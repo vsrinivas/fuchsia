@@ -318,7 +318,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedth
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(::fidl::internal::StatusFromResult(decoded)) {
     if (decoded.is_ok()) {
       decoded_ = std::move(decoded.value());

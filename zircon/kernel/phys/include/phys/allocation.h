@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_ALLOCATION_H_
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_ALLOCATION_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/memalloc/pool.h>
 #include <lib/memalloc/range.h>
 

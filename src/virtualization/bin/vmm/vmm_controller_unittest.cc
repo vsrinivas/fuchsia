@@ -24,10 +24,10 @@ using ::testing::StrictMock;
 
 class MockVmm : public Vmm {
  public:
-  MOCK_METHOD(fitx::result<GuestError>, Initialize,
+  MOCK_METHOD(fit::result<GuestError>, Initialize,
               (GuestConfig, ::sys::ComponentContext*, async_dispatcher_t*), (override));
-  MOCK_METHOD(fitx::result<GuestError>, StartPrimaryVcpu,
-              (fit::function<void(fitx::result<GuestError>)>), (override));
+  MOCK_METHOD(fit::result<GuestError>, StartPrimaryVcpu,
+              (fit::function<void(fit::result<GuestError>)>), (override));
   MOCK_METHOD(void, NotifyClientsShutdown, (zx_status_t), (override));
 };
 
@@ -96,7 +96,7 @@ TEST_F(VmmControllerTest, RecreatingNonRunningGuestDestroysVmm) {
 
 TEST_F(VmmControllerTest, RecreatingRunningGuestRequiresStop) {
   auto vmm = std::make_unique<StrictMock<MockVmm>>();
-  EXPECT_CALL(*vmm, StartPrimaryVcpu(_)).WillOnce(Return(fitx::ok()));
+  EXPECT_CALL(*vmm, StartPrimaryVcpu(_)).WillOnce(Return(fit::ok()));
   controller_->ProvideVmmForTesting(std::move(vmm));
 
   bool run_callback_called = false;
@@ -134,7 +134,7 @@ TEST_F(VmmControllerTest, GuestLifecycleCreateNotCalled) {
 
 TEST_F(VmmControllerTest, GuestLifecycleAlreadyRunning) {
   auto vmm = std::make_unique<StrictMock<MockVmm>>();
-  EXPECT_CALL(*vmm, StartPrimaryVcpu(_)).WillOnce(Return(fitx::ok()));
+  EXPECT_CALL(*vmm, StartPrimaryVcpu(_)).WillOnce(Return(fit::ok()));
   controller_->ProvideVmmForTesting(std::move(vmm));
 
   bool run_callback1_called = false;
@@ -158,7 +158,7 @@ TEST_F(VmmControllerTest, GuestLifecycleAlreadyRunning) {
 TEST_F(VmmControllerTest, RunFailureDoesntSetCallbackAndDestroysVmm) {
   auto vmm = std::make_unique<StrictMock<MockVmm>>();
   EXPECT_CALL(*vmm, StartPrimaryVcpu(_))
-      .WillOnce(Return(fitx::error(GuestError::VCPU_START_FAILURE)));
+      .WillOnce(Return(fit::error(GuestError::VCPU_START_FAILURE)));
   controller_->ProvideVmmForTesting(std::move(vmm));
 
   bool run_callback1_called = false;
@@ -204,7 +204,7 @@ TEST_F(VmmControllerTest, StopWithoutGuestRunning) {
 
 TEST_F(VmmControllerTest, ForcedShutdownReturnsError) {
   auto vmm = std::make_unique<StrictMock<MockVmm>>();
-  EXPECT_CALL(*vmm, StartPrimaryVcpu(_)).WillOnce(Return(fitx::ok()));
+  EXPECT_CALL(*vmm, StartPrimaryVcpu(_)).WillOnce(Return(fit::ok()));
   EXPECT_CALL(*vmm, NotifyClientsShutdown(ZX_ERR_INTERNAL));
   controller_->ProvideVmmForTesting(std::move(vmm));
 
@@ -231,12 +231,12 @@ TEST_F(VmmControllerTest, ForcedShutdownReturnsError) {
 }
 
 TEST_F(VmmControllerTest, CleanGuestInitiatedShutdownReturnsSuccess) {
-  fit::function<void(fitx::result<GuestError>)> captured_callback;
+  fit::function<void(fit::result<GuestError>)> captured_callback;
   auto vmm = std::make_unique<StrictMock<MockVmm>>();
   EXPECT_CALL(*vmm, StartPrimaryVcpu(_))
-      .WillOnce([&captured_callback](fit::function<void(fitx::result<GuestError>)> stop_callback) {
+      .WillOnce([&captured_callback](fit::function<void(fit::result<GuestError>)> stop_callback) {
         captured_callback = std::move(stop_callback);
-        return fitx::ok();
+        return fit::ok();
       });
   EXPECT_CALL(*vmm, NotifyClientsShutdown(ZX_OK));
   controller_->ProvideVmmForTesting(std::move(vmm));
@@ -252,7 +252,7 @@ TEST_F(VmmControllerTest, CleanGuestInitiatedShutdownReturnsSuccess) {
   ASSERT_FALSE(run_callback1_called);
 
   // This posts a task to the dispatch loop, so the guest is still running.
-  captured_callback(fitx::ok());
+  captured_callback(fit::ok());
   ASSERT_FALSE(run_callback1_called);
 
   controller_loop_->RunUntilIdle();

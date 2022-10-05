@@ -82,7 +82,7 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
     return ZX_OK;
   }
 
-  fitx::result<fdf::NodeError> AddChild() {
+  fit::result<fdf::NodeError> AddChild() {
     std::vector<std::string> service_offers;
     service_offers.push_back(std::string(ft::Service::Name));
 
@@ -91,7 +91,7 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
         compat::ServiceOffersV1("v1", std::move(vfs_client_), std::move(service_offers)));
     zx_status_t status = child_->Serve(dispatcher(), context().outgoing().get());
     if (status != ZX_OK) {
-      return fitx::error(fdf::NodeError::kInternal);
+      return fit::error(fdf::NodeError::kInternal);
     }
 
     fidl::Arena arena;
@@ -120,19 +120,19 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
     // Create endpoints of the `NodeController` for the node.
     auto endpoints = fidl::CreateEndpoints<fdf::NodeController>();
     if (endpoints.is_error()) {
-      return fitx::error(fdf::NodeError::kInternal);
+      return fit::error(fdf::NodeError::kInternal);
     }
 
     auto add_result =
         node_.sync()->AddChild(fidl::ToWire(arena, args), std::move(endpoints->server), {});
     if (!add_result.ok()) {
-      return fitx::error(fdf::NodeError::kInternal);
+      return fit::error(fdf::NodeError::kInternal);
     }
     if (add_result->is_error()) {
-      return fitx::error(add_result->error_value());
+      return fit::error(add_result->error_value());
     }
     controller_.Bind(std::move(endpoints->client), dispatcher());
-    return fitx::ok();
+    return fit::ok();
   }
 
   fidl::WireClient<fdf::Node> node_;

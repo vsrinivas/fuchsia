@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_EFI_INCLUDE_PHYS_EFI_FILE_H_
 #define ZIRCON_KERNEL_PHYS_EFI_INCLUDE_PHYS_EFI_FILE_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <memory>
 #include <string_view>
@@ -29,15 +29,15 @@ EfiFilePtr EfiRootDir();
 
 // Open the named file (for reading) within the (optionally) given directory,
 // the default being the root directory EfiRootDir() finds.
-fitx::result<efi_status, EfiFilePtr> EfiOpenFile(const char16_t* filename,
-                                                 efi_file_protocol* dir = EfiRootDir().get());
-fitx::result<efi_status, EfiFilePtr> EfiOpenFile(std::string_view filename,
-                                                 efi_file_protocol* dir = EfiRootDir().get());
+fit::result<efi_status, EfiFilePtr> EfiOpenFile(const char16_t* filename,
+                                                efi_file_protocol* dir = EfiRootDir().get());
+fit::result<efi_status, EfiFilePtr> EfiOpenFile(std::string_view filename,
+                                                efi_file_protocol* dir = EfiRootDir().get());
 
 // Determine the size of the file in bytes.
-fitx::result<efi_status, uint64_t> EfiFileSize(efi_file_protocol* file);
+fit::result<efi_status, uint64_t> EfiFileSize(efi_file_protocol* file);
 
-inline fitx::result<efi_status, uint64_t> EfiFileSize(const EfiFilePtr& file) {
+inline fit::result<efi_status, uint64_t> EfiFileSize(const EfiFilePtr& file) {
   return EfiFileSize(file.get());
 }
 

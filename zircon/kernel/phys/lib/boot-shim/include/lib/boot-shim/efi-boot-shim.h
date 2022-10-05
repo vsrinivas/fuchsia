@@ -9,7 +9,7 @@
 
 #include <lib/acpi_lite.h>
 #include <lib/fit/function.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 
 #include <cstdint>
@@ -66,14 +66,14 @@ class EfiBootShimLoader {
   // ElfBootShim<...>::LoadAndBoot, see below.  It must load the kernel and
   // data ZBIs into memory and return the data ZBI with at least the requested
   // extra data capacity available on the end.
-  using LoadResult = fitx::result<Error, DataZbi>;
+  using LoadResult = fit::result<Error, DataZbi>;
   using LoadFunction = fit::inline_function<LoadResult(uint32_t extra_data_capacity)>;
 
   // This is the type of the `last_chance` callback passed to
   // ElfBootShim<...>::LoadAndBoot, see below.  It is the last chance to
   // prevent the boot or to do anything using UEFI calls of any kind, such as
   // logging.  It gets the final DataZbi that the `boot` callback should use.
-  using LastChanceFunction = fit::inline_function<fitx::result<Error>(DataZbi)>;
+  using LastChanceFunction = fit::inline_function<fit::result<Error>(DataZbi)>;
 
   // This is the type of the `boot` callback passed to
   // ElfBootShim<...>::LoadAndBoot, see below.  It must not return, but
@@ -90,9 +90,9 @@ class EfiBootShimLoader {
   };
 
   // The error value is the UEFI GetMemoryMap size required.
-  using GetMemoryMapResult = fitx::result<size_t, MemoryMapInfo>;
+  using GetMemoryMapResult = fit::result<size_t, MemoryMapInfo>;
 
-  using AppendItemsFunction = fit::function<fitx::result<Error>(DataZbi&)>;
+  using AppendItemsFunction = fit::function<fit::result<Error>(DataZbi&)>;
 
   static std::optional<acpi_lite::AcpiParser> GetAcpi(efi_system_table* systab,
                                                       const char* shim_name, FILE* log);
@@ -138,11 +138,11 @@ class EfiBootShim : public EfiBootShimBase<Items...> {
   using Base::Check;
 
   template <typename... T>
-  bool Check(const char* what, const fitx::result<efi_status, T...>& result) const {
+  bool Check(const char* what, const fit::result<efi_status, T...>& result) const {
     if (result.is_error()) {
       // TODO(mcgrathr): EFI error strings
       constexpr std::string_view kEfiError = "EFI error";
-      return Check(what, fitx::error{kEfiError});
+      return Check(what, fit::error{kEfiError});
     }
     return true;
   }
@@ -151,20 +151,20 @@ class EfiBootShim : public EfiBootShimBase<Items...> {
   // initializes all the standard item types from EfiBootShimBase.
   // Each of Items... may have one of these methods:
   //  * void Init(efi_system_table* systab, const char* shim_name, FILE* log);
-  //  * fitx::result<efi_status> Init(efi_system_table* systab,
+  //  * fit::result<efi_status> Init(efi_system_table* systab,
   //                                  const char* shim_name, FILE* log);
-  //  * fitx::result<Error> Init(efi_system_table* systab,
+  //  * fit::result<Error> Init(efi_system_table* systab,
   //                             const char* shim_name, FILE* log);
   // Each item that does will have its method called here.  The caller of this
   // Init() method is responsible for initializing any items that use different
   // Init() signatures.
-  fitx::result<Error> Init(efi_system_table* systab) {
+  fit::result<Error> Init(efi_system_table* systab) {
     // Set up ACPI access first.  Individual item setup will use it.
     acpi_ = EfiBootShimLoader::GetAcpi(systab, this->shim_name(), this->log());
 
     // Now call the Init() method on each item that takes either
     // efi_system_table* or AcpiParserInterface&.
-    fitx::result<Error> result = fitx::ok();
+    fit::result<Error> result = fit::ok();
     this->EveryItem([&](auto& item) {
       // The DoInit overloads below handle item.Init(...) signatures that take
       // the systab or the acpi() along with shim_name and log.  TryInitItem
@@ -227,25 +227,25 @@ class EfiBootShim : public EfiBootShimBase<Items...> {
 
   // This calls one of those methods and handles its return value, if any.
   template <typename Item>
-  fitx::result<Error> TryInitItem(Item& item, efi_system_table* systab) {
+  fit::result<Error> TryInitItem(Item& item, efi_system_table* systab) {
     using Result = decltype(DoInitItem(item, systab));
     if constexpr (std::is_void_v<Result>) {
       DoInitItem(item, systab);
-    } else if constexpr (std::is_convertible_v<Result, fitx::result<efi_status>>) {
-      fitx::result<efi_status> result = DoInitItem(item, systab);
+    } else if constexpr (std::is_convertible_v<Result, fit::result<efi_status>>) {
+      fit::result<efi_status> result = DoInitItem(item, systab);
       if (result.is_error()) {
         // TODO(mcgrathr): EFI error strings
         fprintf(this->log(), "%s: EFI error %#zx\n", this->shim_name, result.error_value());
-        return fitx::error{Error{.zbi_error = "EFI error"}};
+        return fit::error{Error{.zbi_error = "EFI error"}};
       }
     } else {
-      static_assert(std::is_convertible_v<Result, fitx::result<Error>>,
+      static_assert(std::is_convertible_v<Result, fit::result<Error>>,
                     "Init(efi_system_table*, name, log) or "
                     "Init(AcpiParserInterface&, name, log) must return "
-                    "void, fitx::result<DataZbi::Error>, or fitx::result<efi_error>");
+                    "void, fit::result<DataZbi::Error>, or fit::result<efi_error>");
       return DoInitItem(item, systab);
     }
-    return fitx::ok();
+    return fit::ok();
   }
 
   std::optional<acpi_lite::AcpiParser> acpi_;

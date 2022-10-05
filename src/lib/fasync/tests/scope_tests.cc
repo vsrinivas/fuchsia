@@ -90,15 +90,15 @@ TEST(ScopeTests, exit_destroys_wrapped_futures) {
   auto p0 =
       scope.wrap(fasync::make_future([d = fit::defer([&] {
                                         destroyed[0] = true;
-                                      })]() -> fitx::result<fitx::failed> { return fitx::ok(); }));
+                                      })]() -> fit::result<fit::failed> { return fit::ok(); }));
   auto p1 =
       scope.wrap(fasync::make_future([d = fit::defer([&] {
                                         destroyed[1] = true;
-                                      })]() -> fitx::result<fitx::failed> { return fitx::ok(); }));
+                                      })]() -> fit::result<fit::failed> { return fit::ok(); }));
   auto p2 =
       scope.wrap(fasync::make_future([d = fit::defer([&] {
                                         destroyed[2] = true;
-                                      })]() -> fitx::result<fitx::failed> { return fitx::ok(); }));
+                                      })]() -> fit::result<fit::failed> { return fit::ok(); }));
   EXPECT_FALSE(destroyed[0]);
   EXPECT_FALSE(destroyed[1]);
   EXPECT_FALSE(destroyed[2]);
@@ -121,7 +121,7 @@ TEST(ScopeTests, exit_destroys_wrapped_futures) {
   auto p3 =
       scope.wrap(fasync::make_future([d = fit::defer([&] {
                                         destroyed[3] = true;
-                                      })]() -> fitx::result<fitx::failed> { return fitx::ok(); }));
+                                      })]() -> fit::result<fit::failed> { return fit::ok(); }));
   EXPECT_TRUE(destroyed[3]);
 
   // Executing the wrapped futures returns pending.
@@ -177,7 +177,7 @@ TEST(ScopeTests, thread_safety) {
   constexpr int exit_threshold = 75;
   std::thread threads[num_threads];
   for (int i = 0; i < num_threads; i++) {
-    fasync::bridge<fitx::failed> bridge;
+    fasync::bridge<fit::failed> bridge;
     threads[i] = std::thread([&, completer = std::move(bridge.completer)]() mutable {
       for (int j = 0; j < num_tasks_per_thread; j++) {
         if (j == exit_threshold) {

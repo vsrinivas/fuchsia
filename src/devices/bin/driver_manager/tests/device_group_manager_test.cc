@@ -61,7 +61,7 @@ class DeviceGroupManagerTest : public zxtest::Test {
  public:
   void SetUp() override { device_group_manager_ = std::make_unique<DeviceGroupManager>(&bridge_); }
 
-  fitx::result<fuchsia_driver_framework::DeviceGroupError> AddDeviceGroup(
+  fit::result<fuchsia_driver_framework::DeviceGroupError> AddDeviceGroup(
       fuchsia_driver_framework::wire::DeviceGroup group_info) {
     auto device_group = std::make_unique<FakeDeviceGroup>(DeviceGroupCreateInfo{
         .topological_path = std::string(group_info.topological_path().get()),

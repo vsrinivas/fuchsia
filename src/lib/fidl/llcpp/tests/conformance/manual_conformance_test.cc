@@ -60,7 +60,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
+    fit::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
         fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
     ASSERT_TRUE(result.is_ok());
     const llcpp_misc::wire::InlineXUnionInStruct& msg = result.value().value();
@@ -102,7 +102,7 @@ TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
+  fit::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
       fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
   EXPECT_FALSE(result.is_ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
@@ -126,7 +126,7 @@ TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
+  fit::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
       fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
   EXPECT_FALSE(result.is_ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
@@ -154,7 +154,7 @@ TEST(InlineXUnionInStruct, SuccessLargeXUnionOrdinal) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
+  fit::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
       fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
   ASSERT_TRUE(result.is_ok());
 }
@@ -224,7 +224,7 @@ TEST(ComplexTable, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::ComplexTable>(
+    fit::result result = fidl::InplaceDecode<llcpp_misc::wire::ComplexTable>(
         fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
     ASSERT_TRUE(result.is_ok());
     const llcpp_misc::wire::ComplexTable& msg = result.value().value();

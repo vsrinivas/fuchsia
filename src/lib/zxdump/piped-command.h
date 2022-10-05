@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZXDUMP_PIPED_COMMAND_H_
 #define SRC_LIB_ZXDUMP_PIPED_COMMAND_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 
 #include <map>
@@ -44,7 +44,7 @@ class PipedCommand {
 #endif
 
   // Start the command running with argv {command, args...}.
-  fitx::result<std::string> Start(const std::string& command, const std::vector<std::string>& args);
+  fit::result<std::string> Start(const std::string& command, const std::vector<std::string>& args);
 
   // Once the command is started, the destructor will wait for it to finish
   // unless std::move(obj).process() takes ownership.  Note, it's best to close
@@ -61,10 +61,10 @@ class PipedCommand {
  private:
   static std::vector<const char*> MakeArgv(const std::string& command,
                                            const std::vector<std::string>& args);
-  fitx::result<std::string> StartArgv(cpp20::span<const char*> argv);
+  fit::result<std::string> StartArgv(cpp20::span<const char*> argv);
 #ifdef __Fuchsia__
-  fitx::result<std::string> StartArgv(cpp20::span<const char*> argv, uint32_t flags,
-                                      std::vector<fdio_spawn_action_t> actions);
+  fit::result<std::string> StartArgv(cpp20::span<const char*> argv, uint32_t flags,
+                                     std::vector<fdio_spawn_action_t> actions);
 #endif
 
   std::map<int, fbl::unique_fd> redirect_;

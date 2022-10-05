@@ -14,11 +14,11 @@
 #include <ktl/enforce.h>
 
 // Yet another allocation interface.
-fitx::result<ktl::string_view, Allocation> ZbitlScratchAllocator(size_t size) {
+fit::result<ktl::string_view, Allocation> ZbitlScratchAllocator(size_t size) {
   fbl::AllocChecker ac;
   auto result = Allocation::New(ac, memalloc::Type::kPhysScratch, size);
   if (ac.check()) {
-    return fitx::ok(ktl::move(result));
+    return fit::ok(ktl::move(result));
   }
-  return fitx::error{"cannot allocate scratch memory"sv};
+  return fit::error{"cannot allocate scratch memory"sv};
 }

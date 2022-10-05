@@ -423,9 +423,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 }  // namespace test_unknowninteractions
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> final : public ::fitx::result<::fidl::Error> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> final : public ::fit::result<::fidl::Error> {
  public:
-  using ::fitx::result<::fidl::Error>::result;
+  using ::fit::result<::fidl::Error>::result;
 
  protected:
   Result() = default;
@@ -449,9 +449,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>::result;
 
  protected:
   Result() = default;
@@ -475,9 +475,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse>::result;
 
  protected:
   Result() = default;
@@ -501,9 +501,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse>::result;
 
  protected:
   Result() = default;
@@ -512,10 +512,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final : public ::fitx::result<int32_t>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final : public ::fit::result<int32_t>  {
  public:
-      using ::fitx::result<int32_t>::result;
-      Response(::fitx::result<int32_t> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t>::result;
+      Response(::fit::result<int32_t> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -534,10 +534,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok();
+        return ::fit::ok();
     }
   }
   
@@ -553,9 +553,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>::result;
 
  protected:
   Result() = default;
@@ -564,10 +564,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -586,10 +586,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
     }
   }
   
@@ -605,9 +605,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse>::result;
 
  protected:
   Result() = default;
@@ -616,10 +616,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -638,10 +638,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
     }
   }
   
@@ -657,9 +657,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>::result;
 
  protected:
   Result() = default;
@@ -668,10 +668,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -690,10 +690,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
     }
   }
   
@@ -709,9 +709,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>::result;
 
  protected:
   Result() = default;
@@ -745,9 +745,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> final : public ::fitx::result<::fidl::Error> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> final : public ::fit::result<::fidl::Error> {
  public:
-  using ::fitx::result<::fidl::Error>::result;
+  using ::fit::result<::fidl::Error>::result;
 
  protected:
   Result() = default;
@@ -783,9 +783,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse>::result;
 
  protected:
   Result() = default;
@@ -821,9 +821,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse>::result;
 
  protected:
   Result() = default;
@@ -859,9 +859,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse>::result;
 
  protected:
   Result() = default;
@@ -870,10 +870,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final : public ::fitx::result<int32_t>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final : public ::fit::result<int32_t>  {
  public:
-      using ::fitx::result<int32_t>::result;
-      Response(::fitx::result<int32_t> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t>::result;
+      Response(::fit::result<int32_t> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -901,9 +901,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>::result;
 
  protected:
   Result() = default;
@@ -912,10 +912,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -943,9 +943,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse>::result;
 
  protected:
   Result() = default;
@@ -954,10 +954,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -985,9 +985,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>::result;
 
  protected:
   Result() = default;
@@ -996,10 +996,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -1027,9 +1027,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>::result;
 
  protected:
   Result() = default;
@@ -1072,9 +1072,9 @@ class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInt
 
   ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> FlexibleTwoWayTableErr() const;
 
-  ::fitx::result<::fidl::Error> StrictOneWay() const;
+  ::fit::result<::fidl::Error> StrictOneWay() const;
 
-  ::fitx::result<::fidl::Error> FlexibleOneWay() const;
+  ::fit::result<::fidl::Error> FlexibleOneWay() const;
 
 };namespace test_unknowninteractions {
 
@@ -1948,9 +1948,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 }  // namespace test_unknowninteractions
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> final : public ::fitx::result<::fidl::Error> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> final : public ::fit::result<::fidl::Error> {
  public:
-  using ::fitx::result<::fidl::Error>::result;
+  using ::fit::result<::fidl::Error>::result;
 
  protected:
   Result() = default;
@@ -1974,9 +1974,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>::result;
 
  protected:
   Result() = default;
@@ -2000,9 +2000,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse>::result;
 
  protected:
   Result() = default;
@@ -2026,9 +2026,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse>::result;
 
  protected:
   Result() = default;
@@ -2037,10 +2037,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverPro
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final : public ::fitx::result<int32_t>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final : public ::fit::result<int32_t>  {
  public:
-      using ::fitx::result<int32_t>::result;
-      Response(::fitx::result<int32_t> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t>::result;
+      Response(::fit::result<int32_t> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -2059,10 +2059,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok();
+        return ::fit::ok();
     }
   }
   
@@ -2078,9 +2078,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>::result;
 
  protected:
   Result() = default;
@@ -2089,10 +2089,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverPro
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -2111,10 +2111,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
     }
   }
   
@@ -2130,9 +2130,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse>::result;
 
  protected:
   Result() = default;
@@ -2141,10 +2141,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverPro
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -2163,10 +2163,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
     }
   }
   
@@ -2182,9 +2182,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>::result;
 
  protected:
   Result() = default;
@@ -2193,10 +2193,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverPro
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -2215,10 +2215,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
     }
   }
   
@@ -2234,9 +2234,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>::result;
 
  protected:
   Result() = default;
@@ -2263,9 +2263,9 @@ class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInt
 
   ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr() const;
 
-  ::fitx::result<::fidl::Error> StrictOneWay() const;
+  ::fit::result<::fidl::Error> StrictOneWay() const;
 
-  ::fitx::result<::fidl::Error> FlexibleOneWay() const;
+  ::fit::result<::fidl::Error> FlexibleOneWay() const;
 
 };namespace test_unknowninteractions {
 
@@ -2865,9 +2865,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 }  // namespace test_unknowninteractions
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> final : public ::fitx::result<::fidl::Error> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> final : public ::fit::result<::fidl::Error> {
  public:
-  using ::fitx::result<::fidl::Error>::result;
+  using ::fit::result<::fidl::Error>::result;
 
  protected:
   Result() = default;
@@ -2891,9 +2891,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>::result;
 
  protected:
   Result() = default;
@@ -2917,9 +2917,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse>::result;
 
  protected:
   Result() = default;
@@ -2943,9 +2943,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable> final : public ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse>::result;
 
  protected:
   Result() = default;
@@ -2954,10 +2954,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverP
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final : public ::fitx::result<int32_t>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final : public ::fit::result<int32_t>  {
  public:
-      using ::fitx::result<int32_t>::result;
-      Response(::fitx::result<int32_t> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t>::result;
+      Response(::fit::result<int32_t> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -2976,10 +2976,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok();
+        return ::fit::ok();
     }
   }
   
@@ -2995,9 +2995,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>::result;
 
  protected:
   Result() = default;
@@ -3006,10 +3006,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverP
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -3028,10 +3028,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
     }
   }
   
@@ -3047,9 +3047,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse>::result;
 
  protected:
   Result() = default;
@@ -3058,10 +3058,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverP
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -3080,10 +3080,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
     }
   }
   
@@ -3099,9 +3099,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>::result;
 
  protected:
   Result() = default;
@@ -3110,10 +3110,10 @@ class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverP
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> final : public ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> final : public ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>  {
  public:
-      using ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>::result;
-      Response(::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse> v) : result(std::move(v)) {}
+      using ::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>::result;
+      Response(::fit::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse> v) : result(std::move(v)) {}
       Response() = delete;
 };
 
@@ -3132,10 +3132,10 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
   
   static ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
     }
   }
   
@@ -3151,9 +3151,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse> {
+class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>::result;
 
  protected:
   Result() = default;
@@ -3180,7 +3180,7 @@ class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInt
 
   ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr() const;
 
-  ::fitx::result<::fidl::Error> StrictOneWay() const;
+  ::fit::result<::fidl::Error> StrictOneWay() const;
 
 };namespace test_unknowninteractions {
 

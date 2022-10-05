@@ -14,7 +14,7 @@
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <cstdint>
 
@@ -40,7 +40,7 @@ using NaturalApplicationError =
 // |NaturalMessageConverter| extends transactional message wrappers with the
 // ability to convert to and from domain object types. In particular, result
 // unions in methods using the error syntax will be converted to
-// |fitx::result<ApplicationError, Payload>| when sending.
+// |fit::result<ApplicationError, Payload>| when sending.
 //
 // |Message| is either a |fidl::Request<Foo>|, |fidl::Response<Foo>|, or
 // |fidl::Event<Foo>|.
@@ -77,14 +77,14 @@ class NaturalMessageConverter {
 //
 // To reducing branching in generated code, |Body| may be |std::nullopt|, in
 // which case the message will be decoded without a body (header-only
-// messages), and the return type is `::fitx::result<::fidl::Error>`. Otherwise,
-// returns `::fitx::result<::fidl::Error, Body>`.
+// messages), and the return type is `::fit::result<::fidl::Error>`. Otherwise,
+// returns `::fit::result<::fidl::Error, Body>`.
 //
 // |message| is always consumed.
 template <typename Body = std::nullopt_t>
 static auto DecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& message)
-    -> std::conditional_t<std::is_same_v<Body, std::nullopt_t>, ::fitx::result<::fidl::Error>,
-                          ::fitx::result<::fidl::Error, Body>> {
+    -> std::conditional_t<std::is_same_v<Body, std::nullopt_t>, ::fit::result<::fidl::Error>,
+                          ::fit::result<::fidl::Error, Body>> {
   constexpr bool kHasBody = !std::is_same_v<Body, std::nullopt_t>;
   if constexpr (kHasBody) {
     const fidl_message_header& header = *message.header();
@@ -97,11 +97,11 @@ static auto DecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& messag
   }
 }
 
-inline ::fitx::result<::fidl::Error> ToFitxResult(::fidl::Status result) {
+inline ::fit::result<::fidl::Error> ToFitxResult(::fidl::Status result) {
   if (result.ok()) {
-    return ::fitx::ok();
+    return ::fit::ok();
   }
-  return ::fitx::error<::fidl::Error>(result);
+  return ::fit::error<::fidl::Error>(result);
 }
 
 }  // namespace internal

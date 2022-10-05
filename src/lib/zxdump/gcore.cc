@@ -74,7 +74,7 @@ class Writer {
   auto AccumulateFragmentsCallback() {
     return std::visit(
         [](auto& writer)
-            -> fit::function<fitx::result<error_type>(size_t offset, zxdump::ByteView data)> {
+            -> fit::function<fit::result<error_type>(size_t offset, zxdump::ByteView data)> {
           return writer.AccumulateFragmentsCallback();
         },
         writer_);
@@ -82,14 +82,14 @@ class Writer {
 
   auto WriteFragments() {
     return std::visit(
-        [](auto& writer) -> fitx::result<error_type, size_t> { return writer.WriteFragments(); },
+        [](auto& writer) -> fit::result<error_type, size_t> { return writer.WriteFragments(); },
         writer_);
   }
 
   auto WriteCallback() {
     return std::visit(
         [](auto& writer)
-            -> fit::function<fitx::result<error_type>(size_t offset, zxdump::ByteView data)> {
+            -> fit::function<fit::result<error_type>(size_t offset, zxdump::ByteView data)> {
           return writer.WriteCallback();
         },
         writer_);
@@ -147,13 +147,13 @@ class Writer {
 // and of the dump and where it goes.
 class DumperBase {
  public:
-  static fitx::result<zxdump::Error, zxdump::SegmentDisposition> PruneAll(
+  static fit::result<zxdump::Error, zxdump::SegmentDisposition> PruneAll(
       zxdump::SegmentDisposition segment, const zx_info_maps_t& mapping, const zx_info_vmo_t& vmo) {
     segment.filesz = 0;
-    return fitx::ok(segment);
+    return fit::ok(segment);
   }
 
-  static fitx::result<zxdump::Error, zxdump::SegmentDisposition> PruneDefault(
+  static fit::result<zxdump::Error, zxdump::SegmentDisposition> PruneDefault(
       zxdump::SegmentDisposition segment, const zx_info_maps_t& mapping, const zx_info_vmo_t& vmo) {
     if (mapping.u.mapping.committed_pages == 0 &&   // No private RAM here,
         vmo.parent_koid == ZX_KOID_INVALID &&       // and none shared,
@@ -165,7 +165,7 @@ class DumperBase {
 
     // TODO(mcgrathr): for now, dump everything else.
 
-    return fitx::ok(segment);
+    return fit::ok(segment);
   }
 
   // Read errors from syscalls use the PID (or job KOID).

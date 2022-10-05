@@ -775,7 +775,7 @@ func (m Method) HasNonEmptyPayload() bool {
 //
 // This is true if there is a response payload and either the payload does not
 // use a result type (so the response is just the payload) or the result type
-// either uses error syntax (so the response args are a fitx::result, regardless
+// either uses error syntax (so the response args are a fit::result, regardless
 // of whether the success value is populated) or the result has a non-empty
 // success value.
 //
@@ -801,22 +801,22 @@ func (m Method) NaturalResultBase() string {
 	if m.Result != nil {
 		if m.Result.HasError {
 			if len(m.Result.ValueParameters) > 0 {
-				return fmt.Sprintf("::fitx::result<%s, %s>", m.NaturalAnyErrorIn, m.Result.ValueTypeDecl)
+				return fmt.Sprintf("::fit::result<%s, %s>", m.NaturalAnyErrorIn, m.Result.ValueTypeDecl)
 			} else {
-				return fmt.Sprintf("::fitx::result<%s>", m.NaturalAnyErrorIn)
+				return fmt.Sprintf("::fit::result<%s>", m.NaturalAnyErrorIn)
 			}
 		} else {
 			if len(m.Result.ValueParameters) > 0 {
-				return fmt.Sprintf("::fitx::result<::fidl::Error, %s>", m.Result.ValueTypeDecl)
+				return fmt.Sprintf("::fit::result<::fidl::Error, %s>", m.Result.ValueTypeDecl)
 			} else {
-				return "::fitx::result<::fidl::Error>"
+				return "::fit::result<::fidl::Error>"
 			}
 		}
 	} else {
 		if len(m.ResponseArgs) > 0 {
-			return fmt.Sprintf("::fitx::result<::fidl::Error, %s>", m.ResponsePayload)
+			return fmt.Sprintf("::fit::result<::fidl::Error, %s>", m.ResponsePayload)
 		} else {
-			return "::fitx::result<::fidl::Error>"
+			return "::fit::result<::fidl::Error>"
 		}
 	}
 }
@@ -825,9 +825,9 @@ func (m Method) WireResultUnwrapType() string {
 	if m.Result != nil {
 		if m.Result.HasError {
 			if len(m.Result.ValueParameters) > 0 {
-				return fmt.Sprintf("::fitx::result<%s, %s*>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+				return fmt.Sprintf("::fit::result<%s, %s*>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
 			} else {
-				return fmt.Sprintf("::fitx::result<%s>", m.Result.ErrorDecl)
+				return fmt.Sprintf("::fit::result<%s>", m.Result.ErrorDecl)
 			}
 		} else {
 			if len(m.Result.ValueParameters) > 0 {
@@ -851,10 +851,10 @@ func (m Method) WireReplyArgs() string {
 		return renderParams(param, m.Result.ValueParameters)
 	}
 	if len(m.Result.ValueParameters) > 0 {
-		return fmt.Sprintf("::fitx::result<%s, %s*> result", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+		return fmt.Sprintf("::fit::result<%s, %s*> result", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
 	}
 
-	return fmt.Sprintf("::fitx::result<%s> result", m.Result.ErrorDecl)
+	return fmt.Sprintf("::fit::result<%s> result", m.Result.ErrorDecl)
 }
 
 func (m Method) WireReplySuccess(varName string) string {
@@ -894,9 +894,9 @@ func (m Method) ResponseMessageBase() string {
 	if m.Result != nil {
 		if m.Result.HasError {
 			if len(m.Result.ValueParameters) > 0 {
-				return fmt.Sprintf("::fitx::result<%s, %s>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
+				return fmt.Sprintf("::fit::result<%s, %s>", m.Result.ErrorDecl, m.Result.ValueTypeDecl)
 			} else {
-				return fmt.Sprintf("::fitx::result<%s>", m.Result.ErrorDecl)
+				return fmt.Sprintf("::fit::result<%s>", m.Result.ErrorDecl)
 			}
 		} else {
 			if len(m.Result.ValueParameters) > 0 {

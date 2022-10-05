@@ -33,7 +33,7 @@ zx_obj_type_t Task::type() const {
   return 0;
 }
 
-fitx::result<Error, ByteView> Task::get_info(zx_object_info_topic_t topic, size_t record_size) {
+fit::result<Error, ByteView> Task::get_info(zx_object_info_topic_t topic, size_t record_size) {
   if (info_.empty()) {
     // Only the superroot has no cached info at all.  It's a special case.
     return GetSuperrootInfo(topic);
@@ -41,7 +41,7 @@ fitx::result<Error, ByteView> Task::get_info(zx_object_info_topic_t topic, size_
   auto found = info_.find(topic);
   if (found == info_.end()) {
     if (!live_) {
-      return fitx::error(Error{"zx_object_get_info", ZX_ERR_NOT_SUPPORTED});
+      return fit::error(Error{"zx_object_get_info", ZX_ERR_NOT_SUPPORTED});
     }
 
     // This interface cannot be transparently proxied!  We can always come
@@ -65,7 +65,7 @@ fitx::result<Error, ByteView> Task::get_info(zx_object_info_topic_t topic, size_
       status = live_.get_info(topic, buffer.get(), size, &actual, &avail);
     } while (status == ZX_ERR_BUFFER_TOO_SMALL || actual < avail);
     if (status != ZX_OK) {
-      return fitx::error(Error{"zx_object_get_info", status});
+      return fit::error(Error{"zx_object_get_info", status});
     }
 
     auto [it, unique] = info_.emplace(topic, ByteView{buffer.get(), size});
@@ -74,34 +74,34 @@ fitx::result<Error, ByteView> Task::get_info(zx_object_info_topic_t topic, size_
 
     TakeBuffer(std::move(buffer));
   }
-  return fitx::ok(found->second);
+  return fit::ok(found->second);
 }
 
-fitx::result<Error, ByteView> Task::get_property(uint32_t property) {
+fit::result<Error, ByteView> Task::get_property(uint32_t property) {
   auto found = properties_.find(property);
   if (found == properties_.end()) {
     if (!live_) {
-      return fitx::error(Error{"zx_object_get_property", ZX_ERR_NOT_SUPPORTED});
+      return fit::error(Error{"zx_object_get_property", ZX_ERR_NOT_SUPPORTED});
     }
     auto buffer = GetBuffer(kMaxPropertySize);
     if (zx_status_t status = live_.get_property(property, buffer, kMaxPropertySize);
         status != ZX_OK) {
       ZX_ASSERT(status != ZX_ERR_BUFFER_TOO_SMALL);
-      return fitx::error(Error{"zx_object_get_property", status});
+      return fit::error(Error{"zx_object_get_property", status});
     }
     auto [it, unique] = properties_.emplace(property, ByteView{buffer, kMaxPropertySize});
     ZX_DEBUG_ASSERT(unique);
     found = it;
   }
-  return fitx::ok(found->second);
+  return fit::ok(found->second);
 }
 
-fitx::result<Error, ByteView> Thread::read_state(zx_thread_state_topic_t topic) {
+fit::result<Error, ByteView> Thread::read_state(zx_thread_state_topic_t topic) {
   auto found = state_.find(topic);
   if (found == state_.end()) {
-    return fitx::error(Error{"zx_thread_read_state", ZX_ERR_NOT_SUPPORTED});
+    return fit::error(Error{"zx_thread_read_state", ZX_ERR_NOT_SUPPORTED});
   }
-  return fitx::ok(found->second);
+  return fit::ok(found->second);
 }
 
 }  // namespace zxdump

@@ -294,7 +294,7 @@ class [[nodiscard]] Status {
   // If the operation failed, returns information about the error.
   //
   // This is meant be used by subclasses to accommodate a usage style that is
-  // similar to |fitx::result| types:
+  // similar to |fit::result| types:
   //
   //   fidl::WireResult bar = fidl::WireCall(foo_client_end)->GetBar();
   //   if (!bar.ok()) {

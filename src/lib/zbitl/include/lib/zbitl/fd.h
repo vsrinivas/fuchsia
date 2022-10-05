@@ -27,22 +27,21 @@ class StorageTraits<fbl::unique_fd> {
 
   static std::string error_string(error_type error) { return strerror(error); }
 
-  static fitx::result<error_type, uint32_t> Capacity(const fbl::unique_fd&);
+  static fit::result<error_type, uint32_t> Capacity(const fbl::unique_fd&);
 
-  static fitx::result<error_type> EnsureCapacity(fbl::unique_fd& fd, uint32_t capacity_bytes);
+  static fit::result<error_type> EnsureCapacity(fbl::unique_fd& fd, uint32_t capacity_bytes);
 
-  static fitx::result<error_type, payload_type> Payload(const fbl::unique_fd&, uint32_t offset,
-                                                        uint32_t length) {
-    return fitx::ok(offset);
+  static fit::result<error_type, payload_type> Payload(const fbl::unique_fd&, uint32_t offset,
+                                                       uint32_t length) {
+    return fit::ok(offset);
   }
 
-  static fitx::result<error_type> Read(const fbl::unique_fd& fd, payload_type payload, void* buffer,
-                                       uint32_t length);
+  static fit::result<error_type> Read(const fbl::unique_fd& fd, payload_type payload, void* buffer,
+                                      uint32_t length);
 
   template <typename Callback>
   static auto Read(const fbl::unique_fd& zbi, payload_type payload, uint32_t length,
-                   Callback&& callback)
-      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
+                   Callback&& callback) -> fit::result<error_type, decltype(callback(ByteView{}))> {
     std::optional<decltype(callback(ByteView{}))> result;
     auto cb = [&](ByteView chunk) -> bool {
       result = callback(chunk);
@@ -53,18 +52,18 @@ class StorageTraits<fbl::unique_fd> {
             zbi, payload, length,
             [](void* cb, ByteView chunk) { return (*static_cast<CbType*>(cb))(chunk); }, &cb);
         read_error.is_error()) {
-      return fitx::error{read_error.error_value()};
+      return fit::error{read_error.error_value()};
     } else {
       ZX_DEBUG_ASSERT(result);
-      return fitx::ok(*result);
+      return fit::ok(*result);
     }
   }
 
-  static fitx::result<error_type> Write(const fbl::unique_fd&, uint32_t offset, ByteView data);
+  static fit::result<error_type> Write(const fbl::unique_fd&, uint32_t offset, ByteView data);
 
  private:
-  static fitx::result<error_type> DoRead(const fbl::unique_fd& zbi, off_t offset, uint32_t length,
-                                         bool (*)(void*, ByteView), void*);
+  static fit::result<error_type> DoRead(const fbl::unique_fd& zbi, off_t offset, uint32_t length,
+                                        bool (*)(void*, ByteView), void*);
 };
 
 /// zbitl::View<const fbl::unique_fd&> is an unmovable, uncopyable type that

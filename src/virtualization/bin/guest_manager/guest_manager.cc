@@ -52,7 +52,7 @@ GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
 }
 
-fitx::result<GuestManagerError, GuestConfig> GuestManager::GetDefaultGuestConfig() {
+fit::result<GuestManagerError, GuestConfig> GuestManager::GetDefaultGuestConfig() {
   // Reads guest config from [zircon|termina|debian]_guest package provided as child in
   // [zircon|termina|debian]_guest_manager component hierarchy.
   const std::string config_path = config_pkg_dir_path_ + config_path_;
@@ -66,15 +66,15 @@ fitx::result<GuestManagerError, GuestConfig> GuestManager::GetDefaultGuestConfig
   bool readFileSuccess = files::ReadFileToString(config_path, &content);
   if (!readFileSuccess) {
     FX_LOGS(ERROR) << "Failed to read guest configuration " << config_path;
-    return fitx::error(GuestManagerError::BAD_CONFIG);
+    return fit::error(GuestManagerError::BAD_CONFIG);
   }
   auto config = guest_config::ParseConfig(content, std::move(open_at));
   if (config.is_error()) {
     FX_PLOGS(ERROR, config.error_value()) << "Failed to parse guest configuration " << config_path;
-    return fitx::error(GuestManagerError::BAD_CONFIG);
+    return fit::error(GuestManagerError::BAD_CONFIG);
   }
 
-  return fitx::ok(std::move(*config));
+  return fit::ok(std::move(*config));
 }
 
 // |fuchsia::virtualization::GuestManager|
@@ -156,7 +156,7 @@ void GuestManager::HandleCreateResult(
     GuestLifecycle_Create_Result result,
     fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller, LaunchCallback callback) {
   if (result.is_err()) {
-    HandleGuestStopped(fitx::error(result.err()));
+    HandleGuestStopped(fit::error(result.err()));
     callback(fpromise::error(GuestManagerError::START_FAILURE));
   } else {
     state_ = GuestStatus::RUNNING;
@@ -170,13 +170,13 @@ void GuestManager::HandleCreateResult(
 
 void GuestManager::HandleRunResult(GuestLifecycle_Run_Result result) {
   if (result.is_response()) {
-    HandleGuestStopped(fitx::ok());
+    HandleGuestStopped(fit::ok());
   } else {
-    HandleGuestStopped(fitx::error(result.err()));
+    HandleGuestStopped(fit::error(result.err()));
   }
 }
 
-void GuestManager::HandleGuestStopped(fitx::result<GuestError> err) {
+void GuestManager::HandleGuestStopped(fit::result<GuestError> err) {
   if (err.is_ok()) {
     last_error_ = std::nullopt;
   } else {

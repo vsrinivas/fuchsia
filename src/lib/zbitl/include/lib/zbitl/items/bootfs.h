@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_ITEMS_BOOTFS_H_
 #define SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_ITEMS_BOOTFS_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zbitl/storage-traits.h>
@@ -263,7 +263,7 @@ class BootfsView {
 
   /// Initializes the BootfsView. This method must be called only once and done
   /// so before calling other methods.
-  static fitx::result<Error, BootfsView> Create(storage_type storage) {
+  static fit::result<Error, BootfsView> Create(storage_type storage) {
     using namespace std::literals;
 
     constexpr auto to_error = [](std::string_view reason,
@@ -274,38 +274,38 @@ class BootfsView {
 
     uint32_t capacity = 0;
     if (auto result = Traits::Capacity(storage); result.is_error()) {
-      return fitx::error{
+      return fit::error{
           to_error("cannot determine storage capacity"sv, std::move(result.error_value()))};
     } else {
       capacity = std::move(result).value();
     }
 
     if (capacity < sizeof(zbi_bootfs_header_t)) {
-      return fitx::error{to_error("storage smaller than BOOTFS header size (truncated?)"sv)};
+      return fit::error{to_error("storage smaller than BOOTFS header size (truncated?)"sv)};
     }
 
     uint32_t dirsize = 0;
     if (auto result = Traits::template LocalizedRead<zbi_bootfs_header_t>(storage, 0);
         result.is_error()) {
-      return fitx::error{
+      return fit::error{
           to_error("failed to read BOOTFS dirsize"sv, std::move(result.error_value()))};
     } else {
       const zbi_bootfs_header_t& header = result.value();
       if (header.magic != ZBI_BOOTFS_MAGIC) {
-        return fitx::error{to_error("bad BOOTFS header"sv)};
+        return fit::error{to_error("bad BOOTFS header"sv)};
       }
       dirsize = header.dirsize;
     }
 
     if (capacity < dirsize || capacity - dirsize < sizeof(zbi_bootfs_header_t)) {
-      return fitx::error{to_error("directory exceeds capacity (truncated?)")};
+      return fit::error{to_error("directory exceeds capacity (truncated?)")};
     }
 
     typename Traits::payload_type dir_payload;
     if (auto result = Traits::Payload(storage, sizeof(zbi_bootfs_header_t), dirsize);
         result.is_error()) {
-      return fitx::error{to_error("failed to create payload object for BOOTFS directory"sv,
-                                  std::move(result.error_value()))};
+      return fit::error{to_error("failed to create payload object for BOOTFS directory"sv,
+                                 std::move(result.error_value()))};
     } else {
       dir_payload = std::move(result).value();
     }
@@ -315,7 +315,7 @@ class BootfsView {
     if constexpr (kCanOneShotRead) {
       auto result = Traits::template Read<std::byte, false>(storage, dir_payload, dirsize);
       if (result.is_error()) {
-        return fitx::error{to_error(kErrDirectoryRead, std::move(result.error_value()))};
+        return fit::error{to_error(kErrDirectoryRead, std::move(result.error_value()))};
       }
       dir = std::move(result).value();
       ZX_DEBUG_ASSERT(dir.size() == dirsize);
@@ -323,12 +323,12 @@ class BootfsView {
       fbl::AllocChecker ac;
       dir = fbl::MakeArray<std::byte>(&ac, dirsize);
       if (!ac.check()) {
-        return fitx::error{to_error("failed to allocate directory: out of memory"sv)};
+        return fit::error{to_error("failed to allocate directory: out of memory"sv)};
       }
       if constexpr (Traits::CanUnbufferedRead()) {
         if (auto result = Traits::Read(storage, dir_payload, dir.data(), dirsize);
             result.is_error()) {
-          return fitx::error{to_error(kErrDirectoryRead, std::move(result.error_value()))};
+          return fit::error{to_error(kErrDirectoryRead, std::move(result.error_value()))};
         }
       } else {
         size_t bytes_read = 0;
@@ -337,12 +337,12 @@ class BootfsView {
           unwritten = unwritten.subspan(bytes.size());
         };
         if (auto result = Traits::Read(storage, dir_payload, dirsize, read); result.is_error()) {
-          return fitx::error{to_error(kErrDirectoryRead, std::move(result.error_value()))};
+          return fit::error{to_error(kErrDirectoryRead, std::move(result.error_value()))};
         }
         ZX_DEBUG_ASSERT(bytes_read == dirsize);
       }
     }
-    return fitx::ok(BootfsView(std::move(storage), std::move(dir), capacity));
+    return fit::ok(BootfsView(std::move(storage), std::move(dir), capacity));
   }
 
   /// Check the container for errors after using iterators.  When begin() or
@@ -354,15 +354,15 @@ class BootfsView {
   /// error goes undetected.  After take_error() is called the error state is
   /// consumed and take_error() cannot be called again until another begin() or
   /// iterator::operator++() call has been made.
-  [[nodiscard]] fitx::result<Error> take_error() {
+  [[nodiscard]] fit::result<Error> take_error() {
     ErrorState result = std::move(error_);
     error_ = Taken{};
     if (std::holds_alternative<Error>(result)) {
-      return fitx::error{std::move(std::get<Error>(result))};
+      return fit::error{std::move(std::get<Error>(result))};
     }
     ZX_ASSERT_MSG(!std::holds_alternative<Taken>(result),
                   "zbitl::BootfsView::take_error() was already called");
-    return fitx::ok();
+    return fit::ok();
   }
 
   /// If you explicitly don't care about any error that might have terminated

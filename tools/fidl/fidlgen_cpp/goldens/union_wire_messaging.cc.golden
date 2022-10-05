@@ -28,7 +28,7 @@ extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseM
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -45,7 +45,7 @@ namespace test_union {
 
 ::fidl::WireUnownedResult<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::WireUnownedResult(::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -62,7 +62,7 @@ namespace test_union {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -87,7 +87,7 @@ namespace test_union {
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -104,7 +104,7 @@ namespace test_union {
 
 ::fidl::WireUnownedResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::WireUnownedResult(::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -121,7 +121,7 @@ namespace test_union {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -201,7 +201,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -215,7 +215,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -274,7 +274,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::StrictX
 void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::MakeReply(::test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> _response{xu};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};
@@ -313,7 +313,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::Flexibl
 void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::MakeReply(::test_union::wire::OlderSimpleUnion xu) {
   ::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> _response{xu};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};

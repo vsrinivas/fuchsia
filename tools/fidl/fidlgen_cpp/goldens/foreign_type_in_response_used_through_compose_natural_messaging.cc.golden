@@ -79,7 +79,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

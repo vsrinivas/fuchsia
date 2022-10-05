@@ -38,7 +38,7 @@ fasync::try_future<std::string, int> pick_bananas(int hours) {
           printf("... %d hour elapsed...\n", time);
         }
         if (random(0, 6) == 0) {
-          return fasync::ready(fitx::error("A wild animal ate all the bananas we picked today!"));
+          return fasync::ready(fit::error("A wild animal ate all the bananas we picked today!"));
         }
         if (time < hours) {
           // Simulate time passing.
@@ -54,7 +54,7 @@ fasync::try_future<std::string, int> pick_bananas(int hours) {
           harvest += random(0, 30);
           return fasync::pending();
         }
-        return fasync::ready(fitx::ok(harvest));
+        return fasync::ready(fit::ok(harvest));
       });
 }
 
@@ -66,23 +66,23 @@ fasync::try_future<std::string> eat_bananas(int appetite) {
           resume_in_a_little_while(context.suspend_task());
           appetite--;
           if (random(0, 10) == 0) {
-            return fasync::ready(fitx::error("I ate too many bananas. Urp."));
+            return fasync::ready(fit::error("I ate too many bananas. Urp."));
           }
           return fasync::pending();
         }
         puts("Ahh. So satisfying.");
-        return fasync::ready(fitx::ok());
+        return fasync::ready(fit::ok());
       });
 }
 
-fasync::try_future<fitx::failed> prepare_simulation() {
+fasync::try_future<fit::failed> prepare_simulation() {
   int hours = random(0, 7);
   return pick_bananas(hours) |
-         fasync::and_then([](const int& harvest) -> fitx::result<std::string, int> {
+         fasync::and_then([](const int& harvest) -> fit::result<std::string, int> {
            printf("We picked %d bananas today!\n", harvest);
            if (harvest == 0)
-             return fitx::error("What will we eat now?");
-           return fitx::ok(harvest);
+             return fit::error("What will we eat now?");
+           return fit::ok(harvest);
          }) |
          fasync::and_then([](const int& harvest) {
            int appetite = random(0, 6);
@@ -92,7 +92,7 @@ fasync::try_future<fitx::failed> prepare_simulation() {
          }) |
          fasync::or_else([](const std::string& error) {
            printf("Oh no! %s\n", error.c_str());
-           return fitx::failed();
+           return fit::failed();
          }) |
          fasync::and_then([] { puts("*** Simulation finished ***"); }) | fasync::or_else([] {
            puts("*** Restarting simulation ***");

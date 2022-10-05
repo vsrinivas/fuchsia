@@ -32,7 +32,7 @@ extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMa
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -49,7 +49,7 @@ namespace test_errorsyntax {
 
 ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::WireUnownedResult(::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -66,7 +66,7 @@ namespace test_errorsyntax {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -91,7 +91,7 @@ namespace test_errorsyntax {
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -108,7 +108,7 @@ namespace test_errorsyntax {
 
 ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::WireUnownedResult(::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -125,7 +125,7 @@ namespace test_errorsyntax {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -205,7 +205,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -220,7 +220,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -258,7 +258,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::dispatch_mes
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::Reply(::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result) {
+void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::Reply(::fit::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithResponse(::fidl::ObjectView<::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::FromExternal(result.value())));
   }
@@ -286,7 +286,7 @@ void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSynt
   return MakeReply(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::Reply(::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result) {
+void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::Reply(::fit::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResult::WithResponse(::fidl::ObjectView<::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::FromExternal(result.value())));
   }
@@ -296,7 +296,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErr
 void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::MakeReply(::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResult result) {
   ::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};
@@ -323,7 +323,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErr
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::Reply(::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result) {
+void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::Reply(::fit::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::WithResponse(::fidl::ObjectView<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::FromExternal(result.value())));
   }
@@ -351,7 +351,7 @@ void fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSynt
   return MakeReply(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::WithErr(std::move(error)));
 }
 
-void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::Reply(::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result) {
+void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::Reply(::fit::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::WithResponse(::fidl::ObjectView<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::FromExternal(result.value())));
   }
@@ -361,7 +361,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErr
 void fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::MakeReply(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult result) {
   ::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> _response{result};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};

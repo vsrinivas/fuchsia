@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/cpp/wire/wire_types.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/type_traits.h>
 #include <zircon/fidl.h>
 

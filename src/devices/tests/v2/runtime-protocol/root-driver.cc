@@ -72,17 +72,17 @@ class RootDriver : public driver::DriverBase,
   // fdf::Server<ft::Setter>
   void Set(SetRequest& request, SetCompleter::Sync& completer) override {
     child_value_ = request.value();
-    completer.Reply(fitx::ok());
+    completer.Reply(fit::ok());
   }
 
   // fdf::Server<ft::Getter>
   void Get(GetRequest& request, GetCompleter::Sync& completer) override {
     ZX_ASSERT(child_value_.has_value());
-    completer.Reply(fitx::ok(child_value_.value()));
+    completer.Reply(fit::ok(child_value_.value()));
   }
 
  private:
-  fitx::result<fdf::wire::NodeError> AddChild() {
+  fit::result<fdf::wire::NodeError> AddChild() {
     fidl::Arena arena;
 
     auto offer = driver::MakeOffer<ft::Service>(kChildName);
@@ -101,19 +101,19 @@ class RootDriver : public driver::DriverBase,
     // Create endpoints of the `NodeController` for the node.
     auto endpoints = fidl::CreateEndpoints<fdf::NodeController>();
     if (endpoints.is_error()) {
-      return fitx::error(fdf::NodeError::kInternal);
+      return fit::error(fdf::NodeError::kInternal);
     }
 
     auto add_result =
         node_.sync()->AddChild(fidl::ToWire(arena, args), std::move(endpoints->server), {});
     if (!add_result.ok()) {
-      return fitx::error(fdf::NodeError::kInternal);
+      return fit::error(fdf::NodeError::kInternal);
     }
     if (add_result->is_error()) {
-      return fitx::error(add_result->error_value());
+      return fit::error(add_result->error_value());
     }
     controller_.Bind(std::move(endpoints->client), dispatcher());
-    return fitx::ok();
+    return fit::ok();
   }
 
   fidl::WireClient<fdf::Node> node_;

@@ -287,7 +287,7 @@ zx::status<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
 
 }  // namespace
 
-fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
+fit::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
     const termina_config::Config& structured_config) {
   TRACE_DURATION("termina_guest_manager", "Guest::GetBlockDevices");
 
@@ -304,7 +304,7 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
     // Use a file opened with MODE_TYPE_BLOCK_DEVICE
     auto handle = GetFxfsPartition(kBlockFileStatefulImage, stateful_image_size_bytes);
     if (handle.is_error()) {
-      return fitx::error("Failed to open or create stateful Fxfs file / block device");
+      return fit::error("Failed to open or create stateful Fxfs file / block device");
     }
     stateful_spec.client = handle->TakeChannel();
     stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
@@ -313,7 +313,7 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
     // FVM
     auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size_bytes);
     if (handle.is_error()) {
-      return fitx::error("Failed to find or allocate a partition");
+      return fit::error("Failed to find or allocate a partition");
     }
     stateful_spec.client = handle->TakeChannel();
     stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
@@ -322,14 +322,14 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
     // Simple files.
     auto handle = GetPartition(kFileStatefulImage);
     if (handle.is_error()) {
-      return fitx::error("Failed to open or create stateful file");
+      return fit::error("Failed to open or create stateful file");
     }
 
     auto ptr = handle->BindSync();
     fuchsia::io::File2_Resize_Result resize_result;
     zx_status_t status = ptr->Resize(stateful_image_size_bytes, &resize_result);
     if (status != ZX_OK || resize_result.is_err()) {
-      return fitx::error("Failed resize stateful file");
+      return fit::error("Failed resize stateful file");
     }
 
     stateful_spec.client = ptr.Unbind().TakeChannel();
@@ -352,7 +352,7 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
     });
   }
 
-  return fitx::success(std::move(devices));
+  return fit::success(std::move(devices));
 }
 
 void DropDevNamespace() {

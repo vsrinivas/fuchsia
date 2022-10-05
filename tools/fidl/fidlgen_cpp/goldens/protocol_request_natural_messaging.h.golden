@@ -185,9 +185,9 @@ namespace test_protocolrequest {
 }  // namespace test_protocolrequest
 
 template <>
-class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildResponse> {
+class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final : public ::fit::result<::fidl::Error, ::test_protocolrequest::ParentGetChildResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocolrequest::ParentGetChildResponse>::result;
 
  protected:
   Result() = default;
@@ -208,9 +208,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocolrequest::
 };
 
 template <>
-class ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestResponse> {
+class ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> final : public ::fit::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestResponse>::result;
 
  protected:
   Result() = default;
@@ -224,9 +224,9 @@ class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent> final 
 
   ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChildRequest> GetChildRequest() const;
 
-  ::fitx::result<::fidl::Error> TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const;
+  ::fit::result<::fidl::Error> TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const;
 
-  ::fitx::result<::fidl::Error> TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request) const;
+  ::fit::result<::fidl::Error> TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request) const;
 };
 namespace test_protocolrequest {
 
@@ -244,9 +244,9 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent> fi
 
   ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> GetChildRequest();
 
-  ::fitx::result<::fidl::Error> TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request);
+  ::fit::result<::fidl::Error> TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request);
 
-  ::fitx::result<::fidl::Error> TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request);
+  ::fit::result<::fidl::Error> TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> _client_end() const {

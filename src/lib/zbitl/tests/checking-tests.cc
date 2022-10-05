@@ -7,11 +7,11 @@
 
 #include <gtest/gtest.h>
 
-// Meant for fitx::result<std::string_view>.
+// Meant for fit::result<std::string_view>.
 #define EXPECT_IS_OK(result) \
   EXPECT_TRUE(result.is_ok()) << "unexpected error: " << result.error_value().data()
 #define EXPECT_IS_ERROR(result) EXPECT_TRUE(result.is_error())
-// Meant for fitx::result<zbitl::View::Error>.
+// Meant for fit::result<zbitl::View::Error>.
 #define EXPECT_VIEW_IS_OK(result) \
   EXPECT_TRUE(result.is_ok()) << "unexpected error: " << result.error_value().zbi_error
 

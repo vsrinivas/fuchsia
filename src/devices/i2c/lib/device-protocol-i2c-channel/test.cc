@@ -104,7 +104,7 @@ class I2cDevice : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
       *stop_it++ = transaction.has_stop() ? transaction.stop() : false;
     }
 
-    completer.Reply(::fitx::ok(response.get()));
+    completer.Reply(::fit::ok(response.get()));
   }
 
   const std::vector<uint8_t>& tx_data() const { return tx_data_; }

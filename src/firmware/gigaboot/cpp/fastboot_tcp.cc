@@ -4,7 +4,7 @@
 
 #include "fastboot_tcp.h"
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <stdio.h>
 
 #include "fastboot.h"

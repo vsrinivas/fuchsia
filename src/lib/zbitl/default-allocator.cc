@@ -10,11 +10,11 @@
 namespace zbitl {
 namespace decompress {
 
-fitx::result<std::string_view, std::unique_ptr<std::byte[]>> DefaultAllocator(size_t bytes) {
+fit::result<std::string_view, std::unique_ptr<std::byte[]>> DefaultAllocator(size_t bytes) {
   if (auto ptr = std::make_unique<std::byte[]>(bytes)) {
-    return fitx::ok(std::move(ptr));
+    return fit::ok(std::move(ptr));
   }
-  return fitx::error{"out of memory"};
+  return fit::error{"out of memory"};
 }
 
 }  // namespace decompress

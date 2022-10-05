@@ -18,7 +18,7 @@
 #include "lib/async/default.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fit/defer.h"
-#include "lib/fitx/result.h"
+#include "lib/fit/result.h"
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace component {
@@ -73,17 +73,17 @@ std::unique_ptr<CrashIntrospector::CrashMonitor> CrashIntrospector::ExtractMonit
   return obj;
 }
 
-fitx::result<bool, fuchsia::sys::internal::SourceIdentity> CrashIntrospector::RemoveThreadFromCache(
+fit::result<bool, fuchsia::sys::internal::SourceIdentity> CrashIntrospector::RemoveThreadFromCache(
     zx_koid_t thread_koid) {
   auto it = thread_cache_.find(thread_koid);
   if (it == thread_cache_.end()) {
-    return fitx::error(false);
+    return fit::error(false);
   }
   auto obj = std::move(it->second);
   // already removed, cancel auto removal task if pending
   obj.first->Cancel();
   thread_cache_.erase(it);
-  return fitx::ok(std::move(obj.second));
+  return fit::ok(std::move(obj.second));
 }
 
 void CrashIntrospector::AddThreadToCache(

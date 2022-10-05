@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_LIB_CODE_PATCHING_INCLUDE_LIB_CODE_PATCHING_CODE_PATCHING_H_
 
 #include <lib/arch/cache.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zbitl/items/bootfs.h>
 #include <stdio.h>
 #include <zircon/assert.h>
@@ -71,14 +71,14 @@ class Patcher {
 
   // Initializes the Patcher. The provided directory namespace must be
   // nonempty. Must be called before any other method.
-  fitx::result<Error> Init(Bootfs bootfs, ktl::string_view directory);
+  fit::result<Error> Init(Bootfs bootfs, ktl::string_view directory);
 
   // The associated patch directives.
   ktl::span<const Directive> patches() const { return patches_; }
 
   // Replaces a range of instructions with the given patch alternative.
-  fitx::result<Error> PatchWithAlternative(ktl::span<ktl::byte> instructions,
-                                           ktl::string_view alternative);
+  fit::result<Error> PatchWithAlternative(ktl::span<ktl::byte> instructions,
+                                          ktl::string_view alternative);
 
   // Overwrites a range of instuctions with the minimal number of `nop`
   // instructions.
@@ -91,7 +91,7 @@ class Patcher {
   void Commit() { sync_ctx_ = {}; }
 
  private:
-  fitx::result<Error, Bytes> GetPatchAlternative(ktl::string_view name);
+  fit::result<Error, Bytes> GetPatchAlternative(ktl::string_view name);
 
   void PrepareToSync(ktl::span<ktl::byte> instructions) {
     sync_ctx_.SyncRange(reinterpret_cast<uintptr_t>(instructions.data()), instructions.size());

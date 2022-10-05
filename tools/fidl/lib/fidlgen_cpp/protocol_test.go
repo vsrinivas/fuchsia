@@ -130,7 +130,7 @@ func TestNaturalArgumentRenderingSendPath(t *testing.T) {
 			desc:          "domain error empty struct response",
 			fidl:          "closed protocol P { strict Method() -> (struct {}) error int32; };",
 			actualChooser: func(p *Protocol) string { return p.Methods[0].NaturalResponseArg("r") },
-			expected:      "const ::fidl::Response<::example::P::Method>& r", // fitx::result<int32_t>
+			expected:      "const ::fidl::Response<::example::P::Method>& r", // fit::result<int32_t>
 		},
 		{
 			desc:          "value event",

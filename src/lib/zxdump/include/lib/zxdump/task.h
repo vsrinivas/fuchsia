@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZXDUMP_INCLUDE_LIB_ZXDUMP_TASK_H_
 #define SRC_LIB_ZXDUMP_INCLUDE_LIB_ZXDUMP_TASK_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/debug.h>
 
@@ -128,11 +128,11 @@ class TaskHolder {
   // `read_memory` is false, state will be trimmed after reading in all the
   // notes so less memory is used and the file descriptor is never kept open;
   // but read_memory calls will always fail with ZX_ERR_NOT_SUPPORTED.
-  fitx::result<Error> Insert(fbl::unique_fd fd, bool read_memory = true);
+  fit::result<Error> Insert(fbl::unique_fd fd, bool read_memory = true);
 
   // Insert a live task (job or process).  Live threads cannot be inserted
   // alone, only their containing process.
-  fitx::result<Error, std::reference_wrapper<Task>> Insert(LiveTask task);
+  fit::result<Error, std::reference_wrapper<Task>> Insert(LiveTask task);
 
   // Yields the current root job.  If all tasks in the eye of the TaskHolder
   // form a unified tree, this returns the actual root job in that tree.
@@ -193,22 +193,22 @@ class Task {
   // This is provided for parity with zx::object::get_child, but just using
   // Process::threads, Job::children, or Job::processes is much more convenient
   // for iterating through the lists reported by get_info.
-  fitx::result<Error, std::reference_wrapper<Task>> get_child(zx_koid_t koid);
+  fit::result<Error, std::reference_wrapper<Task>> get_child(zx_koid_t koid);
 
   // Find a task by KOID: this task or a descendent task.
-  fitx::result<Error, std::reference_wrapper<Task>> find(zx_koid_t koid);
+  fit::result<Error, std::reference_wrapper<Task>> find(zx_koid_t koid);
 
   // This gets the full info block for this topic, whatever its size.  Note the
   // data is not necessarily aligned in memory, so it can't be safely accessed
   // with reinterpret_cast.
-  fitx::result<Error, ByteView> get_info(zx_object_info_topic_t topic, size_t record_size = 0);
+  fit::result<Error, ByteView> get_info(zx_object_info_topic_t topic, size_t record_size = 0);
 
   // Get statically-typed info for a topic chosen at a compile time.  Some
   // types return a single `zx_info_*_t` object.  Others return a span of const
   // type that points into storage permanently cached for the lifetime of the
   // containing TaskHolder.  See <lib/zxdump/types.h> for topic->type mappings.
   template <zx_object_info_topic_t Topic>
-  fitx::result<Error, InfoTraitsType<Topic>> get_info() {
+  fit::result<Error, InfoTraitsType<Topic>> get_info() {
     using Info = InfoTraitsType<Topic>;
     if constexpr (kIsSpan<Info>) {
       using Element = typename RemoveSpan<Info>::type;
@@ -216,7 +216,7 @@ class Task {
       if (result.is_error()) {
         return result.take_error();
       }
-      return fitx::ok(Info{
+      return fit::ok(Info{
           reinterpret_cast<Element*>(result.value().data()),
           result.value().size() / sizeof(Element),
       });
@@ -228,22 +228,22 @@ class Task {
       ByteView bytes = result.value();
       Info data;
       if (bytes.size() < sizeof(data)) {
-        return fitx::error(Error{"truncated info note", ZX_ERR_NOT_SUPPORTED});
+        return fit::error(Error{"truncated info note", ZX_ERR_NOT_SUPPORTED});
       }
       memcpy(&data, bytes.data(), sizeof(data));
-      return fitx::ok(data);
+      return fit::ok(data);
     }
   }
 
   // This gets the property, whatever its size.  Note the data is not
   // necessarily aligned in memory, so it can't be safely accessed with
   // reinterpret_cast.
-  fitx::result<Error, ByteView> get_property(uint32_t property);
+  fit::result<Error, ByteView> get_property(uint32_t property);
 
   // Get a statically-typed property chosen at compile time.
   // See <lib/zxdump/types.h> for property->type mappings.
   template <uint32_t Property>
-  fitx::result<Error, PropertyTraitsType<Property>> get_property() {
+  fit::result<Error, PropertyTraitsType<Property>> get_property() {
     auto result = get_property(Property);
     if (result.is_error()) {
       return result.take_error();
@@ -251,10 +251,10 @@ class Task {
     ByteView bytes = result.value();
     PropertyTraitsType<Property> data;
     if (bytes.size() < sizeof(data)) {
-      return fitx::error(Error{"truncated property note", ZX_ERR_NOT_SUPPORTED});
+      return fit::error(Error{"truncated property note", ZX_ERR_NOT_SUPPORTED});
     }
     memcpy(&data, bytes.data(), sizeof(data));
-    return fitx::ok(data);
+    return fit::ok(data);
   }
 
   // Turn a live task into a postmortem task.  The postmortem task holds only
@@ -281,9 +281,9 @@ class Task {
   std::byte* GetBuffer(size_t size);
   void TakeBuffer(std::unique_ptr<std::byte[]> buffer);
 
-  fitx::result<Error, ByteView> get_info_aligned(zx_object_info_topic_t topic, size_t record_size,
-                                                 size_t align);
-  fitx::result<Error, ByteView> GetSuperrootInfo(zx_object_info_topic_t topic);
+  fit::result<Error, ByteView> get_info_aligned(zx_object_info_topic_t topic, size_t record_size,
+                                                size_t align);
+  fit::result<Error, ByteView> GetSuperrootInfo(zx_object_info_topic_t topic);
 
   // A plain reference would make the type not movable.
   std::reference_wrapper<TaskHolder::JobTree> tree_;
@@ -301,7 +301,7 @@ class Thread : public Task {
 
   ~Thread();
 
-  fitx::result<Error, ByteView> read_state(zx_thread_state_topic_t topic);
+  fit::result<Error, ByteView> read_state(zx_thread_state_topic_t topic);
 
  private:
   friend TaskHolder::JobTree;
@@ -325,10 +325,10 @@ class Process : public Task {
   // and then get_child on each KOID, but pre-cached.  Note the returned map is
   // not const so the Thread references can be non-const, but the caller must
   // not modify the map itself.
-  fitx::result<Error, std::reference_wrapper<ThreadMap>> threads();
+  fit::result<Error, std::reference_wrapper<ThreadMap>> threads();
 
   // Find a task by KOID: this process or one of its threads.
-  fitx::result<Error, std::reference_wrapper<Task>> find(zx_koid_t koid);
+  fit::result<Error, std::reference_wrapper<Task>> find(zx_koid_t koid);
 
  private:
   friend TaskHolder::JobTree;
@@ -358,30 +358,30 @@ class Job : public Task {
   // then get_child on each KOID, but pre-cached.  Note the returned map is not
   // const so the Job references can be non-const, but the caller must not
   // modify the map itself.
-  fitx::result<Error, std::reference_wrapper<JobMap>> children();
+  fit::result<Error, std::reference_wrapper<JobMap>> children();
 
   // This is the same as what you'd get from get_info<ZX_INFO_JOB_PROCESSES>
   // and then get_child on each KOID, but pre-cached.  Note the returned map is
   // not const so the Process references can be non-const, but the caller must
   // not modify the map itself.
-  fitx::result<Error, std::reference_wrapper<ProcessMap>> processes();
+  fit::result<Error, std::reference_wrapper<ProcessMap>> processes();
 
   // Find a task by KOID: this task or a descendent task.
-  fitx::result<Error, std::reference_wrapper<Task>> find(zx_koid_t koid);
+  fit::result<Error, std::reference_wrapper<Task>> find(zx_koid_t koid);
 
  private:
   friend TaskHolder::JobTree;
 
   using Task::Task;
 
-  fitx::result<Error, ByteView> GetSuperrootInfo(zx_object_info_topic_t topic);
+  fit::result<Error, ByteView> GetSuperrootInfo(zx_object_info_topic_t topic);
 
   std::map<zx_koid_t, Job> children_;
   std::map<zx_koid_t, Process> processes_;
 };
 
 // Get the live root job of the running system, e.g. for TaskHolder::Insert.
-fitx::result<Error, LiveTask> GetRootJob();
+fit::result<Error, LiveTask> GetRootJob();
 
 }  // namespace zxdump
 

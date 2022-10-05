@@ -10,14 +10,14 @@
 #include <phys/efi/main.h>
 #include <phys/efi/protocol.h>
 
-fitx::result<efi_status, efi_handle> EfiOpenProtocol(efi_handle handle, const efi_guid& guid) {
+fit::result<efi_status, efi_handle> EfiOpenProtocol(efi_handle handle, const efi_guid& guid) {
   void* ptr = nullptr;
   efi_status status = gEfiSystemTable->BootServices->OpenProtocol(
       handle, &guid, &ptr, gEfiImageHandle, nullptr, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
   if (status != EFI_SUCCESS) {
-    return fitx::error{status};
+    return fit::error{status};
   }
-  return fitx::ok(ptr);
+  return fit::ok(ptr);
 }
 
 void EfiCloseProtocol(const efi_guid& guid, efi_handle protocol) {

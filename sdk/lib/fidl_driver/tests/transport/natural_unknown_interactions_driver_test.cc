@@ -369,9 +369,9 @@ struct ResponseCompleter {
   zx::status<T> WaitForResponse() const {
     auto status = inner_->completion.Wait();
     if (status != ZX_OK) {
-      return fitx::error(status);
+      return fit::error(status);
     }
-    return fitx::ok(std::move(inner_->response.value()));
+    return fit::ok(std::move(inner_->response.value()));
   }
 
  private:
@@ -475,7 +475,7 @@ std::array<uint8_t, sizeof(fidl_message_header_t)> MakeMessage(
 TEST_F(UnknownInteractions, OneWayStrictAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fitx::result<fidl::Error>> response;
+  ResponseCompleter<fit::result<fidl::Error>> response;
   WithAsyncClientBlocking([response](auto& client) { response.Signal(client->StrictOneWay()); });
   auto result = response.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
@@ -491,7 +491,7 @@ TEST_F(UnknownInteractions, OneWayStrictAsyncSend) {
 TEST_F(UnknownInteractions, OneWayFlexibleAsyncSend) {
   auto server = TakeServerChannel();
 
-  ResponseCompleter<fitx::result<fidl::Error>> response;
+  ResponseCompleter<fit::result<fidl::Error>> response;
   WithAsyncClientBlocking([response](auto& client) { response.Signal(client->FlexibleOneWay()); });
   auto result = response.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
@@ -1021,7 +1021,7 @@ TEST_F(UnknownInteractions, StrictTwoWayErrResponse) {
   class Server : public UnknownInteractionsServerBase {
     void StrictTwoWayErr(StrictTwoWayErrRequest& request,
                          StrictTwoWayErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::ok());
+      completer.Reply(fit::ok());
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1107,7 +1107,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::ok());
+      completer.Reply(fit::ok());
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1128,7 +1128,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::error(3203));
+      completer.Reply(fit::error(3203));
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1151,7 +1151,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
     void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
                                  FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
       completer.Reply(
-          fitx::ok(::test::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse(
+          fit::ok(::test::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse(
               {.some_field = 42})));
     }
   };
@@ -1174,7 +1174,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponseError) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
                                  FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::error(3203));
+      completer.Reply(fit::error(3203));
     }
   };
   BindServer(std::make_unique<Server>());

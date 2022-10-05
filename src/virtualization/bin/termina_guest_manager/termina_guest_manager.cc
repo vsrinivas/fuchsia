@@ -52,7 +52,7 @@ TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
       });
 }
 
-fitx::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGuestConfig() {
+fit::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGuestConfig() {
   TRACE_DURATION("termina_guest_manager", "TerminaGuestManager::GetDefaultGuestConfig");
 
   auto base_config = GuestManager::GetDefaultGuestConfig();
@@ -63,7 +63,7 @@ fitx::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGues
   auto block_devices_result = GetBlockDevices(structured_config_);
   if (block_devices_result.is_error()) {
     FX_LOGS(ERROR) << "Failed to option block devices: " << block_devices_result.error_value();
-    return fitx::error(GuestManagerError::BAD_CONFIG);
+    return fit::error(GuestManagerError::BAD_CONFIG);
   }
 
   // Drop /dev from our local namespace. We no longer need this capability so we go ahead and
@@ -83,7 +83,7 @@ fitx::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGues
   // Add the vsock listeners for gRPC services.
   *termina_config.mutable_vsock_listeners() = guest_->take_vsock_listeners();
 
-  return fitx::ok(guest_config::MergeConfigs(std::move(*base_config), std::move(termina_config)));
+  return fit::ok(guest_config::MergeConfigs(std::move(*base_config), std::move(termina_config)));
 }
 
 void TerminaGuestManager::StartGuest() {

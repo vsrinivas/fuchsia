@@ -13,7 +13,7 @@
 namespace virtual_audio {
 
 // static
-fitx::result<fuchsia_virtualaudio::Error, std::shared_ptr<VirtualAudioDeviceImpl>>
+fit::result<fuchsia_virtualaudio::Error, std::shared_ptr<VirtualAudioDeviceImpl>>
 VirtualAudioDeviceImpl::Create(const Config& cfg,
                                fidl::ServerEnd<fuchsia_virtualaudio::Device> server,
                                zx_device_t* dev_node, async_dispatcher_t* fidl_dispatcher) {
@@ -44,10 +44,10 @@ VirtualAudioDeviceImpl::Create(const Config& cfg,
   // Ensure the stream was created successfully.
   if (!device->stream_) {
     zxlogf(ERROR, "Device creation failed with unspecified internal error");
-    return fitx::error(fuchsia_virtualaudio::Error::kInternal);
+    return fit::error(fuchsia_virtualaudio::Error::kInternal);
   }
 
-  return fitx::ok(device);
+  return fit::ok(device);
 }
 
 VirtualAudioDeviceImpl::VirtualAudioDeviceImpl(bool is_input, async_dispatcher_t* fidl_dispatcher)

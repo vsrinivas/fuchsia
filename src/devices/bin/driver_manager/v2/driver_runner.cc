@@ -170,12 +170,12 @@ void DriverRunner::BindNodesForDeviceGroups() { TryBindAllOrphansUntracked(); }
 void DriverRunner::CreateDeviceGroup(CreateDeviceGroupRequestView request,
                                      CreateDeviceGroupCompleter::Sync& completer) {
   if (!request->has_topological_path() || !request->has_nodes()) {
-    completer.Reply(fitx::error(fdf::DeviceGroupError::kMissingArgs));
+    completer.Reply(fit::error(fdf::DeviceGroupError::kMissingArgs));
     return;
   }
 
   if (request->nodes().empty()) {
-    completer.Reply(fitx::error(fdf::DeviceGroupError::kEmptyNodes));
+    completer.Reply(fit::error(fdf::DeviceGroupError::kEmptyNodes));
     return;
   }
 

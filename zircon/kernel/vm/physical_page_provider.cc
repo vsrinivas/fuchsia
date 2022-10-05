@@ -7,7 +7,7 @@
 #include "include/vm/physical_page_provider.h"
 
 #include <lib/counters.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <trace.h>
 
 #include <kernel/range_check.h>

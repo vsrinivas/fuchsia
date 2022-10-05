@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_DEV_CORESIGHT_INCLUDE_DEV_CORESIGHT_ROM_TABLE_H_
 #define ZIRCON_KERNEL_DEV_CORESIGHT_INCLUDE_DEV_CORESIGHT_ROM_TABLE_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <zircon/assert.h>
 
 #include <optional>
@@ -108,8 +108,8 @@ class RomTable {
   // is left to the caller. The offset must at least be
   // `kMininumComponentSize`, which is the size of the base table proper.
   template <typename IoProvider, typename ComponentCallback>
-  static fitx::result<WalkError> Walk(IoProvider io, uint32_t max_offset,
-                                      ComponentCallback&& callback) {
+  static fit::result<WalkError> Walk(IoProvider io, uint32_t max_offset,
+                                     ComponentCallback&& callback) {
     static_assert(std::is_invocable_v<ComponentCallback, uint32_t>);
     ZX_ASSERT(max_offset >= kMinimumComponentSize);
     return WalkFrom(io, max_offset, callback, 0);
@@ -163,10 +163,10 @@ class RomTable {
   };
 
   template <typename IoProvider, typename ComponentCallback>
-  static fitx::result<WalkError> WalkFrom(IoProvider root_io, uint32_t max_offset,
-                                          ComponentCallback&& callback, uint32_t offset) {
+  static fit::result<WalkError> WalkFrom(IoProvider root_io, uint32_t max_offset,
+                                         ComponentCallback&& callback, uint32_t offset) {
     if (max_offset - kMinimumComponentSize < offset) {
-      return fitx::error(WalkError{"component exceeds aperture", offset});
+      return fit::error(WalkError{"component exceeds aperture", offset});
     }
 
     // Treats I/O as rooted at the current offset (instead of rooted at the base ROM table, which
@@ -194,15 +194,15 @@ class RomTable {
             max_entries = kMax0x9Rom64BitEntries;
             break;
           default:
-            return fitx::error(WalkError{"bad format value", offset});
+            return fit::error(WalkError{"bad format value", offset});
         }
       }
 
       for (uint32_t i = 0; i < max_entries; ++i) {
-        fitx::result<std::string_view, EntryContents> read_entry_result =
+        fit::result<std::string_view, EntryContents> read_entry_result =
             ReadEntry(io, i, classid, format);
         if (read_entry_result.is_error()) {
-          return fitx::error(WalkError{read_entry_result.error_value(), offset});
+          return fit::error(WalkError{read_entry_result.error_value(), offset});
         }
         EntryContents contents = read_entry_result.value();
         if (contents.value == 0) {
@@ -214,32 +214,32 @@ class RomTable {
         // [CS] D5.4
         // the offset provided by the ROM table entry requires a shift of 12 bits.
         uint32_t new_offset = offset + (contents.offset << 12);
-        if (fitx::result<WalkError> walk_result =
+        if (fit::result<WalkError> walk_result =
                 WalkFrom(root_io, max_offset, callback, new_offset);
             walk_result.is_error()) {
           return walk_result;
         }
       }
-      return fitx::ok();
+      return fit::ok();
     }
 
     // There should be a ROM table at offset zero.
     if (offset == 0) {
-      return fitx::error{WalkError{"not a ROM table", 0}};
+      return fit::error{WalkError{"not a ROM table", 0}};
     }
 
     std::forward<ComponentCallback>(callback)(offset);
-    return fitx::ok();
+    return fit::ok();
   }
 
   static bool IsTable(ClassId classid, uint16_t architect, uint16_t archid);
 
   template <typename IoProvider>
-  static fitx::result<std::string_view, EntryContents> ReadEntry(
+  static fit::result<std::string_view, EntryContents> ReadEntry(
       IoProvider io, uint32_t N, ClassId classid, std::optional<Class0x9EntryFormat> format) {
     if (classid == ClassId::k0x1RomTable) {
       auto entry = Class0x1RomEntry::Get(N).ReadFrom(&io);
-      return fitx::ok(EntryContents{
+      return fit::ok(EntryContents{
           .value = entry.reg_value(),
           .offset = static_cast<uint32_t>(entry.offset()),
           .present = static_cast<bool>(entry.present()),
@@ -253,7 +253,7 @@ class RomTable {
     switch (*format) {
       case Class0x9EntryFormat::k32Bit: {
         auto entry = Class0x9Rom32BitEntry::Get(N).ReadFrom(&io);
-        return fitx::ok(EntryContents{
+        return fit::ok(EntryContents{
             .value = entry.reg_value(),
             .offset = static_cast<uint32_t>(entry.offset()),
             // [CS] D7.5.17: only a value of 0b11 for present() signifies presence.
@@ -264,18 +264,18 @@ class RomTable {
         auto entry = Class0x9Rom64BitEntry::Get(N).ReadFrom(&io);
         uint64_t u32_offset = entry.offset() & 0xffffffff;
         if (entry.offset() != u32_offset) {
-          return fitx::error(
+          return fit::error(
               "a simplifying assumption is made that a ROM table entry's offset only contains 32 "
               "bits of information. If this is no longer true, please file a bug.");
         }
-        return fitx::ok(EntryContents{
+        return fit::ok(EntryContents{
             .value = entry.reg_value(),
             .offset = static_cast<uint32_t>(u32_offset),
             .present = static_cast<bool>(entry.present() & 0b11),
         });
       }
     }
-    return fitx::error("bad format value");
+    return fit::error("bad format value");
   }
 };
 

@@ -4,7 +4,7 @@
 
 #include "src/lib/json_parser/rapidjson_validation.h"
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 
@@ -21,19 +21,19 @@ std::string InitSchemaError::ToString() const {
   return s.str();
 }
 
-fitx::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(std::string_view json) {
+fit::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(std::string_view json) {
   rapidjson::Document schema_document;
   if (schema_document.Parse(json.data(), json.size()).HasParseError()) {
     auto offset = schema_document.GetErrorOffset();
     auto code = schema_document.GetParseError();
-    return fitx::error(InitSchemaError{.offset = offset, .code = code});
+    return fit::error(InitSchemaError{.offset = offset, .code = code});
   }
-  return fitx::ok(rapidjson::SchemaDocument(schema_document));
+  return fit::ok(rapidjson::SchemaDocument(schema_document));
 }
 
-fitx::result<std::string> ValidateSchema(const rapidjson::Value& value,
-                                         const rapidjson::SchemaDocument& schema,
-                                         std::string_view value_name) {
+fit::result<std::string> ValidateSchema(const rapidjson::Value& value,
+                                        const rapidjson::SchemaDocument& schema,
+                                        std::string_view value_name) {
   rapidjson::SchemaValidator validator(schema);
   if (!value.Accept(validator)) {
     rapidjson::StringBuffer uri_buffer;
@@ -46,9 +46,9 @@ fitx::result<std::string> ValidateSchema(const rapidjson::Value& value,
     }
     s << "at " << uri_buffer.GetString()
       << " , schema violation: " << validator.GetInvalidSchemaKeyword();
-    return fitx::error(s.str());
+    return fit::error(s.str());
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace json_parser

@@ -34,7 +34,7 @@ zx_library("zbitl") {
     # <lib/zbitl/items/bootfs.h> has #include <fbl/alloc_checker.h>.
     "//zircon/system/ulib/fbl:headers",
 
-    # <lib/zbitl/view.h> has #include <lib/fitx/result.h>.
+    # <lib/zbitl/view.h> has #include <lib/fit/result.h>.
     "//zircon/system/ulib/zxc:headers",
 
     # <lib/zbitl/efi.h> has #include <efi/protocol/file.h>.
@@ -82,7 +82,7 @@ source_set("internal.decompress-zstd") {
   public_deps = [
     "//sdk/lib/stdcompat",
 
-    # <lib/zbitl/decompress.h> has #include <lib/fitx/result.h>.
+    # <lib/zbitl/decompress.h> has #include <lib/fit/result.h>.
     "//zircon/system/ulib/zxc",
   ]
   include_dirs = [ "include" ]

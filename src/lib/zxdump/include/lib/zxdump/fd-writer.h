@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZXDUMP_INCLUDE_LIB_ZXDUMP_FD_WRITER_H_
 #define SRC_LIB_ZXDUMP_INCLUDE_LIB_ZXDUMP_FD_WRITER_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <sys/uio.h>
 
 #include <string_view>
@@ -51,16 +51,16 @@ class FdWriter {
   //
   // The returned callable object is valid for the lifetime of the FdWriter.
   auto AccumulateFragmentsCallback() {
-    return [this](size_t offset, ByteView data) -> fitx::result<error_type> {
+    return [this](size_t offset, ByteView data) -> fit::result<error_type> {
       Accumulate(offset, data);
-      return fitx::ok();
+      return fit::ok();
     };
   }
 
   // Call this after DumpHeaders makes all its calls to that callback, and
   // before calling the WriteCallback callback.  It returns the number of bytes
   // written out.
-  fitx::result<error_type, size_t> WriteFragments();
+  fit::result<error_type, size_t> WriteFragments();
 
   // Pass the result of this to zxdump::ProcessDump::DumpMemory or the like.
   // The callback makes direct writes.  It accepts an offset that advances over
@@ -69,7 +69,7 @@ class FdWriter {
   //
   // The returned callable object is valid for the lifetime of the FdWriter.
   auto WriteCallback() {
-    return [this](size_t offset, ByteView data) -> fitx::result<error_type> {
+    return [this](size_t offset, ByteView data) -> fit::result<error_type> {
       return Write(offset, data);
     };
   }
@@ -89,7 +89,7 @@ class FdWriter {
 
   // Directly write the data out, seeking or zero-padding ahead if there's a
   // gap from the last write to this offset.
-  fitx::result<error_type> Write(size_t offset, ByteView data);
+  fit::result<error_type> Write(size_t offset, ByteView data);
 
   Fragments fragments_;
   size_t total_ = 0;

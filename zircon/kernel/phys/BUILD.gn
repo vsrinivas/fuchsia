@@ -329,7 +329,7 @@ if (toolchain_environment == "kernel.phys" ||
       # allocation.h has #include <fbl/alloc_checker.h>.
       "//zircon/system/ulib/fbl",
 
-      # allocation.h has #include <lib/fitx/result.h>.
+      # allocation.h has #include <lib/fit/result.h>.
       "//zircon/system/ulib/zxc",
 
       # allocation.h has #include <lib/memalloc/range.h>
@@ -367,7 +367,7 @@ if (toolchain_environment == "kernel.phys" ||
       # zbitl-allocation.h has #include <lib/zbitl/storage-traits.h>.
       "//src/lib/zbitl",
 
-      # zbitl-allocation.h has #include <lib/fitx/result.h>.
+      # zbitl-allocation.h has #include <lib/fit/result.h>.
       "//zircon/system/ulib/zxc",
     ]
     public_configs = [ ":includes" ]

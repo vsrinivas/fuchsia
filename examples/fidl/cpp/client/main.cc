@@ -114,7 +114,7 @@ int main(int argc, const char** argv) {
   // [START one_way_natural]
   // [START one_way_natural_first_line]
   // Make a SendString one way call with natural types.
-  fitx::result<::fidl::Error> result = client->SendString({"hello"});
+  fit::result<::fidl::Error> result = client->SendString({"hello"});
   // [END one_way_natural_first_line]
   if (!result.is_ok()) {
     FX_LOGS(ERROR) << "SendString failed: " << result.error_value();

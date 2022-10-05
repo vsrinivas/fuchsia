@@ -283,7 +283,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add>(::fidl::internal::StatusFromResult(decoded)),
                                                                 arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
     if (decoded.is_ok()) {

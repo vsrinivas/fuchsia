@@ -21,7 +21,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> Send(const ::fidl::Request<::test_driveroneway::OneWay::Send>& request) const;
+  ::fit::result<::fidl::Error> Send(const ::fidl::Request<::test_driveroneway::OneWay::Send>& request) const;
 };
 namespace test_driveroneway {
 

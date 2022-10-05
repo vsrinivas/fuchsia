@@ -175,7 +175,7 @@ std::vector<debug_ipc::Module> ZirconProcessHandle::GetModules() const {
   return GetElfModulesForProcess(*this, dl_debug_addr);
 }
 
-fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandle::GetHandles()
+fit::result<debug::Status, std::vector<debug_ipc::InfoHandle>> ZirconProcessHandle::GetHandles()
     const {
   // Query the handle table size.
   size_t handles_actual = 0;
@@ -183,7 +183,7 @@ fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> ZirconProcessHan
   if (zx_status_t status =
           process_.get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, &handles_actual, &handles_avail);
       status != ZX_OK)
-    return fitx::error(debug::ZxStatus(status));
+    return fit::error(debug::ZxStatus(status));
 
   // We're technically racing with the program, so add some extra buffer in case the process has
   // opened more handles since the above query.
@@ -195,7 +195,7 @@ fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> ZirconProcessHan
                                              handles_avail * sizeof(zx_info_handle_extended_t),
                                              &handles_actual, &handles_avail);
       status != ZX_OK)
-    return fitx::error(debug::ZxStatus(status));
+    return fit::error(debug::ZxStatus(status));
   handles.resize(handles_actual);
 
   // Query the VMO table size.
@@ -204,7 +204,7 @@ fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> ZirconProcessHan
   if (zx_status_t status =
           process_.get_info(ZX_INFO_PROCESS_VMOS, nullptr, 0, &vmo_actual, &vmo_avail);
       status != ZX_OK)
-    return fitx::error(debug::ZxStatus(status));
+    return fit::error(debug::ZxStatus(status));
   vmo_avail += 64;  // Try to prevent races as above.
 
   // Read the VMO table.
@@ -213,7 +213,7 @@ fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> ZirconProcessHan
           process_.get_info(ZX_INFO_PROCESS_VMOS, vmos.data(), vmo_avail * sizeof(zx_info_vmo_t),
                             &vmo_actual, &vmo_avail);
       status != ZX_OK)
-    return fitx::error(debug::ZxStatus(status));
+    return fit::error(debug::ZxStatus(status));
   vmos.resize(vmo_actual);
 
   // Index VMOs by koid to allow merging below.
@@ -252,7 +252,7 @@ fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> ZirconProcessHan
     FillVmoInfo(vmo, dest.ext.vmo);
   }
 
-  return fitx::success(std::move(result));
+  return fit::success(std::move(result));
 }
 
 debug::Status ZirconProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,

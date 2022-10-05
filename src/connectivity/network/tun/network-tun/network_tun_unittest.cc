@@ -281,7 +281,7 @@ class SimpleClient {
     if (!session_result.ok()) {
       return session_result.status();
     }
-    const fitx::result<int32_t, ::fuchsia_hardware_network::wire::DeviceOpenSessionResponse*>&
+    const fit::result<int32_t, ::fuchsia_hardware_network::wire::DeviceOpenSessionResponse*>&
         result = session_result.value();
     if (result.is_error()) {
       return result.error_value();
@@ -987,7 +987,7 @@ TEST_F(TunTest, SimpleRxTx) {
   {
     fidl::WireResult read_frame_wire_result = tun->ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
-    const fitx::result<int32_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>&
+    const fit::result<int32_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>&
         read_frame_result = read_frame_wire_result.value();
     if (read_frame_result.is_error()) {
       ASSERT_STATUS(read_frame_result.error_value(), ZX_ERR_SHOULD_WAIT);
@@ -1007,7 +1007,7 @@ TEST_F(TunTest, SimpleRxTx) {
   {
     fidl::WireResult read_frame_wire_result = tun->ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
-    const fitx::result<int32_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>&
+    const fit::result<int32_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>&
         read_frame_result = read_frame_wire_result.value();
 
     if (read_frame_result.is_error()) {
@@ -1039,7 +1039,7 @@ TEST_F(TunTest, SimpleRxTx) {
     fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
-    const fitx::result<int32_t>& write_frame_result = write_frame_wire_result.value();
+    const fit::result<int32_t>& write_frame_result = write_frame_wire_result.value();
     if (write_frame_result.is_error()) {
       ASSERT_STATUS(write_frame_result.error_value(), ZX_ERR_SHOULD_WAIT);
       ASSERT_STATUS(
@@ -1065,7 +1065,7 @@ TEST_F(TunTest, SimpleRxTx) {
     fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
-    const fitx::result<int32_t>& write_frame_result = write_frame_wire_result.value();
+    const fit::result<int32_t>& write_frame_result = write_frame_wire_result.value();
     if (write_frame_result.is_error()) {
       GTEST_FAIL() << "WriteFrame failed: "
                    << zx_status_get_string(write_frame_result.error_value());
@@ -1351,7 +1351,7 @@ TEST_F(TunTest, RejectsMissingFrameFields) {
     fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
-    const fitx::result<int32_t>& write_frame_result = write_frame_wire_result.value();
+    const fit::result<int32_t>& write_frame_result = write_frame_wire_result.value();
     if (write_frame_result.is_error()) {
       ASSERT_STATUS(write_frame_result.error_value(), test.expect);
     } else {
@@ -1390,7 +1390,7 @@ TEST_F(TunTest, RejectsIfOffline) {
     fidl::WireResult write_frame_wire_result = tun->WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
-    const fitx::result<int32_t>& write_frame_result = write_frame_wire_result.value();
+    const fit::result<int32_t>& write_frame_result = write_frame_wire_result.value();
     if (write_frame_result.is_error()) {
       ASSERT_STATUS(write_frame_result.error_value(), ZX_ERR_BAD_STATE);
     } else {
@@ -1418,7 +1418,7 @@ TEST_F(TunTest, RejectsIfOffline) {
 
     fidl::WireResult read_frame_wire_result = tun->ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
-    const fitx::result<int32_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>&
+    const fit::result<int32_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>&
         read_frame_result = read_frame_wire_result.value();
     if (read_frame_result.is_error()) {
       GTEST_FAIL() << "ReadFrame failed: " << zx_status_get_string(read_frame_result.error_value());

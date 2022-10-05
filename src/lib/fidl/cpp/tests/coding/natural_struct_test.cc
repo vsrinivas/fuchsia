@@ -31,7 +31,7 @@ TEST(NaturalStruct, Decode) {
       ::fidl::internal::WireFormatMetadataForVersion(::fidl::internal::WireFormatVersion::kV2);
 
   // Perform decoding.
-  fitx::result result = ::fidl::Decode<test_types::CopyableStruct>(std::move(message), wire_format);
+  fit::result result = ::fidl::Decode<test_types::CopyableStruct>(std::move(message), wire_format);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
   test_types::CopyableStruct& obj = result.value();
@@ -70,7 +70,7 @@ TEST(NaturalStructWithHandle, Decode) {
       fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2);
 
   // Perform decoding.
-  fitx::result result = ::fidl::Decode<test_types::MoveOnlyStruct>(std::move(message), wire_format);
+  fit::result result = ::fidl::Decode<test_types::MoveOnlyStruct>(std::move(message), wire_format);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
   test_types::MoveOnlyStruct& obj = result.value();

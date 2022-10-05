@@ -112,7 +112,7 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
 
   const fidl::WireResult close_result = fidl::WireCall(endpoints->client)->Close();
   ASSERT_EQ(close_result.status(), ZX_OK);
-  const fitx::result close_response = close_result.value();
+  const fit::result close_response = close_result.value();
   ASSERT_TRUE(close_response.is_ok()) << close_response.error_value();
 }
 

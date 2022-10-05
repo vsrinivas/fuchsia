@@ -30,7 +30,7 @@
 #define LIB_FASYNC_CPP14 1
 #endif
 
-static_assert(LIB_FASYNC_CPP14_SUPPORTED, "C++14 is required for fitx.");
+static_assert(LIB_FASYNC_CPP14_SUPPORTED, "C++14 is required for fit.");
 
 // Language features
 #define LIB_FASYNC_inline_variables_VERSION 201606L

@@ -40,7 +40,7 @@ namespace internal {
 //
 // For a method without error syntax, the |Type| will be the return type of the
 // method specified in the FIDL file. For a method with error syntax, |Type|
-// will be a |fitx::result| of the error type specified in the FIDL file and a
+// will be a |fit::result| of the error type specified in the FIDL file and a
 // pointer to the return type (if the return type is not empty).
 template <typename FidlMethod>
 struct WireResultUnwrap;
@@ -63,7 +63,7 @@ struct TransactionalEvent;
 //
 // For a method without error syntax, the |WireResultUnwrapType| will be the
 // return type of the method specified in the FIDL file. For a method with error
-// syntax, |WireResultUnwrapType| will be a |fitx::result| of the error type
+// syntax, |WireResultUnwrapType| will be a |fit::result| of the error type
 // specified in the FIDL file and a pointer to the return type (if the return
 // type is not empty).
 template <typename FidlMethod>

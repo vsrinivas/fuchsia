@@ -74,17 +74,17 @@ TEST(Response, FromPayloadErrorSyntaxEmptyStructError) {
 }
 
 TEST(Response, InheritFromDomainObjectErrorSyntax) {
-  static_assert(cpp17::is_base_of_v<fitx::result<int32_t, test_types::FooResponse>,
+  static_assert(cpp17::is_base_of_v<fit::result<int32_t, test_types::FooResponse>,
                                     fidl::Response<test_types::ErrorSyntax::FooPayload>>);
-  static_assert(sizeof(fitx::result<int32_t, test_types::FooResponse>) ==
+  static_assert(sizeof(fit::result<int32_t, test_types::FooResponse>) ==
                     sizeof(fidl::Response<test_types::ErrorSyntax::FooPayload>),
                 "Message wrapper must not add any state");
 
-  static_assert(cpp17::is_base_of_v<fitx::result<int32_t>,
+  static_assert(cpp17::is_base_of_v<fit::result<int32_t>,
                                     fidl::Response<test_types::ErrorSyntax::EmptyPayload>>);
-  static_assert(sizeof(fitx::result<int32_t>) ==
-                    sizeof(fidl::Response<test_types::ErrorSyntax::EmptyPayload>),
-                "Message wrapper must not add any state");
+  static_assert(
+      sizeof(fit::result<int32_t>) == sizeof(fidl::Response<test_types::ErrorSyntax::EmptyPayload>),
+      "Message wrapper must not add any state");
 }
 
 TEST(Request, DefaultConstruction) {
@@ -167,15 +167,15 @@ TEST(Event, FromPayloadErrorSyntaxEmptyStructError) {
 }
 
 TEST(Event, InheritFromDomainObjectErrorSyntax) {
-  static_assert(cpp17::is_base_of_v<fitx::result<int32_t, test_types::FooEvent>,
+  static_assert(cpp17::is_base_of_v<fit::result<int32_t, test_types::FooEvent>,
                                     fidl::Event<test_types::ErrorSyntax::EventFooPayload>>);
-  static_assert(sizeof(fitx::result<int32_t, test_types::FooEvent>) ==
+  static_assert(sizeof(fit::result<int32_t, test_types::FooEvent>) ==
                     sizeof(fidl::Event<test_types::ErrorSyntax::EventFooPayload>),
                 "Message wrapper must not add any state");
 
-  static_assert(cpp17::is_base_of_v<fitx::result<int32_t>,
+  static_assert(cpp17::is_base_of_v<fit::result<int32_t>,
                                     fidl::Event<test_types::ErrorSyntax::EventEmptyPayload>>);
-  static_assert(sizeof(fitx::result<int32_t>) ==
+  static_assert(sizeof(fit::result<int32_t>) ==
                     sizeof(fidl::Event<test_types::ErrorSyntax::EventEmptyPayload>),
                 "Message wrapper must not add any state");
 }

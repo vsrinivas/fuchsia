@@ -6,7 +6,7 @@
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_BUFFER_COLLECTION_H_
 
 #include <fuchsia/images/cpp/fidl.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -26,7 +26,7 @@ class BufferCollectionInfo {
   //
   // TODO(fxbug.dev/48210): Make this an asynchronous call. This function is currently thread safe
   // as Allocator_Sync pointers are thread safe, but if this becomes async it may become unsafe.
-  static fitx::result<fitx::failed, BufferCollectionInfo> New(
+  static fit::result<fit::failed, BufferCollectionInfo> New(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator, escher::Escher* escher,
       BufferCollectionHandle buffer_collection_token);
 
@@ -58,7 +58,7 @@ class BufferCollectionInfo {
   vk::BufferCollectionFUCHSIA GetFuchsiaCollection() const { return buffer_collection_fuchsia_; }
 
   // TODO: deprecate along with Image.
-  fitx::result<fitx::failed, zx::vmo> GetVMO(uint32_t index);
+  fit::result<fit::failed, zx::vmo> GetVMO(uint32_t index);
 
   std::set<uint32_t>& ImageResourceIds() { return image_resource_ids_; }
 

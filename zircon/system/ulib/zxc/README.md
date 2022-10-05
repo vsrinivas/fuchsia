@@ -3,17 +3,17 @@
 ## Introduction
 
 ZXC is a library of C++ vocabulary types, providing fundamental C++ primitives
-that promote ergonomics, safety, and consistency. 
+that promote ergonomics, safety, and consistency.
 
 ## Vocabulary Types
 
 ZXC provides the following vocabulary types:
-* fitx::result: An efficient value-or-error result type.
-* zx::status: A specialization of `fitx::result` for `zx_status_t` errors.
+* fit::result: An efficient value-or-error result type.
+* zx::status: A specialization of `fit::result` for `zx_status_t` errors.
 
-### fitx::result<E, Ts...>
+### fit::result<E, Ts...>
 
-`fitx::result` is an efficient implementation of the general value-or-error
+`fit::result` is an efficient implementation of the general value-or-error
 result type pattern. The type supports returning either an error, or zero or one
 values from a function or method.
 
@@ -24,17 +24,17 @@ This type is designed to address the following goals:
 
 #### Basic Usage
 
-`fitx::result<E, T?>` may be used as the return type of a function or method.
+`fit::result<E, T?>` may be used as the return type of a function or method.
 The first template parameter `E` is the type to represent the error value. The
 optional template parameter `T` is zero or one types to represent the value to
 return on success. The value type may be empty, however, an error type is
 required.
 
 ```C++
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 // Define an error type and set of distinct error values. A success value is not
-// necessary as the error and value spaces of fitx::result are separate.
+// necessary as the error and value spaces of fit::result are separate.
 enum class Error {
   InvalidArgs,
   BufferNotAvailable,
@@ -47,21 +47,21 @@ struct BufferResult {
   uint8_t* const buffer;
   const size_t buffer_size;
 };
-fitx::result<Error, BufferResult> GetBuffer();
+fit::result<Error, BufferResult> GetBuffer();
 
-fitx::result<Error> FillBuffer(uint8_t* data, size_t size) {
+fit::result<Error> FillBuffer(uint8_t* data, size_t size) {
   if (data == nullptr || size == 0) {
-    return fitx::as_error(Error::InvalidArgs);
+    return fit::as_error(Error::InvalidArgs);
   }
-  
+
   auto result = GetBuffer()
   if (result.is_ok()) {
     auto [buffer, buffer_size] = result.value();
     if (size > buffer_size) {
-      return fitx::as_error(Error::RequestTooLarge);
+      return fit::as_error(Error::RequestTooLarge);
     }
     std::memcpy(buffer, data, size);
-    return fitx::ok();
+    return fit::ok();
   } else {
     return result.take_error();
   }
@@ -70,7 +70,7 @@ fitx::result<Error> FillBuffer(uint8_t* data, size_t size) {
 
 #### Returning Values
 
-`fitx::result` emphasizes ease of use when returning values or otherwise
+`fit::result` emphasizes ease of use when returning values or otherwise
 signaling success. The result type provides a number of constructors, most of
 which are implicit, to make returning values simple and terse.
 
@@ -85,81 +85,81 @@ value type `T`, if any. That is, it is only trivially constructible when all of
 the supplied types are trivially constructible and it is only copy constructible
 when all of the supplied types are copy constructible.
 
-##### fitx::success
+##### fit::success
 
-`fitx::result<E, T?>` is implicitly constructible from `fitx::success<U?>`, when
+`fit::result<E, T?>` is implicitly constructible from `fit::success<U?>`, when
 `T` is constructible from `U` or both are emtpy.
 
-`fitx::ok(U?)` is a utility function that deduces `U` from the given argument, if
+`fit::ok(U?)` is a utility function that deduces `U` from the given argument, if
 any.
 
-`fitx::success` is not permitted as the error type of `fitx::result`.
+`fit::success` is not permitted as the error type of `fit::result`.
 
 ```C++
-fitx::result<Error> CheckBounds(size_t size) {
+fit::result<Error> CheckBounds(size_t size) {
   if (size > kSizeLimit) {
-    return fitx::as_error(Error::TooBig);
+    return fit::as_error(Error::TooBig);
   }
-  return fitx::ok();
+  return fit::ok();
 }
 ```
 
-##### fitx::failed
+##### fit::failed
 
-The special sentinel type `fitx::failed` may be used as the error type when an
-elaborated (enumerated) error is not necessary. When `fitx::failed` is used as
-the error type, the result type is implicitly constructible from `fitx::failed`.
+The special sentinel type `fit::failed` may be used as the error type when an
+elaborated (enumerated) error is not necessary. When `fit::failed` is used as
+the error type, the result type is implicitly constructible from `fit::failed`.
 
-`fitx::failed` is not permitted as a value type of `fitx::result`.
+`fit::failed` is not permitted as a value type of `fit::result`.
 
 ```C++
-fitx::result<fitx::failed> CheckBounds(size_t size) {
+fit::result<fit::failed> CheckBounds(size_t size) {
   if (size > kSizeLimit) {
-    return fitx::failed();
+    return fit::failed();
   }
-  return fitx::ok();
+  return fit::ok();
 }
 ```
 
-##### fitx::error<F>
+##### fit::error<F>
 
 The result type is implicitly constructible from any instance of
 error space of the result, regardless of which types are used.
 
 ```C++
-fitx::result<std::string, size_t> StringLength(const char* string) {
+fit::result<std::string, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    // Uses the deduction guide to deduce fitx::error<const char*>. The
-    // fitx::result error constructor is permitted because std::string is
+    // Uses the deduction guide to deduce fit::error<const char*>. The
+    // fit::result error constructor is permitted because std::string is
     // constructible from const char*.
-    return fitx::error("String may not be nullptr!");
+    return fit::error("String may not be nullptr!");
   }
-  return fitx::ok(strlen(string));
+  return fit::ok(strlen(string));
 }
 ```
 
-##### fitx::result<F, U?> with Compatible Error and Value
+##### fit::result<F, U?> with Compatible Error and Value
 
-The result `fitx::result<E, T?>` type is implicitly constructible from any other
-`fitx::result<F, U?>`, where the error type `E` is constructible from the error
+The result `fit::result<E, T?>` type is implicitly constructible from any other
+`fit::result<F, U?>`, where the error type `E` is constructible from the error
 type `F` and `T` is constructible from `U`, if any.
 
 ```C++
-fitx::result<const char*, const char*> GetMessageString();
+fit::result<const char*, const char*> GetMessageString();
 
-fitx::result<std::string, std::string> GetMessage() {
+fit::result<std::string, std::string> GetMessage() {
   return GetMessageString();
 }
 ```
 
 #### Discriminating Errors from Values
 
-`fitx::result` has two predicate methods, `is_ok()` and `is_error()`, that
+`fit::result` has two predicate methods, `is_ok()` and `is_error()`, that
 determine whether a result represents success and contains zero or one values,
 or represents an error and contains an error value, respectively.
 
 ```C++
-fitx::result<const char*, size_t> GetSize();
+fit::result<const char*, size_t> GetSize();
 
 void Example() {
   auto result = GetSize();
@@ -174,16 +174,16 @@ void Example() {
 
 #### Accessing Values
 
-`fitx::result` supports several methods to access the value from a successful
+`fit::result` supports several methods to access the value from a successful
 result.
 
-##### fitx:result::value() Accessor Methods
+##### fit:result::value() Accessor Methods
 
 The value of a successful result may be accessed using the `value()` methods of
-`fitx::result`.
+`fit::result`.
 
 ```C++
-fitx::result<Error, A> GetValues();
+fit::result<Error, A> GetValues();
 
 void Example() {
   auto result = GetValues();
@@ -193,41 +193,41 @@ void Example() {
 }
 ```
 
-##### fitx::result::operator*() Accessor Methods
+##### fit::result::operator*() Accessor Methods
 
 `*my_result` is a syntax sugar for `my_result.value()`, when `my_result` is a
-`fitx::result`.
+`fit::result`.
 
-##### fitx::result::take_value() Accessor Method
+##### fit::result::take_value() Accessor Method
 
 The value of a successful result may be propagated to another result using the
-`take_value()` method of `fitx::result`.
+`take_value()` method of `fit::result`.
 
 ```C++
-fitx::result<Error, A> GetValues();
+fit::result<Error, A> GetValues();
 
-fitx::result<Error, A> Example() {
+fit::result<Error, A> Example() {
   auto result = GetValues();
   if (result.is_ok()) {
     return result.take_value();
   } else {
     ConsumeError(result.take_error());
-    return fitx::ok();
+    return fit::ok();
   }
 }
 ```
 
-##### fitx::result::operator->() Accessor Method
+##### fit::result::operator->() Accessor Method
 
 The members of the underlying value of a successful result may be accessed using
-the `operator->()` overloads of `fitx::result`.
+the `operator->()` overloads of `fit::result`.
 
 ```C++
 struct FooBarResult {
   Foo foo;
   Bar bar;
 };
-fitx::result<Error, FooBarResult> GetFooBar();
+fit::result<Error, FooBarResult> GetFooBar();
 
 void Example() {
   auto result = GetFooBar();
@@ -238,7 +238,7 @@ void Example() {
 }
 ```
 
-`fitx::result` forwards to the underlying value's `operator->()` overload when
+`fit::result` forwards to the underlying value's `operator->()` overload when
 one is defined.
 
 ```C++
@@ -246,7 +246,7 @@ struct FooBarResult {
   Foo foo;
   Bar bar;
 };
-fitx::result<Error, std::unique_ptr<FooBarResult>> GetFooBar();
+fit::result<Error, std::unique_ptr<FooBarResult>> GetFooBar();
 
 void Example() {
   auto result = GetFooBar();
@@ -259,66 +259,66 @@ void Example() {
 
 #### Returning Errors
 
-Returning errors with `fitx::result<E, T?>` always involves wrapping the error
-value in an instance of `fitx::error<F>`, where `E` is constructible from `F`.
+Returning errors with `fit::result<E, T?>` always involves wrapping the error
+value in an instance of `fit::error<F>`, where `E` is constructible from `F`.
 This ensures that error values are never ambiguous, even when `E` and `T` are
 compatible types.
 
 There are a variety ways to return errors:
 
-##### Direct fitx::error
+##### Direct fit::error
 
-The most direct way to return an error is to use `fitx::error` directly.
+The most direct way to return an error is to use `fit::error` directly.
 
-`fitx::error` has a single argument deduction guide
-`fitx::error(T) -> fitx::error<T>` when compiling for C++17 and above to
+`fit::error` has a single argument deduction guide
+`fit::error(T) -> fit::error<T>` when compiling for C++17 and above to
 simplify basic error return values.
 
 ```C++
-fitx::result<std::string, size_t> StringLength(const char* string) {
+fit::result<std::string, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    return fitx::error<std::string>("String is nullptr!");
+    return fit::error<std::string>("String is nullptr!");
   }
-  return fitx::ok(strlen(string));
+  return fit::ok(strlen(string));
 }
 
-fitx::result<std::string, size_t> StringLength(const char* string) {
+fit::result<std::string, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    return fitx::error("String is nullptr!");
+    return fit::error("String is nullptr!");
   }
-  return fitx::ok(strlen(string));
+  return fit::ok(strlen(string));
 }
 
 // Error with multiple values.
 using Error = std::pair<std::string, Backtrace>;
 
-fitx::result<Error, size_t> StringLength(const char* string) {
+fit::result<Error, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    return fitx::error<Error>("String is nullptr!", Backtrace::Get());
+    return fit::error<Error>("String is nullptr!", Backtrace::Get());
   }
-  return fitx::ok(strlen(nullptr));
+  return fit::ok(strlen(nullptr));
 }
 ```
 
-##### fitx::as_error Utility Function
+##### fit::as_error Utility Function
 
-The single-argument utility function `fitx::as_error` may be used to simplify
-returning a `fitx::error<F>` by deducting `F` from the argument type.
+The single-argument utility function `fit::as_error` may be used to simplify
+returning a `fit::error<F>` by deducting `F` from the argument type.
 
 This function is a C++14 compatible alternative to the deduction guide.
 
 ```C++
-fitx::result<std::string, size_t> StringLength(const char* string) {
+fit::result<std::string, size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    return fitx::as_error("String is nullptr!"); // Deduces fitx::error<const char*>.
+    return fit::as_error("String is nullptr!"); // Deduces fit::error<const char*>.
   }
-  return fitx::ok(strlen(string));
+  return fit::ok(strlen(string));
 }
 ```
 
 #### Handling Errors
 
-`fitx::result` supports ergonomic error handling and propagation.
+`fit::result` supports ergonomic error handling and propagation.
 
 ##### error_value() and take_error() Access Methods
 
@@ -326,14 +326,14 @@ The error value of a result may be accessed by reference using the
 `error_value()` methods.
 
 The error may be propagated using the `take_error()` method, which returns the
-error value as an instance of `fitx::error<E>`, as required to pass the error to
-`fitx::result`.
+error value as an instance of `fit::error<E>`, as required to pass the error to
+`fit::result`.
 
 ```C++
-fitx::result<const char*> Example() {
+fit::result<const char*> Example() {
   if (auto result = GetValues()) {
     // Use values ...
-    return fitx::ok();
+    return fit::ok();
   } else {
     LOG_ERROR("Failed to get values: %s\n", result.error_value());
     return result.take_error();
@@ -343,7 +343,7 @@ fitx::result<const char*> Example() {
 
 ##### Augmenting Errors
 
-`fitx::result` supports agumented error types, where details about the error
+`fit::result` supports agumented error types, where details about the error
 are accumulated as the error propagates back through the call chain. The result
 type conditionally overloads `operator+=` to append details to contained error.
 
@@ -357,13 +357,13 @@ class ErrorMsg {
  public:
   explicit ErrorMsg(Error error) : error_(error) {}
   ErrorMsg(Error error, std::string detail) : error_{error}, details_{{std::move(detail)}} {}
-  
+
   Error error() const { return error_; }
   const auto& details() const { return details_; }
 
   std::string ToString() const;
 
-  // fitx::result detects this operator and enables augmentation of the error.
+  // fit::result detects this operator and enables augmentation of the error.
   ErrorMsg& operator+=(std::string detail) {
     details_.push_back(std::move(detail));
     return *this;
@@ -374,13 +374,13 @@ class ErrorMsg {
   std::vector<std::string> details_;
 };
 
-fitx::result<Error> FillBuffer(uint8_t* data, size_t size);
+fit::result<Error> FillBuffer(uint8_t* data, size_t size);
 
-fitx::result<ErrorMsg> FillBufferFromVector(const std::vector<uint8_t>& vector) {
+fit::result<ErrorMsg> FillBufferFromVector(const std::vector<uint8_t>& vector) {
   // ErrorMsg is constructible from Error.
-  fitx::result<ErrorMsg> result = FillBuffer(vector.data(), vector.size());
+  fit::result<ErrorMsg> result = FillBuffer(vector.data(), vector.size());
   if (result.is_error()) {
-    result += fitx::error("Error while filling from vector.");
+    result += fit::error("Error while filling from vector.");
   }
   return result;
 }
@@ -388,31 +388,31 @@ fitx::result<ErrorMsg> FillBufferFromVector(const std::vector<uint8_t>& vector) 
 
 #### Relational Operators
 
-`fitx::result` supports a variety of relational operator variants.
+`fit::result` supports a variety of relational operator variants.
 
-##### fitx::success and fitx::failure
+##### fit::success and fit::failure
 
-`fitx::result` is always equal/not equal comparable to instances of
-`fitx::success<>` and `fitx::failed`.
+`fit::result` is always equal/not equal comparable to instances of
+`fit::success<>` and `fit::failed`.
 
-Comparing to `fitx::success<>` is equivalent to comparing to `is_ok()`.
-Comparing to `fitx::failed` is equivalent to comparing to `is_error()`.
+Comparing to `fit::success<>` is equivalent to comparing to `is_ok()`.
+Comparing to `fit::failed` is equivalent to comparing to `is_error()`.
 
 ```C++
-fitx::result<Error, A> GetValues();
+fit::result<Error, A> GetValues();
 
-fitx::result<Error> Example() {
+fit::result<Error> Example() {
   auto result = GetValues();
-  if (result == fitx::ok()) {
-    return fitx::ok();
+  if (result == fit::ok()) {
+    return fit::ok();
   }
   return result.take_error();
 }
 ```
 
-##### Any fitx::result with Compatible Value Types
+##### Any fit::result with Compatible Value Types
 
-`fitx::result<E, T?>` and `fitx::result<F, U?>` are comparable when `T` is
+`fit::result<E, T?>` and `fit::result<F, U?>` are comparable when `T` is
 comparable to `U`, if any. The error types are not compared, only the
 `is_ok()` predicate and values are compared.
 
@@ -420,8 +420,8 @@ Comparing two result types has the same empty and lexicographic ordering as
 comparing `std::optional<T>`.
 
 ```C++
-fitx::result<Error, int> GetMin();
-fitx::result<Error, int> GetMax();
+fit::result<Error, int> GetMin();
+fit::result<Error, int> GetMax();
 
 bool TestEqual() {
   // Returns true when both results have values and the values are the same.
@@ -431,11 +431,11 @@ bool TestEqual() {
 
 ##### Any Type U Comparable to T
 
-When `fitx::result<E, T>` has a single value type `T`, the result is comparable
+When `fit::result<E, T>` has a single value type `T`, the result is comparable
 to any type `U` that is comparable to `T`.
 
 ```C++
-fitx::result<Error, std::string> GetMessage();
+fit::result<Error, std::string> GetMessage();
 
 bool TestMessage() {
   // Returns true if there is a message and it matches the string literal.
@@ -446,9 +446,9 @@ bool TestMessage() {
 ### zx::status<T?>
 
 `zx::status<T?>` is a specialization for Zircon `zx_status_t` errors, based on
-`fitx::result<zx_status_t, T?>`, to make inter-op safer and more natural.
+`fit::result<zx_status_t, T?>`, to make inter-op safer and more natural.
 
-The namespace `zx` has aliases of the support types and functions in `fitx`:
+The namespace `zx` has aliases of the support types and functions in `fit`:
 * `zx::ok`
 * `zx::error`
 * `zx::failed`
@@ -458,7 +458,7 @@ The namespace `zx` has aliases of the support types and functions in `fitx`:
 #### Returning and Using Values
 
 Returning values with `zx::status` is the same as returning values with the
-base `fitx::result`. The status type supports the same value constructors,
+base `fit::result`. The status type supports the same value constructors,
 conversions, and accessors as the base result type.
 
 #### Returning Errors
@@ -478,7 +478,7 @@ convenience.
 #### Handling Errors
 
 Handling errors with `zx::status` is the same as handling errors with
-`fitx::result`. All of the same constructs and accessors are available.
+`fit::result`. All of the same constructs and accessors are available.
 
 The `status_value()` accessor returns `ZX_OK` when the status is in the value
 state. It is still invalid to call `error_value()` or `take_error()` in the
@@ -589,7 +589,7 @@ struct CreateFooBarResult {
   Foo foo;
   Bar bar;
 };
-fitx::<Error, CreateFooBarResult> CreateFooBar(Baz baz);
+fit::<Error, CreateFooBarResult> CreateFooBar(Baz baz);
 ```
 
 ### Use Named Constructors for Complex Initialization
@@ -602,7 +602,7 @@ in from the named constructor.
 ```C++
 class Foo {
  public:
-  fitx::result<Error, Foo> Create(size_t size) {
+  fit::result<Error, Foo> Create(size_t size) {
     auto buffer_result = AllocateBuffer(size);
     if (buffer_result.is_error()) {
       return buffer_result.take_error();
@@ -611,13 +611,13 @@ class Foo {
     if (bar_result.is_error()) {
       return bar_result.take_error());
     }
-    return fitx::ok(Foo{std::move(buffer_result.value()), size, std::move(bar_result.value())});
+    return fit::ok(Foo{std::move(buffer_result.value()), size, std::move(bar_result.value())});
   }
 
  private:
   Foo(std::unique_ptr<uint8_t[]> buffer, size_t size, Bar bar)
     : buffer_{std::move(buffer)}, size_{size}, bar_{std::move(bar)} {}
-  
+
   std::unique_ptr<uint8_t[]> buffer_;
   size_t size_;
   Bar bar_;
@@ -628,7 +628,7 @@ class Foo {
 
 Output parameters are often used when an operation might fail. Typically, the
 return value is used to indicate success or (possibly enumerated) failure, while
-other values are returned using the output parameters. 
+other values are returned using the output parameters.
 
 Output parameters introduce ambiguities that should be avoided:
 * Are parameters pure outputs or mutable inputs?
@@ -701,9 +701,9 @@ struct AllocateResult {
   size_t size;
 };
 
-fitx::result<Status, AllocateResult> AllocateBuffer(size_t size) {
+fit::result<Status, AllocateResult> AllocateBuffer(size_t size) {
   if (size == 0) {
-    return fitx::error(Status::InvalidArgs);
+    return fit::error(Status::InvalidArgs);
   }
   if (size > kMaxSize) {
     size = kMaxSize;
@@ -712,9 +712,9 @@ fitx::result<Status, AllocateResult> AllocateBuffer(size_t size) {
   fbl::AllocChecker checker;
   std::unique_ptr<uint8_t[]> buffer{new (&checker) uint8_t[size]};
   if (!checker.check()) {
-    return fitx::error(Status::NoMemory);
+    return fit::error(Status::NoMemory);
   }
 
-  return fitx::ok(AllocateResult{std::move(buffer), size});
+  return fit::ok(AllocateResult{std::move(buffer), size});
 }
 ```

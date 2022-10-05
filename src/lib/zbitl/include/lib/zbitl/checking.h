@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_CHECKING_H_
 #define SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_CHECKING_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 
@@ -16,8 +16,8 @@ namespace zbitl {
 // Validates ZBI item and container headers, returning a description of the
 // failure in that event. The check is agnostic of storage capacity; whether
 // the encoded length is sensible is left to the caller.
-fitx::result<std::string_view> CheckItemHeader(const zbi_header_t& header);
-fitx::result<std::string_view> CheckContainerHeader(const zbi_header_t& header);
+fit::result<std::string_view> CheckItemHeader(const zbi_header_t& header);
+fit::result<std::string_view> CheckContainerHeader(const zbi_header_t& header);
 
 // Modify a header so that it passes checks.  This can be used to mint new
 // items from a designated initializer that omits uninteresting bits.
@@ -39,11 +39,11 @@ inline constexpr zbi_header_t SanitizeHeader(zbi_header_t header) {
 /// that were scanned before any errors were encountered added up to a complete
 /// ZBI (regardless of whether there were additional items with errors).
 template <typename Zbi>
-fitx::result<std::string_view> CheckBootable(Zbi&& zbi, uint32_t kernel_type
+fit::result<std::string_view> CheckBootable(Zbi&& zbi, uint32_t kernel_type
 #ifdef __aarch64__
-                                                        = ZBI_TYPE_KERNEL_ARM64
+                                                       = ZBI_TYPE_KERNEL_ARM64
 #elif defined(__x86_64__)
-                                                        = ZBI_TYPE_KERNEL_X64
+                                                       = ZBI_TYPE_KERNEL_X64
 
 #endif
 ) {
@@ -63,15 +63,15 @@ fitx::result<std::string_view> CheckBootable(Zbi&& zbi, uint32_t kernel_type
   }
 
   if (empty) {
-    return fitx::error("empty ZBI");
+    return fit::error("empty ZBI");
   }
   switch (kernel) {
     case kKernelAbsent:
-      return fitx::error("no kernel item found");
+      return fit::error("no kernel item found");
     case kKernelLater:
-      return fitx::error("kernel item out of order: must be first");
+      return fit::error("kernel item out of order: must be first");
     case kKernelFirst:
-      return fitx::ok();
+      return fit::ok();
   }
   ZX_ASSERT_MSG(false, "unreachable");
 }

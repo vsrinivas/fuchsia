@@ -383,9 +383,9 @@ struct ResponseCompleter {
   zx::status<T> WaitForResponse() const {
     auto status = inner_->completion.Wait();
     if (status != ZX_OK) {
-      return fitx::error(status);
+      return fit::error(status);
     }
-    return fitx::ok(std::move(inner_->response.value()));
+    return fit::ok(std::move(inner_->response.value()));
   }
 
  private:
@@ -1504,7 +1504,7 @@ TEST_F(UnknownInteractions, StrictTwoWayErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
     void StrictTwoWayErr(::fdf::Arena& arena, StrictTwoWayErrCompleter::Sync& completer) override {
-      completer.buffer(arena).Reply(fitx::ok());
+      completer.buffer(arena).Reply(fit::ok());
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1588,7 +1588,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayErr(::fdf::Arena& arena,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
-      completer.buffer(arena).Reply(fitx::ok());
+      completer.buffer(arena).Reply(fit::ok());
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1609,7 +1609,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayErr(::fdf::Arena& arena,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
-      completer.buffer(arena).Reply(fitx::error(3203));
+      completer.buffer(arena).Reply(fit::error(3203));
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1634,7 +1634,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
       ::test::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse reply{
           .some_field = 42,
       };
-      completer.buffer(arena).Reply(fitx::ok(&reply));
+      completer.buffer(arena).Reply(fit::ok(&reply));
     }
   };
   BindServer(std::make_unique<Server>());
@@ -1656,7 +1656,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponseError) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayFieldsErr(::fdf::Arena& arena,
                                  FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
-      completer.buffer(arena).Reply(fitx::error(3203));
+      completer.buffer(arena).Reply(fit::error(3203));
     }
   };
   BindServer(std::make_unique<Server>());

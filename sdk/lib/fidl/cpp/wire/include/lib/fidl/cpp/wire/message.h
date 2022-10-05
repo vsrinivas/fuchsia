@@ -17,7 +17,7 @@
 #include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/fit/nullable.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
@@ -374,7 +374,7 @@ class UnownedEncodedMessageBase {
  protected:
   UnownedEncodedMessageBase(::fidl::internal::WireFormatVersion wire_format_version,
                             uint32_t iovec_capacity,
-                            ::fitx::result<::fidl::Error, ::fidl::BufferSpan> backing_buffer,
+                            ::fit::result<::fidl::Error, ::fidl::BufferSpan> backing_buffer,
                             fidl_handle_t* handles, fidl_handle_metadata_t* handle_metadata,
                             uint32_t handle_capacity, bool is_transactional, void* value,
                             size_t inline_size, TopLevelEncodeFn encode_fn)
@@ -452,13 +452,13 @@ class UnownedEncodedMessage final
                         uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, FidlType* value)
       : UnownedEncodedMessage(wire_format_version, iovec_capacity,
-                              ::fitx::ok(::fidl::BufferSpan(backing_buffer, backing_buffer_size)),
+                              ::fit::ok(::fidl::BufferSpan(backing_buffer, backing_buffer_size)),
                               value) {}
 
   // Core implementation which other constructors delegate to.
   UnownedEncodedMessage(::fidl::internal::WireFormatVersion wire_format_version,
                         uint32_t iovec_capacity,
-                        ::fitx::result<::fidl::Error, ::fidl::BufferSpan> backing_buffer,
+                        ::fit::result<::fidl::Error, ::fidl::BufferSpan> backing_buffer,
                         FidlType* value)
       : UnownedEncodedMessageBase(
             wire_format_version, iovec_capacity, backing_buffer,
@@ -561,7 +561,7 @@ class DecodedMessage<FidlType, Transport,
 
   DecodedMessage(internal::WireFormatVersion wire_format_version, ::fidl::EncodedMessage&& msg)
       : Status(::fidl::Status::Ok()) {
-    ::fitx::result result = ::fidl::InplaceDecode<FidlType>(
+    ::fit::result result = ::fidl::InplaceDecode<FidlType>(
         std::move(msg), ::fidl::internal::WireFormatMetadataForVersion(wire_format_version));
     if (result.is_error()) {
       Status::operator=(result.error_value());

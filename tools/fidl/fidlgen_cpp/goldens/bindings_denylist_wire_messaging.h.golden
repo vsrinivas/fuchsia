@@ -1651,7 +1651,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBin
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
-  using Type = ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>;
+  using Type = ::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*>;
 };
 
 template<>
@@ -1684,7 +1684,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -1707,7 +1707,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
-  using Type = ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>;
+  using Type = ::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*>;
 };
 
 template<>
@@ -1740,7 +1740,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -1763,7 +1763,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
-  using Type = ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>;
+  using Type = ::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*>;
 };
 
 template<>
@@ -1796,7 +1796,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -1819,7 +1819,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
-  using Type = ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>;
+  using Type = ::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*>;
 };
 
 template<>
@@ -1852,7 +1852,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -1875,7 +1875,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
-  using Type = ::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>;
+  using Type = ::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*>;
 };
 
 template<>
@@ -1908,7 +1908,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -2061,7 +2061,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2074,7 +2074,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2103,7 +2103,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2116,7 +2116,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2145,7 +2145,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2158,7 +2158,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2187,7 +2187,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2200,7 +2200,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2229,7 +2229,7 @@ class ::fidl::internal::WireCompleterImpl<::test_bindingsdenylist::DenyEachBindi
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2242,7 +2242,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEac
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse*> result);
   void ReplySuccess(int32_t b);
   void ReplyError(uint32_t error);
 
@@ -2766,7 +2766,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSa
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>(::fidl::internal::StatusFromResult(decoded)) {}
 
@@ -2805,7 +2805,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSa
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>(::fidl::internal::StatusFromResult(decoded)) {}
 

@@ -34,7 +34,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     }
 
     explicit {{ .WireUnownedResult.Self }}(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<{{ .WireResponse }}>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<{{ .WireResponse }}>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view
     ) : {{ .BaseWireResult }}(::fidl::internal::StatusFromResult(decoded)),
         arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
@@ -45,7 +45,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     }
   {{- else }}
     explicit {{ .WireUnownedResult.Self }}(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : {{ .BaseWireResult }}(::fidl::internal::StatusFromResult(decoded)) {}
   {{- end }}
@@ -101,7 +101,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<{{ .Marker }}>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<{{ .Marker }}>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));

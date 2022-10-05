@@ -18,7 +18,7 @@ LIB_FASYNC_IGNORE_CPP14_COMPAT_END
 #include <lib/fasync/internal/type_traits.h>
 #include <lib/fasync/poll.h>
 #include <lib/fasync/type_traits.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/functional.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/stdcompat/span.h>
@@ -402,33 +402,33 @@ struct promote_return_type {
 };
 
 template <typename... Ts>
-struct promote_return_type<::fitx::success<Ts...>> {
-  using type = ::fitx::result<fitx::failed, Ts...>;
+struct promote_return_type<::fit::success<Ts...>> {
+  using type = ::fit::result<fit::failed, Ts...>;
 };
 
 template <typename E>
-struct promote_return_type<::fitx::error<E>> {
-  using type = ::fitx::result<E>;
+struct promote_return_type<::fit::error<E>> {
+  using type = ::fit::result<E>;
 };
 
 template <>
-struct promote_return_type<::fitx::failed> {
-  using type = ::fitx::result<::fitx::failed>;
+struct promote_return_type<::fit::failed> {
+  using type = ::fit::result<::fit::failed>;
 };
 
 template <typename... Ts>
-struct promote_return_type<::fasync::ready<::fitx::success<Ts...>>> {
-  using type = ::fasync::try_poll<fitx::failed, Ts...>;
+struct promote_return_type<::fasync::ready<::fit::success<Ts...>>> {
+  using type = ::fasync::try_poll<fit::failed, Ts...>;
 };
 
 template <typename E>
-struct promote_return_type<::fasync::ready<::fitx::error<E>>> {
+struct promote_return_type<::fasync::ready<::fit::error<E>>> {
   using type = ::fasync::try_poll<E>;
 };
 
 template <>
-struct promote_return_type<::fasync::ready<::fitx::failed>> {
-  using type = ::fasync::try_poll<::fitx::failed>;
+struct promote_return_type<::fasync::ready<::fit::failed>> {
+  using type = ::fasync::try_poll<::fit::failed>;
 };
 
 template <typename T>
@@ -439,35 +439,35 @@ struct merge_ok_result {};
 
 // TODO(schottm): necessary for returning futures?
 template <typename E, typename... Ts, typename U>
-struct merge_ok_result<::fitx::result<E, Ts...>, U> {
-  using type = ::fitx::result<E, U>;
+struct merge_ok_result<::fit::result<E, Ts...>, U> {
+  using type = ::fit::result<E, U>;
 };
 
 template <typename E, typename... Ts>
-struct merge_ok_result<::fitx::result<E, Ts...>, ::fitx::failed> {
-  using type = ::fitx::result<::fitx::failed, Ts...>;
+struct merge_ok_result<::fit::result<E, Ts...>, ::fit::failed> {
+  using type = ::fit::result<::fit::failed, Ts...>;
 };
 
 template <typename E, typename... Ts, typename F>
-struct merge_ok_result<::fitx::result<E, Ts...>, ::fitx::error<F>> {
-  using type = ::fitx::result<F, Ts...>;
+struct merge_ok_result<::fit::result<E, Ts...>, ::fit::error<F>> {
+  using type = ::fit::result<F, Ts...>;
 };
 
 template <typename E, typename... Ts, typename... Us>
-struct merge_ok_result<::fitx::result<E, Ts...>, ::fitx::success<Us...>> {
-  using type = ::fitx::result<E, Us...>;
+struct merge_ok_result<::fit::result<E, Ts...>, ::fit::success<Us...>> {
+  using type = ::fit::result<E, Us...>;
 };
 
 // TODO(schottm): is this really what we want?
 // Probably not; make one merge_result and ditch the ok/error distinction?
 template <typename E, typename... Ts, typename F, typename... Us>
-struct merge_ok_result<::fitx::result<E, Ts...>, ::fitx::result<F, Us...>> {
-  using type = ::fitx::result<E, Us...>;
+struct merge_ok_result<::fit::result<E, Ts...>, ::fit::result<F, Us...>> {
+  using type = ::fit::result<E, Us...>;
 };
 
 template <typename E, typename... Ts>
-struct merge_ok_result<::fitx::result<E, Ts...>, void> {
-  using type = ::fitx::result<E>;
+struct merge_ok_result<::fit::result<E, Ts...>, void> {
+  using type = ::fit::result<E>;
 };
 
 template <typename R, typename T>
@@ -478,33 +478,33 @@ template <typename R, typename E>
 struct merge_error_result {};
 
 template <typename E, typename... Ts, typename F>
-struct merge_error_result<::fitx::result<E, Ts...>, F> {
-  using type = ::fitx::result<F, Ts...>;
+struct merge_error_result<::fit::result<E, Ts...>, F> {
+  using type = ::fit::result<F, Ts...>;
 };
 
 template <typename E, typename... Ts>
-struct merge_error_result<::fitx::result<E, Ts...>, ::fitx::failed> {
-  using type = ::fitx::result<::fitx::failed, Ts...>;
+struct merge_error_result<::fit::result<E, Ts...>, ::fit::failed> {
+  using type = ::fit::result<::fit::failed, Ts...>;
 };
 
 template <typename E, typename... Ts, typename F>
-struct merge_error_result<::fitx::result<E, Ts...>, ::fitx::error<F>> {
-  using type = ::fitx::result<F, Ts...>;
+struct merge_error_result<::fit::result<E, Ts...>, ::fit::error<F>> {
+  using type = ::fit::result<F, Ts...>;
 };
 
 template <typename E, typename... Ts, typename... Us>
-struct merge_error_result<::fitx::result<E, Ts...>, ::fitx::success<Us...>> {
-  using type = ::fitx::result<E, Us...>;
+struct merge_error_result<::fit::result<E, Ts...>, ::fit::success<Us...>> {
+  using type = ::fit::result<E, Us...>;
 };
 
 template <typename E, typename... Ts, typename F, typename... Us>
-struct merge_error_result<::fitx::result<E, Ts...>, ::fitx::result<F, Us...>> {
-  using type = ::fitx::result<F, Ts...>;
+struct merge_error_result<::fit::result<E, Ts...>, ::fit::result<F, Us...>> {
+  using type = ::fit::result<F, Ts...>;
 };
 
 template <typename E, typename... Ts>
-struct merge_error_result<::fitx::result<E, Ts...>, void> {
-  using type = ::fitx::result<E>;
+struct merge_error_result<::fit::result<E, Ts...>, void> {
+  using type = ::fit::result<E>;
 };
 
 template <typename R, typename E>
@@ -518,18 +518,18 @@ struct merge_result {
 };
 
 template <typename R>
-struct merge_result<R, ::fitx::failed> {
-  using type = merge_error_result_t<R, ::fitx::failed>;
+struct merge_result<R, ::fit::failed> {
+  using type = merge_error_result_t<R, ::fit::failed>;
 };
 
 template <typename R, typename E>
-struct merge_result<R, ::fitx::error<E>> {
-  using type = merge_error_result_t<R, ::fitx::error<E>>;
+struct merge_result<R, ::fit::error<E>> {
+  using type = merge_error_result_t<R, ::fit::error<E>>;
 };
 
 template <typename R, typename... Ts>
-struct merge_result<R, ::fitx::success<Ts...>> {
-  using type = merge_ok_result_t<R, ::fitx::success<Ts...>>;
+struct merge_result<R, ::fit::success<Ts...>> {
+  using type = merge_ok_result_t<R, ::fit::success<Ts...>>;
 };
 
 template <typename R, typename T>
@@ -537,63 +537,62 @@ using merge_result_t = typename merge_result<R, T>::type;
 
 ////////// FORWARD_TO_*
 
-// These |forward_to_*_result()| functions take incomplete result types like |fitx::success| and
-// |fitx::error| and return a result appropriately derived from the given result type.
+// These |forward_to_*_result()| functions take incomplete result types like |fit::success| and
+// |fit::error| and return a result appropriately derived from the given result type.
 template <typename R, typename T, requires_conditions<is_future<T>> = true>
 constexpr merge_ok_result_t<R, T> forward_to_ok_result(T&& value) {
-  return merge_ok_result_t<R, T>(::fitx::ok(std::forward<T>(value)));
+  return merge_ok_result_t<R, T>(::fit::ok(std::forward<T>(value)));
 }
 
 template <typename R>
-constexpr merge_ok_result_t<R, ::fitx::failed> forward_to_ok_result(::fitx::failed) {
-  return merge_ok_result_t<R, ::fitx::failed>(::fitx::failed());
+constexpr merge_ok_result_t<R, ::fit::failed> forward_to_ok_result(::fit::failed) {
+  return merge_ok_result_t<R, ::fit::failed>(::fit::failed());
 }
 
 template <typename R, typename E>
-constexpr merge_ok_result_t<R, ::fitx::error<E>> forward_to_ok_result(::fitx::error<E>&& error) {
-  return merge_ok_result_t<R, ::fitx::error<E>>(std::forward<::fitx::error<E>>(error));
+constexpr merge_ok_result_t<R, ::fit::error<E>> forward_to_ok_result(::fit::error<E>&& error) {
+  return merge_ok_result_t<R, ::fit::error<E>>(std::forward<::fit::error<E>>(error));
 }
 
 template <typename R, typename... Ts>
-constexpr merge_ok_result_t<R, ::fitx::success<Ts...>> forward_to_ok_result(
-    ::fitx::success<Ts...>&& success) {
-  return merge_ok_result_t<R, ::fitx::success<Ts...>>(
-      std::forward<::fitx::success<Ts...>>(success));
+constexpr merge_ok_result_t<R, ::fit::success<Ts...>> forward_to_ok_result(
+    ::fit::success<Ts...>&& success) {
+  return merge_ok_result_t<R, ::fit::success<Ts...>>(std::forward<::fit::success<Ts...>>(success));
 }
 
 template <typename R, typename E, typename... Ts>
-constexpr merge_ok_result_t<R, ::fitx::result<E, Ts...>> forward_to_ok_result(
-    ::fitx::result<E, Ts...>&& result) {
-  return merge_ok_result_t<R, ::fitx::result<E, Ts...>>(
-      std::forward<::fitx::result<E, Ts...>>(result));
+constexpr merge_ok_result_t<R, ::fit::result<E, Ts...>> forward_to_ok_result(
+    ::fit::result<E, Ts...>&& result) {
+  return merge_ok_result_t<R, ::fit::result<E, Ts...>>(
+      std::forward<::fit::result<E, Ts...>>(result));
 }
 
 template <typename R, typename T, requires_conditions<is_future<T>> = true>
 constexpr merge_error_result_t<R, T> forward_to_error_result(T&& value) {
-  return merge_error_result_t<R, T>(::fitx::error<T>(std::forward<T>(value)));
+  return merge_error_result_t<R, T>(::fit::error<T>(std::forward<T>(value)));
 }
 
 template <typename R>
-constexpr merge_error_result_t<R, ::fitx::failed> forward_to_error_result(::fitx::failed) {
-  return merge_error_result_t<R, ::fitx::failed>(::fitx::failed());
+constexpr merge_error_result_t<R, ::fit::failed> forward_to_error_result(::fit::failed) {
+  return merge_error_result_t<R, ::fit::failed>(::fit::failed());
 }
 
 template <typename R, typename E>
-constexpr merge_error_result_t<R, ::fitx::error<E>> forward_to_error_result(
-    ::fitx::error<E>&& error) {
-  return merge_error_result_t<R, ::fitx::error<E>>(std::forward<::fitx::error<E>>(error));
+constexpr merge_error_result_t<R, ::fit::error<E>> forward_to_error_result(
+    ::fit::error<E>&& error) {
+  return merge_error_result_t<R, ::fit::error<E>>(std::forward<::fit::error<E>>(error));
 }
 
 template <typename R, typename... Ts>
-constexpr merge_error_result_t<R, ::fitx::success<Ts...>> forward_to_error_result(
-    ::fitx::success<Ts...>&& success) {
-  return merge_error_result_t<R, ::fitx::success<Ts...>>(
-      std::forward<::fitx::success<Ts...>>(success));
+constexpr merge_error_result_t<R, ::fit::success<Ts...>> forward_to_error_result(
+    ::fit::success<Ts...>&& success) {
+  return merge_error_result_t<R, ::fit::success<Ts...>>(
+      std::forward<::fit::success<Ts...>>(success));
 }
 
 template <typename R, typename E, typename... Ts>
-constexpr decltype(auto) forward_to_error_result(::fitx::result<E, Ts...>&& result) {
-  return std::forward<::fitx::result<E, Ts...>>(result);
+constexpr decltype(auto) forward_to_error_result(::fit::result<E, Ts...>&& result) {
+  return std::forward<::fit::result<E, Ts...>>(result);
 }
 
 template <typename R, typename T>
@@ -618,7 +617,7 @@ constexpr handle_result_t<H, R> handle_result(H&& handler, ::fasync::context& co
 template <typename H, typename R, requires_conditions<handler_returns_void_for<H, R>> = true>
 constexpr handle_result_t<H, R> handle_result(H&& handler, ::fasync::context& context, R&& result) {
   invoke_handler(std::forward<H>(handler), context, std::forward<R>(result));
-  return forward_to_result<R>(::fitx::ok());
+  return forward_to_result<R>(::fit::ok());
 }
 
 /////////// HANDLE_RESULT //////////////
@@ -632,8 +631,8 @@ struct handle_output_type {
 
 // TODO(schottm): is_result and matching on result have different semantics
 template <typename H, typename E, typename... Ts>
-struct handle_output_type<H, ::fitx::result<E, Ts...>> {
-  using type = handle_result_t<H, ::fitx::result<E, Ts...>>;
+struct handle_output_type<H, ::fit::result<E, Ts...>> {
+  using type = handle_result_t<H, ::fit::result<E, Ts...>>;
 };
 
 template <typename H, typename... Ts>
@@ -674,7 +673,7 @@ template <typename H, typename R,
 constexpr handle_ok_result_t<H, R> handle_ok_result(H&& handler, ::fasync::context& context,
                                                     R&& result) {
   invoke_handler(std::forward<H>(handler), context, std::forward<R>(result));
-  return forward_to_ok_result<R>(::fitx::ok());
+  return forward_to_ok_result<R>(::fit::ok());
 }
 
 template <typename H, typename... Ts>
@@ -683,8 +682,8 @@ struct handle_value_type {
 };
 
 template <typename H, typename E, typename... Ts>
-struct handle_value_type<H, ::fitx::result<E, Ts...>> {
-  using type = handle_ok_result_t<H, ::fitx::result<E, Ts...>>;
+struct handle_value_type<H, ::fit::result<E, Ts...>> {
+  using type = handle_ok_result_t<H, ::fit::result<E, Ts...>>;
 };
 
 template <typename H, typename... Ts>
@@ -718,8 +717,8 @@ struct handle_error_type {
 };
 
 template <typename H, typename E, typename... Ts>
-struct handle_error_type<H, ::fitx::result<E, Ts...>> {
-  using type = handle_error_result_t<H, ::fitx::result<E, Ts...>>;
+struct handle_error_type<H, ::fit::result<E, Ts...>> {
+  using type = handle_error_result_t<H, ::fit::result<E, Ts...>>;
 };
 
 template <typename H, typename... Ts>
@@ -738,7 +737,7 @@ template <typename H, typename R, requires_conditions<handler_returns_void_for<H
 constexpr handle_error_result_t<H, R> handle_error_result(H&& handler, ::fasync::context& context,
                                                           R&& result) {
   invoke_handler(std::forward<H>(handler), context, std::forward<R>(result));
-  return forward_to_error_result<R>(::fitx::ok());
+  return forward_to_error_result<R>(::fit::ok());
 }
 
 template <typename H, typename T, requires_conditions<cpp17::negation<is_result<T>>> = true>
@@ -819,7 +818,7 @@ template <typename H, typename F,
 constexpr ::fasync::future_poll_t<F> handle_map_ok(priority_tag<9>, H&& handler,
                                                    ::fasync::context& context, poller<F>& poller) {
   invoke_handler(std::forward<H>(handler), context);
-  return ::fasync::done(::fitx::ok());
+  return ::fasync::done(::fit::ok());
 }
 
 template <typename H, typename F,
@@ -861,7 +860,7 @@ template <typename H, typename F,
 constexpr auto handle_map_ok(priority_tag<4>, H&& handler, ::fasync::context& context,
                              poller<F>& poller) {
   invoke_handler(std::forward<H>(handler), context, poller.output().value());
-  return ::fasync::try_poll<::fasync::future_error_t<F>>(::fasync::done(::fitx::ok()));
+  return ::fasync::try_poll<::fasync::future_error_t<F>>(::fasync::done(::fit::ok()));
 }
 
 template <typename H, typename F,
@@ -919,7 +918,7 @@ constexpr auto handle_map_error(priority_tag<4>, H&& handler, ::fasync::context&
                 "Returning void from an error handler is only supported when the previous result "
                 "had no |value_type|.");
   invoke_handler(std::forward<H>(handler), context, poller.output().error_value());
-  return ::fasync::future_poll_t<F>(::fasync::done(::fitx::ok()));
+  return ::fasync::future_poll_t<F>(::fasync::done(::fit::ok()));
 }
 
 template <typename H, typename F,
@@ -981,16 +980,16 @@ using handler_output_t = typename handler_output<H, F>::type;
 
 template <typename H, typename F, requires_conditions<is_try_future<F>> = true>
 using value_handler_result_t =
-    ::fitx::result<future_error_t<F>, decltype(::fasync::internal::invoke_handler(
-                                          std::declval<H>(), std::declval<::fasync::context&>(),
-                                          std::declval<::fasync::future_value_t<F>>()))>;
+    ::fit::result<future_error_t<F>, decltype(::fasync::internal::invoke_handler(
+                                         std::declval<H>(), std::declval<::fasync::context&>(),
+                                         std::declval<::fasync::future_value_t<F>>()))>;
 
 template <typename H, typename F, requires_conditions<is_try_future<F>> = true>
 using error_handler_result_t =
-    ::fitx::result<decltype(::fasync::internal::invoke_handler(
-                       std::declval<H>(), std::declval<::fasync::context&>(),
-                       std::declval<::fasync::future_error_t<F>>())),
-                   ::fasync::future_value_t<F>>;
+    ::fit::result<decltype(::fasync::internal::invoke_handler(
+                      std::declval<H>(), std::declval<::fasync::context&>(),
+                      std::declval<::fasync::future_error_t<F>>())),
+                  ::fasync::future_value_t<F>>;
 
 // |pending_future|
 //
@@ -1041,9 +1040,9 @@ pending_future(pending_future<T>&&) -> pending_future<T>;
 
 #endif
 
-// A |pending_future| for |fitx::result<E, Ts...>|.
+// A |pending_future| for |fit::result<E, Ts...>|.
 template <typename E, typename... Ts>
-using pending_try_future = pending_future<::fitx::result<E, Ts...>>;
+using pending_try_future = pending_future<::fit::result<E, Ts...>>;
 
 // |value_future| is a future that always resolves with a single value.
 template <typename T>
@@ -1081,17 +1080,17 @@ value_future(value_future<T>&&) -> value_future<T>;
 
 #endif
 
-// These next futures are variants of |value_future| for |fitx::result| and related types.
+// These next futures are variants of |value_future| for |fit::result| and related types.
 template <typename E, typename... Ts>
-using result_future = value_future<::fitx::result<std::decay_t<E>, std::decay_t<Ts>...>>;
+using result_future = value_future<::fit::result<std::decay_t<E>, std::decay_t<Ts>...>>;
 
 template <typename... Ts>
-using ok_future = result_future<::fitx::failed, std::decay_t<Ts>...>;
+using ok_future = result_future<::fit::failed, std::decay_t<Ts>...>;
 
 template <typename E>
 using error_future = result_future<std::decay_t<E>>;
 
-using failed_future = result_future<::fitx::failed>;
+using failed_future = result_future<::fit::failed>;
 
 // Describes the status of a poller.
 enum class poller_state : uint8_t {
@@ -1340,7 +1339,7 @@ class LIB_FASYNC_OWNER map_ok_future final {
       return ::fasync::pending();
     }
     if (poller_.output().is_error()) {
-      return ::fasync::done(::fitx::as_error(poller_.output().error_value()));
+      return ::fasync::done(::fit::as_error(poller_.output().error_value()));
     }
     return handle_map_ok(handler_, context, poller_);
   }
@@ -1371,7 +1370,7 @@ class map_error_future final {
     if (poller_.output().is_error()) {
       return handle_map_error(handler_, context, poller_);
     }
-    return ::fasync::done(::fitx::ok(std::move(poller_.output()).value()));
+    return ::fasync::done(::fit::ok(std::move(poller_.output()).value()));
   }
 
   template <typename G = F, requires_conditions<cpp17::negation<is_value_try_future<G>>> = true>
@@ -1382,7 +1381,7 @@ class map_error_future final {
     if (poller_.output().is_error()) {
       return handle_map_error(handler_, context, poller_);
     }
-    return ::fasync::done(::fitx::ok());
+    return ::fasync::done(::fit::ok());
   }
 
  private:
@@ -1417,7 +1416,7 @@ class flatten_future final {
 template <typename F>
 using flatten_future_t = flatten_future<std::decay_t<F>>;
 
-// A continuation used to flatten futures producing a |fitx::result| where the value type is a
+// A continuation used to flatten futures producing a |fit::result| where the value type is a
 // future. Used by |fasync::and_then|.
 template <typename F>
 class try_flatten_future final {
@@ -1447,7 +1446,7 @@ class try_flatten_future final {
       return ::fasync::pending();
     }
     if (poller_.output().is_error()) {
-      return ::fasync::done(::fitx::as_error(poller_.output().error_value()));
+      return ::fasync::done(::fit::as_error(poller_.output().error_value()));
     }
     return poller_.output().value()(context);
   }
@@ -1459,7 +1458,7 @@ class try_flatten_future final {
 template <typename F>
 using try_flatten_future_t = try_flatten_future<std::decay_t<F>>;
 
-// A continuation used to flatten futures producing a |fitx::result| where the error type is a
+// A continuation used to flatten futures producing a |fit::result| where the error type is a
 // future. Used by |fasync::or_else|.
 template <typename F>
 class try_flatten_error_future final {
@@ -1493,7 +1492,7 @@ class try_flatten_error_future final {
     if (poller_.output().is_error()) {
       return cpp20::invoke(poller_.output().error_value(), context);
     }
-    return ::fasync::done(::fitx::ok(std::move(poller_.output()).value()));
+    return ::fasync::done(::fit::ok(std::move(poller_.output()).value()));
   }
 
   template <typename G = F, requires_conditions<cpp17::negation<is_value_try_future<G>>> = true>
@@ -1504,7 +1503,7 @@ class try_flatten_error_future final {
     if (poller_.output().is_error()) {
       return cpp20::invoke(poller_.output().error_value(), context);
     }
-    return ::fasync::done(::fitx::ok());
+    return ::fasync::done(::fit::ok());
   }
 
  private:

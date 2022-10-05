@@ -117,8 +117,8 @@ class ScratchAllocator {
   }
 
   // zbitl::View::CopyStorageItem calls this to allocate scratch space.
-  fitx::result<std::string_view, Holder> operator()(size_t size) const {
-    return fitx::ok(Holder{*vmar_, *log_, size});
+  fit::result<std::string_view, Holder> operator()(size_t size) const {
+    return fit::ok(Holder{*vmar_, *log_, size});
   }
 
  private:

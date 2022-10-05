@@ -341,7 +341,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -356,7 +356,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -371,7 +371,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -386,7 +386,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -401,7 +401,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -486,7 +486,7 @@ namespace test_bindingsdenylist {
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::Unattributed() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_DynamicFlags};
@@ -495,7 +495,7 @@ fidl::internal::NaturalClientImpl<::test_bindingsdenylist::ImportsSameNameContex
   return ::fidl::internal::ToFitxResult(status);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::AlwaysAppearsInImportingLibrary() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags};
@@ -511,7 +511,7 @@ namespace test_bindingsdenylist {
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::Unattributed() {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_DynamicFlags};
@@ -520,7 +520,7 @@ fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameCo
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::AlwaysAppearsInImportingLibrary() {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal, ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags};
@@ -553,7 +553,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -568,7 +568,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

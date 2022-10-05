@@ -237,7 +237,7 @@ class WireResponseContext : public internal::ResponseContext {
       OnResult(result);
       return std::nullopt;
     }
-    ::fitx::result decoded =
+    ::fit::result decoded =
         ::fidl::internal::InplaceDecodeTransactionalResponse<FidlMethod>(std::move(msg));
     ::fidl::Status maybe_error = ::fidl::internal::StatusFromResult(decoded);
     ::fidl::internal::WireUnownedResultType<FidlMethod> result(std::move(decoded), storage_view);

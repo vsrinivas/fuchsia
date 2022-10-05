@@ -127,9 +127,9 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final : public ::fitx::result<::fidl::Error> {
+class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final : public ::fit::result<::fidl::Error> {
  public:
-  using ::fitx::result<::fidl::Error>::result;
+  using ::fit::result<::fidl::Error>::result;
 
  protected:
   Result() = default;
@@ -150,9 +150,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithAn
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> {
+class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::fit::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>::result;
 
  protected:
   Result() = default;
@@ -170,9 +170,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithAn
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final : public ::fitx::result<::fidl::Error> {
+class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final : public ::fit::result<::fidl::Error> {
  public:
-  using ::fitx::result<::fidl::Error>::result;
+  using ::fit::result<::fidl::Error>::result;
 
  protected:
   Result() = default;
@@ -193,9 +193,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithAn
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> {
+class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::fit::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>::result;
 
  protected:
   Result() = default;
@@ -213,9 +213,9 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutReques
 
   ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> WithRequestWithResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& request) const;
 
-  ::fitx::result<::fidl::Error> NoRequestNoResponse() const;
+  ::fit::result<::fidl::Error> NoRequestNoResponse() const;
 
-  ::fitx::result<::fidl::Error> WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request) const;
+  ::fit::result<::fidl::Error> WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request) const;
 };
 namespace test_protocols {
 
@@ -237,9 +237,9 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRe
 
   ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> WithRequestWithResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& request);
 
-  ::fitx::result<::fidl::Error> NoRequestNoResponse();
+  ::fit::result<::fidl::Error> NoRequestNoResponse();
 
-  ::fitx::result<::fidl::Error> WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request);
+  ::fit::result<::fidl::Error> WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> _client_end() const {
@@ -301,9 +301,9 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::WithAndWithoutR
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> OnEmptyResponse();
+  ::fit::result<::fidl::Error> OnEmptyResponse();
 
-  ::fitx::result<::fidl::Error> OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload);
+  ::fit::result<::fidl::Error> OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload);
 };
 
 template <>
@@ -312,9 +312,9 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::WithAndWithoutReque
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> OnEmptyResponse();
+  ::fit::result<::fidl::Error> OnEmptyResponse();
 
-  ::fitx::result<::fidl::Error> OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload);
+  ::fit::result<::fidl::Error> OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload);
 };
 
 #endif  // __Fuchsia__
@@ -590,10 +590,10 @@ __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResul
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::fitx::result<uint32_t, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
+class ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::fit::result<uint32_t, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::result;
+  Response(::fit::result<uint32_t, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -610,10 +610,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
  public:
   static ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -629,19 +629,19 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
+class ::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::fitx::result<uint32_t> {
+class ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::fit::result<uint32_t> {
  public:
-  using ::fitx::result<uint32_t>::result;
-  Response(::fitx::result<uint32_t> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t>::result;
+  Response(::fit::result<uint32_t> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -658,10 +658,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
  public:
   static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok();
+      return ::fit::ok();
     }
   }
 
@@ -675,19 +675,19 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::fitx::result<::test_protocols::ErrorEnum> {
+class ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::fit::result<::test_protocols::ErrorEnum> {
  public:
-  using ::fitx::result<::test_protocols::ErrorEnum>::result;
-  Response(::fitx::result<::test_protocols::ErrorEnum> v) : result(std::move(v)) {}
+  using ::fit::result<::test_protocols::ErrorEnum>::result;
+  Response(::fit::result<::test_protocols::ErrorEnum> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -704,10 +704,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
  public:
   static ::fidl::Response<::test_protocols::WithErrorSyntax::ErrorAsEnum> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok();
+      return ::fit::ok();
     }
   }
 
@@ -721,19 +721,19 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsEnum>>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsEnum>>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> final : public ::fitx::result<uint32_t, ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
+class ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> final : public ::fit::result<uint32_t, ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocols::WithErrorSyntaxHandleInResultResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_protocols::WithErrorSyntaxHandleInResultResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocols::WithErrorSyntaxHandleInResultResponse>::result;
+  Response(::fit::result<uint32_t, ::test_protocols::WithErrorSyntaxHandleInResultResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -750,10 +750,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
  public:
   static ::fidl::Response<::test_protocols::WithErrorSyntax::HandleInResult> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -767,9 +767,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::HandleInResult>, ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
+class ::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::HandleInResult>, ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::HandleInResult>, ::test_protocols::WithErrorSyntaxHandleInResultResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::HandleInResult>, ::test_protocols::WithErrorSyntaxHandleInResultResponse>::result;
 
  protected:
   Result() = default;
@@ -1108,9 +1108,9 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::ChannelProtocol::MethodB> final : public ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMethodBResponse> {
+class ::fidl::Result<::test_protocols::ChannelProtocol::MethodB> final : public ::fit::result<::fidl::Error, ::test_protocols::ChannelProtocolMethodBResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMethodBResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::ChannelProtocolMethodBResponse>::result;
 
  protected:
   Result() = default;
@@ -1128,9 +1128,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::Channe
 };
 
 template <>
-class ::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle> final : public ::fitx::result<::fidl::Error> {
+class ::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle> final : public ::fit::result<::fidl::Error> {
  public:
-  using ::fitx::result<::fidl::Error>::result;
+  using ::fit::result<::fidl::Error>::result;
 
  protected:
   Result() = default;
@@ -1151,9 +1151,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::Channe
 };
 
 template <>
-class ::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket> final : public ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMutateSocketResponse> {
+class ::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket> final : public ::fit::result<::fidl::Error, ::test_protocols::ChannelProtocolMutateSocketResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMutateSocketResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::ChannelProtocolMutateSocketResponse>::result;
 
  protected:
   Result() = default;
@@ -1169,7 +1169,7 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol> fin
 
   ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MutateSocket> MutateSocket(::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> request) const;
 
-  ::fitx::result<::fidl::Error> MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request) const;
+  ::fit::result<::fidl::Error> MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request) const;
 };
 namespace test_protocols {
 
@@ -1189,7 +1189,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>
 
   ::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket> MutateSocket(::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> request);
 
-  ::fitx::result<::fidl::Error> MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request);
+  ::fit::result<::fidl::Error> MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> _client_end() const {
@@ -1249,7 +1249,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::ChannelProtocol
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload);
+  ::fit::result<::fidl::Error> EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload);
 };
 
 template <>
@@ -1258,7 +1258,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload);
+  ::fit::result<::fidl::Error> EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload);
 };
 
 #endif  // __Fuchsia__
@@ -1472,9 +1472,9 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::Transitional::Request> final : public ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestResponse> {
+class ::fidl::Result<::test_protocols::Transitional::Request> final : public ::fit::result<::fidl::Error, ::test_protocols::TransitionalRequestResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::TransitionalRequestResponse>::result;
 
  protected:
   Result() = default;
@@ -1486,7 +1486,7 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::Transitional> final 
   using NaturalClientBase::NaturalClientBase;
   ::fidl::internal::NaturalThenable<::test_protocols::Transitional::Request> Request(const ::fidl::Request<::test_protocols::Transitional::Request>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request) const;
+  ::fit::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request) const;
 };
 namespace test_protocols {
 
@@ -1502,7 +1502,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional> fi
  public:
   ::fidl::Result<::test_protocols::Transitional::Request> Request(const ::fidl::Request<::test_protocols::Transitional::Request>& request);
 
-  ::fitx::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request);
+  ::fit::result<::fidl::Error> OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::Transitional> _client_end() const {
@@ -1563,7 +1563,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional> :
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
+  ::fit::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
 };
 
 template <>
@@ -1572,7 +1572,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::Transitional>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
+  ::fit::result<::fidl::Error> Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload);
 };
 
 #endif  // __Fuchsia__
@@ -1671,7 +1671,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocols::DiscoverableProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> Method() const;
+  ::fit::result<::fidl::Error> Method() const;
 };
 
 #endif  // __Fuchsia__
@@ -1682,7 +1682,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProtocol> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProtocol>> {
  public:
-  ::fitx::result<::fidl::Error> Method();
+  ::fit::result<::fidl::Error> Method();
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> _client_end() const {
@@ -1969,9 +1969,9 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodResponse> {
+class ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::fit::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodResponse>::result;
 
  protected:
   Result() = default;
@@ -1983,7 +1983,7 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol
   using NaturalClientBase::NaturalClientBase;
   ::fidl::internal::NaturalThenable<::test_protocols::HandleRightsProtocol::ResponseMethod> ResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> request) const;
 
-  ::fitx::result<::fidl::Error> NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request) const;
+  ::fit::result<::fidl::Error> NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request) const;
 };
 namespace test_protocols {
 
@@ -1999,7 +1999,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProt
  public:
   ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod> ResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> request);
 
-  ::fitx::result<::fidl::Error> NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request);
+  ::fit::result<::fidl::Error> NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> _client_end() const {
@@ -2059,7 +2059,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocols::HandleRightsPro
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
+  ::fit::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
 };
 
 template <>
@@ -2068,7 +2068,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtoco
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
+  ::fit::result<::fidl::Error> AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload);
 };
 
 #endif  // __Fuchsia__
@@ -2232,9 +2232,9 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsResponse> {
+class ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::fit::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsResponse>::result;
 
  protected:
   Result() = default;
@@ -2255,9 +2255,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithPr
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsResponse> {
+class ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::fit::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsResponse>::result;
 
  protected:
   Result() = default;
@@ -2278,9 +2278,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithPr
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsResponse> {
+class ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::fit::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsResponse>::result;
 
  protected:
   Result() = default;
@@ -2516,7 +2516,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request) const;
+  ::fit::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request) const;
 };
 namespace test_protocols {
 
@@ -2530,7 +2530,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters>> {
  public:
-  ::fitx::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request);
+  ::fit::result<::fidl::Error> Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> _client_end() const {
@@ -2688,9 +2688,9 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodResponse> {
+class ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fit::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodResponse>::result;
 
  protected:
   Result() = default;

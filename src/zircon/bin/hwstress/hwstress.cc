@@ -26,7 +26,7 @@ constexpr std::string_view kDefaultTemperatureSensorPath = "/dev/class/thermal/0
 
 int Run(int argc, const char** argv) {
   // Parse arguments
-  fitx::result<std::string, CommandLineArgs> result =
+  fit::result<std::string, CommandLineArgs> result =
       ParseArgs(cpp20::span<const char* const>(argv, argc));
   if (result.is_error()) {
     fprintf(stderr, "Error: %s\n\n", result.error_value().c_str());

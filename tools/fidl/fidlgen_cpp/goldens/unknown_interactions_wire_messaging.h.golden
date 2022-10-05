@@ -5827,7 +5827,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>(::fidl::internal::StatusFromResult(decoded)) {}
 
@@ -5866,7 +5866,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>(::fidl::internal::StatusFromResult(decoded)) {}
 
@@ -5907,7 +5907,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>(::fidl::internal::StatusFromResult(decoded)) {}
 
@@ -5957,7 +5957,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6013,7 +6013,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6069,7 +6069,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6092,7 +6092,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> {
-  using Type = ::fitx::result<int32_t>;
+  using Type = ::fit::result<int32_t>;
 };
 
 template<>
@@ -6125,7 +6125,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6148,7 +6148,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse*>;
 };
 
 template<>
@@ -6181,7 +6181,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6204,7 +6204,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse*>;
 };
 
 template<>
@@ -6237,7 +6237,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6260,7 +6260,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse*>;
 };
 
 template<>
@@ -6293,7 +6293,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6346,7 +6346,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6402,7 +6402,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6458,7 +6458,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6514,7 +6514,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6537,7 +6537,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> {
-  using Type = ::fitx::result<int32_t>;
+  using Type = ::fit::result<int32_t>;
 };
 
 template<>
@@ -6570,7 +6570,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6593,7 +6593,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse*>;
 };
 
 template<>
@@ -6626,7 +6626,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6649,7 +6649,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse*>;
 };
 
 template<>
@@ -6682,7 +6682,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -6705,7 +6705,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse*>;
 };
 
 template<>
@@ -6738,7 +6738,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -7234,7 +7234,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t> result);
+  void Reply(::fit::result<int32_t> result);
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -7247,7 +7247,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t> result);
+  void Reply(::fit::result<int32_t> result);
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -7276,7 +7276,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse*> result);
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -7289,7 +7289,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse*> result);
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -7318,7 +7318,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse UnknownInteractionsProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -7331,7 +7331,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse UnknownInteractionsProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -7360,7 +7360,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse UnknownInteractionsProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -7373,7 +7373,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse UnknownInteractionsProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -7554,7 +7554,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t> result);
+  void Reply(::fit::result<int32_t> result);
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -7567,7 +7567,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t> result);
+  void Reply(::fit::result<int32_t> result);
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -7596,7 +7596,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse*> result);
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -7609,7 +7609,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse*> result);
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -7638,7 +7638,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -7651,7 +7651,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -7680,7 +7680,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -7693,7 +7693,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -11796,7 +11796,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>(::fidl::internal::StatusFromResult(decoded)) {}
 
@@ -11835,7 +11835,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>(::fidl::internal::StatusFromResult(decoded)) {}
 
@@ -11876,7 +11876,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>(::fidl::internal::StatusFromResult(decoded)) {}
 
@@ -11926,7 +11926,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -11982,7 +11982,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -12038,7 +12038,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -12061,7 +12061,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> {
-  using Type = ::fitx::result<int32_t>;
+  using Type = ::fit::result<int32_t>;
 };
 
 template<>
@@ -12094,7 +12094,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -12117,7 +12117,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse*>;
 };
 
 template<>
@@ -12150,7 +12150,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -12173,7 +12173,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse*>;
 };
 
 template<>
@@ -12206,7 +12206,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -12229,7 +12229,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse*>;
 };
 
 template<>
@@ -12262,7 +12262,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -12662,7 +12662,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t> result);
+  void Reply(::fit::result<int32_t> result);
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -12675,7 +12675,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t> result);
+  void Reply(::fit::result<int32_t> result);
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -12704,7 +12704,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse*> result);
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -12717,7 +12717,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse*> result);
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -12746,7 +12746,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -12759,7 +12759,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -12788,7 +12788,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -12801,7 +12801,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -15816,7 +15816,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>(::fidl::internal::StatusFromResult(decoded)) {}
 
@@ -15857,7 +15857,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request);
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>(::fidl::internal::StatusFromResult(decoded)) {}
 
@@ -15907,7 +15907,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -15963,7 +15963,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -16019,7 +16019,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -16042,7 +16042,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> {
-  using Type = ::fitx::result<int32_t>;
+  using Type = ::fit::result<int32_t>;
 };
 
 template<>
@@ -16075,7 +16075,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -16098,7 +16098,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse*>;
 };
 
 template<>
@@ -16131,7 +16131,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -16154,7 +16154,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse*>;
 };
 
 template<>
@@ -16187,7 +16187,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -16210,7 +16210,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> {
-  using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse*>;
+  using Type = ::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse*>;
 };
 
 template<>
@@ -16243,7 +16243,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     }
 
     explicit WireUnownedResult(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -16615,7 +16615,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t> result);
+  void Reply(::fit::result<int32_t> result);
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -16628,7 +16628,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t> result);
+  void Reply(::fit::result<int32_t> result);
   void ReplySuccess();
   void ReplyError(int32_t error);
 
@@ -16657,7 +16657,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse*> result);
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -16670,7 +16670,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse*> result);
   void ReplySuccess(int32_t some_field);
   void ReplyError(int32_t error);
 
@@ -16699,7 +16699,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -16712,7 +16712,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse);
   void ReplyError(int32_t error);
 
@@ -16741,7 +16741,7 @@ class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInt
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 
@@ -16754,7 +16754,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::Unkn
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse*> result);
+  void Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse*> result);
   void ReplySuccess(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse);
   void ReplyError(int32_t error);
 

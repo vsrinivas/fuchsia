@@ -12,7 +12,7 @@
 
 namespace boot_shim {
 
-bool BootShimBase::Check(const char* what, fitx::result<std::string_view> result) const {
+bool BootShimBase::Check(const char* what, fit::result<std::string_view> result) const {
   if (result.is_error()) {
     fprintf(log_, "%s: %s: %.*s", shim_name_, what, static_cast<int>(result.error_value().size()),
             result.error_value().data());
@@ -21,7 +21,7 @@ bool BootShimBase::Check(const char* what, fitx::result<std::string_view> result
   return true;
 }
 
-bool BootShimBase::Check(const char* what, fitx::result<InputZbi::Error> result) const {
+bool BootShimBase::Check(const char* what, fit::result<InputZbi::Error> result) const {
   if (result.is_error()) {
     fprintf(log_, "%s: %s: ", shim_name_, what);
     zbitl::PrintViewError(result.error_value(), log_);
@@ -31,7 +31,7 @@ bool BootShimBase::Check(const char* what, fitx::result<InputZbi::Error> result)
 }
 
 bool BootShimBase::Check(const char* what,
-                         fitx::result<InputZbi::CopyError<WritableBytes>> result) const {
+                         fit::result<InputZbi::CopyError<WritableBytes>> result) const {
   if (result.is_error()) {
     fprintf(log_, "%s: %s: ", shim_name_, what);
     zbitl::PrintViewCopyError(result.error_value(), log_);
@@ -40,7 +40,7 @@ bool BootShimBase::Check(const char* what,
   return true;
 }
 
-bool BootShimBase::Check(const char* what, fitx::result<DataZbi::Error> result) const {
+bool BootShimBase::Check(const char* what, fit::result<DataZbi::Error> result) const {
   if (result.is_error()) {
     fprintf(log_, "%s: %s: ", shim_name_, what);
     zbitl::PrintViewError(result.error_value(), log_);

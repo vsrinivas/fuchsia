@@ -241,7 +241,7 @@ struct UseBlockDeviceError {
 // use that block device. Otherwise, hands back the unused data sink server-end
 // together with a status.
 template <typename Protocol>
-fitx::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
+fit::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
     fidl::WireSyncClient<fuchsia_paver::Paver>& paver_client, const char* block_device_path,
     fidl::ServerEnd<Protocol> data_sink_remote) {
   static_assert(std::is_same_v<Protocol, fuchsia_paver::DataSink> ||
@@ -254,13 +254,13 @@ fitx::result<UseBlockDeviceError<Protocol>> UseBlockDevice(
         std::move(*block_device),
         // Note: manually converting any DataSink protocol into a DynamicDataSink.
         fidl::ServerEnd<fuchsia_paver::DynamicDataSink>(data_sink_remote.TakeChannel()));
-    return fitx::ok();
+    return fit::ok();
   }
 
   ERROR("Unable to open block device: %s (%s)\n", block_device_path, block_device.status_string());
   PrintUsage();
 
-  return fitx::error(UseBlockDeviceError<Protocol>{
+  return fit::error(UseBlockDeviceError<Protocol>{
       block_device.status_value(),
       std::move(data_sink_remote),
   });

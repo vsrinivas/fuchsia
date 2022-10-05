@@ -52,7 +52,7 @@ size_t BootShimBase::Cmdline::Collect(std::optional<ItemBase::WritableBytes> pay
 
 size_t BootShimBase::Cmdline::size_bytes() const { return ItemSize(Collect()); }
 
-fitx::result<BootShimBase::DataZbi::Error> BootShimBase::Cmdline::AppendItems(
+fit::result<BootShimBase::DataZbi::Error> BootShimBase::Cmdline::AppendItems(
     BootShimBase::DataZbi& zbi) const {
   auto result = zbi.Append({
       .type = ZBI_TYPE_CMDLINE,
@@ -62,7 +62,7 @@ fitx::result<BootShimBase::DataZbi::Error> BootShimBase::Cmdline::AppendItems(
     return result.take_error();
   }
   Collect(result.value()->payload);
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace boot_shim

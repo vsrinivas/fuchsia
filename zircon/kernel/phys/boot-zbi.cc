@@ -19,30 +19,30 @@
 
 namespace {
 
-constexpr fitx::error<BootZbi::Error> InputError(BootZbi::InputZbi::Error error) {
-  return fitx::error{BootZbi::Error{
+constexpr fit::error<BootZbi::Error> InputError(BootZbi::InputZbi::Error error) {
+  return fit::error{BootZbi::Error{
       .zbi_error = error.zbi_error,
       .read_offset = error.item_offset,
   }};
 }
 
-constexpr fitx::error<BootZbi::Error> EmptyZbi(fitx::result<BootZbi::InputZbi::Error> result) {
+constexpr fit::error<BootZbi::Error> EmptyZbi(fit::result<BootZbi::InputZbi::Error> result) {
   if (result.is_error()) {
     return InputError(result.error_value());
   }
-  return fitx::error{BootZbi::Error{"empty ZBI"}};
+  return fit::error{BootZbi::Error{"empty ZBI"}};
 }
 
-constexpr fitx::error<BootZbi::Error> OutputError(BootZbi::Zbi::Error error) {
-  return fitx::error{BootZbi::Error{
+constexpr fit::error<BootZbi::Error> OutputError(BootZbi::Zbi::Error error) {
+  return fit::error{BootZbi::Error{
       .zbi_error = error.zbi_error,
       .write_offset = error.item_offset,
   }};
 }
 
-constexpr fitx::error<BootZbi::Error> OutputError(
+constexpr fit::error<BootZbi::Error> OutputError(
     BootZbi::InputZbi::CopyError<BootZbi::Bytes> error) {
-  return fitx::error{BootZbi::Error{
+  return fit::error{BootZbi::Error{
       .zbi_error = error.zbi_error,
       .read_offset = error.read_offset,
       .write_offset = error.write_offset,
@@ -94,12 +94,12 @@ BootZbi::Size BootZbi::GetKernelAllocationSize(BootZbi::Zbi::iterator kernel_ite
                                                    zircon_kernel->data_kernel.reserve_memory_size));
 }
 
-fitx::result<BootZbi::Error> BootZbi::InitKernelFromItem() {
+fit::result<BootZbi::Error> BootZbi::InitKernelFromItem() {
   kernel_ = GetZirconKernel(kernel_item_->payload.data());
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<BootZbi::Error> BootZbi::Init(InputZbi arg_zbi) {
+fit::result<BootZbi::Error> BootZbi::Init(InputZbi arg_zbi) {
   // Move the incoming zbitl::View into the object before using
   // iterators into it.
   zbi_ = std::move(arg_zbi);
@@ -134,14 +134,14 @@ fitx::result<BootZbi::Error> BootZbi::Init(InputZbi arg_zbi) {
     return InputError(result.error_value());
   }
 
-  return fitx::error{Error{
+  return fit::error{Error{
       .zbi_error = "ZBI does not start with valid kernel item",
       .read_offset =
           it == zbi_.end() ? static_cast<uint32_t>(sizeof(zbi_header_t)) : it.item_offset(),
   }};
 }
 
-fitx::result<BootZbi::Error> BootZbi::Init(InputZbi arg_zbi, InputZbi::iterator kernel_item) {
+fit::result<BootZbi::Error> BootZbi::Init(InputZbi arg_zbi, InputZbi::iterator kernel_item) {
   zbi_ = std::move(arg_zbi);
   kernel_item_ = zbi_.begin();
   while (true) {
@@ -185,9 +185,9 @@ bool BootZbi::FixedKernelOverlapsData(uint64_t kernel_load_address) const {
   return start1 <= start2 ? start2 < end1 : start1 < end2;
 }
 
-fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
-                                           ktl::optional<uintptr_t> kernel_load_address,
-                                           ktl::optional<uintptr_t> data_load_address) {
+fit::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
+                                          ktl::optional<uintptr_t> kernel_load_address,
+                                          ktl::optional<uintptr_t> data_load_address) {
   ZX_ASSERT(data_.storage().empty());
 
   auto input_address = reinterpret_cast<uintptr_t>(zbi_.storage().data());
@@ -361,7 +361,7 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
         Allocation::New(ac, memalloc::Type::kKernel, static_cast<size_t>(KernelMemorySize()),
                         arch::kZbiBootKernelAlignment);
     if (!ac.check()) {
-      return fitx::error{Error{
+      return fit::error{Error{
           .zbi_error = "cannot allocate memory for kernel image",
           .write_offset = static_cast<uint32_t>(KernelMemorySize()),
       }};
@@ -376,7 +376,7 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
     data_buffer_ = Allocation::New(ac, memalloc::Type::kDataZbi, data_required_size,
                                    arch::kZbiBootDataAlignment);
     if (!ac.check()) {
-      return fitx::error{Error{
+      return fit::error{Error{
           .zbi_error = "cannot allocate memory for data ZBI",
           .write_offset = data_required_size,
       }};
@@ -414,7 +414,7 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
   ZX_ASSERT(KernelCanLoadInPlace());
   ZX_ASSERT(data_.storage().size() >= data_required_size);
   ZX_ASSERT(data_.storage().size() - data_.size_bytes() >= extra_data_capacity);
-  return fitx::ok();
+  return fit::ok();
 }
 
 void BootZbi::Log() {

@@ -105,23 +105,23 @@ TEST(ProfileConfig, Parse) {
 }
 
 TEST(ProfileConfig, ParseRoleSelector) {
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd123"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("_abcd123"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd123.01234"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd-123.012-34"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd_123.012_34"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd123.abc123"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd123._abc123"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd123._abc123:xyz123"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd123._abc123:xyz-123"));
-  EXPECT_EQ(fitx::success{}, zircon_profile::ParseRoleSelector("abcd123._abc123:xyz_123"));
-  EXPECT_EQ(fitx::success{},
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd123"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("_abcd123"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd123.01234"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd-123.012-34"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd_123.012_34"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd123.abc123"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd123._abc123"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd123._abc123:xyz123"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd123._abc123:xyz-123"));
+  EXPECT_EQ(fit::success{}, zircon_profile::ParseRoleSelector("abcd123._abc123:xyz_123"));
+  EXPECT_EQ(fit::success{},
             zircon_profile::ParseRoleSelector("abcd123._abc123:xyz123,abc987=01234"));
 
-  EXPECT_EQ(fitx::failed{}, zircon_profile::ParseRoleSelector(""));
-  EXPECT_EQ(fitx::failed{}, zircon_profile::ParseRoleSelector("+abcd"));
-  EXPECT_EQ(fitx::failed{}, zircon_profile::ParseRoleSelector("-abcd"));
+  EXPECT_EQ(fit::failed{}, zircon_profile::ParseRoleSelector(""));
+  EXPECT_EQ(fit::failed{}, zircon_profile::ParseRoleSelector("+abcd"));
+  EXPECT_EQ(fit::failed{}, zircon_profile::ParseRoleSelector("-abcd"));
 }
 
 TEST(ProfileConfig, MaybeMediaRole) {
@@ -129,40 +129,40 @@ TEST(ProfileConfig, MaybeMediaRole) {
     zircon_profile::Role role{
         .name = "foo",
         .selectors = {{"realm", "media"}, {"capacity", "1000000"}, {"deadline", "10000000"}}};
-    EXPECT_EQ(fitx::success{}, zircon_profile::MaybeMediaRole(role));
+    EXPECT_EQ(fit::success{}, zircon_profile::MaybeMediaRole(role));
   }
   {
     zircon_profile::Role role{
         .name = "foo",
         .selectors = {{"realm", "bar"}, {"capacity", "1000000"}, {"deadline", "10000000"}}};
-    EXPECT_EQ(fitx::failed{}, zircon_profile::MaybeMediaRole(role));
+    EXPECT_EQ(fit::failed{}, zircon_profile::MaybeMediaRole(role));
   }
   {
     zircon_profile::Role role{
         .name = "foo",
         .selectors = {{"realm", "media"}, {"capacity", "bar"}, {"deadline", "10000000"}}};
-    EXPECT_EQ(fitx::failed{}, zircon_profile::MaybeMediaRole(role));
+    EXPECT_EQ(fit::failed{}, zircon_profile::MaybeMediaRole(role));
   }
   {
     zircon_profile::Role role{
         .name = "foo",
         .selectors = {{"realm", "media"}, {"capacity", "1000000"}, {"deadline", "bar"}}};
-    EXPECT_EQ(fitx::failed{}, zircon_profile::MaybeMediaRole(role));
+    EXPECT_EQ(fit::failed{}, zircon_profile::MaybeMediaRole(role));
   }
   {
     zircon_profile::Role role{.name = "foo",
                               .selectors = {{"capacity", "1000000"}, {"deadline", "10000000"}}};
-    EXPECT_EQ(fitx::failed{}, zircon_profile::MaybeMediaRole(role));
+    EXPECT_EQ(fit::failed{}, zircon_profile::MaybeMediaRole(role));
   }
   {
     zircon_profile::Role role{.name = "foo",
                               .selectors = {{"realm", "media"}, {"deadline", "10000000"}}};
-    EXPECT_EQ(fitx::failed{}, zircon_profile::MaybeMediaRole(role));
+    EXPECT_EQ(fit::failed{}, zircon_profile::MaybeMediaRole(role));
   }
   {
     zircon_profile::Role role{.name = "foo",
                               .selectors = {{"realm", "media"}, {"capacity", "1000000"}}};
-    EXPECT_EQ(fitx::failed{}, zircon_profile::MaybeMediaRole(role));
+    EXPECT_EQ(fit::failed{}, zircon_profile::MaybeMediaRole(role));
   }
 }
 

@@ -55,7 +55,7 @@ namespace test_versions {
 #ifdef __Fuchsia__
 }  // namespace test_versions
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_versions::Protocol>::Foo() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_versions::kProtocol_Foo_Ordinal, ::test_versions::kProtocol_Foo_DynamicFlags};
@@ -71,7 +71,7 @@ namespace test_versions {
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_versions::Protocol>::Foo() {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_versions::kProtocol_Foo_Ordinal, ::test_versions::kProtocol_Foo_DynamicFlags};
@@ -104,7 +104,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_versions::kProtocol_Foo_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

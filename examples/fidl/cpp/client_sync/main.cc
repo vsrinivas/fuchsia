@@ -67,7 +67,7 @@ int main(int argc, const char** argv) {
     // Make a SendString call.
     // [START send-string]
     // [START send-string-first-line]
-    fitx::result<fidl::Error> result = client->SendString({"hi"});
+    fit::result<fidl::Error> result = client->SendString({"hi"});
     // [END send-string-first-line]
     if (!result.is_ok()) {
       FX_LOGS(ERROR) << "SendString failed: " << result.error_value();

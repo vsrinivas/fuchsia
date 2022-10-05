@@ -20,7 +20,7 @@ zx_library("zxdump") {
     # <lib/zxdump/types.h> has #include <zircon/types.h>.
     "//zircon/system/public",
 
-    # <lib/zxdump/fd-writer.h> has #include <lib/fitx/result.h>.
+    # <lib/zxdump/fd-writer.h> has #include <lib/fit/result.h>.
     "//zircon/system/ulib/zxc",
 
     # <lib/zxdump/dump.h> has #include <lib/fit/function.h>.

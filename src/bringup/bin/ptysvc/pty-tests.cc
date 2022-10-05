@@ -91,7 +91,7 @@ void WriteCtrlC(Connection& conn) {
   uint8_t data[] = {0x03};
   const fidl::WireResult result = conn->Write(fidl::VectorView<uint8_t>::FromExternal(data));
   ASSERT_OK(result.status());
-  const fitx::result response = result.value();
+  const fit::result response = result.value();
   ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
   ASSERT_EQ(response.value()->actual_count, std::size(data));
 }
@@ -204,7 +204,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
     {
       const fidl::WireResult result = server->Read(10);
       ASSERT_OK(result.status());
-      const fitx::result response = result.value();
+      const fit::result response = result.value();
       ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
       const fidl::VectorView data = response.value()->data;
       ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
@@ -216,7 +216,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
       uint8_t data[16] = {};
       const fidl::WireResult result = server->Write(fidl::VectorView<uint8_t>::FromExternal(data));
       ASSERT_OK(result.status());
-      const fitx::result response = result.value();
+      const fit::result response = result.value();
       ASSERT_TRUE(response.is_error());
       ASSERT_STATUS(response.error_value(), ZX_ERR_PEER_CLOSED);
     }
@@ -258,14 +258,14 @@ TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
   {
     const fidl::WireResult result = server->Read(10);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_error());
     ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
   {
     const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_error());
     ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
@@ -287,7 +287,7 @@ TEST_F(PtyTestCase, ServerEmpty0ByteRead) {
 
   const fidl::WireResult result = server->Read(0);
   ASSERT_OK(result.status());
-  const fitx::result response = result.value();
+  const fit::result response = result.value();
   ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
   const fidl::VectorView data = response.value()->data;
   ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
@@ -306,7 +306,7 @@ TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
     uint8_t buf[256] = {};
     const fidl::WireResult result = server->Write(fidl::VectorView<uint8_t>::FromExternal(buf));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     if (response.is_error()) {
       ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
       break;
@@ -316,7 +316,7 @@ TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
 
   const fidl::WireResult result = server->Write({});
   ASSERT_OK(result.status());
-  const fitx::result response = result.value();
+  const fit::result response = result.value();
   ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
   ASSERT_EQ(response.value()->actual_count, 0);
 }
@@ -332,7 +332,7 @@ TEST_F(PtyTestCase, ClientInactive0ByteClientWrite) {
 
   const fidl::WireResult result = inactive_client->Write({});
   ASSERT_OK(result.status());
-  const fitx::result response = result.value();
+  const fit::result response = result.value();
   ASSERT_TRUE(response.is_error());
   ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
 }
@@ -720,7 +720,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_EQ(response.value()->actual_count, std::size(kTestData));
   }
@@ -750,7 +750,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
     // Request more bytes than are present
     const fidl::WireResult result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
@@ -761,7 +761,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   {
     const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_error());
     ASSERT_STATUS(response.error_value(), ZX_ERR_PEER_CLOSED);
   }
@@ -771,7 +771,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
     uint8_t data[16] = {};
     const fidl::WireResult result = client->Write(fidl::VectorView<uint8_t>::FromExternal(data));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_error());
     ASSERT_STATUS(response.error_value(), ZX_ERR_PEER_CLOSED);
   }
@@ -791,7 +791,7 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
     const fidl::WireResult result =
         client->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_EQ(response.value()->actual_count, std::size(kTestData));
   }
@@ -802,7 +802,7 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
   {
     const fidl::WireResult result = server->Read(std::size(kExpectedReadback) + 10);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
@@ -831,7 +831,7 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     // We expect to see the written count to include the ^C
     ASSERT_EQ(response.value()->actual_count, std::size(kExpectedReadbackWithNul) - 1 + 1);
@@ -843,7 +843,7 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
   {
     const fidl::WireResult result = client->Read(std::size(kExpectedReadbackWithNul) + 10);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
@@ -875,7 +875,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
     const fidl::WireResult result =
         client->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_EQ(response.value()->actual_count, std::size(kTestData));
   }
@@ -886,7 +886,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   {
     const fidl::WireResult result = server->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
@@ -919,7 +919,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(kTestData));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_EQ(response.value()->actual_count, std::size(kTestData));
   }
@@ -930,7 +930,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   {
     const fidl::WireResult result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
@@ -967,7 +967,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
     const fidl::WireResult result = server->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_GT(response.value()->actual_count, 0);
     total_written += response.value()->actual_count;
@@ -978,7 +978,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
     const fidl::WireResult result = server->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_error());
     ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
@@ -991,7 +991,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
         nullptr));
     const fidl::WireResult result = client->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(data.count(), std::min(std::size(kTestString) - 1, total_written - total_read));
@@ -1022,7 +1022,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
     const fidl::WireResult result = client->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_GT(response.value()->actual_count, 0);
     total_written += response.value()->actual_count;
@@ -1033,7 +1033,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
     const fidl::WireResult result = client->Write(
         fidl::VectorView<uint8_t>::FromExternal(kTestString, std::size(kTestString) - 1));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_error());
     ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
@@ -1046,7 +1046,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
         nullptr));
     const fidl::WireResult result = server->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(data.count(), std::min(std::size(kTestString) - 1, total_written - total_read));
@@ -1079,7 +1079,7 @@ TEST_F(PtyTestCase, NonActiveClientsCantWrite) {
     const fidl::WireResult result =
         other_client->Write(fidl::VectorView<uint8_t>::FromExternal(&byte, 1));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_error());
     ASSERT_STATUS(response.error_value(), ZX_ERR_SHOULD_WAIT);
   }
@@ -1100,7 +1100,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(&kControlClientByte, 1));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_EQ(response.value()->actual_count, 1);
   }
@@ -1117,7 +1117,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
     const fidl::WireResult result =
         server->Write(fidl::VectorView<uint8_t>::FromExternal(&kOtherClientByte, 1));
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_EQ(response.value()->actual_count, 1);
   }
@@ -1131,7 +1131,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
 
     const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     const fidl::VectorView data = response.value()->data;
     ASSERT_EQ(data.count(), 1);

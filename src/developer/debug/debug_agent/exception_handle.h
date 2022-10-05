@@ -4,7 +4,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_EXCEPTION_HANDLE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_EXCEPTION_HANDLE_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <memory>
 
@@ -37,12 +37,12 @@ class ExceptionHandle {
   virtual debug_ipc::ExceptionType GetType(const ThreadHandle& thread) const = 0;
 
   // Returns the current resolution for the exception.
-  virtual fitx::result<debug::Status, Resolution> GetResolution() const = 0;
+  virtual fit::result<debug::Status, Resolution> GetResolution() const = 0;
 
   virtual debug::Status SetResolution(Resolution resolution) = 0;
 
   // Returns the associated the exception handling strategy.
-  virtual fitx::result<debug::Status, debug_ipc::ExceptionStrategy> GetStrategy() const = 0;
+  virtual fit::result<debug::Status, debug_ipc::ExceptionStrategy> GetStrategy() const = 0;
 
   // Sets the handling strategy.
   virtual debug::Status SetStrategy(debug_ipc::ExceptionStrategy strategy) = 0;

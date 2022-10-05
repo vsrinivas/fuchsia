@@ -84,7 +84,7 @@ TEST(DriverTransport, NaturalSendZirconHandleEncodeErrorShouldCloseHandle) {
   zx::channel c1, c2;
   ASSERT_OK(zx::channel::create(0, &c1, &c2));
 
-  fitx::result result = client->SendZirconHandle({{
+  fit::result result = client->SendZirconHandle({{
       .s = "too long",
       .h = std::move(c1),
   }});

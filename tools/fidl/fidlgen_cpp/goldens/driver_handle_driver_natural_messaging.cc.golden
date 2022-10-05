@@ -36,7 +36,7 @@ namespace test_driverhandle {
 #ifdef __Fuchsia__
 }  // namespace test_driverhandle
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_driverhandle::HandlesInProtocol>::SendHandles(::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal, ::test_driverhandle::kHandlesInProtocol_SendHandles_DynamicFlags};
@@ -70,7 +70,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_driverhandle::HandlesInProtocolSendHandlesRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_driverhandle::HandlesInProtocolSendHandlesRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

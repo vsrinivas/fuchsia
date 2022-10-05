@@ -33,13 +33,13 @@ class BootShimBase : public ItemBase {
 
   FILE* log() const { return log_; }
 
-  bool Check(const char* what, fitx::result<std::string_view> result) const;
+  bool Check(const char* what, fit::result<std::string_view> result) const;
 
-  bool Check(const char* what, fitx::result<InputZbi::Error> result) const;
+  bool Check(const char* what, fit::result<InputZbi::Error> result) const;
 
-  bool Check(const char* what, fitx::result<InputZbi::CopyError<WritableBytes>> result) const;
+  bool Check(const char* what, fit::result<InputZbi::CopyError<WritableBytes>> result) const;
 
-  bool Check(const char* what, fitx::result<DataZbi::Error> result) const;
+  bool Check(const char* what, fit::result<DataZbi::Error> result) const;
 
  protected:
   class Cmdline : public ItemBase {
@@ -54,7 +54,7 @@ class BootShimBase : public ItemBase {
     void set_cstr(cpp20::span<const char*> cstr) { cstr_ = cstr; }
 
     size_t size_bytes() const;
-    fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
+    fit::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
 
    private:
     size_t Collect(std::optional<WritableBytes> payload = std::nullopt) const;
@@ -149,13 +149,13 @@ class BootShim : public BootShimBase {
 
   // Append additional items to the data ZBI.  The caller ensures there is as
   // much spare capacity as size_bytes() previously returned.
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) {
-    fitx::result<DataZbi::Error> result = fitx::ok();
+  fit::result<DataZbi::Error> AppendItems(DataZbi& zbi) {
+    fit::result<DataZbi::Error> result = fit::ok();
     auto append = [&zbi, &result](auto& item) {
       result = item.AppendItems(zbi);
       return result.is_error();
     };
-    return AnyItem(append) ? result : fitx::ok();
+    return AnyItem(append) ? result : fit::ok();
   }
 
   // Get the item object of a particular type (among Items).

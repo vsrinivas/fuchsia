@@ -265,7 +265,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_driverhandle::HandlesInProto
  public:
   explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_driverhandle::HandlesInProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>* request);
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error>&& decoded,
+      ::fit::result<::fidl::Error>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_driverhandle::HandlesInProtocol::SendHandles>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_driverhandle::HandlesInProtocol::SendHandles>(result) {}

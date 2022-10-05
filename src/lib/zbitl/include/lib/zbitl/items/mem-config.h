@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_ITEMS_MEM_CONFIG_H_
 #define SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_ITEMS_MEM_CONFIG_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zbitl/view.h>
 #include <zircon/boot/image.h>
 

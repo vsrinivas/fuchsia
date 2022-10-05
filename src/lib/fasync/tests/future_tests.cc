@@ -74,9 +74,9 @@ TEST(FutureTests, Map) {
 
   {
     [[maybe_unused]] auto result_pipe =
-        fasync::make_try_future<int, int>(fitx::success(3)) |
-        fasync::map_ok([](int i) { return fitx::ok(std::to_string(i)); }) |
-        fasync::map_error([](int i) { return fitx::as_error(std::to_string(i) + " error"); });
+        fasync::make_try_future<int, int>(fit::success(3)) |
+        fasync::map_ok([](int i) { return fit::ok(std::to_string(i)); }) |
+        fasync::map_error([](int i) { return fit::as_error(std::to_string(i) + " error"); });
 
     using result_pipe_t = decltype(result_pipe);
     static_assert(std::is_same_v<fasync::future_value_t<result_pipe_t>, std::string>);
@@ -301,17 +301,17 @@ TEST(FutureTests, MapReturnTypes) {
   }
   {
     auto x = fasync::make_ok_future(42) |
-             fasync::map([]() -> fitx::result<int, std::string> { return fitx::ok("asdf"s); }) |
+             fasync::map([]() -> fit::result<int, std::string> { return fit::ok("asdf"s); }) |
              fasync::testing::invoke;
     EXPECT_STREQ(x.value(), "asdf");
   }
   {
-    auto x = fasync::make_value_future(0) | fasync::map([] { return fitx::ok(42); }) |
+    auto x = fasync::make_value_future(0) | fasync::map([] { return fit::ok(42); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
-    auto x = fasync::make_value_future(0) | fasync::map([] { return fitx::as_error(42); }) |
+    auto x = fasync::make_value_future(0) | fasync::map([] { return fit::as_error(42); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
@@ -321,22 +321,21 @@ TEST(FutureTests, MapReturnTypes) {
     EXPECT_EQ(x, fasync::pending());
   }
   {
-    auto x = fasync::make_value_future(0) | fasync::map([] { return fasync::done(fitx::ok(42)); }) |
+    auto x = fasync::make_value_future(0) | fasync::map([] { return fasync::done(fit::ok(42)); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
     auto x =
         fasync::make_value_future(0) |
-        fasync::map([]() -> fasync::try_ready<int, int> { return fasync::done(fitx::ok(42)); }) |
+        fasync::map([]() -> fasync::try_ready<int, int> { return fasync::done(fit::ok(42)); }) |
         fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
-    auto x =
-        fasync::make_value_future(0) |
-        fasync::map([]() -> fasync::try_poll<int, int> { return fasync::done(fitx::ok(42)); }) |
-        fasync::testing::invoke;
+    auto x = fasync::make_value_future(0) |
+             fasync::map([]() -> fasync::try_poll<int, int> { return fasync::done(fit::ok(42)); }) |
+             fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
 }
@@ -344,205 +343,200 @@ TEST(FutureTests, MapReturnTypes) {
 TEST(FutureTests, MapOkHandlers) {
   {
     auto x = fasync::make_ok_future(0) |
-             fasync::map_ok([](fasync::context&) { return fitx::ok(42); }) |
+             fasync::map_ok([](fasync::context&) { return fit::ok(42); }) | fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 42);
+  }
+  {
+    auto x = fasync::make_ok_future(42) | fasync::map_ok([](int i) { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
-    auto x = fasync::make_ok_future(42) | fasync::map_ok([](int i) { return fitx::ok(i); }) |
+    auto x = fasync::make_ok_future(42) | fasync::map_ok([](int& i) { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
-    auto x = fasync::make_ok_future(42) | fasync::map_ok([](int& i) { return fitx::ok(i); }) |
+    auto x = fasync::make_ok_future(42) | fasync::map_ok([](auto i) { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
-    auto x = fasync::make_ok_future(42) | fasync::map_ok([](auto i) { return fitx::ok(i); }) |
+    auto x = fasync::make_ok_future(42) | fasync::map_ok([](auto& i) { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
-    auto x = fasync::make_ok_future(42) | fasync::map_ok([](auto& i) { return fitx::ok(i); }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 42);
-  }
-  {
-    auto x = fasync::make_ok_future(42) | fasync::map_ok([](auto&& i) { return fitx::ok(i); }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 42);
-  }
-  {
-    auto x = fasync::make_ok_future(42) |
-             fasync::map_ok([](fasync::context&, int i) { return fitx::ok(i); }) |
+    auto x = fasync::make_ok_future(42) | fasync::map_ok([](auto&& i) { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
     auto x = fasync::make_ok_future(42) |
-             fasync::map_ok([](fasync::context&, int& i) { return fitx::ok(i); }) |
+             fasync::map_ok([](fasync::context&, int i) { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
     auto x = fasync::make_ok_future(42) |
-             fasync::map_ok([](fasync::context&, auto i) { return fitx::ok(i); }) |
+             fasync::map_ok([](fasync::context&, int& i) { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
     auto x = fasync::make_ok_future(42) |
-             fasync::map_ok([](fasync::context&, auto& i) { return fitx::ok(i); }) |
+             fasync::map_ok([](fasync::context&, auto i) { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
     auto x = fasync::make_ok_future(42) |
-             fasync::map_ok([](fasync::context&, auto&& i) { return fitx::ok(i); }) |
+             fasync::map_ok([](fasync::context&, auto& i) { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](std::tuple<int, int, int> t) {
-               return fitx::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
-             }) |
+    auto x = fasync::make_ok_future(42) |
+             fasync::map_ok([](fasync::context&, auto&& i) { return fit::ok(i); }) |
              fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
-  }
-  {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](std::tuple<int, int, int>& t) {
-               return fitx::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
-             }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
-  }
-  {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](auto& t) {
-               return fitx::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
-             }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
-  }
-  {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](auto&& t) {
-               return fitx::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
-             }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
-  }
-  {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](fasync::context&, std::tuple<int, int, int> t) {
-               return fitx::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
-             }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
-  }
-  {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](fasync::context&, std::tuple<int, int, int>& t) {
-               return fitx::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
-             }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
-  }
-  {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](fasync::context&, auto& t) {
-               return fitx::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
-             }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
-  }
-  {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](fasync::context&, auto&& t) {
-               return fitx::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
-             }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
-  }
-  {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](int i, int j, int k) { return fitx::ok(i + j + k); }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
-  }
-  {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](int& i, int j, int k) { return fitx::ok(i + j + k); }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.value(), 3);
+    EXPECT_EQ(x.value(), 42);
   }
   {
     auto x =
-        fasync::make_try_future<int, std::tuple<int, int, int>>(
-            fitx::ok(std::make_tuple(0, 1, 2))) |
-        fasync::map_ok([](fasync::context&, int i, int j, int k) { return fitx::ok(i + j + k); }) |
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](std::tuple<int, int, int> t) {
+          return fit::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+        }) |
         fasync::testing::invoke;
     EXPECT_EQ(x.value(), 3);
   }
   {
     auto x =
-        fasync::make_try_future<int, std::tuple<int, int, int>>(
-            fitx::ok(std::make_tuple(0, 1, 2))) |
-        fasync::map_ok([](fasync::context&, int& i, int j, int k) { return fitx::ok(i + j + k); }) |
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](std::tuple<int, int, int>& t) {
+          return fit::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+        }) |
         fasync::testing::invoke;
     EXPECT_EQ(x.value(), 3);
   }
   {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](fasync::context&, int i, auto...) { return fitx::ok(i); }) |
-             fasync::testing::invoke;
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok(
+            [](auto& t) { return fit::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t)); }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok(
+            [](auto&& t) { return fit::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t)); }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](fasync::context&, std::tuple<int, int, int> t) {
+          return fit::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+        }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](fasync::context&, std::tuple<int, int, int>& t) {
+          return fit::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+        }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](fasync::context&, auto& t) {
+          return fit::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+        }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](fasync::context&, auto&& t) {
+          return fit::ok(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+        }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](int i, int j, int k) { return fit::ok(i + j + k); }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](int& i, int j, int k) { return fit::ok(i + j + k); }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](fasync::context&, int i, int j, int k) { return fit::ok(i + j + k); }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](fasync::context&, int& i, int j, int k) { return fit::ok(i + j + k); }) |
+        fasync::testing::invoke;
+    EXPECT_EQ(x.value(), 3);
+  }
+  {
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](fasync::context&, int i, auto...) { return fit::ok(i); }) |
+        fasync::testing::invoke;
     EXPECT_EQ(x.value(), 0);
   }
   {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](fasync::context&, int i, auto&...) { return fitx::ok(i); }) |
-             fasync::testing::invoke;
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](fasync::context&, int i, auto&...) { return fit::ok(i); }) |
+        fasync::testing::invoke;
     EXPECT_EQ(x.value(), 0);
   }
   {
-    auto x = fasync::make_try_future<int, std::tuple<int, int, int>>(
-                 fitx::ok(std::make_tuple(0, 1, 2))) |
-             fasync::map_ok([](fasync::context&, int i, auto&&...) { return fitx::ok(i); }) |
-             fasync::testing::invoke;
+    auto x =
+        fasync::make_try_future<int, std::tuple<int, int, int>>(fit::ok(std::make_tuple(0, 1, 2))) |
+        fasync::map_ok([](fasync::context&, int i, auto&&...) { return fit::ok(i); }) |
+        fasync::testing::invoke;
     EXPECT_EQ(x.value(), 0);
   }
   {
-    auto x = fasync::make_try_future<int, int>(fitx::ok(42)) |
-             fasync::map_ok([](int i) -> fitx::result<int, int> { return fitx::ok(i); }) |
+    auto x = fasync::make_try_future<int, int>(fit::ok(42)) |
+             fasync::map_ok([](int i) -> fit::result<int, int> { return fit::ok(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 42);
   }
   {
     auto x =
-        fasync::make_try_future<int, int>(fitx::ok(42)) |
-        fasync::map_ok([](int i) -> fitx::result<int, std::string> { return fitx::ok("asdf"); }) |
+        fasync::make_try_future<int, int>(fit::ok(42)) |
+        fasync::map_ok([](int i) -> fit::result<int, std::string> { return fit::ok("asdf"); }) |
         fasync::testing::invoke;
     EXPECT_STREQ(x.value(), "asdf");
   }
 // Needs single_threaded_executor.h (coming)
 #if 0
   {
-    auto x = fasync::make_try_future<int, int>(fitx::ok(0)) |
+    auto x = fasync::make_try_future<int, int>(fit::ok(0)) |
              fasync::map_ok([slept = false](fasync::context& context,
                                             int i) mutable -> fasync::try_poll<int, int> {
                if (!slept) {
@@ -550,7 +544,7 @@ TEST(FutureTests, MapOkHandlers) {
                  context.suspend_task().resume();
                  return fasync::pending();
                }
-               return fasync::done(fitx::ok(i));
+               return fasync::done(fit::ok(i));
              }) |
              fasync::block;
     EXPECT_EQ(x.value().value(), 0);
@@ -564,19 +558,19 @@ TEST(FutureTests, MapOkReturnTypes) {
     EXPECT_TRUE(x.is_ok());
   }
   {
-    auto x = fasync::make_ok_future(42) |
-             fasync::map_ok(
-                 []() -> fitx::result<fitx::failed, std::string> { return fitx::ok("asdf"s); }) |
+    auto x =
+        fasync::make_ok_future(42) |
+        fasync::map_ok([]() -> fit::result<fit::failed, std::string> { return fit::ok("asdf"s); }) |
+        fasync::testing::invoke;
+    EXPECT_STREQ(x.value(), "asdf");
+  }
+  {
+    auto x = fasync::make_ok_future(42) | fasync::map_ok([] { return fit::ok("asdf"s); }) |
              fasync::testing::invoke;
     EXPECT_STREQ(x.value(), "asdf");
   }
   {
-    auto x = fasync::make_ok_future(42) | fasync::map_ok([] { return fitx::ok("asdf"s); }) |
-             fasync::testing::invoke;
-    EXPECT_STREQ(x.value(), "asdf");
-  }
-  {
-    auto x = fasync::make_ok_future(42) | fasync::map_ok([] { return fitx::failed(); }) |
+    auto x = fasync::make_ok_future(42) | fasync::map_ok([] { return fit::failed(); }) |
              fasync::testing::invoke;
     EXPECT_TRUE(x.is_error());
   }
@@ -587,16 +581,16 @@ TEST(FutureTests, MapOkReturnTypes) {
   }
   {
     auto x = fasync::make_ok_future(42) |
-             fasync::map_ok([]() -> fasync::try_ready<fitx::failed, std::string> {
-               return fasync::done(fitx::ok("asdf"s));
+             fasync::map_ok([]() -> fasync::try_ready<fit::failed, std::string> {
+               return fasync::done(fit::ok("asdf"s));
              }) |
              fasync::testing::invoke;
     EXPECT_STREQ(x.value(), "asdf");
   }
   {
     auto x = fasync::make_ok_future(42) |
-             fasync::map_ok([]() -> fasync::try_poll<fitx::failed, std::string> {
-               return fasync::done(fitx::ok("asdf"s));
+             fasync::map_ok([]() -> fasync::try_poll<fit::failed, std::string> {
+               return fasync::done(fit::ok("asdf"s));
              }) |
              fasync::testing::invoke;
     EXPECT_STREQ(x.value(), "asdf");
@@ -606,213 +600,211 @@ TEST(FutureTests, MapOkReturnTypes) {
 TEST(FutureTests, MapErrorHandlers) {
   {
     auto x = fasync::make_error_future(0) |
-             fasync::map_error([](fasync::context&) { return fitx::as_error(42); }) |
+             fasync::map_error([](fasync::context&) { return fit::as_error(42); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([](int i) { return fitx::as_error(i); }) | fasync::testing::invoke;
+             fasync::map_error([](int i) { return fit::as_error(i); }) | fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([](int& i) { return fitx::as_error(i); }) | fasync::testing::invoke;
+             fasync::map_error([](int& i) { return fit::as_error(i); }) | fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([](auto i) { return fitx::as_error(i); }) | fasync::testing::invoke;
+             fasync::map_error([](auto i) { return fit::as_error(i); }) | fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([](auto& i) { return fitx::as_error(i); }) | fasync::testing::invoke;
+             fasync::map_error([](auto& i) { return fit::as_error(i); }) | fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
-    auto x = fasync::make_error_future(42) |
-             fasync::map_error([](auto&& i) { return fitx::ok(); }) | fasync::testing::invoke;
+    auto x = fasync::make_error_future(42) | fasync::map_error([](auto&& i) { return fit::ok(); }) |
+             fasync::testing::invoke;
     EXPECT_TRUE(x.is_ok());
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([](auto&& i) { return fitx::as_error(i); }) |
+             fasync::map_error([](auto&& i) { return fit::as_error(i); }) | fasync::testing::invoke;
+    EXPECT_EQ(x.error_value(), 42);
+  }
+  {
+    auto x = fasync::make_error_future(42) |
+             fasync::map_error([](fasync::context&, int i) { return fit::as_error(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([](fasync::context&, int i) { return fitx::as_error(i); }) |
+             fasync::map_error([](fasync::context&, int& i) { return fit::as_error(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([](fasync::context&, int& i) { return fitx::as_error(i); }) |
+             fasync::map_error([](fasync::context&, auto i) { return fit::as_error(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([](fasync::context&, auto i) { return fitx::as_error(i); }) |
+             fasync::map_error([](fasync::context&, auto& i) { return fit::as_error(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([](fasync::context&, auto& i) { return fitx::as_error(i); }) |
-             fasync::testing::invoke;
-    EXPECT_EQ(x.error_value(), 42);
-  }
-  {
-    auto x = fasync::make_error_future(42) |
-             fasync::map_error([](fasync::context&, auto&& i) { return fitx::as_error(i); }) |
+             fasync::map_error([](fasync::context&, auto&& i) { return fit::as_error(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error([](std::tuple<int, int, int> t) {
-               return fitx::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+               return fit::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
              }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error([](std::tuple<int, int, int>& t) {
-               return fitx::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+               return fit::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
              }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error([](auto& t) {
-               return fitx::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+               return fit::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
              }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error([](auto&& t) {
-               return fitx::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+               return fit::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
              }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error([](fasync::context&, std::tuple<int, int, int> t) {
-               return fitx::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+               return fit::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
              }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error([](fasync::context&, std::tuple<int, int, int>& t) {
-               return fitx::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+               return fit::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
              }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error([](fasync::context&, auto& t) {
-               return fitx::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+               return fit::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
              }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error([](fasync::context&, auto&& t) {
-               return fitx::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
+               return fit::as_error(std::get<0>(t) + std::get<1>(t) + std::get<2>(t));
              }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
-             fasync::map_error([](int i, int j, int k) { return fitx::as_error(i + j + k); }) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
+             fasync::map_error([](int i, int j, int k) { return fit::as_error(i + j + k); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
-             fasync::map_error([](int& i, int j, int k) { return fitx::as_error(i + j + k); }) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
+             fasync::map_error([](int& i, int j, int k) { return fit::as_error(i + j + k); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error(
-                 [](fasync::context&, int i, int j, int k) { return fitx::as_error(i + j + k); }) |
+                 [](fasync::context&, int i, int j, int k) { return fit::as_error(i + j + k); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
              fasync::map_error(
-                 [](fasync::context&, int& i, int j, int k) { return fitx::as_error(i + j + k); }) |
+                 [](fasync::context&, int& i, int j, int k) { return fit::as_error(i + j + k); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 3);
   }
   {
     auto x = fasync::make_try_future<std::tuple<int, int, int>>(
-                 fitx::as_error(std::make_tuple(0, 1, 2))) |
-             fasync::map_error([](fasync::context&, int i, auto...) { return fitx::as_error(i); }) |
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
+             fasync::map_error([](fasync::context&, int i, auto...) { return fit::as_error(i); }) |
+             fasync::testing::invoke;
+    EXPECT_EQ(x.error_value(), 0);
+  }
+  {
+    auto x = fasync::make_try_future<std::tuple<int, int, int>>(
+                 fit::as_error(std::make_tuple(0, 1, 2))) |
+             fasync::map_error([](fasync::context&, int i, auto&...) { return fit::as_error(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 0);
   }
   {
     auto x =
         fasync::make_try_future<std::tuple<int, int, int>>(
-            fitx::as_error(std::make_tuple(0, 1, 2))) |
-        fasync::map_error([](fasync::context&, int i, auto&...) { return fitx::as_error(i); }) |
+            fit::as_error(std::make_tuple(0, 1, 2))) |
+        fasync::map_error([](fasync::context&, int i, auto&&...) { return fit::as_error(i); }) |
         fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 0);
   }
   {
-    auto x =
-        fasync::make_try_future<std::tuple<int, int, int>>(
-            fitx::as_error(std::make_tuple(0, 1, 2))) |
-        fasync::map_error([](fasync::context&, int i, auto&&...) { return fitx::as_error(i); }) |
-        fasync::testing::invoke;
-    EXPECT_EQ(x.error_value(), 0);
-  }
-  {
-    auto x = fasync::make_try_future<int, int>(fitx::as_error(42)) |
-             fasync::map_error([](int i) -> fitx::result<int, int> { return fitx::as_error(i); }) |
+    auto x = fasync::make_try_future<int, int>(fit::as_error(42)) |
+             fasync::map_error([](int i) -> fit::result<int, int> { return fit::as_error(i); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 42);
   }
   {
-    auto x = fasync::make_try_future<int, int>(fitx::as_error(42)) |
+    auto x = fasync::make_try_future<int, int>(fit::as_error(42)) |
              fasync::map_error(
-                 [](int i) -> fitx::result<std::string, int> { return fitx::as_error("asdf"); }) |
+                 [](int i) -> fit::result<std::string, int> { return fit::as_error("asdf"); }) |
              fasync::testing::invoke;
     EXPECT_STREQ(x.error_value(), "asdf");
   }
 // Needs single_threaded_executor.h (coming)
 #if 0
   {
-    auto x = fasync::make_try_future<int, int>(fitx::as_error(0)) |
+    auto x = fasync::make_try_future<int, int>(fit::as_error(0)) |
              fasync::map_error([slept = false](fasync::context& context,
                                                int i) mutable -> fasync::try_poll<int, int> {
                if (!slept) {
@@ -820,7 +812,7 @@ TEST(FutureTests, MapErrorHandlers) {
                  context.suspend_task().resume();
                  return fasync::pending();
                }
-               return fasync::done(fitx::as_error(i));
+               return fasync::done(fit::as_error(i));
              }) |
              fasync::block;
     EXPECT_EQ(x.value().error_value(), 0);
@@ -836,18 +828,18 @@ TEST(FutureTests, MapErrorReturnTypes) {
   {
     auto x =
         fasync::make_error_future(42) |
-        fasync::map_error([]() -> fitx::result<std::string> { return fitx::as_error("asdf"s); }) |
+        fasync::map_error([]() -> fit::result<std::string> { return fit::as_error("asdf"s); }) |
         fasync::testing::invoke;
     EXPECT_STREQ(x.error_value(), "asdf");
   }
   {
-    auto x = fasync::make_error_future(42) | fasync::map_error([] { return fitx::ok(); }) |
+    auto x = fasync::make_error_future(42) | fasync::map_error([] { return fit::ok(); }) |
              fasync::testing::invoke;
     EXPECT_TRUE(x.is_ok());
   }
   {
     auto x = fasync::make_error_future(42) |
-             fasync::map_error([] { return fitx::as_error("asdf"s); }) | fasync::testing::invoke;
+             fasync::map_error([] { return fit::as_error("asdf"s); }) | fasync::testing::invoke;
     EXPECT_STREQ(x.error_value(), "asdf");
   }
   {
@@ -858,7 +850,7 @@ TEST(FutureTests, MapErrorReturnTypes) {
   {
     auto x = fasync::make_error_future(42) |
              fasync::map_error([]() -> fasync::try_ready<std::string> {
-               return fasync::done(fitx::as_error("asdf"s));
+               return fasync::done(fit::as_error("asdf"s));
              }) |
              fasync::testing::invoke;
     EXPECT_STREQ(x.error_value(), "asdf");
@@ -866,7 +858,7 @@ TEST(FutureTests, MapErrorReturnTypes) {
   {
     auto x = fasync::make_error_future(42) |
              fasync::map_error([]() -> fasync::try_poll<std::string> {
-               return fasync::done(fitx::as_error("asdf"s));
+               return fasync::done(fit::as_error("asdf"s));
              }) |
              fasync::testing::invoke;
     EXPECT_STREQ(x.error_value(), "asdf");
@@ -875,44 +867,44 @@ TEST(FutureTests, MapErrorReturnTypes) {
 
 TEST(FutureTests, MapOkError) {
   {
-    auto x = fasync::make_try_future<int, int>(fitx::ok(42)) |
-             fasync::map_ok([](int i) { return fitx::ok(i + 1); }) |
-             fasync::map_error([](int i) { return fitx::as_error(i - 1); }) |
+    auto x = fasync::make_try_future<int, int>(fit::ok(42)) |
+             fasync::map_ok([](int i) { return fit::ok(i + 1); }) |
+             fasync::map_error([](int i) { return fit::as_error(i - 1); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.value(), 43);
   }
   {
-    auto x = fasync::make_try_future<int, int>(fitx::ok(42)) |
-             fasync::map_error([](int i) { return fitx::as_error(i - 1); }) |
-             fasync::map_ok([](int i) { return fitx::ok(i + 1); }) | fasync::testing::invoke;
+    auto x = fasync::make_try_future<int, int>(fit::ok(42)) |
+             fasync::map_error([](int i) { return fit::as_error(i - 1); }) |
+             fasync::map_ok([](int i) { return fit::ok(i + 1); }) | fasync::testing::invoke;
     EXPECT_EQ(x.value(), 43);
   }
   {
-    auto x = fasync::make_try_future<int, int>(fitx::as_error(42)) |
-             fasync::map_ok([](int i) { return fitx::ok(i + 1); }) |
-             fasync::map_error([](int i) { return fitx::as_error(i - 1); }) |
+    auto x = fasync::make_try_future<int, int>(fit::as_error(42)) |
+             fasync::map_ok([](int i) { return fit::ok(i + 1); }) |
+             fasync::map_error([](int i) { return fit::as_error(i - 1); }) |
              fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 41);
   }
   {
-    auto x = fasync::make_try_future<int, int>(fitx::as_error(42)) |
-             fasync::map_error([](int i) { return fitx::as_error(i - 1); }) |
-             fasync::map_ok([](int i) { return fitx::ok(i + 1); }) | fasync::testing::invoke;
+    auto x = fasync::make_try_future<int, int>(fit::as_error(42)) |
+             fasync::map_error([](int i) { return fit::as_error(i - 1); }) |
+             fasync::map_ok([](int i) { return fit::ok(i + 1); }) | fasync::testing::invoke;
     EXPECT_EQ(x.error_value(), 41);
   }
   {
-    auto x = fasync::make_try_future<int, int>(fitx::ok(42)) |
-             fasync::map_ok([](int i) { return fitx::ok(std::to_string(i + 1)); }) |
-             fasync::map_error([](int i) { return fitx::as_error(i - 1); }) |
-             fasync::map_ok([](std::string& s) { return fitx::ok(s + "asdf"); }) |
+    auto x = fasync::make_try_future<int, int>(fit::ok(42)) |
+             fasync::map_ok([](int i) { return fit::ok(std::to_string(i + 1)); }) |
+             fasync::map_error([](int i) { return fit::as_error(i - 1); }) |
+             fasync::map_ok([](std::string& s) { return fit::ok(s + "asdf"); }) |
              fasync::testing::invoke;
     EXPECT_STREQ(x.value(), "43asdf");
   }
   {
-    auto x = fasync::make_try_future<int, int>(fitx::as_error(42)) |
-             fasync::map_error([](int i) { return fitx::as_error(std::to_string(i - 1)); }) |
-             fasync::map_ok([](int i) { return fitx::ok(std::to_string(i + 1)); }) |
-             fasync::map_error([](std::string& s) { return fitx::as_error(s + "jkl"); }) |
+    auto x = fasync::make_try_future<int, int>(fit::as_error(42)) |
+             fasync::map_error([](int i) { return fit::as_error(std::to_string(i - 1)); }) |
+             fasync::map_ok([](int i) { return fit::ok(std::to_string(i + 1)); }) |
+             fasync::map_error([](std::string& s) { return fit::as_error(s + "jkl"); }) |
              fasync::testing::invoke;
     EXPECT_STREQ(x.error_value(), "41jkl");
   }
@@ -920,11 +912,11 @@ TEST(FutureTests, MapOkError) {
 
 TEST(FutureTests, Inspect) {
   {
-    fitx::result result = fasync::make_try_future<int, int>(fitx::error(1)) |
-                          fasync::inspect_ok([](const int& i) { FAIL(); }) |
-                          fasync::inspect_error([](const int& i) { EXPECT_EQ(i, 1); }) |
-                          fasync::testing::invoke;
-    EXPECT_EQ(result, (fitx::result<int, int>(fitx::error(1))));
+    fit::result result = fasync::make_try_future<int, int>(fit::error(1)) |
+                         fasync::inspect_ok([](const int& i) { FAIL(); }) |
+                         fasync::inspect_error([](const int& i) { EXPECT_EQ(i, 1); }) |
+                         fasync::testing::invoke;
+    EXPECT_EQ(result, (fit::result<int, int>(fit::error(1))));
   }
 }
 
@@ -999,56 +991,54 @@ TEST(FutureTests, Then) {
   }
 
   {
-    fitx::result result = fasync::make_try_future<int, int>(fitx::error(1)) |
-                          fasync::and_then([](int i) { return fitx::ok(2); }) |
-                          fasync::or_else([](int i) { return fitx::as_error(3); }) |
-                          fasync::testing::invoke;
+    fit::result result = fasync::make_try_future<int, int>(fit::error(1)) |
+                         fasync::and_then([](int i) { return fit::ok(2); }) |
+                         fasync::or_else([](int i) { return fit::as_error(3); }) |
+                         fasync::testing::invoke;
     EXPECT_EQ(result.error_value(), 3);
   }
 
   {
-    fitx::result result =
-        fasync::make_try_future<std::string, std::string>(fitx::ok("asdf"s)) |
-        fasync::and_then([](auto&& str) { return fitx::ok(std::make_tuple(str[0], str[1])); }) |
+    fit::result result =
+        fasync::make_try_future<std::string, std::string>(fit::ok("asdf"s)) |
+        fasync::and_then([](auto&& str) { return fit::ok(std::make_tuple(str[0], str[1])); }) |
         fasync::or_else([] {
           ADD_FAILURE("Shouldn't be called; also can't return void.");
-          return fitx::as_error(nullptr);
+          return fit::as_error(nullptr);
         }) |
-        fasync::and_then([](aggregate a) { return fitx::ok(a); }) | fasync::testing::invoke;
+        fasync::and_then([](aggregate a) { return fit::ok(a); }) | fasync::testing::invoke;
     EXPECT_EQ(result->a, 'a');
     EXPECT_EQ(result->b, 's');
   }
 
   {
-    auto result = fasync::make_try_future<int>(fitx::error(2)) | fasync::and_then([] {
+    auto result = fasync::make_try_future<int>(fit::error(2)) | fasync::and_then([] {
                     ADD_FAILURE("and_then shouldn't be called here.");
-                    return fitx::ok(""s);
+                    return fit::ok(""s);
                   }) |
-                  fasync::or_else([](auto i) { return fitx::as_error(std::to_string(i)); }) |
+                  fasync::or_else([](auto i) { return fit::as_error(std::to_string(i)); }) |
                   fasync::then([](auto result) -> decltype(result) {
                     EXPECT_TRUE(result.is_error());
-                    return fitx::ok(result.error_value() + "asdf");
+                    return fit::ok(result.error_value() + "asdf");
                   }) |
                   fasync::testing::invoke;
     // This is a different result type than the one we started with
-    static_assert(std::is_same_v<decltype(result), fitx::result<std::string, std::string>>);
+    static_assert(std::is_same_v<decltype(result), fit::result<std::string, std::string>>);
     EXPECT_STREQ(result.value(), "2asdf");
   }
 
   {
-    constexpr auto returns_future = [] {
-      return fasync::make_try_future<int, int>(fitx::error(1));
-    };
-    fitx::result<std::string, int> f =
-        returns_future() | fasync::or_else([](auto i) { return fitx::error(std::to_string(i)); }) |
+    constexpr auto returns_future = [] { return fasync::make_try_future<int, int>(fit::error(1)); };
+    fit::result<std::string, int> f =
+        returns_future() | fasync::or_else([](auto i) { return fit::error(std::to_string(i)); }) |
         fasync::testing::invoke;
     EXPECT_TRUE(f.is_error());
     EXPECT_STREQ(f.error_value(), "1");
 
-    fitx::result result = returns_future() | fasync::or_else(returns_future) |
-                          fasync::or_else([](int i) { return fitx::error(i); }) |
-                          fasync::or_else([](int i) { return fitx::ok(i); }) |
-                          fasync::testing::invoke;
+    fit::result result = returns_future() | fasync::or_else(returns_future) |
+                         fasync::or_else([](int i) { return fit::error(i); }) |
+                         fasync::or_else([](int i) { return fit::ok(i); }) |
+                         fasync::testing::invoke;
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(result.value(), 1);
   }
@@ -1194,9 +1184,9 @@ void test_join_sequence_container() {
 
 template <template <typename, typename> class C>
 void test_join_container_and_remove() {
-  C in = {fasync::make_try_future<int, int>(fitx::error(0)),
-          fasync::make_try_future<int, int>(fitx::ok(1)),
-          fasync::make_try_future<int, int>(fitx::ok(2))};
+  C in = {fasync::make_try_future<int, int>(fit::error(0)),
+          fasync::make_try_future<int, int>(fit::ok(1)),
+          fasync::make_try_future<int, int>(fit::ok(2))};
   using value_type = fasync::future_output_t<typename decltype(in)::value_type>;
   using allocator_type = std::allocator<value_type>;
   C<value_type, allocator_type> out =
@@ -1222,15 +1212,15 @@ TEST(FutureTests, JoinContainer) {
   test_join_container_and_remove<std::deque>();
   test_join_container_and_remove<std::list>();
 
-  fasync::try_future<int, int> arr[] = {fasync::make_try_future<int, int>(fitx::error(0)),
-                                        fasync::make_try_future<int, int>(fitx::ok(1)),
-                                        fasync::make_try_future<int, int>(fitx::ok(2))};
+  fasync::try_future<int, int> arr[] = {fasync::make_try_future<int, int>(fit::error(0)),
+                                        fasync::make_try_future<int, int>(fit::ok(1)),
+                                        fasync::make_try_future<int, int>(fit::ok(2))};
   auto a = fasync::join(std::move(arr)) | fasync::testing::invoke;
   EXPECT_TRUE(a[0].is_error());
 
-  std::array stdarr = {fasync::make_try_future<int, int>(fitx::error(0)),
-                       fasync::make_try_future<int, int>(fitx::ok(1)),
-                       fasync::make_try_future<int, int>(fitx::ok(2))};
+  std::array stdarr = {fasync::make_try_future<int, int>(fit::error(0)),
+                       fasync::make_try_future<int, int>(fit::ok(1)),
+                       fasync::make_try_future<int, int>(fit::ok(2))};
   auto b = fasync::join(std::move(stdarr)) | fasync::testing::invoke;
   EXPECT_TRUE(b[0].is_error());
 

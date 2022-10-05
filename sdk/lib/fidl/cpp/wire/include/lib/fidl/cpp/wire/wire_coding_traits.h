@@ -751,7 +751,7 @@ extern const CodingConfig kNullCodingConfig;
 
 // Create a fidl::WireEncoder and encode the inputted value.
 // This is the top-level function to call to perform encoding using coding traits.
-fitx::result<fidl::Error, WireEncoder::Result> WireEncode(
+fit::result<fidl::Error, WireEncoder::Result> WireEncode(
     size_t inline_size, TopLevelEncodeFn encode_fn, const CodingConfig* coding_config, void* value,
     zx_channel_iovec_t* iovecs, size_t iovec_capacity, fidl_handle_t* handles,
     fidl_handle_metadata_t* handle_metadata, size_t handle_capacity, uint8_t* backing_buffer,

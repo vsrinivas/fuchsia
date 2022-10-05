@@ -6,7 +6,7 @@
 
 #include <endian.h>
 #include <fuchsia/kernel/cpp/fidl.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
@@ -255,22 +255,22 @@ zx::status<> ReallocateMemoryAsRequired(CacheMode mode, size_t size,
   return zx::ok();
 }
 
-fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
+fit::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
   // Get amount of RAM and free memory in system.
   zx::status<fuchsia::kernel::MemoryStats> maybe_stats = GetMemoryStats();
   if (maybe_stats.is_error()) {
-    return fitx::error("Could not fetch free memory.");
+    return fit::error("Could not fetch free memory.");
   }
 
   // If a value was specified, and doesn't exceed total system RAM, use that.
   if (args.mem_to_test_megabytes.has_value()) {
     size_t requested = MiB(args.mem_to_test_megabytes.value());
     if (requested > maybe_stats->total_bytes()) {
-      return fitx::error(fxl::StringPrintf(
+      return fit::error(fxl::StringPrintf(
           "Specified memory size (%ld bytes) exceeds system memory size (%ld bytes).", requested,
           maybe_stats->total_bytes()));
     }
-    return fitx::ok(requested);
+    return fit::ok(requested);
   }
 
   // If user asked for a percent of total memory, calculate that.
@@ -279,7 +279,7 @@ fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
     auto test_bytes =
         static_cast<uint64_t>(static_cast<double>(total_bytes) *
                               (static_cast<double>(args.ram_to_test_percent.value()) / 100.));
-    return fitx::ok(RoundUp(test_bytes, zx_system_get_page_size()));
+    return fit::ok(RoundUp(test_bytes, zx_system_get_page_size()));
   }
 
   // Otherwise, try and calculate a reasonable value based on free memory.
@@ -349,7 +349,7 @@ MemoryWorkloadGenerator::Workload MemoryWorkloadGenerator::Next() {
 bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration duration,
                   TemperatureSensor* /*temperature_sensor*/) {
   // Parse the amount of memory to test.
-  fitx::result<std::string, size_t> bytes_to_test = GetMemoryToTest(args);
+  fit::result<std::string, size_t> bytes_to_test = GetMemoryToTest(args);
   if (bytes_to_test.is_error()) {
     status->Log(bytes_to_test.error_value());
     return false;

@@ -19,7 +19,7 @@ namespace {
 
 using continuation = fasync::internal::bridge_state<const char*>::future_continuation;
 static_assert(fasync::is_future_v<continuation>);
-static_assert(cpp17::is_same_v<fasync::future_output_t<continuation>, fitx::result<const char*>>);
+static_assert(cpp17::is_same_v<fasync::future_output_t<continuation>, fit::result<const char*>>);
 
 void async_invoke_callback_no_args(uint64_t* run_count, fit::function<void()> callback) {
   std::thread([run_count, callback = std::move(callback)]() mutable {
@@ -66,7 +66,7 @@ TEST(BridgeTests, bridge_construction_and_assignment) {
   // It still works.
   bridge.completer.complete_error("Test");
   EXPECT_FALSE(bridge.completer);
-  fitx::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
+  fit::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
   EXPECT_FALSE(bridge.consumer);
   EXPECT_TRUE(result.is_error());
   EXPECT_STREQ("Test", result.error_value());
@@ -90,7 +90,7 @@ TEST(BridgeTests, completer_construction_and_assignment) {
   // It still works.
   completer.complete_error("Test");
   EXPECT_FALSE(completer);
-  fitx::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
+  fit::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
   EXPECT_FALSE(bridge.consumer);
   EXPECT_TRUE(result.is_error());
   EXPECT_STREQ("Test", result.error_value());
@@ -117,8 +117,8 @@ TEST(BridgeTests, completer_abandon) {
     EXPECT_FALSE(bridge.completer);
     EXPECT_TRUE(bridge.consumer.was_abandoned());
 
-    fitx::result<const char*, int> result =
-        fasync::block(bridge.consumer.future_or(fitx::error("Abandoned"))).value();
+    fit::result<const char*, int> result =
+        fasync::block(bridge.consumer.future_or(fit::error("Abandoned"))).value();
     EXPECT_FALSE(bridge.consumer);
     EXPECT_TRUE(result.is_error());
     EXPECT_STREQ("Abandoned", result.error_value());
@@ -134,8 +134,8 @@ TEST(BridgeTests, completer_abandon) {
     EXPECT_FALSE(bridge.completer);
     EXPECT_TRUE(bridge.consumer.was_abandoned());
 
-    fitx::result<const char*, int> result =
-        fasync::block(bridge.consumer.future_or(fitx::error("Abandoned"))).value();
+    fit::result<const char*, int> result =
+        fasync::block(bridge.consumer.future_or(fit::error("Abandoned"))).value();
     EXPECT_FALSE(bridge.consumer);
     EXPECT_TRUE(result.is_error());
     EXPECT_STREQ("Abandoned", result.error_value());
@@ -153,7 +153,7 @@ TEST(BridgeTests, completer_complete) {
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<const char*> result = fasync::block(bridge.consumer.future()).value();
+    fit::result<const char*> result = fasync::block(bridge.consumer.future()).value();
     EXPECT_FALSE(bridge.consumer);
     EXPECT_TRUE(result.is_ok());
   }
@@ -168,7 +168,7 @@ TEST(BridgeTests, completer_complete) {
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
+    fit::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
     EXPECT_FALSE(bridge.consumer);
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(42, result.value());
@@ -176,7 +176,7 @@ TEST(BridgeTests, completer_complete) {
 
   // complete_error()
   {
-    fasync::bridge<fitx::failed, int> bridge;
+    fasync::bridge<fit::failed, int> bridge;
     EXPECT_TRUE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
@@ -184,7 +184,7 @@ TEST(BridgeTests, completer_complete) {
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<fitx::failed, int> result = fasync::block(bridge.consumer.future()).value();
+    fit::result<fit::failed, int> result = fasync::block(bridge.consumer.future()).value();
     EXPECT_FALSE(bridge.consumer);
     EXPECT_TRUE(result.is_error());
   }
@@ -199,39 +199,39 @@ TEST(BridgeTests, completer_complete) {
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
+    fit::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
     EXPECT_FALSE(bridge.consumer);
     EXPECT_TRUE(result.is_error());
     EXPECT_STREQ("Test", result.error_value());
   }
 
-  // complete(fitx::ok(...))
+  // complete(fit::ok(...))
   {
     fasync::bridge<const char*, int> bridge;
     EXPECT_TRUE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    bridge.completer.complete(fitx::ok(42));
+    bridge.completer.complete(fit::ok(42));
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
+    fit::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
     EXPECT_FALSE(bridge.consumer);
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(42, result.value());
   }
 
-  // complete(fitx::error(...))
+  // complete(fit::error(...))
   {
     fasync::bridge<const char*, int> bridge;
     EXPECT_TRUE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    bridge.completer.complete(fitx::error("Test"));
+    bridge.completer.complete(fit::error("Test"));
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
+    fit::result<const char*, int> result = fasync::block(bridge.consumer.future()).value();
     EXPECT_FALSE(bridge.consumer);
     EXPECT_TRUE(result.is_error());
     EXPECT_STREQ("Test", result.error_value());
@@ -242,12 +242,12 @@ TEST(BridgeTests, completer_bind_no_arg_callback) {
   // Use bind()
   {
     uint64_t run_count = 0;
-    fasync::bridge<fitx::failed> bridge;
+    fasync::bridge<fit::failed> bridge;
     async_invoke_callback_no_args(&run_count, bridge.completer.bind());
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<fitx::failed> result = fasync::block(bridge.consumer.future()).value();
+    fit::result<fit::failed> result = fasync::block(bridge.consumer.future()).value();
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(1, run_count);
   }
@@ -255,13 +255,12 @@ TEST(BridgeTests, completer_bind_no_arg_callback) {
   // Use tuple bind()
   {
     uint64_t run_count = 0;
-    fasync::bridge<fitx::failed, std::tuple<>> bridge;
+    fasync::bridge<fit::failed, std::tuple<>> bridge;
     async_invoke_callback_no_args(&run_count, bridge.completer.bind());
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<fitx::failed, std::tuple<>> result =
-        fasync::block(bridge.consumer.future()).value();
+    fit::result<fit::failed, std::tuple<>> result = fasync::block(bridge.consumer.future()).value();
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(1, run_count);
   }
@@ -271,13 +270,12 @@ TEST(BridgeTests, completer_bind_one_arg_callback) {
   // Use bind()
   {
     uint64_t run_count = 0;
-    fasync::bridge<fitx::failed, std::string> bridge;
+    fasync::bridge<fit::failed, std::string> bridge;
     async_invoke_callback_one_arg(&run_count, bridge.completer.bind());
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<fitx::failed, std::string> result =
-        fasync::block(bridge.consumer.future()).value();
+    fit::result<fit::failed, std::string> result = fasync::block(bridge.consumer.future()).value();
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(result.value(), "Hippopotamus");
     EXPECT_EQ(1, run_count);
@@ -286,12 +284,12 @@ TEST(BridgeTests, completer_bind_one_arg_callback) {
   // Use tuple bind()
   {
     uint64_t run_count = 0;
-    fasync::bridge<fitx::failed, std::tuple<std::string>> bridge;
+    fasync::bridge<fit::failed, std::tuple<std::string>> bridge;
     async_invoke_callback_one_arg(&run_count, bridge.completer.bind());
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<fitx::failed, std::tuple<std::string>> result =
+    fit::result<fit::failed, std::tuple<std::string>> result =
         fasync::block(bridge.consumer.future()).value();
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(std::get<0>(result.value()), "Hippopotamus");
@@ -303,12 +301,12 @@ TEST(BridgeTests, completer_bind_two_arg_callback) {
   // Use tuple bind()
   {
     uint64_t run_count = 0;
-    fasync::bridge<fitx::failed, std::tuple<std::string, int>> bridge;
+    fasync::bridge<fit::failed, std::tuple<std::string, int>> bridge;
     async_invoke_callback_two_args(&run_count, bridge.completer.bind());
     EXPECT_FALSE(bridge.completer);
     EXPECT_FALSE(bridge.consumer.was_abandoned());
 
-    fitx::result<fitx::failed, std::tuple<std::string, int>> result =
+    fit::result<fit::failed, std::tuple<std::string, int>> result =
         fasync::block(bridge.consumer.future()).value();
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(std::get<0>(result.value()), "What do you get when you multiply six by nine?");
@@ -335,7 +333,7 @@ TEST(BridgeTests, consumer_construction_and_assignment) {
   // It still works.
   bridge.completer.complete_error("Test");
   EXPECT_FALSE(bridge.completer);
-  fitx::result<const char*, int> result = fasync::block(consumer.future()).value();
+  fit::result<const char*, int> result = fasync::block(consumer.future()).value();
   EXPECT_FALSE(consumer);
   EXPECT_TRUE(result.is_error());
   EXPECT_STREQ("Test", result.error_value());
@@ -395,7 +393,7 @@ TEST(BridgeTests, consumer_future) {
     bridge.completer.complete_ok(42);
     EXPECT_FALSE(bridge.completer);
 
-    fitx::result<const char*, int> result = fasync::block(std::move(future)).value();
+    fit::result<const char*, int> result = fasync::block(std::move(future)).value();
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(42, result.value());
   }
@@ -413,7 +411,7 @@ TEST(BridgeTests, consumer_future) {
     bridge.completer.abandon();
     EXPECT_FALSE(bridge.completer);
 
-    cpp17::optional<fitx::result<const char*, int>> result = fasync::block(std::move(future));
+    cpp17::optional<fit::result<const char*, int>> result = fasync::block(std::move(future));
     EXPECT_FALSE(result.has_value());
   }
 
@@ -424,14 +422,14 @@ TEST(BridgeTests, consumer_future) {
     EXPECT_FALSE(bridge.completer.was_canceled());
 
     fasync::try_future<const char*, int> future =
-        bridge.consumer.future_or(fitx::error("Abandoned"));
+        bridge.consumer.future_or(fit::error("Abandoned"));
     EXPECT_FALSE(bridge.consumer);
     EXPECT_FALSE(bridge.completer.was_canceled());
 
     bridge.completer.complete_ok(42);
     EXPECT_FALSE(bridge.completer);
 
-    fitx::result<const char*, int> result = fasync::block(std::move(future)).value();
+    fit::result<const char*, int> result = fasync::block(std::move(future)).value();
     EXPECT_TRUE(result.is_ok());
     EXPECT_EQ(42, result.value());
   }
@@ -443,14 +441,14 @@ TEST(BridgeTests, consumer_future) {
     EXPECT_FALSE(bridge.completer.was_canceled());
 
     fasync::try_future<const char*, int> future =
-        bridge.consumer.future_or(fitx::error("Abandoned"));
+        bridge.consumer.future_or(fit::error("Abandoned"));
     EXPECT_FALSE(bridge.consumer);
     EXPECT_FALSE(bridge.completer.was_canceled());
 
     bridge.completer.abandon();
     EXPECT_FALSE(bridge.completer);
 
-    fitx::result<const char*, int> result = fasync::block(std::move(future)).value();
+    fit::result<const char*, int> result = fasync::block(std::move(future)).value();
     EXPECT_TRUE(result.is_error());
     EXPECT_STREQ("Abandoned", result.error_value());
   }
@@ -461,18 +459,18 @@ TEST(BridgeTests, schedule_for_consumer) {
   {
     uint64_t run_count[2] = {};
     fasync::single_threaded_executor executor;
-    fasync::consumer<fitx::failed, int> consumer = fasync::schedule_for_consumer(
-        fasync::make_future([&](fasync::context& context) -> fitx::result<fitx::failed, int> {
+    fasync::consumer<fit::failed, int> consumer = fasync::schedule_for_consumer(
+        fasync::make_future([&](fasync::context& context) -> fit::result<fit::failed, int> {
           EXPECT_EQ(&context.executor(), &executor);
           run_count[0]++;
-          return fitx::ok(42);
+          return fit::ok(42);
         }),
         executor);
     EXPECT_EQ(0, run_count[0]);
 
     auto t = std::thread([&] { executor.run(); });
     consumer.future() |
-        fasync::then([&](fasync::context& context, const fitx::result<fitx::failed, int>& result) {
+        fasync::then([&](fasync::context& context, const fit::result<fit::failed, int>& result) {
           ASSERT_NE(&context.executor(), &executor);
           ASSERT_EQ(result.value(), 42);
           run_count[1]++;
@@ -487,8 +485,8 @@ TEST(BridgeTests, schedule_for_consumer) {
   {
     uint64_t run_count[2] = {};
     fasync::single_threaded_executor executor;
-    fasync::consumer<fitx::failed, int> consumer = fasync::schedule_for_consumer(
-        fasync::make_future([&](fasync::context& context) -> fasync::try_poll<fitx::failed, int> {
+    fasync::consumer<fit::failed, int> consumer = fasync::schedule_for_consumer(
+        fasync::make_future([&](fasync::context& context) -> fasync::try_poll<fit::failed, int> {
           EXPECT_EQ(&context.executor(), &executor);
           run_count[0]++;
           // The task will be abandoned after we return since
@@ -500,7 +498,7 @@ TEST(BridgeTests, schedule_for_consumer) {
 
     auto t = std::thread([&] { executor.run(); });
     consumer.future() |
-        fasync::then([&](fasync::context& context, const fitx::result<fitx::failed, int>& result) {
+        fasync::then([&](fasync::context& context, const fit::result<fit::failed, int>& result) {
           // This should not run because the future was abandoned.
           run_count[1]++;
         }) |
@@ -515,8 +513,8 @@ TEST(BridgeTests, schedule_for_consumer) {
   {
     uint64_t run_count[2] = {};
     fasync::single_threaded_executor executor;
-    fasync::consumer<fitx::failed, int> consumer = fasync::schedule_for_consumer(
-        fasync::make_future([&](fasync::context& context) -> fasync::try_poll<fitx::failed, int> {
+    fasync::consumer<fit::failed, int> consumer = fasync::schedule_for_consumer(
+        fasync::make_future([&](fasync::context& context) -> fasync::try_poll<fit::failed, int> {
           EXPECT_EQ(&context.executor(), &executor);
           run_count[0]++;
           // The task will be abandoned after we return since
@@ -527,8 +525,8 @@ TEST(BridgeTests, schedule_for_consumer) {
     EXPECT_EQ(0, run_count[0]);
 
     auto t = std::thread([&] { executor.run(); });
-    consumer.future_or(fitx::failed()) |
-        fasync::then([&](fasync::context& context, const fitx::result<fitx::failed, int>& result) {
+    consumer.future_or(fit::failed()) |
+        fasync::then([&](fasync::context& context, const fit::result<fit::failed, int>& result) {
           ASSERT_NE(&context.executor(), &executor);
           ASSERT_TRUE(result.is_error());
           run_count[1]++;
@@ -546,13 +544,13 @@ TEST(BridgeTests, split) {
     uint64_t run_count[2] = {};
     fasync::single_threaded_executor executor;
     auto future =
-        fasync::make_future([&](fasync::context& context) -> fitx::result<fitx::failed, int> {
+        fasync::make_future([&](fasync::context& context) -> fit::result<fit::failed, int> {
           EXPECT_EQ(&context.executor(), &executor);
           run_count[0]++;
-          return fitx::ok(42);
+          return fit::ok(42);
         }) |
         fasync::split(executor) |
-        fasync::then([&](fasync::context& context, const fitx::result<fitx::failed, int>& result) {
+        fasync::then([&](fasync::context& context, const fit::result<fit::failed, int>& result) {
           ASSERT_NE(&context.executor(), &executor);
           ASSERT_EQ(result.value(), 42);
           run_count[1]++;
@@ -571,7 +569,7 @@ TEST(BridgeTests, split) {
     uint64_t run_count[2] = {};
     fasync::single_threaded_executor executor;
     auto future =
-        fasync::make_future([&](fasync::context& context) -> fasync::try_poll<fitx::failed, int> {
+        fasync::make_future([&](fasync::context& context) -> fasync::try_poll<fit::failed, int> {
           EXPECT_EQ(&context.executor(), &executor);
           run_count[0]++;
           // The task will be abandoned after we return since
@@ -579,7 +577,7 @@ TEST(BridgeTests, split) {
           return fasync::pending();
         }) |
         fasync::split(executor) |
-        fasync::then([&](fasync::context& context, const fitx::result<fitx::failed, int>& result) {
+        fasync::then([&](fasync::context& context, const fit::result<fit::failed, int>& result) {
           // This should not run because the future was abandoned.
           run_count[1]++;
         });

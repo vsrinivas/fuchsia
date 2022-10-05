@@ -5,7 +5,7 @@
 #include "zircon/system/ulib/profile/config.h"
 
 #include <fcntl.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/time.h>
@@ -92,7 +92,7 @@ struct IterateValues {
   rapidjson::Value::ConstValueIterator end_iterator;
 };
 
-// Utility to build a fitx::result<std::string, ?> in the error state using stream operators.
+// Utility to build a fit::result<std::string, ?> in the error state using stream operators.
 //
 // Example:
 //
@@ -110,20 +110,20 @@ class Error {
     return *this;
   }
 
-  // Implicit conversion to fitx::result<std::string, ?> in the error state with accumulated string
+  // Implicit conversion to fit::result<std::string, ?> in the error state with accumulated string
   // as the error value.
   template <typename... Vs>
-  operator fitx::result<std::string, Vs...>() const {
-    return fitx::error(stream_.str());
+  operator fit::result<std::string, Vs...>() const {
+    return fit::error(stream_.str());
   }
 
-  operator fitx::error<std::string>() const { return fitx::error(stream_.str()); }
+  operator fit::error<std::string>() const { return fit::error(stream_.str()); }
 
  private:
   std::ostringstream stream_;
 };
 
-fitx::result<std::string, zx::duration> ParseDurationString(const std::string& duration) {
+fit::result<std::string, zx::duration> ParseDurationString(const std::string& duration) {
   // Match one or more digits, optionally followed by time units ms, us, or ns.
   static const re2::RE2 kReDuration{"^(\\d+)(ms|us|ns)?$"};
 
@@ -135,26 +135,26 @@ fitx::result<std::string, zx::duration> ParseDurationString(const std::string& d
   }
 
   if (units.empty() || units == "ns") {
-    return fitx::ok(zx::nsec(scalar));
+    return fit::ok(zx::nsec(scalar));
   }
   if (units == "ms") {
-    return fitx::ok(zx::msec(scalar));
+    return fit::ok(zx::msec(scalar));
   }
   if (units == "us") {
-    return fitx::ok(zx::usec(scalar));
+    return fit::ok(zx::usec(scalar));
   }
   return Error() << "String duration \"" << duration << "\" has unrecognized units \"" << units
                  << "\"!";
 }
 
-fitx::result<std::string, zx::duration> ParseDuration(const rapidjson::Value& object) {
+fit::result<std::string, zx::duration> ParseDuration(const rapidjson::Value& object) {
   if (object.IsInt()) {
-    return fitx::ok(zx::nsec(object.GetInt()));
+    return fit::ok(zx::nsec(object.GetInt()));
   }
   if (object.IsString()) {
     return ParseDurationString(object.GetString());
   }
-  return fitx::error("Duration must be an integer or duration string!");
+  return fit::error("Duration must be an integer or duration string!");
 }
 
 struct TextPosition {
@@ -190,7 +190,7 @@ std::string GetErrorMessage(const rapidjson::Document& document, const std::stri
 
 template <typename... Context>
 auto GetMember(const char* name, const rapidjson::Value& object, Context&&... context)
-    -> fitx::result<std::string, decltype(std::cref(object[name]))> {
+    -> fit::result<std::string, decltype(std::cref(object[name]))> {
   if (!object.IsObject()) {
     return (Error() << ... << std::forward<Context>(context)) << " must be a JSON object!";
   }
@@ -198,12 +198,12 @@ auto GetMember(const char* name, const rapidjson::Value& object, Context&&... co
     return (Error() << ... << std::forward<Context>(context))
            << " must have a \"" << name << "\" member!";
   }
-  return fitx::ok(std::cref(object[name]));
+  return fit::ok(std::cref(object[name]));
 }
 
 template <typename... Context>
-fitx::result<std::string, int> GetInt(const char* name, const rapidjson::Value& object,
-                                      Context&&... context) {
+fit::result<std::string, int> GetInt(const char* name, const rapidjson::Value& object,
+                                     Context&&... context) {
   auto result = GetMember(name, object, std::forward<Context>(context)...);
   if (result.is_error()) {
     return result.take_error();
@@ -212,12 +212,12 @@ fitx::result<std::string, int> GetInt(const char* name, const rapidjson::Value& 
     return (Error() << ... << std::forward<Context>(context))
            << " member \"" << name << "\" must be an integer!";
   }
-  return fitx::ok(result->get().GetInt());
+  return fit::ok(result->get().GetInt());
 }
 
 template <typename... Context>
-fitx::result<std::string, const char*> GetString(const char* name, const rapidjson::Value& object,
-                                                 Context&&... context) {
+fit::result<std::string, const char*> GetString(const char* name, const rapidjson::Value& object,
+                                                Context&&... context) {
   auto result = GetMember(name, object, std::forward<Context>(context)...);
   if (result.is_error()) {
     return result.take_error();
@@ -226,7 +226,7 @@ fitx::result<std::string, const char*> GetString(const char* name, const rapidjs
     return (Error() << ... << std::forward<Context>(context))
            << " member \"" << name << "\" must be a string!";
   }
-  return fitx::ok(result->get().GetString());
+  return fit::ok(result->get().GetString());
 }
 
 template <typename... Context>
@@ -250,8 +250,8 @@ auto GetObject(const char* name, const rapidjson::Value& object, Context&&... co
 }
 
 template <typename... Context>
-fitx::result<std::string, unsigned int> GetUint(const char* name, const rapidjson::Value& object,
-                                                Context&&... context) {
+fit::result<std::string, unsigned int> GetUint(const char* name, const rapidjson::Value& object,
+                                               Context&&... context) {
   auto result = GetMember(name, object, std::forward<Context>(context)...);
   if (result.is_error()) {
     return result.take_error();
@@ -260,7 +260,7 @@ fitx::result<std::string, unsigned int> GetUint(const char* name, const rapidjso
     return (Error() << ... << std::forward<Context>(context)).rdbuf()
            << " member \"" << name << "\" must be an unsigned integer!";
   }
-  return fitx::ok(result->get().GetUint());
+  return fit::ok(result->get().GetUint());
 }
 
 void ParseProfiles(const std::string& filename, const rapidjson::Document& document,
@@ -436,7 +436,7 @@ void ParseProfiles(const std::string& filename, const rapidjson::Document& docum
 
 namespace zircon_profile {
 
-fitx::result<fitx::failed, Role> ParseRoleSelector(const std::string& role_selector) {
+fit::result<fit::failed, Role> ParseRoleSelector(const std::string& role_selector) {
   static const re2::RE2 kReRoleParts{"(\\w[\\w\\-]+(?:\\.\\w[\\w\\-]+)*)(?::(.+))?"};
   static const re2::RE2 kSelector{"(\\w[\\w\\-]+)(?:=([^,]+))?,?"};
 
@@ -444,7 +444,7 @@ fitx::result<fitx::failed, Role> ParseRoleSelector(const std::string& role_selec
   std::string selectors;
   if (!re2::RE2::FullMatch(role_selector, kReRoleParts, &role.name, &selectors)) {
     FX_LOGF(WARNING, "ProfileProvider", "Bad selector: %s", role_selector.c_str());
-    return fitx::failed{};
+    return fit::failed{};
   }
 
   re2::StringPiece input{selectors};
@@ -457,46 +457,46 @@ fitx::result<fitx::failed, Role> ParseRoleSelector(const std::string& role_selec
     }
   }
 
-  return fitx::ok(std::move(role));
+  return fit::ok(std::move(role));
 }
 
-fitx::result<fitx::failed, MediaRole> MaybeMediaRole(const Role& role) {
+fit::result<fit::failed, MediaRole> MaybeMediaRole(const Role& role) {
   const auto realm_iter = role.selectors.find("realm");
   if (realm_iter == role.selectors.end() || realm_iter->second != "media") {
     FX_LOGF(INFO, "ProfileProvider", "Role \"%s\" is not a media role.", role.name.c_str());
-    return fitx::failed{};
+    return fit::failed{};
   }
 
   const auto capacity_iter = role.selectors.find("capacity");
   const auto deadline_iter = role.selectors.find("deadline");
   if (capacity_iter == role.selectors.end() || deadline_iter == role.selectors.end()) {
     FX_LOGF(WARNING, "ProfileProvider", "Malformed media role \"%s\"!", role.name.c_str());
-    return fitx::failed{};
+    return fit::failed{};
   }
 
   int64_t capacity;
   if (!re2::RE2::FullMatch(capacity_iter->second, "(\\d+)", &capacity)) {
     FX_LOGF(WARNING, "ProfileProvider", "Media role \"%s\" has invalid capacity selector: %s",
             role.name.c_str(), capacity_iter->second.c_str());
-    return fitx::failed{};
+    return fit::failed{};
   }
 
   int64_t deadline;
   if (!re2::RE2::FullMatch(deadline_iter->second, "(\\d+)", &deadline)) {
     FX_LOGF(WARNING, "ProfileProvider", "Media role \"%s\" has invalid deadline selector: %s",
             role.name.c_str(), deadline_iter->second.c_str());
-    return fitx::failed{};
+    return fit::failed{};
   }
 
-  return fitx::ok(MediaRole{.capacity = capacity, .deadline = deadline});
+  return fit::ok(MediaRole{.capacity = capacity, .deadline = deadline});
 }
 
-fitx::result<std::string, ProfileMap> LoadConfigs(const std::string& config_path) {
+fit::result<std::string, ProfileMap> LoadConfigs(const std::string& config_path) {
   fbl::unique_fd dir_fd(openat(AT_FDCWD, config_path.c_str(), O_RDONLY | O_DIRECTORY));
   if (!dir_fd.is_valid()) {
     // A non-existent directory is not an error.
     FX_LOGF(WARNING, "ProfileProvider", "Failed to open config dir: %s", config_path.c_str());
-    return fitx::ok(ProfileMap{});
+    return fit::ok(ProfileMap{});
   }
 
   std::vector<std::string> dir_entries;
@@ -544,7 +544,7 @@ fitx::result<std::string, ProfileMap> LoadConfigs(const std::string& config_path
             ToString(value.info).c_str());
   }
 
-  return fitx::ok(std::move(profiles));
+  return fit::ok(std::move(profiles));
 }
 
 }  // namespace zircon_profile

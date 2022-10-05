@@ -298,13 +298,13 @@ constexpr auto kMakeMember = [](uint32_t type) {
 // This is called with each note (classes derived from NoteBase) when its
 // information is required.  It can be called more than once, so it does
 // nothing if it's already collected the data.  Each NoteBase subclass below
-// has a Collect(const Handle&)->fitx::result<Error> method that should call
+// has a Collect(const Handle&)->fit::result<Error> method that should call
 // NoteBase::Emplace when it has acquired data, and then won't be called again.
-constexpr auto CollectNote = [](const auto& handle, auto& note) -> fitx::result<Error> {
+constexpr auto CollectNote = [](const auto& handle, auto& note) -> fit::result<Error> {
   if (note.empty()) {
     return note.Collect(handle);
   }
-  return fitx::ok();
+  return fit::ok();
 };
 
 // This doesn't need to be templated as specifically as InfoNote itself.  The
@@ -318,7 +318,7 @@ template <typename T>
 using InfoVector = AlignedStorageVector<sizeof(T), alignof(T)>;
 
 template <size_t Align, size_t Size>
-fitx::result<Error, AlignedStorageVector<Size, Align>> GetInfo(
+fit::result<Error, AlignedStorageVector<Size, Align>> GetInfo(
     const zx::handle& task, zx_object_info_topic_t topic, AlignedStorageVector<Size, Align> data) {
   // Start with a buffer of at least one but reuse any larger old buffer.
   if (data.empty()) {
@@ -332,14 +332,14 @@ fitx::result<Error, AlignedStorageVector<Size, Align>> GetInfo(
     size_t actual, avail;
     zx_status_t status = task.get_info(topic, data.data(), data.size() * Size, &actual, &avail);
     if (status != ZX_OK) {
-      return fitx::error(Error{"zx_object_get_info", status});
+      return fit::error(Error{"zx_object_get_info", status});
     }
 
     if (actual == avail) {
       // This is all the data.
       data.resize(avail);
       data.shrink_to_fit();
-      return fitx::ok(std::move(data));
+      return fit::ok(std::move(data));
     }
 
     // There is more data.  Make the buffer at least as big as is needed.
@@ -355,7 +355,7 @@ fitx::result<Error, AlignedStorageVector<Size, Align>> GetInfo(
 template <typename Class, zx_object_info_topic_t Topic, typename T>
 class InfoNote : public NoteBase<Class, Topic> {
  public:
-  fitx::result<Error> Collect(const typename Class::Handle& task) {
+  fit::result<Error> Collect(const typename Class::Handle& task) {
     auto result =
         GetInfo<alignof(T), sizeof(T)>(*zx::unowned_handle{task.get()}, Topic, std::move(data_));
     if (result.is_error()) {
@@ -366,7 +366,7 @@ class InfoNote : public NoteBase<Class, Topic> {
         reinterpret_cast<const std::byte*>(data_.data()),
         data_.size() * sizeof(data_[0]),
     });
-    return fitx::ok();
+    return fit::ok();
   }
 
   cpp20::span<const T> info() const {
@@ -382,13 +382,13 @@ class InfoNote : public NoteBase<Class, Topic> {
 template <typename Class, uint32_t Prop, typename T>
 class PropertyNote : public NoteBase<Class, Prop> {
  public:
-  fitx::result<Error> Collect(const typename Class::Handle& handle) {
+  fit::result<Error> Collect(const typename Class::Handle& handle) {
     zx_status_t status = (handle.*Class::kSyscall)(Prop, &data_, sizeof(T));
     if (status != ZX_OK) {
-      return fitx::error(Error{Class::kCall_, status});
+      return fit::error(Error{Class::kCall_, status});
     }
     this->Emplace({reinterpret_cast<std::byte*>(&data_), sizeof(data_)});
-    return fitx::ok();
+    return fit::ok();
   }
 
  private:
@@ -432,7 +432,7 @@ class JsonNote : public NoteBase<Class, 0> {
   }
 
   // CollectNoteData will call this, but it has nothing to do.
-  static constexpr auto Collect = [](auto& note) -> fitx::result<Error> { return fitx::ok(); };
+  static constexpr auto Collect = [](auto& note) -> fit::result<Error> { return fit::ok(); };
 
  private:
   rapidjson::StringBuffer data_;
@@ -442,10 +442,10 @@ class JsonNote : public NoteBase<Class, 0> {
 
 constexpr auto CollectNoteData =
     // For each note that hasn't already been fetched, try to fetch it now.
-    [](const auto& handle, auto&... note) -> fitx::result<Error, size_t> {
+    [](const auto& handle, auto&... note) -> fit::result<Error, size_t> {
   // This value is always replaced (or ignored), but the type is not
   // default-constructible.
-  fitx::result<Error> result = fitx::ok();
+  fit::result<Error> result = fit::ok();
 
   size_t total = 0;
   auto collect = [&handle, &result, &total](auto& note) -> bool {
@@ -472,7 +472,7 @@ constexpr auto CollectNoteData =
     return result.take_error();
   }
 
-  return fitx::ok(total);
+  return fit::ok(total);
 };
 
 constexpr auto DumpNoteData =
@@ -510,10 +510,10 @@ rapidjson::Document CollectSystemJson() {
   return dom;
 }
 
-constexpr auto CollectSystemNote = [](auto& note) -> fitx::result<Error> {
+constexpr auto CollectSystemNote = [](auto& note) -> fit::result<Error> {
   bool ok = note.Set(CollectSystemJson());
   ZX_ASSERT(ok);
-  return fitx::ok();
+  return fit::ok();
 };
 
 }  // namespace
@@ -545,25 +545,25 @@ class ProcessDumpBase::Collector {
   // will report only about memory and process-wide state, nothing about
   // threads.  Afterwards the process remains suspended until the Collector is
   // destroyed.
-  fitx::result<Error> SuspendAndCollectThreads() {
+  fit::result<Error> SuspendAndCollectThreads() {
     ZX_ASSERT(!process_suspended_);
     ZX_DEBUG_ASSERT(notes_size_bytes_ == 0);
     zx_status_t status = process_->suspend(&process_suspended_);
     if (status == ZX_OK) {
       return CollectThreads();
     }
-    return fitx::error(Error{"zx_task_suspend", status});
+    return fit::error(Error{"zx_task_suspend", status});
   }
 
-  fitx::result<Error> CollectSystem() { return CollectSystemNote(std::get<SystemNote>(notes_)); }
+  fit::result<Error> CollectSystem() { return CollectSystemNote(std::get<SystemNote>(notes_)); }
 
   // This collects information about memory and other process-wide state.  The
   // return value gives the total size of the ET_CORE file to be written.
   // Collection is cut short without error if the ET_CORE file would already
   // exceed the size limit without even including the memory.
-  fitx::result<Error, size_t> CollectProcess(SegmentCallback prune, size_t limit) {
+  fit::result<Error, size_t> CollectProcess(SegmentCallback prune, size_t limit) {
     // Collect the process-wide note data.
-    auto collect = [this](auto&... note) -> fitx::result<Error, size_t> {
+    auto collect = [this](auto&... note) -> fit::result<Error, size_t> {
       return CollectNoteData(*process_, note...);
     };
     if (auto result = std::apply(collect, notes_); result.is_error()) {
@@ -590,13 +590,13 @@ class ProcessDumpBase::Collector {
     }
 
     // Now figure everything else out to write out a full ET_CORE file.
-    return fitx::ok(Layout());
+    return fit::ok(Layout());
   }
 
   // Accumulate header and note data to be written out, by calling
   // `dump(offset, ByreView{...})` repeatedly.
   // The views point to storage in this->notes and Thread::notes_.
-  fitx::result<Error, size_t> DumpHeaders(DumpCallback dump, size_t limit) {
+  fit::result<Error, size_t> DumpHeaders(DumpCallback dump, size_t limit) {
     // Layout has already been done.
     ZX_ASSERT(ehdr_.type == elfldltl::ElfType::kCore);
 
@@ -612,17 +612,17 @@ class ProcessDumpBase::Collector {
 
     // Generate the ELF headers.
     if (append({reinterpret_cast<std::byte*>(&ehdr_), sizeof(ehdr_)})) {
-      return fitx::ok(offset);
+      return fit::ok(offset);
     }
     if (ehdr_.shnum > 0) {
       ZX_DEBUG_ASSERT(ehdr_.shnum() == 1);
       ZX_DEBUG_ASSERT(ehdr_.shoff == offset);
       if (append({reinterpret_cast<std::byte*>(&shdr_), sizeof(shdr_)})) {
-        return fitx::ok(offset);
+        return fit::ok(offset);
       }
     }
     if (append({reinterpret_cast<std::byte*>(phdrs_.data()), phdrs_.size() * sizeof(phdrs_[0])})) {
-      return fitx::ok(offset);
+      return fit::ok(offset);
     }
 
     // Returns true early if any append call returns true.
@@ -632,31 +632,31 @@ class ProcessDumpBase::Collector {
 
     // Generate the process-wide note data.
     if (append_notes(notes())) {
-      return fitx::ok(offset);
+      return fit::ok(offset);
     }
 
     // Generate the note data for each thread.
     for (const auto& thread : threads_) {
       if (append_notes(thread.notes())) {
-        return fitx::ok(offset);
+        return fit::ok(offset);
       }
     }
 
     ZX_DEBUG_ASSERT(offset % NoteAlign() == 0);
     ZX_DEBUG_ASSERT(offset == headers_size_bytes() + notes_size_bytes());
-    return fitx::ok(offset);
+    return fit::ok(offset);
   }
 
   // Dump the memory data by calling `dump(size_t offset, ByteView data)` with
   // the data meant for the given offset into the ET_CORE file.  The data is in
   // storage only available during the callback.  The `dump` function returns
-  // some fitx::result<error_type> type.  DumpMemory returns an "error" result
+  // some fit::result<error_type> type.  DumpMemory returns an "error" result
   // for errors reading the memory in.  The "success" result holds the results
   // from the callback.  If `dump` returns an error result, that is returned
   // immediately.  If it returns success, additional callbacks will be made
   // until all the data has been dumped, and the final `dump` callback's return
   // value will be the "success" return value.
-  fitx::result<Error, size_t> DumpMemory(DumpCallback dump, size_t limit) {
+  fit::result<Error, size_t> DumpMemory(DumpCallback dump, size_t limit) {
     size_t offset = headers_size_bytes() + notes_size_bytes();
     for (const auto& segment : phdrs_) {
       if (segment.type == elfldltl::ElfPhdrType::kLoad) {
@@ -695,7 +695,7 @@ class ProcessDumpBase::Collector {
         ZX_DEBUG_ASSERT(offset == segment.offset + size);
       }
     }
-    return fitx::ok(offset);
+    return fit::ok(offset);
   }
 
   void set_date(time_t date) { std::get<DateNote>(notes_).Set(date); }
@@ -763,7 +763,7 @@ class ProcessDumpBase::Collector {
 
   class DateNote : public NoteBase<DateClass, 0> {
    public:
-    fitx::result<Error> Collect(const zx::process& process) { return fitx::ok(); }
+    fit::result<Error> Collect(const zx::process& process) { return fit::ok(); }
 
     void Set(time_t date) {
       date_ = date;
@@ -823,7 +823,7 @@ class ProcessDumpBase::Collector {
     explicit Thread(zx_koid_t koid) : koid_(koid) {}
 
     // Acquire the thread handle if possible.
-    fitx::result<Error> Acquire(const zx::process& process) {
+    fit::result<Error> Acquire(const zx::process& process) {
       if (!handle_) {
         zx::handle child;
         zx_status_t status = process.get_child(koid_, kThreadRights, &child);
@@ -839,10 +839,10 @@ class ProcessDumpBase::Collector {
             break;
 
           default:
-            return fitx::error(Error{"zx_object_get_child", status});
+            return fit::error(Error{"zx_object_get_child", status});
         }
       }
-      return fitx::ok();
+      return fit::ok();
     }
 
     // Return the item to wait for this thread if it needs to be waited for.
@@ -856,7 +856,7 @@ class ProcessDumpBase::Collector {
     // This can be called after the wait() item has been used in wait_many.
     // If it still needs to be waited for, it returns success but zero size.
     // The next call to wait() will show whether collection is finished.
-    fitx::result<Error, size_t> Collect(zx_signals_t pending) {
+    fit::result<Error, size_t> Collect(zx_signals_t pending) {
       ZX_DEBUG_ASSERT(handle_);
       ZX_DEBUG_ASSERT(handle_->is_valid());
 
@@ -871,7 +871,7 @@ class ProcessDumpBase::Collector {
       }
 
       // Still need to wait for this one.
-      return fitx::ok(0);
+      return fit::ok(0);
     }
 
     // Returns a vector of views into the storage held in this->notes_.
@@ -932,7 +932,7 @@ class ProcessDumpBase::Collector {
 
   // Acquire all the threads.  Then collect all their data as soon as they are
   // done suspending, waiting as necessary.
-  fitx::result<Error> CollectThreads() {
+  fit::result<Error> CollectThreads() {
     ZX_DEBUG_ASSERT(process_suspended_);
     threads_.clear();
     while (true) {
@@ -982,13 +982,13 @@ class ProcessDumpBase::Collector {
 
       // If there are no unfinished threads, collection is all done.
       if (wait_for_count == 0) {
-        return fitx::ok();
+        return fit::ok();
       }
 
       // Wait for a thread to finish its suspension (or death).
       zx_status_t status = zx::thread::wait_many(wait_for, wait_for_count, zx::time::infinite());
       if (status != ZX_OK) {
-        return fitx::error(Error{"zx_object_wait_many", status});
+        return fit::error(Error{"zx_object_wait_many", status});
       }
       for (uint32_t i = 0; i < wait_for_count; ++i) {
         auto result = wait_for_thread[i]->Collect(wait_for[i].pending);
@@ -1005,19 +1005,19 @@ class ProcessDumpBase::Collector {
   }
 
   // Populate phdrs_.  The p_offset fields are filled in later by Layout.
-  fitx::result<Error> FindMemory(SegmentCallback prune_segment) {
+  fit::result<Error> FindMemory(SegmentCallback prune_segment) {
     // Make sure we have the relevant information to scan.
     if (auto result = CollectNote(*process_, process_maps()); result.is_error()) {
       if (result.error_value().status_ == ZX_ERR_NOT_SUPPORTED) {
         // This just means there is no information in the dump.
-        return fitx::ok();
+        return fit::ok();
       }
       return result;
     }
     if (auto result = CollectNote(*process_, process_vmos()); result.is_error()) {
       if (result.error_value().status_ == ZX_ERR_NOT_SUPPORTED) {
         // This just means there is no information in the dump.
-        return fitx::ok();
+        return fit::ok();
       }
       return result;
     }
@@ -1085,7 +1085,7 @@ class ProcessDumpBase::Collector {
       }
     }
 
-    return fitx::ok();
+    return fit::ok();
   }
 
   // Populate the header fields and reify phdrs_ with p_offset values.
@@ -1168,7 +1168,7 @@ class ProcessDumpBase::Collector {
     // returned, but no more than max_bytes.  The returned view is valid only
     // until the next use of this ProcessMemoryReader object.
     auto ReadBytes(uintptr_t vaddr, size_t min_bytes, size_t max_bytes = kWindowSize_)
-        -> fitx::result<Error, ByteView> {
+        -> fit::result<Error, ByteView> {
       ZX_ASSERT(min_bytes > 0);
       ZX_ASSERT(max_bytes >= min_bytes);
       ZX_ASSERT(min_bytes <= kWindowSize_);
@@ -1178,7 +1178,7 @@ class ProcessDumpBase::Collector {
         ByteView data = buffer_data().substr(vaddr - buffer_vaddr_, max_bytes);
         if (data.size() >= min_bytes) {
           ZX_DEBUG_ASSERT(data.data());
-          return fitx::ok(data);
+          return fit::ok(data);
         }
       }
 
@@ -1221,11 +1221,11 @@ class ProcessDumpBase::Collector {
       }
 
       if (status != ZX_OK) {
-        return fitx::error(Error{"zx_process_read_memory", status});
+        return fit::error(Error{"zx_process_read_memory", status});
       }
 
       if (valid_size_ < min_bytes) {
-        return fitx::error(Error{"short memory read", ZX_ERR_NO_MEMORY});
+        return fit::error(Error{"short memory read", ZX_ERR_NO_MEMORY});
       }
 
       ZX_DEBUG_ASSERT(valid_size_ > 0);
@@ -1234,15 +1234,15 @@ class ProcessDumpBase::Collector {
       ZX_DEBUG_ASSERT(buffer_data().data());
       ByteView data = buffer_data().substr(0, max_bytes);
       ZX_DEBUG_ASSERT(data.data());
-      return fitx::ok(data);
+      return fit::ok(data);
     }
 
     // Read an array from the given address.
     template <typename T>
-    fitx::result<Error, const T*> ReadArray(uintptr_t vaddr, size_t nelem) {
+    fit::result<Error, const T*> ReadArray(uintptr_t vaddr, size_t nelem) {
       size_t byte_size = sizeof(T) * nelem;
       if (byte_size > kWindowSize_) {
-        return fitx::error(Error{"array too large", ZX_ERR_NO_MEMORY});
+        return fit::error(Error{"array too large", ZX_ERR_NO_MEMORY});
       }
 
       auto result = ReadBytes(vaddr, byte_size);
@@ -1251,21 +1251,21 @@ class ProcessDumpBase::Collector {
       }
 
       if ((vaddr - buffer_vaddr_) % alignof(T) != 0) {
-        return fitx::error(Error{"misaligned data", ZX_ERR_NO_MEMORY});
+        return fit::error(Error{"misaligned data", ZX_ERR_NO_MEMORY});
       }
 
-      return fitx::ok(reinterpret_cast<const T*>(result.value().data()));
+      return fit::ok(reinterpret_cast<const T*>(result.value().data()));
     }
 
     // Read a datum from the given address.
     template <typename T>
-    fitx::result<Error, std::reference_wrapper<const T>> Read(uintptr_t vaddr) {
+    fit::result<Error, std::reference_wrapper<const T>> Read(uintptr_t vaddr) {
       auto result = ReadArray<T>(vaddr, 1);
       if (result.is_error()) {
         return result.take_error();
       }
       const T* datum_ptr = result.value();
-      return fitx::ok(std::cref(*datum_ptr));
+      return fit::ok(std::cref(*datum_ptr));
     }
 
    private:
@@ -1309,21 +1309,21 @@ ProcessDumpBase::~ProcessDumpBase() = default;
 
 void ProcessDumpBase::clear() { collector_->clear(); }
 
-fitx::result<Error, size_t> ProcessDumpBase::CollectProcess(SegmentCallback prune, size_t limit) {
+fit::result<Error, size_t> ProcessDumpBase::CollectProcess(SegmentCallback prune, size_t limit) {
   return collector_->CollectProcess(std::move(prune), limit);
 }
 
-fitx::result<Error> ProcessDumpBase::SuspendAndCollectThreads() {
+fit::result<Error> ProcessDumpBase::SuspendAndCollectThreads() {
   return collector_->SuspendAndCollectThreads();
 }
 
-fitx::result<Error> ProcessDumpBase::CollectSystem() { return collector_->CollectSystem(); }
+fit::result<Error> ProcessDumpBase::CollectSystem() { return collector_->CollectSystem(); }
 
-fitx::result<Error, size_t> ProcessDumpBase::DumpHeadersImpl(DumpCallback dump, size_t limit) {
+fit::result<Error, size_t> ProcessDumpBase::DumpHeadersImpl(DumpCallback dump, size_t limit) {
   return collector_->DumpHeaders(std::move(dump), limit);
 }
 
-fitx::result<Error, size_t> ProcessDumpBase::DumpMemoryImpl(DumpCallback callback, size_t limit) {
+fit::result<Error, size_t> ProcessDumpBase::DumpMemoryImpl(DumpCallback callback, size_t limit) {
   return collector_->DumpMemory(std::move(callback), limit);
 }
 
@@ -1362,9 +1362,9 @@ class JobDumpBase::Collector {
   void clear() { *this = Collector{std::move(job_)}; }
 
   // This collects information about job-wide state.
-  fitx::result<Error, size_t> CollectJob() {
+  fit::result<Error, size_t> CollectJob() {
     // Collect the job-wide note data.
-    auto collect = [this](auto&... note) -> fitx::result<Error, size_t> {
+    auto collect = [this](auto&... note) -> fit::result<Error, size_t> {
       return CollectNoteData(*job_, note...);
     };
     auto result = std::apply(collect, notes_);
@@ -1383,13 +1383,13 @@ class JobDumpBase::Collector {
     // The name table member will be padded on the way out.
     name_table_size += name_table_size % 2;
 
-    return fitx::ok(kArchiveMagic.size() +        // Archive header +
-                    name_table_.bytes().size() +  // name table member header +
-                    name_table_size +             // name table contents +
-                    result.value());              // note members & headers.
+    return fit::ok(kArchiveMagic.size() +        // Archive header +
+                   name_table_.bytes().size() +  // name table member header +
+                   name_table_size +             // name table contents +
+                   result.value());              // note members & headers.
   }
 
-  fitx::result<Error, JobVector> CollectChildren() {
+  fit::result<Error, JobVector> CollectChildren() {
     auto result = GetChildren();
     if (result.is_error()) {
       return result.take_error();
@@ -1408,13 +1408,13 @@ class JobDumpBase::Collector {
           continue;
 
         default:
-          return fitx::error{Error{"zx_object_get_child", status}};
+          return fit::error{Error{"zx_object_get_child", status}};
       }
     }
-    return fitx::ok(std::move(jobs));
+    return fit::ok(std::move(jobs));
   }
 
-  fitx::result<Error, ProcessVector> CollectProcesses() {
+  fit::result<Error, ProcessVector> CollectProcesses() {
     auto result = GetProcesses();
     if (result.is_error()) {
       return result.take_error();
@@ -1433,15 +1433,15 @@ class JobDumpBase::Collector {
           continue;
 
         default:
-          return fitx::error{Error{"zx_object_get_child", status}};
+          return fit::error{Error{"zx_object_get_child", status}};
       }
     }
-    return fitx::ok(std::move(processes));
+    return fit::ok(std::move(processes));
   }
 
-  fitx::result<Error> CollectSystem() { return CollectSystemNote(std::get<SystemNote>(notes_)); }
+  fit::result<Error> CollectSystem() { return CollectSystemNote(std::get<SystemNote>(notes_)); }
 
-  fitx::result<Error, size_t> DumpHeaders(DumpCallback dump, time_t mtime) {
+  fit::result<Error, size_t> DumpHeaders(DumpCallback dump, time_t mtime) {
     size_t offset = 0;
     auto append = [&](ByteView data) -> bool {
       bool bail = dump(offset, data);
@@ -1454,13 +1454,13 @@ class JobDumpBase::Collector {
             reinterpret_cast<const std::byte*>(kArchiveMagic.data()),
             kArchiveMagic.size(),
         })) {
-      return fitx::ok(offset);
+      return fit::ok(offset);
     }
     ZX_DEBUG_ASSERT(offset % 2 == 0);
 
     // The name table member header has been initialized.  Write it out now.
     if (append(name_table_.bytes())) {
-      return fitx::ok(offset);
+      return fit::ok(offset);
     }
     ZX_DEBUG_ASSERT(offset % 2 == 0);
 
@@ -1478,24 +1478,24 @@ class JobDumpBase::Collector {
     };
     auto finalize = [&](auto&... note) { return (finish_note(note) || ...); };
     if (std::apply(finalize, notes_)) {
-      return fitx::ok(offset);
+      return fit::ok(offset);
     }
     ZX_DEBUG_ASSERT(offset % 2 == name_table_pos % 2);
 
     if (name_table_pos % 2 != 0 && append(kArchiveMemberPad)) {
-      return fitx::ok(offset);
+      return fit::ok(offset);
     }
     ZX_DEBUG_ASSERT(offset % 2 == 0);
 
     // Generate the job-wide note data.
     for (ByteView data : notes()) {
       if (append(data)) {
-        return fitx::ok(offset);
+        return fit::ok(offset);
       }
     }
     ZX_DEBUG_ASSERT(offset % 2 == 0);
 
-    return fitx::ok(offset);
+    return fit::ok(offset);
   }
 
  private:
@@ -1543,22 +1543,22 @@ class JobDumpBase::Collector {
   // Some of the job-wide state is needed in CollectChildren and
   // CollectProcesses anyway, so pre-collect it directly in the notes.
 
-  fitx::result<Error, std::reference_wrapper<const Children>> GetChildren() {
+  fit::result<Error, std::reference_wrapper<const Children>> GetChildren() {
     Children& children = std::get<Children>(notes_);
     auto result = CollectNote(*job_, children);
     if (result.is_error()) {
       return result.take_error();
     }
-    return fitx::ok(std::cref(children));
+    return fit::ok(std::cref(children));
   }
 
-  fitx::result<Error, std::reference_wrapper<const Processes>> GetProcesses() {
+  fit::result<Error, std::reference_wrapper<const Processes>> GetProcesses() {
     Processes& processes = std::get<Processes>(notes_);
     auto result = CollectNote(*job_, processes);
     if (result.is_error()) {
       return result.take_error();
     }
-    return fitx::ok(std::cref(processes));
+    return fit::ok(std::cref(processes));
   }
 
   zx::unowned_job job_;
@@ -1570,31 +1570,30 @@ JobDumpBase::JobDumpBase(JobDumpBase&&) noexcept = default;
 JobDumpBase& JobDumpBase::operator=(JobDumpBase&&) noexcept = default;
 JobDumpBase::~JobDumpBase() = default;
 
-fitx::result<Error> JobDumpBase::CollectSystem() { return collector_->CollectSystem(); }
+fit::result<Error> JobDumpBase::CollectSystem() { return collector_->CollectSystem(); }
 
-fitx::result<Error, size_t> JobDumpBase::CollectJob() { return collector_->CollectJob(); }
+fit::result<Error, size_t> JobDumpBase::CollectJob() { return collector_->CollectJob(); }
 
-fitx::result<Error, std::vector<std::pair<zx::job, zx_koid_t>>> JobDumpBase::CollectChildren() {
+fit::result<Error, std::vector<std::pair<zx::job, zx_koid_t>>> JobDumpBase::CollectChildren() {
   return collector_->CollectChildren();
 }
 
-fitx::result<Error, std::vector<std::pair<zx::process, zx_koid_t>>>
-JobDumpBase::CollectProcesses() {
+fit::result<Error, std::vector<std::pair<zx::process, zx_koid_t>>> JobDumpBase::CollectProcesses() {
   return collector_->CollectProcesses();
 }
 
-fitx::result<Error, size_t> JobDumpBase::DumpHeadersImpl(DumpCallback dump, time_t mtime) {
+fit::result<Error, size_t> JobDumpBase::DumpHeadersImpl(DumpCallback dump, time_t mtime) {
   return collector_->DumpHeaders(std::move(dump), mtime);
 }
 
-fitx::result<Error, size_t> JobDumpBase::DumpMemberHeaderImpl(DumpCallback dump, size_t offset,
-                                                              std::string_view name, size_t size,
-                                                              time_t mtime) {
+fit::result<Error, size_t> JobDumpBase::DumpMemberHeaderImpl(DumpCallback dump, size_t offset,
+                                                             std::string_view name, size_t size,
+                                                             time_t mtime) {
   ArchiveMemberHeader header{name};
   header.set_size(size);
   header.set_date(mtime);
   dump(offset, header.bytes());
-  return fitx::ok(offset + header.bytes().size());
+  return fit::ok(offset + header.bytes().size());
 }
 
 size_t JobDumpBase::MemberHeaderSize() { return sizeof(ar_hdr); }

@@ -10,7 +10,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/include/lib/fit/function.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
@@ -47,7 +47,7 @@ void ProducerConnectorImpl::ConnectProducer(ConnectProducerRequest& request,
   zx_status_t status = fdio_fd_create(request.producer_socket().release(), &sock_fd);
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << "Failed to bind socket to FD: " << status;
-    completer.Reply(fitx::as_error(ZX_ERR_NO_RESOURCES));
+    completer.Reply(fit::as_error(ZX_ERR_NO_RESOURCES));
     return;
   }
   perfetto::base::ScopedFile scoped_sock_fd(sock_fd);
@@ -73,7 +73,7 @@ void ProducerConnectorImpl::ConnectProducer(ConnectProducerRequest& request,
         host->AdoptConnectedSocket_Fuchsia(perfetto::base::ScopedFile(socket_fd), send_fd_cb);
       });
 
-  completer.Reply(fitx::ok());
+  completer.Reply(fit::ok());
 }
 
 bool ProducerConnectorImpl::SendSharedMemoryToProducer(ReceiverId receiver_id, int fd) {

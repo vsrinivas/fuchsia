@@ -93,9 +93,9 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
   // the VMM being destroyed.
   auto deferred = fit::defer([this, &status] {
     if (status == ZX_ERR_CANCELED) {
-      this->guest_->Stop(fitx::ok());
+      this->guest_->Stop(fit::ok());
     } else {
-      this->guest_->Stop(fitx::error(::fuchsia::virtualization::GuestError::VCPU_RUNTIME_FAILURE));
+      this->guest_->Stop(fit::error(::fuchsia::virtualization::GuestError::VCPU_RUNTIME_FAILURE));
     }
   });
 

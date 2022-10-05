@@ -56,7 +56,7 @@ class [[nodiscard]] {{ .WireResult }} final : public {{ .BaseWireResult }} {
 
   {{- if .HasResponse }}
     {{ .IncomingMessageHandleStorageForResponse }} handle_storage;
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<{{ .Marker }}>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<{{ .Marker }}>(
         outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));

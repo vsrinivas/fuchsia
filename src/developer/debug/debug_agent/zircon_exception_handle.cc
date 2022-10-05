@@ -18,21 +18,21 @@ debug_ipc::ExceptionType ZirconExceptionHandle::GetType(const ThreadHandle& thre
   return arch::DecodeExceptionType(thread.GetNativeHandle(), info_.type);
 }
 
-fitx::result<debug::Status, ExceptionHandle::Resolution> ZirconExceptionHandle::GetResolution()
+fit::result<debug::Status, ExceptionHandle::Resolution> ZirconExceptionHandle::GetResolution()
     const {
   uint32_t state = 0;
   if (zx_status_t status = exception_.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
       status != ZX_OK)
-    return fitx::error(debug::ZxStatus(status));
+    return fit::error(debug::ZxStatus(status));
 
   switch (state) {
     case ZX_EXCEPTION_STATE_TRY_NEXT:
-      return fitx::ok(Resolution::kTryNext);
+      return fit::ok(Resolution::kTryNext);
     case ZX_EXCEPTION_STATE_HANDLED:
-      return fitx::ok(Resolution::kHandled);
+      return fit::ok(Resolution::kHandled);
   }
   FX_NOTREACHED();
-  return fitx::error(debug::ZxStatus(ZX_ERR_BAD_STATE));
+  return fit::error(debug::ZxStatus(ZX_ERR_BAD_STATE));
 }
 
 debug::Status ZirconExceptionHandle::SetResolution(Resolution state) {
@@ -49,19 +49,19 @@ debug::Status ZirconExceptionHandle::SetResolution(Resolution state) {
       exception_.set_property(ZX_PROP_EXCEPTION_STATE, &zx_state, sizeof(state)));
 }
 
-fitx::result<debug::Status, debug_ipc::ExceptionStrategy> ZirconExceptionHandle::GetStrategy()
+fit::result<debug::Status, debug_ipc::ExceptionStrategy> ZirconExceptionHandle::GetStrategy()
     const {
   uint32_t raw_strategy = 0;
   zx_status_t status =
       exception_.get_property(ZX_PROP_EXCEPTION_STRATEGY, &raw_strategy, sizeof(raw_strategy));
   if (status != ZX_OK) {
-    return fitx::error(debug::ZxStatus(status));
+    return fit::error(debug::ZxStatus(status));
   }
   auto strategy = debug_ipc::ToExceptionStrategy(raw_strategy);
   if (!strategy.has_value()) {
-    return fitx::error(debug::ZxStatus(ZX_ERR_BAD_STATE));
+    return fit::error(debug::ZxStatus(ZX_ERR_BAD_STATE));
   }
-  return fitx::ok(strategy.value());
+  return fit::ok(strategy.value());
 }
 
 debug::Status ZirconExceptionHandle::SetStrategy(debug_ipc::ExceptionStrategy strategy) {

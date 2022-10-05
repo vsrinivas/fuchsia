@@ -18,7 +18,7 @@ auto GetFakeClient() { return std::make_shared<fidl::internal::ClientControlBloc
 // Example user object acting as callback receivers.
 struct Receiver {
   // Using |int| as our result type in tests.
-  // In production it would be a proper result type such as |fitx::result|.
+  // In production it would be a proper result type such as |fit::result|.
   void Speak(int answer) const { *out_answer = answer; }
   int* out_answer;
 };

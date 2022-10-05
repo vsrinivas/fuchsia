@@ -56,7 +56,7 @@ zx_library("elfldltl") {
   public_deps = [ "//sdk/lib/stdcompat" ]
   if (!is_kernel) {
     public_deps += [
-      # <lib/elfldltl/mapped-fd-file.h> has #include <lib/fitx/result.h>.
+      # <lib/elfldltl/mapped-fd-file.h> has #include <lib/fit/result.h>.
       "//zircon/system/ulib/zxc:headers",
     ]
 

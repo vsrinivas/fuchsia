@@ -37,11 +37,11 @@ namespace fasync {
 //     // with the sequencer.
 //     fasync::future<> perform_complex_task() {
 //         return fasync::make_future([] { /* Do sequential work. */ }) |
-//             fasync::then([] (fitx::result<fitx::failed>& result) {
+//             fasync::then([] (fit::result<fit::failed>& result) {
 //                 /* This will also be wrapped. */
 //             }) |
 //             fasync::wrap_with(seq) |
-//             fasync::then([] (fitx::result<fitx::failed>& result) { /* Do more work. */ });
+//             fasync::then([] (fit::result<fit::failed>& result) { /* Do more work. */ });
 //     }
 //
 class sequencer final {
@@ -49,7 +49,7 @@ class sequencer final {
   sequencer() {
     // Capture a new consumer and intentionally abandon its associated completer so that a future
     // chained onto the consumer using |future_or()| will become immediately runnable.
-    fasync::bridge<fitx::failed> bridge;
+    fasync::bridge<fit::failed> bridge;
     prior_ = std::move(bridge.consumer);
   }
 
@@ -61,9 +61,9 @@ class sequencer final {
   // This method is thread-safe.
   template <typename F>
   decltype(auto) wrap(F&& future) {
-    fasync::bridge<fitx::failed> bridge;
-    fasync::consumer<fitx::failed> prior = swap_prior(std::move(bridge.consumer));
-    return prior.future_or(fitx::ok()) |
+    fasync::bridge<fit::failed> bridge;
+    fasync::consumer<fit::failed> prior = swap_prior(std::move(bridge.consumer));
+    return prior.future_or(fit::ok()) |
            fasync::then([future = std::move(future), completer = std::move(bridge.completer)](
                             fasync::context& context) mutable {
              //  This handler will run once the completer associated with the |prior| future is
@@ -80,9 +80,9 @@ class sequencer final {
   constexpr sequencer& operator=(sequencer&&) = delete;
 
  private:
-  fasync::consumer<fitx::failed> swap_prior(fasync::consumer<fitx::failed> new_prior) {
+  fasync::consumer<fit::failed> swap_prior(fasync::consumer<fit::failed> new_prior) {
     std::lock_guard<std::mutex> lock(mutex_);
-    fasync::consumer<fitx::failed> old_prior = std::move(prior_);
+    fasync::consumer<fit::failed> old_prior = std::move(prior_);
     prior_ = std::move(new_prior);
     return old_prior;
   }
@@ -90,7 +90,7 @@ class sequencer final {
   std::mutex mutex_;
 
   // Holds the consumption capability of the most recently wrapped future.
-  fasync::consumer<fitx::failed> prior_ FIT_GUARDED(mutex_);
+  fasync::consumer<fit::failed> prior_ FIT_GUARDED(mutex_);
 };
 
 }  // namespace fasync

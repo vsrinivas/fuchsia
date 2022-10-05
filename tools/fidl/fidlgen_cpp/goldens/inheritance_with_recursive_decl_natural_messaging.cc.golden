@@ -12,7 +12,7 @@ namespace test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Parent>::First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kParent_First_Ordinal, ::test_inheritancewithrecursivedecl::kParent_First_DynamicFlags};
@@ -31,7 +31,7 @@ namespace test_inheritancewithrecursivedecl {
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Parent>::First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kParent_First_Ordinal, ::test_inheritancewithrecursivedecl::kParent_First_DynamicFlags};
@@ -66,7 +66,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_inheritancewithrecursivedecl::kParent_First_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ParentFirstRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ParentFirstRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -108,7 +108,7 @@ namespace test_inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Child>::First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kChild_First_Ordinal, ::test_inheritancewithrecursivedecl::kChild_First_DynamicFlags};
@@ -120,7 +120,7 @@ fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Child>::F
   return ::fidl::internal::ToFitxResult(status);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal, ::test_inheritancewithrecursivedecl::kChild_Second_DynamicFlags};
@@ -139,7 +139,7 @@ namespace test_inheritancewithrecursivedecl {
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child>::First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kChild_First_Ordinal, ::test_inheritancewithrecursivedecl::kChild_First_DynamicFlags};
@@ -150,7 +150,7 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal, ::test_inheritancewithrecursivedecl::kChild_Second_DynamicFlags};
@@ -185,7 +185,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_inheritancewithrecursivedecl::kChild_First_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ParentFirstRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ParentFirstRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -200,7 +200,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ChildSecondRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_inheritancewithrecursivedecl::ChildSecondRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

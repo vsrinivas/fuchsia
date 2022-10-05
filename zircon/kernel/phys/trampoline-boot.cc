@@ -325,9 +325,9 @@ void TrampolineBoot::SetKernelAddresses() {
   }
 }
 
-fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
-                                                  ktl::optional<uint64_t> kernel_load_address,
-                                                  ktl::optional<uint64_t> data_load_address) {
+fit::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
+                                                 ktl::optional<uint64_t> kernel_load_address,
+                                                 ktl::optional<uint64_t> data_load_address) {
   if (kernel_load_address) {
     set_kernel_load_address(*kernel_load_address);
   }
@@ -347,14 +347,14 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
   if (auto result = pool.UpdateFreeRamSubranges(memalloc::Type::kFixedAddressKernel,
                                                 *kernel_load_address_, KernelMemorySize());
       result.is_error()) {
-    return fitx::error{BootZbi::Error{.zbi_error = "unable to reserve kernel's load image"sv}};
+    return fit::error{BootZbi::Error{.zbi_error = "unable to reserve kernel's load image"sv}};
   }
 
   if (data_load_address_) {
     if (auto result = pool.UpdateFreeRamSubranges(memalloc::Type::kDataZbi, *data_load_address_,
                                                   DataLoadSize() + extra_data_capacity);
         result.is_error()) {
-      return fitx::error{BootZbi::Error{.zbi_error = "unable to reserve data ZBI's load image"sv}};
+      return fit::error{BootZbi::Error{.zbi_error = "unable to reserve data ZBI's load image"sv}};
     }
   }
 
@@ -385,7 +385,7 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
   ArchSetUpAddressSpaceLate();
 #endif
 
-  return fitx::ok();
+  return fit::ok();
 }
 
 [[noreturn]] void TrampolineBoot::Boot(ktl::optional<void*> argument) {
@@ -432,14 +432,14 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
       KernelEntryAddress());
 }
 
-fitx::result<TrampolineBoot::Error> TrampolineBoot::Init(InputZbi zbi) {
+fit::result<TrampolineBoot::Error> TrampolineBoot::Init(InputZbi zbi) {
   auto res = BootZbi::Init(zbi);
   SetKernelAddresses();
   return res;
 }
 
-fitx::result<TrampolineBoot::Error> TrampolineBoot::Init(InputZbi zbi,
-                                                         InputZbi::iterator kernel_item) {
+fit::result<TrampolineBoot::Error> TrampolineBoot::Init(InputZbi zbi,
+                                                        InputZbi::iterator kernel_item) {
   auto res = BootZbi::Init(zbi, kernel_item);
   SetKernelAddresses();
   return res;

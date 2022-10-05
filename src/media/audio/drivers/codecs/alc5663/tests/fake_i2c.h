@@ -89,7 +89,7 @@ void FakeI2c<AddressType, DataType>::Transfer(TransferRequestView request,
     response->read_data = {arena, 1};
     response->read_data[0] = {arena, sizeof(result)};
     memcpy(response->read_data[0].data(), &result, sizeof(result));
-    completer.Reply(::fitx::ok(response.get()));
+    completer.Reply(::fit::ok(response.get()));
     return;
   }
 
@@ -114,7 +114,7 @@ void FakeI2c<AddressType, DataType>::Transfer(TransferRequestView request,
     fidl::Arena arena;
     fidl::ObjectView<fuchsia_hardware_i2c::wire::DeviceTransferResponse> response(arena);
     response->read_data = {arena, 0};
-    completer.Reply(::fitx::ok(response.get()));
+    completer.Reply(::fit::ok(response.get()));
     return;
   }
 

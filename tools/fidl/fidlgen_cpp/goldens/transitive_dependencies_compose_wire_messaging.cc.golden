@@ -22,7 +22,7 @@ extern "C" const fidl_type_t test_bottom_BottomGetFooResponseTable;
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -39,7 +39,7 @@ namespace test_transitivedependenciescompose {
 
 ::fidl::WireUnownedResult<::test_transitivedependenciescompose::Top::GetFoo>::WireUnownedResult(::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_transitivedependenciescompose::Top::GetFoo>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -56,7 +56,7 @@ namespace test_transitivedependenciescompose {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -115,7 +115,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -174,7 +174,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_transitivedependenciescompos
 void fidl::internal::WireBufferCompleterImpl<::test_transitivedependenciescompose::Top::GetFoo>::MakeReply(const ::test_bottom::wire::Foo& foo) {
   ::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo> _response{foo};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_transitivedependenciescompose::Top::GetFoo>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};

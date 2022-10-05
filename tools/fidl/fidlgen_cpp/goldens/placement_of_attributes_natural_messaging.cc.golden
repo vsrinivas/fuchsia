@@ -12,7 +12,7 @@ namespace test_placementofattributes {
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_placementofattributes::kExampleProtocol_Method_Ordinal, ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
@@ -31,7 +31,7 @@ namespace test_placementofattributes {
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProtocol>::Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_placementofattributes::kExampleProtocol_Method_Ordinal, ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
@@ -66,7 +66,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_placementofattributes::ExampleProtocolMethodRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_placementofattributes::ExampleProtocolMethodRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

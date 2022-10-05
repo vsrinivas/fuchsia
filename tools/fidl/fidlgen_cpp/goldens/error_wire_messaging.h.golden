@@ -301,7 +301,7 @@ struct ::fidl::internal::IncomingEventsStorage<::test_error::Example> final : pu
 
 template <>
 struct ::fidl::internal::WireResultUnwrap<::test_error::Example::Foo> {
-  using Type = ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>;
+  using Type = ::fit::result<uint32_t, ::test_error::wire::ExampleFooResponse*>;
 };
 
 template <>
@@ -333,7 +333,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_error::Example::Foo>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_error::Example::Foo>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_error::Example::Foo>(::fidl::internal::StatusFromResult(decoded)) {
     if (decoded.is_ok()) {
       decoded_ = std::move(decoded.value());
@@ -426,7 +426,7 @@ class ::fidl::internal::WireCompleterImpl<::test_error::Example::Foo> : public :
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_error::wire::ExampleFooResponse*> result);
   void ReplySuccess(int64_t y);
   void ReplyError(uint32_t error);
 
@@ -439,7 +439,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo> : pu
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_error::wire::ExampleFooResponse*> result);
   void ReplySuccess(int64_t y);
   void ReplyError(uint32_t error);
 

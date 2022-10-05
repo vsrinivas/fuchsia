@@ -330,7 +330,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::A
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(::fidl::internal::StatusFromResult(decoded)) {
     if (decoded.is_ok()) {
       decoded_ = std::move(decoded.value());

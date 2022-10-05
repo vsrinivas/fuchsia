@@ -11,7 +11,7 @@ LIB_FASYNC_CPP_VERSION_COMPAT_BEGIN
 
 #include <lib/fasync/internal/future.h>
 #include <lib/fit/internal/result.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/stdcompat/span.h>
 #include <lib/stdcompat/type_traits.h>
@@ -59,7 +59,7 @@ namespace fasync {
 // an error.
 //
 // |T| or |fasync::future_value_t<F>| is the type of value produced when the future completes
-// successfully. When the underlying |fitx::result| has no |::value_type|, then there is no future
+// successfully. When the underlying |fit::result| has no |::value_type|, then there is no future
 // value type either.
 //
 // FASYNC::FUTURE AND FASYNC::TRY_FUTURE
@@ -67,11 +67,11 @@ namespace fasync {
 // For the rest of this document, references to |fasync::future| should be taken to apply to both
 // |fasync::future| and |fasync::try_future|. |fasync::future| produces a bare value (which makes it
 // easier for us to interact with C++20 coroutines going forward) and |fasync::try_future| is simply
-// a typedef for an |fasync::future| that produces a |fitx::result|, which is necessary to use
+// a typedef for an |fasync::future| that produces a |fit::result|, which is necessary to use
 // combinators like |fasync::and_then()|, |fasync::or_else()|, etc.
 //
 // The word "output" is used to refer to the type or value produced by the bare future, which for an
-// |fasync::try_future| is a |fitx::result|. The word "value" is used (mostly) to refer to the
+// |fasync::try_future| is a |fit::result|. The word "value" is used (mostly) to refer to the
 // success value produced by an |fasync::try_future|, and the word "error" is used to refer to the
 // error value produced by an |fasync::try_future|.
 //
@@ -158,13 +158,13 @@ namespace fasync {
 // Here is a spiced up example with |fasync::future|:
 //
 //     auto get_random_number() {
-//       return fasync::make_future([] { return fitx::ok(rand() % 10); });
+//       return fasync::make_future([] { return fit::ok(rand() % 10); });
 //     }
 //
 //     auto get_random_product() {
 //         return fasync::join(get_random_number(), get_random_number(), get_random_number()) |
 //                fasync::then([](auto& result1, auto& result2, auto& result3) {
-//                  return fitx::ok(result1.value() + result2.value() + result3.value());
+//                  return fit::ok(result1.value() + result2.value() + result3.value());
 //                });
 //     }
 //
@@ -173,7 +173,7 @@ namespace fasync {
 //     auto get_random_product() {
 //         return fasync::join(get_random_number(), get_random_number(), get_random_number()) |
 //                fasync::then([](auto&... results) {
-//                  return fitx::ok((results.value() + ...));
+//                  return fit::ok((results.value() + ...));
 //                });
 //     }
 //
@@ -271,23 +271,23 @@ namespace fasync {
 // Do this: (chaining as a single expression performs at most one heap allocation)
 //
 //     fasync::future<> f = fasync::make_future([] { ... }) |
-//         fasync::then([](fitx::result<fitx::failed>& result) { ... }) |
+//         fasync::then([](fit::result<fit::failed>& result) { ... }) |
 //         fasync::and_then([] { ... });
 //
 // Or this: (still only performs at most one heap allocation)
 //
 //     auto f = fasync::make_future([] { ... });
-//     auto g = fasync::then(std::move(f), [](fitx::result<fitx::failed>& result) { ... });
+//     auto g = fasync::then(std::move(f), [](fit::result<fit::failed>& result) { ... });
 //     auto h = fasync::and_then(std::move(g), [] { ... });
 //     fasync::future<> boxed_h = h;
 //
 // But don't do this: (incurs up to three heap allocations due to eager boxing)
 //
-//     fasync::try_future<fitx::failed> f = fasync::make_future([] { ... });
-//     fasync::try_future<fitx::failed> g = fasync::then(
+//     fasync::try_future<fit::failed> f = fasync::make_future([] { ... });
+//     fasync::try_future<fit::failed> g = fasync::then(
 //                                              std::move(f),
-//                                              [](fitx::result<fitx::failed>& result) { ... });
-//     fasync::try_future<fitx::failed> h = fasync::and_then(std::move(g), [] { ... });
+//                                              [](fit::result<fit::failed>& result) { ... });
+//     fasync::try_future<fit::failed> h = fasync::and_then(std::move(g), [] { ... });
 //
 // SINGLE OWNERSHIP MODEL
 //
@@ -374,11 +374,11 @@ LIB_FASYNC_NODISCARD constexpr ::fasync::internal::value_future<T> make_value_fu
   return ::fasync::internal::value_future<T>(std::forward<Args>(args)...);
 }
 
-// Make a future that immediately resolves with a |fitx::result|.
+// Make a future that immediately resolves with a |fit::result|.
 template <typename E, typename... Ts>
 LIB_FASYNC_NODISCARD constexpr ::fasync::internal::result_future<E, Ts...> make_try_future(
-    ::fitx::result<E, Ts...>&& r) {
-  return ::fasync::internal::result_future<E, Ts...>(std::forward<::fitx::result<E, Ts...>>(r));
+    ::fit::result<E, Ts...>&& r) {
+  return ::fasync::internal::result_future<E, Ts...>(std::forward<::fit::result<E, Ts...>>(r));
 }
 
 // Construct in-place.
@@ -388,39 +388,39 @@ LIB_FASYNC_NODISCARD constexpr ::fasync::internal::result_future<E, Ts...> make_
   return ::fasync::internal::result_future<E, Ts...>(std::forward<Args>(args)...);
 }
 
-// Make a future that resolves with |fitx::result<fitx::failed>|, bearing the ok value.
+// Make a future that resolves with |fit::result<fit::failed>|, bearing the ok value.
 LIB_FASYNC_NODISCARD inline constexpr ::fasync::internal::ok_future<> make_ok_future() {
-  return ::fasync::internal::ok_future<>(::fitx::ok());
+  return ::fasync::internal::ok_future<>(::fit::ok());
 }
 
-// Make a future that resolves with |fitx::result<fitx::failed, T>|, bearing the T value.
+// Make a future that resolves with |fit::result<fit::failed, T>|, bearing the T value.
 template <typename T>
 LIB_FASYNC_NODISCARD constexpr ::fasync::internal::ok_future<T> make_ok_future(T&& value) {
-  return ::fasync::internal::ok_future<T>(::fitx::ok(std::forward<T>(value)));
+  return ::fasync::internal::ok_future<T>(::fit::ok(std::forward<T>(value)));
 }
 
 // Construct in-place.
 template <typename T, typename... Args>
 LIB_FASYNC_NODISCARD constexpr ::fasync::internal::ok_future<T> make_ok_future(Args&&... args) {
-  return ::fasync::internal::ok_future<T>(::fitx::ok(std::forward<Args>(args)...));
+  return ::fasync::internal::ok_future<T>(::fit::ok(std::forward<Args>(args)...));
 }
 
-// Make a future that resolves with |fitx::result<E>|, bearing the E value.
+// Make a future that resolves with |fit::result<E>|, bearing the E value.
 template <typename E>
 LIB_FASYNC_NODISCARD constexpr ::fasync::internal::error_future<E> make_error_future(E&& e) {
-  return ::fasync::internal::error_future<E>(::fitx::as_error(std::forward<E>(e)));
+  return ::fasync::internal::error_future<E>(::fit::as_error(std::forward<E>(e)));
 }
 
 // Construct in-place.
 template <typename E, typename... Args>
 LIB_FASYNC_NODISCARD constexpr ::fasync::internal::error_future<E> make_error_future(
     Args&&... args) {
-  return ::fasync::internal::error_future<E>(::fitx::as_error(std::forward<Args>(args)...));
+  return ::fasync::internal::error_future<E>(::fit::as_error(std::forward<Args>(args)...));
 }
 
-// Make a future that resolves to |fitx::result<fitx::failed>|, bearing the failed value.
+// Make a future that resolves to |fit::result<fit::failed>|, bearing the failed value.
 LIB_FASYNC_NODISCARD inline constexpr ::fasync::internal::failed_future make_failed_future() {
-  return ::fasync::internal::failed_future(::fitx::failed());
+  return ::fasync::internal::failed_future(::fit::failed());
 }
 
 // Make a future whose poll type is |fasync::poll<Ts...>| but always returns pending.
@@ -508,9 +508,9 @@ unboxed_future(unboxed_future<F>&&) -> unboxed_future<F>;
 template <typename... Ts>
 using future = unboxed_future<::fit::function<poll<Ts...>(context&)>>;
 
-// Same but for |fitx::result|.
-template <typename E = ::fitx::failed, typename... Ts>
-using try_future = future<::fitx::result<E, Ts...>>;
+// Same but for |fit::result|.
+template <typename E = ::fit::failed, typename... Ts>
+using try_future = future<::fit::result<E, Ts...>>;
 
 // |fasync::pending_task|
 //
@@ -987,7 +987,7 @@ class map_ok_combinator final : public combinator<map_ok_combinator> {
 
 // |fasync::map_ok|
 //
-// Like |fasync::map|, but acts on the |.value()| of a |fitx::result| returned by the previous
+// Like |fasync::map|, but acts on the |.value()| of a |fit::result| returned by the previous
 // future.
 //
 // Call pattern:
@@ -1013,7 +1013,7 @@ class map_error_combinator final : public combinator<map_error_combinator> {
 
 // |fasync::map_error|
 //
-// Like |fasync::map_ok|, but acts on the |.error_value()| of a |fitx::result| returned by the
+// Like |fasync::map_ok|, but acts on the |.error_value()| of a |fit::result| returned by the
 // previous future.
 //
 // Call pattern:
@@ -1064,7 +1064,7 @@ class inspect_ok_combinator final : public combinator<inspect_ok_combinator> {
 
 // |fasync::inspect_ok|
 //
-// Like |fasync::inspect|, but acts on the |.value()| from the |fitx::result| of an
+// Like |fasync::inspect|, but acts on the |.value()| from the |fit::result| of an
 // |fasync::try_future|. Again, the callable must return |void|.
 //
 // Call pattern:
@@ -1088,7 +1088,7 @@ class inspect_error_combinator final : public combinator<inspect_error_combinato
 
 // |fasync::inspect_error|
 //
-// Like |fasync::inspect_ok|, but acts on the |.error_value()| from the |fitx::result| of an
+// Like |fasync::inspect_ok|, but acts on the |.error_value()| from the |fit::result| of an
 // |fasync::try_future|. Again, the callable must return |void|.
 //
 // Call pattern:
@@ -1201,9 +1201,9 @@ class then_combinator final : public combinator<then_combinator> {
 // The handler must return one of the following types:
 // - void
 // - T
-// - fitx::result<new_error_type, new_value_type>
-// - fitx::success<new_value_type>
-// - fitx::error<new_error_type>
+// - fit::result<new_error_type, new_value_type>
+// - fit::success<new_value_type>
+// - fit::error<new_error_type>
 // - fasync::pending
 // - fasync::try_ready<new_error_type, new_value_type>
 // - fasync::try_poll<new_error_type, new_value_type>
@@ -1213,7 +1213,7 @@ class then_combinator final : public combinator<then_combinator> {
 //
 // The handler must accept one of the following argument lists:
 // - See above documentation at HANDLER TYPES and substitute T with result_type. Note that it can be
-//   any type, not just a |fitx::result|.
+//   any type, not just a |fit::result|.
 //
 // Call pattern:
 // - fasync::then(<future>, <handler>)
@@ -1224,20 +1224,20 @@ class then_combinator final : public combinator<then_combinator> {
 // EXAMPLE
 //
 //     auto f = fasync::make_future(...) |
-//         fasync::then([] (fitx::result<std::string, int>& result)
-//                   -> fitx::result<fitx::failed, std::string> {
+//         fasync::then([] (fit::result<std::string, int>& result)
+//                   -> fit::result<fit::failed, std::string> {
 //             if (result.is_ok()) {
 //                 printf("received value: %d\n", result.value());
 //                 if (result.value() % 15 == 0)
-//                     return fitx::ok("fizzbuzz");
+//                     return fit::ok("fizzbuzz");
 //                 if (result.value() % 3 == 0)
-//                     return fitx::ok("fizz");
+//                     return fit::ok("fizz");
 //                 if (result.value() % 5 == 0)
-//                     return fitx::ok("buzz");
-//                 return fitx::ok(std::to_string(result.value()));
+//                     return fit::ok("buzz");
+//                 return fit::ok(std::to_string(result.value()));
 //             } else {
 //                 printf("received error: %s\n", result.error().c_str());
-//                 return fitx::failed();
+//                 return fit::failed();
 //             }
 //         }) |
 //         fasync::then(...);
@@ -1284,15 +1284,15 @@ class and_then_combinator final : public combinator<and_then_combinator> {
 //
 // The handler must return one of the following types:
 // - void
-// - fitx::result<error_type, new_value_type>
-// - fitx::success<new_value_type>
-// - fitx::error<error_type>
+// - fit::result<error_type, new_value_type>
+// - fit::success<new_value_type>
+// - fit::error<error_type>
 // - fasync::pending
 // - fasync::try_ready<error_type, new_value_type>
 // - fasync::try_poll<error_type, new_value_type>
 // - fasync::try_future<error_type, new_value_type>
 // - any callable or unboxed future with the following signature:
-//   fitx::result<error_type, new_value_type>(fasync::context&)
+//   fit::result<error_type, new_value_type>(fasync::context&)
 //
 // The handler must accept one of the following argument lists:
 // - See above documentation at HANDLER TYPES and substitute T with value_type.
@@ -1309,12 +1309,12 @@ class and_then_combinator final : public combinator<and_then_combinator> {
 //         fasync::and_then([] (const int& value) {
 //             printf("received value: %d\n", value);
 //             if (value % 15 == 0)
-//                 return fitx::ok("fizzbuzz");
+//                 return fit::ok("fizzbuzz");
 //             if (value % 3 == 0)
-//                 return fitx::ok("fizz");
+//                 return fit::ok("fizz");
 //             if (value % 5 == 0)
-//                 return fitx::ok("buzz");
-//             return fitx::ok(std::to_string(value));
+//                 return fit::ok("buzz");
+//             return fit::ok(std::to_string(value));
 //         }) |
 //         fasync::then(...);
 //
@@ -1355,15 +1355,15 @@ class or_else_combinator final : public combinator<or_else_combinator> {
 //
 // The handler must return one of the following types:
 // - void
-// - fitx::result<new_error_type, value_type>
-// - fitx::success<value_type>
-// - fitx::error<new_error_type>
+// - fit::result<new_error_type, value_type>
+// - fit::success<value_type>
+// - fit::error<new_error_type>
 // - fasync::pending
 // - fasync::try_ready<new_error_type, value_type>
 // - fasync::try_poll<new_error_type, value_type>
 // - fasync::try_future<new_error_type, value_type>
 // - any callable or unboxed future with the following signature:
-//   fitx::result<new_error_type, value_type>(fasync::context&)
+//   fit::result<new_error_type, value_type>(fasync::context&)
 //
 // The handler must accept one of the following argument lists:
 // - See above documentation at HANDLER TYPES and substitute T with error_type.
@@ -1379,7 +1379,7 @@ class or_else_combinator final : public combinator<or_else_combinator> {
 //     auto f = fasync::make_future(...) |
 //         fasync::or_else([] (const std::string& error) {
 //             printf("received error: %s\n", error.c_str());
-//             return fitx::error();
+//             return fit::error();
 //         }) |
 //         fasync::then(...);
 //

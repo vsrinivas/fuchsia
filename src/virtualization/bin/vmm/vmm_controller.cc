@@ -38,7 +38,7 @@ void VmmController::Create(GuestConfig guest_config, CreateCallback callback) {
   }
 
   auto vmm = std::make_unique<vmm::Vmm>();
-  fitx::result<GuestError> result =
+  fit::result<GuestError> result =
       vmm->Initialize(std::move(guest_config), context_.get(), dispatcher_);
   if (!result.is_ok()) {
     callback(fpromise::error(result.error_value()));
@@ -61,7 +61,7 @@ void VmmController::Run(RunCallback callback) {
   }
 
   auto result = vmm_->StartPrimaryVcpu(
-      [this](fitx::result<GuestError> result) { ScheduleVmmTeardown(result); });
+      [this](fit::result<GuestError> result) { ScheduleVmmTeardown(result); });
   if (result.is_error()) {
     vmm_.reset();
     callback(fpromise::error(result.error_value()));
@@ -72,7 +72,7 @@ void VmmController::Run(RunCallback callback) {
 }
 
 void VmmController::Stop(StopCallback callback) {
-  ScheduleVmmTeardown(fitx::error(GuestError::CONTROLLER_FORCED_HALT));
+  ScheduleVmmTeardown(fit::error(GuestError::CONTROLLER_FORCED_HALT));
   callback();
 }
 
@@ -81,7 +81,7 @@ void VmmController::LifecycleChannelClosed() {
   stop_component_callback_();
 }
 
-void VmmController::ScheduleVmmTeardown(fitx::result<GuestError> result) {
+void VmmController::ScheduleVmmTeardown(fit::result<GuestError> result) {
   const zx_status_t status =
       async::PostTask(dispatcher_, [this, result]() { DestroyAndRespond(result); });
 
@@ -93,7 +93,7 @@ void VmmController::ScheduleVmmTeardown(fitx::result<GuestError> result) {
   }
 }
 
-void VmmController::DestroyAndRespond(fitx::result<::fuchsia::virtualization::GuestError> result) {
+void VmmController::DestroyAndRespond(fit::result<::fuchsia::virtualization::GuestError> result) {
   if (vmm_) {
     vmm_->NotifyClientsShutdown(result.is_ok() ? ZX_OK : ZX_ERR_INTERNAL);
   }

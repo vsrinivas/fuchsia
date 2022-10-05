@@ -34,9 +34,9 @@ class SimpleProtocolImpl : public fidl::Server<SimpleProtocol> {
 
   void DoAction(DoActionRequest& request, DoActionCompleter::Sync& completer) override {
     actions_attempted_ += 1;
-    fitx::result<Error> result = fitx::ok();
+    fit::result<Error> result = fit::ok();
     if (auto error = next_error()) {
-      result = fitx::as_error(*error);
+      result = fit::as_error(*error);
     } else {
       actions_successful_ += 1;
     }

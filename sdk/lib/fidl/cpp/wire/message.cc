@@ -177,11 +177,10 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
     return;
   }
 
-  fitx::result<fidl::Error, fidl::internal::WireEncoder::Result> result =
-      fidl::internal::WireEncode(inline_size, encode_fn, transport_vtable_->encoding_configuration,
-                                 data, iovecs(), iovec_capacity(), handles(),
-                                 message_.iovec.handle_metadata, handle_capacity(),
-                                 backing_buffer(), backing_buffer_capacity());
+  fit::result<fidl::Error, fidl::internal::WireEncoder::Result> result = fidl::internal::WireEncode(
+      inline_size, encode_fn, transport_vtable_->encoding_configuration, data, iovecs(),
+      iovec_capacity(), handles(), message_.iovec.handle_metadata, handle_capacity(),
+      backing_buffer(), backing_buffer_capacity());
   if (!result.is_ok()) {
     SetStatus(result.error_value());
     return;

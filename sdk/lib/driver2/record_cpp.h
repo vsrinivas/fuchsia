@@ -30,7 +30,7 @@ zx_status_t Start(EncodedDriverStartArgs encoded_start_args, fdf_dispatcher_t* d
   // Decode the incoming `msg`.
   auto wire_format_metadata =
       fidl::WireFormatMetadata::FromOpaque(encoded_start_args.wire_format_metadata);
-  fitx::result start_args = fidl::InplaceDecode<fuchsia_driver_framework::wire::DriverStartArgs>(
+  fit::result start_args = fidl::InplaceDecode<fuchsia_driver_framework::wire::DriverStartArgs>(
       fidl::EncodedMessage::FromEncodedCMessage(encoded_start_args.msg), wire_format_metadata);
   if (!start_args.is_ok()) {
     return start_args.error_value().status();

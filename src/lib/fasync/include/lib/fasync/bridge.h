@@ -75,10 +75,10 @@ namespace fasync {
 // Here's how we can adapt the library's |read_async| function to a |fasync::future| by binding its
 // callback to a bridge:
 //
-//     fasync::try_future<fitx::failed, size_t> future_read(uint8_t* buffer, size_t num_bytes) {
-//       fasync::bridge<fitx::failed, size_t> bridge;
+//     fasync::try_future<fit::failed, size_t> future_read(uint8_t* buffer, size_t num_bytes) {
+//       fasync::bridge<fit::failed, size_t> bridge;
 //       read_async(num_bytes, buffer, bridge.completer.bind());
-//       return bridge.consumer.future_or(fitx::failed());
+//       return bridge.consumer.future_or(fit::failed());
 //     }
 //
 // Finally we can chain additional asynchronous tasks to be performed upon completion of the
@@ -98,7 +98,7 @@ namespace fasync {
 //
 // Similarly, suppose the File I/O library offers a callback-based asynchronous writing function
 // that can return a variety of errors encoded as negative sizes. Here's how we might decode those
-// errors uniformly into |fitx::result| allowing them to be handled using combinators such as
+// errors uniformly into |fit::result| allowing them to be handled using combinators such as
 // |fasync::or_else|.
 //
 //     using write_callback = fit::function<void(size_t bytes_written, int error)>;
@@ -114,7 +114,7 @@ namespace fasync {
 //           }
 //           completer.complete_ok(bytes_written);
 //       });
-//       return bridge.consumer.future_or(fitx::error(ERR_ABANDONED));
+//       return bridge.consumer.future_or(fit::error(ERR_ABANDONED));
 //     }
 //
 //     auto buffer == std::make_unique<uint8_t[]>(4096);
@@ -130,10 +130,10 @@ namespace fasync {
 //     }
 //
 // See documentation of |fasync::future| for more information.
-template <typename E = ::fitx::failed, typename... Ts>
+template <typename E = ::fit::failed, typename... Ts>
 class bridge final {
  public:
-  using result_type = ::fitx::result<E, Ts...>;
+  using result_type = ::fit::result<E, Ts...>;
   using completer_type = ::fasync::completer<E, Ts...>;
   using consumer_type = ::fasync::consumer<E, Ts...>;
 
@@ -181,7 +181,7 @@ class completer final {
   using completion_ref = typename bridge_state::completion_ref;
 
  public:
-  using result_type = ::fitx::result<E, Ts...>;
+  using result_type = ::fit::result<E, Ts...>;
 
   completer() = default;
 
@@ -218,7 +218,7 @@ class completer final {
   void complete_ok() {
     assert(completion_ref_);
     bridge_state& state = completion_ref_.get();
-    state.complete(std::move(completion_ref_), ::fitx::ok());
+    state.complete(std::move(completion_ref_), ::fit::ok());
   }
 
   template <
@@ -228,17 +228,17 @@ class completer final {
   void complete_ok(T&& value) {
     assert(completion_ref_);
     bridge_state& state = completion_ref_.get();
-    state.complete(std::move(completion_ref_), ::fitx::ok(std::forward<T>(value)));
+    state.complete(std::move(completion_ref_), ::fit::ok(std::forward<T>(value)));
   }
 
   // Reports that the task has completed with an error. This method takes no arguments if |E| is
-  // |fitx::failed|, otherwise it takes one argument which must be assignable to |E|.
+  // |fit::failed|, otherwise it takes one argument which must be assignable to |E|.
   template <typename EE = E,
-            ::fasync::internal::requires_conditions<std::is_same<EE, ::fitx::failed>> = true>
+            ::fasync::internal::requires_conditions<std::is_same<EE, ::fit::failed>> = true>
   void complete_error() {
     assert(completion_ref_);
     bridge_state& state = completion_ref_.get();
-    state.complete(std::move(completion_ref_), ::fitx::failed());
+    state.complete(std::move(completion_ref_), ::fit::failed());
   }
 
   template <typename EE = E, ::fasync::internal::requires_conditions<
@@ -246,15 +246,15 @@ class completer final {
   void complete_error(EE&& error) {
     assert(completion_ref_);
     bridge_state& state = completion_ref_.get();
-    state.complete(std::move(completion_ref_), ::fitx::as_error(std::forward<EE>(error)));
+    state.complete(std::move(completion_ref_), ::fit::as_error(std::forward<EE>(error)));
   }
 
   // Reports that the task has completed or been abandoned.
   // See |fasync::bridge| for details about abandonment.
   //
   // The result state determines the task's final disposition.
-  // - |fitx::success|: The task completed successfully.
-  // - |fitx::error|: The task completed with an error.
+  // - |fit::success|: The task completed successfully.
+  // - |fit::error|: The task completed with an error.
   template <typename R,
             ::fasync::internal::requires_conditions<std::is_constructible<result_type, R>> = true>
   void complete(R&& result) {
@@ -308,7 +308,7 @@ class consumer final {
   using consumption_ref = typename bridge_state::consumption_ref;
 
  public:
-  using result_type = ::fitx::result<E, Ts...>;
+  using result_type = ::fit::result<E, Ts...>;
 
   consumer() = default;
 
@@ -354,8 +354,8 @@ class consumer final {
   //
   // The state of |result_if_abandoned| determines the future's behavior in case of abandonment.
   //
-  // - |fitx::success|: Reports a successful result.
-  // - |fitx::error|: Reports a failure result.
+  // - |fit::success|: Reports a successful result.
+  // - |fit::error|: Reports a failure result.
   template <typename R,
             ::fasync::internal::requires_conditions<std::is_constructible<result_type, R>> = true>
   auto future_or(R&& result_if_abandoned) {
@@ -391,11 +391,11 @@ class consumer final {
 //     // This model has specialized internal threading requirements so it manages its own executor.
 //     class model {
 //      public:
-//       fasync::consumer<fitx::failed, int> perform_calculation(int parameter) {
+//       fasync::consumer<fit::failed, int> perform_calculation(int parameter) {
 //           return fasync::schedule_for_consumer(executor_,
 //               fasync::make_future([parameter] {
 //                   // In reality, this would likely be a much more complex expression.
-//                   return fitx::ok(parameter * parameter);
+//                   return fit::ok(parameter * parameter);
 //               });
 //       }
 //
@@ -410,7 +410,7 @@ class consumer final {
 //     void print_output(fasync::executor& executor, model& m) {
 //       executor.schedule(
 //           m.perform_calculation(16)
-//               .future_or(fitx::failed()) |
+//               .future_or(fit::failed()) |
 //               fasync::and_then([](const int& result) { printf("done: %d\n", result); }) |
 //               fasync::or_else([] { puts("failed or abandoned"); }));
 //     }
@@ -490,10 +490,10 @@ class split_combinator final {
 // Let's reimagine our previous example if the first executor didn't need to be encapsulated in its
 // own class:
 //
-//     fasync::try_future<fitx::failed, int> perform_calculation(int parameter) {
+//     fasync::try_future<fit::failed, int> perform_calculation(int parameter) {
 //       return fasync::make_future([parameter] {
 //                // In reality, this would likely be a much more complex expression.
-//                return fitx::ok(parameter * parameter);
+//                return fit::ok(parameter * parameter);
 //              });
 //     }
 //

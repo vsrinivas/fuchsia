@@ -32,7 +32,7 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibl
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -49,7 +49,7 @@ namespace test_requestflexibleenvelope {
 
 ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::WireUnownedResult(::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -66,7 +66,7 @@ namespace test_requestflexibleenvelope {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -91,7 +91,7 @@ namespace test_requestflexibleenvelope {
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -108,7 +108,7 @@ namespace test_requestflexibleenvelope {
 
 ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::WireUnownedResult(::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -125,7 +125,7 @@ namespace test_requestflexibleenvelope {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -205,7 +205,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_requestflexibleenvelope::kProtocol_RequestStrictResponseFlexible_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -220,7 +220,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_requestflexibleenvelope::kProtocol_RequestFlexibleResponseStrict_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -280,7 +280,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::Pro
 void fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::MakeReply(::test_requestflexibleenvelope::wire::FlexibleFoo f) {
   ::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> _response{f};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};
@@ -319,7 +319,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::Pro
 void fidl::internal::WireBufferCompleterImpl<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::MakeReply(::test_requestflexibleenvelope::wire::StrictFoo f) {
   ::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> _response{f};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};

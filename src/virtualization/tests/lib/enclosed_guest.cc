@@ -20,7 +20,7 @@
 #include <fuchsia/ui/observation/geometry/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
@@ -424,7 +424,7 @@ zx_status_t EnclosedGuest::ForceRestart(GuestLaunchInfo& guest_launch_info, zx::
   return LaunchInternal(guest_launch_info, deadline);
 }
 
-fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::ConnectToBalloon(
+fit::result<::fuchsia::virtualization::GuestError> EnclosedGuest::ConnectToBalloon(
     ::fidl::InterfaceRequest<::fuchsia::virtualization::BalloonController> controller) {
   zx_status_t status = ZX_ERR_TIMED_OUT;
   fuchsia::virtualization::GuestError error;
@@ -443,16 +443,16 @@ fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::ConnectToBall
                                     zx::deadline_after(zx::sec(20)));
   if (!success) {
     FX_LOGS(ERROR) << "Timed out waiting to get balloon controller";
-    return fitx::error(fuchsia::virtualization::GuestError::DEVICE_NOT_PRESENT);
+    return fit::error(fuchsia::virtualization::GuestError::DEVICE_NOT_PRESENT);
   }
 
   if (status != ZX_OK) {
-    return fitx::error(error);
+    return fit::error(error);
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::GetHostVsockEndpoint(
+fit::result<::fuchsia::virtualization::GuestError> EnclosedGuest::GetHostVsockEndpoint(
     ::fidl::InterfaceRequest<::fuchsia::virtualization::HostVsockEndpoint> endpoint) {
   zx_status_t status = ZX_ERR_TIMED_OUT;
   fuchsia::virtualization::GuestError error;
@@ -471,13 +471,13 @@ fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::GetHostVsockE
                                     zx::deadline_after(zx::sec(20)));
   if (!success) {
     FX_LOGS(ERROR) << "Timed out waiting to get host vsock endpoint";
-    return fitx::error(fuchsia::virtualization::GuestError::DEVICE_NOT_PRESENT);
+    return fit::error(fuchsia::virtualization::GuestError::DEVICE_NOT_PRESENT);
   }
 
   if (status != ZX_OK) {
-    return fitx::error(error);
+    return fit::error(error);
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
 zx_status_t EnclosedGuest::Stop(zx::time deadline) {
@@ -540,14 +540,14 @@ EnclosedGuest::DisplayInfo EnclosedGuest::WaitForDisplay() {
 }
 
 namespace {
-fitx::result<std::string> EnsureValidZirconPsOutput(std::string_view ps_output) {
+fit::result<std::string> EnsureValidZirconPsOutput(std::string_view ps_output) {
   if (ps_output.find("virtual-console") == std::string::npos) {
-    return fitx::error("'virtual-console' cannot be found in 'ps' output");
+    return fit::error("'virtual-console' cannot be found in 'ps' output");
   }
   if (ps_output.find("system-updater") == std::string::npos) {
-    return fitx::error("'system-updater' cannot be found in 'ps' output");
+    return fit::error("'system-updater' cannot be found in 'ps' output");
   }
-  return fitx::ok();
+  return fit::ok();
 }
 }  // namespace
 

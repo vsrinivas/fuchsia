@@ -58,7 +58,7 @@ namespace fasync {
 //     fasync::future<int> accumulator::accumulate(int value) {
 //         return fasync::make_future([this, value] {
 //             prior_total_ += value;
-//             return fitx::ok(prior_total_);
+//             return fit::ok(prior_total_);
 //         }) | fasync::wrap_with(scope_); // Binding to scope happens here.
 //     }
 //

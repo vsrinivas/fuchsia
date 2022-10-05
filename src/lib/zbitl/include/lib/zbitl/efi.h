@@ -32,22 +32,21 @@ class StorageTraits<efi_file_protocol*> {
   /// Offset into file where the ZBI item payload begins.
   using payload_type = uint64_t;
 
-  static fitx::result<error_type, uint32_t> Capacity(efi_file_protocol* file);
+  static fit::result<error_type, uint32_t> Capacity(efi_file_protocol* file);
 
-  static fitx::result<error_type> EnsureCapacity(efi_file_protocol* file, uint32_t capacity_bytes);
+  static fit::result<error_type> EnsureCapacity(efi_file_protocol* file, uint32_t capacity_bytes);
 
-  static fitx::result<error_type, payload_type> Payload(efi_file_protocol* file, uint32_t offset,
-                                                        uint32_t length) {
-    return fitx::ok(offset);
+  static fit::result<error_type, payload_type> Payload(efi_file_protocol* file, uint32_t offset,
+                                                       uint32_t length) {
+    return fit::ok(offset);
   }
 
-  static fitx::result<error_type> Read(efi_file_protocol* file, payload_type payload, void* buffer,
-                                       uint32_t length);
+  static fit::result<error_type> Read(efi_file_protocol* file, payload_type payload, void* buffer,
+                                      uint32_t length);
 
   template <typename Callback>
   static auto Read(efi_file_protocol* file, payload_type payload, uint32_t length,
-                   Callback&& callback)
-      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
+                   Callback&& callback) -> fit::result<error_type, decltype(callback(ByteView{}))> {
     std::optional<decltype(callback(ByteView{}))> result;
     auto cb = [&](ByteView chunk) -> bool {
       result = callback(chunk);
@@ -61,14 +60,14 @@ class StorageTraits<efi_file_protocol*> {
       return read_error.take_error();
     }
     ZX_DEBUG_ASSERT(result);
-    return fitx::ok(*result);
+    return fit::ok(*result);
   }
 
-  static fitx::result<error_type> Write(efi_file_protocol* file, uint32_t offset, ByteView data);
+  static fit::result<error_type> Write(efi_file_protocol* file, uint32_t offset, ByteView data);
 
  private:
-  static fitx::result<error_type> DoRead(efi_file_protocol* f, payload_type offset, uint32_t length,
-                                         bool (*)(void*, ByteView), void*);
+  static fit::result<error_type> DoRead(efi_file_protocol* f, payload_type offset, uint32_t length,
+                                        bool (*)(void*, ByteView), void*);
 };
 
 template <class Deleter>
@@ -77,28 +76,28 @@ class StorageTraits<std::unique_ptr<efi_file_protocol, Deleter>>
  public:
   using Base = StorageTraits<efi_file_protocol*>;
 
-  static fitx::result<error_type, uint32_t> Capacity(
+  static fit::result<error_type, uint32_t> Capacity(
       const std::unique_ptr<efi_file_protocol, Deleter>& file) {
     return Base::Capacity(file.get());
   }
 
-  static fitx::result<error_type> EnsureCapacity(
+  static fit::result<error_type> EnsureCapacity(
       const std::unique_ptr<efi_file_protocol, Deleter>& file, uint32_t capacity_bytes) {
     return Base::EnsureCapacity(file.get(), capacity_bytes);
   }
 
-  static fitx::result<error_type, payload_type> Payload(
+  static fit::result<error_type, payload_type> Payload(
       const std::unique_ptr<efi_file_protocol, Deleter>& file, uint32_t offset, uint32_t length) {
     return Base::Payload(file.get(), offset, length);
   }
 
-  static fitx::result<error_type> Read(const std::unique_ptr<efi_file_protocol, Deleter>& file,
-                                       payload_type payload, void* buffer, uint32_t length) {
+  static fit::result<error_type> Read(const std::unique_ptr<efi_file_protocol, Deleter>& file,
+                                      payload_type payload, void* buffer, uint32_t length) {
     return Base::Read(file.get(), payload, buffer, length);
   }
 
-  static fitx::result<error_type> Write(const std::unique_ptr<efi_file_protocol, Deleter>& file,
-                                        uint32_t offset, ByteView data) {
+  static fit::result<error_type> Write(const std::unique_ptr<efi_file_protocol, Deleter>& file,
+                                       uint32_t offset, ByteView data) {
     return Base::Write(file.get(), offset, data);
   }
 };

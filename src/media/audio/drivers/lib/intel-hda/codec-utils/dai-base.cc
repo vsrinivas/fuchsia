@@ -129,7 +129,7 @@ void IntelHDADaiBase::GetDaiFormats(DaiChannel::GetDaiFormatsCompleter::Sync& co
 
   fuchsia_hardware_audio::wire::DaiGetDaiFormatsResponse response;
   response.dai_formats = std::move(all_formats);
-  completer.Reply(::fitx::ok(&response));
+  completer.Reply(::fit::ok(&response));
 }
 
 void IntelHDADaiBase::Reset(DaiChannel::ResetCompleter::Sync& completer) {
@@ -223,7 +223,7 @@ void IntelHDADaiBase::GetRingBufferFormats(
 
   fuchsia_hardware_audio::wire::DaiGetRingBufferFormatsResponse response;
   response.ring_buffer_formats = std::move(fidl_formats);
-  completer.Reply(::fitx::ok(&response));
+  completer.Reply(::fit::ok(&response));
 }
 
 void IntelHDADaiBase::CreateRingBuffer(

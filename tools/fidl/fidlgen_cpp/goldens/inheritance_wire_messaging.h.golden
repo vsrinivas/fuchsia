@@ -331,7 +331,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> fi
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Super::Foo>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Super::Foo>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritance::Super::Foo>(::fidl::internal::StatusFromResult(decoded)) {
     if (decoded.is_ok()) {
       decoded_ = std::move(decoded.value());
@@ -789,7 +789,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> fina
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Sub::Foo>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Sub::Foo>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritance::Sub::Foo>(::fidl::internal::StatusFromResult(decoded)) {
     if (decoded.is_ok()) {
       decoded_ = std::move(decoded.value());

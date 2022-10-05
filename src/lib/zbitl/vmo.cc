@@ -14,18 +14,18 @@ namespace zbitl {
 
 namespace {
 
-fitx::result<zx_status_t, bool> IsResizable(const zx::vmo& vmo) {
+fit::result<zx_status_t, bool> IsResizable(const zx::vmo& vmo) {
   zx_info_vmo_t info = {};
   zx_status_t status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
-    return fitx::error{status};
+    return fit::error{status};
   }
-  return fitx::ok((info.flags & ZX_INFO_VMO_RESIZABLE) != 0);
+  return fit::ok((info.flags & ZX_INFO_VMO_RESIZABLE) != 0);
 }
 
 }  // namespace
 
-fitx::result<zx_status_t, uint32_t> StorageTraits<zx::vmo>::Capacity(const zx::vmo& vmo) {
+fit::result<zx_status_t, uint32_t> StorageTraits<zx::vmo>::Capacity(const zx::vmo& vmo) {
   uint64_t size;
   zx_status_t status = vmo.get_size(&size);
   if (status == ZX_OK) {
@@ -36,48 +36,48 @@ fitx::result<zx_status_t, uint32_t> StorageTraits<zx::vmo>::Capacity(const zx::v
     }
   }
   if (status != ZX_OK) {
-    return fitx::error{status};
+    return fit::error{status};
   }
-  return fitx::ok(static_cast<uint32_t>(
+  return fit::ok(static_cast<uint32_t>(
       std::min(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), size)));
 }
 
-fitx::result<zx_status_t> StorageTraits<zx::vmo>::EnsureCapacity(const zx::vmo& vmo,
-                                                                 uint32_t capacity_bytes) {
+fit::result<zx_status_t> StorageTraits<zx::vmo>::EnsureCapacity(const zx::vmo& vmo,
+                                                                uint32_t capacity_bytes) {
   auto current = Capacity(vmo);
   if (current.is_error()) {
     return current.take_error();
   } else if (current.value() >= capacity_bytes) {
-    return fitx::ok();  // Current capacity is sufficient.
+    return fit::ok();  // Current capacity is sufficient.
   }
 
   uint64_t cap = static_cast<uint64_t>(capacity_bytes);
   if (auto status = vmo.set_size(cap); status != ZX_OK) {
-    return fitx::error{status};
+    return fit::error{status};
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<zx_status_t> StorageTraits<zx::vmo>::Read(const zx::vmo& vmo, payload_type payload,
-                                                       void* buffer, uint32_t length) {
+fit::result<zx_status_t> StorageTraits<zx::vmo>::Read(const zx::vmo& vmo, payload_type payload,
+                                                      void* buffer, uint32_t length) {
   zx_status_t status = vmo.read(buffer, payload, length);
   if (status != ZX_OK) {
-    return fitx::error{status};
+    return fit::error{status};
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<zx_status_t> StorageTraits<zx::vmo>::Write(const zx::vmo& vmo, uint32_t offset,
-                                                        ByteView data) {
+fit::result<zx_status_t> StorageTraits<zx::vmo>::Write(const zx::vmo& vmo, uint32_t offset,
+                                                       ByteView data) {
   zx_status_t status = vmo.write(data.data(), offset, data.size());
   if (status != ZX_OK) {
-    return fitx::error{status};
+    return fit::error{status};
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<zx_status_t, zx::vmo> StorageTraits<zx::vmo>::Create(const zx::vmo& old, uint32_t size,
-                                                                  uint32_t initial_zero_size) {
+fit::result<zx_status_t, zx::vmo> StorageTraits<zx::vmo>::Create(const zx::vmo& old, uint32_t size,
+                                                                 uint32_t initial_zero_size) {
   // While `initial_zero_size` is a required parameter for the creation trait,
   // it is unnecessary in the case of VMOs, as newly-created instances are
   // always zero-filled.
@@ -92,12 +92,12 @@ fitx::result<zx_status_t, zx::vmo> StorageTraits<zx::vmo>::Create(const zx::vmo&
 
   zx::vmo vmo;
   if (zx_status_t status = zx::vmo::create(size, options, &vmo); status != ZX_OK) {
-    return fitx::error{status};
+    return fit::error{status};
   }
-  return fitx::ok(std::move(vmo));
+  return fit::ok(std::move(vmo));
 }
 
-fitx::result<zx_status_t, std::optional<std::pair<zx::vmo, uint32_t>>>
+fit::result<zx_status_t, std::optional<std::pair<zx::vmo, uint32_t>>>
 StorageTraits<zx::vmo>::DoClone(const zx::vmo& original, uint32_t offset, uint32_t length) {
   const uint32_t slop = offset % uint32_t{ZX_PAGE_SIZE};
   const uint32_t clone_start = offset & -uint32_t{ZX_PAGE_SIZE};
@@ -123,10 +123,10 @@ StorageTraits<zx::vmo>::DoClone(const zx::vmo& original, uint32_t offset, uint32
                             nullptr, 0);
   }
   if (status != ZX_OK) {
-    return fitx::error{status};
+    return fit::error{status};
   }
 
-  return fitx::ok(std::make_pair(std::move(clone), slop));
+  return fit::ok(std::make_pair(std::move(clone), slop));
 }
 
 }  // namespace zbitl

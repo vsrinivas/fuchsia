@@ -186,7 +186,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_service::FirstProtocol::Met
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_service::FirstProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>* request);
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error>&& decoded,
+      ::fit::result<::fidl::Error>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_service::FirstProtocol::MethodOnFirst>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_service::FirstProtocol::MethodOnFirst>(result) {}
@@ -447,7 +447,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_service::SecondProtocol::Me
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>* request);
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error>&& decoded,
+      ::fit::result<::fidl::Error>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_service::SecondProtocol::MethodOnSecond>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_service::SecondProtocol::MethodOnSecond>(result) {}

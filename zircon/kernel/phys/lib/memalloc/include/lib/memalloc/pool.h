@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_INCLUDE_LIB_MEMALLOC_POOL_H_
 
 #include <lib/fit/function.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/memalloc/range.h>
 #include <lib/stdcompat/span.h>
 #include <stdio.h>
@@ -129,13 +129,13 @@ class Pool {
   // types, or between an extended type with one of kReserved or kPeripheral;
   // otherwise, arbitrary overlap is permitted.
   //
-  // fitx::failed is returned if there is insufficient free RAM to use for
+  // fit::failed is returned if there is insufficient free RAM to use for
   // Pool's initial bookkeeping.
   //
   template <size_t N>
-  fitx::result<fitx::failed> Init(std::array<cpp20::span<Range>, N> ranges,
-                                  uint64_t default_min_addr = kDefaultMinAddr,
-                                  uint64_t default_max_addr = kDefaultMaxAddr) {
+  fit::result<fit::failed> Init(std::array<cpp20::span<Range>, N> ranges,
+                                uint64_t default_min_addr = kDefaultMinAddr,
+                                uint64_t default_max_addr = kDefaultMaxAddr) {
     return Init(ranges, std::make_index_sequence<N>(), default_min_addr, default_max_addr);
   }
 
@@ -174,12 +174,13 @@ class Pool {
   //
   // Any returned address is guaranteed to be nonzero.
   //
-  // fitx::failed is returned if there is insufficient free RAM to track any
+  // fit::failed is returned if there is insufficient free RAM to track any
   // new ranges or if there is no free RAM that meets the given constraints.
   //
-  fitx::result<fitx::failed, uint64_t> Allocate(
-      Type type, uint64_t size, uint64_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__,
-      std::optional<uint64_t> min_addr = {}, std::optional<uint64_t> max_addr = {});
+  fit::result<fit::failed, uint64_t> Allocate(Type type, uint64_t size,
+                                              uint64_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__,
+                                              std::optional<uint64_t> min_addr = {},
+                                              std::optional<uint64_t> max_addr = {});
 
   // Attempts to perform a "weak allocation" of the given range, wherein all
   // kFreeRam subranges are updated to `type`. The given range must be
@@ -193,10 +194,10 @@ class Pool {
   // image, we would want to prevent page tables - which must persist
   // across the boot -from being allocated out of that load range.
   //
-  // fitx::failed is returned if there is insufficient bookkeeping to track any
+  // fit::failed is returned if there is insufficient bookkeeping to track any
   // new ranges of memory.
   //
-  fitx::result<fitx::failed> UpdateFreeRamSubranges(Type type, uint64_t addr, uint64_t size);
+  fit::result<fit::failed> UpdateFreeRamSubranges(Type type, uint64_t addr, uint64_t size);
 
   // Attempts to free a subrange of a previously allocated range or one of
   // an extended type that had previously been passed to Init(). This subrange
@@ -204,10 +205,10 @@ class Pool {
   //
   // Freeing a range already tracked as kFreeRam is a no-op.
   //
-  // fitx::failed is returned if there is insufficient memory to track the new
+  // fit::failed is returned if there is insufficient memory to track the new
   // (subdivided) ranges of memory that would result from freeing.
   //
-  fitx::result<fitx::failed> Free(uint64_t addr, uint64_t size);
+  fit::result<fit::failed> Free(uint64_t addr, uint64_t size);
 
   // Attempts to resize a previously allocated range or one of the ranges of
   // extended type originally passed to Init(). The resizing occurs only at
@@ -227,11 +228,11 @@ class Pool {
   // `new_size` must be positive; this method is not a backdoor `Free()`. The
   // original range must already be `min_alignment`-aligned.
   //
-  // fitx::failed is returned if there is insufficient memory to track the new
+  // fit::failed is returned if there is insufficient memory to track the new
   // (subdivided) ranges of memory that would result from resizing, or if the
   // range is untracked. No failure mode will leave the original range freed.
-  fitx::result<fitx::failed, uint64_t> Resize(const Range& original, uint64_t new_size,
-                                              uint64_t min_alignment);
+  fit::result<fit::failed, uint64_t> Resize(const Range& original, uint64_t new_size,
+                                            uint64_t min_alignment);
 
   // Pretty-prints the memory ranges contained in the pool.
   void PrintMemoryRanges(const char* prefix, FILE* f = stdout) const;
@@ -261,13 +262,13 @@ class Pool {
   };
 
   // Ultimately deferred to as the actual initialization routine.
-  fitx::result<fitx::failed> Init(cpp20::span<internal::RangeIterationContext> state,
-                                  uint64_t min_addr, uint64_t max_addr);
+  fit::result<fit::failed> Init(cpp20::span<internal::RangeIterationContext> state,
+                                uint64_t min_addr, uint64_t max_addr);
 
   template <size_t... I>
-  fitx::result<fitx::failed> Init(std::array<cpp20::span<Range>, sizeof...(I)> ranges,
-                                  std::index_sequence<I...> seq, uint64_t min_addr,
-                                  uint64_t max_addr) {
+  fit::result<fit::failed> Init(std::array<cpp20::span<Range>, sizeof...(I)> ranges,
+                                std::index_sequence<I...> seq, uint64_t min_addr,
+                                uint64_t max_addr) {
     std::array state{internal::RangeIterationContext(ranges[I])...};
     return Init({state}, min_addr, max_addr);
   }
@@ -275,12 +276,12 @@ class Pool {
   // Similar semantics to Allocate(), FindAllocatable() is its main allocation
   // subroutine: it only finds a suitable address to allocate (not actually
   // performing the allocation).
-  fitx::result<fitx::failed, uint64_t> FindAllocatable(Type type, uint64_t size, uint64_t alignment,
-                                                       uint64_t min_addr, uint64_t max_addr);
+  fit::result<fit::failed, uint64_t> FindAllocatable(Type type, uint64_t size, uint64_t alignment,
+                                                     uint64_t min_addr, uint64_t max_addr);
 
   // On success, returns disconnected node with the given range information;
   // fails if there is insufficient bookkeeping space for the new node.
-  fitx::result<fitx::failed, Node*> NewNode(const Range& range);
+  fit::result<fit::failed, Node*> NewNode(const Range& range);
 
   // Insert creates a new node for a range that is expected to already be a
   // subrange of an existing node. No policy checking is done to determine
@@ -288,7 +289,7 @@ class Pool {
   // fails if there is insufficient bookkeeping space for the new node. As an
   // optimization if known, the iterator pointing to the parent node may be
   // provided.
-  fitx::result<fitx::failed, mutable_iterator> InsertSubrange(
+  fit::result<fit::failed, mutable_iterator> InsertSubrange(
       const Range& range, std::optional<mutable_iterator> parent_it = std::nullopt);
 
   // Merges into `it` any neighboring nodes with directly adjacent ranges of

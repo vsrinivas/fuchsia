@@ -93,7 +93,7 @@ class {{ .WireEventDispatcher }} final :
     {{- range .Events }}
       case {{ .OrdinalName }}:
       {
-        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<{{ .Marker }}>(
+        ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<{{ .Marker }}>(
             std::move(msg));
         if (!decoded.is_ok()) {
           return decoded.error_value();
@@ -226,7 +226,7 @@ class {{ .NaturalEventDispatcher }} final :
     {{- range .Events }}
       case {{ .OrdinalName }}:
       {
-        ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage
+        ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessage
               {{- if .HasResponsePayload }}<{{ .ResponsePayload }}>{{ end -}}(std::move(msg));
         if (decoded.is_error()) {
           return decoded.error_value();

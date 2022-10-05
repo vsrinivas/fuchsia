@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZXDUMP_DUMP_FILE_H_
 #define SRC_LIB_ZXDUMP_DUMP_FILE_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zxdump/types.h>
 #include <zircon/assert.h>
 
@@ -73,8 +73,8 @@ class DumpFile {
   virtual ~DumpFile();
 
   // Read a new dump file, using mmap if possible or else stdio.
-  static fitx::result<Error, std::unique_ptr<DumpFile>> Open(fbl::unique_fd fd,
-                                                             bool try_mmap = true);
+  static fit::result<Error, std::unique_ptr<DumpFile>> Open(fbl::unique_fd fd,
+                                                            bool try_mmap = true);
 
   // Returns true if the probed bytes indicate a compressed file.  The buffer
   // is expected to be at least kHeaderProbeSize to be able to match anything.
@@ -84,7 +84,7 @@ class DumpFile {
   // ReadEphemeral calls on it.  The new DumpFile's lifetime must not exceed
   // this object's lifetime.  The underlying object should not be used for
   // ReadEphemeral while the decompressor object is being used.
-  fitx::result<Error, std::unique_ptr<DumpFile>> Decompress(FileRange where, ByteView header);
+  fit::result<Error, std::unique_ptr<DumpFile>> Decompress(FileRange where, ByteView header);
 
   // Return the size of the file.  This may not be known for a streaming input,
   // in which case this value acts only as an upper bound.
@@ -98,16 +98,16 @@ class DumpFile {
 
   // Read a range of the file, yielding a pointer that's valid as long as this
   // object lives.  When not doing mmap, this has to copy it all in memory.
-  virtual fitx::result<Error, ByteView> ReadPermanent(FileRange fr) = 0;
+  virtual fit::result<Error, ByteView> ReadPermanent(FileRange fr) = 0;
 
   // Read a range of the file, yielding a pointer that's only guaranteed to be
   // valid until the next ReadEphemeral (or ReadProbe) call on the same object.
-  virtual fitx::result<Error, ByteView> ReadEphemeral(FileRange fr) = 0;
+  virtual fit::result<Error, ByteView> ReadEphemeral(FileRange fr) = 0;
 
   // This does ReadEphemeral (and so it invalidates past ReadEphemeral results
   // and vice versa), but if the dump file ends before the whole range, just
   // return a shorter range rather than the "truncated dump" error.
-  virtual fitx::result<Error, ByteView> ReadProbe(FileRange fr) = 0;
+  virtual fit::result<Error, ByteView> ReadProbe(FileRange fr) = 0;
 
  private:
   // This is used by both Stdio and Zstd.
@@ -122,14 +122,14 @@ class DumpFile {
 // Helpers for some common errors.
 
 constexpr auto TruncatedDump() {
-  return fitx::error(Error{
+  return fit::error(Error{
       "truncated dump",
       ZX_ERR_OUT_OF_RANGE,
   });
 }
 
 constexpr auto CorruptedDump() {
-  return fitx::error(Error{
+  return fit::error(Error{
       "corrupted dump",
       ZX_ERR_IO_DATA_INTEGRITY,
   });

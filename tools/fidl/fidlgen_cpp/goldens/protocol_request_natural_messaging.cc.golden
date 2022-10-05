@@ -99,7 +99,7 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::GetChildReque
       });
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_TakeChild_Ordinal, ::test_protocolrequest::kParent_TakeChild_DynamicFlags};
@@ -111,7 +111,7 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(::f
   return ::fidl::internal::ToFitxResult(status);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal, ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags};
@@ -150,7 +150,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::GetChildR
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_TakeChild_Ordinal, ::test_protocolrequest::kParent_TakeChild_DynamicFlags};
@@ -161,7 +161,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChild
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal, ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags};
@@ -214,7 +214,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocolrequest::kParent_GetChild_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -229,7 +229,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -244,7 +244,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocolrequest::kParent_TakeChild_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocolrequest::ParentTakeChildRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocolrequest::ParentTakeChildRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -259,7 +259,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocolrequest::kParent_TakeChildRequest_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocolrequest::ParentTakeChildRequestRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocolrequest::ParentTakeChildRequestRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

@@ -15,14 +15,14 @@ namespace boot_shim {
 // ZBI, then we'll synthesize a ZBI_TYPE_SERIAL_NUMBER item containing "foo".
 constexpr std::string_view kSerialNumberEq = "bootloader.zbi.serial-number=";
 
-fitx::result<ItemBase::InputZbi::Error> TestSerialNumberItem::Init(ItemBase::InputZbi zbi) {
+fit::result<ItemBase::InputZbi::Error> TestSerialNumberItem::Init(ItemBase::InputZbi zbi) {
   ByteView found;
   for (auto [header, payload] : zbi) {
     switch (header->type) {
       case ZBI_TYPE_SERIAL_NUMBER:
         // There's a real serial number here, so don't synthesize one.
         zbi.ignore_error();
-        return fitx::ok();
+        return fit::ok();
 
       case ZBI_TYPE_CMDLINE:
         std::string_view line{
@@ -44,7 +44,7 @@ fitx::result<ItemBase::InputZbi::Error> TestSerialNumberItem::Init(ItemBase::Inp
   return zbi.take_error();
 }
 
-fitx::result<ItemBase::DataZbi::Error> TestSerialNumberItem::AppendItems(
+fit::result<ItemBase::DataZbi::Error> TestSerialNumberItem::AppendItems(
     ItemBase::DataZbi& zbi) const {
   if (!payload_.empty()) {
     auto result = zbi.Append({.type = ZBI_TYPE_SERIAL_NUMBER}, payload_);
@@ -52,7 +52,7 @@ fitx::result<ItemBase::DataZbi::Error> TestSerialNumberItem::AppendItems(
       return result.take_error();
     }
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace boot_shim

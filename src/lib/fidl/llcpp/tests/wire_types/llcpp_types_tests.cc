@@ -94,7 +94,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
   const fidl_message_header_t header = *incoming.header();
   EXPECT_EQ(header.txid, 10u);
   EXPECT_EQ(header.ordinal, 0x67982ebd88e037a2lu);
-  fitx::result decoded =
+  fit::result decoded =
       fidl::internal::InplaceDecodeTransactionalMessage<NonNullableChannelRequest>(
           std::move(incoming));
   ASSERT_TRUE(decoded.is_ok());
@@ -211,7 +211,7 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
 
   fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
-  fitx::result decoded = fidl::InplaceDecode<VectorStruct>(
+  fit::result decoded = fidl::InplaceDecode<VectorStruct>(
       std::move(converted.incoming_message()),
       fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
   ASSERT_TRUE(decoded.is_ok());

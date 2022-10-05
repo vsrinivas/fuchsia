@@ -59,10 +59,10 @@ __LOCAL extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCal
 }  // namespace test_errorsyntax
 
 template <>
-class ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final : public ::fitx::result<uint32_t, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> {
+class ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final : public ::fit::result<uint32_t, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::result;
+  Response(::fit::result<uint32_t, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -79,10 +79,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyn
  public:
   static ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -98,19 +98,19 @@ namespace test_errorsyntax {
 }  // namespace test_errorsyntax
 
 template <>
-class ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final : public ::fitx::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> {
+class ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final : public ::fit::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final : public ::fitx::result<uint32_t, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
+class ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final : public ::fit::result<uint32_t, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::result;
+  Response(::fit::result<uint32_t, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -127,10 +127,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyn
  public:
   static ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -144,9 +144,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyn
 };
 
 template <>
-class ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final : public ::fitx::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
+class ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final : public ::fit::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::result;
 
  protected:
   Result() = default;

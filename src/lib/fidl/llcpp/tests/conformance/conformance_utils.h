@@ -175,7 +175,7 @@ bool DecodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
         .rights = handle_info.rights,
     });
   }
-  fitx::result<fidl::Error, fidl::DecodedValue<FidlType>> result = fidl::InplaceDecode<FidlType>(
+  fit::result<fidl::Error, fidl::DecodedValue<FidlType>> result = fidl::InplaceDecode<FidlType>(
       fidl::EncodedMessage::Create(bytes, handles.data(), handle_metadata.data(),
                                    static_cast<uint32_t>(handle_infos.size())),
       fidl::internal::WireFormatMetadataForVersion(wire_format_version));
@@ -202,7 +202,7 @@ bool DecodeFailure(fidl::internal::WireFormatVersion wire_format_version,
         .rights = handle_info.rights,
     });
   }
-  fitx::result<fidl::Error, fidl::DecodedValue<FidlType>> result = fidl::InplaceDecode<FidlType>(
+  fit::result<fidl::Error, fidl::DecodedValue<FidlType>> result = fidl::InplaceDecode<FidlType>(
       fidl::EncodedMessage::Create(bytes, handles.data(), handle_metadata.data(),
                                    static_cast<uint32_t>(handle_infos.size())),
       fidl::internal::WireFormatMetadataForVersion(wire_format_version));

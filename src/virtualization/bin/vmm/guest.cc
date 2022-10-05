@@ -361,11 +361,11 @@ zx_status_t Guest::Interrupt(uint64_t mask, uint32_t vector) {
 }
 
 void Guest::set_stop_callback(
-    fit::function<void(fitx::result<::fuchsia::virtualization::GuestError>)> stop_callback) {
+    fit::function<void(fit::result<::fuchsia::virtualization::GuestError>)> stop_callback) {
   stop_callback_ = std::move(stop_callback);
 }
 
-void Guest::Stop(fitx::result<::fuchsia::virtualization::GuestError> result) {
+void Guest::Stop(fit::result<::fuchsia::virtualization::GuestError> result) {
   FX_CHECK(stop_callback_);
   stop_callback_(result);
 }

@@ -19,7 +19,7 @@
 ::fidl::Status {{ .Protocol.WireWeakOnewayBufferClientImpl.NoLeading }}::{{ .Name }}(
     {{- RenderParams .RequestArgs }}) {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<{{ .Marker }}>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();

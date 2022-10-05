@@ -7,7 +7,7 @@
 #include <fuchsia/scheduler/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl-async/bind.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/profile/profile.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/profile.h>
@@ -121,7 +121,7 @@ zx_status_t SetProfileByRoleSimple(void* ctx, zx_handle_t thread, const char* ro
   FX_LOGF(INFO, "ProfileProvider", "Role \"%s\" requested by %" PRId64 ":%" PRId64,
           role_selector.c_str(), handle_info.related_koid, handle_info.koid);
 
-  const fitx::result role_result = ParseRoleSelector(role_selector);
+  const fit::result role_result = ParseRoleSelector(role_selector);
   if (role_result.is_error()) {
     return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_INVALID_ARGS);
   }

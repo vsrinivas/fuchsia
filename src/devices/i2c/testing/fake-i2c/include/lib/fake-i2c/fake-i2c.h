@@ -83,7 +83,7 @@ class FakeI2c : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
       memcpy(response->read_data[0].data(), read_buffer, read_buffer_size);
     }
 
-    completer.Reply(::fitx::ok(response.get()));
+    completer.Reply(::fit::ok(response.get()));
   }
 
  protected:

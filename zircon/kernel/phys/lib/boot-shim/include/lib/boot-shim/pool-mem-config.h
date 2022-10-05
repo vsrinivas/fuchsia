@@ -22,7 +22,7 @@ class PoolMemConfigItem : public ItemBase {
 
   size_t size_bytes() const;
 
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
+  fit::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
 
  private:
   const memalloc::Pool* pool_ = nullptr;

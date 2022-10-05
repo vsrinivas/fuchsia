@@ -27,7 +27,7 @@ class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxM
   TerminaGuestManager& operator=(const TerminaGuestManager&) = delete;
 
  protected:
-  fitx::result<::fuchsia::virtualization::GuestManagerError, ::fuchsia::virtualization::GuestConfig>
+  fit::result<::fuchsia::virtualization::GuestManagerError, ::fuchsia::virtualization::GuestConfig>
   GetDefaultGuestConfig() override;
   void OnGuestLaunched() override;
   void OnGuestStopped() override;

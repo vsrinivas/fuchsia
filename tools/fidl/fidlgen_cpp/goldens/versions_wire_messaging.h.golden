@@ -311,7 +311,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> fi
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_versions::Protocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>* request);
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error>&& decoded,
+      ::fit::result<::fidl::Error>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_versions::Protocol::Foo>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_versions::Protocol::Foo>(result) {}

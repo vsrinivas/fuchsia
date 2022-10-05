@@ -108,7 +108,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestRespons
       });
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestResponse>::NoRequestNoResponse() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_DynamicFlags};
@@ -117,7 +117,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestRespons
   return ::fidl::internal::ToFitxResult(status);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestResponse>::WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_DynamicFlags};
@@ -180,7 +180,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestRes
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestResponse>::NoRequestNoResponse() {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_DynamicFlags};
@@ -189,7 +189,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestRes
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestResponse>::WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_DynamicFlags};
@@ -216,7 +216,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestRe
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+      ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
         return decoded.error_value();
       }
@@ -227,7 +227,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestRe
       return ::fidl::Status::Ok();
     }
     case ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>(std::move(msg));
+      ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>(std::move(msg));
       if (decoded.is_error()) {
         return decoded.error_value();
       }
@@ -247,7 +247,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestRe
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
+::fit::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
@@ -255,7 +255,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestRe
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
+::fit::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
@@ -263,7 +263,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestRe
   return ::fidl::internal::ToFitxResult(::fidl::Status{_encoded_message});
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::WithAndWithoutRequestResponse>::OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::WithAndWithoutRequestResponse>::OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_DynamicFlags};
   _encoder.EncodeBody(
@@ -273,7 +273,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestRe
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::WithAndWithoutRequestResponse>::OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::WithAndWithoutRequestResponse>::OnWithResponse(const ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>& payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_DynamicFlags};
   _encoder.EncodeBody(
@@ -324,7 +324,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -339,7 +339,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -354,7 +354,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -369,7 +369,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -384,7 +384,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -399,7 +399,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -621,7 +621,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -636,7 +636,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -651,7 +651,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -666,7 +666,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -774,7 +774,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MutateSock
       });
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MethodA_Ordinal, ::test_protocols::kChannelProtocol_MethodA_DynamicFlags};
@@ -829,7 +829,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::Mutate
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MethodA_Ordinal, ::test_protocols::kChannelProtocol_MethodA_DynamicFlags};
@@ -856,7 +856,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol>::Dispa
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kChannelProtocol_EventA_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::ChannelProtocolEventARequest>(std::move(msg));
+      ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::ChannelProtocolEventARequest>(std::move(msg));
       if (decoded.is_error()) {
         return decoded.error_value();
       }
@@ -876,7 +876,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol>::Dispa
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::ChannelProtocol>::EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::ChannelProtocol>::EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_EventA_Ordinal, ::test_protocols::kChannelProtocol_EventA_DynamicFlags};
   _encoder.EncodeBody(
@@ -886,7 +886,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol>::Dispa
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>::EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>::EventA(const ::fidl::Event<::test_protocols::ChannelProtocol::EventA>& payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_EventA_Ordinal, ::test_protocols::kChannelProtocol_EventA_DynamicFlags};
   _encoder.EncodeBody(
@@ -930,7 +930,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kChannelProtocol_MethodA_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::ChannelProtocolMethodARequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::ChannelProtocolMethodARequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -945,7 +945,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kChannelProtocol_MethodB_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::ChannelProtocolMethodBRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::ChannelProtocolMethodBRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -960,7 +960,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kChannelProtocol_TakeHandle_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::ChannelProtocolTakeHandleRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::ChannelProtocolTakeHandleRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -975,7 +975,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kChannelProtocol_MutateSocket_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::ChannelProtocolMutateSocketRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::ChannelProtocolMutateSocketRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1039,7 +1039,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::Request(const
       });
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_OneWay_Ordinal, ::test_protocols::kTransitional_OneWay_DynamicFlags};
@@ -1070,7 +1070,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>::Request(c
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>::OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_OneWay_Ordinal, ::test_protocols::kTransitional_OneWay_DynamicFlags};
@@ -1097,7 +1097,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional>::Dispatch
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kTransitional_Event_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::TransitionalEventRequest>(std::move(msg));
+      ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::TransitionalEventRequest>(std::move(msg));
       if (decoded.is_error()) {
         return decoded.error_value();
       }
@@ -1117,7 +1117,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional>::Dispatch
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>::Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>::Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_Event_Ordinal, ::test_protocols::kTransitional_Event_DynamicFlags};
   _encoder.EncodeBody(
@@ -1127,7 +1127,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional>::Dispatch
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::Transitional>::Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::Transitional>::Event(const ::fidl::Event<::test_protocols::Transitional::Event>& payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_Event_Ordinal, ::test_protocols::kTransitional_Event_DynamicFlags};
   _encoder.EncodeBody(
@@ -1155,7 +1155,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kTransitional_Request_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::TransitionalRequestRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::TransitionalRequestRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1170,7 +1170,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kTransitional_OneWay_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::TransitionalOneWayRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::TransitionalOneWayRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1208,7 +1208,7 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::DiscoverableProtocol>::Method() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kDiscoverableProtocol_Method_Ordinal, ::test_protocols::kDiscoverableProtocol_Method_DynamicFlags};
@@ -1224,7 +1224,7 @@ namespace test_protocols {
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProtocol>::Method() {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kDiscoverableProtocol_Method_Ordinal, ::test_protocols::kDiscoverableProtocol_Method_DynamicFlags};
@@ -1257,7 +1257,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kDiscoverableProtocol_Method_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1364,7 +1364,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::Respo
       });
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_DynamicFlags};
@@ -1395,7 +1395,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol>::R
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol>::NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_DynamicFlags};
@@ -1422,7 +1422,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::HandleRightsProtocolAnEventRequest>(std::move(msg));
+      ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::HandleRightsProtocolAnEventRequest>(std::move(msg));
       if (decoded.is_error()) {
         return decoded.error_value();
       }
@@ -1442,7 +1442,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal, ::test_protocols::kHandleRightsProtocol_AnEvent_DynamicFlags};
   _encoder.EncodeBody(
@@ -1452,7 +1452,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtocol>::AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal, ::test_protocols::kHandleRightsProtocol_AnEvent_DynamicFlags};
   _encoder.EncodeBody(
@@ -1480,7 +1480,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1495,7 +1495,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::HandleRightsProtocolResponseMethodRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::HandleRightsProtocolResponseMethodRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1690,7 +1690,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::WithProtocolEndsClientEndsRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::WithProtocolEndsClientEndsRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1705,7 +1705,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::WithProtocolEndsServerEndsRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::WithProtocolEndsServerEndsRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1720,7 +1720,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::WithProtocolEndsStructContainingEndsRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::WithProtocolEndsStructContainingEndsRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1758,7 +1758,7 @@ namespace test_protocols {
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters>::Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kManyParameters_Fifteen_Ordinal, ::test_protocols::kManyParameters_Fifteen_DynamicFlags};
@@ -1777,7 +1777,7 @@ namespace test_protocols {
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters>::Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kManyParameters_Fifteen_Ordinal, ::test_protocols::kManyParameters_Fifteen_DynamicFlags};
@@ -1812,7 +1812,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kManyParameters_Fifteen_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::ManyParametersFifteenRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::ManyParametersFifteenRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -1921,7 +1921,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_protocols::MethodWithUnionUnionMethodRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_protocols::MethodWithUnionUnionMethodRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

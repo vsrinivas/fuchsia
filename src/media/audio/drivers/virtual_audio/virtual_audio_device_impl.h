@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.virtualaudio/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/device.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/clock.h>
 
 #include <memory>
@@ -53,7 +53,7 @@ class VirtualAudioDeviceImpl : public fidl::WireServer<fuchsia_virtualaudio::Dev
     std::optional<uint32_t> initial_notifications_per_ring;
   };
 
-  static fitx::result<fuchsia_virtualaudio::Error, std::shared_ptr<VirtualAudioDeviceImpl>> Create(
+  static fit::result<fuchsia_virtualaudio::Error, std::shared_ptr<VirtualAudioDeviceImpl>> Create(
       const Config& cfg, fidl::ServerEnd<fuchsia_virtualaudio::Device> server,
       zx_device_t* dev_node, async_dispatcher_t* fidl_dispatcher);
 

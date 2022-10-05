@@ -11,7 +11,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_diagnostics.h>
@@ -625,14 +625,14 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   }
 
   // Called directly after a reconfiguration change during a stream. If a the result is
-  // fitx::error(std::string), there was a problem with the new constraints that can't be solved
+  // fit::error(std::string), there was a problem with the new constraints that can't be solved
   // with a buffer reconfiguration (i.e. the requested buffers exceed the max supported size for our
-  // given hardware) and SetCodecFailure should be called with the error. If fitx::ok(bool) then
+  // given hardware) and SetCodecFailure should be called with the error. If fit::ok(bool) then
   // there were no fatal codec failures and the bool contains if the buffers should be reconfigured.
   // If true the buffers *CAN NOT* be used with the new configuration and the old buffers will have
   // to be discarded. If false the buffers *CAN* be used with the new configuration and only the new
   // output format has to be sent to the client.
-  fitx::result<std::string, bool> IsBufferReconfigurationNeeded() const;
+  fit::result<std::string, bool> IsBufferReconfigurationNeeded() const;
 
   // Processes input in a loop. Should only execute on input_processing_thread_.
   // Loops for the lifetime of a stream.

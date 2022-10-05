@@ -27,7 +27,7 @@ TEST(FidlHost, Request) {
   auto bytes = message.GetOutgoingMessage().CopyBytes();
   EXPECT_EQ(bytes.size(), 24U);
   // Decoded version of the linear buffer.
-  fitx::result decoded =
+  fit::result decoded =
       fidl::internal::InplaceDecodeTransactionalMessage<test_types::wire::BazFooRequest>(
           fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
               bytes.data(), bytes.size(), nullptr, nullptr, 0));
@@ -50,7 +50,7 @@ TEST(FidlHost, Response) {
   auto bytes = message.GetOutgoingMessage().CopyBytes();
   EXPECT_EQ(bytes.size(), 24U);
   // Decoded version of the linear buffer.
-  fitx::result decoded =
+  fit::result decoded =
       fidl::internal::InplaceDecodeTransactionalMessage<fidl::WireResponse<test_types::Baz::Foo>>(
           fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
               bytes.data(), bytes.size(), nullptr, nullptr, 0));

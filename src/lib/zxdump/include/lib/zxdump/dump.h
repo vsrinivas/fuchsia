@@ -6,7 +6,7 @@
 #define SRC_LIB_ZXDUMP_INCLUDE_LIB_ZXDUMP_DUMP_H_
 
 #include <lib/fit/function.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 
@@ -45,7 +45,7 @@ struct SegmentDisposition {
   size_t filesz = 0;
 };
 
-using SegmentCallback = fit::function<fitx::result<Error, SegmentDisposition>(
+using SegmentCallback = fit::function<fit::result<Error, SegmentDisposition>(
     const SegmentDisposition&, const zx_info_maps_t&, const zx_info_vmo_t&)>;
 
 // zxdump::ProcessDump<zx::process> or zxdump::ProcessDump<zx::unowned_process>
@@ -62,8 +62,8 @@ using SegmentCallback = fit::function<fitx::result<Error, SegmentDisposition>(
 // The methods to produce the dump output work with any callable object that
 // accepts a monotonically-increasing size_t offset in the "dump file" (really,
 // stream position) and a zxdump::ByteView chunk of output.  That call should
-// return some `fitx::result<error_type>` type.  The methods here propagate any
-// error result by returning `fitx::result<error_type, ...>` values.
+// return some `fit::result<error_type>` type.  The methods here propagate any
+// error result by returning `fit::result<error_type, ...>` values.
 // zxdump::FdWriter (<lib/zxdump/fd-writer.h>) and similar objects return
 // callable objects meant to be passed in here.
 
@@ -95,22 +95,21 @@ class DumpBase {
     DumpResult* operator->() { return &dump_result_; }
 
     template <typename T>
-    fitx::result<DumpError<Dump>, T> error_or(std::string_view op,
-                                              fitx::result<Error, T> op_result) {
+    fit::result<DumpError<Dump>, T> error_or(std::string_view op, fit::result<Error, T> op_result) {
       if (dump_result_.is_error()) {
         DumpError<Dump> error(Error{.op_ = op, .status_ = ZX_OK});
         error.dump_error_ = std::move(dump_result_).error_value();
-        return fitx::error{std::move(error)};
+        return fit::error{std::move(error)};
       }
       if (op_result.is_error()) {
-        return fitx::error{DumpError<Dump>{std::move(op_result).error_value()}};
+        return fit::error{DumpError<Dump>{std::move(op_result).error_value()}};
       }
-      return fitx::ok(std::move(op_result).value());
+      return fit::ok(std::move(op_result).value());
     }
 
    private:
     Dump dump_;
-    DumpResult dump_result_ = fitx::ok();
+    DumpResult dump_result_ = fit::ok();
   };
 
   // Deduction guide.
@@ -139,12 +138,12 @@ class ProcessDumpBase : protected DumpBase {
   // will report only about memory and process-wide state, nothing about
   // threads.  Afterwards the process remains suspended until the ProcessDump
   // object is destroyed.
-  fitx::result<Error> SuspendAndCollectThreads();
+  fit::result<Error> SuspendAndCollectThreads();
 
   // Collect system-wide information.  This is always optional, but it must
   // always be called before CollectProcess, if called at all.  The system
   // information is included in the total size returned by CollectProcess.
-  fitx::result<Error> CollectSystem();
+  fit::result<Error> CollectSystem();
 
   // This can be called first or after SuspendAndCollectThreads.
   //
@@ -158,15 +157,15 @@ class ProcessDumpBase : protected DumpBase {
   // has been done and the live data from the process won't be consulted again.
   // The only state still left to be collected from the process is the contents
   // of its memory.
-  fitx::result<Error, size_t> CollectProcess(SegmentCallback prune_segment,
-                                             size_t limit = DefaultLimit());
+  fit::result<Error, size_t> CollectProcess(SegmentCallback prune_segment,
+                                            size_t limit = DefaultLimit());
 
   // This must be called after CollectProcess.
   //
   // Accumulate header and note data to be written out, by repeatedly calling
   // `dump(size_t offset, ByteView data)`.  The Dump callback returns some
-  // `fitx::result<error_type>` type.  DumpHeaders returns a result of type
-  // `fitx::result<zxdump::DumpError<Dump>, size_t>` with the result of the
+  // `fit::result<error_type>` type.  DumpHeaders returns a result of type
+  // `fit::result<zxdump::DumpError<Dump>, size_t>` with the result of the
   // first failing callback, or with the total number of bytes dumped (i.e. the
   // ending value of `offset`).
   //
@@ -178,7 +177,7 @@ class ProcessDumpBase : protected DumpBase {
   // storage helds inside the DumpProcess object.  They can be used freely
   // until the object is destroyed or clear()'d.
   template <typename Dump>
-  fitx::result<DumpError<Dump>, size_t> DumpHeaders(Dump&& dump, size_t limit = DefaultLimit()) {
+  fit::result<DumpError<Dump>, size_t> DumpHeaders(Dump&& dump, size_t limit = DefaultLimit()) {
     using namespace std::literals;
     DumpWrapper wrapper(std::forward<Dump>(dump));
     return wrapper.error_or("DumpHeader"sv, DumpHeadersImpl(wrapper.callback(), limit));
@@ -203,7 +202,7 @@ class ProcessDumpBase : protected DumpBase {
   // that will be reused for the next callback.  So this `dump` callback must
   // stream the data out or copy it, not just accumulate the view objects.
   template <typename Dump>
-  fitx::result<DumpError<Dump>, size_t> DumpMemory(Dump&& dump, size_t limit = DefaultLimit()) {
+  fit::result<DumpError<Dump>, size_t> DumpMemory(Dump&& dump, size_t limit = DefaultLimit()) {
     using namespace std::literals;
     DumpWrapper wrapper(std::forward<Dump>(dump));
     return wrapper.error_or("DumpMemory"sv, DumpMemoryImpl(wrapper.callback(), limit));
@@ -219,8 +218,8 @@ class ProcessDumpBase : protected DumpBase {
   void Emplace(zx::unowned_process process);
 
  private:
-  fitx::result<Error, size_t> DumpHeadersImpl(DumpCallback dump, size_t limit);
-  fitx::result<Error, size_t> DumpMemoryImpl(DumpCallback dump, size_t limit);
+  fit::result<Error, size_t> DumpHeadersImpl(DumpCallback dump, size_t limit);
+  fit::result<Error, size_t> DumpMemoryImpl(DumpCallback dump, size_t limit);
 
   std::unique_ptr<Collector> collector_;
 };
@@ -276,7 +275,7 @@ class JobDumpBase : protected DumpBase {
   // Collect system-wide information.  This is always optional, but it must
   // always be called first, before CollectJob, if called at all.  The system
   // information is included in the total size returned by CollectJob.
-  fitx::result<Error> CollectSystem();
+  fit::result<Error> CollectSystem();
 
   // Collect information about the job itself.  The result contains the size of
   // the job archive to dump just that information.  Note that this collection
@@ -284,7 +283,7 @@ class JobDumpBase : protected DumpBase {
   // it.  The dump will be conducted on the basis of this data, but even as new
   // processes or child jobs come and go, they will not be collected.  (There
   // is no analog to zx::ProcessDump<...>::SuspendAndCollectThreads for jobs.)
-  fitx::result<Error, size_t> CollectJob();
+  fit::result<Error, size_t> CollectJob();
 
   // This must be called after CollectJob and before other dumping calls.  It
   // dumps the job archive header and the information CollectJob found.  This
@@ -293,7 +292,7 @@ class JobDumpBase : protected DumpBase {
   // its result's size_t value() is the total size written so far, which by
   // itself is already a valid archive file image for the "stub" job archive.
   template <typename Dump>
-  fitx::result<DumpError<Dump>, size_t> DumpHeaders(Dump&& dump, time_t mtime = 0) {
+  fit::result<DumpError<Dump>, size_t> DumpHeaders(Dump&& dump, time_t mtime = 0) {
     using namespace std::literals;
     DumpWrapper wrapper{std::forward<Dump>(dump)};
     return wrapper.error_or("DumpHeaders"sv, DumpHeadersImpl(wrapper.callback(), mtime));
@@ -311,9 +310,9 @@ class JobDumpBase : protected DumpBase {
   // is understood based on its own format and contents, though names friendly
   // to human readers of `ar tv` output are recommended.
   template <typename Dump>
-  static fitx::result<DumpError<Dump>, size_t> DumpMemberHeader(Dump&& dump, size_t offset,
-                                                                std::string_view name, size_t size,
-                                                                time_t mtime = 0) {
+  static fit::result<DumpError<Dump>, size_t> DumpMemberHeader(Dump&& dump, size_t offset,
+                                                               std::string_view name, size_t size,
+                                                               time_t mtime = 0) {
     using namespace std::literals;
     DumpWrapper wrapper{std::forward<Dump>(dump)};
     return wrapper.error_or("DumpMemberHeader"sv,
@@ -334,7 +333,7 @@ class JobDumpBase : protected DumpBase {
   //
   // The caller can then create a JobDump object for each job and stream it out
   // after calling DumpMemberHeader.
-  fitx::result<Error, JobVector> CollectChildren();
+  fit::result<Error, JobVector> CollectChildren();
 
   // This can be used either before or after using DumpHeaders or other calls.
   // This acquires process handles for all the direct-child processes
@@ -347,7 +346,7 @@ class JobDumpBase : protected DumpBase {
   //
   // The caller can then create a ProcessDump object for each process and
   // stream it out after calling DumpMemberHeader.
-  fitx::result<Error, ProcessVector> CollectProcesses();
+  fit::result<Error, ProcessVector> CollectProcesses();
 
  protected:
   class Collector;
@@ -357,10 +356,10 @@ class JobDumpBase : protected DumpBase {
   void Emplace(zx::unowned_job job);
 
  private:
-  fitx::result<Error, size_t> DumpHeadersImpl(DumpCallback dump, time_t mtime);
-  static fitx::result<Error, size_t> DumpMemberHeaderImpl(DumpCallback dump, size_t offset,
-                                                          std::string_view name, size_t size,
-                                                          time_t mtime);
+  fit::result<Error, size_t> DumpHeadersImpl(DumpCallback dump, time_t mtime);
+  static fit::result<Error, size_t> DumpMemberHeaderImpl(DumpCallback dump, size_t offset,
+                                                         std::string_view name, size_t size,
+                                                         time_t mtime);
 
   std::unique_ptr<Collector> collector_;
 };

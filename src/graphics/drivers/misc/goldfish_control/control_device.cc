@@ -663,7 +663,7 @@ void Control::GetBufferHandleInfo(GetBufferHandleInfoRequestView request,
   response.info.set_id(handle)
       .set_memory_property(it_types->second.memory_property)
       .set_type(it_types->second.type);
-  completer.Reply(::fitx::ok(&response));
+  completer.Reply(::fit::ok(&response));
 }
 
 void Control::DdkRelease() { delete this; }

@@ -8,12 +8,12 @@
 
 namespace zbitl {
 
-fitx::result<std::string_view, CpuTopologyTable> CpuTopologyTable::FromPayload(
+fit::result<std::string_view, CpuTopologyTable> CpuTopologyTable::FromPayload(
     uint32_t item_type, zbitl::ByteView payload) {
   switch (item_type) {
     case ZBI_TYPE_CPU_TOPOLOGY:
       if (payload.size_bytes() == 0) {
-        return fitx::error("ZBI_TYPE_CPU_TOPOLOGY payload is empty");
+        return fit::error("ZBI_TYPE_CPU_TOPOLOGY payload is empty");
       }
       if (payload.size_bytes() % sizeof(zbi_topology_node_t) == 0) {
         CpuTopologyTable result;
@@ -21,9 +21,9 @@ fitx::result<std::string_view, CpuTopologyTable> CpuTopologyTable::FromPayload(
             reinterpret_cast<const zbi_topology_node_t*>(payload.data()),
             payload.size_bytes() / sizeof(zbi_topology_node_t),
         };
-        return fitx::ok(result);
+        return fit::ok(result);
       }
-      return fitx::error("ZBI_TYPE_CPU_TOPOLOGY payload not a multiple of entry size");
+      return fit::error("ZBI_TYPE_CPU_TOPOLOGY payload not a multiple of entry size");
 
     case ZBI_TYPE_CPU_CONFIG:
       if (payload.size_bytes() >= sizeof(zbi_cpu_config_t)) {
@@ -31,16 +31,16 @@ fitx::result<std::string_view, CpuTopologyTable> CpuTopologyTable::FromPayload(
         const size_t conf_size =
             sizeof(zbi_cpu_config_t) + (conf->cluster_count * sizeof(zbi_cpu_cluster_t));
         if (payload.size_bytes() < conf_size) {
-          return fitx::error("ZBI_TYPE_CPU_CONFIG too small for cluster count");
+          return fit::error("ZBI_TYPE_CPU_CONFIG too small for cluster count");
         }
         CpuTopologyTable result;
         result.table_ = conf;
-        return fitx::ok(result);
+        return fit::ok(result);
       }
-      return fitx::error("ZBI_TYPE_CPU_CONFIG too small for header");
+      return fit::error("ZBI_TYPE_CPU_CONFIG too small for header");
 
     default:
-      return fitx::error("invalid ZBI item type for CpuTopologyTable");
+      return fit::error("invalid ZBI item type for CpuTopologyTable");
   }
 }
 

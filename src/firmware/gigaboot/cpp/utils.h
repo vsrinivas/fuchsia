@@ -32,14 +32,14 @@ namespace gigaboot {
 
 // This calls into the LocateProtocol() boot service. It returns a null pointer if operation fails.
 template <class Protocol>
-inline fitx::result<efi_status, EfiProtocolPtr<Protocol>> EfiLocateProtocol() {
+inline fit::result<efi_status, EfiProtocolPtr<Protocol>> EfiLocateProtocol() {
   void* ptr = nullptr;
   efi_status status =
       gEfiSystemTable->BootServices->LocateProtocol(&kEfiProtocolGuid<Protocol>, nullptr, &ptr);
   if (status != EFI_SUCCESS) {
-    return fitx::error{status};
+    return fit::error{status};
   }
-  return fitx::ok(EfiProtocolPtr<Protocol>(static_cast<Protocol*>(ptr)));
+  return fit::ok(EfiProtocolPtr<Protocol>(static_cast<Protocol*>(ptr)));
 }
 
 // A wrapper type for the list of handles returned by LocateHandleBuffer() boot service. It owns
@@ -62,16 +62,16 @@ class HandleBuffer {
 // This calls into LocateHandleBuffer() with ByProtocol search type and the given protocol.
 // It returns a list of efi_handles that support the given protocol
 template <class Protocol>
-inline fitx::result<efi_status, HandleBuffer> EfiLocateHandleBufferByProtocol() {
+inline fit::result<efi_status, HandleBuffer> EfiLocateHandleBufferByProtocol() {
   size_t count;
   efi_handle* handles;
   efi_status status = gEfiSystemTable->BootServices->LocateHandleBuffer(
       ByProtocol, &kEfiProtocolGuid<Protocol>, nullptr, &count, &handles);
   if (status != EFI_SUCCESS) {
-    return fitx::error{status};
+    return fit::error{status};
   }
 
-  return fitx::ok(HandleBuffer(handles, count));
+  return fit::ok(HandleBuffer(handles, count));
 }
 
 // Convert a given efi_status code to informative string.
@@ -92,7 +92,7 @@ efi_status PrintTpm2Capability();
 
 // Check whether secure boot is turned on by querying the `SecureBoot` global variable.
 // Returns error if fail to query `SecureBoot`.
-fitx::result<efi_status, bool> IsSecureBootOn();
+fit::result<efi_status, bool> IsSecureBootOn();
 
 }  // namespace gigaboot
 

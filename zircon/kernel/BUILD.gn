@@ -90,7 +90,7 @@ if (current_toolchain == default_toolchain) {
         # <dev/iommu.h> has #include <fbl/name.h>
         "//zircon/kernel/lib/fbl:headers.config",
 
-        # Everywhere has #include <lib/fitx/result.h>
+        # Everywhere has #include <lib/fit/result.h>
         # Everywhere has #include <zx/status.h>
         "//zircon/system/ulib/zxc:headers.config",
 

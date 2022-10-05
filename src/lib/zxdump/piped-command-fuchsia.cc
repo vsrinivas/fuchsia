@@ -14,7 +14,7 @@
 
 namespace zxdump {
 
-fitx::result<std::string> PipedCommand::StartArgv(cpp20::span<const char*> argv) {
+fit::result<std::string> PipedCommand::StartArgv(cpp20::span<const char*> argv) {
   ZX_DEBUG_ASSERT(!process_);
 
   std::vector<fdio_spawn_action_t> actions = spawn_actions_;
@@ -30,9 +30,9 @@ fitx::result<std::string> PipedCommand::StartArgv(cpp20::span<const char*> argv)
                                       argv.data(), environ, actions.size(), actions.data(),
                                       process_.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
-    return fitx::error{err_msg};
+    return fit::error{err_msg};
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
 PipedCommand::~PipedCommand() {

@@ -29,7 +29,7 @@ class ZirconProcessHandle final : public ProcessHandle, public debug::ZirconExce
   uint64_t GetLoaderBreakpointAddress() override;
   std::vector<debug_ipc::AddressRegion> GetAddressSpace(uint64_t address) const override;
   std::vector<debug_ipc::Module> GetModules() const override;
-  fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> GetHandles() const override;
+  fit::result<debug::Status, std::vector<debug_ipc::InfoHandle>> GetHandles() const override;
   debug::Status ReadMemory(uintptr_t address, void* buffer, size_t len,
                            size_t* actual) const override;
   debug::Status WriteMemory(uintptr_t address, const void* buffer, size_t len,

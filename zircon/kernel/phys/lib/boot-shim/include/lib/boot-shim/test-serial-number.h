@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_TEST_SERIAL_NUMBER_H_
 #define ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_TEST_SERIAL_NUMBER_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <string_view>
 
@@ -24,11 +24,11 @@ class TestSerialNumberItem : public ItemBase {
  public:
   // Scan the ZBI-embedded command line switches for one meant specifically to
   // tell the shim to synthesize a ZBI_TYPE_SERIAL_NUMBER item.
-  fitx::result<InputZbi::Error> Init(InputZbi zbi);
+  fit::result<InputZbi::Error> Init(InputZbi zbi);
 
   constexpr size_t size_bytes() const { return ItemSize(payload_.size_bytes()); }
 
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
+  fit::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
 
  private:
   ByteView payload_;

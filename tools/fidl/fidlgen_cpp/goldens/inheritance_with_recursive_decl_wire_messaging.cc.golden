@@ -33,7 +33,7 @@ namespace test_inheritancewithrecursivedecl {
 
 ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Parent::First>::WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_inheritancewithrecursivedecl::Parent::First>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -65,7 +65,7 @@ namespace test_inheritancewithrecursivedecl {
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_inheritancewithrecursivedecl::Parent>::First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_inheritancewithrecursivedecl::Parent::First>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
@@ -97,7 +97,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_inheritancewithrecursivedecl::kParent_First_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -181,7 +181,7 @@ namespace test_inheritancewithrecursivedecl {
 
 ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Child::First>::WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_inheritancewithrecursivedecl::Child::First>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -222,7 +222,7 @@ namespace test_inheritancewithrecursivedecl {
 
 ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Child::Second>::WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_inheritancewithrecursivedecl::Child::Second>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -261,7 +261,7 @@ namespace test_inheritancewithrecursivedecl {
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_inheritancewithrecursivedecl::Child>::First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_inheritancewithrecursivedecl::Child::First>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
@@ -274,7 +274,7 @@ namespace test_inheritancewithrecursivedecl {
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request) {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_inheritancewithrecursivedecl::Child::Second>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
@@ -306,7 +306,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_inheritancewithrecursivedecl::kChild_First_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -321,7 +321,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }

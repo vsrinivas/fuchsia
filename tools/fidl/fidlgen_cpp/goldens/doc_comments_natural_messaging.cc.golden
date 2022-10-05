@@ -16,7 +16,7 @@ namespace test_doccomments {
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_doccomments::Interface>::Method() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_doccomments::kInterface_Method_Ordinal, ::test_doccomments::kInterface_Method_DynamicFlags};
@@ -32,7 +32,7 @@ namespace test_doccomments {
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>::Method() {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_doccomments::kInterface_Method_Ordinal, ::test_doccomments::kInterface_Method_DynamicFlags};
@@ -57,7 +57,7 @@ fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchE
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+      ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
       if (decoded.is_error()) {
         return decoded.error_value();
       }
@@ -77,7 +77,7 @@ fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchE
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_doccomments::Interface>::OnEvent() {
+::fit::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_doccomments::kInterface_OnEvent_Ordinal, ::test_doccomments::kInterface_OnEvent_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
@@ -85,7 +85,7 @@ fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchE
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_doccomments::Interface>::OnEvent() {
+::fit::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_doccomments::kInterface_OnEvent_Ordinal, ::test_doccomments::kInterface_OnEvent_DynamicFlags};
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
@@ -102,7 +102,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_doccomments::kInterface_Method_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

@@ -8,7 +8,7 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 
 #include <memory>
@@ -101,10 +101,10 @@ class EnclosedGuest {
 
   virtual GuestKernel GetGuestKernel() = 0;
 
-  fitx::result<::fuchsia::virtualization::GuestError> ConnectToBalloon(
+  fit::result<::fuchsia::virtualization::GuestError> ConnectToBalloon(
       ::fidl::InterfaceRequest<::fuchsia::virtualization::BalloonController> controller);
 
-  fitx::result<::fuchsia::virtualization::GuestError> GetHostVsockEndpoint(
+  fit::result<::fuchsia::virtualization::GuestError> GetHostVsockEndpoint(
       ::fidl::InterfaceRequest<::fuchsia::virtualization::HostVsockEndpoint> endpoint);
 
   template <typename Interface>

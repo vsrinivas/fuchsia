@@ -6,7 +6,7 @@
 
 #include "phys/allocation.h"
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/memalloc/pool.h>
 #include <zircon/assert.h>
 
@@ -45,7 +45,7 @@ Allocation Allocation::New(fbl::AllocChecker& ac, memalloc::Type type, size_t si
                            size_t alignment, ktl::optional<uint64_t> min_addr,
                            ktl::optional<uint64_t> max_addr) {
   Allocation alloc;
-  fitx::result<fitx::failed, uint64_t> result =
+  fit::result<fit::failed, uint64_t> result =
       GetPool().Allocate(type, size, alignment, min_addr, max_addr);
   ac.arm(size, result.is_ok());
   if (result.is_ok()) {

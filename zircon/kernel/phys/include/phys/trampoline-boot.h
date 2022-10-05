@@ -21,8 +21,8 @@ class TrampolineBoot : public BootZbi {
 
   // Inits a default constructed object. Just like |BootZbi::*| but performs additional
   // initialization depending on the zbi format. (Fixed or position independent entry address).
-  fitx::result<Error> Init(InputZbi zbi);
-  fitx::result<Error> Init(InputZbi zbi, InputZbi::iterator kernel_item);
+  fit::result<Error> Init(InputZbi zbi);
+  fit::result<Error> Init(InputZbi zbi, InputZbi::iterator kernel_item);
 
   uint64_t KernelEntryAddress() const { return kernel_entry_address_; }
 
@@ -30,9 +30,9 @@ class TrampolineBoot : public BootZbi {
     return kernel_load_address_ && FixedKernelOverlapsData(kernel_load_address_.value());
   }
 
-  fitx::result<Error> Load(uint32_t extra_data_capacity = 0,
-                           ktl::optional<uint64_t> kernel_load_address = ktl::nullopt,
-                           ktl::optional<uint64_t> data_load_address = ktl::nullopt);
+  fit::result<Error> Load(uint32_t extra_data_capacity = 0,
+                          ktl::optional<uint64_t> kernel_load_address = ktl::nullopt,
+                          ktl::optional<uint64_t> data_load_address = ktl::nullopt);
 
   [[noreturn]] void Boot(ktl::optional<void*> argument = {});
 

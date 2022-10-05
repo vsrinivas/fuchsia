@@ -146,7 +146,7 @@ TEST(VmofileTests, test_vmofile_basic) {
     const fidl::WireResult seek_result =
         fidl::WireCall(file)->Seek(fio::wire::SeekOrigin::kStart, 7u);
     ASSERT_TRUE(seek_result.ok(), "%s", seek_result.status_string());
-    const fitx::result response = seek_result.value();
+    const fit::result response = seek_result.value();
     ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
     ASSERT_EQ(response.value()->offset_from_start, 7u);
   }

@@ -52,10 +52,10 @@ class ClosedTargetServer : public fidl::Server<fidl_serversuite::ClosedTarget> {
     std::cout << "ClosedTarget.TwoWayResult()" << std::endl;
     switch (request.Which()) {
       case TwoWayResultRequest::Tag::kPayload:
-        completer.Reply(fitx::ok(request.payload().value()));
+        completer.Reply(fit::ok(request.payload().value()));
         return;
       case TwoWayResultRequest::Tag::kError:
-        completer.Reply(fitx::error(request.error().value()));
+        completer.Reply(fit::error(request.error().value()));
         return;
     }
     ZX_PANIC("unhandled case");
@@ -178,10 +178,10 @@ class OpenTargetServer : public fidl::Server<fidl_serversuite::OpenTarget> {
                        StrictTwoWayErrCompleter::Sync& completer) override {
     switch (request.Which()) {
       case fidl_serversuite::OpenTargetStrictTwoWayErrRequest::Tag::kReplySuccess:
-        completer.Reply(fitx::ok());
+        completer.Reply(fit::ok());
         break;
       case fidl_serversuite::OpenTargetStrictTwoWayErrRequest::Tag::kReplyError:
-        completer.Reply(fitx::error(request.reply_error().value()));
+        completer.Reply(fit::error(request.reply_error().value()));
         break;
     }
   }
@@ -190,10 +190,10 @@ class OpenTargetServer : public fidl::Server<fidl_serversuite::OpenTarget> {
                              StrictTwoWayFieldsErrCompleter::Sync& completer) override {
     switch (request.Which()) {
       case fidl_serversuite::OpenTargetStrictTwoWayFieldsErrRequest::Tag::kReplySuccess:
-        completer.Reply(fitx::ok(request.reply_success().value()));
+        completer.Reply(fit::ok(request.reply_success().value()));
         break;
       case fidl_serversuite::OpenTargetStrictTwoWayFieldsErrRequest::Tag::kReplyError:
-        completer.Reply(fitx::error(request.reply_error().value()));
+        completer.Reply(fit::error(request.reply_error().value()));
         break;
     }
   }
@@ -212,10 +212,10 @@ class OpenTargetServer : public fidl::Server<fidl_serversuite::OpenTarget> {
                          FlexibleTwoWayErrCompleter::Sync& completer) override {
     switch (request.Which()) {
       case fidl_serversuite::OpenTargetFlexibleTwoWayErrRequest::Tag::kReplySuccess:
-        completer.Reply(fitx::ok());
+        completer.Reply(fit::ok());
         break;
       case fidl_serversuite::OpenTargetFlexibleTwoWayErrRequest::Tag::kReplyError:
-        completer.Reply(fitx::error(request.reply_error().value()));
+        completer.Reply(fit::error(request.reply_error().value()));
         break;
     }
   }
@@ -224,10 +224,10 @@ class OpenTargetServer : public fidl::Server<fidl_serversuite::OpenTarget> {
                                FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
     switch (request.Which()) {
       case fidl_serversuite::OpenTargetFlexibleTwoWayFieldsErrRequest::Tag::kReplySuccess:
-        completer.Reply(fitx::ok(request.reply_success().value()));
+        completer.Reply(fit::ok(request.reply_success().value()));
         break;
       case fidl_serversuite::OpenTargetFlexibleTwoWayFieldsErrRequest::Tag::kReplyError:
-        completer.Reply(fitx::error(request.reply_error().value()));
+        completer.Reply(fit::error(request.reply_error().value()));
         break;
     }
   }

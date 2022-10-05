@@ -22,6 +22,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_hlcpp",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_hlcpp",
     "//sdk/fidl/fuchsia.test:fuchsia.test_hlcpp",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/syslog/cpp",
@@ -31,7 +32,6 @@ executable("bin") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/zxc:fitx",
   ]
 }
 

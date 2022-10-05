@@ -22,13 +22,13 @@ constexpr std::string_view kBadSize = "ZBI_TYPE_DEBUGDATA item too large for enc
 
 }  // namespace
 
-fitx::result<std::string_view> Debugdata::Init(cpp20::span<const std::byte> payload) {
+fit::result<std::string_view> Debugdata::Init(cpp20::span<const std::byte> payload) {
   if (payload.size_bytes() < sizeof(zbi_debugdata_t)) {
-    return fitx::error{kBadTrailer};
+    return fit::error{kBadTrailer};
   }
 
   if (payload.size_bytes() % ZBI_ALIGNMENT != 0) {
-    return fitx::error{kBadAlign};
+    return fit::error{kBadAlign};
   }
 
   const zbi_debugdata_t& header = *reinterpret_cast<const zbi_debugdata_t*>(
@@ -36,14 +36,14 @@ fitx::result<std::string_view> Debugdata::Init(cpp20::span<const std::byte> payl
   payload = payload.subspan(0, payload.size() - sizeof(zbi_debugdata_t));
 
   auto get = [&payload](auto& result, size_t size,
-                        std::string_view bad_size) -> fitx::result<std::string_view> {
+                        std::string_view bad_size) -> fit::result<std::string_view> {
     using Byte = std::decay_t<decltype(result.front())>;
     if (size > payload.size_bytes()) {
-      return fitx::error{bad_size};
+      return fit::error{bad_size};
     }
     result = {reinterpret_cast<const Byte*>(payload.data()), size};
     payload = payload.subspan(size);
-    return fitx::ok();
+    return fit::ok();
   };
 
   auto result = get(contents_, header.content_size, kBadContents);
@@ -58,7 +58,7 @@ fitx::result<std::string_view> Debugdata::Init(cpp20::span<const std::byte> payl
   }
 
   if (result.is_ok() && payload.size_bytes() >= ZBI_ALIGNMENT) {
-    return fitx::error{kBadSize};
+    return fit::error{kBadSize};
   }
 
   return result;

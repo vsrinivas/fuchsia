@@ -342,10 +342,10 @@ __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDe
 }  // namespace test_bindingsdenylist
 
 template <>
-class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final : public ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
+class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final : public ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>::result;
+  Response(::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -362,10 +362,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
  public:
   static ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -381,19 +381,19 @@ namespace test_bindingsdenylist {
 }  // namespace test_bindingsdenylist
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final : public ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
+class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final : public ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::result;
+  Response(::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -410,10 +410,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
  public:
   static ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -427,19 +427,19 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
 };
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final : public ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> {
+class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final : public ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::result;
+  Response(::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -456,10 +456,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
  public:
   static ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -473,19 +473,19 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
 };
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final : public ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
+class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final : public ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::result;
+  Response(::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -502,10 +502,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
  public:
   static ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -519,19 +519,19 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
 };
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final : public ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> {
+class ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final : public ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::result;
+  Response(::fit::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -548,10 +548,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
  public:
   static ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -565,9 +565,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
 };
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::result;
 
  protected:
   Result() = default;
@@ -983,9 +983,9 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_bindingsdenylist::ImportsSameNameContext> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> Unattributed() const;
+  ::fit::result<::fidl::Error> Unattributed() const;
 
-  ::fitx::result<::fidl::Error> AlwaysAppearsInImportingLibrary() const;
+  ::fit::result<::fidl::Error> AlwaysAppearsInImportingLibrary() const;
 };
 
 #endif  // __Fuchsia__
@@ -996,9 +996,9 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext>> {
  public:
-  ::fitx::result<::fidl::Error> Unattributed();
+  ::fit::result<::fidl::Error> Unattributed();
 
-  ::fitx::result<::fidl::Error> AlwaysAppearsInImportingLibrary();
+  ::fit::result<::fidl::Error> AlwaysAppearsInImportingLibrary();
 
  private:
   ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> _client_end() const {

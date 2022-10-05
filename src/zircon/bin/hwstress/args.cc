@@ -6,7 +6,7 @@
 
 #include <lib/cmdline/args_parser.h>
 #include <lib/cmdline/status.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -146,20 +146,20 @@ Memory test options:
 )");
 }
 
-fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* const> args) {
+fit::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* const> args) {
   CommandLineArgs result;
   StressTest subcommand;
 
   // Ensure a subcommand was provided.
   if (args.size() < 2) {
-    return fitx::error("A subcommand specifying what type of test to run must be specified.");
+    return fit::error("A subcommand specifying what type of test to run must be specified.");
   }
   std::string_view first_arg(args.data()[1]);
 
   // If "--help" or "-h" was provided, don't try parsing anything else.
   if (first_arg == "-h" || first_arg == "--help") {
     result.help = true;
-    return fitx::success(result);
+    return fit::success(result);
   }
 
   // Parse the subcommand.
@@ -172,7 +172,7 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* con
   } else if (first_arg == std::string_view("light")) {
     subcommand = StressTest::kLight;
   } else {
-    return fitx::error(
+    return fit::error(
         fxl::StringPrintf("Unknown subcommand or option: '%s'.", std::string(first_arg).data())
             .c_str());
   }
@@ -184,75 +184,75 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* con
   cmdline::Status status =
       parser->Parse(static_cast<int>(other_args.size()), other_args.data(), &result, &params);
   if (!status.ok()) {
-    return fitx::error(status.error_message().c_str());
+    return fit::error(status.error_message().c_str());
   }
 
   // If help is provided, ignore any further invalid args and just show the
   // help screen.
   if (result.help) {
-    return fitx::success(result);
+    return fit::success(result);
   }
 
   result.subcommand = subcommand;
 
   // Validate duration.
   if (result.test_duration_seconds < 0) {
-    return fitx::error("Test duration cannot be negative.");
+    return fit::error("Test duration cannot be negative.");
   }
 
   // Validate logging level.
   if (LogLevelFromString(result.log_level) == LogLevel::kInvalid) {
-    return fitx::error("Logging level must be one of: terse, normal or verbose.");
+    return fit::error("Logging level must be one of: terse, normal or verbose.");
   }
 
   // Validate memory flags.
   if (result.ram_to_test_percent.has_value()) {
     if (result.ram_to_test_percent.value() <= 0 || result.ram_to_test_percent.value() >= 100) {
-      return fitx::error("Percent of RAM to test must be between 1 and 99, inclusive.");
+      return fit::error("Percent of RAM to test must be between 1 and 99, inclusive.");
     }
   }
   if (result.mem_to_test_megabytes.has_value()) {
     if (result.mem_to_test_megabytes.value() <= 0) {
-      return fitx::error("RAM to test must be strictly positive.");
+      return fit::error("RAM to test must be strictly positive.");
     }
   }
   if (result.mem_to_test_megabytes.has_value() && result.ram_to_test_percent.has_value()) {
-    return fitx::error("--memory and --percent-memory cannot both be specified.");
+    return fit::error("--memory and --percent-memory cannot both be specified.");
   }
 
   // Validate utilization.
   if (result.utilization_percent <= 0.0 || result.utilization_percent > 100.0) {
-    return fitx::error("--utilization must be greater than 0%%, and no more than 100%%.");
+    return fit::error("--utilization must be greater than 0%%, and no more than 100%%.");
   }
 
   // Validate light settings.
   if (result.light_on_time_seconds < 0) {
-    return fitx::error("'--light-on-time' cannot be negative.");
+    return fit::error("'--light-on-time' cannot be negative.");
   }
   if (result.light_off_time_seconds < 0) {
-    return fitx::error("'--light-off-time' cannot be negative.");
+    return fit::error("'--light-off-time' cannot be negative.");
   }
 
   // Validate iterations.
   if (result.iterations) {
     if (result.iterations < 1) {
-      return fitx::error("'--iterations' must be at least 1.");
+      return fit::error("'--iterations' must be at least 1.");
     }
     if (result.test_duration_seconds != 0.0) {
-      return fitx::error("'--duration' and '--iterations' cannot both be specified.");
+      return fit::error("'--duration' and '--iterations' cannot both be specified.");
     }
     if (result.subcommand != StressTest::kFlash) {
-      return fitx::error("'--iterations' is only valid for the flash test.");
+      return fit::error("'--iterations' is only valid for the flash test.");
     }
   }
 
   // Ensure mandatory flash test argument is provided
   if (result.subcommand == StressTest::kFlash) {
     if (result.destroy_partitions && !result.fvm_path.empty()) {
-      return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager invalid with cleanup"));
+      return fit::error(fxl::StringPrintf("Path to Fuchsia Volume Manager invalid with cleanup"));
     }
     if (!result.destroy_partitions && result.fvm_path.empty()) {
-      return fitx::error(fxl::StringPrintf("Path to Fuchsia Volume Manager must be specified"));
+      return fit::error(fxl::StringPrintf("Path to Fuchsia Volume Manager must be specified"));
     }
   }
 
@@ -268,17 +268,17 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* con
     } else {
       for (auto core : result.cores_to_test.cores) {
         if (core >= num_cpus) {
-          return fitx::error(fxl::StringPrintf("CPU core out of range."));
+          return fit::error(fxl::StringPrintf("CPU core out of range."));
         }
       }
     }
   }
   // Ensure no more parameters were given.
   if (!params.empty()) {
-    return fitx::error(fxl::StringPrintf("Unknown option: '%s'.", params[1].c_str()).c_str());
+    return fit::error(fxl::StringPrintf("Unknown option: '%s'.", params[1].c_str()).c_str());
   }
 
-  return fitx::success(result);
+  return fit::success(result);
 }
 
 }  // namespace hwstress

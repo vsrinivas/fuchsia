@@ -38,7 +38,7 @@ fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::SendAndRec
       });
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_Send_Ordinal, ::test_emptystruct::kEmptyProtocol_Send_DynamicFlags};
@@ -69,7 +69,7 @@ fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>::SendAn
       msg.Call(_client_end().handle(), response_storage.view()), nullptr);
 }
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>::Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_Send_Ordinal, ::test_emptystruct::kEmptyProtocol_Send_DynamicFlags};
@@ -96,7 +96,7 @@ fidl::internal::NaturalEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispa
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
-      ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_emptystruct::EmptyProtocolReceiveRequest>(std::move(msg));
+      ::fit::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_emptystruct::EmptyProtocolReceiveRequest>(std::move(msg));
       if (decoded.is_error()) {
         return decoded.error_value();
       }
@@ -116,7 +116,7 @@ fidl::internal::NaturalEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispa
 
 #ifdef __Fuchsia__
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_emptystruct::EmptyProtocol>::Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<::test_emptystruct::EmptyProtocol>::Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_Receive_Ordinal, ::test_emptystruct::kEmptyProtocol_Receive_DynamicFlags};
   _encoder.EncodeBody(
@@ -126,7 +126,7 @@ fidl::internal::NaturalEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispa
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>::Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload) {
+::fit::result<::fidl::Error> fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>::Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_Receive_Ordinal, ::test_emptystruct::kEmptyProtocol_Receive_DynamicFlags};
   _encoder.EncodeBody(
@@ -154,7 +154,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_emptystruct::kEmptyProtocol_Send_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_emptystruct::EmptyProtocolSendRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_emptystruct::EmptyProtocolSendRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -169,7 +169,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

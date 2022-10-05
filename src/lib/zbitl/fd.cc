@@ -20,57 +20,57 @@ using error_type = StorageTraits<fbl::unique_fd>::error_type;
 
 }  // namespace
 
-fitx::result<error_type, uint32_t> StorageTraits<fbl::unique_fd>::Capacity(
+fit::result<error_type, uint32_t> StorageTraits<fbl::unique_fd>::Capacity(
     const fbl::unique_fd& fd) {
   struct stat st;
   if (fstat(fd.get(), &st) < 0) {
-    return fitx::error{errno};
+    return fit::error{errno};
   }
   auto size = std::min(static_cast<off_t>(std::numeric_limits<uint32_t>::max()), st.st_size);
-  return fitx::ok(static_cast<uint32_t>(size));
+  return fit::ok(static_cast<uint32_t>(size));
 }
 
-fitx::result<error_type> StorageTraits<fbl::unique_fd>::EnsureCapacity(fbl::unique_fd& fd,
-                                                                       uint32_t capacity_bytes) {
+fit::result<error_type> StorageTraits<fbl::unique_fd>::EnsureCapacity(fbl::unique_fd& fd,
+                                                                      uint32_t capacity_bytes) {
   auto current = Capacity(fd);
   if (current.is_error()) {
     return current.take_error();
   } else if (current.value() >= capacity_bytes) {
-    return fitx::ok();  // Current capacity is sufficient.
+    return fit::ok();  // Current capacity is sufficient.
   }
   // Write a single byte to reserve enough space for the new capacity.
   if (ssize_t n = pwrite(fd.get(), "", 1, capacity_bytes - 1); n < 0) {
-    return fitx::error{errno};
+    return fit::error{errno};
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<error_type> StorageTraits<fbl::unique_fd>::Read(const fbl::unique_fd& fd, off_t offset,
-                                                             void* buffer, uint32_t length) {
+fit::result<error_type> StorageTraits<fbl::unique_fd>::Read(const fbl::unique_fd& fd, off_t offset,
+                                                            void* buffer, uint32_t length) {
   auto p = static_cast<std::byte*>(buffer);
   while (length > 0) {
     ssize_t n = pread(fd.get(), p, length, offset);
     if (n < 0) {
-      return fitx::error{errno};
+      return fit::error{errno};
     }
     if (n == 0) {
-      return fitx::error{ESPIPE};
+      return fit::error{ESPIPE};
     }
     ZX_DEBUG_ASSERT(static_cast<size_t>(n) <= length);
     length -= static_cast<uint32_t>(n);
     p += n;
     offset += n;
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<error_type> StorageTraits<fbl::unique_fd>::DoRead(const fbl::unique_fd& fd,
-                                                               off_t offset, uint32_t length,
-                                                               bool (*cb)(void*, ByteView),
-                                                               void* arg) {
+fit::result<error_type> StorageTraits<fbl::unique_fd>::DoRead(const fbl::unique_fd& fd,
+                                                              off_t offset, uint32_t length,
+                                                              bool (*cb)(void*, ByteView),
+                                                              void* arg) {
   if (length == 0) {
     cb(arg, {});
-    return fitx::ok();
+    return fit::ok();
   }
 
   // This always copies, when mmap'ing might be better for large sizes.  But
@@ -82,10 +82,10 @@ fitx::result<error_type> StorageTraits<fbl::unique_fd>::DoRead(const fbl::unique
   while (length > 0) {
     ssize_t n = pread(fd.get(), buf.get(), size(), offset);
     if (n < 0) {
-      return fitx::error{errno};
+      return fit::error{errno};
     }
     if (n == 0) {
-      return fitx::error{ESPIPE};
+      return fit::error{ESPIPE};
     }
     ZX_ASSERT(static_cast<size_t>(n) <= kBufferSize);
     if (!cb(arg, {buf.get(), static_cast<size_t>(n)})) {
@@ -95,21 +95,21 @@ fitx::result<error_type> StorageTraits<fbl::unique_fd>::DoRead(const fbl::unique
     length -= static_cast<uint32_t>(n);
   }
 
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<error_type> StorageTraits<fbl::unique_fd>::Write(const fbl::unique_fd& fd,
-                                                              uint32_t offset, ByteView data) {
+fit::result<error_type> StorageTraits<fbl::unique_fd>::Write(const fbl::unique_fd& fd,
+                                                             uint32_t offset, ByteView data) {
   while (!data.empty()) {
     ssize_t n = pwrite(fd.get(), data.data(), data.size(), offset);
     if (n < 0) {
-      return fitx::error{errno};
+      return fit::error{errno};
     }
     ZX_ASSERT(static_cast<size_t>(n) <= data.size());
     offset += static_cast<uint32_t>(n);
     data = data.subspan(static_cast<size_t>(n));
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace zbitl

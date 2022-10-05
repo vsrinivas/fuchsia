@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <lib/fit/defer.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -26,9 +26,9 @@ struct GetAddrInfoResponse {
   const size_t count;
 };
 
-class GetAddrInfoTest
-    : public testing::TestWithParam<
-          std::tuple<GetAddrInfoRequest, fitx::result<int, GetAddrInfoResponse>>> {};
+class GetAddrInfoTest : public testing::TestWithParam<
+                            std::tuple<GetAddrInfoRequest, fit::result<int, GetAddrInfoResponse>>> {
+};
 
 std::string to_string(const GetAddrInfoTest::ParamType& param) {
   const auto& [request, expectation] = param;
@@ -137,7 +137,7 @@ INSTANTIATE_TEST_SUITE_P(
                                                                .ai_family = AF_INET,
                                                                .ai_socktype = SOCK_STREAM,
                                                            }},
-                                    fitx::ok(GetAddrInfoResponse{
+                                    fit::ok(GetAddrInfoResponse{
                                         .port = 80,
                                         .address = "192.0.2.1",
                                         .count = 1,
@@ -149,7 +149,7 @@ INSTANTIATE_TEST_SUITE_P(
                                                                .ai_family = AF_INET6,
                                                                .ai_socktype = SOCK_DGRAM,
                                                            }},
-                                    fitx::ok(GetAddrInfoResponse{
+                                    fit::ok(GetAddrInfoResponse{
                                         .port = 123,
                                         .address = "2001:db8::1",
                                         .count = 1,
@@ -161,7 +161,7 @@ INSTANTIATE_TEST_SUITE_P(
                                                                .ai_family = AF_INET,
                                                                .ai_socktype = SOCK_STREAM,
                                                            }},
-                                    fitx::ok(GetAddrInfoResponse{
+                                    fit::ok(GetAddrInfoResponse{
                                         .port = 80,
                                         .address = "192.0.2.1",
                                         .count = MAXADDRS,
@@ -173,7 +173,7 @@ INSTANTIATE_TEST_SUITE_P(
                                                                .ai_family = AF_INET,
                                                                .ai_socktype = SOCK_STREAM,
                                                            }},
-                                    fitx::error(EAI_NONAME))),
+                                    fit::error(EAI_NONAME))),
     [](const testing::TestParamInfo<GetAddrInfoTest::ParamType>& info) {
       return to_string(info.param);
     });

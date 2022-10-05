@@ -30,24 +30,24 @@ ZstdWriter::~ZstdWriter() {
   ZSTD_freeCStream(ctx);
 }
 
-fitx::result<ZstdWriter::error_type> ZstdWriter::Flush() {
+fit::result<ZstdWriter::error_type> ZstdWriter::Flush() {
   ByteView out{buffer_.get(), buffer_pos_};
   buffer_pos_ = 0;
   while (!out.empty()) {
     ssize_t n = write(fd_.get(), out.data(), out.size());
     if (n < 0) {
-      return fitx::error{"write"};
+      return fit::error{"write"};
     }
     if (n == 0) {
       errno = EAGAIN;
-      return fitx::error{"write returned zero"};
+      return fit::error{"write returned zero"};
     }
     out.remove_prefix(n);
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<ZstdWriter::error_type> ZstdWriter::Write(size_t offset, ByteView data) {
+fit::result<ZstdWriter::error_type> ZstdWriter::Write(size_t offset, ByteView data) {
   ZX_ASSERT(offset >= offset_);
   ZX_ASSERT(!data.empty());
   ZX_DEBUG_ASSERT(data.data());
@@ -70,7 +70,7 @@ fitx::result<ZstdWriter::error_type> ZstdWriter::Write(size_t offset, ByteView d
     buffer_pos_ = out.pos;
     if (ZSTD_isError(result)) {
       errno = 0;
-      return fitx::error{ZSTD_getErrorName(result)};
+      return fit::error{ZSTD_getErrorName(result)};
     }
     if (in.pos < in.size) {
       // Not all consumed yet, so flush the buffer.
@@ -82,10 +82,10 @@ fitx::result<ZstdWriter::error_type> ZstdWriter::Write(size_t offset, ByteView d
   }
 
   offset_ += in.pos;
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<ZstdWriter::error_type> ZstdWriter::Finish() {
+fit::result<ZstdWriter::error_type> ZstdWriter::Finish() {
   size_t compress_result;
   do {
     ZSTD_inBuffer in = {};
@@ -95,13 +95,13 @@ fitx::result<ZstdWriter::error_type> ZstdWriter::Finish() {
     buffer_pos_ = out.pos;
     if (ZSTD_isError(compress_result)) {
       errno = 0;
-      return fitx::error{ZSTD_getErrorName(compress_result)};
+      return fit::error{ZSTD_getErrorName(compress_result)};
     }
     if (auto result = Flush(); result.is_error()) {
       return result.take_error();
     }
   } while (compress_result != 0);
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace zxdump

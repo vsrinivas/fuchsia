@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_HANDLE_H_
 
 #include <lib/fit/function.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/process.h>
 #include <zircon/types.h>
 
@@ -111,7 +111,7 @@ class ProcessHandle {
   virtual std::vector<debug_ipc::Module> GetModules() const = 0;
 
   // Returns the handles opened by the process.
-  virtual fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> GetHandles() const = 0;
+  virtual fit::result<debug::Status, std::vector<debug_ipc::InfoHandle>> GetHandles() const = 0;
 
   virtual debug::Status ReadMemory(uintptr_t address, void* buffer, size_t len,
                                    size_t* actual) const = 0;

@@ -54,7 +54,7 @@ struct BaseWireResultStorage<FidlMethod,
 
 // Defines the storage for a method which uses error syntax. For these methods
 // if the result union is the success or application error variants, the result
-// is stored in a |fitx::result| which has the application error type as its
+// is stored in a |fit::result| which has the application error type as its
 // error variant, and as its success variant either a pointer to the payload or
 // nothing if the payload is empty.
 template <typename FidlMethod>
@@ -147,7 +147,7 @@ class BaseWireResult<
  public:
   // Gets a pointer to the result of the method call, if it succeeded. For a
   // method without error syntax, this is the return type of the method. For a
-  // method with error syntax, this is a |fitx::result| of the error type and a
+  // method with error syntax, this is a |fit::result| of the error type and a
   // pointer to the return type (if the return type is not empty).
   WireResultUnwrapType<FidlMethod>* Unwrap() {
     if constexpr (FidlMethod::kHasApplicationError) {
@@ -160,7 +160,7 @@ class BaseWireResult<
   }
   // Gets a pointer to the result of the method call, if it succeeded. For a
   // method without error syntax, this is the return type of the method. For a
-  // method with error syntax, this is a |fitx::result| of the error type and a
+  // method with error syntax, this is a |fit::result| of the error type and a
   // pointer to the return type (if the return type is not empty).
   const WireResultUnwrapType<FidlMethod>* Unwrap() const {
     if constexpr (FidlMethod::kHasApplicationError) {
@@ -174,13 +174,13 @@ class BaseWireResult<
 
   // Gets a reference to the result of the method call, if it succeeded. For a
   // method without error syntax, this is the return type of the method. For a
-  // method with error syntax, this is a |fitx::result| of the error type and a
+  // method with error syntax, this is a |fit::result| of the error type and a
   // pointer to the return type (if the return type is not empty).
   WireResultUnwrapType<FidlMethod>& value() { return *Unwrap(); }
 
   // Gets a reference to the result of the method call, if it succeeded. For a
   // method without error syntax, this is the return type of the method. For a
-  // method with error syntax, this is a |fitx::result| of the error type and a
+  // method with error syntax, this is a |fit::result| of the error type and a
   // pointer to the return type (if the return type is not empty).
   const WireResultUnwrapType<FidlMethod>& value() const { return *Unwrap(); }
 
@@ -215,13 +215,13 @@ class BaseWireResult<
       if (raw_response->result.is_transport_err()) {
         SetStatus(::fidl::Status::UnknownMethod());
       } else if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
+        result_ = fit::error(raw_response->result.err());
       } else {
         ZX_ASSERT_MSG(raw_response->result.is_response(), "Unknown FIDL result union variant");
         if constexpr (FidlMethod::kHasNonEmptyPayload) {
-          result_ = fitx::ok(&(raw_response->result.response()));
+          result_ = fit::ok(&(raw_response->result.response()));
         } else {
-          result_ = fitx::ok();
+          result_ = fit::ok();
         }
       }
     } else if constexpr (FidlMethod::kHasTransportError) {
@@ -237,13 +237,13 @@ class BaseWireResult<
       }
     } else if constexpr (FidlMethod::kHasApplicationError) {
       if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
+        result_ = fit::error(raw_response->result.err());
       } else {
         ZX_ASSERT_MSG(raw_response->result.is_response(), "Unknown FIDL result union variant");
         if constexpr (FidlMethod::kHasNonEmptyPayload) {
-          result_ = fitx::ok(&(raw_response->result.response()));
+          result_ = fit::ok(&(raw_response->result.response()));
         } else {
-          result_ = fitx::ok();
+          result_ = fit::ok();
         }
       }
     } else {

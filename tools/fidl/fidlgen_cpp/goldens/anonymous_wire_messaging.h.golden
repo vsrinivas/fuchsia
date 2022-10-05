@@ -302,7 +302,7 @@ struct ::fidl::internal::IncomingEventsStorage<::test_anonymous::SomeProtocol> f
 
 template <>
 struct ::fidl::internal::WireResultUnwrap<::test_anonymous::SomeProtocol::SomeMethod> {
-  using Type = ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>;
+  using Type = ::fit::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>;
 };
 
 template <>
@@ -334,7 +334,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::So
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod>(::fidl::internal::StatusFromResult(decoded)) {
     if (decoded.is_ok()) {
       decoded_ = std::move(decoded.value());
@@ -427,7 +427,7 @@ class ::fidl::internal::WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMe
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result);
+  void Reply(::fit::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result);
   void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
   void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
 
@@ -440,7 +440,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_anonymous::SomeProtocol::
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result);
+  void Reply(::fit::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*> result);
   void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
   void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
 

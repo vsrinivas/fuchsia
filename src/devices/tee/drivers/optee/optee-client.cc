@@ -1403,7 +1403,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
       message->set_return_code(TEEC_ERROR_GENERIC);
       return result.status();
     }
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     if (response.is_error()) {
       LOG(ERROR, "failed to read from file (IO status: %s)",
           zx_status_get_string(response.error_value()));
@@ -1464,7 +1464,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
       message->set_return_code(TEEC_ERROR_GENERIC);
       return result.status();
     }
-    const fitx::result response = result.value();
+    const fit::result response = result.value();
     if (response.is_error()) {
       LOG(ERROR, "failed to write to file (IO status: %s)",
           zx_status_get_string(response.error_value()));
@@ -1500,7 +1500,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
     message->set_return_code(TEEC_ERROR_GENERIC);
     return result.status();
   }
-  const fitx::result response = result.value();
+  const fit::result response = result.value();
   if (response.is_error()) {
     LOG(ERROR, "failed to truncate file (IO status: %s)",
         zx_status_get_string(response.error_value()));

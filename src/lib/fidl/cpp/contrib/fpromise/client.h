@@ -13,7 +13,7 @@ namespace fidl_fpromise {
 namespace internal {
 
 // |fpromise::result| uses |void| for when the result does not have a success type.
-// On the other hand, |fitx::result| simply leaves the |value_type| alias absent.
+// On the other hand, |fit::result| simply leaves the |value_type| alias absent.
 // This SFINAE converts one scheme to the other.
 template <typename T, typename V = void>
 struct ValueTypeOrVoid {

@@ -38,8 +38,8 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
   bool is_guest_started() const;
 
  protected:
-  virtual fitx::result<::fuchsia::virtualization::GuestManagerError,
-                       ::fuchsia::virtualization::GuestConfig>
+  virtual fit::result<::fuchsia::virtualization::GuestManagerError,
+                      ::fuchsia::virtualization::GuestConfig>
   GetDefaultGuestConfig();
   virtual void OnGuestLaunched() {}
   virtual void OnGuestStopped() {}
@@ -49,7 +49,7 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
                           fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                           LaunchCallback callback);
   void HandleRunResult(::fuchsia::virtualization::GuestLifecycle_Run_Result result);
-  void HandleGuestStopped(fitx::result<::fuchsia::virtualization::GuestError> err);
+  void HandleGuestStopped(fit::result<::fuchsia::virtualization::GuestError> err);
 
   sys::ComponentContext* context_;
   fidl::BindingSet<fuchsia::virtualization::GuestManager> manager_bindings_;

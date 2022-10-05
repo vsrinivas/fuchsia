@@ -70,7 +70,7 @@ void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::uniqu
                      size_t* num_bytes);
 
 struct TestAllocator {
-  fitx::result<std::string_view, std::unique_ptr<std::byte[]>> operator()(size_t bytes) {
+  fit::result<std::string_view, std::unique_ptr<std::byte[]>> operator()(size_t bytes) {
     allocated_.push_back(bytes);
     return zbitl::decompress::DefaultAllocator(bytes);
   }

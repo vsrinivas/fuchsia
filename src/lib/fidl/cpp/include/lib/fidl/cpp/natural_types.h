@@ -189,7 +189,7 @@ OwnedEncodeResult Encode(FidlType value) {
 //     fidl::EncodedMessage message = fidl::EncodedMessage::Create(byte_span);
 //
 //     // Decode the message.
-//     fitx::result decoded = fidl::Decode<fuchsia_my_lib::SomeType>(
+//     fit::result decoded = fidl::Decode<fuchsia_my_lib::SomeType>(
 //         std::move(message), wire_format_metadata);
 //
 //     // Use the decoded value.
@@ -201,8 +201,8 @@ OwnedEncodeResult Encode(FidlType value) {
 // |message| is always consumed. |metadata| informs the wire format of the
 // encoded message.
 template <typename FidlType>
-::fitx::result<::fidl::Error, FidlType> Decode(::fidl::EncodedMessage message,
-                                               ::fidl::WireFormatMetadata metadata) {
+::fit::result<::fidl::Error, FidlType> Decode(::fidl::EncodedMessage message,
+                                              ::fidl::WireFormatMetadata metadata) {
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
   FidlType value{internal::DefaultConstructPossiblyInvalidObjectTag{}};
 
@@ -218,9 +218,9 @@ template <typename FidlType>
                                                 message, static_cast<void*>(&value));
 
   if (!status.ok()) {
-    return ::fitx::error(status);
+    return ::fit::error(status);
   }
-  return ::fitx::ok(std::move(value));
+  return ::fit::ok(std::move(value));
 }
 
 }  // namespace fidl

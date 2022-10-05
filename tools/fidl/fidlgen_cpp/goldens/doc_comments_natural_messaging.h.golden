@@ -37,7 +37,7 @@ class ::fidl::internal::NaturalClientImpl<::test_doccomments::Interface> final :
   /// method comment #1
   ///
   /// method comment #3
-  ::fitx::result<::fidl::Error> Method() const;
+  ::fit::result<::fidl::Error> Method() const;
 };
 namespace fidl {
 
@@ -54,7 +54,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface> fin
   /// method comment #1
   ///
   /// method comment #3
-  ::fitx::result<::fidl::Error> Method();
+  ::fit::result<::fidl::Error> Method();
 
  private:
   ::fidl::UnownedClientEnd<::test_doccomments::Interface> _client_end() const {
@@ -123,7 +123,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_doccomments::Interface> : 
   /// event comment #1
   ///
   /// event comment #3
-  ::fitx::result<::fidl::Error> OnEvent();
+  ::fit::result<::fidl::Error> OnEvent();
 };
 
 template <>
@@ -135,7 +135,7 @@ class ::fidl::internal::NaturalEventSender<::test_doccomments::Interface>
   /// event comment #1
   ///
   /// event comment #3
-  ::fitx::result<::fidl::Error> OnEvent();
+  ::fit::result<::fidl::Error> OnEvent();
 };
 
 #endif  // __Fuchsia__

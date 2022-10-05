@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_ITEMS_CPU_TOPOLOGY_H_
 #define SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_ITEMS_CPU_TOPOLOGY_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/boot/image.h>
 
@@ -25,11 +25,11 @@ class CpuTopologyTable {
 
   // Create a CpuTopologyTable from a ZBI item payload, which may be either
   // ZBI_TYPE_CPU_CONFIG or ZBI_TYPE_CPU_TOPOLOGY.
-  static fitx::result<std::string_view, CpuTopologyTable> FromPayload(uint32_t item_type,
-                                                                      ByteView payload);
+  static fit::result<std::string_view, CpuTopologyTable> FromPayload(uint32_t item_type,
+                                                                     ByteView payload);
 
   template <class Iterator>
-  static fitx::result<std::string_view, CpuTopologyTable> FromItem(Iterator it) {
+  static fit::result<std::string_view, CpuTopologyTable> FromItem(Iterator it) {
     auto [header, payload] = *it;
     return FromPayload(header->type, payload);
   }

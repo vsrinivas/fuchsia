@@ -87,7 +87,7 @@ extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestT
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChild>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChild>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -104,7 +104,7 @@ namespace test_protocolrequest {
 
 ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::GetChild>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -121,7 +121,7 @@ namespace test_protocolrequest {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChild>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChild>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -146,7 +146,7 @@ namespace test_protocolrequest {
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -163,7 +163,7 @@ namespace test_protocolrequest {
 
 ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::GetChildRequest>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -180,7 +180,7 @@ namespace test_protocolrequest {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -216,7 +216,7 @@ namespace test_protocolrequest {
 
 ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChild>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::TakeChild>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -257,7 +257,7 @@ namespace test_protocolrequest {
 
 ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChildRequest>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::TakeChildRequest>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -308,7 +308,7 @@ namespace test_protocolrequest {
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_protocolrequest::Parent>::TakeChild(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::TakeChild>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
@@ -321,7 +321,7 @@ namespace test_protocolrequest {
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::TakeChildRequest>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
@@ -383,7 +383,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_GetChild_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -397,7 +397,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -411,7 +411,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_TakeChild_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -426,7 +426,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_TakeChildRequest_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequestRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequestRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -486,7 +486,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::Get
 void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::GetChild>::MakeReply(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
   ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild> _response{std::move(c)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolrequest::Parent::GetChild>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};
@@ -525,7 +525,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::Get
 void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::GetChildRequest>::MakeReply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest> _response{std::move(r)};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocolrequest::Parent::GetChildRequest>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};

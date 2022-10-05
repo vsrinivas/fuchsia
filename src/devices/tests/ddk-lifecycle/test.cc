@@ -183,7 +183,7 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
   {
     const fidl::WireResult read_result = fidl::WireCall<File>(chan)->Read(10);
     ASSERT_OK(read_result.status());
-    const fitx::result response = read_result.value();
+    const fit::result response = read_result.value();
     ASSERT_TRUE(response.is_error());
     ASSERT_STATUS(response.error_value(), ZX_ERR_IO_NOT_PRESENT);
   }
@@ -192,7 +192,7 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
     const fidl::WireResult write_result =
         fidl::WireCall<File>(chan)->Write(fidl::VectorView<uint8_t>::FromExternal(array));
     ASSERT_OK(write_result.status());
-    const fitx::result response = write_result.value();
+    const fit::result response = write_result.value();
     ASSERT_TRUE(response.is_error());
     ASSERT_STATUS(response.error_value(), ZX_ERR_IO_NOT_PRESENT);
   }

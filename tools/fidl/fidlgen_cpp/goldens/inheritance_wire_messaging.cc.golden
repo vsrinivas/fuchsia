@@ -24,7 +24,7 @@ extern "C" const fidl_type_t test_inheritance_SuperFooResponseTable;
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_inheritance::Super::Foo>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_inheritance::Super::Foo>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -41,7 +41,7 @@ namespace test_inheritance {
 
 ::fidl::WireUnownedResult<::test_inheritance::Super::Foo>::WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritance::Super> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_inheritance::Super::Foo>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -58,7 +58,7 @@ namespace test_inheritance {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_inheritance::Super::Foo>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_inheritance::Super::Foo>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -117,7 +117,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_inheritance::ksuper_foo_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_inheritance::wire::SuperFooRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritance::wire::SuperFooRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -177,7 +177,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Super::Foo>::Re
 void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Super::Foo>::MakeReply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo> _response{y};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_inheritance::Super::Foo>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};
@@ -225,7 +225,7 @@ extern "C" const fidl_type_t test_inheritance_SuperFooResponseTable;
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_inheritance::Sub::Foo>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_inheritance::Sub::Foo>(
       outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -242,7 +242,7 @@ namespace test_inheritance {
 
 ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo>::WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_inheritance::Sub::Foo>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -259,7 +259,7 @@ namespace test_inheritance {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> handle_storage;
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_inheritance::Sub::Foo>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_inheritance::Sub::Foo>(
       outgoing.Call(
           client_end.handle(),
           handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
@@ -318,7 +318,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_inheritance::ksub_foo_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_inheritance::wire::SuperFooRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_inheritance::wire::SuperFooRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -378,7 +378,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Sub::Foo>::Repl
 void fidl::internal::WireBufferCompleterImpl<::test_inheritance::Sub::Foo>::MakeReply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo> _response{y};
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_inheritance::Sub::Foo>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     ::fidl::OutgoingMessage _failure{_allocation.error_value()};

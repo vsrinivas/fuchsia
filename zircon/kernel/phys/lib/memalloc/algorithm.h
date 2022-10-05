@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_ALGORITHM_H_
 
 #include <lib/fit/function.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/memalloc/range.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
@@ -86,14 +86,13 @@ constexpr size_t FindNormalizedRangesScratchSize(size_t n) { return 4 * n; }
 // be.
 //
 // Ranges may overlap only if they are of the same type or one type is
-// kFreeRam; otherwise fitx::failed is returned.
-fitx::result<fitx::failed> FindNormalizedRanges(RangeStream ranges, cpp20::span<void*> scratch,
-                                                RangeCallback cb);
+// kFreeRam; otherwise fit::failed is returned.
+fit::result<fit::failed> FindNormalizedRanges(RangeStream ranges, cpp20::span<void*> scratch,
+                                              RangeCallback cb);
 
 // Used for streamlined testing.
-inline fitx::result<fitx::failed> FindNormalizedRanges(cpp20::span<Range> ranges,
-                                                       cpp20::span<void*> scratch,
-                                                       RangeCallback cb) {
+inline fit::result<fit::failed> FindNormalizedRanges(cpp20::span<Range> ranges,
+                                                     cpp20::span<void*> scratch, RangeCallback cb) {
   internal::RangeIterationContext ctx(ranges);
   return FindNormalizedRanges(RangeStream({&ctx, 1}), scratch, std::move(cb));
 }

@@ -93,7 +93,7 @@ class MockI2c : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
     fidl::ObjectView<fuchsia_hardware_i2c::wire::DeviceTransferResponse> response(arena);
     response->read_data =
         fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(read_ops.data(), read_ops.size());
-    completer.Reply(::fitx::ok(response.get()));
+    completer.Reply(::fit::ok(response.get()));
   }
 
  private:

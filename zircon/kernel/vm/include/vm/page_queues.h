@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <sys/types.h>
 #include <zircon/listnode.h>
 

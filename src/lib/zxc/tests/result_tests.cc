@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/status.h>
 #include <zircon/errors.h>
 
@@ -21,79 +21,79 @@ namespace {
 struct nothing {};
 
 // Basic properties.
-static_assert(!std::is_constructible_v<fitx::result<int>>);
-static_assert(std::is_constructible_v<fitx::result<int>, fitx::success<>>);
-static_assert(!std::is_constructible_v<fitx::result<int>, fitx::failed>);
-static_assert(!std::is_constructible_v<fitx::result<int>, nothing>);
-static_assert(!std::is_constructible_v<fitx::result<int>, fitx::success<nothing>>);
-static_assert(std::is_constructible_v<fitx::result<int>, fitx::error<int>>);
-static_assert(!std::is_constructible_v<fitx::result<int>, fitx::error<nothing>>);
+static_assert(!std::is_constructible_v<fit::result<int>>);
+static_assert(std::is_constructible_v<fit::result<int>, fit::success<>>);
+static_assert(!std::is_constructible_v<fit::result<int>, fit::failed>);
+static_assert(!std::is_constructible_v<fit::result<int>, nothing>);
+static_assert(!std::is_constructible_v<fit::result<int>, fit::success<nothing>>);
+static_assert(std::is_constructible_v<fit::result<int>, fit::error<int>>);
+static_assert(!std::is_constructible_v<fit::result<int>, fit::error<nothing>>);
 
-static_assert(!std::is_constructible_v<fitx::result<int, int>>);
-static_assert(!std::is_constructible_v<fitx::result<int, int>, fitx::success<>>);
-static_assert(!std::is_constructible_v<fitx::result<int, int>, fitx::failed>);
-static_assert(!std::is_constructible_v<fitx::result<int, int>, int>);
-static_assert(std::is_constructible_v<fitx::result<int, int>, fitx::success<int>>);
-static_assert(!std::is_constructible_v<fitx::result<int, int>, nothing>);
-static_assert(!std::is_constructible_v<fitx::result<int, int>, fitx::success<nothing>>);
-static_assert(std::is_constructible_v<fitx::result<int, int>, fitx::error<int>>);
-static_assert(!std::is_constructible_v<fitx::result<int, int>, fitx::error<nothing>>);
+static_assert(!std::is_constructible_v<fit::result<int, int>>);
+static_assert(!std::is_constructible_v<fit::result<int, int>, fit::success<>>);
+static_assert(!std::is_constructible_v<fit::result<int, int>, fit::failed>);
+static_assert(!std::is_constructible_v<fit::result<int, int>, int>);
+static_assert(std::is_constructible_v<fit::result<int, int>, fit::success<int>>);
+static_assert(!std::is_constructible_v<fit::result<int, int>, nothing>);
+static_assert(!std::is_constructible_v<fit::result<int, int>, fit::success<nothing>>);
+static_assert(std::is_constructible_v<fit::result<int, int>, fit::error<int>>);
+static_assert(!std::is_constructible_v<fit::result<int, int>, fit::error<nothing>>);
 
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed>>);
-static_assert(std::is_constructible_v<fitx::result<fitx::failed>, fitx::success<>>);
-static_assert(std::is_constructible_v<fitx::result<fitx::failed>, fitx::failed>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed>, nothing>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed>, fitx::success<nothing>>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed>, fitx::error<int>>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed>, fitx::error<nothing>>);
-static_assert(std::is_constructible_v<fitx::result<fitx::failed>, fitx::error<fitx::failed>>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed>>);
+static_assert(std::is_constructible_v<fit::result<fit::failed>, fit::success<>>);
+static_assert(std::is_constructible_v<fit::result<fit::failed>, fit::failed>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed>, nothing>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed>, fit::success<nothing>>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed>, fit::error<int>>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed>, fit::error<nothing>>);
+static_assert(std::is_constructible_v<fit::result<fit::failed>, fit::error<fit::failed>>);
 
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed, int>>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::success<>>);
-static_assert(std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::failed>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed, int>, int>);
-static_assert(std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::success<int>>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed, int>, nothing>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::success<nothing>>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::error<int>>);
-static_assert(!std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::error<nothing>>);
-static_assert(std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::error<fitx::failed>>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed, int>>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed, int>, fit::success<>>);
+static_assert(std::is_constructible_v<fit::result<fit::failed, int>, fit::failed>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed, int>, int>);
+static_assert(std::is_constructible_v<fit::result<fit::failed, int>, fit::success<int>>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed, int>, nothing>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed, int>, fit::success<nothing>>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed, int>, fit::error<int>>);
+static_assert(!std::is_constructible_v<fit::result<fit::failed, int>, fit::error<nothing>>);
+static_assert(std::is_constructible_v<fit::result<fit::failed, int>, fit::error<fit::failed>>);
 
 // Ensure that success/error types and helpers do not return references to their arguments when
 // deducing the value/error types.
-[[maybe_unused]] constexpr auto return_success(int value) { return fitx::success(value); }
-[[maybe_unused]] constexpr auto return_error(int value) { return fitx::error(value); }
-[[maybe_unused]] constexpr auto return_ok(int value) { return fitx::ok(value); }
-[[maybe_unused]] constexpr auto return_as_error(int value) { return fitx::as_error(value); }
-static_assert(std::is_same_v<fitx::success<int>, decltype(return_success(10))>);
-static_assert(std::is_same_v<fitx::error<int>, decltype(return_error(10))>);
-static_assert(std::is_same_v<fitx::success<int>, decltype(return_ok(10))>);
-static_assert(std::is_same_v<fitx::error<int>, decltype(return_as_error(10))>);
+[[maybe_unused]] constexpr auto return_success(int value) { return fit::success(value); }
+[[maybe_unused]] constexpr auto return_error(int value) { return fit::error(value); }
+[[maybe_unused]] constexpr auto return_ok(int value) { return fit::ok(value); }
+[[maybe_unused]] constexpr auto return_as_error(int value) { return fit::as_error(value); }
+static_assert(std::is_same_v<fit::success<int>, decltype(return_success(10))>);
+static_assert(std::is_same_v<fit::error<int>, decltype(return_error(10))>);
+static_assert(std::is_same_v<fit::success<int>, decltype(return_ok(10))>);
+static_assert(std::is_same_v<fit::error<int>, decltype(return_as_error(10))>);
 
 #if 0 || TEST_DOES_NOT_COMPILE
-static_assert(fitx::result<fitx::success<>>{});
-static_assert(fitx::result<int, fitx::failed>{});
+static_assert(fit::result<fit::success<>>{});
+static_assert(fit::result<int, fit::failed>{});
 #endif
 
-static_assert(fitx::result<fitx::failed>{fitx::ok()}.is_ok() == true);
-static_assert(fitx::result<fitx::failed>{fitx::ok()}.is_error() == false);
-static_assert(fitx::result<fitx::failed>{fitx::failed()}.is_ok() == false);
-static_assert(fitx::result<fitx::failed>{fitx::failed()}.is_error() == true);
+static_assert(fit::result<fit::failed>{fit::ok()}.is_ok() == true);
+static_assert(fit::result<fit::failed>{fit::ok()}.is_error() == false);
+static_assert(fit::result<fit::failed>{fit::failed()}.is_ok() == false);
+static_assert(fit::result<fit::failed>{fit::failed()}.is_error() == true);
 
-static_assert(fitx::result<int>{fitx::ok()}.is_ok() == true);
-static_assert(fitx::result<int>{fitx::ok()}.is_error() == false);
-static_assert(fitx::result<int>{fitx::error(0)}.is_ok() == false);
-static_assert(fitx::result<int>{fitx::error(0)}.is_error() == true);
+static_assert(fit::result<int>{fit::ok()}.is_ok() == true);
+static_assert(fit::result<int>{fit::ok()}.is_error() == false);
+static_assert(fit::result<int>{fit::error(0)}.is_ok() == false);
+static_assert(fit::result<int>{fit::error(0)}.is_error() == true);
 
-static_assert(fitx::result<int, int>{fitx::ok(10)}.is_ok() == true);
-static_assert(fitx::result<int, int>{fitx::ok(10)}.is_error() == false);
-static_assert(fitx::result<int, int>{fitx::ok(10)}.value() == 10);
-static_assert(*fitx::result<int, int>{fitx::ok(10)} == 10);
-static_assert(fitx::result<int, int>{fitx::ok(10)}.value_or(20) == 10);
-static_assert(fitx::result<int, int>{fitx::error(10)}.is_ok() == false);
-static_assert(fitx::result<int, int>{fitx::error(10)}.is_error() == true);
-static_assert(fitx::result<int, int>{fitx::error(10)}.error_value() == 10);
-static_assert(fitx::result<int, int>{fitx::error(10)}.value_or(20) == 20);
+static_assert(fit::result<int, int>{fit::ok(10)}.is_ok() == true);
+static_assert(fit::result<int, int>{fit::ok(10)}.is_error() == false);
+static_assert(fit::result<int, int>{fit::ok(10)}.value() == 10);
+static_assert(*fit::result<int, int>{fit::ok(10)} == 10);
+static_assert(fit::result<int, int>{fit::ok(10)}.value_or(20) == 10);
+static_assert(fit::result<int, int>{fit::error(10)}.is_ok() == false);
+static_assert(fit::result<int, int>{fit::error(10)}.is_error() == true);
+static_assert(fit::result<int, int>{fit::error(10)}.error_value() == 10);
+static_assert(fit::result<int, int>{fit::error(10)}.value_or(20) == 20);
 
 // Agumenting errors.
 struct augmented_error {
@@ -107,12 +107,12 @@ struct augmented_error {
 template <typename T>
 constexpr bool agument_compiles() {
   {
-    fitx::result<augmented_error> result = fitx::error<augmented_error>();
-    result += fitx::error<T>();
+    fit::result<augmented_error> result = fit::error<augmented_error>();
+    result += fit::error<T>();
   }
   {
-    fitx::result<augmented_error, int> result = fitx::error<augmented_error>();
-    result += fitx::error<T>();
+    fit::result<augmented_error, int> result = fit::error<augmented_error>();
+    result += fit::error<T>();
   }
   return true;
 }
@@ -128,12 +128,12 @@ struct test_members {
   int b;
 };
 
-static_assert(fitx::result<fitx::failed, test_members> { zx::ok(test_members{10, 20}) } -> a == 10);
-static_assert(fitx::result<fitx::failed, test_members> { zx::ok(test_members{10, 20}) } -> b == 20);
-static_assert(fitx::result<fitx::failed, std::optional<test_members>> {
+static_assert(fit::result<fit::failed, test_members> { zx::ok(test_members{10, 20}) } -> a == 10);
+static_assert(fit::result<fit::failed, test_members> { zx::ok(test_members{10, 20}) } -> b == 20);
+static_assert(fit::result<fit::failed, std::optional<test_members>> {
   zx::ok(test_members{10, 20})
 } -> a == 10);
-static_assert(fitx::result<fitx::failed, std::optional<test_members>> {
+static_assert(fit::result<fit::failed, std::optional<test_members>> {
   zx::ok(test_members{10, 20})
 } -> b == 20);
 
@@ -243,106 +243,106 @@ static_assert(!std::is_trivially_copy_constructible_v<non_trivial_copyable>);
 static_assert(!std::is_trivially_move_constructible_v<non_trivial_copyable>);
 static_assert(!std::is_trivially_destructible_v<non_trivial_copyable>);
 
-// Assert that fitx::result maintains the properties common to its error and
+// Assert that fit::result maintains the properties common to its error and
 // value types.
-static_assert(std::is_trivially_copy_constructible_v<fitx::result<trivial, trivial>>);
-static_assert(!std::is_trivially_copy_constructible_v<fitx::result<trivial, non_trivial>>);
-static_assert(!std::is_trivially_copy_constructible_v<fitx::result<non_trivial, trivial>>);
-static_assert(!std::is_trivially_copy_constructible_v<fitx::result<non_trivial, non_trivial>>);
+static_assert(std::is_trivially_copy_constructible_v<fit::result<trivial, trivial>>);
+static_assert(!std::is_trivially_copy_constructible_v<fit::result<trivial, non_trivial>>);
+static_assert(!std::is_trivially_copy_constructible_v<fit::result<non_trivial, trivial>>);
+static_assert(!std::is_trivially_copy_constructible_v<fit::result<non_trivial, non_trivial>>);
 
-static_assert(std::is_trivially_move_constructible_v<fitx::result<trivial, trivial>>);
-static_assert(!std::is_trivially_move_constructible_v<fitx::result<trivial, non_trivial>>);
-static_assert(!std::is_trivially_move_constructible_v<fitx::result<non_trivial, trivial>>);
-static_assert(!std::is_trivially_move_constructible_v<fitx::result<non_trivial, non_trivial>>);
+static_assert(std::is_trivially_move_constructible_v<fit::result<trivial, trivial>>);
+static_assert(!std::is_trivially_move_constructible_v<fit::result<trivial, non_trivial>>);
+static_assert(!std::is_trivially_move_constructible_v<fit::result<non_trivial, trivial>>);
+static_assert(!std::is_trivially_move_constructible_v<fit::result<non_trivial, non_trivial>>);
 
-static_assert(std::is_trivially_destructible_v<fitx::result<trivial, trivial>>);
-static_assert(!std::is_trivially_destructible_v<fitx::result<trivial, non_trivial>>);
-static_assert(!std::is_trivially_destructible_v<fitx::result<non_trivial, trivial>>);
-static_assert(!std::is_trivially_destructible_v<fitx::result<non_trivial, non_trivial>>);
+static_assert(std::is_trivially_destructible_v<fit::result<trivial, trivial>>);
+static_assert(!std::is_trivially_destructible_v<fit::result<trivial, non_trivial>>);
+static_assert(!std::is_trivially_destructible_v<fit::result<non_trivial, trivial>>);
+static_assert(!std::is_trivially_destructible_v<fit::result<non_trivial, non_trivial>>);
 
 static_assert(
-    !std::is_default_constructible_v<fitx::result<default_constructible, default_constructible>>);
+    !std::is_default_constructible_v<fit::result<default_constructible, default_constructible>>);
 static_assert(!std::is_default_constructible_v<
-              fitx::result<default_constructible, non_default_constructible>>);
+              fit::result<default_constructible, non_default_constructible>>);
 static_assert(!std::is_default_constructible_v<
-              fitx::result<non_default_constructible, default_constructible>>);
+              fit::result<non_default_constructible, default_constructible>>);
 static_assert(!std::is_default_constructible_v<
-              fitx::result<non_default_constructible, non_default_constructible>>);
+              fit::result<non_default_constructible, non_default_constructible>>);
 
-static_assert(std::is_copy_constructible_v<fitx::result<copyable, copyable>>);
-static_assert(!std::is_copy_constructible_v<fitx::result<copyable, move_only>>);
-static_assert(!std::is_copy_constructible_v<fitx::result<move_only, copyable>>);
-static_assert(!std::is_copy_constructible_v<fitx::result<move_only, move_only>>);
+static_assert(std::is_copy_constructible_v<fit::result<copyable, copyable>>);
+static_assert(!std::is_copy_constructible_v<fit::result<copyable, move_only>>);
+static_assert(!std::is_copy_constructible_v<fit::result<move_only, copyable>>);
+static_assert(!std::is_copy_constructible_v<fit::result<move_only, move_only>>);
 static_assert(
-    std::is_copy_constructible_v<fitx::result<non_trivial_copyable, non_trivial_copyable>>);
+    std::is_copy_constructible_v<fit::result<non_trivial_copyable, non_trivial_copyable>>);
 
-static_assert(std::is_copy_assignable_v<fitx::result<copyable, copyable>>);
-static_assert(!std::is_copy_assignable_v<fitx::result<copyable, move_only>>);
-static_assert(!std::is_copy_assignable_v<fitx::result<move_only, copyable>>);
-static_assert(!std::is_copy_assignable_v<fitx::result<move_only, move_only>>);
-static_assert(std::is_copy_assignable_v<fitx::result<non_trivial_copyable, non_trivial_copyable>>);
+static_assert(std::is_copy_assignable_v<fit::result<copyable, copyable>>);
+static_assert(!std::is_copy_assignable_v<fit::result<copyable, move_only>>);
+static_assert(!std::is_copy_assignable_v<fit::result<move_only, copyable>>);
+static_assert(!std::is_copy_assignable_v<fit::result<move_only, move_only>>);
+static_assert(std::is_copy_assignable_v<fit::result<non_trivial_copyable, non_trivial_copyable>>);
 
-static_assert(std::is_trivially_copy_constructible_v<fitx::result<trivial, trivial>>);
-static_assert(!std::is_trivially_copy_constructible_v<fitx::result<trivial, non_trivial>>);
-static_assert(!std::is_trivially_copy_constructible_v<fitx::result<non_trivial, trivial>>);
-static_assert(!std::is_trivially_copy_constructible_v<fitx::result<non_trivial, non_trivial>>);
+static_assert(std::is_trivially_copy_constructible_v<fit::result<trivial, trivial>>);
+static_assert(!std::is_trivially_copy_constructible_v<fit::result<trivial, non_trivial>>);
+static_assert(!std::is_trivially_copy_constructible_v<fit::result<non_trivial, trivial>>);
+static_assert(!std::is_trivially_copy_constructible_v<fit::result<non_trivial, non_trivial>>);
 static_assert(!std::is_trivially_copy_constructible_v<
-              fitx::result<non_trivial_copyable, non_trivial_copyable>>);
+              fit::result<non_trivial_copyable, non_trivial_copyable>>);
 
-static_assert(std::is_move_constructible_v<fitx::result<copyable, copyable>>);
-static_assert(std::is_move_constructible_v<fitx::result<copyable, move_only>>);
-static_assert(std::is_move_constructible_v<fitx::result<move_only, copyable>>);
-static_assert(std::is_move_constructible_v<fitx::result<move_only, move_only>>);
+static_assert(std::is_move_constructible_v<fit::result<copyable, copyable>>);
+static_assert(std::is_move_constructible_v<fit::result<copyable, move_only>>);
+static_assert(std::is_move_constructible_v<fit::result<move_only, copyable>>);
+static_assert(std::is_move_constructible_v<fit::result<move_only, move_only>>);
 static_assert(
-    std::is_move_constructible_v<fitx::result<non_trivial_copyable, non_trivial_copyable>>);
+    std::is_move_constructible_v<fit::result<non_trivial_copyable, non_trivial_copyable>>);
 
-static_assert(std::is_move_assignable_v<fitx::result<copyable, copyable>>);
-static_assert(std::is_move_assignable_v<fitx::result<copyable, move_only>>);
-static_assert(std::is_move_assignable_v<fitx::result<move_only, copyable>>);
-static_assert(std::is_move_assignable_v<fitx::result<move_only, move_only>>);
-static_assert(std::is_move_assignable_v<fitx::result<non_trivial_copyable, non_trivial_copyable>>);
+static_assert(std::is_move_assignable_v<fit::result<copyable, copyable>>);
+static_assert(std::is_move_assignable_v<fit::result<copyable, move_only>>);
+static_assert(std::is_move_assignable_v<fit::result<move_only, copyable>>);
+static_assert(std::is_move_assignable_v<fit::result<move_only, move_only>>);
+static_assert(std::is_move_assignable_v<fit::result<non_trivial_copyable, non_trivial_copyable>>);
 
-static_assert(std::is_nothrow_move_constructible_v<fitx::result<copyable, copyable>>);
-static_assert(std::is_nothrow_move_constructible_v<fitx::result<copyable, move_only>>);
-static_assert(std::is_nothrow_move_constructible_v<fitx::result<move_only, copyable>>);
-static_assert(std::is_nothrow_move_constructible_v<fitx::result<move_only, move_only>>);
+static_assert(std::is_nothrow_move_constructible_v<fit::result<copyable, copyable>>);
+static_assert(std::is_nothrow_move_constructible_v<fit::result<copyable, move_only>>);
+static_assert(std::is_nothrow_move_constructible_v<fit::result<move_only, copyable>>);
+static_assert(std::is_nothrow_move_constructible_v<fit::result<move_only, move_only>>);
 static_assert(
-    std::is_nothrow_move_constructible_v<fitx::result<non_trivial_copyable, non_trivial_copyable>>);
+    std::is_nothrow_move_constructible_v<fit::result<non_trivial_copyable, non_trivial_copyable>>);
 
-static_assert(std::is_trivially_move_constructible_v<fitx::result<trivial, trivial>>);
-static_assert(!std::is_trivially_move_constructible_v<fitx::result<trivial, non_trivial>>);
-static_assert(!std::is_trivially_move_constructible_v<fitx::result<non_trivial, trivial>>);
-static_assert(!std::is_trivially_move_constructible_v<fitx::result<non_trivial, non_trivial>>);
+static_assert(std::is_trivially_move_constructible_v<fit::result<trivial, trivial>>);
+static_assert(!std::is_trivially_move_constructible_v<fit::result<trivial, non_trivial>>);
+static_assert(!std::is_trivially_move_constructible_v<fit::result<non_trivial, trivial>>);
+static_assert(!std::is_trivially_move_constructible_v<fit::result<non_trivial, non_trivial>>);
 static_assert(!std::is_trivially_move_constructible_v<
-              fitx::result<non_trivial_copyable, non_trivial_copyable>>);
+              fit::result<non_trivial_copyable, non_trivial_copyable>>);
 
-// Assert that fitx::error maintains the properties of its error type.
-static_assert(std::is_trivially_copy_constructible_v<fitx::error<trivial>>);
-static_assert(!std::is_trivially_copy_constructible_v<fitx::error<non_trivial>>);
+// Assert that fit::error maintains the properties of its error type.
+static_assert(std::is_trivially_copy_constructible_v<fit::error<trivial>>);
+static_assert(!std::is_trivially_copy_constructible_v<fit::error<non_trivial>>);
 
-static_assert(std::is_trivially_move_constructible_v<fitx::error<trivial>>);
-static_assert(!std::is_trivially_move_constructible_v<fitx::error<non_trivial>>);
+static_assert(std::is_trivially_move_constructible_v<fit::error<trivial>>);
+static_assert(!std::is_trivially_move_constructible_v<fit::error<non_trivial>>);
 
-static_assert(std::is_trivially_destructible_v<fitx::error<trivial>>);
-static_assert(!std::is_trivially_destructible_v<fitx::error<non_trivial>>);
+static_assert(std::is_trivially_destructible_v<fit::error<trivial>>);
+static_assert(!std::is_trivially_destructible_v<fit::error<non_trivial>>);
 
-static_assert(std::is_default_constructible_v<fitx::error<default_constructible>>);
-static_assert(!std::is_default_constructible_v<fitx::error<non_default_constructible>>);
+static_assert(std::is_default_constructible_v<fit::error<default_constructible>>);
+static_assert(!std::is_default_constructible_v<fit::error<non_default_constructible>>);
 
-static_assert(std::is_copy_constructible_v<fitx::error<copyable>>);
-static_assert(!std::is_copy_constructible_v<fitx::error<move_only>>);
+static_assert(std::is_copy_constructible_v<fit::error<copyable>>);
+static_assert(!std::is_copy_constructible_v<fit::error<move_only>>);
 
-static_assert(std::is_trivially_copy_constructible_v<fitx::error<trivial>>);
-static_assert(!std::is_trivially_copy_constructible_v<fitx::error<non_trivial>>);
+static_assert(std::is_trivially_copy_constructible_v<fit::error<trivial>>);
+static_assert(!std::is_trivially_copy_constructible_v<fit::error<non_trivial>>);
 
-static_assert(std::is_move_constructible_v<fitx::error<copyable>>);
-static_assert(std::is_move_constructible_v<fitx::error<move_only>>);
+static_assert(std::is_move_constructible_v<fit::error<copyable>>);
+static_assert(std::is_move_constructible_v<fit::error<move_only>>);
 
-static_assert(std::is_nothrow_move_constructible_v<fitx::error<copyable>>);
-static_assert(std::is_nothrow_move_constructible_v<fitx::error<move_only>>);
+static_assert(std::is_nothrow_move_constructible_v<fit::error<copyable>>);
+static_assert(std::is_nothrow_move_constructible_v<fit::error<move_only>>);
 
-static_assert(std::is_trivially_move_constructible_v<fitx::error<trivial>>);
-static_assert(!std::is_trivially_move_constructible_v<fitx::error<non_trivial>>);
+static_assert(std::is_trivially_move_constructible_v<fit::error<trivial>>);
+static_assert(!std::is_trivially_move_constructible_v<fit::error<non_trivial>>);
 
 namespace comparison_tests {
 
@@ -379,7 +379,7 @@ constexpr bool operator<(less, greater) { return true; }
 constexpr bool operator>(less, greater) { return false; }
 
 // Note these definitions match the empty-to-other, other-to-empty, and
-// empty-to-empty comparison behavior of fitx::result for convenience in
+// empty-to-empty comparison behavior of fit::result for convenience in
 // exhaustive testing.
 constexpr bool operator==(empty, greater) { return false; }
 constexpr bool operator<=(empty, greater) { return true; }
@@ -421,10 +421,10 @@ constexpr bool match_comparisons(T, U) {
   constexpr T lhs{};
   constexpr U rhs{};
 
-  constexpr fitx::result<empty, T> ok_lhs{fitx::ok(lhs)};
-  constexpr fitx::result<empty, U> ok_rhs{fitx::ok(rhs)};
-  constexpr fitx::result<empty, T> error_lhs{fitx::error(empty{})};
-  constexpr fitx::result<empty, U> error_rhs{fitx::error(empty{})};
+  constexpr fit::result<empty, T> ok_lhs{fit::ok(lhs)};
+  constexpr fit::result<empty, U> ok_rhs{fit::ok(rhs)};
+  constexpr fit::result<empty, T> error_lhs{fit::error(empty{})};
+  constexpr fit::result<empty, U> error_rhs{fit::error(empty{})};
 
   // Both result operands.
   static_assert((ok_lhs == ok_rhs) == (lhs == rhs));
@@ -500,19 +500,19 @@ static_assert(match_comparisons(less{}, less{}));
 TEST(LibZxCommon, Abort) {
   // Validate that accessing the error of a non-error result aborts.
   ASSERT_DEATH(([] {
-    fitx::result<nothing, int> result{fitx::ok(10)};
+    fit::result<nothing, int> result{fit::ok(10)};
     EXPECT_FALSE(result.is_error());
     EXPECT_TRUE(result.is_ok());
     result.error_value();
   }));
   ASSERT_DEATH(([] {
-    const fitx::result<nothing, int> result{fitx::ok(10)};
+    const fit::result<nothing, int> result{fit::ok(10)};
     EXPECT_FALSE(result.is_error());
     EXPECT_TRUE(result.is_ok());
     result.error_value();
   }));
   ASSERT_DEATH(([] {
-    fitx::result<nothing, int> result{fitx::ok(10)};
+    fit::result<nothing, int> result{fit::ok(10)};
     EXPECT_FALSE(result.is_error());
     EXPECT_TRUE(result.is_ok());
     result.take_error();
@@ -520,65 +520,65 @@ TEST(LibZxCommon, Abort) {
 
   // Validate that accessing the value of an error result aborts.
   ASSERT_DEATH(([] {
-    fitx::result<nothing, int> result{fitx::error(nothing{})};
+    fit::result<nothing, int> result{fit::error(nothing{})};
     EXPECT_TRUE(result.is_error());
     EXPECT_FALSE(result.is_ok());
     result.value();
   }));
   ASSERT_DEATH(([] {
-    const fitx::result<nothing, int> result{fitx::error(nothing{})};
+    const fit::result<nothing, int> result{fit::error(nothing{})};
     EXPECT_TRUE(result.is_error());
     EXPECT_FALSE(result.is_ok());
     result.value();
   }));
   ASSERT_DEATH(([] {
-    fitx::result<nothing, int> result{fitx::error(nothing{})};
+    fit::result<nothing, int> result{fit::error(nothing{})};
     EXPECT_TRUE(result.is_error());
     EXPECT_FALSE(result.is_ok());
     std::move(result).value();
   }));
   ASSERT_DEATH(([] {
-    const fitx::result<nothing, int> result{fitx::error(nothing{})};
+    const fit::result<nothing, int> result{fit::error(nothing{})};
     EXPECT_TRUE(result.is_error());
     EXPECT_FALSE(result.is_ok());
     std::move(result).value();
   }));
   ASSERT_DEATH(([] {
-    fitx::result<nothing, int> result{fitx::error(nothing{})};
+    fit::result<nothing, int> result{fit::error(nothing{})};
     *result;
   }));
   ASSERT_DEATH(([] {
-    const fitx::result<nothing, int> result{fitx::error(nothing{})};
+    const fit::result<nothing, int> result{fit::error(nothing{})};
     *result;
   }));
   ASSERT_DEATH(([] {
-    fitx::result<nothing, int> result{fitx::error(nothing{})};
+    fit::result<nothing, int> result{fit::error(nothing{})};
     *std::move(result);
   }));
   ASSERT_DEATH(([] {
-    const fitx::result<nothing, int> result{fitx::error(nothing{})};
+    const fit::result<nothing, int> result{fit::error(nothing{})};
     *std::move(result);
   }));
   ASSERT_DEATH(([] {
-    fitx::result<nothing, test_members> result{fitx::error(nothing{})};
+    fit::result<nothing, test_members> result{fit::error(nothing{})};
     EXPECT_TRUE(result.is_error());
     EXPECT_FALSE(result.is_ok());
     (void)result->a;
   }));
   ASSERT_DEATH(([] {
-    const fitx::result<nothing, test_members> result{fitx::error(nothing{})};
+    const fit::result<nothing, test_members> result{fit::error(nothing{})};
     EXPECT_TRUE(result.is_error());
     EXPECT_FALSE(result.is_ok());
     (void)result->a;
   }));
   ASSERT_DEATH(([] {
-    fitx::result<nothing, std::optional<test_members>> result{fitx::error(nothing{})};
+    fit::result<nothing, std::optional<test_members>> result{fit::error(nothing{})};
     EXPECT_TRUE(result.is_error());
     EXPECT_FALSE(result.is_ok());
     (void)result->a;
   }));
   ASSERT_DEATH(([] {
-    const fitx::result<nothing, std::optional<test_members>> result{fitx::error(nothing{})};
+    const fit::result<nothing, std::optional<test_members>> result{fit::error(nothing{})};
     EXPECT_TRUE(result.is_error());
     EXPECT_FALSE(result.is_ok());
     (void)result->a;
@@ -690,8 +690,8 @@ struct counter {
 using counter_a = counter<0>;
 using counter_b = counter<1>;
 
-fitx::result<counter_a, counter_b> get_values() { return fitx::ok(counter_b{non_default_v}); }
-fitx::result<counter_a, counter_b> get_error() { return fitx::error(non_default_v); }
+fit::result<counter_a, counter_b> get_values() { return fit::ok(counter_b{non_default_v}); }
+fit::result<counter_a, counter_b> get_error() { return fit::error(non_default_v); }
 
 TEST(LibZxCommon, BasicConstructorDestructor) {
   counter_a::reset();
@@ -877,8 +877,8 @@ TEST(LibZxCommon, Accessors) {
     auto result = get_values();
     auto b = result.take_value();
 
-    static_assert(std::is_same_v<decltype(b), fitx::success<counter_b>>);
-    static_assert(std::is_same_v<decltype(result.take_value()), fitx::success<counter_b>>);
+    static_assert(std::is_same_v<decltype(b), fit::success<counter_b>>);
+    static_assert(std::is_same_v<decltype(result.take_value()), fit::success<counter_b>>);
 
     EXPECT_EQ(0, counter_a::constructor_count());
     EXPECT_EQ(0, counter_a::alive_count());
@@ -975,7 +975,7 @@ TEST(LibZxCommon, ErrorResults) {
     auto result = get_error();
     auto error = result.take_error();
 
-    static_assert(std::is_same_v<decltype(error), fitx::error<counter_a>>);
+    static_assert(std::is_same_v<decltype(error), fit::error<counter_a>>);
 
     EXPECT_EQ(0, counter_a::default_constructor_count);
     EXPECT_NE(0, counter_a::constructor_count());
@@ -998,7 +998,7 @@ TEST(LibZxCommon, ErrorResults) {
     auto result = get_error();
     const auto& error = result.take_error();
 
-    static_assert(std::is_same_v<decltype(error), const fitx::error<counter_a>&>);
+    static_assert(std::is_same_v<decltype(error), const fit::error<counter_a>&>);
 
     EXPECT_EQ(0, counter_a::default_constructor_count);
     EXPECT_NE(0, counter_a::constructor_count());
@@ -1054,31 +1054,31 @@ struct ErrorMsg {
 
 TEST(LibZxCommon, AugmentError) {
   {
-    fitx::result<std::string> result = fitx::error("Bad outcome!");
-    result += fitx::error("More details!");
+    fit::result<std::string> result = fit::error("Bad outcome!");
+    result += fit::error("More details!");
     EXPECT_STREQ(result.error_value(), "Bad outcome!More details!");
   }
 
   {
-    fitx::result<std::string, int> result = fitx::error("Bad outcome!");
-    result += fitx::error("More details!");
+    fit::result<std::string, int> result = fit::error("Bad outcome!");
+    result += fit::error("More details!");
     EXPECT_STREQ(result.error_value(), "Bad outcome!More details!");
   }
 
   {
-    fitx::result<ErrorMsg> result = fitx::error(ErrorMsg{ZX_ERR_NOT_FOUND});
+    fit::result<ErrorMsg> result = fit::error(ErrorMsg{ZX_ERR_NOT_FOUND});
     EXPECT_EQ(0, result.error_value().details.size());
 
-    result += fitx::error("More details!");
+    result += fit::error("More details!");
     ASSERT_EQ(1, result.error_value().details.size());
     EXPECT_STREQ(result.error_value().details[0], "More details!");
   }
 
   {
-    fitx::result<ErrorMsg, int> result = fitx::error(ErrorMsg{ZX_ERR_NOT_FOUND});
+    fit::result<ErrorMsg, int> result = fit::error(ErrorMsg{ZX_ERR_NOT_FOUND});
     EXPECT_EQ(0, result.error_value().details.size());
 
-    result += fitx::error("More details!");
+    result += fit::error("More details!");
     ASSERT_EQ(1, result.error_value().details.size());
     EXPECT_STREQ(result.error_value().details[0], "More details!");
   }
@@ -1095,14 +1095,14 @@ TEST(LibZxCommon, AugmentError) {
 TEST(ResultTests, ResultRvalueOverloads) {
   // result.value() &&
   {
-    fitx::result<int, move_only> result = fitx::success<move_only>();
+    fit::result<int, move_only> result = fit::success<move_only>();
     move_only value = std::move(result).value();
     (void)value;
   }
 
   // result.error_value() &&
   {
-    fitx::result<move_only, int> moved_error = fitx::error<move_only>();
+    fit::result<move_only, int> moved_error = fit::error<move_only>();
     move_only value = std::move(moved_error).error_value();
     (void)value;
   }
@@ -1111,12 +1111,12 @@ TEST(ResultTests, ResultRvalueOverloads) {
 // Test that operator*() functions on single-value result types.
 TEST(ResultTests, OperatorStar) {
   {
-    fitx::result<int, move_only> result = fitx::success<move_only>();
+    fit::result<int, move_only> result = fit::success<move_only>();
     move_only value = std::move(*result);
     (void)value;
   }
   {
-    fitx::result<int, move_only> result = fitx::success<move_only>();
+    fit::result<int, move_only> result = fit::success<move_only>();
     move_only value = *std::move(result);
     (void)value;
   }
@@ -1209,8 +1209,8 @@ TEST(LibZxCommon, MakeStatusWithMoveOnlyType) {
 
 TEST(LibZxCommon, Swap) {
   {
-    fitx::result<char> result1 = fitx::ok();
-    fitx::result<char> result2 = fitx::ok();
+    fit::result<char> result1 = fit::ok();
+    fit::result<char> result2 = fit::ok();
     EXPECT_TRUE(result1.is_ok());
     EXPECT_TRUE(result2.is_ok());
 
@@ -1219,8 +1219,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_TRUE(result2.is_ok());
   }
   {
-    fitx::result<char> result1 = fitx::error('a');
-    fitx::result<char> result2 = fitx::error('b');
+    fit::result<char> result1 = fit::error('a');
+    fit::result<char> result2 = fit::error('b');
     EXPECT_EQ(result1.error_value(), 'a');
     EXPECT_EQ(result2.error_value(), 'b');
 
@@ -1229,8 +1229,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_EQ(result2.error_value(), 'a');
   }
   {
-    fitx::result<char> result1 = fitx::ok();
-    fitx::result<char> result2 = fitx::error('a');
+    fit::result<char> result1 = fit::ok();
+    fit::result<char> result2 = fit::error('a');
     EXPECT_TRUE(result1.is_ok());
     EXPECT_TRUE(result2.is_error());
     EXPECT_EQ(result2.error_value(), 'a');
@@ -1241,8 +1241,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_EQ(result1.error_value(), 'a');
   }
   {
-    fitx::result<char, int> result1 = fitx::ok(42);
-    fitx::result<char, int> result2 = fitx::ok(43);
+    fit::result<char, int> result1 = fit::ok(42);
+    fit::result<char, int> result2 = fit::ok(43);
     EXPECT_EQ(result1.value(), 42);
     EXPECT_EQ(result2.value(), 43);
 
@@ -1251,8 +1251,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_EQ(result2.value(), 42);
   }
   {
-    fitx::result<char, int> result1 = fitx::error('a');
-    fitx::result<char, int> result2 = fitx::error('b');
+    fit::result<char, int> result1 = fit::error('a');
+    fit::result<char, int> result2 = fit::error('b');
     EXPECT_EQ(result1.error_value(), 'a');
     EXPECT_EQ(result2.error_value(), 'b');
 
@@ -1261,8 +1261,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_EQ(result2.error_value(), 'a');
   }
   {
-    fitx::result<char, int> result1 = fitx::ok(42);
-    fitx::result<char, int> result2 = fitx::error('a');
+    fit::result<char, int> result1 = fit::ok(42);
+    fit::result<char, int> result2 = fit::error('a');
     EXPECT_TRUE(result1.is_ok());
     EXPECT_TRUE(result2.is_error());
     EXPECT_EQ(result1.value(), 42);
@@ -1276,8 +1276,8 @@ TEST(LibZxCommon, Swap) {
   }
   // Non-trivial
   {
-    fitx::result<std::string> result1 = fitx::ok();
-    fitx::result<std::string> result2 = fitx::ok();
+    fit::result<std::string> result1 = fit::ok();
+    fit::result<std::string> result2 = fit::ok();
     EXPECT_TRUE(result1.is_ok());
     EXPECT_TRUE(result2.is_ok());
 
@@ -1286,8 +1286,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_TRUE(result2.is_ok());
   }
   {
-    fitx::result<std::string> result1 = fitx::error("asdf");
-    fitx::result<std::string> result2 = fitx::error("jkl");
+    fit::result<std::string> result1 = fit::error("asdf");
+    fit::result<std::string> result2 = fit::error("jkl");
     EXPECT_STREQ(result1.error_value(), "asdf");
     EXPECT_STREQ(result2.error_value(), "jkl");
 
@@ -1296,8 +1296,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_EQ(result2.error_value(), "asdf");
   }
   {
-    fitx::result<std::string> result1 = fitx::ok();
-    fitx::result<std::string> result2 = fitx::error("asdf");
+    fit::result<std::string> result1 = fit::ok();
+    fit::result<std::string> result2 = fit::error("asdf");
     EXPECT_TRUE(result1.is_ok());
     EXPECT_TRUE(result2.is_error());
     EXPECT_STREQ(result2.error_value(), "asdf");
@@ -1308,8 +1308,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_EQ(result1.error_value(), "asdf");
   }
   {
-    fitx::result<std::string, std::string> result1 = fitx::ok("asdf");
-    fitx::result<std::string, std::string> result2 = fitx::ok("jkl");
+    fit::result<std::string, std::string> result1 = fit::ok("asdf");
+    fit::result<std::string, std::string> result2 = fit::ok("jkl");
     EXPECT_STREQ(result1.value(), "asdf");
     EXPECT_STREQ(result2.value(), "jkl");
 
@@ -1318,8 +1318,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_EQ(result2.value(), "asdf");
   }
   {
-    fitx::result<std::string, std::string> result1 = fitx::error("asdf");
-    fitx::result<std::string, std::string> result2 = fitx::error("jkl");
+    fit::result<std::string, std::string> result1 = fit::error("asdf");
+    fit::result<std::string, std::string> result2 = fit::error("jkl");
     EXPECT_STREQ(result1.error_value(), "asdf");
     EXPECT_STREQ(result2.error_value(), "jkl");
 
@@ -1328,8 +1328,8 @@ TEST(LibZxCommon, Swap) {
     EXPECT_EQ(result2.error_value(), "asdf");
   }
   {
-    fitx::result<std::string, std::string> result1 = fitx::ok("asdf");
-    fitx::result<std::string, std::string> result2 = fitx::error("jkl");
+    fit::result<std::string, std::string> result1 = fit::ok("asdf");
+    fit::result<std::string, std::string> result2 = fit::error("jkl");
     EXPECT_TRUE(result1.is_ok());
     EXPECT_TRUE(result2.is_error());
     EXPECT_STREQ(result1.value(), "asdf");

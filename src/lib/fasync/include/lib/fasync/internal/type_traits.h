@@ -10,7 +10,7 @@
 LIB_FASYNC_CPP_VERSION_COMPAT_BEGIN
 
 #include <lib/fasync/type_traits.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/tuple.h>
 
 namespace fasync {

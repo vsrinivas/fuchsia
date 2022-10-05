@@ -53,9 +53,9 @@ namespace test_inheritance {
 }  // namespace test_inheritance
 
 template <>
-class ::fidl::Result<::test_inheritance::Super::Foo> final : public ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooResponse> {
+class ::fidl::Result<::test_inheritance::Super::Foo> final : public ::fit::result<::fidl::Error, ::test_inheritance::SuperFooResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_inheritance::SuperFooResponse>::result;
 
  protected:
   Result() = default;
@@ -239,9 +239,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_inheritance::Sub:
 };
 
 template <>
-class ::fidl::Result<::test_inheritance::Sub::Foo> final : public ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooResponse> {
+class ::fidl::Result<::test_inheritance::Sub::Foo> final : public ::fit::result<::fidl::Error, ::test_inheritance::SuperFooResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_inheritance::SuperFooResponse>::result;
 
  protected:
   Result() = default;

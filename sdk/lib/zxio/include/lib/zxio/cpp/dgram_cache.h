@@ -6,7 +6,7 @@
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_DGRAM_CACHE_H_
 
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zxio/cpp/socket_address.h>
 #include <zircon/types.h>
@@ -52,7 +52,7 @@ class RequestedCmsgSet {
 
 class RequestedCmsgCache {
  public:
-  using Result = fitx::result<ErrOrOutCode, std::optional<RequestedCmsgSet>>;
+  using Result = fit::result<ErrOrOutCode, std::optional<RequestedCmsgSet>>;
   Result Get(zx_wait_item_t err_wait_item, bool get_requested_cmsg_set,
              fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket>& client);
 
@@ -67,7 +67,7 @@ class RequestedCmsgCache {
 
 class RouteCache {
  public:
-  using Result = fitx::result<ErrOrOutCode, uint32_t>;
+  using Result = fit::result<ErrOrOutCode, uint32_t>;
 
   Result Get(std::optional<SocketAddress>& remote_addr,
              const std::optional<std::pair<uint64_t, fuchsia_net::wire::Ipv6Address>>&

@@ -7,7 +7,7 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/vmar.h>
 
@@ -59,10 +59,10 @@ class Guest {
 
   // Sets a stop callback that can be triggered by a VCPU to stop VMM execution.
   void set_stop_callback(
-      fit::function<void(fitx::result<::fuchsia::virtualization::GuestError>)> stop_callback);
+      fit::function<void(fit::result<::fuchsia::virtualization::GuestError>)> stop_callback);
 
   // Stop the VMM with the given error code.
-  void Stop(fitx::result<::fuchsia::virtualization::GuestError> result);
+  void Stop(fit::result<::fuchsia::virtualization::GuestError> result);
 
   // Returns zx_system_get_page_size aligned guest memory.
   static uint64_t GetPageAlignedGuestMemory(uint64_t guest_memory);
@@ -92,7 +92,7 @@ class Guest {
 
   std::shared_mutex mutex_;
   VcpuArray vcpus_;
-  fit::function<void(fitx::result<::fuchsia::virtualization::GuestError>)> stop_callback_;
+  fit::function<void(fit::result<::fuchsia::virtualization::GuestError>)> stop_callback_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_GUEST_H_

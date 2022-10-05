@@ -14,12 +14,12 @@
 
 namespace scenic_impl::gfx {
 
-fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
+fit::result<fit::failed, BufferCollectionInfo> BufferCollectionInfo::New(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator, escher::Escher* escher,
     BufferCollectionHandle buffer_collection_token) {
   if (!buffer_collection_token.is_valid()) {
     FX_LOGS(ERROR) << "Buffer collection token is not valid.";
-    return fitx::failed();
+    return fit::failed();
   }
 
   auto vk_device = escher->vk_device();
@@ -35,7 +35,7 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
         sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Cannot duplicate token. The client may have invalidated the token.";
-      return fitx::failed();
+      return fit::failed();
     }
 
     // Reassign the channel to the non-sync interface handle.
@@ -54,7 +54,7 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   zx_status_t status = buffer_collection->Sync();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not bind buffer collection.";
-    return fitx::failed();
+    return fit::failed();
   }
 
   // Set a friendly name if currently unset.
@@ -77,11 +77,11 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   // Scenic completes the import. The sysmem will close all the other handles
   // to the BufferCollection, and all the buffer collection operations will
   // fail, including the Vulkan buffer collection calls. Thus we should still
-  // return a fitx::failed here (and in checks below) instead of crashing
+  // return a fit::failed here (and in checks below) instead of crashing
   // Scenic.
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not set constraints on buffer collection: " << status;
-    return fitx::failed();
+    return fit::failed();
   }
 
   vk::ImageCreateInfo create_info =
@@ -102,11 +102,11 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
     if (vk_result != vk::Result::eSuccess) {
       FX_LOGS(ERROR) << "Could not call vkSetBufferCollectionImageConstraintsFUCHSIA: "
                      << vk::to_string(vk_result);
-      return fitx::failed();
+      return fit::failed();
     }
   }
 
-  return fitx::ok(BufferCollectionInfo(std::move(buffer_collection), std::move(vk_collection)));
+  return fit::ok(BufferCollectionInfo(std::move(buffer_collection), std::move(vk_collection)));
 }
 
 bool BufferCollectionInfo::BuffersAreAllocated() {
@@ -138,10 +138,10 @@ bool BufferCollectionInfo::BuffersAreAllocated() {
   return true;
 }
 
-fitx::result<fitx::failed, zx::vmo> BufferCollectionInfo::GetVMO(uint32_t index) {
+fit::result<fit::failed, zx::vmo> BufferCollectionInfo::GetVMO(uint32_t index) {
   if (index >= buffer_collection_info_.buffer_count) {
     FX_LOGS(ERROR) << "buffer_collection_index " << index << " is out of bounds.";
-    return fitx::failed();
+    return fit::failed();
   }
 
   zx::vmo vmo;
@@ -150,10 +150,10 @@ fitx::result<fitx::failed, zx::vmo> BufferCollectionInfo::GetVMO(uint32_t index)
 
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "VMO duplication failed.";
-    return fitx::failed();
+    return fit::failed();
   }
 
-  return fitx::ok(std::move(vmo));
+  return fit::ok(std::move(vmo));
 }
 
 }  // namespace scenic_impl::gfx

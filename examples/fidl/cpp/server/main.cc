@@ -48,7 +48,7 @@ class EchoImpl : public fidl::Server<fuchsia_examples::Echo> {
 
     // Handle a SendString request by sending an |OnString| event (an
     // unsolicited server-to-client message) back to the client.
-    fitx::result result = fidl::SendEvent(*binding_ref_)->OnString({request.value()});
+    fit::result result = fidl::SendEvent(*binding_ref_)->OnString({request.value()});
     if (!result.is_ok()) {
       FX_LOGS(ERROR) << "Error sending event: " << result.error_value();
     }

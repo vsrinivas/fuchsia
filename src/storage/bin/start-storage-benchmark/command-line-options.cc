@@ -4,7 +4,7 @@
 
 #include "src/storage/bin/start-storage-benchmark/command-line-options.h"
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <zircon/assert.h>
 
 #include <sstream>
@@ -41,7 +41,7 @@ CommandLineStatus CommandLineError(std::string_view error_msg) {
   stream << error_msg;
   stream << std::endl;
   stream << kUsageInto;
-  return fitx::error(stream.str());
+  return fit::error(stream.str());
 }
 
 }  // namespace
@@ -85,7 +85,7 @@ CommandLineStatus ParseCommandLine(const fxl::CommandLine& command_line) {
     return CommandLineError("memfs cannot be started on zxcrypt.");
   }
 
-  return fitx::ok(options);
+  return fit::ok(options);
 }
 
 }  // namespace storage_benchmark

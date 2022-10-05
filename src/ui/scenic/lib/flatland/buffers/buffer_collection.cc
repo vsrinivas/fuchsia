@@ -9,14 +9,14 @@
 
 namespace flatland {
 
-fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
+fit::result<fit::failed, BufferCollectionInfo> BufferCollectionInfo::New(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     BufferCollectionHandle buffer_collection_token) {
   FX_DCHECK(sysmem_allocator);
 
   if (!buffer_collection_token.is_valid()) {
     FX_LOGS(ERROR) << "Buffer collection token is not valid.";
-    return fitx::failed();
+    return fit::failed();
   }
 
   // Bind the buffer collection token to get the local token. Valid tokens can always be bound,
@@ -31,7 +31,7 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   zx_status_t status = buffer_collection->Sync();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not bind buffer collection. Status: " << status;
-    return fitx::failed();
+    return fit::failed();
   }
 
   // Use a name with a priority thats > the vulkan implementation, but < what any client would use.
@@ -51,7 +51,7 @@ fitx::result<fitx::failed, BufferCollectionInfo> BufferCollectionInfo::New(
   // failure occurs now, then that is some underlying issue unrelated to user input.
   FX_DCHECK(status == ZX_OK) << "Could not set constraints on buffer collection.";
 
-  return fitx::ok(BufferCollectionInfo(std::move(buffer_collection)));
+  return fit::ok(BufferCollectionInfo(std::move(buffer_collection)));
 }
 
 bool BufferCollectionInfo::BuffersAreAllocated() {

@@ -6,7 +6,7 @@
 #define SRC_SYS_RUN_TEST_COMPONENT_RUN_TEST_COMPONENT_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -36,7 +36,7 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
 std::string GetSimplifiedUrl(const std::string& url);
 
 // Parse log level and return corresponding integer representation.
-fitx::result<bool, uint32_t> ParseLogLevel(const std::string& level);
+fit::result<bool, uint32_t> ParseLogLevel(const std::string& level);
 
 }  // namespace run
 

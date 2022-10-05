@@ -487,7 +487,7 @@ terminate the communication.
   * For example, in the Rust bindings, `Result<T, fidl::Error>` is used to
     present other transport-level errors from calls, so `transport_err` should
     be folded into `fidl::Error`. Similarly, in the low-level C++ bindings,
-    `fitx::result<fidl::Error>` is used to convey transport-level errors, so
+    `fit::result<fidl::Error>` is used to convey transport-level errors, so
     `transport_err` should be merged into `fidl::Error`.  The `response` and
     `err` variants would be conveyed the same way as for a strict method. In
     Rust that would mean `Result<Result<T, ApplicationError>, fidl::Error>` for

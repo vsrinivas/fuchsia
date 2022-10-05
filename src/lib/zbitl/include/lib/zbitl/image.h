@@ -31,7 +31,7 @@ class Image : public View<Storage> {
   // this method even if the underlying storage does not already represent a
   // ZBI or is too small to do so; it will attempt to extend the capacity and
   // write a new container header.
-  fitx::result<Error> clear() { return ResetContainer(sizeof(zbi_header_t)); }
+  fit::result<Error> clear() { return ResetContainer(sizeof(zbi_header_t)); }
 
   // This version of Append reserves enough space in the underlying ZBI to
   // append an item corresponding to the provided header. The header is
@@ -45,7 +45,7 @@ class Image : public View<Storage> {
   // If `header.flags` has `ZBI_FLAG_CRC32` set, then it is the caller's
   // further responsibility to ensure that `header.crc32` is correct or to use
   // `EditHeader` later on the returned iterator with a correct value.
-  fitx::result<Error, iterator> Append(const zbi_header_t& new_header) {
+  fit::result<Error, iterator> Append(const zbi_header_t& new_header) {
     // Get the size from the container header directly (instead of
     // size_bytes()) to ensure that the underlying storage does indeed
     // represent a ZBI. If we did not check that the following would be able to
@@ -65,7 +65,7 @@ class Image : public View<Storage> {
     // any of the constituent elements in its defining sum, including
     // `ZBI_ALIGNMENT`; this reduces to the following predicate.
     if (new_size <= new_item_offset || new_size <= new_header.length) {
-      return fitx::error(Error{"integer overflow; new size is too big", size});
+      return fit::error(Error{"integer overflow; new size is too big", size});
     }
 
     if (auto result = ResetContainer(new_size); result.is_error()) {
@@ -73,7 +73,7 @@ class Image : public View<Storage> {
     }
 
     if (auto result = this->WriteHeader(new_header, new_item_offset); result.is_error()) {
-      return fitx::error{
+      return fit::error{
           Error{"cannot write item header", new_item_offset, std::move(result.error_value())}};
     }
 
@@ -84,7 +84,7 @@ class Image : public View<Storage> {
       constexpr std::byte kZero[ZBI_ALIGNMENT - 1] = {};
       auto padding = AsBytes(kZero).subspan(0, padding_size);
       if (auto result = Traits::Write(this->storage(), payload_end, padding); result.is_error()) {
-        return fitx::error{
+        return fit::error{
             Error{"cannot write zero padding", payload_end, std::move(result.error_value())}};
       }
     }
@@ -97,7 +97,7 @@ class Image : public View<Storage> {
     // Header trait, which might be a reference wrapper to the header in memory
     // instead of the raw value.
     if (auto result = this->ReadItemHeader(this->storage(), new_item_offset); result.is_error()) {
-      return fitx::error{
+      return fit::error{
           Error{"cannot read header", new_item_offset, std::move(result.error_value())}};
     } else {
       it.value_.header = header_type(std::move(result).value());
@@ -105,12 +105,12 @@ class Image : public View<Storage> {
 
     if (auto result = Traits::Payload(this->storage(), it.payload_offset(), new_header.length);
         result.is_error()) {
-      return fitx::error{Error{"cannot determine payload", it.payload_offset()}};
+      return fit::error{Error{"cannot determine payload", it.payload_offset()}};
     } else {
       it.value_.payload = result.value();
     }
 
-    return fitx::ok(it);
+    return fit::ok(it);
   }
 
   // A simpler variation of Append, in which the provided header and payload
@@ -118,7 +118,7 @@ class Image : public View<Storage> {
   // automatically be set as `data.size()`. Moreover, if the ZBI_FLAG_CRC32
   // flag is provided, the CRC32 will be automatically computed and set as
   // well.
-  fitx::result<Error> Append(zbi_header_t header, ByteView data) {
+  fit::result<Error> Append(zbi_header_t header, ByteView data) {
     header.length = static_cast<uint32_t>(data.size());
     if (header.flags & ZBI_FLAG_CRC32) {
       // An item's CRC32 is computed as the hash of its sanitized header with
@@ -141,11 +141,11 @@ class Image : public View<Storage> {
       uint32_t offset = it.payload_offset();
       if (auto write_result = Traits::Write(this->storage(), offset, data);
           write_result.is_error()) {
-        return fitx::error{
+        return fit::error{
             Error{"cannot write payload", offset, std::move(write_result.error_value())}};
       }
     }
-    return fitx::ok();
+    return fit::ok();
   }
 
   // The following aliases are introduced to improve the readability of Extend's
@@ -163,25 +163,25 @@ class Image : public View<Storage> {
   // copy from [first, last) and the relevant headers are not sanitized or
   // checked for correctness when written.
   template <typename ViewIterator>
-  fitx::result<ExtendError<ViewIterator>> Extend(ViewIterator first, ViewIterator last) {
+  fit::result<ExtendError<ViewIterator>> Extend(ViewIterator first, ViewIterator last) {
     using ErrorType = ExtendError<ViewIterator>;
 
     if (&first.view() != &last.view()) {
-      return fitx::error{ErrorType{"iterators from different views provided"}};
+      return fit::error{ErrorType{"iterators from different views provided"}};
     }
 
     auto& view = first.view();
     if (first == view.end()) {
       if (last == view.end()) {
-        return fitx::ok();  // By convention, a no-op.
+        return fit::ok();  // By convention, a no-op.
       }
-      return fitx::error{ErrorType{"cannot extend by iterator range starting at a view's end."}};
+      return fit::error{ErrorType{"cannot extend by iterator range starting at a view's end."}};
     }
 
     uint32_t size = 0;
     if (auto result = this->container_header(); result.is_error()) {
       auto error = std::move(result).error_value();
-      return fitx::error(ErrorType{
+      return fit::error(ErrorType{
           .zbi_error = error.zbi_error,
           .write_offset = error.item_offset,
           .write_error = std::move(error.storage_error),
@@ -196,7 +196,7 @@ class Image : public View<Storage> {
     uint32_t new_size = size + tail_size;
     if (auto result = ResetContainer(new_size); result.is_error()) {
       auto error = std::move(result).error_value();
-      return fitx::error{ErrorType{
+      return fit::error{ErrorType{
           .zbi_error = error.zbi_error,
           .write_offset = new_size,
           .write_error = std::move(error.storage_error),
@@ -210,7 +210,7 @@ class Image : public View<Storage> {
   // to the given new length, which must be no larger than the space already
   // accounted for the item when it was appended.  On success, the new iterator
   // at the same item is returned; old iterators to this item are invalidated.
-  fitx::result<Error, iterator> TrimLastItem(iterator item, uint32_t new_length) {
+  fit::result<Error, iterator> TrimLastItem(iterator item, uint32_t new_length) {
     ZX_ASSERT(item != this->end());
     ZX_ASSERT(item.next_is_end());
 
@@ -218,12 +218,12 @@ class Image : public View<Storage> {
     ZX_ASSERT(new_length <= ZBI_ALIGN(old_length));
 
     if (new_length == old_length) {
-      return fitx::ok(item);
+      return fit::ok(item);
     }
 
     const uint32_t offset = item.item_offset();
     if (auto result = this->WriteHeader(*item->header, offset, new_length); result.is_error()) {
-      return fitx::error{Error{
+      return fit::error{Error{
           "cannot write item header",
           offset,
           std::move(result.error_value()),
@@ -236,14 +236,14 @@ class Image : public View<Storage> {
     }
 
     item.Update(offset);
-    return fitx::ok(item);
+    return fit::ok(item);
   }
 
   // Remove the given item and all items past it, invalidating any iterators to
   // those items.
-  fitx::result<Error> Truncate(iterator new_end) {
+  fit::result<Error> Truncate(iterator new_end) {
     if (new_end == this->end()) {
-      return fitx::ok();
+      return fit::ok();
     }
     return ResetContainer(new_end.item_offset());
   }
@@ -252,11 +252,11 @@ class Image : public View<Storage> {
   // Resets the container as being of the provided size (which is the total
   // container size and not the length of the ZBI). If possible, the
   // underlying storage will be extended as needed.
-  fitx::result<Error> ResetContainer(uint32_t new_size) {
+  fit::result<Error> ResetContainer(uint32_t new_size) {
     ZX_DEBUG_ASSERT(new_size % ZBI_ALIGNMENT == 0);
 
     if (auto result = Traits::EnsureCapacity(this->storage(), new_size); result.is_error()) {
-      return fitx::error{Error{
+      return fit::error{Error{
           "cannot ensure sufficient capacity",
           new_size,
           std::move(result.error_value()),
@@ -265,11 +265,10 @@ class Image : public View<Storage> {
     if (auto result =
             this->WriteHeader(ZBI_CONTAINER_HEADER(new_size - uint32_t{sizeof(zbi_header_t)}), 0);
         result.is_error()) {
-      return fitx::error{
-          Error{"cannot write container header", 0, std::move(result.error_value())}};
+      return fit::error{Error{"cannot write container header", 0, std::move(result.error_value())}};
     }
     this->set_limit(new_size);
-    return fitx::ok();
+    return fit::ok();
   }
 };
 

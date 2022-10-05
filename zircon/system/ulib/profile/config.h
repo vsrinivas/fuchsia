@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_PROFILE_H_
-#define ZIRCON_SYSTEM_ULIB_PROFILE_H_
+#ifndef ZIRCON_SYSTEM_ULIB_PROFILE_CONFIG_H_
+#define ZIRCON_SYSTEM_ULIB_PROFILE_CONFIG_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/time.h>
 #include <zircon/syscalls.h>
 
@@ -32,7 +32,7 @@ struct Profile {
 
 using ProfileMap = std::unordered_map<std::string, Profile>;
 
-fitx::result<std::string, ProfileMap> LoadConfigs(const std::string& config_path);
+fit::result<std::string, ProfileMap> LoadConfigs(const std::string& config_path);
 
 struct Role {
   std::string name;
@@ -40,14 +40,14 @@ struct Role {
 
   bool has(const std::string& key) const { return selectors.find(key) != selectors.end(); }
 };
-fitx::result<fitx::failed, Role> ParseRoleSelector(const std::string& role_selector);
+fit::result<fit::failed, Role> ParseRoleSelector(const std::string& role_selector);
 
 struct MediaRole {
   zx_duration_t capacity;
   zx_duration_t deadline;
 };
-fitx::result<fitx::failed, MediaRole> MaybeMediaRole(const Role& role);
+fit::result<fit::failed, MediaRole> MaybeMediaRole(const Role& role);
 
 }  // namespace zircon_profile
 
-#endif  // ZIRCON_SYSTEM_ULIB_PROFILE_H_
+#endif  // ZIRCON_SYSTEM_ULIB_PROFILE_CONFIG_H_

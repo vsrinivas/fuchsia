@@ -54,9 +54,9 @@ namespace test_transitivedependenciescompose {
 }  // namespace test_transitivedependenciescompose
 
 template <>
-class ::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo> final : public ::fitx::result<::fidl::Error, ::test_bottom::BottomGetFooResponse> {
+class ::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo> final : public ::fit::result<::fidl::Error, ::test_bottom::BottomGetFooResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_bottom::BottomGetFooResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_bottom::BottomGetFooResponse>::result;
 
  protected:
   Result() = default;

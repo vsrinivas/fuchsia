@@ -32,7 +32,7 @@ zx_library("boot-shim") {
     # <lib/boot-shim/item-base.h> has #include <lib/zbitl/image.h>.
     "//src/lib/zbitl",
 
-    # <lib/boot-shim/item-base.h> has #include <lib/fitx/result.h>
+    # <lib/boot-shim/item-base.h> has #include <lib/fit/result.h>
     "//zircon/system/ulib/zxc",
 
     # <lib/boot-shim/efi.h> #include <efi/system-table.h>

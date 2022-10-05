@@ -70,9 +70,9 @@ namespace test_requestflexibleenvelope {
 }  // namespace test_requestflexibleenvelope
 
 template <>
-class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final : public ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> {
+class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final : public ::fit::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse>::result;
 
  protected:
   Result() = default;
@@ -93,9 +93,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_requestflexibleen
 };
 
 template <>
-class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final : public ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> {
+class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final : public ::fit::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse>::result;
 
  protected:
   Result() = default;

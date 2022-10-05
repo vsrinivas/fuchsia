@@ -228,11 +228,11 @@ std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult> WireNaturalConve
 
 ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod> WireNaturalConversionTraits<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>, ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>::ToNatural(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> src) {
   return ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>(
-      WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse, ::fitx::result<::test_anonymous::SomeProtocolSomeMethodError, ::test_anonymous::SomeProtocolSomeMethodResponse>>::ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse, ::fit::result<::test_anonymous::SomeProtocolSomeMethodError, ::test_anonymous::SomeProtocolSomeMethodResponse>>::ToNatural(std::move(src)));
 }
 ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> WireNaturalConversionTraits<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>, ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod> src) {
   return ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>(
-      WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse, ::fitx::result<::test_anonymous::SomeProtocolSomeMethodError, ::test_anonymous::SomeProtocolSomeMethodResponse>>::ToWire(arena, std::move(src)));
+      WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse, ::fit::result<::test_anonymous::SomeProtocolSomeMethodError, ::test_anonymous::SomeProtocolSomeMethodResponse>>::ToWire(arena, std::move(src)));
 }
 
 #endif  // __Fuchsia__

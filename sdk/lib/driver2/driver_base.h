@@ -232,7 +232,7 @@ class Record {
     // Decode the incoming `msg`.
     auto wire_format_metadata =
         fidl::WireFormatMetadata::FromOpaque(encoded_start_args.wire_format_metadata);
-    fitx::result start_args = fidl::Decode<fuchsia_driver_framework::DriverStartArgs>(
+    fit::result start_args = fidl::Decode<fuchsia_driver_framework::DriverStartArgs>(
         fidl::EncodedMessage::FromEncodedCMessage(encoded_start_args.msg), wire_format_metadata);
     if (!start_args.is_ok()) {
       return start_args.error_value().status();

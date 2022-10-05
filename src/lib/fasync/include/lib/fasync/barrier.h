@@ -44,7 +44,7 @@ class barrier final {
   barrier() {
     // Capture a new consumer and intentionally abandon its associated completer so that a future
     // chained onto the consumer using |future_or()| will become immediately runnable.
-    fasync::bridge<fitx::failed> bridge;
+    fasync::bridge<fit::failed> bridge;
     prior_ = std::move(bridge.consumer);
   }
 
@@ -61,7 +61,7 @@ class barrier final {
   // This method is thread-safe.
   template <typename F, ::fasync::internal::requires_conditions<is_future<F>> = true>
   decltype(auto) wrap(F&& future) {
-    fasync::bridge<fitx::failed> bridge;
+    fasync::bridge<fit::failed> bridge;
     auto prior = swap_prior(std::move(bridge.consumer));
 
     // First, execute the originally provided future.
@@ -79,7 +79,7 @@ class barrier final {
              // When this chain completes, the sync future can complete too, since it implies that
              // all prior access to the barrier has completed.
              context.executor().schedule(
-                 prior.future_or(fitx::ok()) |
+                 prior.future_or(fit::ok()) |
                  fasync::then([completer = std::move(completer)]() mutable {}));
 
              return std::make_tuple(std::forward<decltype(results)>(results)...);
@@ -89,21 +89,21 @@ class barrier final {
   // Returns a future which completes after all previously wrapped work has completed.
   //
   // This method is thread-safe.
-  fasync::try_future<fitx::failed> sync() {
+  fasync::try_future<fit::failed> sync() {
     // Swap the latest pending work with our own consumer; a subsequent request to sync should wait
     // on this one.
-    fasync::bridge<fitx::failed> bridge;
-    fasync::consumer<fitx::failed> prior = swap_prior(std::move(bridge.consumer));
-    return prior.future_or(fitx::ok()) |
+    fasync::bridge<fit::failed> bridge;
+    fasync::consumer<fit::failed> prior = swap_prior(std::move(bridge.consumer));
+    return prior.future_or(fit::ok()) |
            fasync::then([completer = std::move(bridge.completer)]() mutable {
              return fasync::make_ok_future();
            });
   }
 
  private:
-  fasync::consumer<fitx::failed> swap_prior(fasync::consumer<fitx::failed> new_prior) {
+  fasync::consumer<fit::failed> swap_prior(fasync::consumer<fit::failed> new_prior) {
     std::lock_guard<std::mutex> lock(mutex_);
-    fasync::consumer<fitx::failed> old_prior = std::move(prior_);
+    fasync::consumer<fit::failed> old_prior = std::move(prior_);
     prior_ = std::move(new_prior);
     return old_prior;
   }
@@ -111,7 +111,7 @@ class barrier final {
   std::mutex mutex_;
 
   // Holds the consumption capability of the most recently wrapped future.
-  fasync::consumer<fitx::failed> prior_ FIT_GUARDED(mutex_);
+  fasync::consumer<fit::failed> prior_ FIT_GUARDED(mutex_);
 };
 
 }  // namespace fasync

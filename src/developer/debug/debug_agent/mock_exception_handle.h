@@ -46,8 +46,8 @@ class MockExceptionHandle : public ExceptionHandle {
 
   void set_type(debug_ipc::ExceptionType type) { type_ = type; }
 
-  fitx::result<debug::Status, Resolution> GetResolution() const override {
-    return fitx::ok(resolution_);
+  fit::result<debug::Status, Resolution> GetResolution() const override {
+    return fit::ok(resolution_);
   }
 
   debug::Status SetResolution(Resolution resolution) override {
@@ -56,8 +56,8 @@ class MockExceptionHandle : public ExceptionHandle {
     return debug::Status();
   }
 
-  fitx::result<debug::Status, debug_ipc::ExceptionStrategy> GetStrategy() const override {
-    return fitx::ok(strategy_);
+  fit::result<debug::Status, debug_ipc::ExceptionStrategy> GetStrategy() const override {
+    return fit::ok(strategy_);
   }
 
   debug::Status SetStrategy(debug_ipc::ExceptionStrategy strategy) override {

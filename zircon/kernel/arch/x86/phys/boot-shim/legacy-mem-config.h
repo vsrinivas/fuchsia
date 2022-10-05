@@ -5,7 +5,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_LEGACY_MEM_CONFIG_H_
 #define ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_LEGACY_MEM_CONFIG_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zbitl/storage-traits.h>
 #include <lib/zircon-internal/e820.h>
@@ -63,8 +63,8 @@ zbi_mem_range_t ToMemRange(const efi_memory_descriptor& range);
 class MemRangeTable {
  public:
   // Create a MemRangeTable from the given memory range, assumed to be of type `zbi_type`.
-  static fitx::result<std::string_view, MemRangeTable> FromSpan(uint32_t zbi_type,
-                                                                zbitl::ByteView payload);
+  static fit::result<std::string_view, MemRangeTable> FromSpan(uint32_t zbi_type,
+                                                               zbitl::ByteView payload);
 
   // begin/end iterators over the items in the table.
   class iterator;

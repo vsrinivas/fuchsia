@@ -24,7 +24,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     }
 
     explicit {{ .WireUnownedResult.Self }}(
-        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<{{ .WireResponse }}>>&& decoded,
+        ::fit::result<::fidl::Error, ::fidl::DecodedValue<{{ .WireResponse }}>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : {{ .BaseWireResult }}(::fidl::internal::StatusFromResult(decoded)) {
       if (decoded.is_ok()) {
@@ -34,7 +34,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     }
   {{- else }}
     explicit {{ .WireUnownedResult.Self }}(
-        ::fitx::result<::fidl::Error>&& decoded,
+        ::fit::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
     ) : {{ .BaseWireResult }}(::fidl::internal::StatusFromResult(decoded)) {}
   {{- end }}
@@ -71,7 +71,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
 
   {{/* Allocate one buffer for both request/response (if applicable). */ -}}
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<{{ .Marker }}>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -103,7 +103,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
 
   {{- if .HasResponse }}
     {{ .IncomingMessageHandleStorageForResponse }} handle_storage;
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<{{ .Marker }}>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<{{ .Marker }}>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))

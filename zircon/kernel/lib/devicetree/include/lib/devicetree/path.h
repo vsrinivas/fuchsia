@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_LIB_DEVICETREE_INCLUDE_LIB_DEVICETREE_PATH_H_
 
 #include <lib/devicetree/devicetree.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <optional>
 #include <string_view>
@@ -92,7 +92,7 @@ class PathResolver {
   constexpr explicit PathResolver(const std::optional<Properties>& aliases) : aliases_(aliases) {}
 
   // Returns a resolved path containing the de-aliased prefix and the suffix of the path.
-  fitx::result<ResolveError, ResolvedPath> Resolve(std::string_view maybe_aliased_path) const;
+  fit::result<ResolveError, ResolvedPath> Resolve(std::string_view maybe_aliased_path) const;
 
  private:
   const std::optional<Properties>& aliases_;

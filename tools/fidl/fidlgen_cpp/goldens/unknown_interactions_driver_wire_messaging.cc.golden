@@ -264,7 +264,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -292,7 +292,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -324,7 +324,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -356,7 +356,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -388,7 +388,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -420,7 +420,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -452,7 +452,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -484,7 +484,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -516,7 +516,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -548,7 +548,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -580,7 +580,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -612,7 +612,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -644,7 +644,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -676,7 +676,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -708,7 +708,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -740,7 +740,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -1245,7 +1245,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1262,7 +1262,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1279,7 +1279,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1296,7 +1296,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1313,7 +1313,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1330,7 +1330,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1347,7 +1347,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1364,7 +1364,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1381,7 +1381,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1398,7 +1398,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1415,7 +1415,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1432,7 +1432,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1449,7 +1449,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1466,7 +1466,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1483,7 +1483,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1500,7 +1500,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1517,7 +1517,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1534,7 +1534,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -1690,7 +1690,7 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::Reply(::fit::result<int32_t> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::WithResponse({}));
   }
@@ -1726,7 +1726,7 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult::WithResponse(std::move(*result.value())));
   }
@@ -1765,7 +1765,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>::FromExternal(result.value())));
   }
@@ -1802,7 +1802,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>::FromExternal(result.value())));
   }
@@ -1940,7 +1940,7 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::Reply(::fit::result<int32_t> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::WithResponse({}));
   }
@@ -1976,7 +1976,7 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult::WithResponse(std::move(*result.value())));
   }
@@ -2015,7 +2015,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse>::FromExternal(result.value())));
   }
@@ -2052,7 +2052,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProt
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>::FromExternal(result.value())));
   }
@@ -2459,7 +2459,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -2487,7 +2487,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -2519,7 +2519,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -2551,7 +2551,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -2583,7 +2583,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -2615,7 +2615,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -2647,7 +2647,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -2679,7 +2679,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -2992,7 +2992,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3009,7 +3009,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3026,7 +3026,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3043,7 +3043,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3060,7 +3060,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3077,7 +3077,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3094,7 +3094,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3111,7 +3111,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3128,7 +3128,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3145,7 +3145,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -3299,7 +3299,7 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::Reply(::fit::result<int32_t> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::WithResponse({}));
   }
@@ -3335,7 +3335,7 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult::WithResponse(std::move(*result.value())));
   }
@@ -3374,7 +3374,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>::FromExternal(result.value())));
   }
@@ -3411,7 +3411,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriver
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>::FromExternal(result.value())));
   }
@@ -3690,7 +3690,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -3718,7 +3718,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -3750,7 +3750,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -3782,7 +3782,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -3814,7 +3814,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -3846,7 +3846,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -3878,7 +3878,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -3910,7 +3910,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
             ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
                 arena.get()),
     };
-    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>(
+    ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>(
         outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
@@ -4173,7 +4173,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4190,7 +4190,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4207,7 +4207,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4224,7 +4224,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4241,7 +4241,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4258,7 +4258,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4275,7 +4275,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4292,7 +4292,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4309,7 +4309,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         if (unlikely(!decoded.is_ok())) {
           return decoded.error_value();
         }
@@ -4449,7 +4449,7 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::Reply(::fitx::result<int32_t> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::Reply(::fit::result<int32_t> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::WithResponse({}));
   }
@@ -4485,7 +4485,7 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult::WithResponse(std::move(*result.value())));
   }
@@ -4524,7 +4524,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>::FromExternal(result.value())));
   }
@@ -4561,7 +4561,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriv
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>::Reply(::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse*> result) {
+fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>::Reply(::fit::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse*> result) {
   if (result.is_ok()) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult::WithResponse(::fidl::ObjectView<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>::FromExternal(result.value())));
   }

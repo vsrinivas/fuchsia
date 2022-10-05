@@ -53,10 +53,10 @@ std::vector<debug_ipc::Module> MockProcessHandle::GetModules() const {
   return {};
 }
 
-fitx::result<debug::Status, std::vector<debug_ipc::InfoHandle>> MockProcessHandle::GetHandles()
+fit::result<debug::Status, std::vector<debug_ipc::InfoHandle>> MockProcessHandle::GetHandles()
     const {
   // Not currently implemented in this mock.
-  return fitx::success(std::vector<debug_ipc::InfoHandle>());
+  return fit::success(std::vector<debug_ipc::InfoHandle>());
 }
 
 debug::Status MockProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,

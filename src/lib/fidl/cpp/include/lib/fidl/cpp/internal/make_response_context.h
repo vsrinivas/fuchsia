@@ -34,14 +34,14 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
 
   // Check error from the underlying transport.
   if (!incoming.ok()) {
-    ResultType error = ::fitx::error(incoming.error());
+    ResultType error = ::fit::error(incoming.error());
     if (out_maybe_unbind != nullptr) {
       out_maybe_unbind->emplace(incoming.error());
     }
     return error;
   }
 
-  ::fitx::result decoded = [&] {
+  ::fit::result decoded = [&] {
     if constexpr (IsAbsentBody) {
       return DecodeTransactionalMessage(std::move(incoming));
     } else {
@@ -52,7 +52,7 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
 
   // Check decoding error.
   if (decoded.is_error()) {
-    ResultType error = ::fitx::error(decoded.error_value());
+    ResultType error = ::fit::error(decoded.error_value());
     if (out_maybe_unbind != nullptr) {
       out_maybe_unbind->emplace(decoded.error_value());
     }
@@ -61,13 +61,13 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
 
   if constexpr (IsAbsentBody) {
     // Absent body.
-    ResultType value = ::fitx::success();
+    ResultType value = ::fit::success();
     return value;
   } else {
     auto& domain_object = decoded.value();
     if constexpr (HasApplicationError) {
       if (domain_object.result().err().has_value()) {
-        ResultType value = ::fitx::error(std::move(domain_object.result().err().value()));
+        ResultType value = ::fit::error(std::move(domain_object.result().err().value()));
         return value;
       }
     }
@@ -77,7 +77,7 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
             domain_object.result().transport_err().value();
         switch (transport_err) {
           case ::fidl::internal::TransportErr::kUnknownMethod: {
-            ResultType value = ::fitx::error(::fidl::Error::UnknownMethod());
+            ResultType value = ::fit::error(::fidl::Error::UnknownMethod());
             return value;
           }
         }
@@ -89,14 +89,14 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
 
       ZX_DEBUG_ASSERT(domain_object.result().response().has_value());
       if constexpr (IsEmptyStructPayload) {
-        ResultType value = ::fitx::success();
+        ResultType value = ::fit::success();
         return value;
       } else {
-        ResultType value = ::fitx::ok(std::move(domain_object.result().response().value()));
+        ResultType value = ::fit::ok(std::move(domain_object.result().response().value()));
         return value;
       }
     } else {
-      ResultType value = ::fitx::ok(std::move(domain_object));
+      ResultType value = ::fit::ok(std::move(domain_object));
       return value;
     }
   }

@@ -13,12 +13,12 @@
 
 namespace zbitl {
 
-fitx::result<zx_status_t> StorageTraits<zx::vmo>::DoRead(const zx::vmo& vmo, uint64_t offset,
-                                                         uint32_t length,
-                                                         bool (*cb)(void*, ByteView), void* arg) {
+fit::result<zx_status_t> StorageTraits<zx::vmo>::DoRead(const zx::vmo& vmo, uint64_t offset,
+                                                        uint32_t length,
+                                                        bool (*cb)(void*, ByteView), void* arg) {
   if (length == 0) {
     cb(arg, {});
-    return fitx::ok();
+    return fit::ok();
   }
 
   // This always copies, when mapping might be better for large sizes.  But
@@ -31,7 +31,7 @@ fitx::result<zx_status_t> StorageTraits<zx::vmo>::DoRead(const zx::vmo& vmo, uin
     const uint32_t n = size();
     zx_status_t status = vmo.read(buf.get(), offset, n);
     if (status != ZX_OK) {
-      return fitx::error{status};
+      return fit::error{status};
     }
     if (!cb(arg, {buf.get(), n})) {
       break;
@@ -40,7 +40,7 @@ fitx::result<zx_status_t> StorageTraits<zx::vmo>::DoRead(const zx::vmo& vmo, uin
     length -= n;
   }
 
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace zbitl

@@ -66,9 +66,9 @@ bool ParseHeaderInteger(std::string_view field, T& value) {
 }
 
 // Parse the basic archive header.  The name may need additional decoding.
-fitx::result<Error, MemberHeader> ParseArchiveHeader(ByteView header) {
+fit::result<Error, MemberHeader> ParseArchiveHeader(ByteView header) {
   if (header.size() < sizeof(ar_hdr)) {
-    return fitx::error(Error{"truncated archive", ZX_ERR_OUT_OF_RANGE});
+    return fit::error(Error{"truncated archive", ZX_ERR_OUT_OF_RANGE});
   }
   static_assert(alignof(ar_hdr) == 1);
   auto ar = reinterpret_cast<const ar_hdr*>(header.data());
@@ -80,7 +80,7 @@ fitx::result<Error, MemberHeader> ParseArchiveHeader(ByteView header) {
       !ParseHeaderInteger({ar->ar_size, sizeof(ar->ar_size)}, member.size)) {
     return CorruptedDump();
   }
-  return fitx::ok(member);
+  return fit::ok(member);
 }
 
 // Update member.name if it's an encoded reference to the long name table.
@@ -104,7 +104,7 @@ bool HandleLongName(std::string_view name_table, MemberHeader& member) {
 // The successful return value is false if the name didn't match or true if it
 // was a valid note that wasn't already in the map.
 template <typename Key>
-fitx::result<Error, std::optional<Key>> JobNoteName(std::string_view match, std::string_view name) {
+fit::result<Error, std::optional<Key>> JobNoteName(std::string_view match, std::string_view name) {
   if (name.substr(0, match.size()) == match) {
     name.remove_prefix(match.size());
     if (name.empty()) {
@@ -112,23 +112,23 @@ fitx::result<Error, std::optional<Key>> JobNoteName(std::string_view match, std:
     }
     Key key = 0;
     if (ParseHeaderInteger(name, key)) {
-      return fitx::ok(key);
+      return fit::ok(key);
     }
   }
-  return fitx::ok(std::nullopt);
+  return fit::ok(std::nullopt);
 }
 
 // Add a note to an info_ or properties_ map.  Duplicates are not allowed.
 template <typename Key>
-fitx::result<Error> AddNote(std::map<Key, ByteView>& map, Key key, ByteView data) {
+fit::result<Error> AddNote(std::map<Key, ByteView>& map, Key key, ByteView data) {
   auto [it, unique] = map.insert({key, data});
   if (!unique) {
-    return fitx::error(Error{
+    return fit::error(Error{
         "duplicate note name in dump",
         ZX_ERR_IO_DATA_INTEGRITY,
     });
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
 // rapidjson's built-in features require NUL-terminated strings.
@@ -184,7 +184,7 @@ class TaskHolder::JobTree {
   Job& root_job() const { return root_job_; }
 
   // Insert any number of dumps by reading a core file or an archive.
-  fitx::result<Error> Insert(fbl::unique_fd fd, bool read_memory) {
+  fit::result<Error> Insert(fbl::unique_fd fd, bool read_memory) {
     if (auto result = DumpFile::Open(std::move(fd)); result.is_error()) {
       return result.take_error();
     } else {
@@ -204,25 +204,25 @@ class TaskHolder::JobTree {
 
   // Insert a live task.
   auto Insert(LiveTask live, InsertChild* parent)
-      -> fitx::result<Error, std::reference_wrapper<Task>> {
+      -> fit::result<Error, std::reference_wrapper<Task>> {
     zx_info_handle_basic_t info;
     if (zx_status_t status =
             live.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
         status != ZX_OK) {
-      return fitx::error(Error{"invalid live task", status});
+      return fit::error(Error{"invalid live task", status});
     }
 
     // Place the basic info into a new Task object now that it's known valid.
     // Everything relies on the basic info always being available in the map.
     auto ingest = [&](auto attach, auto task)  //
-        -> fitx::result<Error, std::reference_wrapper<Task>> {
+        -> fit::result<Error, std::reference_wrapper<Task>> {
       task.date_ = time(nullptr);  // Time of first data sample from this task.
       auto buffer = GetBuffer(sizeof(info));
       memcpy(buffer, &info, sizeof(info));
       task.info_.emplace(ZX_INFO_HANDLE_BASIC, ByteView{buffer, sizeof(info)});
       if (parent) {
         *parent = std::move(task);
-        return fitx::ok(std::ref(std::get<decltype(task)>(*parent)));
+        return fit::ok(std::ref(std::get<decltype(task)>(*parent)));
       }
       return (this->*attach)(std::move(task));
     };
@@ -234,19 +234,19 @@ class TaskHolder::JobTree {
         return ingest(&JobTree::AttachProcess, Process{*this, std::move(live)});
       case ZX_OBJ_TYPE_THREAD:
         if (parent) {
-          return ingest(static_cast<fitx::error<Error> (JobTree::*)(Thread)>(nullptr),
+          return ingest(static_cast<fit::error<Error> (JobTree::*)(Thread)>(nullptr),
                         Thread{*this, std::move(live)});
         }
         [[fallthrough]];
       default:
-        return fitx::error(Error{"not a valid job or process handle", ZX_ERR_BAD_HANDLE});
+        return fit::error(Error{"not a valid job or process handle", ZX_ERR_BAD_HANDLE});
     }
   }
 
   void AssertIsSuperroot(Task& task) { ZX_DEBUG_ASSERT(&task == &superroot_); }
 
   // Unlike generic get_info, the view is always fully aligned for casting.
-  fitx::result<Error, ByteView> GetSuperrootInfo(zx_object_info_topic_t topic) {
+  fit::result<Error, ByteView> GetSuperrootInfo(zx_object_info_topic_t topic) {
     switch (topic) {
       case ZX_INFO_JOB_CHILDREN:
         if (!superroot_info_children_) {
@@ -257,7 +257,7 @@ class TaskHolder::JobTree {
             *p++ = koid;
           }
         }
-        return fitx::ok(ByteView{
+        return fit::ok(ByteView{
             reinterpret_cast<const std::byte*>(superroot_info_children_.get()),
             superroot_.children()->get().size(),
         });
@@ -271,12 +271,11 @@ class TaskHolder::JobTree {
             *p++ = koid;
           }
         }
-        return fitx::ok(
-            ByteView{reinterpret_cast<const std::byte*>(superroot_info_processes_.get()),
-                     superroot_.processes()->get().size()});
+        return fit::ok(ByteView{reinterpret_cast<const std::byte*>(superroot_info_processes_.get()),
+                                superroot_.processes()->get().size()});
 
       default:
-        return fitx::error(Error{"fake root job info", ZX_ERR_NOT_SUPPORTED});
+        return fit::error(Error{"fake root job info", ZX_ERR_NOT_SUPPORTED});
     }
   }
 
@@ -296,13 +295,13 @@ class TaskHolder::JobTree {
 
  private:
   // This is the actual reader, implemented below.
-  fitx::result<Error> Read(DumpFile& file, bool read_memory, FileRange where, time_t date = 0);
-  fitx::result<Error> ReadElf(DumpFile& file, FileRange where, time_t date, ByteView header,
-                              bool read_memory);
-  fitx::result<Error> ReadArchive(DumpFile& file, FileRange archive, ByteView header,
-                                  bool read_memory);
+  fit::result<Error> Read(DumpFile& file, bool read_memory, FileRange where, time_t date = 0);
+  fit::result<Error> ReadElf(DumpFile& file, FileRange where, time_t date, ByteView header,
+                             bool read_memory);
+  fit::result<Error> ReadArchive(DumpFile& file, FileRange archive, ByteView header,
+                                 bool read_memory);
 
-  fitx::result<Error> ReadSystemNote(ByteView data);
+  fit::result<Error> ReadSystemNote(ByteView data);
   const rapidjson::Value* GetSystemJsonData(const char* key) const;
 
   // Snap the root job pointer to the sole job or back to the superroot.
@@ -318,7 +317,7 @@ class TaskHolder::JobTree {
     superroot_info_processes_.reset();
   }
 
-  fitx::result<Error, std::reference_wrapper<Job>> AttachJob(Job&& job) {
+  fit::result<Error, std::reference_wrapper<Job>> AttachJob(Job&& job) {
     // See if any of the orphan jobs are this job's children.
     // If a child job is found in the superroot, claim it.
     if (!superroot_.children_.empty()) {
@@ -331,7 +330,7 @@ class TaskHolder::JobTree {
             auto [job_it, unique] = job.children_.insert(std::move(*it));
             superroot_.children_.erase(it);
             if (!unique) {
-              return fitx::error(Error{
+              return fit::error(Error{
                   "duplicate job KOID",
                   ZX_ERR_IO_DATA_INTEGRITY,
               });
@@ -353,7 +352,7 @@ class TaskHolder::JobTree {
             auto [job_it, unique] = job.processes_.insert(std::move(*it));
             superroot_.processes_.erase(it);
             if (!unique) {
-              return fitx::error(Error{
+              return fit::error(Error{
                   "duplicate process KOID",
                   ZX_ERR_IO_DATA_INTEGRITY,
               });
@@ -371,21 +370,21 @@ class TaskHolder::JobTree {
       auto [j, unique] = parent.children_.try_emplace(koid, std::move(job));
       ZX_DEBUG_ASSERT(unique);
       missing_.erase(it);
-      return fitx::ok(std::ref(j->second));
+      return fit::ok(std::ref(j->second));
     } else {
       // The superroot fosters the orphan until its parent appears (if ever).
       auto [j, unique] = superroot_.children_.try_emplace(koid, std::move(job));
       if (!unique) {
-        return fitx::error(Error{
+        return fit::error(Error{
             "duplicate job KOID",
             ZX_ERR_IO_DATA_INTEGRITY,
         });
       }
-      return fitx::ok(std::ref(j->second));
+      return fit::ok(std::ref(j->second));
     }
   }
 
-  fitx::result<Error, std::reference_wrapper<Process>> AttachProcess(Process&& process) {
+  fit::result<Error, std::reference_wrapper<Process>> AttachProcess(Process&& process) {
     zx_koid_t koid = process.koid();
     if (auto it = missing_.find(koid); it != missing_.end()) {
       // There is a job looking for this lost process!
@@ -393,19 +392,19 @@ class TaskHolder::JobTree {
       auto [p, unique] = job.processes_.try_emplace(koid, std::move(process));
       ZX_DEBUG_ASSERT(unique);
       missing_.erase(it);
-      return fitx::ok(std::ref(p->second));
+      return fit::ok(std::ref(p->second));
     }
 
     // The superroot holds the process until a job claims it (if ever).
     auto [it, unique] = superroot_.processes_.try_emplace(koid, std::move(process));
     if (!unique) {
-      return fitx::error(Error{
+      return fit::error(Error{
           "duplicate process KOID",
           ZX_ERR_IO_DATA_INTEGRITY,
       });
     }
 
-    return fitx::ok(std::ref(it->second));
+    return fit::ok(std::ref(it->second));
   }
 
   std::forward_list<std::unique_ptr<DumpFile>> dumps_;
@@ -440,11 +439,11 @@ TaskHolder::~TaskHolder() = default;
 
 Job& TaskHolder::root_job() const { return tree_->root_job(); }
 
-fitx::result<Error> TaskHolder::Insert(fbl::unique_fd fd, bool read_memory) {
+fit::result<Error> TaskHolder::Insert(fbl::unique_fd fd, bool read_memory) {
   return tree_->Insert(std::move(fd), read_memory);
 }
 
-fitx::result<Error, std::reference_wrapper<Task>> TaskHolder::Insert(LiveTask task) {
+fit::result<Error, std::reference_wrapper<Task>> TaskHolder::Insert(LiveTask task) {
   return tree_->Insert(std::move(task), nullptr);
 }
 
@@ -456,7 +455,7 @@ Process::~Process() = default;
 
 Thread::~Thread() = default;
 
-fitx::result<Error, std::reference_wrapper<zxdump::Job::JobMap>> Job::children() {
+fit::result<Error, std::reference_wrapper<zxdump::Job::JobMap>> Job::children() {
   if (children_.empty() && live()) {
     // The first time called on a live task (or on repeated calls iff the first
     // time there were no children), populate the whole list.
@@ -482,7 +481,7 @@ fitx::result<Error, std::reference_wrapper<zxdump::Job::JobMap>> Job::children()
           continue;
 
         default:
-          return fitx::error(Error{"zx_object_get_child", status});
+          return fit::error(Error{"zx_object_get_child", status});
       }
 
       InsertChild child;
@@ -496,10 +495,10 @@ fitx::result<Error, std::reference_wrapper<zxdump::Job::JobMap>> Job::children()
       ZX_DEBUG_ASSERT(unique);
     }
   }
-  return fitx::ok(std::ref(children_));
+  return fit::ok(std::ref(children_));
 }
 
-fitx::result<Error, std::reference_wrapper<zxdump::Job::ProcessMap>> Job::processes() {
+fit::result<Error, std::reference_wrapper<zxdump::Job::ProcessMap>> Job::processes() {
   if (processes_.empty() && live()) {
     // The first time called on a live task (or on repeated calls iff the first
     // time there were no processes), populate the whole list.
@@ -522,7 +521,7 @@ fitx::result<Error, std::reference_wrapper<zxdump::Job::ProcessMap>> Job::proces
           continue;
 
         default:
-          return fitx::error(Error{"zx_object_get_child", status});
+          return fit::error(Error{"zx_object_get_child", status});
       }
 
       InsertChild child;
@@ -536,10 +535,10 @@ fitx::result<Error, std::reference_wrapper<zxdump::Job::ProcessMap>> Job::proces
       ZX_DEBUG_ASSERT(unique);
     }
   }
-  return fitx::ok(std::ref(processes_));
+  return fit::ok(std::ref(processes_));
 }
 
-fitx::result<Error, std::reference_wrapper<zxdump::Process::ThreadMap>> Process::threads() {
+fit::result<Error, std::reference_wrapper<zxdump::Process::ThreadMap>> Process::threads() {
   if (threads_.empty() && live()) {
     // The first time called on a live task (or on repeated calls iff the first
     // time there were no processes), populate the whole list.
@@ -562,7 +561,7 @@ fitx::result<Error, std::reference_wrapper<zxdump::Process::ThreadMap>> Process:
           continue;
 
         default:
-          return fitx::error(Error{"zx_object_get_child", status});
+          return fit::error(Error{"zx_object_get_child", status});
       }
 
       InsertChild child;
@@ -578,12 +577,12 @@ fitx::result<Error, std::reference_wrapper<zxdump::Process::ThreadMap>> Process:
     }
   }
 
-  return fitx::ok(std::ref(threads_));
+  return fit::ok(std::ref(threads_));
 }
 
-fitx::result<Error, std::reference_wrapper<Task>> Task::find(zx_koid_t match) {
+fit::result<Error, std::reference_wrapper<Task>> Task::find(zx_koid_t match) {
   if (koid() == match) {
-    return fitx::ok(std::ref(*this));
+    return fit::ok(std::ref(*this));
   }
   switch (this->type()) {
     case ZX_OBJ_TYPE_JOB:
@@ -591,20 +590,20 @@ fitx::result<Error, std::reference_wrapper<Task>> Task::find(zx_koid_t match) {
     case ZX_OBJ_TYPE_PROCESS:
       return static_cast<Process*>(this)->find(match);
   }
-  return fitx::error{kTaskNotFound};
+  return fit::error{kTaskNotFound};
 }
 
-fitx::result<Error, std::reference_wrapper<Task>> Job::find(zx_koid_t match) {
+fit::result<Error, std::reference_wrapper<Task>> Job::find(zx_koid_t match) {
   if (koid() == match) {
-    return fitx::ok(std::ref(*this));
+    return fit::ok(std::ref(*this));
   }
 
   // First check our immediate child tasks.
   if (auto it = children_.find(match); it != children_.end()) {
-    return fitx::ok(std::ref(it->second));
+    return fit::ok(std::ref(it->second));
   }
   if (auto it = processes_.find(match); it != processes_.end()) {
-    return fitx::ok(std::ref(it->second));
+    return fit::ok(std::ref(it->second));
   }
 
   if (live()) {
@@ -630,14 +629,14 @@ fitx::result<Error, std::reference_wrapper<Task>> Job::find(zx_koid_t match) {
         ZX_ASSERT(job->koid() == match);
         auto [it, unique] = children_.emplace(match, std::move(*job));
         ZX_DEBUG_ASSERT(unique);
-        return fitx::ok(std::ref(it->second));
+        return fit::ok(std::ref(it->second));
       }
 
       auto& process = std::get<Process>(child);
       ZX_ASSERT(process.koid() == match);
       auto [it, unique] = processes_.emplace(match, std::move(process));
       ZX_DEBUG_ASSERT(unique);
-      return fitx::ok(std::ref(it->second));
+      return fit::ok(std::ref(it->second));
     }
   }
 
@@ -667,29 +666,29 @@ fitx::result<Error, std::reference_wrapper<Task>> Job::find(zx_koid_t match) {
     }
   }
 
-  return fitx::error{kTaskNotFound};
+  return fit::error{kTaskNotFound};
 }
 
-fitx::result<Error, std::reference_wrapper<Task>> Process::find(zx_koid_t match) {
+fit::result<Error, std::reference_wrapper<Task>> Process::find(zx_koid_t match) {
   if (koid() == match) {
-    return fitx::ok(std::ref(*this));
+    return fit::ok(std::ref(*this));
   }
   if (auto it = threads_.find(match); it != threads_.end()) {
-    return fitx::ok(std::ref(it->second));
+    return fit::ok(std::ref(it->second));
   }
-  return fitx::error{kTaskNotFound};
+  return fit::error{kTaskNotFound};
 }
 
 std::byte* Task::GetBuffer(size_t size) { return tree().GetBuffer(size); }
 
 void Task::TakeBuffer(std::unique_ptr<std::byte[]> buffer) { tree().TakeBuffer(std::move(buffer)); }
 
-fitx::result<Error, ByteView> Task::GetSuperrootInfo(zx_object_info_topic_t topic) {
+fit::result<Error, ByteView> Task::GetSuperrootInfo(zx_object_info_topic_t topic) {
   tree_.get().AssertIsSuperroot(*this);
   return tree_.get().GetSuperrootInfo(topic);
 }
 
-fitx::result<Error, ByteView> Task::get_info_aligned(  //
+fit::result<Error, ByteView> Task::get_info_aligned(  //
     zx_object_info_topic_t topic, size_t record_size, size_t align) {
   ByteView bytes;
   if (auto result = get_info(topic, record_size); result.is_error()) {
@@ -702,7 +701,7 @@ fitx::result<Error, ByteView> Task::get_info_aligned(  //
   size_t space = bytes.size();
   if (std::align(align, space, ptr, space)) {
     // It's already aligned.
-    return fitx::ok(bytes);
+    return fit::ok(bytes);
   }
 
   // Allocate a buffer with alignment slop and make the holder hold onto it.
@@ -717,11 +716,11 @@ fitx::result<Error, ByteView> Task::get_info_aligned(  //
   // the cached data with the aligned copy for the next lookup to find.
   ByteView copy{static_cast<std::byte*>(aligned_ptr), bytes.size()};
   info_[topic] = copy;
-  return fitx::ok(copy);
+  return fit::ok(copy);
 }
 
-fitx::result<Error> TaskHolder::JobTree::Read(DumpFile& real_file, bool read_memory,
-                                              FileRange where, time_t date) {
+fit::result<Error> TaskHolder::JobTree::Read(DumpFile& real_file, bool read_memory, FileRange where,
+                                             time_t date) {
   // If the file is compressed, this will iterate with the decompressed file.
   for (DumpFile* file = &real_file; where.size >= kHeaderProbeSize;
        // Read the whole uncompressed file as a stream.  Its size is unknown.
@@ -759,11 +758,11 @@ fitx::result<Error> TaskHolder::JobTree::Read(DumpFile& real_file, bool read_mem
     file = result.value().get();
     dumps_.push_front(std::move(result).value());
   }
-  return fitx::error(Error{"not an ELF or archive file", ZX_ERR_NOT_FILE});
+  return fit::error(Error{"not an ELF or archive file", ZX_ERR_NOT_FILE});
 }
 
-fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where, time_t date,
-                                                 ByteView header, bool read_memory) {
+fit::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where, time_t date,
+                                                ByteView header, bool read_memory) {
   Elf::Ehdr ehdr;
   if (header.size() < sizeof(ehdr)) {
     return TruncatedDump();
@@ -771,7 +770,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
   memcpy(&ehdr, header.data(), sizeof(ehdr));
   if (!ehdr.Valid() || ehdr.phentsize() != sizeof(Elf::Phdr) ||
       ehdr.type != elfldltl::ElfType::kCore) {
-    return fitx::error(Error{"ELF file is not a Zircon core dump", ZX_ERR_IO_DATA_INTEGRITY});
+    return fit::error(Error{"ELF file is not a Zircon core dump", ZX_ERR_IO_DATA_INTEGRITY});
   }
 
   // Get the count of program headers.  Large counts use a special encoding
@@ -780,7 +779,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
   if (phnum == Elf::Ehdr::kPnXnum) {
     Elf::Shdr shdr;
     if (ehdr.shoff < sizeof(ehdr) || ehdr.shnum() == 0 || ehdr.shentsize() != sizeof(shdr)) {
-      return fitx::error(Error{
+      return fit::error(Error{
           "invalid ELF section headers for PN_XNUM",
           ZX_ERR_IO_DATA_INTEGRITY,
       });
@@ -833,7 +832,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
   };
 
   // Parse a note segment.  Truncated notes do not cause an error.
-  auto parse_notes = [&](FileRange notes) -> fitx::result<Error> {
+  auto parse_notes = [&](FileRange notes) -> fit::result<Error> {
     // Cap the segment size to what's available in the file.
     notes.size = std::min(notes.size, where.size - notes.offset);
 
@@ -954,7 +953,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
           // but the move constructor and move assignment operator are public.
           thread = {Thread{*this}};
         } else if (!thread) {
-          return fitx::error(Error{
+          return fit::error(Error{
               "first thread info note is not ZX_INFO_HANDLE_BASIC",
               ZX_ERR_IO_DATA_INTEGRITY,
           });
@@ -970,7 +969,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
       // Not a thread info note.  Check for a thread property note.
       if (name == kThreadPropertyNoteName) {
         if (!thread) {
-          return fitx::error(Error{
+          return fit::error(Error{
               "thread property note before thread ZX_INFO_HANDLE_BASIC note",
               ZX_ERR_IO_DATA_INTEGRITY,
           });
@@ -986,7 +985,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
       // Not a thread property note.  Check for a thread state note.
       if (name == kThreadStateNoteName) {
         if (!thread) {
-          return fitx::error(Error{
+          return fit::error(Error{
               "thread state note before thread ZX_INFO_HANDLE_BASIC note",
               ZX_ERR_IO_DATA_INTEGRITY,
           });
@@ -1002,31 +1001,31 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
       // Ignore unrecognized notes.  Could make them an error?
     }
 
-    return fitx::ok();
+    return fit::ok();
   };
 
   // Validate a memory segment and add it to the memory map.
   auto add_segment = [&process](uint64_t vaddr, Process::Segment segment)  //
-      -> fitx::result<Error> {
+      -> fit::result<Error> {
     ZX_DEBUG_ASSERT(segment.memsz > 0);
     if (!process.memory_.empty()) {
       const auto& [last_vaddr, last_segment] = *process.memory_.crbegin();
       ZX_DEBUG_ASSERT(last_segment.memsz > 0);
       if (vaddr <= last_vaddr) {
-        return fitx::error(Error{
+        return fit::error(Error{
             "ELF core file PT_LOAD segments not in ascending address order",
             ZX_ERR_IO_DATA_INTEGRITY,
         });
       }
       if (vaddr < last_vaddr + last_segment.memsz) {
-        return fitx::error(Error{
+        return fit::error(Error{
             "ELF core file PT_LOAD segments overlap",
             ZX_ERR_IO_DATA_INTEGRITY,
         });
       }
     }
     process.memory_.emplace_hint(process.memory_.end(), vaddr, segment);
-    return fitx::ok();
+    return fit::ok();
   };
 
   while (!phdrs_bytes.empty()) {
@@ -1059,17 +1058,17 @@ fitx::result<Error> TaskHolder::JobTree::ReadElf(DumpFile& file, FileRange where
   if (auto result = AttachProcess(std::move(process)); result.is_error()) {
     return result.take_error();
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange archive,
-                                                     ByteView header, bool read_memory) {
+fit::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange archive,
+                                                    ByteView header, bool read_memory) {
   // The first member's header comes immediately after kArchiveMagic.
   archive %= kArchiveMagic.size();
   header.remove_prefix(kArchiveMagic.size());
 
   if (archive.empty()) {
-    return fitx::ok();
+    return fit::ok();
   }
 
   // This holds the current member's details.
@@ -1079,7 +1078,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
   // This parses the header into member and contents, and consumes them from
   // archive.
   auto parse = [&archive, &member, &contents](ByteView header)  //
-      -> fitx::result<Error, bool> {
+      -> fit::result<Error, bool> {
     if (auto result = ParseArchiveHeader(header); result.is_error()) {
       return result.take_error();
     } else {
@@ -1091,11 +1090,11 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
     }
     contents = archive / member.size;
     archive %= member.size + (member.size & 1);
-    return fitx::ok(true);
+    return fit::ok(true);
   };
 
   // This reads and parses the next header, consuming the member from archive.
-  auto next = [&](bool probe = false) -> fitx::result<Error, bool> {
+  auto next = [&](bool probe = false) -> fit::result<Error, bool> {
     ByteView header;
     if (auto result = file.ReadProbe(archive / sizeof(ar_hdr)); result.is_error()) {
       return result.take_error();
@@ -1103,7 +1102,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
       header = result.value();
     }
     if (probe && header.empty()) {
-      return fitx::ok(false);
+      return fit::ok(false);
     }
     if (header.size() < sizeof(ar_hdr)) {
       return TruncatedDump();
@@ -1120,7 +1119,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
     // An archive symbol table was created by `ar`.  `gcore` won't add one.
     // Ignore it and read the next member.
     if (archive.empty()) {
-      return fitx::ok();
+      return fit::ok();
     }
     if (auto result = next(); result.is_error()) {
       return result.take_error();
@@ -1140,7 +1139,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
       };
     }
     if (archive.empty()) {
-      return fitx::ok();
+      return fit::ok();
     }
     if (auto result = next(); result.is_error()) {
       return result.take_error();
@@ -1151,7 +1150,7 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
   Job job{*this};
 
   // Process one normal member.  It might be a note or an embedded dump file.
-  auto handle_member = [&]() -> fitx::result<Error> {
+  auto handle_member = [&]() -> fit::result<Error> {
     // Check for an info note.
     if (auto info = JobNoteName<zx_object_info_topic_t>(kJobInfoPrefix, member.name);
         info.is_error()) {
@@ -1236,29 +1235,29 @@ fitx::result<Error> TaskHolder::JobTree::ReadArchive(DumpFile& file, FileRange a
     if (result.is_error()) {
       return result.take_error();
     }
-    return fitx::ok();
+    return fit::ok();
   }
 
   if (job.info_.empty() && job.properties_.empty()) {
     // This was just a plain archive, not actually a job archive at all.
-    return fitx::ok();
+    return fit::ok();
   }
 
   // This job archive had some notes but no ZX_INFO_HANDLE_BASIC note.
   return CorruptedDump();
 }
 
-fitx::result<Error> TaskHolder::JobTree::ReadSystemNote(ByteView data) {
+fit::result<Error> TaskHolder::JobTree::ReadSystemNote(ByteView data) {
   // If it's already been collected, then ignore new data.
   if (system_.IsObject()) {
-    return fitx::ok();
+    return fit::ok();
   }
 
   std::string_view sv{reinterpret_cast<const char*>(data.data()), data.size()};
   StringViewStream stream{sv};
   system_.ParseStream(stream);
 
-  return fitx::ok();
+  return fit::ok();
 }
 
 const rapidjson::Value* TaskHolder::JobTree::GetSystemJsonData(const char* key) const {

@@ -161,7 +161,7 @@ TEST_F(PtyTestCase, Read) {
   ASSERT_NO_FATAL_FAILURE(Connect(&client));
   const fidl::WireResult result = client->Read(sizeof(kResponse));
   ASSERT_OK(result.status());
-  const fitx::result response = result.value();
+  const fit::result response = result.value();
   ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
   const fidl::VectorView data = response.value()->data;
   ASSERT_EQ(std::string_view(reinterpret_cast<const char*>(data.data()), data.count()),
@@ -189,7 +189,7 @@ TEST_F(PtyTestCase, Write) {
   const fidl::WireResult result =
       client->Write(fidl::VectorView<uint8_t>::FromExternal(kWrittenData));
   ASSERT_OK(result.status());
-  const fitx::result response = result.value();
+  const fit::result response = result.value();
   ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
   ASSERT_EQ(response.value()->actual_count, sizeof(kWrittenData));
 

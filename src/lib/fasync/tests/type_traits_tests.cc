@@ -15,13 +15,13 @@ TEST(TypeTraitsTests, IsPoll) {
   static_assert(fasync::is_poll_v<fasync::poll<>>, "");
   static_assert(fasync::is_poll_v<fasync::poll<int>>, "");
   static_assert(fasync::is_poll_v<fasync::poll<std::string>>, "");
-  static_assert(fasync::is_poll_v<fasync::try_poll<fitx::failed>>, "");
+  static_assert(fasync::is_poll_v<fasync::try_poll<fit::failed>>, "");
   static_assert(fasync::is_poll_v<fasync::try_poll<std::string, int>>, "");
 
   static_assert(!fasync::is_poll_v<fasync::pending>, "");
   static_assert(!fasync::is_poll_v<fasync::ready<>>, "");
   static_assert(!fasync::is_poll_v<fasync::ready<int>>, "");
-  static_assert(!fasync::is_poll_v<fitx::failed>, "");
+  static_assert(!fasync::is_poll_v<fit::failed>, "");
   static_assert(!fasync::is_poll_v<void>, "");
   static_assert(!fasync::is_poll_v<int>, "");
   static_assert(!fasync::is_poll_v<std::string>, "");
@@ -31,7 +31,7 @@ TEST(TypeTraitsTests, IsPoll) {
   static_assert(!fasync::is_void_poll_v<fasync::poll<int>>, "");
 
   // fasync::is_try_poll
-  static_assert(fasync::is_try_poll_v<fasync::try_poll<fitx::failed>>, "");
+  static_assert(fasync::is_try_poll_v<fasync::try_poll<fit::failed>>, "");
   static_assert(fasync::is_try_poll_v<fasync::try_poll<std::string, int>>, "");
   static_assert(!fasync::is_try_poll_v<fasync::poll<>>, "");
   static_assert(!fasync::is_try_poll_v<fasync::poll<int>>, "");
@@ -42,13 +42,13 @@ TEST(TypeTraitsTests, IsReady) {
   static_assert(fasync::is_ready_v<fasync::ready<>>, "");
   static_assert(fasync::is_ready_v<fasync::ready<int>>, "");
   static_assert(fasync::is_ready_v<fasync::ready<std::string>>, "");
-  static_assert(fasync::is_ready_v<fasync::try_ready<fitx::failed>>, "");
+  static_assert(fasync::is_ready_v<fasync::try_ready<fit::failed>>, "");
   static_assert(fasync::is_ready_v<fasync::try_ready<std::string, int>>, "");
 
   static_assert(!fasync::is_ready_v<fasync::pending>, "");
   static_assert(!fasync::is_ready_v<fasync::poll<>>, "");
   static_assert(!fasync::is_ready_v<fasync::poll<int>>, "");
-  static_assert(!fasync::is_ready_v<fitx::failed>, "");
+  static_assert(!fasync::is_ready_v<fit::failed>, "");
   static_assert(!fasync::is_ready_v<void>, "");
   static_assert(!fasync::is_ready_v<int>, "");
   static_assert(!fasync::is_ready_v<std::string>, "");
@@ -67,11 +67,11 @@ TEST(TypeTraitsTests, IsFuture) {
   constexpr auto ready_with_value = [](fasync::context&) -> fasync::poll<int> {
     return fasync::done(42);
   };
-  constexpr auto try_pending = [](fasync::context&) -> fasync::try_poll<fitx::failed> {
+  constexpr auto try_pending = [](fasync::context&) -> fasync::try_poll<fit::failed> {
     return fasync::pending();
   };
-  constexpr auto try_ready = [](fasync::context&) -> fasync::try_poll<fitx::failed> {
-    return fasync::done(fitx::ok());
+  constexpr auto try_ready = [](fasync::context&) -> fasync::try_poll<fit::failed> {
+    return fasync::done(fit::ok());
   };
 
   struct functor {
@@ -124,20 +124,20 @@ TEST(TypeTraitsTests, IsFuture) {
 
 TEST(TypeTraitsTests, IsValue) {
   // fasync::internal::is_value_result
-  static_assert(fasync::internal::is_value_result_v<fitx::result<char, int>>, "");
-  static_assert(!fasync::internal::is_value_result_v<fitx::result<char>>, "");
+  static_assert(fasync::internal::is_value_result_v<fit::result<char, int>>, "");
+  static_assert(!fasync::internal::is_value_result_v<fit::result<char>>, "");
 
   // fasync::internal::is_value_try_poll
-  static_assert(fasync::internal::is_value_try_poll_v<fasync::try_poll<fitx::failed, std::string>>,
+  static_assert(fasync::internal::is_value_try_poll_v<fasync::try_poll<fit::failed, std::string>>,
                 "");
-  static_assert(!fasync::internal::is_value_try_poll_v<fasync::try_poll<fitx::failed>>, "");
+  static_assert(!fasync::internal::is_value_try_poll_v<fasync::try_poll<fit::failed>>, "");
 
   // fasync::internal::is_value_try_future
-  constexpr auto value = [](fasync::context&) -> fasync::try_poll<fitx::failed, std::string> {
-    return fasync::done(fitx::failed());
+  constexpr auto value = [](fasync::context&) -> fasync::try_poll<fit::failed, std::string> {
+    return fasync::done(fit::failed());
   };
-  constexpr auto no_value = [](fasync::context&) -> fasync::try_poll<fitx::failed> {
-    return fasync::done(fitx::ok());
+  constexpr auto no_value = [](fasync::context&) -> fasync::try_poll<fit::failed> {
+    return fasync::done(fit::ok());
   };
 
   static_assert(fasync::internal::is_value_try_future_v<decltype(value)>, "");

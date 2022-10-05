@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/time.h>
@@ -60,7 +60,7 @@ bool RequestedCmsgSet::ipv6_pktinfo() const {
 
 // TODO(https://fxbug.dev/97260): Implement cache eviction strategy to avoid unbounded cache
 // growth.
-using RequestedCmsgResult = fitx::result<ErrOrOutCode, std::optional<RequestedCmsgSet>>;
+using RequestedCmsgResult = fit::result<ErrOrOutCode, std::optional<RequestedCmsgSet>>;
 RequestedCmsgResult RequestedCmsgCache::Get(zx_wait_item_t err_wait_item,
                                             bool get_requested_cmsg_set,
                                             fidl::WireSyncClient<fsocket::DatagramSocket>& client) {
@@ -94,7 +94,7 @@ RequestedCmsgResult RequestedCmsgCache::Get(zx_wait_item_t err_wait_item,
         if (err_wait_item_ref.pending & err_wait_item_ref.waitfor) {
           std::optional err = GetErrorWithClient(client);
           if (err.has_value()) {
-            return fitx::error(err.value());
+            return fit::error(err.value());
           }
           continue;
         }
@@ -109,29 +109,29 @@ RequestedCmsgResult RequestedCmsgCache::Get(zx_wait_item_t err_wait_item,
       } break;
       case ZX_ERR_TIMED_OUT: {
         if (!get_requested_cmsg_set) {
-          return fitx::ok(std::nullopt);
+          return fit::ok(std::nullopt);
         }
         if (cache_.has_value()) {
-          return fitx::ok(cache_.value().requested_cmsg_set);
+          return fit::ok(cache_.value().requested_cmsg_set);
         }
       } break;
       default:
         ErrOrOutCode err = zx::error(status);
-        return fitx::error(err);
+        return fit::error(err);
     }
 
     const fidl::WireResult response = client->RecvMsgPostflight();
     if (!response.ok()) {
       ErrOrOutCode err = zx::error(response.status());
-      return fitx::error(err);
+      return fit::error(err);
     }
     const auto& result = response.value();
     if (result.is_error()) {
-      return fitx::error(zx::ok(static_cast<int16_t>(result.error_value())));
+      return fit::error(zx::ok(static_cast<int16_t>(result.error_value())));
     }
     fsocket::wire::DatagramSocketRecvMsgPostflightResponse& response_inner = *result.value();
     if (!response_inner.has_validity()) {
-      return fitx::error(zx::ok(static_cast<int16_t>(EIO)));
+      return fit::error(zx::ok(static_cast<int16_t>(EIO)));
     }
     cache_ = Value{
         .validity = std::move(response_inner.validity()),
@@ -177,7 +177,7 @@ std::list<RouteCache::Key>::iterator RouteCache::LruAddToFrontLocked(const Key& 
   return lru_.begin();
 }
 
-using RouteCacheResult = fitx::result<ErrOrOutCode, uint32_t>;
+using RouteCacheResult = fit::result<ErrOrOutCode, uint32_t>;
 RouteCacheResult RouteCache::Get(
     std::optional<SocketAddress>& remote_addr,
     const std::optional<std::pair<uint64_t, fuchsia_net::wire::Ipv6Address>>& local_iface_and_addr,
@@ -237,19 +237,19 @@ RouteCacheResult RouteCache::Get(
         if (wait_items[ERR_WAIT_ITEM_IDX].pending & wait_items[ERR_WAIT_ITEM_IDX].waitfor) {
           std::optional err = GetErrorWithClient(client);
           if (err.has_value()) {
-            return fitx::error(err.value());
+            return fit::error(err.value());
           }
           continue;
         }
       } break;
       case ZX_ERR_TIMED_OUT: {
         if (maximum_size.has_value()) {
-          return fitx::success(maximum_size.value());
+          return fit::success(maximum_size.value());
         }
       } break;
       default:
         ErrOrOutCode err = zx::error(status);
-        return fitx::error(err);
+        return fit::error(err);
     }
 
     // TODO(https://fxbug.dev/103740): Avoid allocating into this arena.
@@ -272,11 +272,11 @@ RouteCacheResult RouteCache::Get(
     }();
     if (!response.ok()) {
       ErrOrOutCode err = zx::error(response.status());
-      return fitx::error(err);
+      return fit::error(err);
     }
     const auto& result = response.value();
     if (result.is_error()) {
-      return fitx::error(zx::ok(static_cast<int16_t>(result.error_value())));
+      return fit::error(zx::ok(static_cast<int16_t>(result.error_value())));
     }
     fsocket::wire::DatagramSocketSendMsgPreflightResponse& res = *result.value();
 
@@ -290,11 +290,11 @@ RouteCacheResult RouteCache::Get(
         remote_addr.has_value() ? remote_addr : returned_addr;
 
     if (!addr_to_store.has_value()) {
-      return fitx::error(zx::ok(static_cast<int16_t>(EIO)));
+      return fit::error(zx::ok(static_cast<int16_t>(EIO)));
     }
 
     if (!res.has_maximum_size() || !res.has_validity()) {
-      return fitx::error(zx::ok(static_cast<int16_t>(EIO)));
+      return fit::error(zx::ok(static_cast<int16_t>(EIO)));
     }
 
     std::vector<zx::eventpair> eventpairs;

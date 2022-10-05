@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZXDUMP_INCLUDE_LIB_ZXDUMP_ZSTD_WRITER_H_
 #define SRC_LIB_ZXDUMP_INCLUDE_LIB_ZXDUMP_ZSTD_WRITER_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <memory>
 #include <string_view>
@@ -43,24 +43,24 @@ class ZstdWriter {
 
   // Both kinds of callbacks are handled the same way.
   auto WriteCallback() {
-    return [this](size_t offset, ByteView data) -> fitx::result<error_type> {
+    return [this](size_t offset, ByteView data) -> fit::result<error_type> {
       return Write(offset, data);
     };
   }
 
   auto AccumulateFragmentsCallback() { return WriteCallback(); }
 
-  fitx::result<error_type, size_t> WriteFragments() { return fitx::ok(offset_); }
+  fit::result<error_type, size_t> WriteFragments() { return fit::ok(offset_); }
 
   void ResetOffset() { offset_ = 0; }
 
   // Flush the compression buffers and finish writing all the output.
-  fitx::result<error_type> Finish();
+  fit::result<error_type> Finish();
 
  private:
-  fitx::result<error_type> Write(size_t offset, ByteView data);
+  fit::result<error_type> Write(size_t offset, ByteView data);
 
-  fitx::result<error_type> Flush();
+  fit::result<error_type> Flush();
 
   void* ctx_ = nullptr;
   std::unique_ptr<std::byte[]> buffer_;

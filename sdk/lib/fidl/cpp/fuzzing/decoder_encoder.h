@@ -133,7 +133,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   status.progress = DecoderEncoderProgress::InitializedForDecoding;
 
   fidl::WireFormatMetadata& wire_format_metadata = wire_format_metadata_initialize_later.value();
-  std::optional<fitx::result<fidl::Error, fidl::DecodedValue<Body>>> decoded_initialize_later;
+  std::optional<fit::result<fidl::Error, fidl::DecodedValue<Body>>> decoded_initialize_later;
 
   if (kTreatBytesAsTransactionalMessage) {
     decoded_initialize_later.emplace(fidl::internal::InplaceDecodeTransactionalMessage<Body>(
@@ -145,7 +145,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
         fidl::InplaceDecode<Body>(std::move(encoded), wire_format_metadata));
   }
 
-  fitx::result<fidl::Error, fidl::DecodedValue<Body>>& decoded = decoded_initialize_later.value();
+  fit::result<fidl::Error, fidl::DecodedValue<Body>>& decoded = decoded_initialize_later.value();
 
   if (!decoded.is_ok()) {
     status.status = decoded.error_value();
@@ -181,10 +181,10 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   }
   status.progress = DecoderEncoderProgress::FirstEncodeVerified;
 
-  std::optional<fitx::result<fidl::Error, fidl::DecodedValue<Body>>> decoded2_initialize_later;
+  std::optional<fit::result<fidl::Error, fidl::DecodedValue<Body>>> decoded2_initialize_later;
   decoded2_initialize_later.emplace(
       fidl::InplaceDecode<Body>(std::move(conversion.incoming_message()), wire_format_metadata));
-  fitx::result<fidl::Error, fidl::DecodedValue<Body>>& decoded2 = decoded2_initialize_later.value();
+  fit::result<fidl::Error, fidl::DecodedValue<Body>>& decoded2 = decoded2_initialize_later.value();
 
   if (!decoded2.is_ok()) {
     status.status = decoded2.error_value();

@@ -13,31 +13,31 @@
 
 namespace elfldltl {
 
-fitx::result<int> MappedFdFile::Init(int fd) {
+fit::result<int> MappedFdFile::Init(int fd) {
   // Stat the file to get its size.
   struct stat st;
   if (fstat(fd, &st) < 0) {
-    return fitx::error{errno};
+    return fit::error{errno};
   }
 
   // If it's not a regular file, st_size doesn't mean something useful.
   if (!S_ISREG(st.st_mode)) {
-    return fitx::error{ENOTSUP};
+    return fit::error{ENOTSUP};
   }
 
   const size_t file_size = static_cast<size_t>(st.st_size);
   if (st.st_size > static_cast<ssize_t>(file_size)) {
-    return fitx::error{EFBIG};
+    return fit::error{EFBIG};
   }
 
   void* mapped = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
   if (mapped == MAP_FAILED) {
-    return fitx::error{errno};
+    return fit::error{errno};
   }
 
   set_image({static_cast<std::byte*>(mapped), file_size});
 
-  return fitx::ok();
+  return fit::ok();
 }
 
 MappedFdFile::~MappedFdFile() {

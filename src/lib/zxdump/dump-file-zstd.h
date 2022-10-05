@@ -28,23 +28,23 @@ class DumpFile::Zstd : public DumpFile {
 
   size_t size() const override;
 
-  fitx::result<Error, ByteView> ReadProbe(FileRange where) override;
+  fit::result<Error, ByteView> ReadProbe(FileRange where) override;
 
-  fitx::result<Error, ByteView> ReadEphemeral(FileRange where) override;
+  fit::result<Error, ByteView> ReadEphemeral(FileRange where) override;
 
-  fitx::result<Error, ByteView> ReadPermanent(FileRange where) override;
+  fit::result<Error, ByteView> ReadPermanent(FileRange where) override;
 
   void shrink_to_fit() override;
 
   // Put some data through the decompressor.
-  fitx::result<Error, bool> Pump(ByteView compressed, size_t skip);
+  fit::result<Error, bool> Pump(ByteView compressed, size_t skip);
 
  private:
   struct FreeCtx {
     void operator()(ZSTD_DCtx* ctx) const { ZSTD_freeDCtx(ctx); }
   };
 
-  fitx::result<Error, ByteView> Read(FileRange where, bool permanent, bool probe);
+  fit::result<Error, ByteView> Read(FileRange where, bool permanent, bool probe);
 
   // The read state of the underlying stream: the offset of what's
   // already been read; and the size of what to read next.  When the size

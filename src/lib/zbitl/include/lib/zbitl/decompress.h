@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_DECOMPRESS_H_
 #define SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_DECOMPRESS_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 
 #include <memory>
@@ -19,7 +19,7 @@ namespace zbitl::decompress {
 // to allocate scratch memory.  It uses normal `new std::byte[]`.  If explicit
 // callbacks are provided instead, the library won't need to link in the
 // standard C++ library allocator used by this.
-fitx::result<std::string_view, std::unique_ptr<std::byte[]>> DefaultAllocator(size_t bytes);
+fit::result<std::string_view, std::unique_ptr<std::byte[]>> DefaultAllocator(size_t bytes);
 
 class OneShot {
  public:
@@ -29,8 +29,8 @@ class OneShot {
   // Called (once) with the whole payload and returns success only if exactly
   // the whole output buffer was filled.
   template <typename Allocator>
-  static fitx::result<std::string_view> Decompress(cpp20::span<std::byte> out, ByteView payload,
-                                                   Allocator&& allocator) {
+  static fit::result<std::string_view> Decompress(cpp20::span<std::byte> out, ByteView payload,
+                                                  Allocator&& allocator) {
     const size_t need = GetScratchSize();
     auto scratch = allocator(need);
     if (scratch.is_error()) {
@@ -46,8 +46,8 @@ class OneShot {
   // Set up the decompression context in a buffer according to GetScratchSize.
   static Context* Init(void* scratch_space, size_t scratch_size);
 
-  static fitx::result<std::string_view> DecompressImpl(Context* dctx, cpp20::span<std::byte> out,
-                                                       ByteView in);
+  static fit::result<std::string_view> DecompressImpl(Context* dctx, cpp20::span<std::byte> out,
+                                                      ByteView in);
 };
 
 class Streaming {
@@ -55,15 +55,15 @@ class Streaming {
   template <bool Buffered, typename Allocator>
   static auto Create(ByteView probe, Allocator&& allocator) {
     if constexpr (Buffered) {
-      // Returns fitx::result<std::string_view, lambda>.  On success, lambda is
-      // (ByteView& in) -> fitx::result<std::string_view, cpp20::span<std::byte>>
+      // Returns fit::result<std::string_view, lambda>.  On success, lambda is
+      // (ByteView& in) -> fit::result<std::string_view, cpp20::span<std::byte>>
       // It updates the `in` argument for the data consumed, and it returns the
       // a buffer of decompressed data that can be used until the next call.
       return Streaming::CreateBufferedImpl(probe, std::forward<Allocator>(allocator));
     } else {
-      // Returns fitx::result<std::string_view, lambda>.  On success, the
+      // Returns fit::result<std::string_view, lambda>.  On success, the
       // lambda is (cpp20::span<std::byte> out, ByteView& in) ->
-      // fitx::result<std::string_view, cpp20::span<std::byte>>.  It updates the
+      // fit::result<std::string_view, cpp20::span<std::byte>>.  It updates the
       // `in` argument for the data consumed, and it returns the remainder of
       // the `out` argument not yet written.
       return Streaming::CreateUnbufferedImpl(probe, std::forward<Allocator>(allocator));
@@ -80,7 +80,7 @@ class Streaming {
 
   // Calculate the scratch space required to decompress the payload, given an
   // initial chunk of the payload of at least zbitl::kReadMinimum bytes.
-  static fitx::result<std::string_view, ScratchSize> GetScratchSize(ByteView probe);
+  static fit::result<std::string_view, ScratchSize> GetScratchSize(ByteView probe);
 
   // Set up the decompression context.
   static Context* Init(void* scratch_space, size_t scratch_size);
@@ -88,7 +88,7 @@ class Streaming {
   // Decompress a chunk of payload into the buffer.  The returned buffer is a
   // subset of the supplied buffer.  The argument is updated to leave only the
   // unprocessed remainder.
-  static fitx::result<std::string_view, cpp20::span<std::byte>> Decompress(
+  static fit::result<std::string_view, cpp20::span<std::byte>> Decompress(
       Context* dctx, cpp20::span<std::byte> buffer, ByteView& chunk);
 
   // This creates the decompressor object that View::DecompressStorage calls
@@ -102,19 +102,19 @@ class Streaming {
     };
     return [owner = std::forward<decltype(owner)>(owner),
             buffer = std::forward<decltype(buffer)>(buffer), dctx,
-            out](ByteView& in) -> fitx::result<std::string_view, cpp20::span<std::byte>> {
+            out](ByteView& in) -> fit::result<std::string_view, cpp20::span<std::byte>> {
       auto result = Decompress(dctx, out, in);
       if (result.is_error()) {
         return result.take_error();
       }
-      return fitx::ok(out.subspan(0, out.size() - result.value().size()));
+      return fit::ok(out.subspan(0, out.size() - result.value().size()));
     };
   };
 
   template <typename Allocator>
   static auto CreateBufferedImpl(ByteView probe, Allocator&& allocator)
-      -> fitx::result<std::string_view,  // A lambda type
-                      decltype(MakeBuffered({}, allocator({}).value(), allocator({}).value()))> {
+      -> fit::result<std::string_view,  // A lambda type
+                     decltype(MakeBuffered({}, allocator({}).value(), allocator({}).value()))> {
     ScratchSize need;
     if (auto result = GetScratchSize(probe); result.is_error()) {
       return result.take_error();
@@ -129,7 +129,7 @@ class Streaming {
     if (buffer.is_error()) {
       return buffer.take_error();
     }
-    return fitx::ok(MakeBuffered(need, std::move(scratch).value(), std::move(buffer).value()));
+    return fit::ok(MakeBuffered(need, std::move(scratch).value(), std::move(buffer).value()));
   }
 
   // This creates the decompressor object that View::DecompressStorage calls
@@ -143,7 +143,7 @@ class Streaming {
 
   template <typename Allocator>
   static auto CreateUnbufferedImpl(ByteView probe, Allocator&& allocator)
-      -> fitx::result<std::string_view, decltype(MakeUnbuffered({}, allocator({}).value()))> {
+      -> fit::result<std::string_view, decltype(MakeUnbuffered({}, allocator({}).value()))> {
     ScratchSize need;
     if (auto result = GetScratchSize(probe); result.is_error()) {
       return result.take_error();
@@ -154,7 +154,7 @@ class Streaming {
     if (scratch.is_error()) {
       return scratch.take_error();
     }
-    return fitx::ok(MakeUnbuffered(need.scratch_size, std::move(scratch).value()));
+    return fit::ok(MakeUnbuffered(need.scratch_size, std::move(scratch).value()));
   }
 };
 

@@ -24,7 +24,7 @@ zx::status<fbl::unique_fd> StartDriverTestRealm() {
   if (!fidl_result.ok()) {
     return zx::error(fidl_result.status());
   }
-  const fitx::result result = fidl_result.value();
+  const fit::result result = fidl_result.value();
   if (result.is_error()) {
     return zx::error(result.error_value());
   }

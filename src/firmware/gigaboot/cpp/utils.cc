@@ -139,7 +139,7 @@ efi_status PrintTpm2Capability() {
   return EFI_SUCCESS;
 }
 
-fitx::result<efi_status, bool> IsSecureBootOn() {
+fit::result<efi_status, bool> IsSecureBootOn() {
   size_t size = 1;
   uint8_t value;
   char16_t name[] = u"SecureBoot";
@@ -147,10 +147,10 @@ fitx::result<efi_status, bool> IsSecureBootOn() {
   efi_status status =
       gEfiSystemTable->RuntimeServices->GetVariable(name, &global_var_guid, NULL, &size, &value);
   if (status != EFI_SUCCESS) {
-    return fitx::error(status);
+    return fit::error(status);
   }
 
-  return fitx::ok(value);
+  return fit::ok(value);
 }
 
 }  // namespace gigaboot

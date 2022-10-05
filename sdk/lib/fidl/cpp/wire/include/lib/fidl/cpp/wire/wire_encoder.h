@@ -9,7 +9,7 @@
 #include <lib/fidl/cpp/wire/coding_errors.h>
 #include <lib/fidl/cpp/wire/internal/transport.h>
 #include <lib/fidl/cpp/wire/wire_coding_common.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 namespace fidl::internal {
 
@@ -139,14 +139,14 @@ class WireEncoder {
     size_t handle_actual;
   };
 
-  fitx::result<fidl::Error, Result> Finish() {
+  fit::result<fidl::Error, Result> Finish() {
     if (unlikely(AvailableBytesInBuffer() < 0)) {
       // |Alloc| deferred error checking. Report an error if the buffer size was exceeded.
       SetError(ZX_ERR_BUFFER_TOO_SMALL, kCodingErrorBackingBufferSizeExceeded);
     }
     if (unlikely(error_ != nullptr)) {
       coding_config_->close_many(handles_, handle_actual_);
-      return fitx::error(fidl::Status::EncodeError(error_status_, error_));
+      return fit::error(fidl::Status::EncodeError(error_status_, error_));
     }
     if (likely(ConsumedBytesInCurrentIovec() > 0)) {
       // Emit a final iovec entry.
@@ -157,7 +157,7 @@ class WireEncoder {
       };
       iovec_actual_++;
     }
-    return fitx::ok(Result{
+    return fit::ok(Result{
         .iovec_actual = iovec_actual_,
         .handle_actual = handle_actual_,
     });

@@ -36,8 +36,7 @@ class MockLimboProvider final : public LimboProvider {
   bool Valid() const override { return true; }
   bool IsProcessInLimbo(zx_koid_t process_koid) const override;
   const RecordMap& GetLimboRecords() const override;
-  fitx::result<debug::Status, RetrievedException> RetrieveException(
-      zx_koid_t process_koid) override;
+  fit::result<debug::Status, RetrievedException> RetrieveException(zx_koid_t process_koid) override;
   debug::Status ReleaseProcess(zx_koid_t process_koid) override;
 
   void AppendException(MockProcessHandle process, MockThreadHandle thread,

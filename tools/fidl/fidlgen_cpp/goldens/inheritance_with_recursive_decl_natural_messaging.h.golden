@@ -25,7 +25,7 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Parent> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request) const;
+  ::fit::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request) const;
 };
 namespace test_inheritancewithrecursivedecl {
 
@@ -39,7 +39,7 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Parent> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Parent>> {
  public:
-  ::fitx::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request);
+  ::fit::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request);
 
  private:
   ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent> _client_end() const {
@@ -170,9 +170,9 @@ template <>
 class ::fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Child> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
-  ::fitx::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request) const;
+  ::fit::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request) const;
 
-  ::fitx::result<::fidl::Error> Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request) const;
+  ::fit::result<::fidl::Error> Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request) const;
 };
 namespace test_inheritancewithrecursivedecl {
 
@@ -186,9 +186,9 @@ template <>
 class ::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child>> {
  public:
-  ::fitx::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request);
+  ::fit::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request);
 
-  ::fitx::result<::fidl::Error> Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request);
+  ::fit::result<::fidl::Error> Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request);
 
  private:
   ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child> _client_end() const {

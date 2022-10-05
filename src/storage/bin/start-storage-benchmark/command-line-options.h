@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BIN_START_STORAGE_BENCHMARK_COMMAND_LINE_OPTIONS_H_
 #define SRC_STORAGE_BIN_START_STORAGE_BENCHMARK_COMMAND_LINE_OPTIONS_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <istream>
 #include <string>
@@ -33,7 +33,7 @@ struct CommandLineOptions {
   std::vector<std::string> benchmark_options;
 };
 
-using CommandLineStatus = fitx::result<std::string, CommandLineOptions>;
+using CommandLineStatus = fit::result<std::string, CommandLineOptions>;
 
 // Parses the command line options in |CommandLineOptions|.
 // Returns an error string if the command line options are invalid.

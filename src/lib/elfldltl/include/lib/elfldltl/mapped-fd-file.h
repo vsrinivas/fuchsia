@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_MAPPED_FD_FILE_H_
 #define SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_MAPPED_FD_FILE_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include "memory.h"
 
@@ -37,7 +37,7 @@ class MappedFdFile : public DirectMemory {
   }
 
   // Fails with an errno code if fstat or mmap failed.
-  fitx::result<int> Init(int fd);
+  fit::result<int> Init(int fd);
 
   ~MappedFdFile();
 

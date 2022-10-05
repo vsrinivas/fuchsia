@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_LIMBO_PROVIDER_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_LIMBO_PROVIDER_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <map>
 #include <vector>
@@ -61,7 +61,7 @@ class LimboProvider {
   virtual const RecordMap& GetLimboRecords() const = 0;
 
   // Consumes the process in limbo.
-  virtual fitx::result<debug::Status, RetrievedException> RetrieveException(
+  virtual fit::result<debug::Status, RetrievedException> RetrieveException(
       zx_koid_t process_koid) = 0;
 
   virtual debug::Status ReleaseProcess(zx_koid_t process_koid) = 0;

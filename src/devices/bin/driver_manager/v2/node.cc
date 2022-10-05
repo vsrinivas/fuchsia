@@ -86,27 +86,26 @@ void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
   }
 }
 
-fitx::result<fdf::wire::NodeError> ValidateSymbols(
-    fidl::VectorView<fdf::wire::NodeSymbol> symbols) {
+fit::result<fdf::wire::NodeError> ValidateSymbols(fidl::VectorView<fdf::wire::NodeSymbol> symbols) {
   std::unordered_set<std::string_view> names;
   for (auto& symbol : symbols) {
     if (!symbol.has_name()) {
       LOGF(ERROR, "SymbolError: a symbol is missing a name");
-      return fitx::error(fdf::wire::NodeError::kSymbolNameMissing);
+      return fit::error(fdf::wire::NodeError::kSymbolNameMissing);
     }
     if (!symbol.has_address()) {
       LOGF(ERROR, "SymbolError: symbol '%.*s' is missing an address",
            static_cast<int>(symbol.name().size()), symbol.name().data());
-      return fitx::error(fdf::wire::NodeError::kSymbolAddressMissing);
+      return fit::error(fdf::wire::NodeError::kSymbolAddressMissing);
     }
     auto [_, inserted] = names.emplace(symbol.name().get());
     if (!inserted) {
       LOGF(ERROR, "SymbolError: symbol '%.*s' already exists",
            static_cast<int>(symbol.name().size()), symbol.name().data());
-      return fitx::error(fdf::wire::NodeError::kSymbolAlreadyExists);
+      return fit::error(fdf::wire::NodeError::kSymbolAlreadyExists);
     }
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace
@@ -451,29 +450,29 @@ void Node::Remove() {
   UnbindAndReset(node_ref_);
 }
 
-fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> Node::AddChild(
+fit::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> Node::AddChild(
     fuchsia_driver_framework::wire::NodeAddArgs args,
     fidl::ServerEnd<fuchsia_driver_framework::NodeController> controller,
     fidl::ServerEnd<fuchsia_driver_framework::Node> node) {
   if (node_manager_ == nullptr) {
     LOGF(WARNING, "Failed to add Node, as this Node '%s' was removed", name().data());
-    return fitx::as_error(fdf::wire::NodeError::kNodeRemoved);
+    return fit::as_error(fdf::wire::NodeError::kNodeRemoved);
   }
   if (!args.has_name()) {
     LOGF(ERROR, "Failed to add Node, a name must be provided");
-    return fitx::as_error(fdf::wire::NodeError::kNameMissing);
+    return fit::as_error(fdf::wire::NodeError::kNameMissing);
   }
   auto name = args.name().get();
   if (name.find('.') != std::string_view::npos) {
     LOGF(ERROR, "Failed to add Node '%.*s', name must not contain '.'",
          static_cast<int>(name.size()), name.data());
-    return fitx::as_error(fdf::wire::NodeError::kNameInvalid);
+    return fit::as_error(fdf::wire::NodeError::kNameInvalid);
   }
   for (auto& child : children_) {
     if (child->name() == name) {
       LOGF(ERROR, "Failed to add Node '%.*s', name already exists among siblings",
            static_cast<int>(name.size()), name.data());
-      return fitx::as_error(fdf::wire::NodeError::kNameAlreadyExists);
+      return fit::as_error(fdf::wire::NodeError::kNameAlreadyExists);
     }
   };
   auto child = std::make_shared<Node>(name, std::vector<Node*>{this}, *node_manager_, dispatcher_);
@@ -486,14 +485,14 @@ fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> N
       if (!has_source_name.value_or(false)) {
         LOGF(ERROR, "Failed to add Node '%.*s', an offer must have a source name",
              static_cast<int>(name.size()), name.data());
-        return fitx::as_error(fdf::wire::NodeError::kOfferSourceNameMissing);
+        return fit::as_error(fdf::wire::NodeError::kOfferSourceNameMissing);
       }
       auto has_ref = VisitOffer<bool>(
           offer, [](auto& decl) { return decl.has_source() || decl.has_target(); });
       if (has_ref.value_or(false)) {
         LOGF(ERROR, "Failed to add Node '%.*s', an offer must not have a source or target",
              static_cast<int>(name.size()), name.data());
-        return fitx::as_error(fdf::wire::NodeError::kOfferRefExists);
+        return fit::as_error(fdf::wire::NodeError::kOfferRefExists);
       }
 
       // Find a parent node with a collection. This indicates that a driver has
@@ -533,7 +532,7 @@ fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> N
     if (is_valid.is_error()) {
       LOGF(ERROR, "Failed to add Node '%.*s', bad symbols", static_cast<int>(name.size()),
            name.data());
-      return fitx::as_error(is_valid.error_value());
+      return fit::as_error(is_valid.error_value());
     }
 
     child->symbols_.reserve(args.symbols().count());
@@ -558,7 +557,7 @@ fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> N
     (*node_manager_)->Bind(*child, nullptr);
   }
   child->AddToParents();
-  return fitx::ok(child);
+  return fit::ok(child);
 }
 
 bool Node::IsComposite() const { return parents_.size() > 1; }

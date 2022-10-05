@@ -524,7 +524,7 @@ struct ::fidl::internal::IncomingEventsStorage<::test_errorsyntax::ExampleUseOfE
 
 template <>
 struct ::fidl::internal::WireResultUnwrap<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> {
-  using Type = ::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>;
+  using Type = ::fit::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*>;
 };
 
 template <>
@@ -556,7 +556,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(::fidl::internal::StatusFromResult(decoded)) {
     if (decoded.is_ok()) {
       decoded_ = std::move(decoded.value());
@@ -577,7 +577,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
 
 template <>
 struct ::fidl::internal::WireResultUnwrap<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> {
-  using Type = ::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>;
+  using Type = ::fit::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*>;
 };
 
 template <>
@@ -609,7 +609,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(::fidl::internal::StatusFromResult(decoded)) {
     if (decoded.is_ok()) {
       decoded_ = std::move(decoded.value());
@@ -714,7 +714,7 @@ class ::fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorS
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result);
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
 
@@ -727,7 +727,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOf
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse*> result);
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
 
@@ -755,7 +755,7 @@ class ::fidl::internal::WireCompleterImpl<::test_errorsyntax::ExampleUseOfErrorS
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result);
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
 
@@ -768,7 +768,7 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_errorsyntax::ExampleUseOf
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::fitx::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result);
+  void Reply(::fit::result<uint32_t, ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse*> result);
   void ReplySuccess(int64_t value);
   void ReplyError(uint32_t error);
 

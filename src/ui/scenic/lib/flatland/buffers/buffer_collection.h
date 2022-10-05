@@ -6,7 +6,7 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_BUFFER_COLLECTION_H_
 
 #include <fuchsia/images/cpp/fidl.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -24,7 +24,7 @@ class BufferCollectionInfo {
   //
   // TODO(fxbug.dev/48210): Make this an asynchronous call. This function is currently thread safe
   // as Allocator_Sync pointers are thread safe, but if this becomes async it may become unsafe.
-  static fitx::result<fitx::failed, BufferCollectionInfo> New(
+  static fit::result<fit::failed, BufferCollectionInfo> New(
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       BufferCollectionHandle buffer_collection_token);
 

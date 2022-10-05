@@ -23,7 +23,7 @@ namespace zxdump {
 
 using ByteView = std::basic_string_view<std::byte>;
 
-// fitx::result<zxdump::Error> is used as the return type of many operations.
+// fit::result<zxdump::Error> is used as the return type of many operations.
 // It carries a zx_status_t and a string describing what operation failed.
 struct Error {
   std::string_view status_string() const;
@@ -37,7 +37,7 @@ struct Error {
 template <typename Dump>
 using DumpResult = std::decay_t<decltype(std::declval<Dump>()(size_t{}, ByteView{}))>;
 
-// fitx::result<zxdump::DumpError<Dump>> is used as the return type of
+// fit::result<zxdump::DumpError<Dump>> is used as the return type of
 // operations that take a Dump function.  Usually either Error::status_ will be
 // ZX_OK and dump_error_ will be set, or dump_error_ will be std::nullopt and
 // Error::status_ will not be ZX_OK.  For dump errors, Error::op_ will be the

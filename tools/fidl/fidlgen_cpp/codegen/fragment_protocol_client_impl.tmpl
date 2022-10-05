@@ -128,7 +128,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 
   {{- range .OneWayMethods }}
   {{- .Docs }}
-  ::fitx::result<::fidl::Error> {{ .Name }}({{ .NaturalRequestArg "request" }}) const;
+  ::fit::result<::fidl::Error> {{ .Name }}({{ .NaturalRequestArg "request" }}) const;
 {{ "" }}
   {{- end }}
 };
@@ -176,7 +176,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 {{- range .OneWayMethods }}
 
 {{- EnsureNamespace "" }}
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };

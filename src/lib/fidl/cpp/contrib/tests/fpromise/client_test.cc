@@ -96,11 +96,11 @@ TEST(Client, PromisifyTransportError) {
 class ErrorServer : public fidl::Server<test_error_methods::ErrorMethods> {
   void NoArgsPrimitiveError(NoArgsPrimitiveErrorRequest& request,
                             NoArgsPrimitiveErrorCompleter::Sync& completer) final {
-    completer.Reply(fitx::error(42));
+    completer.Reply(fit::error(42));
   }
   void ManyArgsCustomError(ManyArgsCustomErrorRequest& request,
                            ManyArgsCustomErrorCompleter::Sync& completer) final {
-    completer.Reply(fitx::error(test_error_methods::MyError::kBadError));
+    completer.Reply(fit::error(test_error_methods::MyError::kBadError));
   }
 };
 
@@ -160,11 +160,11 @@ TEST(Client, PromisifyApplicationErrorMethodCaseCustomError) {
 class SuccessServer : public fidl::Server<test_error_methods::ErrorMethods> {
   void NoArgsPrimitiveError(NoArgsPrimitiveErrorRequest& request,
                             NoArgsPrimitiveErrorCompleter::Sync& completer) final {
-    completer.Reply(fitx::ok());
+    completer.Reply(fit::ok());
   }
   void ManyArgsCustomError(ManyArgsCustomErrorRequest& request,
                            ManyArgsCustomErrorCompleter::Sync& completer) final {
-    completer.Reply(fitx::ok(
+    completer.Reply(fit::ok(
         test_error_methods::ErrorMethodsManyArgsCustomErrorResponse{{.a = 1, .b = 2, .c = 3}}));
   }
 };

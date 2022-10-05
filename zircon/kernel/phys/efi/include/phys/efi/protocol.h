@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_EFI_INCLUDE_PHYS_EFI_PROTOCOL_H_
 #define ZIRCON_KERNEL_PHYS_EFI_INCLUDE_PHYS_EFI_PROTOCOL_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <memory>
 #include <type_traits>
@@ -18,7 +18,7 @@
 // efi_boot_services.  These functions are not usually used directly, but
 // instead the EfiOpenProtocol<Protocol> template should be used and then
 // CloseProtocol calls are automatic via RAII.
-fitx::result<efi_status, efi_handle> EfiOpenProtocol(efi_handle handle, const efi_guid& guid);
+fit::result<efi_status, efi_handle> EfiOpenProtocol(efi_handle handle, const efi_guid& guid);
 void EfiCloseProtocol(const efi_guid& guid, efi_handle protocol);
 
 // This is defined below.
@@ -44,13 +44,13 @@ inline constexpr efi_guid kEfiProtocolGuid =
 // OpenProtocol fails (with no efi_status details).  The returned move-only
 // smart pointer type will automatically call CloseProtocol on destruction.
 template <class Protocol>
-inline fitx::result<efi_status, EfiProtocolPtr<Protocol>> EfiOpenProtocol(efi_handle handle) {
+inline fit::result<efi_status, EfiProtocolPtr<Protocol>> EfiOpenProtocol(efi_handle handle) {
   auto result = EfiOpenProtocol(handle, kEfiProtocolGuid<Protocol>);
   if (result.is_error()) {
     return result.take_error();
   }
   Protocol* ptr = static_cast<Protocol*>(result.value());
-  return fitx::ok(EfiProtocolPtr<Protocol>(ptr));
+  return fit::ok(EfiProtocolPtr<Protocol>(ptr));
 }
 
 // Custom unique_ptr deleter instantiated for each efi_*_protocol type.

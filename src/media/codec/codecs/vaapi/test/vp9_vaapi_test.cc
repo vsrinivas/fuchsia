@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/syslog/global.h>
 #include <stdio.h>
 
@@ -64,12 +64,12 @@ class IvfParser {
   IvfParser(IvfParser&&) = delete;
   IvfParser& operator=(IvfParser&&) = delete;
 
-  fitx::result<std::string, IvfFileHeader> ReadFileHeader(const uint8_t* stream, size_t size) {
+  fit::result<std::string, IvfFileHeader> ReadFileHeader(const uint8_t* stream, size_t size) {
     ptr_ = stream;
     end_ = stream + size;
 
     if (size < sizeof(IvfFileHeader)) {
-      return fitx::error("EOF before file header");
+      return fit::error("EOF before file header");
     }
 
     IvfFileHeader file_header;
@@ -77,24 +77,24 @@ class IvfParser {
 
     if (std::memcmp(file_header.signature, kIvfHeaderSignature, sizeof(file_header.signature)) !=
         0) {
-      return fitx::error("IVF signature not valid");
+      return fit::error("IVF signature not valid");
     }
 
     if (file_header.version != 0) {
-      return fitx::error("IVF version unknown");
+      return fit::error("IVF version unknown");
     }
 
     if (file_header.header_size != sizeof(IvfFileHeader)) {
-      return fitx::error("IVF invalid header file");
+      return fit::error("IVF invalid header file");
     }
 
     ptr_ += sizeof(IvfFileHeader);
-    return fitx::ok(std::move(file_header));
+    return fit::ok(std::move(file_header));
   }
 
-  fitx::result<std::string, std::pair<IvfFrameHeader, const uint8_t*>> ParseFrame() {
+  fit::result<std::string, std::pair<IvfFrameHeader, const uint8_t*>> ParseFrame() {
     if (static_cast<std::size_t>(end_ - ptr_) < sizeof(IvfFrameHeader)) {
-      return fitx::error("Not enough space to parse frame header");
+      return fit::error("Not enough space to parse frame header");
     }
 
     IvfFrameHeader frame_header;
@@ -102,13 +102,13 @@ class IvfParser {
     ptr_ += sizeof(IvfFrameHeader);
 
     if (static_cast<uint32_t>(end_ - ptr_) < frame_header.frame_size) {
-      return fitx::error("Not enough space to parse frame payload");
+      return fit::error("Not enough space to parse frame payload");
     }
 
     const uint8_t* payload = ptr_;
     ptr_ += frame_header.frame_size;
 
-    return fitx::ok(std::make_pair(frame_header, payload));
+    return fit::ok(std::make_pair(frame_header, payload));
   }
 
  private:
@@ -326,9 +326,9 @@ class Vp9VaapiTestFixture : public ::testing::Test {
     decoder_->CoreCodecEnsureBuffersNotConfigured(CodecPort::kOutputPort);
   }
 
-  fitx::result<std::string, IvfFileHeader> InitializeIvfFile(const std::string& file_name) {
+  fit::result<std::string, IvfFileHeader> InitializeIvfFile(const std::string& file_name) {
     if (!files::ReadFileToVector(file_name, &ivf_file_data_)) {
-      return fitx::error("Could not read file at " + file_name);
+      return fit::error("Could not read file at " + file_name);
     }
 
     return ivf_parser_.ReadFileHeader(ivf_file_data_.data(), ivf_file_data_.size());

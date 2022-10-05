@@ -225,10 +225,10 @@ namespace test_protocollayouts {
 }  // namespace test_protocollayouts
 
 template <>
-class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedWithErrorResponse> {
+class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedWithErrorResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedWithErrorResponse>::result;
-  Event(::fitx::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedWithErrorResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedWithErrorResponse>::result;
+  Event(::fit::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedWithErrorResponse> v) : result(std::move(v)) {}
   Event() = delete;
 };
 
@@ -245,10 +245,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
  public:
   static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -280,10 +280,10 @@ namespace test_protocollayouts {
 }  // namespace test_protocollayouts
 
 template <>
-class ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> {
+class ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload>::result;
-  Event(::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload>::result;
+  Event(::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> v) : result(std::move(v)) {}
   Event() = delete;
 };
 
@@ -300,10 +300,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
  public:
   static ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -335,10 +335,10 @@ namespace test_protocollayouts {
 }  // namespace test_protocollayouts
 
 template <>
-class ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> {
+class ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload>::result;
-  Event(::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload>::result;
+  Event(::fit::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> v) : result(std::move(v)) {}
   Event() = delete;
 };
 
@@ -355,10 +355,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
  public:
   static ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -390,10 +390,10 @@ namespace test_protocollayouts {
 }  // namespace test_protocollayouts
 
 template <>
-class ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts::LocalTablePayload> {
+class ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts::LocalTablePayload> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts::LocalTablePayload>::result;
-  Event(::fitx::result<uint32_t, ::test_protocollayouts::LocalTablePayload> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts::LocalTablePayload>::result;
+  Event(::fit::result<uint32_t, ::test_protocollayouts::LocalTablePayload> v) : result(std::move(v)) {}
   Event() = delete;
 };
 
@@ -410,10 +410,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
  public:
   static ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -445,10 +445,10 @@ namespace test_protocollayouts {
 }  // namespace test_protocollayouts
 
 template <>
-class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> {
+class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse>::result;
-  Event(::fitx::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse>::result;
+  Event(::fit::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> v) : result(std::move(v)) {}
   Event() = delete;
 };
 
@@ -465,10 +465,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
  public:
   static ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -500,19 +500,19 @@ namespace test_protocollayouts {
 }  // namespace test_protocollayouts
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::fit::result<::fidl::Error, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse> {
+class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse>::result;
+  Response(::fit::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -529,10 +529,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
  public:
   static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -546,9 +546,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse>::result;
 
  protected:
   Result() = default;
@@ -569,19 +569,19 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocollayouts::
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> final : public ::fit::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload>::result;
+  using ::fit::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> {
+class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload>::result;
-  Response(::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload>::result;
+  Response(::fit::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -598,10 +598,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
  public:
   static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -615,9 +615,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::test_protocollayouts_imported::ImportUnionPayload>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::test_protocollayouts_imported::ImportUnionPayload>::result;
 
  protected:
   Result() = default;
@@ -638,19 +638,19 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocollayouts::
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImport> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImport> final : public ::fit::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload>::result;
+  using ::fit::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> {
+class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload>::result;
-  Response(::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload>::result;
+  Response(::fit::result<uint32_t, ::test_protocollayouts_imported::ImportUnionPayload> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -667,10 +667,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
  public:
   static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayImportWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -684,9 +684,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::test_protocollayouts_imported::ImportUnionPayload>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::test_protocollayouts_imported::ImportUnionPayload>::result;
 
  protected:
   Result() = default;
@@ -707,19 +707,19 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocollayouts::
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocal> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts::LocalTablePayload> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocal> final : public ::fit::result<::fidl::Error, ::test_protocollayouts::LocalTablePayload> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocollayouts::LocalTablePayload>::result;
+  using ::fit::result<::fidl::Error, ::test_protocollayouts::LocalTablePayload>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts::LocalUnionPayload> {
+class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts::LocalUnionPayload> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts::LocalUnionPayload>::result;
-  Response(::fitx::result<uint32_t, ::test_protocollayouts::LocalUnionPayload> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts::LocalUnionPayload>::result;
+  Response(::fit::result<uint32_t, ::test_protocollayouts::LocalUnionPayload> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -736,10 +736,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
  public:
   static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -753,9 +753,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::test_protocollayouts::LocalUnionPayload> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::test_protocollayouts::LocalUnionPayload> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::test_protocollayouts::LocalUnionPayload>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::test_protocollayouts::LocalUnionPayload>::result;
 
  protected:
   Result() = default;
@@ -776,19 +776,19 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocollayouts::
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnon> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts::MainProtocolTwoWayAnonResponse> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnon> final : public ::fit::result<::fidl::Error, ::test_protocollayouts::MainProtocolTwoWayAnonResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocollayouts::MainProtocolTwoWayAnonResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_protocollayouts::MainProtocolTwoWayAnonResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
+class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fit::result<uint32_t, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>::result;
+  Response(::fit::result<uint32_t, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -805,10 +805,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
  public:
   static ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -822,9 +822,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>::result;
 
  protected:
   Result() = default;
@@ -854,15 +854,15 @@ class ::fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol> 
 
   ::fidl::internal::NaturalThenable<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> TwoWayAnonWithError(const ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWayAnonComposed(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>& request) const;
+  ::fit::result<::fidl::Error> OneWayAnonComposed(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWayNamedComposed(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>& request) const;
+  ::fit::result<::fidl::Error> OneWayNamedComposed(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWayImport(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>& request) const;
+  ::fit::result<::fidl::Error> OneWayImport(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWayLocal(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>& request) const;
+  ::fit::result<::fidl::Error> OneWayLocal(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>& request) const;
 
-  ::fitx::result<::fidl::Error> OneWayAnon(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>& request) const;
+  ::fit::result<::fidl::Error> OneWayAnon(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>& request) const;
 };
 namespace test_protocollayouts {
 
@@ -896,15 +896,15 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocollayouts::MainProtoc
 
   ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> TwoWayAnonWithError(const ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>& request);
 
-  ::fitx::result<::fidl::Error> OneWayAnonComposed(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>& request);
+  ::fit::result<::fidl::Error> OneWayAnonComposed(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnonComposed>& request);
 
-  ::fitx::result<::fidl::Error> OneWayNamedComposed(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>& request);
+  ::fit::result<::fidl::Error> OneWayNamedComposed(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayNamedComposed>& request);
 
-  ::fitx::result<::fidl::Error> OneWayImport(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>& request);
+  ::fit::result<::fidl::Error> OneWayImport(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayImport>& request);
 
-  ::fitx::result<::fidl::Error> OneWayLocal(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>& request);
+  ::fit::result<::fidl::Error> OneWayLocal(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayLocal>& request);
 
-  ::fitx::result<::fidl::Error> OneWayAnon(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>& request);
+  ::fit::result<::fidl::Error> OneWayAnon(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> _client_end() const {
@@ -982,25 +982,25 @@ class ::fidl::internal::NaturalWeakEventSender<::test_protocollayouts::MainProto
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> OnAnonComposed(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>& payload);
+  ::fit::result<::fidl::Error> OnAnonComposed(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnonComposedWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>& payload);
+  ::fit::result<::fidl::Error> OnAnonComposedWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnNamedComposed(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>& payload);
+  ::fit::result<::fidl::Error> OnNamedComposed(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>& payload);
 
-  ::fitx::result<::fidl::Error> OnNamedComposedWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>& payload);
+  ::fit::result<::fidl::Error> OnNamedComposedWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnImport(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>& payload);
+  ::fit::result<::fidl::Error> OnImport(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>& payload);
 
-  ::fitx::result<::fidl::Error> OnImportWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>& payload);
+  ::fit::result<::fidl::Error> OnImportWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnLocal(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>& payload);
+  ::fit::result<::fidl::Error> OnLocal(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>& payload);
 
-  ::fitx::result<::fidl::Error> OnLocalWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>& payload);
+  ::fit::result<::fidl::Error> OnLocalWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnon(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>& payload);
+  ::fit::result<::fidl::Error> OnAnon(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnonWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>& payload);
+  ::fit::result<::fidl::Error> OnAnonWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>& payload);
 };
 
 template <>
@@ -1009,25 +1009,25 @@ class ::fidl::internal::NaturalEventSender<::test_protocollayouts::MainProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> OnAnonComposed(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>& payload);
+  ::fit::result<::fidl::Error> OnAnonComposed(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnonComposedWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>& payload);
+  ::fit::result<::fidl::Error> OnAnonComposedWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnNamedComposed(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>& payload);
+  ::fit::result<::fidl::Error> OnNamedComposed(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>& payload);
 
-  ::fitx::result<::fidl::Error> OnNamedComposedWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>& payload);
+  ::fit::result<::fidl::Error> OnNamedComposedWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnImport(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>& payload);
+  ::fit::result<::fidl::Error> OnImport(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>& payload);
 
-  ::fitx::result<::fidl::Error> OnImportWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>& payload);
+  ::fit::result<::fidl::Error> OnImportWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnLocal(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>& payload);
+  ::fit::result<::fidl::Error> OnLocal(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>& payload);
 
-  ::fitx::result<::fidl::Error> OnLocalWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>& payload);
+  ::fit::result<::fidl::Error> OnLocalWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnon(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>& payload);
+  ::fit::result<::fidl::Error> OnAnon(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>& payload);
 
-  ::fitx::result<::fidl::Error> OnAnonWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>& payload);
+  ::fit::result<::fidl::Error> OnAnonWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>& payload);
 };
 
 #endif  // __Fuchsia__

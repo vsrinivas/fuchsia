@@ -8,14 +8,14 @@ namespace zxdump::internal {
 
 bool DumpFile::IsCompressed(ByteView header) { return ZSTD_isFrame(header.data(), header.size()); }
 
-fitx::result<Error, std::unique_ptr<DumpFile>> DumpFile::Decompress(FileRange where,
-                                                                    ByteView header) {
+fit::result<Error, std::unique_ptr<DumpFile>> DumpFile::Decompress(FileRange where,
+                                                                   ByteView header) {
   auto decompressor = std::make_unique<Zstd>(*this, where);
   auto result = decompressor->Pump(header, 0);
   if (result.is_error()) {
     return result.take_error();
   }
-  return fitx::ok(std::move(decompressor));
+  return fit::ok(std::move(decompressor));
 }
 
 // This really just has to return nonzero.
@@ -24,15 +24,15 @@ size_t DumpFile::Zstd::size() const {
   return file_pos_.size == 0 ? buffer_.size() : file_pos_.size;
 }
 
-fitx::result<Error, ByteView> DumpFile::Zstd::ReadProbe(FileRange where) {
+fit::result<Error, ByteView> DumpFile::Zstd::ReadProbe(FileRange where) {
   return Read(where, false, true);
 }
 
-fitx::result<Error, ByteView> DumpFile::Zstd::ReadEphemeral(FileRange where) {
+fit::result<Error, ByteView> DumpFile::Zstd::ReadEphemeral(FileRange where) {
   return Read(where, false, false);
 }
 
-fitx::result<Error, ByteView> DumpFile::Zstd::ReadPermanent(FileRange where) {
+fit::result<Error, ByteView> DumpFile::Zstd::ReadPermanent(FileRange where) {
   return Read(where, true, false);
 }
 
@@ -42,7 +42,7 @@ void DumpFile::Zstd::shrink_to_fit() {
 }
 
 // Put some data through the decompressor.
-fitx::result<Error, bool> DumpFile::Zstd::Pump(ByteView compressed, size_t skip) {
+fit::result<Error, bool> DumpFile::Zstd::Pump(ByteView compressed, size_t skip) {
   if (buffer_.empty()) {
     buffer_ = Buffer{ZSTD_DStreamOutSize()};
   }
@@ -50,7 +50,7 @@ fitx::result<Error, bool> DumpFile::Zstd::Pump(ByteView compressed, size_t skip)
   ZSTD_outBuffer out = {buffer_.data(), buffer_.size(), skip};
   size_t result = ZSTD_decompressStream(ctx_.get(), &out, &in);
   if (ZSTD_isError(result)) {
-    return fitx::error(Error{
+    return fit::error(Error{
         ZSTD_getErrorName(result),
         ZX_ERR_IO_DATA_INTEGRITY,
     });
@@ -68,12 +68,12 @@ fitx::result<Error, bool> DumpFile::Zstd::Pump(ByteView compressed, size_t skip)
   // Store the decompressor's hint about how much to read next time.
   // This is zero when the stream is complete.
   file_pos_.size = result;
-  return fitx::ok(in.pos > 0);
+  return fit::ok(in.pos > 0);
 }
 
-fitx::result<Error, ByteView> DumpFile::Zstd::Read(FileRange where, bool permanent, bool probe) {
+fit::result<Error, ByteView> DumpFile::Zstd::Read(FileRange where, bool permanent, bool probe) {
   if (where.offset < buffer_range_.offset) {
-    return fitx::error(Error{
+    return fit::error(Error{
         "random access not available",
         ZX_ERR_IO_REFUSED,
     });
@@ -129,7 +129,7 @@ fitx::result<Error, ByteView> DumpFile::Zstd::Read(FileRange where, bool permane
     buffered = {buffer_.data(), buffered.size()};
   };
 
-  auto ok = [&]() -> fitx::result<Error, ByteView> {
+  auto ok = [&]() -> fit::result<Error, ByteView> {
     if (!probe && buffered.size() < where.size) {
       return TruncatedDump();
     }
@@ -145,7 +145,7 @@ fitx::result<Error, ByteView> DumpFile::Zstd::Read(FileRange where, bool permane
       }
       keepalive_.push_front(std::move(saved));
     }
-    return fitx::ok(buffered);
+    return fit::ok(buffered);
   };
 
   if (size_t ofs = where.offset - buffer_range_.offset; ofs < buffered.size()) {

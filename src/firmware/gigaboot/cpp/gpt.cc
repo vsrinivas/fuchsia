@@ -51,7 +51,7 @@ void RestoreHeaderFromGood(const gpt_header_t &good, gpt_header_t *damaged) {
 
 }  // namespace
 
-fitx::result<efi_status> EfiGptBlockDevice::LoadGptEntries(const gpt_header_t &header) {
+fit::result<efi_status> EfiGptBlockDevice::LoadGptEntries(const gpt_header_t &header) {
   entries_.resize(header.entries_count);
   utf8_names_.resize(header.entries_count);
 
@@ -61,56 +61,56 @@ fitx::result<efi_status> EfiGptBlockDevice::LoadGptEntries(const gpt_header_t &h
     entries_.resize(0);
     utf8_names_.resize(0);
 
-    return fitx::error(status);
+    return fit::error(status);
   }
 
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<efi_status> EfiGptBlockDevice::RestoreFromBackup() {
+fit::result<efi_status> EfiGptBlockDevice::RestoreFromBackup() {
   gpt_header_t backup;
   if (efi_status status =
           Read(&backup, BlockSize() * block_io_protocol_->Media->LastBlock, sizeof(backup));
       status != EFI_SUCCESS) {
-    return fitx::error(status);
+    return fit::error(status);
   }
 
   if (!ValidateHeader(backup)) {
-    return fitx::error(EFI_NOT_FOUND);
+    return fit::error(EFI_NOT_FOUND);
   }
 
-  if (fitx::result res = LoadGptEntries(backup); !res.is_ok()) {
+  if (fit::result res = LoadGptEntries(backup); !res.is_ok()) {
     return res;
   }
 
   uint32_t entries_crc =
       crc32(0, reinterpret_cast<uint8_t *>(entries_.data()), sizeof(entries_[0]) * entries_.size());
   if (entries_crc != backup.entries_crc) {
-    return fitx::error(EFI_NOT_FOUND);
+    return fit::error(EFI_NOT_FOUND);
   }
 
   RestoreHeaderFromGood(backup, &gpt_header_);
   if (efi_status status = Write(&gpt_header_, BlockSize(), sizeof(gpt_header_));
       status != EFI_SUCCESS) {
-    return fitx::error(status);
+    return fit::error(status);
   }
 
   if (efi_status status = Write(entries_.data(), gpt_header_.entries * BlockSize(),
                                 gpt_header_.entries_count * gpt_header_.entries_size);
       status != EFI_SUCCESS) {
-    return fitx::error(status);
+    return fit::error(status);
   }
 
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<efi_status, EfiGptBlockDevice> EfiGptBlockDevice::Create(efi_handle device_handle) {
+fit::result<efi_status, EfiGptBlockDevice> EfiGptBlockDevice::Create(efi_handle device_handle) {
   EfiGptBlockDevice ret;
   // Open the block IO protocol for this device.
   auto block_io = EfiOpenProtocol<efi_block_io_protocol>(device_handle);
   if (block_io.is_error()) {
     printf("Failed to open block io protocol %s\n", EfiStatusToString(block_io.error_value()));
-    return fitx::error(block_io.error_value());
+    return fit::error(block_io.error_value());
   }
   ret.block_io_protocol_ = std::move(block_io.value());
 
@@ -118,18 +118,18 @@ fitx::result<efi_status, EfiGptBlockDevice> EfiGptBlockDevice::Create(efi_handle
   auto disk_io = EfiOpenProtocol<efi_disk_io_protocol>(device_handle);
   if (disk_io.is_error()) {
     printf("Failed to open disk io protocol %s\n", EfiStatusToString(disk_io.error_value()));
-    return fitx::error(disk_io.error_value());
+    return fit::error(disk_io.error_value());
   }
   ret.disk_io_protocol_ = std::move(disk_io.value());
 
-  return fitx::ok(std::move(ret));
+  return fit::ok(std::move(ret));
 }
 
-fitx::result<efi_status> EfiGptBlockDevice::Load() {
+fit::result<efi_status> EfiGptBlockDevice::Load() {
   // First block is MBR. Read the second block for the GPT header.
   if (efi_status status = Read(&gpt_header_, BlockSize(), sizeof(gpt_header_));
       status != EFI_SUCCESS) {
-    return fitx::error(status);
+    return fit::error(status);
   }
 
   // Note: we only read the backup header and entries if the primary is corrupted.
@@ -171,11 +171,11 @@ fitx::result<efi_status> EfiGptBlockDevice::Load() {
                       reinterpret_cast<uint8_t *>(utf8_names_[i].data()), &dst_len);
     if (conv_status != ZX_OK || dst_len > utf8_names_[i].size()) {
       printf("Failed to convert partition name to utf8, %d, %zu\n", conv_status, dst_len);
-      return fitx::error(EFI_UNSUPPORTED);
+      return fit::error(EFI_UNSUPPORTED);
     }
   }
 
-  return fitx::ok();
+  return fit::ok();
 }
 
 efi_status EfiGptBlockDevice::Read(void *buffer, size_t offset, size_t length) {
@@ -203,72 +203,72 @@ const gpt_entry_t *EfiGptBlockDevice::FindPartition(std::string_view name) {
   return nullptr;
 }
 
-fitx::result<efi_status, size_t> EfiGptBlockDevice::CheckAndGetPartitionAccessRangeInStorage(
+fit::result<efi_status, size_t> EfiGptBlockDevice::CheckAndGetPartitionAccessRangeInStorage(
     std::string_view name, size_t offset, size_t length) {
   const gpt_entry_t *entry = FindPartition(name);
   if (!entry) {
-    return fitx::error(EFI_NOT_FOUND);
+    return fit::error(EFI_NOT_FOUND);
   }
 
   size_t block_size = BlockSize();
   size_t abs_offset = entry->first * block_size + offset;
   if (abs_offset + length > (entry->last + 1) * block_size) {
-    return fitx::error(EFI_INVALID_PARAMETER);
+    return fit::error(EFI_INVALID_PARAMETER);
   }
 
-  return fitx::ok(abs_offset);
+  return fit::ok(abs_offset);
 }
 
-fitx::result<efi_status> EfiGptBlockDevice::ReadPartition(std::string_view name, size_t offset,
-                                                          size_t length, void *out) {
+fit::result<efi_status> EfiGptBlockDevice::ReadPartition(std::string_view name, size_t offset,
+                                                         size_t length, void *out) {
   auto res = CheckAndGetPartitionAccessRangeInStorage(name, offset, length);
   if (res.is_error()) {
     printf("ReadPartition: failed while checking and getting read range %s\n",
            EfiStatusToString(res.error_value()));
-    return fitx::error(res.error_value());
+    return fit::error(res.error_value());
   }
 
   efi_status status = Read(out, res.value(), length);
   if (status != EFI_SUCCESS) {
-    return fitx::error(status);
+    return fit::error(status);
   }
 
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<efi_status> EfiGptBlockDevice::WritePartition(std::string_view name, const void *data,
-                                                           size_t offset, size_t length) {
+fit::result<efi_status> EfiGptBlockDevice::WritePartition(std::string_view name, const void *data,
+                                                          size_t offset, size_t length) {
   auto res = CheckAndGetPartitionAccessRangeInStorage(name, offset, length);
   if (res.is_error()) {
     printf("WritePartition: failed while checking and getting write range %s\n",
            EfiStatusToString(res.error_value()));
-    return fitx::error(res.error_value());
+    return fit::error(res.error_value());
   }
 
   efi_status status = Write(data, res.value(), length);
   if (status != EFI_SUCCESS) {
-    return fitx::error(status);
+    return fit::error(status);
   }
 
-  return fitx::ok();
+  return fit::ok();
 }
 
 // TODO(https://fxbug.dev/79197): The function currently only finds the storage devie that hosts
 // the currently running image. This can be a problem when booting from USB. Add support to handle
 // the USB case.
-fitx::result<efi_status, EfiGptBlockDevice> FindEfiGptDevice() {
+fit::result<efi_status, EfiGptBlockDevice> FindEfiGptDevice() {
   auto image_device_path = EfiOpenProtocol<efi_device_path_protocol>(gEfiLoadedImage->DeviceHandle);
   if (image_device_path.is_error()) {
     printf("Failed to open device path protocol %s\n",
            EfiStatusToString(image_device_path.error_value()));
-    return fitx::error{image_device_path.error_value()};
+    return fit::error{image_device_path.error_value()};
   }
 
   // Find all handles that support block io protocols.
   auto block_io_supported_handles = EfiLocateHandleBufferByProtocol<efi_block_io_protocol>();
   if (block_io_supported_handles.is_error()) {
     printf("Failed to locate handles supporting block io protocol\n");
-    return fitx::error(block_io_supported_handles.error_value());
+    return fit::error(block_io_supported_handles.error_value());
   }
 
   // Scan all handles and find the one from which the currently running image comes.
@@ -277,7 +277,7 @@ fitx::result<efi_status, EfiGptBlockDevice> FindEfiGptDevice() {
     auto block_io = EfiOpenProtocol<efi_block_io_protocol>(handle);
     if (block_io.is_error()) {
       printf("Failed to open block io protocol\n");
-      return fitx::error(block_io.error_value());
+      return fit::error(block_io.error_value());
     }
 
     // Skip logical partition blocks and non present devices.
@@ -290,7 +290,7 @@ fitx::result<efi_status, EfiGptBlockDevice> FindEfiGptDevice() {
     auto device_path = EfiOpenProtocol<efi_device_path_protocol>(handle);
     if (device_path.is_error()) {
       printf("Failed to create device path protocol\n");
-      return fitx::error(device_path.error_value());
+      return fit::error(device_path.error_value());
     }
 
     if (EfiDevicePathNode::StartsWith(image_device_path.value().get(), device_path.value().get())) {
@@ -298,15 +298,15 @@ fitx::result<efi_status, EfiGptBlockDevice> FindEfiGptDevice() {
       auto efi_gpt_device = EfiGptBlockDevice::Create(handle);
       if (efi_gpt_device.is_error()) {
         printf("Failed to create GPT device\n");
-        return fitx::error(efi_gpt_device.error_value());
+        return fit::error(efi_gpt_device.error_value());
       }
 
-      return fitx::ok(std::move(efi_gpt_device.value()));
+      return fit::ok(std::move(efi_gpt_device.value()));
     }
   }
 
   printf("No matching block device found\n");
-  return fitx::error{EFI_NOT_FOUND};
+  return fit::error{EFI_NOT_FOUND};
 }
 
 }  // namespace gigaboot

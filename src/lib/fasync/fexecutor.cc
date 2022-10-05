@@ -17,7 +17,7 @@ fasync::try_future<zx_status_t> fexecutor::make_delayed_future(zx::duration dura
       dispatcher(),
       [completer = std::move(bridge.completer)]() mutable { completer.complete_ok(); }, duration);
 
-  return bridge.consumer.future_or(fitx::as_error(ZX_ERR_CANCELED));
+  return bridge.consumer.future_or(fit::as_error(ZX_ERR_CANCELED));
 }
 
 fasync::try_future<zx_status_t> fexecutor::make_future_for_time(zx::time deadline) {
@@ -26,7 +26,7 @@ fasync::try_future<zx_status_t> fexecutor::make_future_for_time(zx::time deadlin
       dispatcher(),
       [completer = std::move(bridge.completer)]() mutable { completer.complete_ok(); }, deadline);
 
-  return bridge.consumer.future_or(fitx::as_error(ZX_ERR_CANCELED));
+  return bridge.consumer.future_or(fit::as_error(ZX_ERR_CANCELED));
 }
 
 fasync::try_future<zx_status_t, zx_packet_signal_t> fexecutor::make_future_wait_for_handle(
@@ -46,7 +46,7 @@ fasync::try_future<zx_status_t, zx_packet_signal_t> fexecutor::make_future_wait_
         }
       });
 
-  return bridge.consumer.future_or(fitx::as_error(ZX_ERR_CANCELED));
+  return bridge.consumer.future_or(fit::as_error(ZX_ERR_CANCELED));
 }
 
 // Unfortunately std::unique_lock does not support thread-safety annotations

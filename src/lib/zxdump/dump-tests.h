@@ -7,7 +7,7 @@
 
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zxdump/dump.h>
@@ -94,10 +94,10 @@ class TestProcess {
   }
 
   // This is a standard SegmentCallback that can be used.
-  static fitx::result<zxdump::Error, zxdump::SegmentDisposition> PruneAllMemory(
+  static fit::result<zxdump::Error, zxdump::SegmentDisposition> PruneAllMemory(
       zxdump::SegmentDisposition segment, const zx_info_maps_t& maps, const zx_info_vmo_t& vmo) {
     segment.filesz = 0;
-    return fitx::ok(segment);
+    return fit::ok(segment);
   }
 
  private:

@@ -201,7 +201,7 @@ void arm_dap_init_percpu(uint level) {
     // Walk the ROM table to find the debug interface for this CPU.
     hwreg::RegisterMmio mmio(reinterpret_cast<void *>(da.virt));
     const auto vaddr = reinterpret_cast<uintptr_t>(da.virt);
-    fitx::result<coresight::RomTable::WalkError> result = coresight::RomTable::Walk(
+    fit::result<coresight::RomTable::WalkError> result = coresight::RomTable::Walk(
         mmio, static_cast<uint32_t>(da.size),
         [&dp, vaddr, curr_cpu_mpidr, curr_cpu_num](uint32_t offset) {
           const uintptr_t component = vaddr + offset;

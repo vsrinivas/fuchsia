@@ -10,8 +10,8 @@
 LIB_FASYNC_CPP_VERSION_COMPAT_BEGIN
 
 #include <lib/fasync/future.h>
+#include <lib/fit/result.h>
 #include <lib/fit/thread_safety.h>
-#include <lib/fitx/result.h>
 
 #include <atomic>
 #include <iostream>
@@ -48,7 +48,7 @@ class bridge_state final {
   class consumption_ref;
   class future_continuation;
 
-  using result_type = ::fitx::result<E, Ts...>;
+  using result_type = ::fit::result<E, Ts...>;
 
   ~bridge_state() = default;
 
@@ -215,13 +215,13 @@ class bridge_bind_callback final {
   template <typename TT = first<Ts...>, requires_conditions<cpp17::negation<has_type<TT>>> = true>
   void operator()() {
     callback_bridge_state& state = ref_.get();
-    state.complete(std::move(ref_), ::fitx::ok());
+    state.complete(std::move(ref_), ::fit::ok());
   }
 
   template <typename TT = first<Ts...>, typename T = typename TT::type>
   void operator()(T&& value) {
     callback_bridge_state& state = ref_.get();
-    state.complete(std::move(ref_), ::fitx::ok(std::forward<T>(value)));
+    state.complete(std::move(ref_), ::fit::ok(std::forward<T>(value)));
   }
 
   template <
@@ -229,7 +229,7 @@ class bridge_bind_callback final {
       requires_conditions<is_tuple<T>, std::is_constructible<T, std::tuple<Params...>>> = true>
   void operator()(Params&&... params) {
     callback_bridge_state& state = ref_.get();
-    state.complete(std::move(ref_), ::fitx::ok(std::make_tuple(std::forward<Params>(params)...)));
+    state.complete(std::move(ref_), ::fit::ok(std::make_tuple(std::forward<Params>(params)...)));
   }
 
  private:

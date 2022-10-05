@@ -108,7 +108,7 @@ class ProviderServer final : public fidl::WireServer<fuchsia_boot::SvcStashProvi
     // So the test can be repeated, each call to Get refills the stash with the expected values.
     fuchsia_boot::wire::SvcStashProviderGetResponse response;
     response.resource = std::move(stash_);
-    completer.Reply(fitx::ok(&response));
+    completer.Reply(fit::ok(&response));
   }
 
  private:

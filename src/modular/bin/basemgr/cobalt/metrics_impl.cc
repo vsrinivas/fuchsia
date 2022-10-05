@@ -12,7 +12,7 @@ namespace modular {
 using fuchsia_metrics::MetricEventLogger;
 using fuchsia_metrics::MetricEventLoggerFactory;
 
-using MetricsResult = fitx::result<fidl::internal::AnyErrorInImpl<fuchsia_metrics::Error>>;
+using MetricsResult = fit::result<fidl::internal::AnyErrorInImpl<fuchsia_metrics::Error>>;
 
 MetricsImpl::MetricsImpl(async_dispatcher_t* dispatcher,
                          fidl::ClientEnd<fuchsia_io::Directory> directory)

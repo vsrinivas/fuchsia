@@ -45,7 +45,7 @@ class capture_result_wrapper {
       static_assert(cpp17::is_same_v<fasync::internal::first_t<Ts...>, fasync::future_value_t<F>>,
                     "");
     }
-    return std::forward<F>(future) | fasync::then([this](fitx::result<E, Ts...> result) {
+    return std::forward<F>(future) | fasync::then([this](fit::result<E, Ts...> result) {
              last_result = fasync::ready(std::move(result));
            });
   }
@@ -88,18 +88,18 @@ TEST(FutureTests, basics) {
         fasync::make_future([i] {
           // Pretend that squaring numbers is hard and takes time
           // to finish...
-          return sleep_for_a_little_while() | fasync::then([i] { return fitx::ok(i * i); });
+          return sleep_for_a_little_while() | fasync::then([i] { return fit::ok(i * i); });
         }) |
-        fasync::then([](auto square) -> fitx::result<const char*, int> {
+        fasync::then([](auto square) -> fit::result<const char*, int> {
           if (square.value() % 2 == 0)
-            return fitx::ok(square.value() / 2);
-          return fitx::error("square is odd");
+            return fit::ok(square.value() / 2);
+          return fit::error("square is odd");
         });
 
 // Needs single_threaded_executor.h (coming)
 #if 0
     // Evaluate the future.
-    fitx::result<const char*, int> result = fasync::block(std::move(future)).value();
+    fit::result<const char*, int> result = fasync::block(std::move(future)).value();
     if (i % 2 == 0) {
       EXPECT_TRUE(result.is_ok());
       EXPECT_EQ(i * i / 2, result.value());
@@ -114,16 +114,16 @@ TEST(FutureTests, basics) {
 TEST(FutureTests, invocation) {
   uint64_t run_count = 0;
   fake_context fake_context;
-  fasync::try_future<fitx::failed> future(
-      [&](fasync::context& context) -> fasync::try_poll<fitx::failed> {
+  fasync::try_future<fit::failed> future(
+      [&](fasync::context& context) -> fasync::try_poll<fit::failed> {
         ASSERT_CRITICAL(&context == &fake_context);
         if (++run_count == 2)
-          return fasync::ready(fitx::ok());
+          return fasync::ready(fit::ok());
         return fasync::pending();
       });
   // EXPECT_TRUE(future);
 
-  fasync::try_poll<fitx::failed> poll = future(fake_context);
+  fasync::try_poll<fit::failed> poll = future(fake_context);
   EXPECT_EQ(1, run_count);
   EXPECT_TRUE(poll.is_pending());
   // EXPECT_TRUE(future);
@@ -140,19 +140,19 @@ TEST(FutureTests, assignment_and_swap) {
   fasync::future<> empty = fasync::make_future([] {});
 
   uint64_t run_count = 0;
-  fasync::try_future<fitx::failed> future(
-      [&](fasync::context& context) -> fasync::try_poll<fitx::failed> {
+  fasync::try_future<fit::failed> future(
+      [&](fasync::context& context) -> fasync::try_poll<fit::failed> {
         run_count++;
         return fasync::pending();
       });
 
   fasync::future<> x(std::move(empty));
 
-  fasync::try_future<fitx::failed> y(std::move(future));
+  fasync::try_future<fit::failed> y(std::move(future));
   static_cast<void>(y(fake_context));
   EXPECT_EQ(1, run_count);
 
-  y = [&](fasync::context& context) -> fasync::try_poll<fitx::failed> {
+  y = [&](fasync::context& context) -> fasync::try_poll<fit::failed> {
     run_count *= 2;
     return fasync::pending();
   };
@@ -176,12 +176,12 @@ TEST(FutureTests, make_future) {
     EXPECT_TRUE(poll.is_ready());
   }
 
-  // Handler signature: fitx::result<int, char>().
+  // Handler signature: fit::result<int, char>().
   {
     uint64_t run_count = 0;
-    auto f = fasync::make_future([&]() -> fitx::result<char, int> {
+    auto f = fasync::make_future([&]() -> fit::result<char, int> {
       run_count++;
-      return fitx::ok(42);
+      return fit::ok(42);
     });
     static_assert(cpp17::is_same_v<char, fasync::future_error_t<decltype(f)>>, "");
     static_assert(cpp17::is_same_v<int, fasync::future_value_t<decltype(f)>>, "");
@@ -191,18 +191,18 @@ TEST(FutureTests, make_future) {
     EXPECT_EQ(42, poll.output().value());
   }
 
-  // Handler signature: fitx::ok<int>().
+  // Handler signature: fit::ok<int>().
   {
     uint64_t run_count = 0;
     auto f = fasync::make_future([&] {
       run_count++;
-      return fitx::ok(42);
+      return fit::ok(42);
     });
     static_assert(fasync::is_future_v<decltype(f)>, "");
     static_assert(fasync::is_try_future_v<decltype(f)>, "");
-    static_assert(cpp17::is_same_v<fitx::failed, fasync::future_error_t<decltype(f)>>, "");
+    static_assert(cpp17::is_same_v<fit::failed, fasync::future_error_t<decltype(f)>>, "");
     static_assert(cpp17::is_same_v<int, fasync::future_value_t<decltype(f)>>, "");
-    fasync::try_poll<fitx::failed, int> poll = f(fake_context);
+    fasync::try_poll<fit::failed, int> poll = f(fake_context);
     EXPECT_EQ(1, run_count);
     EXPECT_TRUE(poll.output().is_ok());
     EXPECT_EQ(42, poll.output().value());
@@ -212,7 +212,7 @@ TEST(FutureTests, make_future) {
     uint64_t run_count = 0;
     auto f = fasync::make_future([&] {
       run_count++;
-      return fitx::error(42);
+      return fit::error(42);
     });
     static_assert(cpp17::is_same_v<int, fasync::future_error_t<decltype(f)>>, "");
     fasync::try_poll<int> poll = f(fake_context);
@@ -241,7 +241,7 @@ TEST(FutureTests, make_future) {
       run_count++;
       return fasync::make_future([&]() -> fasync::try_poll<char, int> {
         if (++run_count2 == 2)
-          return fasync::ready(fitx::ok(42));
+          return fasync::ready(fit::ok(42));
         return fasync::pending();
       });
     });
@@ -276,10 +276,10 @@ TEST(FutureTests, make_future) {
 TEST(FutureTests, make_future_with_continuation) {
   uint64_t run_count = 0;
   fake_context fake_context;
-  auto f = fasync::make_future([&](fasync::context& context) -> fitx::result<char, int> {
+  auto f = fasync::make_future([&](fasync::context& context) -> fit::result<char, int> {
     ASSERT_CRITICAL(&context == &fake_context);
     run_count++;
-    return fitx::ok(42);
+    return fit::ok(42);
   });
   static_assert(cpp17::is_same_v<char, fasync::future_error_t<decltype(f)>>, "");
   static_assert(cpp17::is_same_v<int, fasync::future_value_t<decltype(f)>>, "");
@@ -293,9 +293,9 @@ TEST(FutureTests, make_future_with_continuation) {
 TEST(FutureTests, make_try_future) {
   fake_context fake_context;
 
-  // Argument type: fitx::result<int, char>
+  // Argument type: fit::result<int, char>
   {
-    auto f = fasync::make_try_future(fitx::result<char, int>(fitx::ok(42)));
+    auto f = fasync::make_try_future(fit::result<char, int>(fit::ok(42)));
     static_assert(cpp17::is_same_v<char, fasync::future_error_t<decltype(f)>>, "");
     static_assert(cpp17::is_same_v<int, fasync::future_value_t<decltype(f)>>, "");
     fasync::try_poll<char, int> poll = f(fake_context);
@@ -303,19 +303,19 @@ TEST(FutureTests, make_try_future) {
     EXPECT_EQ(42, poll.output().value());
   }
 
-  // Argument type: fitx::result<fitx::failed, int> with inferred types
+  // Argument type: fit::result<fit::failed, int> with inferred types
   {
     auto f = fasync::make_ok_future(42);
-    static_assert(cpp17::is_same_v<fitx::failed, fasync::future_error_t<decltype(f)>>, "");
+    static_assert(cpp17::is_same_v<fit::failed, fasync::future_error_t<decltype(f)>>, "");
     static_assert(cpp17::is_same_v<int, fasync::future_value_t<decltype(f)>>, "");
-    fasync::try_poll<fitx::failed, int> poll = f(fake_context);
+    fasync::try_poll<fit::failed, int> poll = f(fake_context);
     EXPECT_TRUE(poll.output().is_ok());
     EXPECT_EQ(42, poll.output().value());
   }
 
-  // Argument type: fitx::result<char, int> with explicit types
+  // Argument type: fit::result<char, int> with explicit types
   {
-    auto f = fasync::make_try_future<char, int>(fitx::ok(42));
+    auto f = fasync::make_try_future<char, int>(fit::ok(42));
     static_assert(cpp17::is_same_v<char, fasync::future_error_t<decltype(f)>>, "");
     static_assert(cpp17::is_same_v<int, fasync::future_value_t<decltype(f)>>, "");
     fasync::try_poll<char, int> poll = f(fake_context);
@@ -323,7 +323,7 @@ TEST(FutureTests, make_try_future) {
     EXPECT_EQ(42, poll.output().value());
   }
 
-  // Argument type: fitx::result<char> with inferred types
+  // Argument type: fit::result<char> with inferred types
   {
     auto f = fasync::make_error_future('x');
     static_assert(cpp17::is_same_v<char, fasync::future_error_t<decltype(f)>>, "");
@@ -332,9 +332,9 @@ TEST(FutureTests, make_try_future) {
     EXPECT_EQ('x', poll.output().error_value());
   }
 
-  // Argument type: fitx::result<char, int> with explicit types
+  // Argument type: fit::result<char, int> with explicit types
   {
-    auto f = fasync::make_try_future<char, int>(fitx::error('x'));
+    auto f = fasync::make_try_future<char, int>(fit::error('x'));
     static_assert(cpp17::is_same_v<char, fasync::future_error_t<decltype(f)>>, "");
     static_assert(cpp17::is_same_v<int, fasync::future_value_t<decltype(f)>>, "");
     fasync::try_poll<char, int> poll = f(fake_context);
@@ -342,7 +342,7 @@ TEST(FutureTests, make_try_future) {
     EXPECT_EQ('x', poll.output().error_value());
   }
 
-  // Argument type: fitx::pending with inferred types
+  // Argument type: fit::pending with inferred types
   {
     auto f = fasync::make_pending_future();
     fasync::poll<> poll = f(fake_context);
@@ -365,9 +365,9 @@ TEST(FutureTests, make_ok_future) {
   // Argument type: int
   {
     auto f = fasync::make_ok_future(42);
-    static_assert(cpp17::is_same_v<fitx::failed, fasync::future_error_t<decltype(f)>>, "");
+    static_assert(cpp17::is_same_v<fit::failed, fasync::future_error_t<decltype(f)>>, "");
     static_assert(cpp17::is_same_v<int, fasync::future_value_t<decltype(f)>>, "");
-    fasync::try_poll<fitx::failed, int> poll = f(fake_context);
+    fasync::try_poll<fit::failed, int> poll = f(fake_context);
     EXPECT_TRUE(poll.output().is_ok());
     EXPECT_EQ(42, poll.output().value());
   }
@@ -375,8 +375,8 @@ TEST(FutureTests, make_ok_future) {
   // Argument type: none (void)
   {
     auto f = fasync::make_ok_future();
-    static_assert(cpp17::is_same_v<fitx::failed, fasync::future_error_t<decltype(f)>>, "");
-    fasync::try_poll<fitx::failed> poll = f(fake_context);
+    static_assert(cpp17::is_same_v<fit::failed, fasync::future_error_t<decltype(f)>>, "");
+    fasync::try_poll<fit::failed> poll = f(fake_context);
     EXPECT_TRUE(poll.output().is_ok());
   }
 }
@@ -396,34 +396,34 @@ TEST(FutureTests, make_error_future) {
   // Argument type: none (void)
   {
     [[maybe_unused]] auto f = fasync::make_failed_future();
-    static_assert(cpp17::is_same_v<fitx::failed, fasync::future_error_t<decltype(f)>>, "");
-    fasync::try_poll<fitx::failed> poll = f(fake_context);
+    static_assert(cpp17::is_same_v<fit::failed, fasync::future_error_t<decltype(f)>>, "");
+    fasync::try_poll<fit::failed> poll = f(fake_context);
     EXPECT_TRUE(poll.output().is_error());
   }
 }
 
 auto make_checked_ok_future(int value) {
-  return fasync::make_future([value, count = 0]() mutable -> fitx::result<char, int> {
+  return fasync::make_future([value, count = 0]() mutable -> fit::result<char, int> {
     ASSERT_CRITICAL(count == 0);
     ++count;
-    return fitx::ok(value);
+    return fit::ok(value);
   });
 }
 
 auto make_move_only_future(int value) {
   return fasync::make_future(
-      [value, count = 0]() mutable -> fitx::result<char, std::unique_ptr<int>> {
+      [value, count = 0]() mutable -> fit::result<char, std::unique_ptr<int>> {
         ASSERT_CRITICAL(count == 0);
         ++count;
-        return fitx::ok(std::make_unique<int>(value));
+        return fit::ok(std::make_unique<int>(value));
       });
 }
 
 auto make_checked_error_future(char error) {
-  return fasync::make_future([error, count = 0]() mutable -> fitx::result<char, int> {
+  return fasync::make_future([error, count = 0]() mutable -> fit::result<char, int> {
     ASSERT_CRITICAL(count == 0);
     ++count;
-    return fitx::error(error);
+    return fit::error(error);
   });
 }
 
@@ -431,7 +431,7 @@ auto make_delayed_ok_future(int value) {
   return fasync::make_future([value, count = 0]() mutable -> fasync::try_poll<char, int> {
     ASSERT_CRITICAL(count <= 1);
     if (++count == 2)
-      return fasync::ready(fitx::ok(value));
+      return fasync::ready(fit::ok(value));
     return fasync::pending();
   });
 }
@@ -440,7 +440,7 @@ auto make_delayed_error_future(char error) {
   return fasync::make_future([error, count = 0]() mutable -> fasync::try_poll<char, int> {
     ASSERT_CRITICAL(count <= 1);
     if (++count == 2)
-      return fasync::ready(fitx::error(error));
+      return fasync::ready(fit::error(error));
     return fasync::pending();
   });
 }
@@ -451,19 +451,19 @@ TEST(FutureTests, then_combinator) {
   fake_context fake_context;
 
   // Chaining on OK.
-  // Handler signature: fitx::result<fitx::failed>(const fitx::result<int, char>&).
+  // Handler signature: fit::result<fit::failed>(const fit::result<int, char>&).
   {
     uint64_t run_count = 0;
     auto f =
         make_delayed_ok_future(42) |
-        fasync::then([&](const fitx::result<char, int>& result) -> fasync::try_poll<fitx::failed> {
+        fasync::then([&](const fit::result<char, int>& result) -> fasync::try_poll<fit::failed> {
           ASSERT_CRITICAL(result.value() == 42);
           if (++run_count == 2)
-            return fasync::ready(fitx::ok());
+            return fasync::ready(fit::ok());
           return fasync::pending();
         });
 
-    fasync::try_poll<fitx::failed> poll = f(fake_context);
+    fasync::try_poll<fit::failed> poll = f(fake_context);
     EXPECT_EQ(0, run_count);
     EXPECT_TRUE(poll.is_pending());
 
@@ -477,19 +477,19 @@ TEST(FutureTests, then_combinator) {
   }
 
   // Chaining on ERROR.
-  // Handler signature: fitx::result<fitx::failed>(const fitx::result<int, char>&).
+  // Handler signature: fit::result<fit::failed>(const fit::result<int, char>&).
   {
     uint64_t run_count = 0;
     auto f =
         make_delayed_error_future('x') |
-        fasync::then([&](const fitx::result<char, int>& result) -> fasync::try_poll<fitx::failed> {
+        fasync::then([&](const fit::result<char, int>& result) -> fasync::try_poll<fit::failed> {
           ASSERT_CRITICAL(result.error_value() == 'x');
           if (++run_count == 2)
-            return fasync::ready(fitx::ok());
+            return fasync::ready(fit::ok());
           return fasync::pending();
         });
 
-    fasync::try_poll<fitx::failed> poll = f(fake_context);
+    fasync::try_poll<fit::failed> poll = f(fake_context);
     EXPECT_EQ(0, run_count);
     EXPECT_TRUE(poll.is_pending());
 
@@ -506,25 +506,25 @@ TEST(FutureTests, then_combinator) {
   {
     uint64_t run_count = 0;
     auto f = make_checked_ok_future(42) |
-             fasync::then([&](fitx::result<char, int>& result) -> fitx::result<char, int> {
+             fasync::then([&](fit::result<char, int>& result) -> fit::result<char, int> {
                run_count++;
-               return fitx::ok(result.value() + 1);
+               return fit::ok(result.value() + 1);
              }) |
-             fasync::then([&](const fitx::result<char, int>& result) -> fitx::result<char, int> {
+             fasync::then([&](const fit::result<char, int>& result) -> fit::result<char, int> {
                run_count++;
-               return fitx::ok(result.value() + 1);
-             }) |
-             fasync::then([&](fasync::context& context,
-                              fitx::result<char, int>& result) -> fitx::result<char, int> {
-               ASSERT_CRITICAL(&context == &fake_context);
-               run_count++;
-               return fitx::ok(result.value() + 1);
+               return fit::ok(result.value() + 1);
              }) |
              fasync::then([&](fasync::context& context,
-                              const fitx::result<char, int>& result) -> fitx::result<char, int> {
+                              fit::result<char, int>& result) -> fit::result<char, int> {
                ASSERT_CRITICAL(&context == &fake_context);
                run_count++;
-               return fitx::ok(result.value() + 1);
+               return fit::ok(result.value() + 1);
+             }) |
+             fasync::then([&](fasync::context& context,
+                              const fit::result<char, int>& result) -> fit::result<char, int> {
+               ASSERT_CRITICAL(&context == &fake_context);
+               run_count++;
+               return fit::ok(result.value() + 1);
              });
 
     fasync::try_poll<char, int> poll = f(fake_context);
@@ -538,14 +538,14 @@ TEST(FutureTests, and_then_combinator) {
   fake_context fake_context;
 
   // Chaining on OK.
-  // Handler signature: fitx::result<fitx::failed>(const int&).
+  // Handler signature: fit::result<fit::failed>(const int&).
   {
     uint64_t run_count = 0;
     auto f = make_delayed_ok_future(42) |
              fasync::and_then([&](const int& value) -> fasync::try_poll<char> {
                ASSERT_CRITICAL(value == 42);
                if (++run_count == 2)
-                 return fasync::ready(fitx::error('y'));
+                 return fasync::ready(fit::error('y'));
                return fasync::pending();
              });
 
@@ -564,7 +564,7 @@ TEST(FutureTests, and_then_combinator) {
   }
 
   // Chaining on ERROR.
-  // Handler signature: fitx::result<fitx::failed>(const int&).
+  // Handler signature: fit::result<fit::failed>(const int&).
   {
     uint64_t run_count = 0;
     auto f = make_delayed_error_future('x') |
@@ -586,26 +586,25 @@ TEST(FutureTests, and_then_combinator) {
   // Cover all handler argument signatures, more briefly.
   {
     uint64_t run_count = 0;
-    auto f = make_checked_ok_future(42) |
-             fasync::and_then([&](int& value) -> fitx::result<char, int> {
-               run_count++;
-               return fitx::ok(value + 1);
-             }) |
-             fasync::and_then([&](const int& value) -> fitx::result<char, int> {
-               run_count++;
-               return fitx::ok(value + 1);
-             }) |
-             fasync::and_then([&](fasync::context& context, int& value) -> fitx::result<char, int> {
-               ASSERT_CRITICAL(&context == &fake_context);
-               run_count++;
-               return fitx::ok(value + 1);
-             }) |
-             fasync::and_then(
-                 [&](fasync::context& context, const int& value) -> fitx::result<char, int> {
-                   ASSERT_CRITICAL(&context == &fake_context);
-                   run_count++;
-                   return fitx::ok(value + 1);
-                 });
+    auto f =
+        make_checked_ok_future(42) | fasync::and_then([&](int& value) -> fit::result<char, int> {
+          run_count++;
+          return fit::ok(value + 1);
+        }) |
+        fasync::and_then([&](const int& value) -> fit::result<char, int> {
+          run_count++;
+          return fit::ok(value + 1);
+        }) |
+        fasync::and_then([&](fasync::context& context, int& value) -> fit::result<char, int> {
+          ASSERT_CRITICAL(&context == &fake_context);
+          run_count++;
+          return fit::ok(value + 1);
+        }) |
+        fasync::and_then([&](fasync::context& context, const int& value) -> fit::result<char, int> {
+          ASSERT_CRITICAL(&context == &fake_context);
+          run_count++;
+          return fit::ok(value + 1);
+        });
 
     fasync::try_poll<char, int> poll = f(fake_context);
     EXPECT_EQ(4, run_count);
@@ -618,16 +617,16 @@ TEST(FutureTests, or_else_combinator) {
   fake_context fake_context;
 
   // Chaining on OK.
-  // Handler signature: fitx::result<fitx::failed>(const char&).
+  // Handler signature: fit::result<fit::failed>(const char&).
   {
     uint64_t run_count = 0;
     auto f = make_delayed_ok_future(42) |
-             fasync::or_else([&](const char& error) -> fasync::try_poll<fitx::failed, int> {
+             fasync::or_else([&](const char& error) -> fasync::try_poll<fit::failed, int> {
                run_count++;
                return fasync::pending();
              });
 
-    fasync::try_poll<fitx::failed, int> poll = f(fake_context);
+    fasync::try_poll<fit::failed, int> poll = f(fake_context);
     EXPECT_EQ(0, run_count);
     EXPECT_TRUE(poll.is_pending());
 
@@ -638,18 +637,18 @@ TEST(FutureTests, or_else_combinator) {
   }
 
   // Chaining on ERROR.
-  // Handler signature: fitx::result<fitx::failed>(const char&).
+  // Handler signature: fit::result<fit::failed>(const char&).
   {
     uint64_t run_count = 0;
     auto f = make_delayed_error_future('x') |
-             fasync::or_else([&](const char& error) -> fasync::try_poll<fitx::failed, int> {
+             fasync::or_else([&](const char& error) -> fasync::try_poll<fit::failed, int> {
                ASSERT_CRITICAL(error == 'x');
                if (++run_count == 2)
-                 return fasync::ready(fitx::ok(43));
+                 return fasync::ready(fit::ok(43));
                return fasync::pending();
              });
 
-    fasync::try_poll<fitx::failed, int> poll = f(fake_context);
+    fasync::try_poll<fit::failed, int> poll = f(fake_context);
     EXPECT_EQ(0, run_count);
     EXPECT_TRUE(poll.is_pending());
 
@@ -666,26 +665,26 @@ TEST(FutureTests, or_else_combinator) {
   // Cover all handler argument signatures, more briefly.
   {
     uint64_t run_count = 0;
-    auto f = make_checked_error_future('a') |
-             fasync::or_else([&](char& error) -> fitx::result<char, int> {
-               run_count++;
-               return fitx::error(static_cast<char>(error + 1));
-             }) |
-             fasync::or_else([&](const char& error) -> fitx::result<char, int> {
-               run_count++;
-               return fitx::error(static_cast<char>(error + 1));
-             }) |
-             fasync::or_else([&](fasync::context& context, char& error) -> fitx::result<char, int> {
-               ASSERT_CRITICAL(&context == &fake_context);
-               run_count++;
-               return fitx::error(static_cast<char>(error + 1));
-             }) |
-             fasync::or_else(
-                 [&](fasync::context& context, const char& error) -> fitx::result<char, int> {
-                   ASSERT_CRITICAL(&context == &fake_context);
-                   run_count++;
-                   return fitx::error(static_cast<char>(error + 1));
-                 });
+    auto f =
+        make_checked_error_future('a') |
+        fasync::or_else([&](char& error) -> fit::result<char, int> {
+          run_count++;
+          return fit::error(static_cast<char>(error + 1));
+        }) |
+        fasync::or_else([&](const char& error) -> fit::result<char, int> {
+          run_count++;
+          return fit::error(static_cast<char>(error + 1));
+        }) |
+        fasync::or_else([&](fasync::context& context, char& error) -> fit::result<char, int> {
+          ASSERT_CRITICAL(&context == &fake_context);
+          run_count++;
+          return fit::error(static_cast<char>(error + 1));
+        }) |
+        fasync::or_else([&](fasync::context& context, const char& error) -> fit::result<char, int> {
+          ASSERT_CRITICAL(&context == &fake_context);
+          run_count++;
+          return fit::error(static_cast<char>(error + 1));
+        });
 
     fasync::try_poll<char, int> poll = f(fake_context);
     EXPECT_EQ(4, run_count);
@@ -698,11 +697,11 @@ TEST(FutureTests, inspect_combinator) {
   fake_context fake_context;
 
   // Chaining on OK.
-  // Handler signature: void(const fitx::result<int, char>&).
+  // Handler signature: void(const fit::result<int, char>&).
   {
     uint64_t run_count = 0;
     auto f =
-        make_delayed_ok_future(42) | fasync::inspect([&](const fitx::result<char, int>& result) {
+        make_delayed_ok_future(42) | fasync::inspect([&](const fit::result<char, int>& result) {
           ASSERT_CRITICAL(result.value() == 42);
           run_count++;
         });
@@ -718,14 +717,14 @@ TEST(FutureTests, inspect_combinator) {
   }
 
   // Chaining on ERROR.
-  // Handler signature: void(const fitx::result<int, char>&).
+  // Handler signature: void(const fit::result<int, char>&).
   {
     uint64_t run_count = 0;
-    auto f = make_delayed_error_future('x') |
-             fasync::inspect([&](const fitx::result<char, int>& result) {
-               ASSERT_CRITICAL(result.error_value() == 'x');
-               run_count++;
-             });
+    auto f =
+        make_delayed_error_future('x') | fasync::inspect([&](const fit::result<char, int>& result) {
+          ASSERT_CRITICAL(result.error_value() == 'x');
+          run_count++;
+        });
 
     fasync::try_poll<char, int> poll = f(fake_context);
     EXPECT_EQ(0, run_count);
@@ -741,16 +740,16 @@ TEST(FutureTests, inspect_combinator) {
   {
     uint64_t run_count = 0;
     auto f = make_checked_ok_future(42) |
-             fasync::inspect([&](const fitx::result<char, int>& result) {
+             fasync::inspect([&](const fit::result<char, int>& result) {
                ASSERT_CRITICAL(result.value() == 42);
                run_count++;
              }) |
-             fasync::inspect([&](const fitx::result<char, int>& result) { run_count++; }) |
-             fasync::inspect([&](fasync::context& context, const fitx::result<char, int>& result) {
+             fasync::inspect([&](const fit::result<char, int>& result) { run_count++; }) |
+             fasync::inspect([&](fasync::context& context, const fit::result<char, int>& result) {
                ASSERT_CRITICAL(&context == &fake_context);
                run_count++;
              }) |
-             fasync::inspect([&](fasync::context& context, const fitx::result<char, int>& result) {
+             fasync::inspect([&](fasync::context& context, const fit::result<char, int>& result) {
                ASSERT_CRITICAL(&context == &fake_context);
                run_count++;
              });
@@ -814,7 +813,7 @@ TEST(FutureTests, wrap_with_combinator) {
 TEST(FutureTests, box_combinator) {
   fake_context fake_context;
 
-  auto f = fasync::make_future([&]() -> fitx::result<char, int> { return fitx::ok(42); });
+  auto f = fasync::make_future([&]() -> fit::result<char, int> { return fit::ok(42); });
   static_assert(!cpp17::is_same_v<fasync::try_future<char, int>, decltype(f)>, "");
 
   auto q = std::move(f) | fasync::box;
@@ -830,16 +829,15 @@ TEST(FutureTests, join_combinator) {
 
   auto f = fasync::join(make_checked_ok_future(42),
                         make_checked_error_future('x') |
-                            fasync::or_else([](const char& error) { return fitx::error('y'); }),
+                            fasync::or_else([](const char& error) { return fit::error('y'); }),
                         make_delayed_ok_future(55));
 
   using output = fasync::future_output_t<decltype(f)>;
-  static_assert(cpp17::is_same_v<std::tuple_element_t<0, output>, fitx::result<char, int>>, "");
-  static_assert(cpp17::is_same_v<std::tuple_element_t<1, output>, fitx::result<char, int>>, "");
-  static_assert(cpp17::is_same_v<std::tuple_element_t<2, output>, fitx::result<char, int>>, "");
+  static_assert(cpp17::is_same_v<std::tuple_element_t<0, output>, fit::result<char, int>>, "");
+  static_assert(cpp17::is_same_v<std::tuple_element_t<1, output>, fit::result<char, int>>, "");
+  static_assert(cpp17::is_same_v<std::tuple_element_t<2, output>, fit::result<char, int>>, "");
 
-  fasync::poll<
-      std::tuple<fitx::result<char, int>, fitx::result<char, int>, fitx::result<char, int>>>
+  fasync::poll<std::tuple<fit::result<char, int>, fit::result<char, int>, fit::result<char, int>>>
       poll = f(fake_context);
   EXPECT_TRUE(poll.is_pending());
 
@@ -856,14 +854,14 @@ TEST(FutureTests, join_combinator_move_only_result) {
   // Add 1 + 2 to get 3, using a join combinator with a "then" continuation to demonstrate how to
   // optionally return an error.
   auto f = fasync::join(make_move_only_future(1), make_move_only_future(2)) |
-           fasync::then([](std::tuple<fitx::result<char, std::unique_ptr<int>>,
-                                      fitx::result<char, std::unique_ptr<int>>>& results)
-                            -> fitx::result<char, std::unique_ptr<int>> {
+           fasync::then([](std::tuple<fit::result<char, std::unique_ptr<int>>,
+                                      fit::result<char, std::unique_ptr<int>>>& results)
+                            -> fit::result<char, std::unique_ptr<int>> {
              if (std::get<0>(results).is_error() || std::get<1>(results).is_error()) {
-               return fitx::error('e');
+               return fit::error('e');
              } else {
                int value = *std::get<0>(results).value() + *std::get<1>(results).value();
-               return fitx::ok(std::make_unique<int>(value));
+               return fit::ok(std::make_unique<int>(value));
              }
            });
 
@@ -878,16 +876,16 @@ TEST(FutureTests, join_vector_combinator) {
   std::vector<fasync::try_future<char, int>> futures;
   futures.push_back(make_checked_ok_future(42));
   futures.push_back(make_checked_error_future('x') |
-                    fasync::or_else([](const char& error) { return fitx::error('y'); }));
+                    fasync::or_else([](const char& error) { return fit::error('y'); }));
   futures.push_back(make_delayed_ok_future(55));
   futures.push_back(fasync::try_future<char, int>(make_checked_ok_future(42)));
   futures.push_back(fasync::try_future<char, int>(make_checked_error_future('x')) |
-                    fasync::or_else([](const char& error) { return fitx::error('y'); }));
+                    fasync::or_else([](const char& error) { return fit::error('y'); }));
   futures.push_back(fasync::try_future<char, int>(make_checked_error_future('y')));
   futures.push_back(fasync::try_future<char, int>(make_delayed_ok_future(55)));
   auto f = fasync::join(std::move(futures));
 
-  fasync::poll<std::vector<fitx::result<char, int>>> poll = f(fake_context);
+  fasync::poll<std::vector<fit::result<char, int>>> poll = f(fake_context);
   EXPECT_TRUE(poll.is_pending());
 
   auto poll2 = f(fake_context);

@@ -47,9 +47,9 @@ namespace test_drivertwoway {
 }  // namespace test_drivertwoway
 
 template <>
-class ::fdf::Result<::test_drivertwoway::TwoWay::Add> final : public ::fitx::result<::fidl::Error, ::test_drivertwoway::TwoWayAddResponse> {
+class ::fdf::Result<::test_drivertwoway::TwoWay::Add> final : public ::fit::result<::fidl::Error, ::test_drivertwoway::TwoWayAddResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_drivertwoway::TwoWayAddResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_drivertwoway::TwoWayAddResponse>::result;
 
  protected:
   Result() = default;

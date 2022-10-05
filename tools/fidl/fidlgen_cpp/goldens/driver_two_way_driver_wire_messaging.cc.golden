@@ -32,7 +32,7 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseTable;
           ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
               arena.get()),
   };
-  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_drivertwoway::TwoWay::Add>(
+  ::fit::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_drivertwoway::TwoWay::Add>(
       outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options)));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
@@ -87,7 +87,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-          ::fitx::result decoded = ::fidl::InplaceDecode<::test_drivertwoway::wire::TwoWayAddRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::InplaceDecode<::test_drivertwoway::wire::TwoWayAddRequest>(std::move(msg), metadata);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }

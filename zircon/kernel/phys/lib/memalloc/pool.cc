@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/memalloc/pool.h>
 #include <lib/stdcompat/bit.h>
 #include <lib/stdcompat/span.h>
@@ -49,8 +49,8 @@ constexpr int kSizeColWidth = 7;
 
 }  // namespace
 
-fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContext> state,
-                                      uint64_t min_addr, uint64_t max_addr) {
+fit::result<fit::failed> Pool::Init(cpp20::span<internal::RangeIterationContext> state,
+                                    uint64_t min_addr, uint64_t max_addr) {
   RangeStream ranges(state);
 
   const size_t scratch_size = FindNormalizedRangesScratchSize(ranges.size()) * sizeof(void*);
@@ -78,7 +78,7 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContex
   };
   FindNormalizedRamRanges(ranges, find_bookkeeping);
   if (!bookkeeping_addr) {
-    return fitx::failed();
+    return fit::failed();
   }
 
   // Convert our bookkeeping space before actual use, and zero out the mapped
@@ -116,7 +116,7 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContex
                 "Pool::Init(): bad input: the provided ranges feature overlap among different "
                 "extended types, or an extended type with one of kReserved or kPeripheral");
   if (alloc_failure) {
-    return fitx::failed();
+    return fit::failed();
   }
 
   // Now reclaim the tail as node space.
@@ -134,21 +134,21 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContex
 
   default_min_addr_ = min_addr;
   default_max_addr_ = max_addr;
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<fitx::failed, Pool::Node*> Pool::NewNode(const Range& range) {
+fit::result<fit::failed, Pool::Node*> Pool::NewNode(const Range& range) {
   ZX_DEBUG_ASSERT(range.type != Type::kReserved);  // Not tracked, by policy.
 
   if (unused_.is_empty()) {
-    return fitx::failed();
+    return fit::failed();
   }
   Range* node = unused_.pop_back();
   ZX_DEBUG_ASSERT(node);
   node->addr = range.addr;
   node->size = range.size;
   node->type = range.type;
-  return fitx::ok(static_cast<Node*>(node));
+  return fit::ok(static_cast<Node*>(node));
 }
 
 const Range* Pool::GetContainingRange(uint64_t addr) {
@@ -156,9 +156,9 @@ const Range* Pool::GetContainingRange(uint64_t addr) {
   return it == ranges_.end() ? nullptr : &*it;
 }
 
-fitx::result<fitx::failed, uint64_t> Pool::Allocate(Type type, uint64_t size, uint64_t alignment,
-                                                    std::optional<uint64_t> min_addr,
-                                                    std::optional<uint64_t> max_addr) {
+fit::result<fit::failed, uint64_t> Pool::Allocate(Type type, uint64_t size, uint64_t alignment,
+                                                  std::optional<uint64_t> min_addr,
+                                                  std::optional<uint64_t> max_addr) {
   ZX_ASSERT(size > 0);
   uint64_t upper_bound = max_addr.value_or(default_max_addr_);
   uint64_t lower_bound = min_addr.value_or(default_min_addr_);
@@ -181,17 +181,17 @@ fitx::result<fitx::failed, uint64_t> Pool::Allocate(Type type, uint64_t size, ui
     auto it = std::move(result).value();
     Coalesce(it);
   }
-  return fitx::ok(addr);
+  return fit::ok(addr);
 }
 
-fitx::result<fitx::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t size,
-                                                           uint64_t alignment, uint64_t min_addr,
-                                                           uint64_t max_addr) {
+fit::result<fit::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t size,
+                                                         uint64_t alignment, uint64_t min_addr,
+                                                         uint64_t max_addr) {
   ZX_DEBUG_ASSERT(IsExtendedType(type));
   ZX_DEBUG_ASSERT(size > 0);
   ZX_DEBUG_ASSERT(min_addr <= max_addr);
   if (size - 1 > max_addr - min_addr) {
-    return fitx::failed();
+    return fit::failed();
   }
 
   // We use a simple first-fit approach, ultimately assuming that allocation
@@ -215,18 +215,18 @@ fitx::result<fitx::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t s
     if (*aligned >= range.end() || range.end() - *aligned < size) {
       continue;
     }
-    return fitx::ok(*aligned);
+    return fit::ok(*aligned);
   }
 
-  return fitx::failed();
+  return fit::failed();
 }
 
-fitx::result<fitx::failed> Pool::Free(uint64_t addr, uint64_t size) {
+fit::result<fit::failed> Pool::Free(uint64_t addr, uint64_t size) {
   ZX_ASSERT(kMax - addr >= size);
 
   if (size == 0) {
     // Nothing to do.
-    return fitx::ok();
+    return fit::ok();
   }
 
   auto it = GetContainingNode(addr, size);
@@ -234,7 +234,7 @@ fitx::result<fitx::failed> Pool::Free(uint64_t addr, uint64_t size) {
 
   // Double-freeing is a no-op.
   if (it->type == Type::kFreeRam) {
-    return fitx::ok();
+    return fit::ok();
   }
 
   // Try to proactively ensure two bookkeeping nodes, which might be required
@@ -251,11 +251,11 @@ fitx::result<fitx::failed> Pool::Free(uint64_t addr, uint64_t size) {
   }
   Coalesce(it);
 
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<fitx::failed, uint64_t> Pool::Resize(const Range& original, uint64_t new_size,
-                                                  uint64_t min_alignment) {
+fit::result<fit::failed, uint64_t> Pool::Resize(const Range& original, uint64_t new_size,
+                                                uint64_t min_alignment) {
   ZX_ASSERT(new_size > 0);
   ZX_ASSERT(IsExtendedType(original.type));
   ZX_ASSERT(cpp20::has_single_bit(min_alignment));
@@ -266,15 +266,15 @@ fitx::result<fitx::failed, uint64_t> Pool::Resize(const Range& original, uint64_
 
   // Already appropriately sized; nothing to do.
   if (new_size == original.size) {
-    return fitx::ok(original.addr);
+    return fit::ok(original.addr);
   }
 
   // Smaller size; need only to free the tail.
   if (new_size < original.size) {
     if (auto result = Free(original.addr + new_size, original.size - new_size); result.is_error()) {
-      return fitx::failed();
+      return fit::failed();
     }
-    return fitx::ok(original.addr);
+    return fit::ok(original.addr);
   }
 
   //
@@ -307,7 +307,7 @@ fitx::result<fitx::failed, uint64_t> Pool::Resize(const Range& original, uint64_
         next->size -= next_spillover;
       }
       it->size += next_spillover;
-      return fitx::ok(original.addr);
+      return fit::ok(original.addr);
     }
   }
 
@@ -356,33 +356,33 @@ fitx::result<fitx::failed, uint64_t> Pool::Resize(const Range& original, uint64_
       } else if (new_end < original.end()) {
         auto result = Free(new_end, original.end() - new_end);
         if (result.is_error()) {
-          return fitx::failed();
+          return fit::failed();
         }
       }
-      return fitx::ok(new_addr);
+      return fit::ok(new_addr);
     }
   }
 
   // No option left but to allocate a replacement.
   uint64_t new_addr = 0;
   if (auto result = Allocate(original.type, new_size, min_alignment); result.is_error()) {
-    return fitx::failed();
+    return fit::failed();
   } else {
     new_addr = std::move(result).value();
   }
   if (auto result = Free(original.addr, original.size); result.is_error()) {
-    return fitx::failed();
+    return fit::failed();
   }
-  return fitx::ok(new_addr);
+  return fit::ok(new_addr);
 }
 
-fitx::result<fitx::failed> Pool::UpdateFreeRamSubranges(Type type, uint64_t addr, uint64_t size) {
+fit::result<fit::failed> Pool::UpdateFreeRamSubranges(Type type, uint64_t addr, uint64_t size) {
   ZX_ASSERT(IsExtendedType(type));
   ZX_ASSERT(kMax - addr >= size);
 
   if (size == 0) {
     // Nothing to do.
-    return fitx::ok();
+    return fit::ok();
   }
 
   // Try to proactively ensure two bookkeeping nodes, which might be required
@@ -404,10 +404,10 @@ fitx::result<fitx::failed> Pool::UpdateFreeRamSubranges(Type type, uint64_t addr
     }
     ++it;
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
-fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
+fit::result<fit::failed, Pool::mutable_iterator> Pool::InsertSubrange(
     const Range& range, std::optional<mutable_iterator> parent_it) {
   auto it = parent_it.value_or(GetContainingNode(range.addr, range.size));
   ZX_DEBUG_ASSERT(it != ranges_.end());
@@ -419,7 +419,7 @@ fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
   //     <----*it----->
   if (it->addr == range.addr && it->size == range.size) {
     it->type = range.type;
-    return fitx::ok(it);
+    return fit::ok(it);
   }
 
   // We know now that we will need at least one new node for `range`.
@@ -440,7 +440,7 @@ fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
     ZX_DEBUG_ASSERT(range.size < it->size);
     it->addr += range.size;
     it->size -= range.size;
-    return fitx::ok(InsertNodeAt(node, it));
+    return fit::ok(InsertNodeAt(node, it));
   }
 
   const uint64_t containing_end = it->end();
@@ -454,7 +454,7 @@ fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
   if (range.end() == it->end()) {
     ZX_DEBUG_ASSERT(it->addr < range.addr);
     it->size -= range.size;
-    return fitx::ok(InsertNodeAt(node, next));
+    return fit::ok(InsertNodeAt(node, next));
   }
 
   //     .------------+------------.------------.
@@ -480,7 +480,7 @@ fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
     InsertNodeAt(node, next);
   }
 
-  return fitx::ok(std::next(it));
+  return fit::ok(std::next(it));
 }
 
 Pool::mutable_iterator Pool::GetContainingNode(uint64_t addr, uint64_t size) {

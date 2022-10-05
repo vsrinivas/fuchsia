@@ -182,12 +182,12 @@ TEST(SingleThreadedExecutorTests, abandoning_tasks) {
 
 TEST(SingleThreadedExecutorTests, block) {
   uint64_t run_count = 0;
-  fitx::result<fitx::failed, int> result = (fasync::make_future([&] {
-                                              run_count++;
-                                              return fitx::ok(42);
-                                            }) |
-                                            fasync::block)
-                                               .value();
+  fit::result<fit::failed, int> result = (fasync::make_future([&] {
+                                            run_count++;
+                                            return fit::ok(42);
+                                          }) |
+                                          fasync::block)
+                                             .value();
   EXPECT_EQ(42, result.value());
   EXPECT_EQ(1, run_count);
 }
@@ -198,11 +198,10 @@ TEST(SingleThreadedExecutorTests, block_move_only_result) {
 
   auto future = fasync::make_future([&] {
     run_count++;
-    return fitx::ok(std::make_unique<int>(kGolden));
+    return fit::ok(std::make_unique<int>(kGolden));
   });
 
-  fitx::result<fitx::failed, std::unique_ptr<int>> result =
-      fasync::block(std::move(future)).value();
+  fit::result<fit::failed, std::unique_ptr<int>> result = fasync::block(std::move(future)).value();
   EXPECT_EQ(kGolden, *result.value());
   EXPECT_EQ(1, run_count);
 }

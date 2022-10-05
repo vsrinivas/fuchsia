@@ -6,7 +6,7 @@
 #define SRC_ZIRCON_BIN_HWSTRESS_ARGS_H_
 
 #include <lib/cmdline/args_parser.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 
 #include <istream>
@@ -102,7 +102,7 @@ struct CommandLineArgs {
 void PrintUsage();
 
 // Parse args, returning failure or the parsed arguments.
-fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* const> args);
+fit::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* const> args);
 
 }  // namespace hwstress
 

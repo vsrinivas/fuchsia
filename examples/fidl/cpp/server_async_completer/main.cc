@@ -32,7 +32,7 @@ class EchoImpl : public fidl::Server<fuchsia_examples::Echo> {
   void SendString(SendStringRequest& request, SendStringCompleter::Sync& completer) override {
     ZX_ASSERT(binding_ref_.has_value());
 
-    fitx::result result = fidl::SendEvent(*binding_ref_)->OnString({request.value()});
+    fit::result result = fidl::SendEvent(*binding_ref_)->OnString({request.value()});
     if (!result.is_ok()) {
       FX_LOGS(ERROR) << "Error sending event: " << result.error_value();
     }

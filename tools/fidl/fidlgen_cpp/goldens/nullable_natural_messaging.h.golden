@@ -53,9 +53,9 @@ namespace test_nullable {
 }  // namespace test_nullable
 
 template <>
-class ::fidl::Result<::test_nullable::SimpleProtocol::Add> final : public ::fitx::result<::fidl::Error, ::test_nullable::SimpleProtocolAddResponse> {
+class ::fidl::Result<::test_nullable::SimpleProtocol::Add> final : public ::fit::result<::fidl::Error, ::test_nullable::SimpleProtocolAddResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_nullable::SimpleProtocolAddResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_nullable::SimpleProtocolAddResponse>::result;
 
  protected:
   Result() = default;

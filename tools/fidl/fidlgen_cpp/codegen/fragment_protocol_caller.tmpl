@@ -74,7 +74,7 @@ class {{ .NaturalSyncClientImpl }} final
 
   {{ range .OneWayMethods }}
     {{ .Docs }}
-    ::fitx::result<::fidl::Error> {{ .Name }}({{ .NaturalRequestArg "request" }});
+    ::fit::result<::fidl::Error> {{ .Name }}({{ .NaturalRequestArg "request" }});
 
   {{ end }}
 
@@ -112,7 +112,7 @@ class {{ .NaturalSyncClientImpl }} final
 {{ end }}
 
 {{ range .OneWayMethods }}
-  ::fitx::result<::fidl::Error>
+  ::fit::result<::fidl::Error>
   {{ $.NaturalSyncClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) {
     ::fidl::internal::NaturalMessageEncoder encoder{
         &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };

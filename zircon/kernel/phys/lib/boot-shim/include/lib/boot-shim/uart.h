@@ -20,7 +20,7 @@ class UartItem : public boot_shim::ItemBase {
 
   constexpr size_t size_bytes() const { return ItemSize(zbi_dcfg_size()); }
 
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
+  fit::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
 
  private:
   constexpr size_t zbi_dcfg_size() const {

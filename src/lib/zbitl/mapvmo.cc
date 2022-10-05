@@ -7,18 +7,18 @@
 
 namespace zbitl {
 
-fitx::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo& zbi,
-                                                                   uint64_t payload,
-                                                                   uint32_t length, bool write) {
+fit::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo& zbi,
+                                                                  uint64_t payload, uint32_t length,
+                                                                  bool write) {
   ZX_ASSERT_MSG(!write || zbi.writable_, "map-VMO not configured to be written to");
 
   if (length == 0) {
-    return fitx::ok(nullptr);
+    return fit::ok(nullptr);
   }
 
   auto mapped = [&zbi](uint64_t offset_in_mapping, uint32_t length) {
     std::byte* data = zbi.mapping_.data();
-    return fitx::ok(data + static_cast<size_t>(offset_in_mapping));
+    return fit::ok(data + static_cast<size_t>(offset_in_mapping));
   };
 
   // Check if the current mapping already covers it.
@@ -31,7 +31,7 @@ fitx::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo
             zbi.vmar().protect(ZX_VM_PERM_READ | (zbi.writable_ ? ZX_VM_PERM_WRITE : 0),
                                zbi.mapping_.address_, zbi.mapping_.size_);
         if (status != ZX_OK) {
-          return fitx::error{status};
+          return fit::error{status};
         }
         zbi.mapping_.write_ = true;
       }
@@ -50,7 +50,7 @@ fitx::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo
           zbi.vmar().map(ZX_VM_PERM_READ | (zbi.writable_ ? ZX_VM_PERM_WRITE : 0), 0, zbi.vmo(),
                          previous_page_boundary, size, &zbi.mapping_.address_);
       status != ZX_OK) {
-    return fitx::error{status};
+    return fit::error{status};
   }
   zbi.mapping_.offset_ = previous_page_boundary;
   zbi.mapping_.size_ = size;

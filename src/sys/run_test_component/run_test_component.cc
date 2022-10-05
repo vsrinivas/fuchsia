@@ -6,7 +6,7 @@
 
 #include <glob.h>
 #include <lib/fit/defer.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <limits.h>
 
@@ -32,26 +32,26 @@ bool to_bool(std::string str) {
   return b;
 }
 
-fitx::result<bool, uint32_t> ParseLogLevel(const std::string& level) {
+fit::result<bool, uint32_t> ParseLogLevel(const std::string& level) {
   if (level == "TRACE") {
-    return fitx::success(syslog::LOG_TRACE);
+    return fit::success(syslog::LOG_TRACE);
   }
   if (level == "DEBUG") {
-    return fitx::success(syslog::LOG_DEBUG);
+    return fit::success(syslog::LOG_DEBUG);
   }
   if (level == "INFO") {
-    return fitx::success(syslog::LOG_INFO);
+    return fit::success(syslog::LOG_INFO);
   }
   if (level == "WARN") {
-    return fitx::success(syslog::LOG_WARNING);
+    return fit::success(syslog::LOG_WARNING);
   }
   if (level == "ERROR") {
-    return fitx::success(syslog::LOG_ERROR);
+    return fit::success(syslog::LOG_ERROR);
   }
   if (level == "FATAL") {
-    return fitx::success(syslog::LOG_FATAL);
+    return fit::success(syslog::LOG_FATAL);
   }
-  return fitx::error(false);
+  return fit::error(false);
 }
 
 ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,

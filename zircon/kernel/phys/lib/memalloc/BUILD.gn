@@ -47,7 +47,7 @@ zx_library("memalloc") {
     # <lib/memalloc/pool.h> has #include <fbl/intrusive_double_list.h>.
     "//zircon/system/ulib/fbl:headers",
 
-    # <lib/memalloc/pool.h> has #include <lib/fitx/result.h>.
+    # <lib/memalloc/pool.h> has #include <lib/fit/result.h>.
     "//zircon/system/ulib/zxc:headers",
   ]
 }

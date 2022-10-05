@@ -62,7 +62,7 @@ EfiBootShimLoader::GetMemoryMapResult EfiBootShimLoader::GetMemoryMap(
   efi_status status = boot_services->GetMemoryMap(
       &size, reinterpret_cast<efi_memory_descriptor*>(buffer.data()), &key, &entry_size, &version);
   if (status == EFI_BUFFER_TOO_SMALL) {
-    return fitx::error(size);
+    return fit::error(size);
   }
 
   // No other errors should be possible.
@@ -70,7 +70,7 @@ EfiBootShimLoader::GetMemoryMapResult EfiBootShimLoader::GetMemoryMap(
 
   ZX_ASSERT_MSG(version == EFI_MEMORY_DESCRIPTOR_VERSION, "version %" PRIu32, version);
 
-  return fitx::ok(MemoryMapInfo{
+  return fit::ok(MemoryMapInfo{
       .map = buffer.subspan(0, size),
       .entry_size = entry_size,
       .key = key,

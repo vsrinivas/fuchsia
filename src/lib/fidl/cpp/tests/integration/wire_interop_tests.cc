@@ -351,7 +351,7 @@ TEST_F(UnifiedClientToWireServer, OneWay) {
   fidl::BindServer(loop().dispatcher(), std::move(server_end()), &server);
   {
     // Test with natural domain objects.
-    fitx::result<fidl::Error> result = client()->OneWay({MakeNaturalFile()});
+    fit::result<fidl::Error> result = client()->OneWay({MakeNaturalFile()});
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(loop().RunUntilIdle());
     EXPECT_EQ(1, server.num_calls);
@@ -529,9 +529,9 @@ TEST_F(WireClientToNaturalServer, TryRoundTrip) {
       num_calls++;
       // TODO(fxbug.dev/91363): ReplySuccess/ReplyError.
       if (reply_with_error) {
-        completer.Reply(fitx::error(ZX_ERR_INVALID_ARGS));
+        completer.Reply(fit::error(ZX_ERR_INVALID_ARGS));
       } else {
-        completer.Reply(fitx::ok(std::move(request.node())));
+        completer.Reply(fit::ok(std::move(request.node())));
       }
     }
 
@@ -648,7 +648,7 @@ TEST_F(WireClientToNaturalServerWithEventHandler, SendOnNodeEventOverServerEnd) 
   // Test sending the event with natural types.
   {
     fidl_cpp_wire_interop_test::Node node = MakeNaturalDir();
-    fitx::result result = fidl::SendEvent(server_end())->OnNode(node);
+    fit::result result = fidl::SendEvent(server_end())->OnNode(node);
     EXPECT_TRUE(result.is_ok(), "%s", result.error_value().FormatDescription().c_str());
     EXPECT_OK(loop().RunUntilIdle());
     EXPECT_EQ(1, num_events());
@@ -677,7 +677,7 @@ TEST_F(WireClientToNaturalServerWithEventHandler, SendOnNodeEventOverServerBindi
   // Test sending the event with natural types.
   {
     fidl_cpp_wire_interop_test::Node node = MakeNaturalDir();
-    fitx::result result = fidl::SendEvent(binding_ref)->OnNode(node);
+    fit::result result = fidl::SendEvent(binding_ref)->OnNode(node);
     EXPECT_TRUE(result.is_ok(), "%s", result.error_value().FormatDescription().c_str());
     EXPECT_OK(loop().RunUntilIdle());
     EXPECT_EQ(1, num_events());
@@ -876,7 +876,7 @@ TEST_F(UnifiedSyncClientToWireServer, OneWay) {
   fidl::BindServer(loop().dispatcher(), std::move(server_end()), &server);
   {
     // Test with natural domain objects.
-    fitx::result<fidl::Error> result = client()->OneWay({MakeNaturalFile()});
+    fit::result<fidl::Error> result = client()->OneWay({MakeNaturalFile()});
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(loop().RunUntilIdle());
     EXPECT_EQ(1, server.num_calls);

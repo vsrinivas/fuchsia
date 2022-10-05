@@ -34,7 +34,7 @@ TEST(NaturalResponse, DecodePayloadThenConvertToMessage) {
       bytes.data(), static_cast<uint32_t>(bytes.size()), nullptr, nullptr, 0);
 
   // Perform decoding.
-  fitx::result result =
+  fit::result result =
       fidl::internal::DecodeTransactionalMessage<test_types::BazFooResponse>(std::move(message));
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
@@ -62,7 +62,7 @@ TEST(NaturalResponsePayload, Decode) {
       fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2);
 
   // Perform decoding.
-  fitx::result result = fidl::Decode<test_types::BazFooResponse>(std::move(message), metadata);
+  fit::result result = fidl::Decode<test_types::BazFooResponse>(std::move(message), metadata);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
   test_types::BazFooResponse& response = result.value();

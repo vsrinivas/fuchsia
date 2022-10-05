@@ -6,7 +6,7 @@
 
 #include "algorithm.h"
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/memalloc/range.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
@@ -134,10 +134,10 @@ class ActiveRanges {
   }
 
   // Gives the active range type with the highest relative precedence,
-  // std::nullopt if there are no active ranges, or fitx::failed if
+  // std::nullopt if there are no active ranges, or fit::failed if
   // * two different extended types are active
   // * both an extended type and one of kReserved or kPeripheral are active.
-  fitx::result<fitx::failed, std::optional<Type>> DominantType() {
+  fit::result<fit::failed, std::optional<Type>> DominantType() {
     // First look through the base types in reverse-order of precedence (so
     // "last wins").
     std::optional<Type> active_base;
@@ -154,7 +154,7 @@ class ActiveRanges {
         // If there is a non-kFreeRam base type or another extended type
         // active, that's an error.
         if ((active_base && *active_base != Type::kFreeRam) || active_extended) {
-          return fitx::failed();
+          return fit::failed();
         }
         active_extended = type;
       }
@@ -163,12 +163,12 @@ class ActiveRanges {
     // Give an active extended type precedence, as we now know that it can only
     // carve out subranges of active free RAM.
     if (active_extended) {
-      return fitx::ok(*active_extended);
+      return fit::ok(*active_extended);
     }
     if (active_base) {
-      return fitx::ok(*active_base);
+      return fit::ok(*active_base);
     }
-    return fitx::ok(std::nullopt);
+    return fit::ok(std::nullopt);
   }
 
  private:
@@ -281,10 +281,10 @@ void FindNormalizedRamRanges(RangeStream ranges, RangeCallback cb) {
   }
 }
 
-fitx::result<fitx::failed> FindNormalizedRanges(RangeStream ranges, cpp20::span<void*> scratch,
-                                                RangeCallback cb) {
+fit::result<fit::failed> FindNormalizedRanges(RangeStream ranges, cpp20::span<void*> scratch,
+                                              RangeCallback cb) {
   if (ranges.empty()) {
-    return fitx::ok();
+    return fit::ok();
   }
 
   // This algorithm relies on creating a sorted array of endpoints. For every
@@ -371,14 +371,14 @@ fitx::result<fitx::failed> FindNormalizedRanges(RangeStream ranges, cpp20::span<
       return result.take_error();
     }
     if (!process_event(std::move(result).value())) {
-      return fitx::ok();
+      return fit::ok();
     }
   }
   // There should be no active ranges tracked now, normalized or otherwise.
   ZX_DEBUG_ASSERT(!curr_type);
   ZX_DEBUG_ASSERT(counters.DominantType().is_ok());
   ZX_DEBUG_ASSERT(!counters.DominantType().value());
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace memalloc

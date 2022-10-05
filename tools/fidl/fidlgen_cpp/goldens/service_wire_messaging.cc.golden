@@ -31,7 +31,7 @@ namespace test_service {
 
 ::fidl::WireUnownedResult<::test_service::FirstProtocol::MethodOnFirst>::WireUnownedResult(::fidl::UnownedClientEnd<::test_service::FirstProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_service::FirstProtocol::MethodOnFirst>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -63,7 +63,7 @@ namespace test_service {
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_service::FirstProtocol>::MethodOnFirst() {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_service::FirstProtocol::MethodOnFirst>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
@@ -95,7 +95,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_service::kFirstProtocol_MethodOnFirst_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }
@@ -166,7 +166,7 @@ namespace test_service {
 
 ::fidl::WireUnownedResult<::test_service::SecondProtocol::MethodOnSecond>::WireUnownedResult(::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_service::SecondProtocol::MethodOnSecond>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
     SetStatus(allocation.error_value());
     return;
@@ -198,7 +198,7 @@ namespace test_service {
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<::test_service::SecondProtocol>::MethodOnSecond() {
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<::test_service::SecondProtocol::MethodOnSecond>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
@@ -230,7 +230,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_service::kSecondProtocol_MethodOnSecond_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          ::fit::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (unlikely(!decoded.is_ok())) {
             return decoded.error_value();
           }

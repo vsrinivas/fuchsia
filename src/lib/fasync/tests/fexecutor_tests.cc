@@ -385,7 +385,7 @@ TEST(ExecutorTests, future_wait_on_handle) {
   bool completed = false;
   executor.schedule(executor.make_future_wait_for_handle(zx::unowned_handle(event.get()), trigger,
                                                          ZX_WAIT_ASYNC_TIMESTAMP) |
-                    fasync::then([&](fitx::result<zx_status_t, zx_packet_signal_t> result) {
+                    fasync::then([&](fit::result<zx_status_t, zx_packet_signal_t> result) {
                       ASSERT_FALSE(result.is_error());
 
                       check_signaled(event, sent);
@@ -431,7 +431,7 @@ TEST(ExecutorTests, future_wait_on_handle) {
 
   completed = false;
   executor.schedule(executor.make_future_wait_for_handle(zx::unowned_handle(event.get()), trigger) |
-                    fasync::then([&](fitx::result<zx_status_t, zx_packet_signal_t> result) {
+                    fasync::then([&](fit::result<zx_status_t, zx_packet_signal_t> result) {
                       EXPECT_TRUE(result.is_ok());
 
                       auto packet = std::move(result).value();

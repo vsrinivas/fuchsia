@@ -8,7 +8,7 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
@@ -43,13 +43,13 @@ class Vmm : public fuchsia::virtualization::Guest {
   ~Vmm() override;
 
   // Instantiate all VMM objects and configure the guest kernel.
-  virtual fitx::result<::fuchsia::virtualization::GuestError> Initialize(
+  virtual fit::result<::fuchsia::virtualization::GuestError> Initialize(
       ::fuchsia::virtualization::GuestConfig cfg, ::sys::ComponentContext* context,
       async_dispatcher_t* dispatcher);
 
   // Start the primary VCPU. This will begin guest execution.
-  virtual fitx::result<::fuchsia::virtualization::GuestError> StartPrimaryVcpu(
-      fit::function<void(fitx::result<::fuchsia::virtualization::GuestError>)> stop_callback);
+  virtual fit::result<::fuchsia::virtualization::GuestError> StartPrimaryVcpu(
+      fit::function<void(fit::result<::fuchsia::virtualization::GuestError>)> stop_callback);
 
   // The guest is being shutdown, so notify all clients by disconnecting with an epitaph.
   virtual void NotifyClientsShutdown(zx_status_t status);
@@ -74,7 +74,7 @@ class Vmm : public fuchsia::virtualization::Guest {
   zx_gpaddr_t AllocDeviceAddr(size_t device_size);
 
   // Serve any supported public services. This will always serve |fuchsia::virtualization::Guest|.
-  fitx::result<::fuchsia::virtualization::GuestError> AddPublicServices();
+  fit::result<::fuchsia::virtualization::GuestError> AddPublicServices();
 
   // Must be destroyed first (see comment in destructor).
   std::unique_ptr<::Guest> guest_;

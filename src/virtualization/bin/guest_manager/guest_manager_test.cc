@@ -53,12 +53,12 @@ class FakeGuestLifecycle : public GuestLifecycle {
   // simulates what happens when the component terminates unexpectedly (such as a crash).
   void SimulateCrash() { bindings_.CloseAll(); }
 
-  void set_create_response(fitx::result<GuestError> err) { create_response_ = err; }
+  void set_create_response(fit::result<GuestError> err) { create_response_ = err; }
   RunCallback take_run_callback() { return std::move(captured_run_callback_); }
   GuestConfig take_guest_config() { return std::move(captured_config_); }
 
  private:
-  fitx::result<GuestError> create_response_ = fitx::ok();
+  fit::result<GuestError> create_response_ = fit::ok();
   RunCallback captured_run_callback_;
   GuestConfig captured_config_;
   fidl::BindingSet<GuestLifecycle> bindings_;
@@ -193,7 +193,7 @@ TEST_F(GuestManagerTest, VmmComponentCrash) {
 
 TEST_F(GuestManagerTest, FailedToCreateAndInitializeVmmWithRestart) {
   // Inject a failure into Launch.
-  fake_guest_lifecycle_->set_create_response(fitx::error(GuestError::GUEST_INITIALIZATION_FAILURE));
+  fake_guest_lifecycle_->set_create_response(fit::error(GuestError::GUEST_INITIALIZATION_FAILURE));
   bool launch_callback_called = false;
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
   {
@@ -210,7 +210,7 @@ TEST_F(GuestManagerTest, FailedToCreateAndInitializeVmmWithRestart) {
   ASSERT_TRUE(launch_callback_called);
 
   // Second Launch succeeds.
-  fake_guest_lifecycle_->set_create_response(fitx::ok());
+  fake_guest_lifecycle_->set_create_response(fit::ok());
   launch_callback_called = false;
   {
     fuchsia::virtualization::GuestConfig user_guest_config;

@@ -45,7 +45,7 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
     uint32_t num_channels;
     zx::duration external_delay;
   };
-  fitx::result<ErrorT, CurrentFormat> GetFormatForVA() __TA_REQUIRES(domain_token());
+  fit::result<ErrorT, CurrentFormat> GetFormatForVA() __TA_REQUIRES(domain_token());
 
   struct CurrentGain {
     bool mute;
@@ -59,13 +59,13 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
     uint32_t num_frames;
     uint32_t notifications_per_ring;
   };
-  fitx::result<ErrorT, CurrentBuffer> GetBufferForVA() __TA_REQUIRES(domain_token());
+  fit::result<ErrorT, CurrentBuffer> GetBufferForVA() __TA_REQUIRES(domain_token());
 
   struct CurrentPosition {
     zx::time monotonic_time;
     uint32_t ring_position;
   };
-  fitx::result<ErrorT, CurrentPosition> GetPositionForVA() __TA_REQUIRES(domain_token());
+  fit::result<ErrorT, CurrentPosition> GetPositionForVA() __TA_REQUIRES(domain_token());
 
   void SetNotificationFrequencyFromVA(uint32_t notifications_per_ring)
       __TA_REQUIRES(domain_token());

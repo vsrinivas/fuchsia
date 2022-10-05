@@ -24,10 +24,10 @@ size_t DebugdataItem::payload_size_bytes() const {
   return size;
 }
 
-auto DebugdataItem::AppendItems(DataZbi& zbi) -> fitx::result<DataZbi::Error> {
+auto DebugdataItem::AppendItems(DataZbi& zbi) -> fit::result<DataZbi::Error> {
   const uint32_t size = static_cast<uint32_t>(payload_size_bytes());
   if (size == 0) {
-    return fitx::ok();
+    return fit::ok();
   }
 
   WritableBytes payload;
@@ -60,7 +60,7 @@ auto DebugdataItem::AppendItems(DataZbi& zbi) -> fitx::result<DataZbi::Error> {
       .log_size = static_cast<uint32_t>(log_.size()),
   };
 
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace boot_shim

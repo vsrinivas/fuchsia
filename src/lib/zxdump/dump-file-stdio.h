@@ -36,16 +36,16 @@ class DumpFile::Stdio : public DumpFile {
 
   // Return the available subset of the requested data, a view valid for the
   // life of the Stdio.
-  fitx::result<Error, ByteView> ReadPermanent(FileRange where) override;
+  fit::result<Error, ByteView> ReadPermanent(FileRange where) override;
 
   // Return the available subset of the requested data, a view valid only
   // until the next call to this method.  The returned data might be less
   // than what's requested if EOF is reached.
-  fitx::result<Error, ByteView> ReadProbe(FileRange where) override;
+  fit::result<Error, ByteView> ReadProbe(FileRange where) override;
 
   // Return the available subset of the requested data, a view valid only
   // until the next call to this method.  The data must be present.
-  fitx::result<Error, ByteView> ReadEphemeral(FileRange where) override;
+  fit::result<Error, ByteView> ReadEphemeral(FileRange where) override;
 
   void shrink_to_fit() override { stream_.reset(); }
 
@@ -54,7 +54,7 @@ class DumpFile::Stdio : public DumpFile {
     void operator()(FILE* stream) const { fclose(stream); }
   };
 
-  fitx::result<Error, Buffer> Read(FileRange where);
+  fit::result<Error, Buffer> Read(FileRange where);
 
   std::unique_ptr<FILE, StdioCloser> stream_;
   std::forward_list<Buffer> keepalive_;

@@ -19,11 +19,11 @@ const LimboProvider::RecordMap& MockLimboProvider::GetLimboRecords() const {
   return limbo_;
 }
 
-fitx::result<debug::Status, LimboProvider::RetrievedException> MockLimboProvider::RetrieveException(
+fit::result<debug::Status, LimboProvider::RetrievedException> MockLimboProvider::RetrieveException(
     zx_koid_t process_koid) {
   auto it = mock_records_.find(process_koid);
   if (it == mock_records_.end())
-    return fitx::error(debug::Status("Not found"));
+    return fit::error(debug::Status("Not found"));
 
   RetrievedException result;
   result.process = std::make_unique<MockProcessHandle>(it->second.process);
@@ -33,7 +33,7 @@ fitx::result<debug::Status, LimboProvider::RetrievedException> MockLimboProvider
   mock_records_.erase(it);
   limbo_.erase(process_koid);
 
-  return fitx::ok(std::move(result));
+  return fit::ok(std::move(result));
 }
 
 debug::Status MockLimboProvider::ReleaseProcess(zx_koid_t process_koid) {

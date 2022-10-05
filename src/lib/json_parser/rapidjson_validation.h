@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_JSON_PARSER_RAPIDJSON_VALIDATION_H_
 #define SRC_LIB_JSON_PARSER_RAPIDJSON_VALIDATION_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <memory>
 #include <sstream>
@@ -28,13 +28,13 @@ struct InitSchemaError {
 };
 
 // Build a SchemaDocument from a json encoded string.
-fitx::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(std::string_view json);
+fit::result<InitSchemaError, rapidjson::SchemaDocument> InitSchema(std::string_view json);
 
 // Validate that the given json value match the given schema.
 // Returns validation error on error.
-fitx::result<std::string> ValidateSchema(const rapidjson::Value& value,
-                                         const rapidjson::SchemaDocument& schema,
-                                         std::string_view value_name = "");
+fit::result<std::string> ValidateSchema(const rapidjson::Value& value,
+                                        const rapidjson::SchemaDocument& schema,
+                                        std::string_view value_name = "");
 
 }  // namespace json_parser
 

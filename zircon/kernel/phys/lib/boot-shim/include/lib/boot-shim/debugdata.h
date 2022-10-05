@@ -17,7 +17,7 @@ class DebugdataItem : public ItemBase {
  public:
   size_t size_bytes() const { return ItemSize(payload_size_bytes()); }
 
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi);
+  fit::result<DataZbi::Error> AppendItems(DataZbi& zbi);
 
   void Init(std::string_view sink_name, std::string_view vmo_name,
             std::string_view vmo_name_suffix = "") {

@@ -4,7 +4,7 @@
 
 #include "sdk/lib/fdio/socket.h"
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/cpp/cmsg.h>
@@ -325,8 +325,8 @@ int16_t ParseMultipleControlMessages(const struct msghdr& msg, fidl::AnyArena& a
   return 0;
 }
 
-fitx::result<int16_t, fsocket::wire::NetworkSocketSendControlData>
-ParseNetworkSocketSendControlData(const struct msghdr& msg, fidl::AnyArena& allocator) {
+fit::result<int16_t, fsocket::wire::NetworkSocketSendControlData> ParseNetworkSocketSendControlData(
+    const struct msghdr& msg, fidl::AnyArena& allocator) {
   fidl::WireTableBuilder fidl_socket = fsocket::wire::SocketSendControlData::Builder(allocator);
   fidl::WireTableBuilder fidl_ip = fsocket::wire::IpSendControlData::Builder(allocator);
   fidl::WireTableBuilder fidl_ipv6 = fsocket::wire::Ipv6SendControlData::Builder(allocator);
@@ -350,41 +350,41 @@ ParseNetworkSocketSendControlData(const struct msghdr& msg, fidl::AnyArena& allo
       });
 
   if (err != 0) {
-    return fitx::error(err);
+    return fit::error(err);
   }
 
-  return fitx::success(fsocket::wire::NetworkSocketSendControlData::Builder(allocator)
-                           .socket(fidl_socket.Build())
-                           .ip(fidl_ip.Build())
-                           .ipv6(fidl_ipv6.Build())
-                           .Build());
+  return fit::success(fsocket::wire::NetworkSocketSendControlData::Builder(allocator)
+                          .socket(fidl_socket.Build())
+                          .ip(fidl_ip.Build())
+                          .ipv6(fidl_ipv6.Build())
+                          .Build());
 }
 
 template <typename T>
-fitx::result<int16_t, T> ParseControlMessages(const struct msghdr& msg, fidl::AnyArena& allocator);
+fit::result<int16_t, T> ParseControlMessages(const struct msghdr& msg, fidl::AnyArena& allocator);
 
 template <>
-fitx::result<int16_t, fsocket::wire::DatagramSocketSendControlData>
+fit::result<int16_t, fsocket::wire::DatagramSocketSendControlData>
 ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(const struct msghdr& msg,
                                                                    fidl::AnyArena& allocator) {
-  fitx::result fidl_net = ParseNetworkSocketSendControlData(msg, allocator);
+  fit::result fidl_net = ParseNetworkSocketSendControlData(msg, allocator);
   if (fidl_net.is_error()) {
     return fidl_net.take_error();
   }
 
-  return fitx::success(fsocket::wire::DatagramSocketSendControlData::Builder(allocator)
-                           .network(fidl_net.value())
-                           .Build());
+  return fit::success(fsocket::wire::DatagramSocketSendControlData::Builder(allocator)
+                          .network(fidl_net.value())
+                          .Build());
 }
 
 template <>
-fitx::result<int16_t, fsocket::wire::NetworkSocketSendControlData>
+fit::result<int16_t, fsocket::wire::NetworkSocketSendControlData>
 ParseControlMessages<fsocket::wire::NetworkSocketSendControlData>(const struct msghdr& msg,
                                                                   fidl::AnyArena& allocator) {
   return ParseNetworkSocketSendControlData(msg, allocator);
 }
 
-fitx::result<int16_t, fsocket::wire::SocketSendControlData> ParseSocketSendControlData(
+fit::result<int16_t, fsocket::wire::SocketSendControlData> ParseSocketSendControlData(
     const struct msghdr& msg, fidl::AnyArena& allocator) {
   fidl::WireTableBuilder fidl_socket = fsocket::wire::SocketSendControlData::Builder(allocator);
   int16_t err = ParseMultipleControlMessages(
@@ -399,29 +399,29 @@ fitx::result<int16_t, fsocket::wire::SocketSendControlData> ParseSocketSendContr
       });
 
   if (err != 0) {
-    return fitx::error(err);
+    return fit::error(err);
   }
 
-  return fitx::success(fidl_socket.Build());
+  return fit::success(fidl_socket.Build());
 }
 
 template <>
-fitx::result<int16_t, fsocket::wire::SocketSendControlData>
+fit::result<int16_t, fsocket::wire::SocketSendControlData>
 ParseControlMessages<fsocket::wire::SocketSendControlData>(const struct msghdr& msg,
                                                            fidl::AnyArena& allocator) {
   return ParseSocketSendControlData(msg, allocator);
 }
 
 template <>
-fitx::result<int16_t, fpacketsocket::wire::SendControlData>
+fit::result<int16_t, fpacketsocket::wire::SendControlData>
 ParseControlMessages<fpacketsocket::wire::SendControlData>(const struct msghdr& msg,
                                                            fidl::AnyArena& allocator) {
-  fitx::result fidl_socket = ParseSocketSendControlData(msg, allocator);
+  fit::result fidl_socket = ParseSocketSendControlData(msg, allocator);
   if (fidl_socket.is_error()) {
     return fidl_socket.take_error();
   }
 
-  return fitx::success(
+  return fit::success(
       fpacketsocket::wire::SendControlData::Builder(allocator).socket(fidl_socket.value()).Build());
 }
 
@@ -903,7 +903,7 @@ struct socket_with_event : virtual public base_socket<T> {
     size_t total = opt_total.value();
 
     fidl::Arena allocator;
-    fitx::result cmsg_result =
+    fit::result cmsg_result =
         ParseControlMessages<typename T::FidlSendControlData>(msghdr_ref, allocator);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();
@@ -1229,7 +1229,7 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
 
     // TODO(https://fxbug.dev/103740): Avoid allocating into this arena.
     fidl::Arena alloc;
-    fitx::result cmsg_result =
+    fit::result cmsg_result =
         ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(msghdr_ref, alloc);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();
@@ -1544,7 +1544,7 @@ struct stream_socket : public socket_with_zx_socket<StreamSocket> {
     }
     const msghdr& msghdr_ref = *msg;
     fidl::Arena allocator;
-    fitx::result cmsg_result =
+    fit::result cmsg_result =
         ParseControlMessages<fsocket::wire::SocketSendControlData>(msghdr_ref, allocator);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();

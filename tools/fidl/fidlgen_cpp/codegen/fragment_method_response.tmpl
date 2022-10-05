@@ -168,13 +168,13 @@ class {{ .NaturalResponseConverter }} {
   error variants cannot be converted to fidl::Response. */}}
   static {{ .NaturalResponse }} FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
       {{- if .Result.ValueParameters }}
-        return ::fitx::ok(std::move(o.result().response().value()));
+        return ::fit::ok(std::move(o.result().response().value()));
       {{- else }}
-        return ::fitx::ok();
+        return ::fit::ok();
       {{- end }}
     }
   }

@@ -28,7 +28,7 @@ void FdWriter::Accumulate(size_t offset, ByteView data) {
 }
 
 // Flush accumulated fragments.
-fitx::result<FdWriter::error_type, size_t> FdWriter::WriteFragments() {
+fit::result<FdWriter::error_type, size_t> FdWriter::WriteFragments() {
   // Consume the old state.
   Fragments fragments = std::exchange(fragments_, {});
 
@@ -43,7 +43,7 @@ fitx::result<FdWriter::error_type, size_t> FdWriter::WriteFragments() {
       if (n == 0) {
         errno = EIO;
       }
-      return fitx::error{"writev"};
+      return fit::error{"writev"};
     }
     size_t wrote = static_cast<size_t>(n);
     ZX_ASSERT(wrote <= fragments.size_bytes_ - written);
@@ -67,30 +67,30 @@ fitx::result<FdWriter::error_type, size_t> FdWriter::WriteFragments() {
 
   total_ += written;
   ZX_ASSERT(written == fragments.size_bytes_);
-  return fitx::ok(written);
+  return fit::ok(written);
 }
 
-fitx::result<FdWriter::error_type> FdWriter::Write(size_t offset, ByteView data) {
+fit::result<FdWriter::error_type> FdWriter::Write(size_t offset, ByteView data) {
   ZX_ASSERT(offset >= total_);
   ZX_ASSERT(!data.empty());
   ZX_DEBUG_ASSERT(data.data());
 
   auto write_data = [this](ByteView data)  // Write the whole chunk.
-      -> fitx::result<FdWriter::error_type> {
+      -> fit::result<FdWriter::error_type> {
     do {
       ssize_t n = write(fd_.get(), data.data(), data.size());
       if (n <= 0) {
         if (n == 0) {
           errno = EIO;
         }
-        return fitx::error{"write"};
+        return fit::error{"write"};
       }
       const size_t wrote = static_cast<size_t>(n);
       ZX_ASSERT(wrote <= data.size());
       data.remove_prefix(wrote);
       total_ += wrote;
     } while (!data.empty());
-    return fitx::ok();
+    return fit::ok();
   };
 
   // Seek or fill past any gap.
@@ -102,7 +102,7 @@ fitx::result<FdWriter::error_type> FdWriter::Write(size_t offset, ByteView data)
     if (!is_pipe_ && lseek(fd_.get(), static_cast<off_t>(gap), SEEK_CUR) < 0) {
       is_pipe_ = errno == ESPIPE;
       if (!is_pipe_) {
-        return fitx::error{"lseek"};
+        return fit::error{"lseek"};
       }
     }
     if (is_pipe_) {

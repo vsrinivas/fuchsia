@@ -106,20 +106,20 @@ zbi_mem_range_t ToMemRange(const efi_memory_descriptor& range) {
 
 }  // namespace internal
 
-fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromSpan(uint32_t zbi_type,
-                                                                      zbitl::ByteView payload) {
+fit::result<std::string_view, MemRangeTable> MemRangeTable::FromSpan(uint32_t zbi_type,
+                                                                     zbitl::ByteView payload) {
   MemRangeTable result;
   switch (zbi_type) {
     case kLegacyZbiTypeE820Table:
       if (payload.size() % sizeof(E820Entry) != 0) {
-        return fitx::error("Invalid size for E820 table");
+        return fit::error("Invalid size for E820 table");
       };
       result.table_ = internal::E820Table{zbitl::AsSpan<const E820Entry>(payload)};
       break;
 
     case ZBI_TYPE_MEM_CONFIG:
       if (payload.size() % sizeof(zbi_mem_range_t) != 0) {
-        return fitx::error("Invalid size for MemConfig table");
+        return fit::error("Invalid size for MemConfig table");
       }
       result.table_ = internal::MemConfigTable{zbitl::AsSpan<const zbi_mem_range_t>(payload)};
       break;
@@ -128,7 +128,7 @@ fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromSpan(uint32_t z
       size_t num_entries;
       size_t entry_size;
       if (!ParseEfiPayload(payload, &num_entries, &entry_size)) {
-        return fitx::error("Could not parse EFI memory map");
+        return fit::error("Could not parse EFI memory map");
       }
       result.table_ = internal::EfiTable{
           .num_entries = num_entries,
@@ -138,9 +138,9 @@ fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromSpan(uint32_t z
       break;
     }
     default:
-      return fitx::error("Unknown memory table type");
+      return fit::error("Unknown memory table type");
   }
-  return fitx::ok(result);
+  return fit::ok(result);
 }
 
 zbi_mem_range_t MemRangeTable::operator[](size_t n) const {

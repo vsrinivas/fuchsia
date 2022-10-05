@@ -1749,7 +1749,7 @@ TEST_F(UnknownInteractions, StrictTwoWayErrResponse) {
   class Server : public UnknownInteractionsServerBase {
     void StrictTwoWayErr(StrictTwoWayErrRequest& request,
                          StrictTwoWayErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::ok());
+      completer.Reply(fit::ok());
     }
   };
   Server server;
@@ -1846,7 +1846,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::ok());
+      completer.Reply(fit::ok());
     }
   };
   Server server;
@@ -1870,7 +1870,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::error(3203));
+      completer.Reply(fit::error(3203));
     }
   };
   Server server;
@@ -1895,7 +1895,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
                                  FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
-      completer.Reply(::fitx::ok(
+      completer.Reply(::fit::ok(
           ::test::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse({.some_field = 42})));
     }
   };
@@ -1920,7 +1920,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponseError) {
   class Server : public UnknownInteractionsServerBase {
     void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
                                  FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
-      completer.Reply(fitx::error(3203));
+      completer.Reply(fit::error(3203));
     }
   };
   Server server;

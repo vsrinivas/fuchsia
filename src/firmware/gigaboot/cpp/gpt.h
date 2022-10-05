@@ -5,7 +5,7 @@
 #ifndef SRC_FIRMWARE_GIGABOOT_CPP_GPT_H_
 #define SRC_FIRMWARE_GIGABOOT_CPP_GPT_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <zircon/hw/gpt.h>
 
 #include <array>
@@ -20,7 +20,7 @@ namespace gigaboot {
 
 class EfiGptBlockDevice {
  public:
-  static fitx::result<efi_status, EfiGptBlockDevice> Create(efi_handle device_handle);
+  static fit::result<efi_status, EfiGptBlockDevice> Create(efi_handle device_handle);
 
   // No copy.
   EfiGptBlockDevice(const EfiGptBlockDevice &) = delete;
@@ -29,10 +29,10 @@ class EfiGptBlockDevice {
   EfiGptBlockDevice(EfiGptBlockDevice &&) = default;
   EfiGptBlockDevice &operator=(EfiGptBlockDevice &&) = default;
 
-  fitx::result<efi_status> ReadPartition(std::string_view name, size_t offset, size_t length,
-                                         void *out);
-  fitx::result<efi_status> WritePartition(std::string_view name, const void *data, size_t offset,
-                                          size_t length);
+  fit::result<efi_status> ReadPartition(std::string_view name, size_t offset, size_t length,
+                                        void *out);
+  fit::result<efi_status> WritePartition(std::string_view name, const void *data, size_t offset,
+                                         size_t length);
 
   // Find partition info.
   const gpt_entry_t *FindPartition(std::string_view name);
@@ -50,7 +50,7 @@ class EfiGptBlockDevice {
   // Reading both tables all the time slows down boot in the common case where
   // both tables are fine. This sort of verification and repair is arguably better
   // suited to a post-boot daemon.
-  fitx::result<efi_status> Load();
+  fit::result<efi_status> Load();
 
   // TODO(b/238334864): Add support for initializing/updating GPT.
 
@@ -76,17 +76,17 @@ class EfiGptBlockDevice {
   efi_status Read(void *buffer, size_t offset, size_t length);
   efi_status Write(const void *data, size_t offset, size_t length);
 
-  fitx::result<efi_status> LoadGptEntries(const gpt_header_t &);
-  fitx::result<efi_status> RestoreFromBackup();
+  fit::result<efi_status> LoadGptEntries(const gpt_header_t &);
+  fit::result<efi_status> RestoreFromBackup();
 
   // Check that the given range is within boundary of a partition and returns the absolute offset
   // relative to the storage start.
-  fitx::result<efi_status, size_t> CheckAndGetPartitionAccessRangeInStorage(std::string_view name,
-                                                                            size_t offset,
-                                                                            size_t length);
+  fit::result<efi_status, size_t> CheckAndGetPartitionAccessRangeInStorage(std::string_view name,
+                                                                           size_t offset,
+                                                                           size_t length);
 };
 
-fitx::result<efi_status, EfiGptBlockDevice> FindEfiGptDevice();
+fit::result<efi_status, EfiGptBlockDevice> FindEfiGptDevice();
 
 }  // namespace gigaboot
 

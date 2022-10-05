@@ -112,7 +112,7 @@ TEST(Coding, EncodedDecode) {
   auto copied_bytes = encoded.GetOutgoingMessage().CopyBytes();
   fidl::EncodedMessage message = fidl::EncodedMessage::Create<TestTransport>(
       copied_bytes, msg.handles(), msg.handle_metadata<TestTransport>(), msg.handle_actual());
-  fitx::result decoded = fidl::InplaceDecode<Input>(
+  fit::result decoded = fidl::InplaceDecode<Input>(
       std::move(message),
       fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
   ASSERT_TRUE(decoded.is_ok());

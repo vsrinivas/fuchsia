@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_ITEM_BASE_H_
 #define ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_ITEM_BASE_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/view.h>
@@ -42,7 +42,7 @@ class ItemBase {
 
   // Append additional items to the data ZBI.  The caller ensures there is as
   // much spare capacity as size_bytes() previously returned.
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
+  fit::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
 };
 
 // This defines a simple item with a flat payload already in memory.
@@ -56,14 +56,14 @@ class SingleItem : public ItemBase {
     return *this;
   }
 
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const {
+  fit::result<DataZbi::Error> AppendItems(DataZbi& zbi) const {
     if (!payload_.empty()) {
       auto result = zbi.Append({.type = Type}, payload_);
       if (result.is_error()) {
         return result.take_error();
       }
     }
-    return fitx::ok();
+    return fit::ok();
   }
 
  private:
@@ -88,14 +88,14 @@ class SingleOptionalItem : public ItemBase {
     return *this;
   }
 
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const {
+  fit::result<DataZbi::Error> AppendItems(DataZbi& zbi) const {
     return payload_ ? zbi.Append(
                           {
                               .type = Type,
                               .extra = Extra,
                           },
                           zbitl::AsBytes(*payload_))
-                    : fitx::ok();
+                    : fit::ok();
   }
 
  private:
@@ -138,7 +138,7 @@ class SingleVariantItemBase : public ItemBase {
     return static_cast<Item&>(*this);
   }
 
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const {
+  fit::result<DataZbi::Error> AppendItems(DataZbi& zbi) const {
     return std::visit([&zbi](const auto& payload) { return Append(zbi, payload); }, payload_);
   }
 
@@ -153,20 +153,20 @@ class SingleVariantItemBase : public ItemBase {
     return ItemSize(sizeof(payload));
   }
 
-  static constexpr fitx::result<DataZbi::Error> Append(DataZbi& zbi, std::monostate none) {
-    return fitx::ok();
+  static constexpr fit::result<DataZbi::Error> Append(DataZbi& zbi, std::monostate none) {
+    return fit::ok();
   }
 
   template <typename T>
-  static constexpr fitx::result<DataZbi::Error> Append(DataZbi& zbi, const T& payload) {
+  static constexpr fit::result<DataZbi::Error> Append(DataZbi& zbi, const T& payload) {
     static_assert((std::is_same_v<T, Payload> || ...));
     return zbi.Append(Item::ItemHeader(payload), zbitl::AsBytes(payload));
   }
 
   template <typename... Args>
-  static constexpr fitx::result<DataZbi::Error> Append(Args&&... args) {
+  static constexpr fit::result<DataZbi::Error> Append(Args&&... args) {
     static_assert((std::is_void_v<Args> && ...));
-    return fitx::ok();
+    return fit::ok();
   }
 
  private:

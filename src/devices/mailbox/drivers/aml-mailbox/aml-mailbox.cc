@@ -284,7 +284,7 @@ void AmlMailbox::ReceiveData(ReceiveDataRequestView request,
     memset(channels_[ToSendIdx(channel)].data(), 0, channels_[ToSendIdx(channel)].size());
   }
 
-  completer.Reply(::fitx::ok(&response));
+  completer.Reply(::fit::ok(&response));
 }
 
 zx_status_t AmlMailbox::SendCommand(uint8_t channel, FidlMailbox::wire::MboxTx* mdata) {

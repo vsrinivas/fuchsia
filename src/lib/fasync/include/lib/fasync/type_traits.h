@@ -9,7 +9,7 @@
 
 LIB_FASYNC_CPP_VERSION_COMPAT_BEGIN
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 namespace fasync {
 
@@ -109,7 +109,7 @@ struct is_void_poll
 template <typename P>
 LIB_FASYNC_INLINE_CONSTANT constexpr bool is_void_poll_v = is_void_poll<P>::value;
 
-// Detects whether the given type is an |fasync::poll<fitx::result<E, Ts...>>|, aka
+// Detects whether the given type is an |fasync::poll<fit::result<E, Ts...>>|, aka
 // |fasync::try_poll<E, Ts...>|.
 template <typename P>
 struct is_try_poll
@@ -127,7 +127,7 @@ struct is_void_future
 template <typename F>
 LIB_FASYNC_INLINE_CONSTANT constexpr bool is_void_future_v = is_void_future<F>::value;
 
-// Detects whether the given type is a future with an output of |fitx::result|.
+// Detects whether the given type is a future with an output of |fit::result|.
 template <typename F>
 struct is_try_future
     : cpp17::conjunction<is_future<F>,
@@ -136,37 +136,37 @@ struct is_try_future
 template <typename F>
 LIB_FASYNC_INLINE_CONSTANT constexpr bool is_try_future_v = is_try_future<F>::value;
 
-// Retrieves the |::error_type| of a |fitx::result|.
+// Retrieves the |::error_type| of a |fit::result|.
 template <typename R,
           ::fasync::internal::requires_conditions<::fasync::internal::is_result<R>> = true>
 using result_error_t = typename R::error_type;
 
-// Retrieves the |::value_type| of a |fitx::result|.
+// Retrieves the |::value_type| of a |fit::result|.
 template <typename R,
           ::fasync::internal::requires_conditions<::fasync::internal::is_result<R>> = true>
 using result_value_t = typename R::value_type;
 
-// Retrieves the |::output_type| of an |fasync::poll| only when that type is a |fitx::result|.
+// Retrieves the |::output_type| of an |fasync::poll| only when that type is a |fit::result|.
 template <typename P, ::fasync::internal::requires_conditions<is_try_poll<P>> = true>
 using poll_result_t = poll_output_t<P>;
 
-// Retrieves the |::value_type| of the |fitx::result| of the given |fasync::try_poll|.
+// Retrieves the |::value_type| of the |fit::result| of the given |fasync::try_poll|.
 template <typename P, ::fasync::internal::requires_conditions<is_try_poll<P>> = true>
 using poll_value_t = result_value_t<poll_result_t<P>>;
 
-// Retrieves the |::error_type| of the |fitx::result| of the given |fasync::try_poll|.
+// Retrieves the |::error_type| of the |fit::result| of the given |fasync::try_poll|.
 template <typename P, ::fasync::internal::requires_conditions<is_try_poll<P>> = true>
 using poll_error_t = result_error_t<poll_result_t<P>>;
 
-// Retrieves the output type of the given future only when that type is a |fitx::result|.
+// Retrieves the output type of the given future only when that type is a |fit::result|.
 template <typename F, ::fasync::internal::requires_conditions<is_try_future<F>> = true>
 using future_result_t = future_output_t<F>;
 
-// Retrieves the |::value_type| of the |fitx::result| output by the given future.
+// Retrieves the |::value_type| of the |fit::result| output by the given future.
 template <typename F, ::fasync::internal::requires_conditions<is_try_future<F>> = true>
 using future_value_t = result_value_t<future_result_t<F>>;
 
-// Retrieves the |::error_type| of the |fitx::result| output by the given future.
+// Retrieves the |::error_type| of the |fit::result| output by the given future.
 template <typename F, ::fasync::internal::requires_conditions<is_try_future<F>> = true>
 using future_error_t = result_error_t<future_result_t<F>>;
 

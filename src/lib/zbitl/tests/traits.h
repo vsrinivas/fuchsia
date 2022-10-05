@@ -69,10 +69,10 @@ struct FuzzTraits<zx::vmo> : public zbitl::StorageTraits<zx::vmo> {
 
   // In order for StorageTraits<zx::vmo>::Create() to create a resiable VMO,
   // its input VMO must be resizable: so just create one directly.
-  static fitx::result<zx_status_t, zx::vmo> Create(zx::vmo& vmo, uint32_t capacity,
-                                                   uint32_t initial_zero_size) {
+  static fit::result<zx_status_t, zx::vmo> Create(zx::vmo& vmo, uint32_t capacity,
+                                                  uint32_t initial_zero_size) {
     ZX_ASSERT(ZX_OK == zx::vmo::create(capacity, ZX_VMO_RESIZABLE, &vmo));
-    return fitx::ok(std::move(vmo));
+    return fit::ok(std::move(vmo));
   }
 };
 #endif  // __Fuchsia__

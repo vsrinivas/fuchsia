@@ -281,7 +281,7 @@ class OutgoingDirectoryMinfs : public OutgoingDirectoryFixture {
     const fidl::WireResult res =
         file_client->Write(fidl::VectorView<uint8_t>::FromExternal(content));
     ASSERT_TRUE(res.ok()) << res.status_string();
-    const fitx::result resp = res.value();
+    const fit::result resp = res.value();
     ASSERT_TRUE(resp.is_ok()) << zx_status_get_string(resp.error_value());
     ASSERT_EQ(resp.value()->actual_count, content.size());
 
@@ -327,7 +327,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   fidl::WireSyncClient<fio::File> file_client(std::move(test_file_ends->client));
   const fidl::WireResult res2 = file_client->Read(4);
   ASSERT_TRUE(res2.ok()) << res2.status_string();
-  const fitx::result resp2 = res2.value();
+  const fit::result resp2 = res2.value();
   ASSERT_TRUE(resp2.is_ok()) << zx_status_get_string(resp2.error_value());
   ASSERT_EQ(resp2.value()->data[0], 1);
 

@@ -72,11 +72,11 @@ std::unique_ptr<::test_error::ExampleFooResult> WireNaturalConversionTraits<::te
 
 ::fidl::Response<::test_error::Example::Foo> WireNaturalConversionTraits<::fidl::WireResponse<::test_error::Example::Foo>, ::fidl::Response<::test_error::Example::Foo>>::ToNatural(::fidl::WireResponse<::test_error::Example::Foo> src) {
   return ::fidl::Response<::test_error::Example::Foo>(
-      WireNaturalConversionTraits<::test_error::wire::ExampleFooTopResponse, ::fitx::result<uint32_t, ::test_error::ExampleFooResponse>>::ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_error::wire::ExampleFooTopResponse, ::fit::result<uint32_t, ::test_error::ExampleFooResponse>>::ToNatural(std::move(src)));
 }
 ::fidl::WireResponse<::test_error::Example::Foo> WireNaturalConversionTraits<::fidl::WireResponse<::test_error::Example::Foo>, ::fidl::Response<::test_error::Example::Foo>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_error::Example::Foo> src) {
   return ::fidl::WireResponse<::test_error::Example::Foo>(
-      WireNaturalConversionTraits<::test_error::wire::ExampleFooTopResponse, ::fitx::result<uint32_t, ::test_error::ExampleFooResponse>>::ToWire(arena, std::move(src)));
+      WireNaturalConversionTraits<::test_error::wire::ExampleFooTopResponse, ::fit::result<uint32_t, ::test_error::ExampleFooResponse>>::ToWire(arena, std::move(src)));
 }
 
 #endif  // __Fuchsia__

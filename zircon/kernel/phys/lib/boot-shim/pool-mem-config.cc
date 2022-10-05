@@ -37,7 +37,7 @@ namespace boot_shim {
 
 size_t PoolMemConfigItem::size_bytes() const { return pool_ ? ItemSize(PayloadSize(*pool_)) : 0; }
 
-fitx::result<ErrorType> PoolMemConfigItem::AppendItems(DataZbi& zbi) const {
+fit::result<ErrorType> PoolMemConfigItem::AppendItems(DataZbi& zbi) const {
   const size_t payload_size = pool_ ? PayloadSize(*pool_) : 0;
   if (payload_size > 0) {
     auto result = zbi.Append({
@@ -49,7 +49,7 @@ fitx::result<ErrorType> PoolMemConfigItem::AppendItems(DataZbi& zbi) const {
     }
     WritePayload(*pool_, result->payload);
   }
-  return fitx::ok();
+  return fit::ok();
 }
 
 }  // namespace boot_shim

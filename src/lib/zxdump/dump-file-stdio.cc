@@ -10,7 +10,7 @@ DumpFile::Stdio::~Stdio() = default;
 
 // Return the available subset of the requested data, a view valid for the
 // life of the Stdio.
-fitx::result<Error, ByteView> DumpFile::Stdio::ReadPermanent(FileRange where) {
+fit::result<Error, ByteView> DumpFile::Stdio::ReadPermanent(FileRange where) {
   auto result = Read(where);
   if (result.is_error()) {
     return result.take_error();
@@ -20,13 +20,13 @@ fitx::result<Error, ByteView> DumpFile::Stdio::ReadPermanent(FileRange where) {
   }
   ByteView data{result->data(), result->size()};
   keepalive_.push_front(std::move(result).value());
-  return fitx::ok(data);
+  return fit::ok(data);
 }
 
 // Return the available subset of the requested data, a view valid only
 // until the next call to this method.  The returned data might be less
 // than what's requested if EOF is reached.
-fitx::result<Error, ByteView> DumpFile::Stdio::ReadProbe(FileRange where) {
+fit::result<Error, ByteView> DumpFile::Stdio::ReadProbe(FileRange where) {
   auto result = Read(where);
   if (result.is_error()) {
     return result.take_error();
@@ -34,12 +34,12 @@ fitx::result<Error, ByteView> DumpFile::Stdio::ReadProbe(FileRange where) {
   ByteView data{result->data(), result->size()};
   ephemeral_buffer_ = std::move(result).value();
   ephemeral_buffer_range_ = where;
-  return fitx::ok(data);
+  return fit::ok(data);
 }
 
 // Return the available subset of the requested data, a view valid only
 // until the next call to this method.  The data must be present.
-fitx::result<Error, ByteView> DumpFile::Stdio::ReadEphemeral(FileRange where) {
+fit::result<Error, ByteView> DumpFile::Stdio::ReadEphemeral(FileRange where) {
   auto result = ReadProbe(where);
   if (result.is_ok() && result->size() < where.size) {
     return TruncatedDump();
@@ -47,9 +47,9 @@ fitx::result<Error, ByteView> DumpFile::Stdio::ReadEphemeral(FileRange where) {
   return result;
 }
 
-fitx::result<Error, DumpFile::Buffer> DumpFile::Stdio::Read(FileRange where) {
+fit::result<Error, DumpFile::Buffer> DumpFile::Stdio::Read(FileRange where) {
   if (!stream_) {
-    return fitx::error(Error{"read_memory disabled", ZX_ERR_NOT_SUPPORTED});
+    return fit::error(Error{"read_memory disabled", ZX_ERR_NOT_SUPPORTED});
   }
 
   // Seek if necessary and possible.
@@ -59,7 +59,7 @@ fitx::result<Error, DumpFile::Buffer> DumpFile::Stdio::Read(FileRange where) {
     } else if (errno == ESPIPE) {
       is_pipe_ = true;
     } else {
-      return fitx::error(Error{"fseek", ZX_ERR_IO});
+      return fit::error(Error{"fseek", ZX_ERR_IO});
     }
   }
 
@@ -83,13 +83,13 @@ fitx::result<Error, DumpFile::Buffer> DumpFile::Stdio::Read(FileRange where) {
         continue;
       }
     }
-    return fitx::error(Error{"random access not available", ZX_ERR_IO_REFUSED});
+    return fit::error(Error{"random access not available", ZX_ERR_IO_REFUSED});
   }
 
   // Not seekable, so just eat any data being skipped over.
   while (where.offset > pos_) {
     if (getc(stream_.get()) == EOF) {
-      return fitx::error(Error{"getc", ZX_ERR_IO});
+      return fit::error(Error{"getc", ZX_ERR_IO});
     }
     ++pos_;
   }
@@ -100,7 +100,7 @@ fitx::result<Error, DumpFile::Buffer> DumpFile::Stdio::Read(FileRange where) {
       if (feof(stream_.get())) {
         break;
       }
-      return fitx::error(Error{"fread", ZX_ERR_IO});
+      return fit::error(Error{"fread", ZX_ERR_IO});
     }
     pos_ += n;
     data += n;
@@ -108,7 +108,7 @@ fitx::result<Error, DumpFile::Buffer> DumpFile::Stdio::Read(FileRange where) {
   }
   buffer.resize(data - buffer.data());
   buffer.shrink_to_fit();
-  return fitx::ok(std::move(buffer));
+  return fit::ok(std::move(buffer));
 }
 
 }  // namespace zxdump::internal

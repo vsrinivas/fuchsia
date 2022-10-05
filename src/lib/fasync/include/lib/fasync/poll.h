@@ -10,21 +10,21 @@
 LIB_FASYNC_CPP_VERSION_COMPAT_BEGIN
 
 #include <lib/fasync/type_traits.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 // |fasync::poll|: Type to be returned by futures to indicate their state of completion.
 //
 // |fasync::poll| can be seen as a more specialized version of |std::optional|: when an executor
 // polls a future, the |fasync::poll| value is either still pending (no output) or is ready with a
-// value of the output type. It has a specialization for |fitx::result| so that only one
+// value of the output type. It has a specialization for |fit::result| so that only one
 // discriminator is used in this tri-state case.
 //
 // To make an |fasync::poll|:
 //
-//   fitx::ready(ready_value)      // Ready for |fasync::poll<T>|.
-//   fitx::ready()                 // Ready for |fasync::poll<>| (no output value).
-//   fitx::done(ready_value)       // Ready for |fasync::poll<T>|.
-//   fitx::done()                  // Ready for |fasync::poll<>| (no output value).
+//   fit::ready(ready_value)      // Ready for |fasync::poll<T>|.
+//   fit::ready()                 // Ready for |fasync::poll<>| (no output value).
+//   fit::done(ready_value)       // Ready for |fasync::poll<T>|.
+//   fit::done()                  // Ready for |fasync::poll<>| (no output value).
 //
 //   fasync::pending()             // Pending.
 //
@@ -145,8 +145,8 @@ ready(T&&) -> ready<std::decay_t<T>>;
 
 #endif
 
-template <typename E = ::fitx::failed, typename... Ts>
-using try_ready = ready<::fitx::result<E, Ts...>>;
+template <typename E = ::fit::failed, typename... Ts>
+using try_ready = ready<::fit::result<E, Ts...>>;
 
 // Returns |fasync::ready<T>| for the given value, where T is deduced from the argument type. This
 // utility is a C++14 compatible alternative to the C++17 deduction guide above.
@@ -284,9 +284,9 @@ poll(poll<T>&&) -> poll<T>;
 #endif
 
 // |fasync::try_poll<E, Ts...>| is a convenience wrapper to make it easier to deal with
-// |fasync::poll|s with an |::output_type| of |fitx::result<E, Ts...>|.
-template <typename E = ::fitx::failed, typename... Ts>
-using try_poll = poll<::fitx::result<E, Ts...>>;
+// |fasync::poll|s with an |::output_type| of |fit::result<E, Ts...>|.
+template <typename E = ::fit::failed, typename... Ts>
+using try_poll = poll<::fit::result<E, Ts...>>;
 
 template <typename... Ts>
 constexpr void swap(poll<Ts...>& p, poll<Ts...>& q) {

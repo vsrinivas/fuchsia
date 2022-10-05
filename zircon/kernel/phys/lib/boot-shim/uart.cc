@@ -8,11 +8,11 @@
 
 namespace boot_shim {
 
-fitx::result<UartItem::DataZbi::Error> UartItem::AppendItems(DataZbi& zbi) const {
+fit::result<UartItem::DataZbi::Error> UartItem::AppendItems(DataZbi& zbi) const {
   return std::visit(
-      [&zbi](const auto& driver) -> fitx::result<DataZbi::Error> {
+      [&zbi](const auto& driver) -> fit::result<DataZbi::Error> {
         if (driver.type() == 0) {
-          return fitx::ok();
+          return fit::ok();
         }
 
         if (auto result = zbi.Append({
@@ -27,7 +27,7 @@ fitx::result<UartItem::DataZbi::Error> UartItem::AppendItems(DataZbi& zbi) const
           return result.take_error();
         }
 
-        return fitx::ok();
+        return fit::ok();
       },
       driver_);
 }

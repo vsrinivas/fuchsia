@@ -106,7 +106,7 @@ TEST(StandaloneResourceTypeCoding, Decode) {
       cpp20::span(bytes), handles.data(), nullptr, static_cast<uint32_t>(handles.size()));
 
   // Perform decoding.
-  fitx::result decoded =
+  fit::result decoded =
       fidl::Decode<test_driver_coding::MixedResources>(std::move(message), metadata);
   ASSERT_TRUE(decoded.is_ok());
 

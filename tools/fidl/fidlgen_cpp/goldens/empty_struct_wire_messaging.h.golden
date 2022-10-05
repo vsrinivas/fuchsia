@@ -524,7 +524,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol:
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>* request);
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error>&& decoded,
+      ::fit::result<::fidl::Error>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_emptystruct::EmptyProtocol::Send>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_emptystruct::EmptyProtocol::Send>(result) {}
@@ -569,7 +569,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol:
   }
 
   explicit WireUnownedResult(
-      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>>&& decoded,
+      ::fit::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>(::fidl::internal::StatusFromResult(decoded)) {
     if (decoded.is_ok()) {
       decoded_ = std::move(decoded.value());

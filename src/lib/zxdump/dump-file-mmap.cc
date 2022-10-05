@@ -9,7 +9,7 @@
 namespace zxdump::internal {
 
 // The returned view is valid for the life of the Mmap.
-fitx::result<Error, ByteView> DumpFile::Mmap::ReadPermanent(FileRange where) {
+fit::result<Error, ByteView> DumpFile::Mmap::ReadPermanent(FileRange where) {
   auto result = ReadEphemeral(where);
   if (result.is_ok()) {
     const size_t bytes_read = result.value().size();
@@ -21,18 +21,18 @@ fitx::result<Error, ByteView> DumpFile::Mmap::ReadPermanent(FileRange where) {
 // The returned view is only guaranteed valid until the next call.  In
 // fact, it stays valid possibly for the life of the Mmap and at
 // least until shrink_to_fit is called.
-fitx::result<Error, ByteView> DumpFile::Mmap::ReadEphemeral(FileRange where) {
+fit::result<Error, ByteView> DumpFile::Mmap::ReadEphemeral(FileRange where) {
   ByteView data{reinterpret_cast<std::byte*>(data_), size_};
   data = data.substr(where.offset, where.size);
   if (data.empty()) {
     return TruncatedDump();
   }
-  return fitx::ok(data);
+  return fit::ok(data);
 }
 
 // This never allows EOF since the size is always known and reading past
 // EOF should never be attempted.
-fitx::result<Error, ByteView> DumpFile::Mmap::ReadProbe(FileRange where) {
+fit::result<Error, ByteView> DumpFile::Mmap::ReadProbe(FileRange where) {
   return ReadEphemeral(where);
 }
 

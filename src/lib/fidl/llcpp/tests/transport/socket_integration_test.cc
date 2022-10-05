@@ -176,9 +176,8 @@ class TestClient {
           ::fidl::IncomingHeaderAndMessage&& result,
           fidl::internal::MessageStorageViewBase* storage_view) override {
         ZX_ASSERT(result.ok());
-        fitx::result decoded =
-            fidl::internal::InplaceDecodeTransactionalMessage<TwoWayResponseBody>(
-                std::move(result));
+        fit::result decoded = fidl::internal::InplaceDecodeTransactionalMessage<TwoWayResponseBody>(
+            std::move(result));
         ZX_ASSERT(decoded.is_ok());
         callback(decoded.value().value());
         delete this;
@@ -209,7 +208,7 @@ class TestServer : public fidl::internal::IncomingMessageDispatcher {
   void dispatch_message(::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
                         fidl::internal::MessageStorageViewBase* storage_view) override {
     ZX_ASSERT(msg.ok());
-    fitx::result decoded =
+    fit::result decoded =
         fidl::internal::InplaceDecodeTransactionalMessage<TwoWayResponseBody>(std::move(msg));
     ZX_ASSERT(decoded.is_ok());
     ZX_ASSERT(decoded->payload == kRequestPayload);

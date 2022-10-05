@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/block/volume/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zx/status.h>
 #include <zircon/hw/gpt.h>
 
@@ -23,7 +23,7 @@ constexpr std::array<uint8_t, fuchsia::hardware::block::partition::GUID_LENGTH>
         0x87, 0x11, 0x1f, 0x99, 0x05, 0xb7, 0x6e, 0xd1,
 };
 
-fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
+fit::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
     const termina_config::Config& structured_config);
 
 void DropDevNamespace();

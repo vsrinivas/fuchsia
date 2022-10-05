@@ -37,23 +37,23 @@ void WireDecodeUnknownEnvelope(WireDecoder* decoder, WirePosition position) {
   decoder->CloseNextNHandles(envelope->num_handles);
 }
 
-fitx::result<fidl::Error, WireEncoder::Result> WireEncode(
+fit::result<fidl::Error, WireEncoder::Result> WireEncode(
     size_t inline_size, TopLevelEncodeFn encode_fn, const CodingConfig* coding_config, void* value,
     zx_channel_iovec_t* iovecs, size_t iovec_capacity, fidl_handle_t* handles,
     fidl_handle_metadata_t* handle_metadata, size_t handle_capacity, uint8_t* backing_buffer,
     size_t backing_buffer_capacity) {
   if (unlikely(value == nullptr)) {
-    return fitx::error(fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNullIovecBuffer));
+    return fit::error(fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNullIovecBuffer));
   }
   if (unlikely(iovecs == nullptr)) {
-    return fitx::error(fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNullIovecBuffer));
+    return fit::error(fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNullIovecBuffer));
   }
   if (unlikely(handle_capacity > 0 && handles == nullptr)) {
-    return fitx::error(
+    return fit::error(
         fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNullHandleBufferButNonzeroCount));
   }
   if (unlikely(backing_buffer == nullptr)) {
-    return fitx::error(fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNullByteBuffer));
+    return fit::error(fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNullByteBuffer));
   }
   WireEncoder encoder(coding_config, iovecs, iovec_capacity, handles, handle_metadata,
                       handle_capacity, backing_buffer, backing_buffer_capacity);

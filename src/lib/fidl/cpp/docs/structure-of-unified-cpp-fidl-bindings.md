@@ -231,7 +231,7 @@ early if they are not interested in transport errors.
 
 Overall guiding principles:
 
-* Use `fitx::result` in return values. `fitx::result` is widely used in newer
+* Use `fit::result` in return values. `fit::result` is widely used in newer
   Fuchsia C++ code, and we should integrate with where the overall ecosystem is
   heading.
 * Do not flatten method requests/responses into multiple arguments. For example,
@@ -255,18 +255,18 @@ The precise definition that it expands to depends on the shape of the method:
 
 * When the method does not use the error syntax:
   - When the method response has no body: `fidl::Result<FooMethod>` inherits
-    `fitx::result<fidl::Error>`.
+    `fit::result<fidl::Error>`.
   - When the method response has a body: `fidl::Result<FooMethod>` inherits
-    `fitx::result<fidl::Error, FooMethodPayload>`, where `fidl::Error` is a type
+    `fit::result<fidl::Error, FooMethodPayload>`, where `fidl::Error` is a type
     representing any transport error or protocol level terminal errors such as
     epitaphs.
 * When the method uses the error syntax:
   - When the method response payload is an empty struct:
     `fidl::Result<FooMethod>` inherits
-    `fitx::result<fidl::AnyErrorIn<FooMethod>>` (see `AnyErrorIn` below).
+    `fit::result<fidl::AnyErrorIn<FooMethod>>` (see `AnyErrorIn` below).
   - When the method response payload is not an empty struct:
     `fidl::Result<FooMethod>` inherits
-  `fitx::result<fidl::AnyErrorIn<FooMethod>, FooMethodPayload>`.
+  `fit::result<fidl::AnyErrorIn<FooMethod>, FooMethodPayload>`.
 
 `AnyErrorIn` is used to implement [error folding][error-folding] of transport
 and application errors, such that one may query `is_ok()` once on the result
@@ -307,7 +307,7 @@ Now we present some examples using the types and FIDL definition above:
 client->Greet({std::string("hi")}).Then(
     [] (fidl::Result<fuchsia_example::Speak::Greet>& result) {
       // fidl::Result<fuchsia_example::Speak::Greet> =
-      //     fitx::result<
+      //     fit::result<
       //        fidl::Error,
       //        fuchsia_example::Speak::GreetPayload>;
 
@@ -321,7 +321,7 @@ client->Greet({std::string("hi")}).Then(
 client->EmptyAck().Then(
     [] (fidl::Result<fuchsia_example::Speak::Greet>& result) {
       // fidl::Result<fuchsia_example::Speak::Greet> =
-      //     fitx::result<fidl::Error>;
+      //     fit::result<fidl::Error>;
 
       assert(result.is_ok());
       // No payload to access...
@@ -335,7 +335,7 @@ client->EmptyAck().Then(
 client->TryGreet({std::string("hi")}).Then(
     [] (fidl::Result<fuchsia_example::Speak::TryGreet>& result) {
       // fidl::Result<fuchsia_example::Speak::TryGreet> =
-      //     fitx::result<
+      //     fit::result<
       //         fidl::AnyErrorIn<fuchsia_example::Speak::TryGreet>,
       //         fuchsia_example::SpeakTryGreetPayload>;
 
@@ -357,7 +357,7 @@ client->TryGreet({std::string("hi")}).Then(
 client->TryEmptyAck().Then(
     [] (fidl::Result<fuchsia_example::Speak::TryGreet>& result) {
       // fidl::Result<fuchsia_example::Speak::TryGreet> =
-      //     fitx::result<fidl::AnyErrorIn<fuchsia_example::Speak::TryEmptyAck>>;
+      //     fit::result<fidl::AnyErrorIn<fuchsia_example::Speak::TryEmptyAck>>;
 
       // Check both transport and application error.
       if (!result.is_ok()) {
@@ -387,9 +387,9 @@ fidl::SyncClient client(std::move(client_end));
 // Natural API, sync.
 fidl::Result<fuchsia_example::Speak::Greet> result =
     client->Greet({std::string("hi")});
-// Alternatively, one may elide the template argument if using |fitx::result|.
+// Alternatively, one may elide the template argument if using |fit::result|.
 // Note that |fidl::Result| is just an alias.
-fitx::result result = client->Greet({std::string("hi")});
+fit::result result = client->Greet({std::string("hi")});
 
 // Check error
 bool ok = result.is_ok();
@@ -400,13 +400,13 @@ int32_t s = result->s();
 std::string foo = result->foo();
 
 // Example for responses with absent bodies:
-fitx::result<fidl::Error> result = client->EmptyAck({std::string("hi")});
+fit::result<fidl::Error> result = client->EmptyAck({std::string("hi")});
 
 // Example for one way calls:
-fitx::result<fidl::Error> result = client->OneWay({42});
+fit::result<fidl::Error> result = client->OneWay({42});
 
 // Example for error syntax:
-fitx::result<fidl::AnyErrorIn<TryEmptyAck>> result = client->TryEmptyAck();
+fit::result<fidl::AnyErrorIn<TryEmptyAck>> result = client->TryEmptyAck();
 ```
 
 Note that two-way methods with absent response bodies have the same return value
@@ -499,11 +499,11 @@ class fidl::Event<Method> { ... };
   - When the event has no body, `fidl::Event<FooMethod>` is empty.
 * When the event uses the error syntax:
   - When the success payload is not an empty struct, `fidl::Event<FooMethod>`
-    inherits `fitx::result<ApplicationError, FooMethodPayload>`, where
+    inherits `fit::result<ApplicationError, FooMethodPayload>`, where
     `ApplicationError` is the corresponding application error type for that
     event.
   - When the success payload is an empty struct, `fidl::Event<FooMethod>`
-    inherits `fitx::result<ApplicationError>`.
+    inherits `fit::result<ApplicationError>`.
 
 Note: an alternative to the second bullet is to simply omit the corresponding
 `fidl::Event<FooMethod>` in case of events with absent bodies. Here we choose to
@@ -612,7 +612,7 @@ following to make it safe and ergonomic:
 * Server authors should not be able to manually respond with the `transport_err`
   variant from inside a method handler. By definition, the method is known to
   the server if the code reaches a particular method handler.
-* Client users should still be able to use `fitx::result` types, which has two
+* Client users should still be able to use `fit::result` types, which has two
   variants, even when the result union on the wire has three variants.
 
 To achieve these, our idea is to decouple the physical shape of the result union
@@ -622,7 +622,7 @@ the client side, the `transport_err` combined into other kinds of transport
 errors.
 
 This means for example the server completer of a flexible two-way method using
-error syntax will take `fitx::result<ApplicationError, FooPayload>`, and that of
+error syntax will take `fit::result<ApplicationError, FooPayload>`, and that of
 a flexible two-way method not using the error syntax will simply take
 `FooPayload`.
 

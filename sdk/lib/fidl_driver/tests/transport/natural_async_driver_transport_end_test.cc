@@ -91,8 +91,7 @@ TEST(DriverTransport, NaturalSendDriverClientEndEncodeErrorShouldCloseHandle) {
   zx::status send_endpoints = fdf::CreateEndpoints<test_transport::OneWayTest>();
   ASSERT_OK(send_endpoints.status_value());
 
-  fitx::result result =
-      client->SendDriverClientEnd({"too long", std::move(send_endpoints->client)});
+  fit::result result = client->SendDriverClientEnd({"too long", std::move(send_endpoints->client)});
   ASSERT_FALSE(result.is_ok());
   ASSERT_EQ(fidl::Reason::kEncodeError, result.error_value().reason());
   ASSERT_NO_FAILURES(fidl_driver_testing::AssertPeerClosed(*send_endpoints->server.handle()));

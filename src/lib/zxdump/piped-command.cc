@@ -6,8 +6,8 @@
 
 namespace zxdump {
 
-fitx::result<std::string> PipedCommand::Start(const std::string& command,
-                                              const std::vector<std::string>& args) {
+fit::result<std::string> PipedCommand::Start(const std::string& command,
+                                             const std::vector<std::string>& args) {
   std::vector<const char*> argv{command.c_str()};
   for (const std::string& arg : args) {
     argv.push_back(arg.c_str());

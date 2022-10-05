@@ -79,7 +79,7 @@ class TestDai : public TestDaiDeviceType,
 
     fuchsia_hardware_audio::wire::DaiGetRingBufferFormatsResponse response;
     response.ring_buffer_formats = std::move(all_formats);
-    completer.Reply(::fitx::ok(&response));
+    completer.Reply(::fit::ok(&response));
   }
 
   void GetDaiFormats(GetDaiFormatsCompleter::Sync& completer) override {
@@ -114,7 +114,7 @@ class TestDai : public TestDaiDeviceType,
 
     fuchsia_hardware_audio::wire::DaiGetDaiFormatsResponse response;
     response.dai_formats = std::move(all_formats);
-    completer.Reply(::fitx::ok(&response));
+    completer.Reply(::fit::ok(&response));
   }
   void CreateRingBuffer(CreateRingBufferRequestView request,
                         CreateRingBufferCompleter::Sync& completer) override {

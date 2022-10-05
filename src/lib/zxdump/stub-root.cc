@@ -8,11 +8,11 @@ namespace zxdump {
 namespace {
 
 constexpr auto NotFuchsia() {
-  return fitx::error{Error{"Try running Fuchsia!", ZX_ERR_NOT_SUPPORTED}};
+  return fit::error{Error{"Try running Fuchsia!", ZX_ERR_NOT_SUPPORTED}};
 }
 
 }  // namespace
 
-fitx::result<Error, LiveTask> GetRootJob() { return NotFuchsia(); }
+fit::result<Error, LiveTask> GetRootJob() { return NotFuchsia(); }
 
 }  // namespace zxdump

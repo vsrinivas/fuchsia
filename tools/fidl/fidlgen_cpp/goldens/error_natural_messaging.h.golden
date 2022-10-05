@@ -39,10 +39,10 @@ __LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 }  // namespace test_error
 
 template <>
-class ::fidl::Response<::test_error::Example::Foo> final : public ::fitx::result<uint32_t, ::test_error::ExampleFooResponse> {
+class ::fidl::Response<::test_error::Example::Foo> final : public ::fit::result<uint32_t, ::test_error::ExampleFooResponse> {
  public:
-  using ::fitx::result<uint32_t, ::test_error::ExampleFooResponse>::result;
-  Response(::fitx::result<uint32_t, ::test_error::ExampleFooResponse> v) : result(std::move(v)) {}
+  using ::fit::result<uint32_t, ::test_error::ExampleFooResponse>::result;
+  Response(::fit::result<uint32_t, ::test_error::ExampleFooResponse> v) : result(std::move(v)) {}
   Response() = delete;
 };
 
@@ -59,10 +59,10 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_error::E
  public:
   static ::fidl::Response<::test_error::Example::Foo> FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
-      return ::fitx::error(std::move(o.result().err().value()));
+      return ::fit::error(std::move(o.result().err().value()));
     } else {
       ZX_DEBUG_ASSERT(o.result().response().has_value());
-      return ::fitx::ok(std::move(o.result().response().value()));
+      return ::fit::ok(std::move(o.result().response().value()));
     }
   }
 
@@ -78,9 +78,9 @@ namespace test_error {
 }  // namespace test_error
 
 template <>
-class ::fidl::Result<::test_error::Example::Foo> final : public ::fitx::result<::fidl::AnyErrorIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse> {
+class ::fidl::Result<::test_error::Example::Foo> final : public ::fit::result<::fidl::AnyErrorIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse> {
  public:
-  using ::fitx::result<::fidl::AnyErrorIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse>::result;
+  using ::fit::result<::fidl::AnyErrorIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse>::result;
 
  protected:
   Result() = default;

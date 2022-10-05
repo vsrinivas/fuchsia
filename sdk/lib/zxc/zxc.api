@@ -1,6 +1,6 @@
 {
-  "pkg/zxc/include/lib/fitx/internal/compiler.h": "3b050f1cec235f382982fbee11ad9a26",
-  "pkg/zxc/include/lib/fitx/internal/result.h": "f56b1896a3f2e1f94d30700dc5083066",
-  "pkg/zxc/include/lib/fitx/result.h": "914de85b14b2c20d12bc1a53d0033fd9",
+  "pkg/zxc/include/lib/fit/internal/compiler.h": "3b050f1cec235f382982fbee11ad9a26",
+  "pkg/zxc/include/lib/fit/internal/result.h": "f56b1896a3f2e1f94d30700dc5083066",
+  "pkg/zxc/include/lib/fit/result.h": "914de85b14b2c20d12bc1a53d0033fd9",
   "pkg/zxc/include/lib/zx/status.h": "36bbdeaf15958596284fba6774e94ef2"
 }

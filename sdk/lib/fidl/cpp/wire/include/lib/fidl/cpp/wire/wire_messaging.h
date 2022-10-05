@@ -102,9 +102,9 @@ fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl,
 namespace internal {
 
 // Verifies that |body| has zero bytes and no handles.
-::fitx::result<::fidl::Error> VerifyBodyIsAbsent(const ::fidl::EncodedMessage& body);
+::fit::result<::fidl::Error> VerifyBodyIsAbsent(const ::fidl::EncodedMessage& body);
 
-::fitx::result<::fidl::Error> DecodeTransactionalMessageWithoutBody(
+::fit::result<::fidl::Error> DecodeTransactionalMessageWithoutBody(
     ::fidl::IncomingHeaderAndMessage message);
 
 // |InplaceDecodeTransactionalMessage| decodes a transactional incoming message
@@ -112,18 +112,18 @@ namespace internal {
 //
 // To reducing branching in generated code, |Body| may be |std::nullopt|, in
 // which case the message will be decoded without a body (header-only
-// messages), and the return type is `::fitx::result<::fidl::Error>`. Otherwise,
-// returns `::fitx::result<::fidl::Error, ::fidl::DecodedValue<Body>>`.
+// messages), and the return type is `::fit::result<::fidl::Error>`. Otherwise,
+// returns `::fit::result<::fidl::Error, ::fidl::DecodedValue<Body>>`.
 //
 // |message| is always consumed.
 template <typename Body = std::nullopt_t>
 auto InplaceDecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& message)
-    -> std::conditional_t<std::is_same_v<Body, std::nullopt_t>, ::fitx::result<::fidl::Error>,
-                          ::fitx::result<::fidl::Error, fidl::DecodedValue<Body>>> {
+    -> std::conditional_t<std::is_same_v<Body, std::nullopt_t>, ::fit::result<::fidl::Error>,
+                          ::fit::result<::fidl::Error, fidl::DecodedValue<Body>>> {
   constexpr bool kHasBody = !std::is_same_v<Body, std::nullopt_t>;
   if constexpr (kHasBody) {
     if (!message.ok()) {
-      return ::fitx::error(message.error());
+      return ::fit::error(message.error());
     }
     const fidl_message_header& header = *message.header();
     auto metadata = ::fidl::WireFormatMetadata::FromTransactionalHeader(header);
@@ -161,7 +161,7 @@ auto InplaceDecodeTransactionalEvent(::fidl::IncomingHeaderAndMessage&& message)
 #endif  // __Fuchsia__
 
 template <typename... T>
-::fidl::Status StatusFromResult(const ::fitx::result<::fidl::Error, T...>& r) {
+::fidl::Status StatusFromResult(const ::fit::result<::fidl::Error, T...>& r) {
   if (r.is_ok()) {
     return ::fidl::Status::Ok();
   }

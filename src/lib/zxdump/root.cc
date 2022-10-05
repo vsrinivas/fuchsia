@@ -14,7 +14,7 @@ namespace zxdump {
 namespace {
 
 template <typename T, class Service, auto Member>
-fitx::result<Error, T> GetFromService() {
+fit::result<Error, T> GetFromService() {
   constexpr const char* kSvcName = fidl::DiscoverableProtocolDefaultPath<Service>;
 
   static constexpr auto kGetName = []() {
@@ -35,21 +35,21 @@ fitx::result<Error, T> GetFromService() {
 
   fidl::ClientEnd<Service> client;
   if (auto result = component::Connect<Service>(); result.is_error()) {
-    return fitx::error{Error{kSvcName, result.status_value()}};
+    return fit::error{Error{kSvcName, result.status_value()}};
   } else {
     client = std::move(result).value();
   }
 
   auto result = fidl::WireSyncClient(std::move(client))->Get();
   if (result.ok()) {
-    return fitx::ok(std::move(result.value().*Member));
+    return fit::ok(std::move(result.value().*Member));
   }
-  return fitx::error{Error{kCallName, result.status()}};
+  return fit::error{Error{kCallName, result.status()}};
 }
 
 }  // namespace
 
-fitx::result<Error, LiveTask> GetRootJob() {
+fit::result<Error, LiveTask> GetRootJob() {
   return GetFromService<LiveTask, fuchsia_kernel::RootJob,
                         &fidl::WireResponse<fuchsia_kernel::RootJob::Get>::job>();
 }

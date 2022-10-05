@@ -124,14 +124,14 @@ zx_status_t VirtualAudioStream::AdjustClockRate() {
   return ZX_OK;
 }
 
-fitx::result<VirtualAudioStream::ErrorT, VirtualAudioStream::CurrentFormat>
+fit::result<VirtualAudioStream::ErrorT, VirtualAudioStream::CurrentFormat>
 VirtualAudioStream::GetFormatForVA() {
   if (!frame_rate_) {
     zxlogf(WARNING, "%s: %p ring buffer not initialized yet", __func__, this);
-    return fitx::error(ErrorT::kNoRingBuffer);
+    return fit::error(ErrorT::kNoRingBuffer);
   }
 
-  return fitx::ok(CurrentFormat{
+  return fit::ok(CurrentFormat{
       .frames_per_second = frame_rate_,
       .sample_format = sample_format_,
       .num_channels = num_channels_,
@@ -147,11 +147,11 @@ VirtualAudioStream::CurrentGain VirtualAudioStream::GetGainForVA() {
   };
 }
 
-fitx::result<VirtualAudioStream::ErrorT, VirtualAudioStream::CurrentBuffer>
+fit::result<VirtualAudioStream::ErrorT, VirtualAudioStream::CurrentBuffer>
 VirtualAudioStream::GetBufferForVA() {
   if (!ring_buffer_vmo_.is_valid()) {
     zxlogf(WARNING, "%s: %p ring buffer not initialized yet", __func__, this);
-    return fitx::error(ErrorT::kNoRingBuffer);
+    return fit::error(ErrorT::kNoRingBuffer);
   }
 
   zx::vmo dup_vmo;
@@ -159,21 +159,21 @@ VirtualAudioStream::GetBufferForVA() {
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &dup_vmo);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: %p ring buffer creation failed with status %d", __func__, this, status);
-    return fitx::error(ErrorT::kInternal);
+    return fit::error(ErrorT::kInternal);
   }
 
-  return fitx::ok(CurrentBuffer{
+  return fit::ok(CurrentBuffer{
       .vmo = std::move(dup_vmo),
       .num_frames = num_ring_buffer_frames_,
       .notifications_per_ring = notifications_per_ring_,
   });
 }
 
-fitx::result<VirtualAudioStream::ErrorT, VirtualAudioStream::CurrentPosition>
+fit::result<VirtualAudioStream::ErrorT, VirtualAudioStream::CurrentPosition>
 VirtualAudioStream::GetPositionForVA() {
   if (!ref_start_time_.get()) {
     zxlogf(WARNING, "%s: %p stream is not started yet", __func__, this);
-    return fitx::error(ErrorT::kNotStarted);
+    return fit::error(ErrorT::kNotStarted);
   }
 
   zx::time ref_now;
@@ -188,7 +188,7 @@ VirtualAudioStream::GetPositionForVA() {
   // float32 format, 192kHz) would be a 700-second ring buffer (!).
   auto ring_position = static_cast<uint32_t>((frames % num_ring_buffer_frames_) * frame_size_);
 
-  return fitx::ok(CurrentPosition{
+  return fit::ok(CurrentPosition{
       .monotonic_time = mono_now,
       .ring_position = ring_position,
   });

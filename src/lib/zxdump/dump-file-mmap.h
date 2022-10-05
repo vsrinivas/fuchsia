@@ -33,16 +33,16 @@ class DumpFile::Mmap : public DumpFile {
   size_t size() const override { return size_; }
 
   // The returned view is valid for the life of the Mmap.
-  fitx::result<Error, ByteView> ReadPermanent(FileRange where) override;
+  fit::result<Error, ByteView> ReadPermanent(FileRange where) override;
 
   // The returned view is only guaranteed valid until the next call.  In
   // fact, it stays valid possibly for the life of the Mmap and at
   // least until shrink_to_fit is called.
-  fitx::result<Error, ByteView> ReadEphemeral(FileRange where) override;
+  fit::result<Error, ByteView> ReadEphemeral(FileRange where) override;
 
   // This never allows EOF since the size is always known and reading past
   // EOF should never be attempted.
-  fitx::result<Error, ByteView> ReadProbe(FileRange where) override;
+  fit::result<Error, ByteView> ReadProbe(FileRange where) override;
 
   // All the data that will be read has been read.
   void shrink_to_fit() override;

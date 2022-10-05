@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_ITEMS_DEBUGDATA_H_
 #define SRC_LIB_ZBITL_INCLUDE_LIB_ZBITL_ITEMS_DEBUGDATA_H_
 
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 
 #include <cstdint>
@@ -23,7 +23,7 @@ class Debugdata {
  public:
   // This fails if the header is invalid, meaning it's missing or truncated, or
   // its sizes add up to more than the payload size available.
-  fitx::result<std::string_view> Init(cpp20::span<const std::byte> payload);
+  fit::result<std::string_view> Init(cpp20::span<const std::byte> payload);
 
   cpp20::span<const std::byte> contents() const { return contents_; }
 

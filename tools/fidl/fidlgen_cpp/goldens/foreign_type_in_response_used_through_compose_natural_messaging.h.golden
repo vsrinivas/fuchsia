@@ -54,9 +54,9 @@ namespace test_foreigntypeinresponseusedthroughcompose {
 }  // namespace test_foreigntypeinresponseusedthroughcompose
 
 template <>
-class ::fidl::Result<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::fitx::result<::fidl::Error, ::test_middle::MiddleGetFooResponse> {
+class ::fidl::Result<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::fit::result<::fidl::Error, ::test_middle::MiddleGetFooResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_middle::MiddleGetFooResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_middle::MiddleGetFooResponse>::result;
 
  protected:
   Result() = default;

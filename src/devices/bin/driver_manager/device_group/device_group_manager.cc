@@ -13,7 +13,7 @@ namespace fdf = fuchsia_driver_framework;
 
 DeviceGroupManager::DeviceGroupManager(CompositeManagerBridge *bridge) : bridge_(bridge) {}
 
-fitx::result<fdf::DeviceGroupError> DeviceGroupManager::AddDeviceGroup(
+fit::result<fdf::DeviceGroupError> DeviceGroupManager::AddDeviceGroup(
     fdf::wire::DeviceGroup fidl_group, std::unique_ptr<DeviceGroup> device_group) {
   ZX_ASSERT(device_group);
   ZX_ASSERT(fidl_group.has_topological_path() && fidl_group.has_nodes() &&
@@ -23,7 +23,7 @@ fitx::result<fdf::DeviceGroupError> DeviceGroupManager::AddDeviceGroup(
   if (device_groups_.find(topological_path) != device_groups_.end()) {
     LOGF(ERROR, "Duplicate device group %.*s", static_cast<int>(topological_path.size()),
          topological_path.data());
-    return fitx::error(fdf::DeviceGroupError::kAlreadyExists);
+    return fit::error(fdf::DeviceGroupError::kAlreadyExists);
   }
 
   auto node_count = fidl_group.nodes().count();
@@ -53,7 +53,7 @@ fitx::result<fdf::DeviceGroupError> DeviceGroupManager::AddDeviceGroup(
       };
 
   bridge_->AddDeviceGroupToDriverIndex(fidl_group, std::move(callback));
-  return fitx::ok();
+  return fit::ok();
 }
 
 zx::status<std::optional<CompositeNodeAndDriver>> DeviceGroupManager::BindDeviceGroupNode(

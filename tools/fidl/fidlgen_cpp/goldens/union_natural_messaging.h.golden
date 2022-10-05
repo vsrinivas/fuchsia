@@ -67,9 +67,9 @@ namespace test_union {
 }  // namespace test_union
 
 template <>
-class ::fidl::Result<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> final : public ::fitx::result<::fidl::Error, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
+class ::fidl::Result<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> final : public ::fit::result<::fidl::Error, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>::result;
 
  protected:
   Result() = default;
@@ -90,9 +90,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_union::TestProtoc
 };
 
 template <>
-class ::fidl::Result<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> final : public ::fitx::result<::fidl::Error, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
+class ::fidl::Result<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> final : public ::fit::result<::fidl::Error, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::result;
 
  protected:
   Result() = default;

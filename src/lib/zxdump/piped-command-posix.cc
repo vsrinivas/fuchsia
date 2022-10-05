@@ -15,15 +15,15 @@
 
 namespace zxdump {
 
-fitx::result<std::string> PipedCommand::StartArgv(cpp20::span<const char*> argv) {
+fit::result<std::string> PipedCommand::StartArgv(cpp20::span<const char*> argv) {
   ZX_DEBUG_ASSERT(pid_ == -1);
 
   pid_ = fork();
   if (pid_ < 0) {
-    return fitx::error{strerror(errno)};
+    return fit::error{strerror(errno)};
   }
   if (pid_ > 0) {
-    return fitx::ok();
+    return fit::ok();
   }
 
   for (auto& [number, fd] : redirect_) {

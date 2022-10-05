@@ -303,7 +303,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
           ADD_FAILURE() << "WriteFrame failed: " << call_result.error();
           return;
         }
-        const fitx::result<zx_status_t>* result = call_result.Unwrap();
+        const fit::result<zx_status_t>* result = call_result.Unwrap();
         wrote_frame = true;
         if (result->is_error()) {
           FAIL() << "Failed to write to device " << zx_status_get_string(result->error_value());
@@ -320,7 +320,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
           return;
         }
         done = true;
-        const ::fitx::result<zx_status_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>*
+        const ::fit::result<zx_status_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>*
             result = call_result.Unwrap();
         if (result->is_error()) {
           FAIL() << "Failed to read from device " << zx_status_get_string(result->error_value());
@@ -376,7 +376,7 @@ TEST_F(NetDeviceTest, TestEcho) {
               ADD_FAILURE() << "WriteFrame failed: " << call_result.error();
               return;
             }
-            fitx::result<zx_status_t>* result = call_result.Unwrap();
+            fit::result<zx_status_t>* result = call_result.Unwrap();
             if (result->is_error()) {
               write_bridge.completer.complete_error(result->error_value());
             }
@@ -420,7 +420,7 @@ TEST_F(NetDeviceTest, TestEcho) {
             ADD_FAILURE() << "ReadFrame failed: " << call_result.error();
             return;
           }
-          const fitx::result<zx_status_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>*
+          const fit::result<zx_status_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>*
               result = call_result.Unwrap();
           if (result->is_error()) {
             read_bridge.completer.complete_error(result->error_value());
@@ -667,7 +667,7 @@ TEST_F(NetDeviceTest, PadTxFrames) {
             return;
           }
           done = true;
-          const fitx::result<zx_status_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>*
+          const fit::result<zx_status_t, ::fuchsia_net_tun::wire::DeviceReadFrameResponse*>*
               result = call_result.Unwrap();
           if (result->is_error()) {
             ADD_FAILURE() << "Read frame failed " << zx_status_get_string(result->error_value());
@@ -794,7 +794,7 @@ TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
             ADD_FAILURE() << "WriteFrame failed: " << call_result.error();
             return;
           }
-          const fitx::result<zx_status_t>* result = call_result.Unwrap();
+          const fit::result<zx_status_t>* result = call_result.Unwrap();
           zx_status_t status = [&result]() {
             if (result->is_error()) {
               return result->error_value();

@@ -73,9 +73,9 @@ namespace test_emptystruct {
 }  // namespace test_emptystruct
 
 template <>
-class ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::fitx::result<::fidl::Error, ::test_emptystruct::EmptyProtocolSendAndReceiveResponse> {
+class ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::fit::result<::fidl::Error, ::test_emptystruct::EmptyProtocolSendAndReceiveResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_emptystruct::EmptyProtocolSendAndReceiveResponse>::result;
+  using ::fit::result<::fidl::Error, ::test_emptystruct::EmptyProtocolSendAndReceiveResponse>::result;
 
  protected:
   Result() = default;
@@ -87,7 +87,7 @@ class ::fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol> fin
   using NaturalClientBase::NaturalClientBase;
   ::fidl::internal::NaturalThenable<::test_emptystruct::EmptyProtocol::SendAndReceive> SendAndReceive(const ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>& request) const;
 
-  ::fitx::result<::fidl::Error> Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request) const;
+  ::fit::result<::fidl::Error> Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request) const;
 };
 namespace test_emptystruct {
 
@@ -103,7 +103,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>
  public:
   ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> SendAndReceive(const ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>& request);
 
-  ::fitx::result<::fidl::Error> Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request);
+  ::fit::result<::fidl::Error> Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request);
 
  private:
   ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> _client_end() const {
@@ -163,7 +163,7 @@ class ::fidl::internal::NaturalWeakEventSender<::test_emptystruct::EmptyProtocol
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  ::fitx::result<::fidl::Error> Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload);
+  ::fit::result<::fidl::Error> Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload);
 };
 
 template <>
@@ -172,7 +172,7 @@ class ::fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  ::fitx::result<::fidl::Error> Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload);
+  ::fit::result<::fidl::Error> Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload);
 };
 
 #endif  // __Fuchsia__

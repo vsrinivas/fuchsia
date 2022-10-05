@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_BOOT_ZBI_H_
 
 #include <lib/arch/zbi-boot.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/view.h>
 
@@ -68,10 +68,10 @@ class BootZbi {
   // be used before calling Init() or being moved-into from a BootZbi object on
   // which Init() has been called.  The initialized object describes the kernel
   // image in place before loading.
-  fitx::result<Error> Init(InputZbi zbi);
+  fit::result<Error> Init(InputZbi zbi);
 
   // This does the same, but with a preselected kernel item.
-  fitx::result<Error> Init(InputZbi zbi, InputZbi::iterator kernel_item);
+  fit::result<Error> Init(InputZbi zbi, InputZbi::iterator kernel_item);
 
   // Load the kernel and data ZBIs from the input ZBI.  The data ZBI will have
   // at least extra_data_capacity bytes of space available to Append() items to
@@ -81,9 +81,9 @@ class BootZbi {
   // After Load(), the kernel and data images are both in place in memory and
   // ready for Boot().  The data image can be modified in place between Load
   // and Boot but no more shuffling of memory is expected after Load succeeds.
-  fitx::result<Error> Load(uint32_t extra_data_capacity = 0,
-                           ktl::optional<uintptr_t> kernel_load_address = ktl::nullopt,
-                           ktl::optional<uintptr_t> data_load_address = ktl::nullopt);
+  fit::result<Error> Load(uint32_t extra_data_capacity = 0,
+                          ktl::optional<uintptr_t> kernel_load_address = ktl::nullopt,
+                          ktl::optional<uintptr_t> data_load_address = ktl::nullopt);
 
   // Log the address and size details.  This is meant to be nearly the very
   // last thing done before Boot(), perhaps before final handoff details that
@@ -141,7 +141,7 @@ class BootZbi {
   bool FixedKernelOverlapsData(uint64_t kernel_load_address) const;
 
  private:
-  fitx::result<Error> InitKernelFromItem();
+  fit::result<Error> InitKernelFromItem();
 
   // These are set on construction by Init().
   InputZbi zbi_;

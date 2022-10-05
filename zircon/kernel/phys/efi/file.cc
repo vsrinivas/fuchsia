@@ -70,7 +70,7 @@ EfiFilePtr EfiRootDir() {
   return EfiFilePtr(root);
 }
 
-fitx::result<efi_status, uint64_t> EfiFileSize(efi_file_protocol* file) {
+fit::result<efi_status, uint64_t> EfiFileSize(efi_file_protocol* file) {
   union {
     efi_file_info info;
     char space[sizeof(efi_file_info) + sizeof(char16_t[255])];
@@ -78,26 +78,25 @@ fitx::result<efi_status, uint64_t> EfiFileSize(efi_file_protocol* file) {
   size_t info_size = sizeof(buffer);
   efi_status status = file->GetInfo(file, &FileInfoGuid, &info_size, &buffer);
   if (status != EFI_SUCCESS) {
-    return fitx::error{status};
+    return fit::error{status};
   }
   ZX_ASSERT(info_size >= sizeof(buffer.info));
-  return fitx::ok(buffer.info.FileSize);
+  return fit::ok(buffer.info.FileSize);
 }
 
-fitx::result<efi_status, EfiFilePtr> EfiOpenFile(const char16_t* filename, efi_file_protocol* dir) {
+fit::result<efi_status, EfiFilePtr> EfiOpenFile(const char16_t* filename, efi_file_protocol* dir) {
   efi_file_protocol* file = nullptr;
   efi_status status = dir->Open(dir, &file, filename, EFI_FILE_MODE_READ, 0);
   if (status != EFI_SUCCESS) {
-    return fitx::error{status};
+    return fit::error{status};
   }
-  return fitx::ok(EfiFilePtr(file));
+  return fit::ok(EfiFilePtr(file));
 }
 
-fitx::result<efi_status, EfiFilePtr> EfiOpenFile(ktl::string_view filename,
-                                                 efi_file_protocol* dir) {
+fit::result<efi_status, EfiFilePtr> EfiOpenFile(ktl::string_view filename, efi_file_protocol* dir) {
   ktl::unique_ptr<char16_t[]> utf16 = ConvertUtf8ToUtf16CString(filename);
   if (!utf16) {
-    return fitx::error{EFI_OUT_OF_RESOURCES};
+    return fit::error{EFI_OUT_OF_RESOURCES};
   }
   return EfiOpenFile(utf16.get(), dir);
 }

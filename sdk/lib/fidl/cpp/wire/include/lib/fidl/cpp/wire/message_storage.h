@@ -7,7 +7,7 @@
 
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fit/function.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -167,7 +167,7 @@ class AnyBufferAllocator {
 
   // Attempt to allocate |size| bytes from the allocator, returning a view when
   // successful and an error otherwise.
-  fitx::result<fidl::Error, fidl::BufferSpan> TryAllocate(uint32_t num_bytes);
+  fit::result<fidl::Error, fidl::BufferSpan> TryAllocate(uint32_t num_bytes);
 
  private:
   template <typename MemoryResource>

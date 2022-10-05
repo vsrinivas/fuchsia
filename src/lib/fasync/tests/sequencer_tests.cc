@@ -40,10 +40,10 @@ TEST(SequencerTests, sequencing_tasks) {
            }) |
            fasync::wrap_with(seq) |
            fasync::then(
-               [&, count = 0](fasync::context& context) mutable -> fasync::try_poll<fitx::failed> {
+               [&, count = 0](fasync::context& context) mutable -> fasync::try_poll<fit::failed> {
                  if (++count == 5) {
                    str += ":b3";
-                   return fasync::ready(fitx::failed());
+                   return fasync::ready(fit::failed());
                  }
                  str += ":b2";
                  context.suspend_task().resume();  // immediately resume
@@ -91,7 +91,7 @@ TEST(SequencerTests, thread_safety) {
   constexpr int num_tasks_per_thread = 100;
   std::thread threads[num_threads];
   for (int i = 0; i < num_threads; i++) {
-    fasync::bridge<fitx::failed> bridge;
+    fasync::bridge<fit::failed> bridge;
     threads[i] = std::thread([&, completer = std::move(bridge.completer)]() mutable {
       for (int j = 0; j < num_tasks_per_thread; j++) {
         executor.schedule(fasync::make_future([&] { run_count++; }) | fasync::wrap_with(seq));

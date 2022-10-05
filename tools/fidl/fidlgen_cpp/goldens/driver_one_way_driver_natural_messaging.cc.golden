@@ -8,7 +8,7 @@ namespace test_driveroneway {
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
 
-::fitx::result<::fidl::Error>
+::fit::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(const ::fidl::Request<::test_driveroneway::OneWay::Send>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, ::test_driveroneway::kOneWay_Send_Ordinal, ::test_driveroneway::kOneWay_Send_DynamicFlags};
@@ -42,7 +42,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
         ::test_driveroneway::kOneWay_Send_Ordinal,
         [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::Decode<::test_driveroneway::OneWaySendRequest>(std::move(msg), metadata);
+          ::fit::result decoded = ::fidl::Decode<::test_driveroneway::OneWaySendRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

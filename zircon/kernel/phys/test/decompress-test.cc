@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <lib/fitx/result.h>
+#include <lib/fit/result.h>
 #include <lib/memalloc/range.h>
 #include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/view.h>

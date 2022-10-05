@@ -89,7 +89,7 @@ fidl::Status {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
 fidl::Status {{ $.WireWeakBufferEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<{{ .Marker }}>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     _inner().HandleSendError(_allocation.error_value());
@@ -121,7 +121,7 @@ fidl::Status {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
 fidl::Status {{ $.InternalWireBufferEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<{{ .Marker }}>();
-  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+  ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
       _allocator().TryAllocate(_buffer_size);
   if (!_allocation.is_ok()) {
     return _allocation.error_value();
@@ -154,7 +154,7 @@ class {{ .NaturalWeakEventSender }} : public ::fidl::internal::WeakEventSenderBa
 
   {{- range .Events }}
     {{- .Docs }}
-    ::fitx::result<::fidl::Error> {{ .Name }}({{ .NaturalResponseArg "payload" }});
+    ::fit::result<::fidl::Error> {{ .Name }}({{ .NaturalResponseArg "payload" }});
 
   {{ end }}
 };
@@ -168,7 +168,7 @@ class {{ .NaturalEventSender }}
 
   {{- range .Events }}
     {{- .Docs }}
-    ::fitx::result<::fidl::Error> {{ .Name }}({{ .NaturalResponseArg "payload" }});
+    ::fit::result<::fidl::Error> {{ .Name }}({{ .NaturalResponseArg "payload" }});
 
   {{ end }}
 };
@@ -183,7 +183,7 @@ class {{ .NaturalEventSender }}
 {{- IfdefFuchsia -}}
   {{- range .Events }}
 
-::fitx::result<::fidl::Error> {{ $.NaturalWeakEventSender.NoLeading }}::{{ .Name }}(
+::fit::result<::fidl::Error> {{ $.NaturalWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- .NaturalResponseArg "payload" }}) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
@@ -196,7 +196,7 @@ class {{ .NaturalEventSender }}
   return ::fidl::internal::ToFitxResult(result);
 }
 
-::fitx::result<::fidl::Error> {{ $.NaturalEventSender.NoLeading }}::{{ .Name }}(
+::fit::result<::fidl::Error> {{ $.NaturalEventSender.NoLeading }}::{{ .Name }}(
     {{- .NaturalResponseArg "payload" }}) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };

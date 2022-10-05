@@ -41,10 +41,10 @@ class VmmController : ::fuchsia::virtualization::GuestLifecycle {
   //
   // If this can't schedule a task for whatever reason, this will shutdown the dispatch loop
   // ultimately resulting in this component going away.
-  void ScheduleVmmTeardown(fitx::result<::fuchsia::virtualization::GuestError> result);
+  void ScheduleVmmTeardown(fit::result<::fuchsia::virtualization::GuestError> result);
 
   // Destroys the VMM and responds with the provided status is a responder is waiting.
-  void DestroyAndRespond(fitx::result<::fuchsia::virtualization::GuestError> result);
+  void DestroyAndRespond(fit::result<::fuchsia::virtualization::GuestError> result);
 
   std::unique_ptr<vmm::Vmm> vmm_;
   std::optional<RunCallback> run_callback_;

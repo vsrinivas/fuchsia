@@ -82,7 +82,7 @@ class WireTableBaseBuilder;
 //     fidl::EncodedMessage message = fidl::EncodedMessage::Create(byte_span);
 //
 //     // Decode the message.
-//     fitx::result decoded = fidl::InplaceDecode<fuchsia_my_lib::wire::SomeType>(
+//     fit::result decoded = fidl::InplaceDecode<fuchsia_my_lib::wire::SomeType>(
 //         std::move(message), wire_format_metadata);
 //
 //     // Use the decoded value.
@@ -94,7 +94,7 @@ class WireTableBaseBuilder;
 // |message| is always consumed. |metadata| informs the wire format of the
 // encoded message.
 template <typename FidlType>
-::fitx::result<::fidl::Error, ::fidl::DecodedValue<FidlType>> InplaceDecode(
+::fit::result<::fidl::Error, ::fidl::DecodedValue<FidlType>> InplaceDecode(
     EncodedMessage message, WireFormatMetadata metadata) {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types are supported");
 
@@ -105,9 +105,9 @@ template <typename FidlType>
       internal::WireDecode(metadata, contains_envelope, inline_size, decode_fn, message);
 
   if (!status.ok()) {
-    return ::fitx::error(status);
+    return ::fit::error(status);
   }
-  return ::fitx::ok(DecodedValue<FidlType>(reinterpret_cast<FidlType*>(message.bytes().data())));
+  return ::fit::ok(DecodedValue<FidlType>(reinterpret_cast<FidlType*>(message.bytes().data())));
 }
 
 }  // namespace fidl

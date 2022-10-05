@@ -30,7 +30,7 @@ class DeviceGroupManager {
   // Adds a device group to the driver index. If it's successfully added, then the
   // DeviceGroupManager stores the device group in a map. After that, it sends a call to
   // CompositeManagerBridge to bind all unbound devices.
-  fitx::result<fuchsia_driver_framework::DeviceGroupError> AddDeviceGroup(
+  fit::result<fuchsia_driver_framework::DeviceGroupError> AddDeviceGroup(
       fuchsia_driver_framework::wire::DeviceGroup group_info,
       std::unique_ptr<DeviceGroup> device_group);
 
