@@ -1,0 +1,67 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard includes the portion of the scene manager layer that is
+// common across all production ui realms that include scene manager, but
+// differs from test ui realms.
+//
+// Production ui realms should include this shard directly.
+//
+// This shard should include:
+//
+// (1) Scene manager's child declaration. Note that other shards assume the name
+//     "scene_manager".
+// (2) Capability routes to scene manager that are the same for all production ui
+//     realms in which scene manager is present, but differ in test realms.
+//
+// This shard should **NOT** include:
+//
+// (1) Routes that are common to all production and test ui realms; these
+//     routes belong in scenic_base_routes.shard.cml.
+// (2) Routes to scene manager that differ among production ui realms.
+// (3) Routes **FROM** scene manager to other components in the ui realm; these
+//     routes belong in the target components' routing shards.
+{
+    include: [ "//src/ui/meta/scene_manager_base_routes.shard.cml" ],
+    children: [
+        {
+            name: "scene_manager",
+            url: "fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#scene_manager" ],
+            subdir: "scene_manager",
+        },
+        {
+            directory: "dev-input-report",
+            from: "parent",
+            to: [ "#scene_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.recovery.FactoryReset",
+                "fuchsia.settings.Keyboard",
+            ],
+            from: "parent",
+            to: [ "#scene_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.accessibility.ColorTransform",
+
+                // TODO(fxbug.dev/100268) Magnifier is only used by gfx, not
+                // flatland. Remove when gfx is gone.
+                "fuchsia.accessibility.Magnifier",
+                "fuchsia.accessibility.scene.Provider",
+            ],
+            from: "#a11y_manager",
+            to: [ "#scene_manager" ],
+            dependency: "weak",
+        },
+    ],
+}

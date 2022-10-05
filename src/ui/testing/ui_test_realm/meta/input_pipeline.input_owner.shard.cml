@@ -35,7 +35,7 @@
         },
         {
             protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
-            from: "#text-manager",
+            from: "#text_manager",
             to: [ "#root-presenter" ],
         },
         {

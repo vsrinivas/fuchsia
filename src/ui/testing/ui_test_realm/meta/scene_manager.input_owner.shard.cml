@@ -10,7 +10,7 @@
             url: "#meta/input-synthesis-component.cm",
         },
         {
-            name: "shortcut-manager",
+            name: "shortcut_manager",
             url: "#meta/shortcut_manager.cm",
         },
         {
@@ -29,38 +29,20 @@
             to: [
                 "#input-helper",
                 "#input-synthesis",
-                "#shortcut-manager",
+                "#shortcut_manager",
             ],
-        },
-        {
-            protocol: [
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#text-manager",
-            to: [ "#scene-manager" ],
         },
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.ui.input.InputDeviceRegistry",
             ],
-            from: "#scene-manager",
+            from: "#scene_manager",
             to: [ "#input-synthesis" ],
         },
         {
-            protocol: [ "fuchsia.ui.shortcut.Manager" ],
-            from: "#shortcut-manager",
-            to: "#scene-manager",
-        },
-        {
-            protocol: [ "fuchsia.ui.focus.FocusChainListenerRegistry" ],
-            from: "#scenic",
-            to: "#scene-manager",
-        },
-        {
             protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
-            from: "#scene-manager",
+            from: "#scene_manager",
             to: [ "#input-helper" ],
         },
         {
@@ -75,19 +57,11 @@
         },
         {
             protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
-            from: "#text-manager",
+            from: "#text_manager",
             to: [ "#virtual-keyboard-manager" ],
         },
     ],
     expose: [
-        {
-            protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry",
-                "fuchsia.input.interaction.Notifier",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-            ],
-            from: "#scene-manager",
-        },
         {
             protocol: [
                 "fuchsia.input.virtualkeyboard.ControllerCreator",

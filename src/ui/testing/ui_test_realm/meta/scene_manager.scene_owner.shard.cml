@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/ui/testing/ui_test_realm/meta/scene_provider.shard.cml" ],
+    include: [
+        "//src/ui/meta/scene_manager_base_routes.shard.cml",
+        "//src/ui/testing/ui_test_realm/meta/scene_provider.shard.cml",
+    ],
     children: [
         {
-            name: "scene-manager",
+            name: "scene_manager",
             url: "#meta/scene_manager.cm",
 
             // Known missing capabilities:
@@ -23,41 +26,9 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: [ "#scene-manager" ],
-        },
-        {
-            protocol: [
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.FlatlandDisplay",
-                "fuchsia.ui.display.color.Converter",
-                "fuchsia.ui.display.singleton.Info",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.views.ViewRefInstalled",
-            ],
-            from: "#scenic",
-            to: [ "#scene-manager" ],
-        },
-        {
             protocol: [ "fuchsia.session.scene.Manager" ],
-            from: "#scene-manager",
+            from: "#scene_manager",
             to: [ "#scene-provider" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: [
-                "fuchsia.session.scene.Manager",
-                "fuchsia.ui.accessibility.view.Registry",
-            ],
-            from: "#scene-manager",
         },
     ],
 }

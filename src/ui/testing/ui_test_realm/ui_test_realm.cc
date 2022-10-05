@@ -54,7 +54,6 @@ using component_testing::Route;
 constexpr auto kScenicOnlyUrl = "#meta/scenic_only.cm";
 constexpr auto kRootPresenterSceneUrl = "#meta/root_presenter_scene.cm";
 constexpr auto kRootPresenterSceneWithInputUrl = "#meta/root_presenter_scene_with_input.cm";
-constexpr auto kSceneManagerSceneUrl = "#meta/scene_manager_scene.cm";
 constexpr auto kSceneManagerSceneWithInputUrl = "#meta/scene_manager_scene_with_input.cm";
 
 // System component urls.
@@ -68,9 +67,9 @@ constexpr auto kClientSubrealmName = "client-subrealm";
 constexpr auto kA11yManagerName = "a11y-manager";
 constexpr auto kScenicName = "scenic";
 constexpr auto kRootPresenterName = "root-presenter";
-constexpr auto kSceneManagerName = "scene-manager";
+constexpr auto kSceneManagerName = "scene_manager";
 constexpr auto kInputPipelineName = "input-pipeline";
-constexpr auto kTextManagerName = "text-manager";
+constexpr auto kTextManagerName = "text_manager";
 constexpr auto kVirtualKeyboardManagerName = "virtual-keyboard-manager";
 constexpr auto kSceneProviderName = "scene-provider";
 
@@ -248,7 +247,10 @@ std::string UITestRealm::CalculateBaseRealmUrl() {
   if (config_.scene_owner == UITestRealm::SceneOwnerType::ROOT_PRESENTER) {
     return config_.use_input ? kRootPresenterSceneWithInputUrl : kRootPresenterSceneUrl;
   } else if (config_.scene_owner == UITestRealm::SceneOwnerType::SCENE_MANAGER) {
-    return config_.use_input ? kSceneManagerSceneWithInputUrl : kSceneManagerSceneUrl;
+    // Scene manager and input pipeline run in the same monolithic component, so
+    // there's no meaningful difference in component topology between the "use
+    // input" and "no input" cases.
+    return kSceneManagerSceneWithInputUrl;
   } else {
     // If we have exhausted all potential scene owner options, then scene_owner
     // should be std::nullopt.

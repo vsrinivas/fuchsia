@@ -4,15 +4,11 @@
 {
     include: [
         "//src/ui/meta/a11y_routes.shard.cml",
+        "//src/ui/meta/scene_manager_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
         "syslog/client.shard.cml",
     ],
     children: [
-        {
-            // Scene owner.
-            name: "scene_manager",
-            url: "fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm",
-        },
         {
             // Centralized management of text entry.
             name: "text_manager",
@@ -26,13 +22,7 @@
     ],
     offer: [
         {
-            directory: "config-data",
-            from: "parent",
-            to: [ "#scene_manager" ],
-            subdir: "scene_manager",
-        },
-        {
-            directory: "dev-input-report",
+            protocol: [ "fuchsia.media.sounds.Player" ],
             from: "parent",
             to: [ "#scene_manager" ],
         },
@@ -43,33 +33,9 @@
             ],
             from: "parent",
             to: [
-                "#scene_manager",
                 "#text_manager",
                 "#virtual_keyboard_manager",
             ],
-        },
-        {
-            protocol: [
-                "fuchsia.media.sounds.Player",
-                "fuchsia.recovery.FactoryReset",
-                "fuchsia.settings.Keyboard",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader",
-            ],
-            from: "parent",
-            to: [ "#scene_manager" ],
-        },
-        {
-            protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-
-                // Used by the input pipeline library to distribute focus.
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#text_manager",
-            to: [ "#scene_manager" ],
         },
 
         // TODO(fxbug.dev/110642): Remove once gfx is deprecated.
@@ -77,39 +43,6 @@
             protocol: [ "fuchsia.ui.accessibility.view.Registry" ],
             from: "#scene_manager",
             to: [ "#a11y_manager" ],
-        },
-
-        // TODO(fxbug.dev/98690): Move to a11y_base_routes.cml once
-        // ui_with_root_presenter.cml is deleted.
-        {
-            protocol: [
-                "fuchsia.accessibility.ColorTransform",
-
-                // TODO(fxbug.dev/100268) Magnifier is only used by gfx, not
-                // flatland. Remove when gfx is gone.
-                "fuchsia.accessibility.Magnifier",
-                "fuchsia.accessibility.scene.Provider",
-            ],
-            from: "#a11y_manager",
-            to: [ "#scene_manager" ],
-            dependency: "weak",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.FlatlandDisplay",
-                "fuchsia.ui.display.color.Converter",
-                "fuchsia.ui.display.singleton.Info",
-
-                // Used by the input pipeline library to distribute focus.
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.views.ViewRefInstalled",
-            ],
-            from: "#scenic",
-            to: [ "#scene_manager" ],
         },
         {
             protocol: [ "fuchsia.ui.focus.FocusChainListenerRegistry" ],
@@ -121,29 +54,8 @@
             from: "#text_manager",
             to: [ "#virtual_keyboard_manager" ],
         },
-        {
-            protocol: [ "fuchsia.ui.shortcut.Manager" ],
-            from: "void",
-            to: "#scene_manager",
-            availability: "optional",
-        },
     ],
     expose: [
-        {
-            protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry", // test-only
-                "fuchsia.input.interaction.Notifier",
-                "fuchsia.recovery.policy.Device",
-                "fuchsia.recovery.ui.FactoryResetCountdown",
-                "fuchsia.session.scene.Manager",
-                "fuchsia.ui.accessibility.view.Registry",
-                "fuchsia.ui.brightness.ColorAdjustmentHandler",
-                "fuchsia.ui.input.config.Features",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-                "fuchsia.ui.policy.DisplayBacklight",
-            ],
-            from: "#scene_manager",
-        },
         {
             protocol: [
                 "fuchsia.ui.input.ImeService",

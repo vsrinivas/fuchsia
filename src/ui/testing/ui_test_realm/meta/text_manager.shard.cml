@@ -4,7 +4,7 @@
 {
     children: [
         {
-            name: "text-manager",
+            name: "text_manager",
             url: "#meta/text_manager.cm",
         },
     ],
@@ -12,7 +12,7 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#text-manager" ],
+            to: [ "#text_manager" ],
         },
     ],
     expose: [
@@ -22,7 +22,7 @@
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.keyboard.focus.Controller",
             ],
-            from: "#text-manager",
+            from: "#text_manager",
         },
     ],
 }
