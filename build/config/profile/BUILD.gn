@@ -142,4 +142,12 @@ variant("profile") {
     ldflags = [ "-Wl,$dynamic_linker_flags" ]
     rustflags += [ "-Clink-arg=$dynamic_linker_flags" ]
   }
+
+  if (is_fuchsia || is_kernel) {
+    # TODO(fxbug.dev/102391): Value profiling isn't supported by the runtime.
+    cflags = [
+      "-mllvm",
+      "-disable-vp",
+    ]
+  }
 }
