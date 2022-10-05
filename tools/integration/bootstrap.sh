@@ -85,8 +85,9 @@ main() {
   GOCACHE_DIR=$(mktemp -d)
   trap 'rm -rf $GOCACHE_DIR' EXIT
 
-  readonly go_bin="$FUCHSIA_ROOT/prebuilt/third_party/go/$(host_platform)/bin/go"
-  GOCACHE="$GOCACHE_DIR" GOPROXY=off $go_bin build \
+  GOROOT_DIR="$FUCHSIA_ROOT/prebuilt/third_party/go/$(host_platform)"
+  readonly go_bin="$GOROOT_DIR/bin/go"
+  GOCACHE="$GOCACHE_DIR" GOROOT="$GOROOT_DIR" GOPROXY=off $go_bin build \
     -o "$output" ./tools/integration/fint/cmd/fint
 }
 
