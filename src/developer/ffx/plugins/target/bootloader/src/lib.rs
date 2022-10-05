@@ -103,7 +103,7 @@ pub async fn bootloader_plugin_impl<W: Write>(
 mod test {
     use super::*;
     use ffx_bootloader_args::LockCommand;
-    use ffx_fastboot::test::setup;
+    use ffx_fastboot::{common::LOCKED_VAR, test::setup};
     use tempfile::NamedTempFile;
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -189,7 +189,8 @@ mod test {
         {
             let mut state = state.lock().unwrap();
             // is_locked
-            state.variables.push("no".to_string());
+            state.set_var(LOCKED_VAR.to_string(), "no".to_string());
+            state.set_var("vx-unlockable".to_string(), "no".to_string());
         }
         bootloader(
             proxy,

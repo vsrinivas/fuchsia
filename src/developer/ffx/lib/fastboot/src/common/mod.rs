@@ -103,10 +103,10 @@ pub trait Boot {
 pub const MISSING_PRODUCT: &str = "Manifest does not contain product";
 
 const LARGE_FILE: &str = "large file, please wait... ";
-const REVISION_VAR: &str = "hw-revision";
-const IS_USERSPACE_VAR: &str = "is-userspace";
+pub const REVISION_VAR: &str = "hw-revision";
+pub const IS_USERSPACE_VAR: &str = "is-userspace";
 
-const LOCKED_VAR: &str = "vx-locked";
+pub const LOCKED_VAR: &str = "vx-locked";
 const LOCK_COMMAND: &str = "vx-lock";
 
 pub const UNLOCK_ERR: &str = "The product requires the target to be unlocked. \

@@ -39,6 +39,7 @@ pub async fn unlock<W: Write, F: FileResolver + Sync>(
 mod test {
     use super::*;
     use crate::common::file::EmptyResolver;
+    use crate::common::LOCKED_VAR;
     use crate::test::setup;
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -47,7 +48,7 @@ mod test {
         {
             let mut state = state.lock().unwrap();
             // is_locked
-            state.variables.push("no".to_string());
+            state.set_var(LOCKED_VAR.to_string(), "no".to_string());
         }
         let mut writer = Vec::<u8>::new();
         let result =
@@ -63,7 +64,7 @@ mod test {
         {
             let mut state = state.lock().unwrap();
             // is_locked
-            state.variables.push("yes".to_string());
+            state.set_var(LOCKED_VAR.to_string(), "yes".to_string());
         }
         let mut writer = Vec::<u8>::new();
         let result = unlock(&mut writer, &mut EmptyResolver::new()?, &vec![], &proxy).await;

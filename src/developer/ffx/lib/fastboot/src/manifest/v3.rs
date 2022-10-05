@@ -164,6 +164,7 @@ impl Boot for FlashManifest {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::common::{IS_USERSPACE_VAR, REVISION_VAR};
     use crate::test::{setup, TestResolver};
     use serde_json::from_str;
     use std::path::PathBuf;
@@ -231,7 +232,12 @@ mod test {
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         let (state, proxy) = setup();
-        state.lock().unwrap().variables.push("rev_test-b4".to_string());
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var(REVISION_VAR.to_string(), "rev_test-b4".to_string());
+            state.set_var(IS_USERSPACE_VAR.to_string(), "no".to_string());
+            state.set_var("var".to_string(), "val".to_string());
+        }
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,
@@ -252,7 +258,12 @@ mod test {
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         let (state, proxy) = setup();
-        state.lock().unwrap().variables.push("rev_test-b4".to_string());
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var("var".to_string(), "val".to_string());
+            state.set_var(IS_USERSPACE_VAR.to_string(), "no".to_string());
+            state.set_var(REVISION_VAR.to_string(), "rev_test-b4".to_string());
+        }
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,

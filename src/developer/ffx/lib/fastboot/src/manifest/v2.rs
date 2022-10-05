@@ -105,7 +105,11 @@ impl Boot for FlashManifest {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::common::cmd::{BootParams, Command};
+    use crate::common::REVISION_VAR;
+    use crate::common::{
+        cmd::{BootParams, Command},
+        IS_USERSPACE_VAR, LOCKED_VAR,
+    };
     use crate::test::{setup, TestResolver};
     use serde_json::from_str;
     use std::path::PathBuf;
@@ -152,7 +156,7 @@ mod test {
         "products": [
             {
                 "name": "zedboot",
-                "requires_unlock": false,
+                "requires_unlock": true,
                 "bootloader_partitions": [],
                 "partitions": [
                     ["test1", "path1"],
@@ -190,7 +194,11 @@ mod test {
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         let (state, proxy) = setup();
-        state.lock().unwrap().variables.push("rev_test-b4".to_string());
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var(IS_USERSPACE_VAR.to_string(), "yes".to_string());
+            state.set_var(REVISION_VAR.to_string(), "rev_test-b4".to_string());
+        }
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,
@@ -210,7 +218,12 @@ mod test {
         let v: FlashManifest = from_str(MISMATCH_MANIFEST)?;
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
-        let (_, proxy) = setup();
+        let (state, proxy) = setup();
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var(IS_USERSPACE_VAR.to_string(), "yes".to_string());
+            state.set_var(REVISION_VAR.to_string(), "test".to_string());
+        }
         let mut writer = Vec::<u8>::new();
         assert!(v
             .flash(
@@ -233,7 +246,13 @@ mod test {
         let v: FlashManifest = from_str(NO_CREDS_MANIFEST)?;
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
-        let (_, proxy) = setup();
+        let (state, proxy) = setup();
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var(IS_USERSPACE_VAR.to_string(), "no".to_string());
+            state.set_var(REVISION_VAR.to_string(), "zedboot".to_string());
+            state.set_var(LOCKED_VAR.to_string(), "yes".to_string());
+        }
         let mut writer = Vec::<u8>::new();
         assert!(v
             .flash(
@@ -257,7 +276,11 @@ mod test {
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         let (state, proxy) = setup();
-        state.lock().unwrap().variables.push("zedboot".to_string());
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var(IS_USERSPACE_VAR.to_string(), "yes".to_string());
+            state.set_var(REVISION_VAR.to_string(), "zedboot".to_string());
+        }
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,

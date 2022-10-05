@@ -17,6 +17,7 @@ pub mod test {
     use async_trait::async_trait;
     use fidl::endpoints::{create_proxy_and_stream, Proxy};
     use fidl_fuchsia_developer_ffx::{FastbootProxy, FastbootRequest};
+    use std::collections::HashMap;
     use std::default::Default;
     use std::io::Write;
     use std::path::{Path, PathBuf};
@@ -26,9 +27,35 @@ pub mod test {
     pub struct FakeServiceCommands {
         pub staged_files: Vec<String>,
         pub oem_commands: Vec<String>,
-        pub variables: Vec<String>,
         pub bootloader_reboots: usize,
         pub boots: usize,
+        /// Variable => (Value, Call Count)
+        variables: HashMap<String, (String, u32)>,
+    }
+
+    impl FakeServiceCommands {
+        /// Sets the provided variable to the given value preserving the past
+        /// call count.
+        pub fn set_var(&mut self, var: String, value: String) {
+            match self.variables.get_mut(&var) {
+                Some(v) => {
+                    let last_call_count = v.1;
+                    self.variables.insert(var, (value, last_call_count));
+                }
+                None => {
+                    self.variables.insert(var, (value, 0));
+                }
+            }
+        }
+
+        /// Returns the number of times a variable was retrieved from the
+        /// fake if the variable has been set, panics otherwise.
+        pub fn get_var_call_count(&self, var: String) -> u32 {
+            match self.variables.get(&var) {
+                Some(v) => v.1,
+                None => panic!("Requested variable: {} was not set", var),
+            }
+        }
     }
 
     pub struct TestResolver {
@@ -79,10 +106,17 @@ pub mod test {
                     listener.into_proxy().unwrap().on_reboot().unwrap();
                     responder.send(&mut Ok(())).unwrap();
                 }
-                FastbootRequest::GetVar { responder, .. } => {
+                FastbootRequest::GetVar { responder, name } => {
                     let mut state = state.lock().unwrap();
-                    let var = state.variables.pop().unwrap_or("test".to_string());
-                    responder.send(&mut Ok(var)).unwrap();
+                    match state.variables.get_mut(&name) {
+                        Some(var) => {
+                            var.1 += 1;
+                            responder.send(&mut Ok(var.0.to_owned())).unwrap();
+                        }
+                        None => {
+                            panic!("Warning: requested variable: {}, which was not set", name)
+                        }
+                    }
                 }
                 FastbootRequest::GetAllVars { listener, responder, .. } => {
                     listener.into_proxy().unwrap().on_variable("test", "test").unwrap();

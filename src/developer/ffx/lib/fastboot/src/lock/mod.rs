@@ -35,6 +35,7 @@ pub async fn lock<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> R
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::common::LOCKED_VAR;
     use crate::test::setup;
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -43,7 +44,7 @@ mod test {
         {
             let mut state = state.lock().unwrap();
             // is_locked
-            state.variables.push("yes".to_string());
+            state.set_var(LOCKED_VAR.to_string(), "yes".to_string());
         }
         let mut writer = Vec::<u8>::new();
         let result = lock(&mut writer, &proxy).await;
@@ -56,9 +57,9 @@ mod test {
         let (state, proxy) = setup();
         {
             let mut state = state.lock().unwrap();
-            state.variables.push(EPHEMERAL.to_string());
+            state.set_var(LOCKABLE_VAR.to_string(), EPHEMERAL.to_string());
             // is_locked
-            state.variables.push("no".to_string());
+            state.set_var(LOCKED_VAR.to_string(), "no".to_string());
         }
         let mut writer = Vec::<u8>::new();
         let result = lock(&mut writer, &proxy).await;
@@ -72,9 +73,9 @@ mod test {
         {
             let mut state = state.lock().unwrap();
             // ephemeral
-            state.variables.push("whatever".to_string());
+            state.set_var(LOCKABLE_VAR.to_string(), "whatever".to_string());
             // is_locked
-            state.variables.push("no".to_string());
+            state.set_var(LOCKED_VAR.to_string(), "no".to_string());
         }
         let mut writer = Vec::<u8>::new();
         lock(&mut writer, &proxy).await?;

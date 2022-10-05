@@ -151,6 +151,7 @@ impl Boot for FlashManifest {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::common::{IS_USERSPACE_VAR, LOCKED_VAR};
     use crate::test::{setup, TestResolver};
     use regex::Regex;
     use serde_json::from_str;
@@ -298,7 +299,11 @@ mod test {
         let v: FlashManifest = from_str(MANIFEST)?;
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
-        let (_, proxy) = setup();
+        let (state, proxy) = setup();
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var(IS_USERSPACE_VAR.to_string(), "yes".to_string());
+        }
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,
@@ -325,6 +330,10 @@ mod test {
     async fn test_oem_file_should_be_staged_from_command() -> Result<()> {
         let v: FlashManifest = from_str(SIMPLE_MANIFEST)?;
         let (state, proxy) = setup();
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var(IS_USERSPACE_VAR.to_string(), "yes".to_string());
+        }
         let test_oem_cmd = "test-oem-cmd";
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
@@ -359,9 +368,10 @@ mod test {
         let (state, proxy) = setup();
         {
             let mut state = state.lock().unwrap();
-            state.variables.push("not_value3".to_string());
-            state.variables.push("value2".to_string());
-            state.variables.push("not_value1".to_string());
+            state.set_var(IS_USERSPACE_VAR.to_string(), "no".to_string());
+            state.set_var("var1".to_string(), "not_value1".to_string());
+            state.set_var("var2".to_string(), "value2".to_string());
+            state.set_var("var3".to_string(), "not_value3".to_string());
         }
         let mut writer = Vec::<u8>::new();
         v.flash(
@@ -392,6 +402,11 @@ mod test {
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         let (state, proxy) = setup();
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var(IS_USERSPACE_VAR.to_string(), "no".to_string());
+        }
+
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,
@@ -418,8 +433,8 @@ mod test {
         let (state, proxy) = setup();
         {
             let mut state = state.lock().unwrap();
-            state.variables.push("vx-locked".to_string());
-            state.variables.push("yes".to_string());
+            state.set_var(LOCKED_VAR.to_string(), "vx-locked".to_string());
+            state.set_var(LOCKED_VAR.to_string(), "yes".to_string());
         }
         let mut writer = Vec::<u8>::new();
         let res = v
