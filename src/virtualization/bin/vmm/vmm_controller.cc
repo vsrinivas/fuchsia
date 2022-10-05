@@ -94,21 +94,20 @@ void VmmController::ScheduleVmmTeardown(fitx::result<GuestError> result) {
 }
 
 void VmmController::DestroyAndRespond(fitx::result<::fuchsia::virtualization::GuestError> result) {
+  if (vmm_) {
+    vmm_->NotifyClientsShutdown(result.is_ok() ? ZX_OK : ZX_ERR_INTERNAL);
+  }
+
+  vmm_.reset();
+
   if (run_callback_.has_value()) {
     RunCallback callback = std::exchange(run_callback_, std::nullopt).value();
     if (result.is_error()) {
-      if (vmm_) {
-        vmm_->NotifyClientsShutdown(ZX_ERR_INTERNAL);
-      }
       callback(fpromise::error(result.error_value()));
     } else {
-      if (vmm_) {
-        vmm_->NotifyClientsShutdown(ZX_OK);
-      }
       callback(fpromise::ok());
     }
   }
-  vmm_.reset();
 }
 
 }  // namespace vmm

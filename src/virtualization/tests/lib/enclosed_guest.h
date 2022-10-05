@@ -74,6 +74,12 @@ class EnclosedGuest {
   // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
   zx_status_t Stop(zx::time deadline);
 
+  // Force stop the guest, and restart it. This can be used to ensure that devices are cleanly
+  // brought down and up without needing to destroy the VMM component.
+  //
+  // Aborts with ZX_ERR_TIMED_OUT if we reach `deadline` first.
+  zx_status_t ForceRestart(GuestLaunchInfo& guest_launch_info, zx::time deadline);
+
   // Execute |command| on the guest serial and wait for the |result|.
   virtual zx_status_t Execute(const std::vector<std::string>& argv,
                               const std::unordered_map<std::string, std::string>& env,
@@ -147,6 +153,9 @@ class EnclosedGuest {
   fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 
  private:
+  // Launch the guest into an already prepared realm.
+  zx_status_t LaunchInternal(GuestLaunchInfo& guest_launch_info, zx::time deadline);
+
   std::unique_ptr<sys::ServiceDirectory> StartWithRealmBuilder(zx::time deadline,
                                                                GuestLaunchInfo& guest_launch_info);
   std::unique_ptr<sys::ServiceDirectory> StartWithUITestManager(zx::time deadline,
@@ -164,6 +173,7 @@ class EnclosedGuest {
   std::unique_ptr<component_testing::RealmRoot> realm_root_;
   // The exposed services directory for the test realm.
   std::unique_ptr<sys::ServiceDirectory> realm_services_;
+  std::optional<zx_status_t> guest_error_;
 };
 
 class ZirconEnclosedGuest : public EnclosedGuest {

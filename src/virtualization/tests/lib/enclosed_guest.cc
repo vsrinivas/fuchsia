@@ -288,14 +288,20 @@ void EnclosedGuest::InstallInRealm(component_testing::Realm& realm,
 zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> services,
                                          GuestLaunchInfo& guest_launch_info, zx::time deadline) {
   realm_services_ = std::move(services);
-  Logger::Get().Reset();
-  PeriodicLogger logger;
 
   guest_manager_ =
       realm_services_
           ->Connect<fuchsia::virtualization::GuestManager>(guest_launch_info.interface_name)
           .Unbind()
           .BindSync();
+
+  return LaunchInternal(guest_launch_info, deadline);
+}
+
+zx_status_t EnclosedGuest::LaunchInternal(GuestLaunchInfo& guest_launch_info, zx::time deadline) {
+  Logger::Get().Reset();
+  PeriodicLogger logger;
+  guest_error_ = std::nullopt;
 
   // Get whether the vsock device will be installed for this guest. This is used later to validate
   // whether we expect GetHostVsockEndpoint to succeed.
@@ -309,6 +315,12 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
     FX_PLOGS(ERROR, status) << "Failure launching guest " << guest_launch_info.url;
     return status;
   }
+  if (res.is_err()) {
+    FX_LOGS(ERROR) << "Launch failed with error " << static_cast<uint32_t>(res.err())
+                   << " for guest " << guest_launch_info.url;
+    return ZX_ERR_INTERNAL;
+  }
+
   guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
 
   if (vsock_enabled && GetHostVsockEndpoint(vsock_.NewRequest()).is_error()) {
@@ -318,8 +330,7 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
 
   // Launch the guest.
   logger.Start("Launching guest", zx::sec(5));
-  std::optional<zx_status_t> guest_error;
-  guest_.set_error_handler([&guest_error](zx_status_t status) { guest_error = status; });
+  guest_.set_error_handler([this](zx_status_t status) { this->guest_error_ = status; });
 
   // Connect to guest serial, and log it to the logger.
   logger.Start("Connecting to guest serial", zx::sec(10));
@@ -329,18 +340,18 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
       [&get_serial_result](zx::socket socket) { get_serial_result = std::move(socket); });
 
   bool success = RunLoopUntil(
-      [&guest_error, &get_serial_result] {
-        return guest_error.has_value() || get_serial_result.has_value();
+      [this, &get_serial_result] {
+        return this->guest_error_.has_value() || get_serial_result.has_value();
       },
       deadline);
   if (!success) {
     FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial";
     return ZX_ERR_TIMED_OUT;
   }
-  if (guest_error.has_value()) {
+  if (guest_error_.has_value()) {
     FX_LOGS(ERROR) << "Error connecting to guest's serial: "
-                   << zx_status_get_string(guest_error.value());
-    return guest_error.value();
+                   << zx_status_get_string(guest_error_.value());
+    return guest_error_.value();
   }
   serial_logger_.emplace(&Logger::Get(), std::move(get_serial_result.value()));
 
@@ -352,18 +363,18 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
         get_console_result = std::move(result);
       });
   success = RunLoopUntil(
-      [&guest_error, &get_console_result] {
-        return guest_error.has_value() || get_console_result.has_value();
+      [this, &get_console_result] {
+        return guest_error_.has_value() || get_console_result.has_value();
       },
       deadline);
   if (!success) {
     FX_LOGS(ERROR) << "Timed out waiting to connect to guest's console";
     return ZX_ERR_TIMED_OUT;
   }
-  if (guest_error.has_value()) {
+  if (guest_error_.has_value()) {
     FX_LOGS(ERROR) << "Error connecting to guest's console: "
-                   << zx_status_get_string(guest_error.value());
-    return guest_error.value();
+                   << zx_status_get_string(guest_error_.value());
+    return guest_error_.value();
   }
   if (get_console_result->is_err()) {
     FX_LOGS(ERROR) << "Failed to open guest console"
@@ -390,6 +401,27 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
   }
 
   return ZX_OK;
+}
+
+zx_status_t EnclosedGuest::ForceRestart(GuestLaunchInfo& guest_launch_info, zx::time deadline) {
+  guest_manager_->ForceShutdown();
+
+  // Instead of waiting on the guest closed signal to determine whether a VM has shutdown, this
+  // polls the guest status. This is done to avoid a race where the VM object has stopped but the
+  // guest manager isn't yet aware, and is thus not in a state where a VM can be restarted.
+  const bool shutdown_complete = RunLoopUntil(
+      [this] {
+        ::fuchsia::virtualization::GuestInfo info;
+        guest_manager_->GetInfo(&info);
+        return info.guest_status() == ::fuchsia::virtualization::GuestStatus::STOPPED;
+      },
+      zx::deadline_after(zx::sec(20)));
+  if (!shutdown_complete) {
+    FX_LOGS(ERROR) << "Timed out waiting for the guest to report shutdown";
+    return ZX_ERR_TIMED_OUT;
+  }
+
+  return LaunchInternal(guest_launch_info, deadline);
 }
 
 fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::ConnectToBalloon(

@@ -57,6 +57,7 @@ group("tests") {
     ":virtualization_gpu_tests_pkg",
     ":virtualization_input_tests_pkg",
     ":virtualization_net_tests_pkg",
+    ":virtualization_shutdown_tests_pkg",
     ":virtualization_test_utils_pkg",
     ":virtualization_vsock_tests_pkg",
     "hypervisor",
@@ -78,6 +79,17 @@ group("tests") {
   data_deps = guest_packages
 }
 
+group("test_images") {
+  testonly = true
+  deps = [
+           ":debian_tests_img",
+           ":linux_extras_img",
+           ":termina_extras_img",
+           linux_tests_label,
+           termina_extras_label,
+         ] + guest_packages
+}
+
 executable("virtualization_core_tests") {
   visibility = [ ":*" ]
   testonly = true
@@ -96,17 +108,6 @@ executable("virtualization_core_tests") {
   ]
 }
 
-group("test_images") {
-  testonly = true
-  deps = [
-           ":debian_tests_img",
-           ":linux_extras_img",
-           ":termina_extras_img",
-           linux_tests_label,
-           termina_extras_label,
-         ] + guest_packages
-}
-
 fuchsia_test_component("virtualization_core_tests_cmp") {
   component_name = "virtualization_core_tests"
   deps = [
@@ -119,6 +120,42 @@ fuchsia_test_component("virtualization_core_tests_cmp") {
 fuchsia_test_package("virtualization_core_tests_pkg") {
   package_name = "virtualization-core-tests"
   test_components = [ ":virtualization_core_tests_cmp" ]
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+executable("virtualization_shutdown_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [ "shutdown_tests.cc" ]
+
+  deps = [
+    "lib",
+    "lib:guest_console",
+    "lib:test_main",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+fuchsia_test_component("virtualization_shutdown_tests_cmp") {
+  component_name = "virtualization_shutdown_tests"
+  deps = [
+           ":test_images",
+           ":virtualization_shutdown_tests",
+         ] + guest_packages
+  manifest = "meta/virtualization_shutdown_tests.cml"
+}
+
+fuchsia_test_package("virtualization_shutdown_tests_pkg") {
+  package_name = "virtualization_shutdown_tests"
+  test_components = [ ":virtualization_shutdown_tests_cmp" ]
   test_specs = {
     environments = guest_envs
     log_settings = {
