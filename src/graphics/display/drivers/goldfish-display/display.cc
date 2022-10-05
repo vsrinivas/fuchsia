@@ -5,8 +5,8 @@
 #include "display.h"
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
+#include <fidl/fuchsia.sysmem/cpp/fidl.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
-#include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
@@ -29,6 +29,12 @@
 
 #include <fbl/auto_lock.h>
 
+#include "fidl/fuchsia.sysmem/cpp/common_types.h"
+#include "fidl/fuchsia.sysmem/cpp/markers.h"
+#include "fidl/fuchsia.sysmem/cpp/natural_types.h"
+#include "lib/fidl/cpp/channel.h"
+#include "lib/fidl/cpp/wire/internal/transport_channel.h"
+#include "lib/fidl/cpp/wire/traits.h"
 #include "src/devices/lib/goldfish/pipe_headers/include/base.h"
 #include "src/graphics/display/drivers/goldfish-display/goldfish-display-bind.h"
 #include "src/graphics/display/drivers/goldfish-display/render_control.h"
@@ -283,24 +289,20 @@ zx_status_t Display::ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset) 
 
 zx_status_t Display::DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
                                                       uint32_t index) {
-  zx_status_t status, status2;
-  fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
-  status =
-      fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(handle, &status2, &collection_info);
-  if (status != ZX_OK) {
-    return status;
+  auto wait_result = fidl::Call(fidl::UnownedClientEnd<fuchsia_sysmem::BufferCollection>(handle))
+                         ->WaitForBuffersAllocated();
+  if (wait_result.is_error()) {
+    return wait_result.error_value().status();
   }
-  if (status2 != ZX_OK) {
-    return status2;
+  if (wait_result->status() != ZX_OK) {
+    return wait_result->status();
   }
+  auto& collection_info = wait_result->buffer_collection_info();
 
   zx::vmo vmo;
-  if (index < collection_info.buffer_count) {
-    vmo = zx::vmo(collection_info.buffers[index].vmo);
-    collection_info.buffers[index].vmo = ZX_HANDLE_INVALID;
-  }
-  for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
-    zx_handle_close(collection_info.buffers[i].vmo);
+  if (index < collection_info.buffer_count()) {
+    vmo = std::move(collection_info.buffers()[index].vmo());
+    ZX_DEBUG_ASSERT(!collection_info.buffers()[index].vmo().is_valid());
   }
 
   if (!vmo.is_valid()) {
@@ -308,14 +310,14 @@ zx_status_t Display::DisplayControllerImplImportImage(image_t* image, zx_unowned
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  uint64_t offset = collection_info.buffers[index].vmo_usable_start;
+  uint64_t offset = collection_info.buffers()[index].vmo_usable_start();
 
-  if (collection_info.settings.buffer_settings.heap !=
-      fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL) {
+  if (collection_info.settings().buffer_settings().heap() !=
+      fuchsia_sysmem::HeapType::kGoldfishDeviceLocal) {
     return ImportVmoImage(image, std::move(vmo), offset);
   }
 
-  if (!collection_info.settings.has_image_format_constraints || offset) {
+  if (!collection_info.settings().has_image_format_constraints() || offset) {
     zxlogf(ERROR, "%s: invalid image format or offset", kTag);
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -606,55 +608,54 @@ zx_status_t Display::DisplayControllerImplGetSysmemConnection(zx::channel connec
 
 zx_status_t Display::DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
                                                                          uint32_t collection) {
-  fuchsia_sysmem_BufferCollectionConstraints constraints = {};
-  constraints.usage.display = fuchsia_sysmem_displayUsageLayer;
-  constraints.has_buffer_memory_constraints = true;
-  fuchsia_sysmem_BufferMemoryConstraints& buffer_constraints =
-      constraints.buffer_memory_constraints;
-  buffer_constraints.min_size_bytes = 0;
-  buffer_constraints.max_size_bytes = 0xffffffff;
-  buffer_constraints.physically_contiguous_required = true;
-  buffer_constraints.secure_required = false;
-  buffer_constraints.ram_domain_supported = true;
-  buffer_constraints.cpu_domain_supported = true;
-  buffer_constraints.inaccessible_domain_supported = true;
-  buffer_constraints.heap_permitted_count = 2;
-  buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
-  buffer_constraints.heap_permitted[1] = fuchsia_sysmem_HeapType_GOLDFISH_DEVICE_LOCAL;
-  constraints.image_format_constraints_count = 4;
-  for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
-    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
-        constraints.image_format_constraints[i];
-    image_constraints.pixel_format.type =
-        i & 0b01 ? fuchsia_sysmem_PixelFormatType_R8G8B8A8 : fuchsia_sysmem_PixelFormatType_BGRA32;
-    image_constraints.pixel_format.has_format_modifier = true;
-    image_constraints.pixel_format.format_modifier.value =
-        i & 0b10 ? fuchsia_sysmem_FORMAT_MODIFIER_LINEAR
-                 : fuchsia_sysmem_FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL;
-    image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
-    image_constraints.min_coded_width = 0;
-    image_constraints.max_coded_width = 0xffffffff;
-    image_constraints.min_coded_height = 0;
-    image_constraints.max_coded_height = 0xffffffff;
-    image_constraints.min_bytes_per_row = 0;
-    image_constraints.max_bytes_per_row = 0xffffffff;
-    image_constraints.max_coded_width_times_coded_height = 0xffffffff;
-    image_constraints.layers = 1;
-    image_constraints.coded_width_divisor = 1;
-    image_constraints.coded_height_divisor = 1;
-    image_constraints.bytes_per_row_divisor = 1;
-    image_constraints.start_offset_divisor = 1;
-    image_constraints.display_width_divisor = 1;
-    image_constraints.display_height_divisor = 1;
+  fuchsia_sysmem::BufferCollectionConstraints constraints;
+  constraints.usage().display() = fuchsia_sysmem::kDisplayUsageLayer;
+  constraints.has_buffer_memory_constraints() = true;
+  auto& buffer_constraints = constraints.buffer_memory_constraints();
+  buffer_constraints.min_size_bytes() = 0;
+  buffer_constraints.max_size_bytes() = 0xffffffff;
+  buffer_constraints.physically_contiguous_required() = true;
+  buffer_constraints.secure_required() = false;
+  buffer_constraints.ram_domain_supported() = true;
+  buffer_constraints.cpu_domain_supported() = true;
+  buffer_constraints.inaccessible_domain_supported() = true;
+  buffer_constraints.heap_permitted_count() = 2;
+  buffer_constraints.heap_permitted()[0] = fuchsia_sysmem::HeapType::kSystemRam;
+  buffer_constraints.heap_permitted()[1] = fuchsia_sysmem::HeapType::kGoldfishDeviceLocal;
+  constraints.image_format_constraints_count() = 4;
+  for (uint32_t i = 0; i < constraints.image_format_constraints_count(); i++) {
+    auto& image_constraints = constraints.image_format_constraints()[i];
+    image_constraints.pixel_format().type() = i & 0b01 ? fuchsia_sysmem::PixelFormatType::kR8G8B8A8
+                                                       : fuchsia_sysmem::PixelFormatType::kBgra32;
+    image_constraints.pixel_format().has_format_modifier() = true;
+    image_constraints.pixel_format().format_modifier().value() =
+        i & 0b10 ? fuchsia_sysmem::kFormatModifierLinear
+                 : fuchsia_sysmem::kFormatModifierGoogleGoldfishOptimal;
+    image_constraints.color_spaces_count() = 1;
+    image_constraints.color_space()[0].type() = fuchsia_sysmem::ColorSpaceType::kSrgb;
+    image_constraints.min_coded_width() = 0;
+    image_constraints.max_coded_width() = 0xffffffff;
+    image_constraints.min_coded_height() = 0;
+    image_constraints.max_coded_height() = 0xffffffff;
+    image_constraints.min_bytes_per_row() = 0;
+    image_constraints.max_bytes_per_row() = 0xffffffff;
+    image_constraints.max_coded_width_times_coded_height() = 0xffffffff;
+    image_constraints.layers() = 1;
+    image_constraints.coded_width_divisor() = 1;
+    image_constraints.coded_height_divisor() = 1;
+    image_constraints.bytes_per_row_divisor() = 1;
+    image_constraints.start_offset_divisor() = 1;
+    image_constraints.display_width_divisor() = 1;
+    image_constraints.display_height_divisor() = 1;
   }
 
-  zx_status_t status =
-      fuchsia_sysmem_BufferCollectionSetConstraints(collection, true, &constraints);
-  if (status != ZX_OK) {
+  auto set_result = fidl::Call(fidl::UnownedClientEnd<fuchsia_sysmem::BufferCollection>(collection))
+                        ->SetConstraints({true, std::move(constraints)});
+  if (set_result.is_error()) {
     zxlogf(ERROR, "%s: failed to set constraints", kTag);
-    return status;
+    return set_result.error_value().status();
   }
+
   return ZX_OK;
 }
 

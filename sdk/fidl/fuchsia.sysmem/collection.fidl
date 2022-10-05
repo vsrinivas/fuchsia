@@ -442,7 +442,6 @@ protocol BufferCollectionToken {
 /// memory fragmentation and avoid overlap of buffer allocation lifetimes for
 /// the old and new collections. Collections can be large enough that it's worth
 /// avoiding allocation overlap (in time).
-@for_deprecated_c_bindings
 protocol BufferCollection {
     @available(added=9)
     compose Node;

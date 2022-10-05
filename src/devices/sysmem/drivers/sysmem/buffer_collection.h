@@ -129,8 +129,6 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   fpromise::result<fuchsia_sysmem::wire::BufferCollectionInfo2> CloneAuxBuffersResultForSendingV1(
       const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info);
 
-  static const fuchsia_sysmem_BufferCollection_ops_t kOps;
-
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.
   std::optional<TableHolder<fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers>>

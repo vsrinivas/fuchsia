@@ -4,9 +4,9 @@
 
 #include "fake-display.h"
 
+#include <fidl/fuchsia.sysmem/cpp/fidl.h>
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
-#include <fuchsia/sysmem/c/fidl.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format/image_format.h>
@@ -27,10 +27,12 @@
 #include <fbl/auto_lock.h>
 
 #include "fbl/vector.h"
+#include "fidl/fuchsia.sysmem/cpp/common_types.h"
+#include "fidl/fuchsia.sysmem/cpp/markers.h"
+#include "fidl/fuchsia.sysmem/cpp/natural_types.h"
+#include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/graphics/display/drivers/display/preferred-scanout-image-type.h"
 #include "zircon/types.h"
-
-constexpr unsigned int RAM = fuchsia_sysmem_CoherencyDomain_RAM;
 
 namespace fake_display {
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -120,29 +122,30 @@ zx_status_t FakeDisplay::DisplayControllerImplImportImage(image_t* image,
     DISP_INFO("Pixel format is unsupported (%u).\n", image->pixel_format);
     return ZX_ERR_INVALID_ARGS;
   }
-  zx_status_t status2;
-  fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
-  status =
-      fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(handle, &status2, &collection_info);
 
-  if (status != ZX_OK) {
-    return status;
+  auto wait_result = fidl::Call(fidl::UnownedClientEnd<fuchsia_sysmem::BufferCollection>(handle))
+                         ->WaitForBuffersAllocated();
+  if (wait_result.is_error()) {
+    return wait_result.error_value().status();
   }
-  if (status2 != ZX_OK) {
-    return status2;
+  if (wait_result->status() != ZX_OK) {
+    return wait_result->status();
   }
+  auto& collection_info = wait_result->buffer_collection_info();
 
   fbl::Vector<zx::vmo> vmos;
-  for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
-    vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
+  for (uint32_t i = 0; i < collection_info.buffer_count(); ++i) {
+    vmos.push_back(std::move(collection_info.buffers()[i].vmo()));
   }
 
-  if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+  if (!collection_info.settings().has_image_format_constraints() || index >= vmos.size()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  import_info->pixel_format = collection_info.settings.image_format_constraints.pixel_format.type;
-  import_info->ram_domain = collection_info.settings.buffer_settings.coherency_domain == RAM;
+  import_info->pixel_format = static_cast<uint32_t>(
+      collection_info.settings().image_format_constraints().pixel_format().type());
+  import_info->ram_domain = (collection_info.settings().buffer_settings().coherency_domain() ==
+                             fuchsia_sysmem::CoherencyDomain::kRam);
   import_info->vmo = std::move(vmos[index]);
   image->handle = reinterpret_cast<uint64_t>(import_info.get());
   imported_images_.push_back(std::move(import_info));
@@ -229,67 +232,65 @@ zx_status_t FakeDisplay::DisplayControllerImplGetSysmemConnection(zx::channel co
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 zx_status_t FakeDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
-  fuchsia_sysmem_BufferCollectionConstraints constraints = {};
+  fuchsia_sysmem::BufferCollectionConstraints constraints;
   if (config->type == IMAGE_TYPE_CAPTURE) {
-    constraints.usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+    constraints.usage().cpu() =
+        fuchsia_sysmem::kCpuUsageReadOften | fuchsia_sysmem::kCpuUsageWriteOften;
   } else {
-    constraints.usage.display = fuchsia_sysmem_displayUsageLayer;
+    constraints.usage().display() = fuchsia_sysmem::kDisplayUsageLayer;
   }
 
-  constraints.has_buffer_memory_constraints = true;
-  fuchsia_sysmem_BufferMemoryConstraints& buffer_constraints =
-      constraints.buffer_memory_constraints;
-  buffer_constraints.min_size_bytes = 0;
-  buffer_constraints.max_size_bytes = 0xffffffff;
-  buffer_constraints.physically_contiguous_required = false;
-  buffer_constraints.secure_required = false;
-  buffer_constraints.ram_domain_supported = true;
-  buffer_constraints.cpu_domain_supported = true;
-  buffer_constraints.inaccessible_domain_supported = true;
-  constraints.image_format_constraints_count = 4;
-  for (size_t i = 0; i < constraints.image_format_constraints_count; i++) {
-    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
-        constraints.image_format_constraints[i];
-    image_constraints.pixel_format.type =
-        i & 0b01 ? fuchsia_sysmem_PixelFormatType_R8G8B8A8 : fuchsia_sysmem_PixelFormatType_BGRA32;
-    image_constraints.pixel_format.has_format_modifier = true;
-    image_constraints.pixel_format.format_modifier.value =
-        i & 0b10 ? fuchsia_sysmem_FORMAT_MODIFIER_LINEAR
-                 : fuchsia_sysmem_FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL;
-    image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
+  constraints.has_buffer_memory_constraints() = true;
+  auto& buffer_constraints = constraints.buffer_memory_constraints();
+  buffer_constraints.min_size_bytes() = 0;
+  buffer_constraints.max_size_bytes() = 0xffffffff;
+  buffer_constraints.physically_contiguous_required() = false;
+  buffer_constraints.secure_required() = false;
+  buffer_constraints.ram_domain_supported() = true;
+  buffer_constraints.cpu_domain_supported() = true;
+  buffer_constraints.inaccessible_domain_supported() = true;
+  constraints.image_format_constraints_count() = 4;
+  for (size_t i = 0; i < constraints.image_format_constraints_count(); i++) {
+    auto& image_constraints = constraints.image_format_constraints()[i];
+    image_constraints.pixel_format().type() = i & 0b01 ? fuchsia_sysmem::PixelFormatType::kR8G8B8A8
+                                                       : fuchsia_sysmem::PixelFormatType::kBgra32;
+    image_constraints.pixel_format().has_format_modifier() = true;
+    image_constraints.pixel_format().format_modifier().value() =
+        i & 0b10 ? fuchsia_sysmem::kFormatModifierLinear
+                 : fuchsia_sysmem::kFormatModifierGoogleGoldfishOptimal;
+    image_constraints.color_spaces_count() = 1;
+    image_constraints.color_space()[0].type() = fuchsia_sysmem::ColorSpaceType::kSrgb;
     if (config->type == IMAGE_TYPE_CAPTURE) {
-      image_constraints.min_coded_width = kWidth;
-      image_constraints.max_coded_width = kWidth;
-      image_constraints.min_coded_height = kHeight;
-      image_constraints.max_coded_height = kHeight;
-      image_constraints.min_bytes_per_row = kWidth * 4;
-      image_constraints.max_bytes_per_row = kWidth * 4;
-      image_constraints.max_coded_width_times_coded_height = kWidth * kHeight;
+      image_constraints.min_coded_width() = kWidth;
+      image_constraints.max_coded_width() = kWidth;
+      image_constraints.min_coded_height() = kHeight;
+      image_constraints.max_coded_height() = kHeight;
+      image_constraints.min_bytes_per_row() = kWidth * 4;
+      image_constraints.max_bytes_per_row() = kWidth * 4;
+      image_constraints.max_coded_width_times_coded_height() = kWidth * kHeight;
     } else {
-      image_constraints.min_coded_width = 0;
-      image_constraints.max_coded_width = 0xffffffff;
-      image_constraints.min_coded_height = 0;
-      image_constraints.max_coded_height = 0xffffffff;
-      image_constraints.min_bytes_per_row = 0;
-      image_constraints.max_bytes_per_row = 0xffffffff;
-      image_constraints.max_coded_width_times_coded_height = 0xffffffff;
+      image_constraints.min_coded_width() = 0;
+      image_constraints.max_coded_width() = 0xffffffff;
+      image_constraints.min_coded_height() = 0;
+      image_constraints.max_coded_height() = 0xffffffff;
+      image_constraints.min_bytes_per_row() = 0;
+      image_constraints.max_bytes_per_row() = 0xffffffff;
+      image_constraints.max_coded_width_times_coded_height() = 0xffffffff;
     }
-    image_constraints.layers = 1;
-    image_constraints.coded_width_divisor = 1;
-    image_constraints.coded_height_divisor = 1;
-    image_constraints.bytes_per_row_divisor = 1;
-    image_constraints.start_offset_divisor = 1;
-    image_constraints.display_width_divisor = 1;
-    image_constraints.display_height_divisor = 1;
+    image_constraints.layers() = 1;
+    image_constraints.coded_width_divisor() = 1;
+    image_constraints.coded_height_divisor() = 1;
+    image_constraints.bytes_per_row_divisor() = 1;
+    image_constraints.start_offset_divisor() = 1;
+    image_constraints.display_width_divisor() = 1;
+    image_constraints.display_height_divisor() = 1;
   }
 
-  zx_status_t status =
-      fuchsia_sysmem_BufferCollectionSetConstraints(collection, true, &constraints);
-
-  if (status != ZX_OK) {
+  auto set_result = fidl::Call(fidl::UnownedClientEnd<fuchsia_sysmem::BufferCollection>(collection))
+                        ->SetConstraints({true, std::move(constraints)});
+  if (set_result.is_error()) {
     DISP_ERROR("Failed to set constraints");
-    return status;
+    return set_result.error_value().status();
   }
 
   return ZX_OK;
@@ -309,30 +310,33 @@ zx_status_t FakeDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_hand
   if (import_capture == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
+
   fbl::AutoLock lock(&capture_lock_);
-  zx_status_t status, status2;
-  fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
-  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection, &status2,
-                                                                  &collection_info);
-  if (status != ZX_OK) {
-    return status;
+
+  auto wait_result =
+      fidl::Call(fidl::UnownedClientEnd<fuchsia_sysmem::BufferCollection>(collection))
+          ->WaitForBuffersAllocated();
+  if (wait_result.is_error()) {
+    return wait_result.error_value().status();
   }
-  if (status2 != ZX_OK) {
-    return status2;
+  if (wait_result->status() != ZX_OK) {
+    return wait_result->status();
   }
+  auto& collection_info = wait_result->buffer_collection_info();
 
   fbl::Vector<zx::vmo> vmos;
-  for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
-    vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
+  for (uint32_t i = 0; i < collection_info.buffer_count(); ++i) {
+    vmos.push_back(std::move(collection_info.buffers()[i].vmo()));
   }
 
-  if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+  if (!collection_info.settings().has_image_format_constraints() || index >= vmos.size()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  import_capture->pixel_format =
-      collection_info.settings.image_format_constraints.pixel_format.type;
-  import_capture->ram_domain = collection_info.settings.buffer_settings.coherency_domain == RAM;
+  import_capture->pixel_format = static_cast<uint32_t>(
+      collection_info.settings().image_format_constraints().pixel_format().type());
+  import_capture->ram_domain = (collection_info.settings().buffer_settings().coherency_domain() ==
+                                fuchsia_sysmem::CoherencyDomain::kRam);
   import_capture->vmo = std::move(vmos[index]);
   *out_capture_handle = reinterpret_cast<uint64_t>(import_capture.get());
   imported_captures_.push_back(std::move(import_capture));
@@ -532,7 +536,9 @@ zx_status_t FakeDisplay::Bind(bool start_vsync) {
   }
 
   if (start_vsync) {
-    using Args = struct { FakeDisplay* fake_display; };
+    using Args = struct {
+      FakeDisplay* fake_display;
+    };
     Args* pargs = new Args{this};
     auto start_thread = [](void* opaque) {
       Args* pargs = static_cast<Args*>(opaque);

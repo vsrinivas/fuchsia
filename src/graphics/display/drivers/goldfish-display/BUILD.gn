@@ -56,7 +56,7 @@ source_set("common") {
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_cpp_wire",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp",
     "//src/devices/lib/goldfish/pipe_headers",
     "//src/devices/lib/goldfish/pipe_io",
     "//src/lib/ddk",
