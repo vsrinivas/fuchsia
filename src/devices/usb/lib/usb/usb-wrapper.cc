@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/usb/descriptor/c/banjo.h>
 #include <stdio.h>
 
 #include <memory>
+#include <optional>
 
 #include <usb/usb.h>
 
@@ -56,9 +58,7 @@ EndpointList::iterator EndpointList::begin() const {
     return end();
   }
   usb_desc_iter_t iter = iter_;
-  usb_iter_endpoint_descriptor_t endpoint{};
-  EndpointList::iterator::ReadEp(&iter, &endpoint);
-
+  Endpoint endpoint = EndpointList::iterator::ReadEp(&iter);
   return iterator(iter, endpoint);
 }
 
@@ -67,26 +67,28 @@ EndpointList::const_iterator EndpointList::cbegin() const {
 }
 
 EndpointList::iterator EndpointList::end() const {
-  usb_desc_iter_t init = {};
-  return iterator(init, usb_iter_endpoint_descriptor_t{});
+  Endpoint endpoint(/* descriptor = */ nullptr, /* ss_companion = */ std::nullopt);
+  return iterator(/* iter = */ {}, endpoint);
 }
 
 EndpointList::const_iterator EndpointList::cend() const {
   return static_cast<EndpointList::const_iterator>(end());
 }
 
-void EndpointList::iterator::ReadEp(usb_desc_iter_t* iter, usb_iter_endpoint_descriptor_t* out) {
-  const usb_endpoint_descriptor_t* ptr = usb_desc_iter_next_endpoint(iter);
-  if (ptr) {
-    out->descriptor = *ptr;
+Endpoint EndpointList::iterator::ReadEp(usb_desc_iter_t* iter) {
+  usb_endpoint_descriptor_t* descriptor = usb_desc_iter_next_endpoint(iter);
+  std::optional<const usb_ss_ep_comp_descriptor_t*> ss_companion = std::nullopt;
+  if (descriptor == nullptr) {
+    // If there's no descriptor, don't check for a SuperSpeed companion.
+    return Endpoint(descriptor, ss_companion);
   }
 
   // A SuperSpeed companion descriptor may optionally follow.
   const usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
   if (header && header->b_descriptor_type == USB_DT_SS_EP_COMPANION) {
-    out->ss_companion = *usb_desc_iter_next_ss_ep_comp(iter);
-    out->has_companion = true;
+    ss_companion = usb_desc_iter_next_ss_ep_comp(iter);
   }
+  return Endpoint(descriptor, ss_companion);
 }
 
 EndpointList Interface::GetEndpointList() const { return EndpointList(iter_, descriptor_); }

@@ -95,11 +95,10 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
   for (auto& interface : *interfaces) {
     if (interface.descriptor()->b_num_endpoints == 1) {
       auto eplist = interface.GetEndpointList();
-      auto ep_iter = eplist.begin();
-      auto ep = ep_iter.endpoint();
-      interrupt_endpoint_ = ep->descriptor;
-      status = usb_.EnableEndpoint(&interrupt_endpoint_,
-                                   (ep->has_companion) ? &ep->ss_companion : nullptr, true);
+      auto ep = eplist.begin();
+      interrupt_endpoint_ = *ep->descriptor();
+      status =
+          usb_.EnableEndpoint(&interrupt_endpoint_, ep->ss_companion().value_or(nullptr), true);
       break;
     }
   }

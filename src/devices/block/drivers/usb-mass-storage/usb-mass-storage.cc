@@ -169,7 +169,7 @@ void UsbMassStorageDevice::DdkInit(ddk::InitTxn txn) {
   }
 
   for (auto ep_itr : interfaces->begin()->GetEndpointList()) {
-    const usb_endpoint_descriptor_t* endp = &ep_itr.descriptor;
+    const usb_endpoint_descriptor_t* endp = ep_itr.descriptor();
     if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
         bulk_out_addr = endp->b_endpoint_address;

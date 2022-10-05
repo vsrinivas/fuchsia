@@ -84,9 +84,9 @@ zx_status_t Device::Bind() {
 
   for (auto& interface : *usb_interface_list) {
     for (auto ep_itr : interface.GetEndpointList()) {
-      if (usb_ep_direction(&ep_itr.descriptor) == USB_ENDPOINT_OUT) {
-        if (usb_ep_type(&ep_itr.descriptor) == USB_ENDPOINT_BULK) {
-          bulk_out_addr = ep_itr.descriptor.b_endpoint_address;
+      if (usb_ep_direction(ep_itr.descriptor()) == USB_ENDPOINT_OUT) {
+        if (usb_ep_type(ep_itr.descriptor()) == USB_ENDPOINT_BULK) {
+          bulk_out_addr = ep_itr.descriptor()->b_endpoint_address;
         }
       }
     }

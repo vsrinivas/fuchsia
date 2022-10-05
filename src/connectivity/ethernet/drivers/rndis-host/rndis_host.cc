@@ -648,9 +648,9 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
           return ZX_ERR_NOT_SUPPORTED;
         }
         for (const auto& endp : interface.GetEndpointList()) {
-          if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_IN &&
-              usb_ep_type(&endp.descriptor) == USB_ENDPOINT_INTERRUPT) {
-            intr_addr = endp.descriptor.b_endpoint_address;
+          if (usb_ep_direction(endp.descriptor()) == USB_ENDPOINT_IN &&
+              usb_ep_type(endp.descriptor()) == USB_ENDPOINT_INTERRUPT) {
+            intr_addr = endp.descriptor()->b_endpoint_address;
           }
         }
       } else if (intf->b_interface_class == USB_CLASS_CDC) {
@@ -658,13 +658,13 @@ static zx_status_t rndishost_bind(void* ctx, zx_device_t* parent) {
           return ZX_ERR_NOT_SUPPORTED;
         }
         for (const auto& endp : interface.GetEndpointList()) {
-          if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_OUT) {
-            if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
-              bulk_out_addr = endp.descriptor.b_endpoint_address;
+          if (usb_ep_direction(endp.descriptor()) == USB_ENDPOINT_OUT) {
+            if (usb_ep_type(endp.descriptor()) == USB_ENDPOINT_BULK) {
+              bulk_out_addr = endp.descriptor()->b_endpoint_address;
             }
-          } else if (usb_ep_direction(&endp.descriptor) == USB_ENDPOINT_IN) {
-            if (usb_ep_type(&endp.descriptor) == USB_ENDPOINT_BULK) {
-              bulk_in_addr = endp.descriptor.b_endpoint_address;
+          } else if (usb_ep_direction(endp.descriptor()) == USB_ENDPOINT_IN) {
+            if (usb_ep_type(endp.descriptor()) == USB_ENDPOINT_BULK) {
+              bulk_in_addr = endp.descriptor()->b_endpoint_address;
             }
           }
         }
@@ -707,4 +707,3 @@ static zx_driver_ops_t rndis_driver_ops = []() {
 // covers the tethered device case.
 // clang-format off
 ZIRCON_DRIVER(rndishost, rndis_driver_ops, "zircon", "0.1");
-

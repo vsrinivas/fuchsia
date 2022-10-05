@@ -119,13 +119,6 @@ __END_CDECLS
 #ifdef __cplusplus
 namespace usb {
 
-typedef struct {
-  usb_endpoint_descriptor_t descriptor;
-  usb_ss_ep_comp_descriptor_t ss_companion;
-  // True if ss_companion is populated.
-  bool has_companion;
-} usb_iter_endpoint_descriptor_t;
-
 class UsbDevice : public ddk::UsbProtocolClient {
  public:
   UsbDevice() {}
@@ -158,39 +151,27 @@ class UsbDevice : public ddk::UsbProtocolClient {
   }
 };
 
-// DescriptorList is owned by Interface, where Interface is accessed by an InterfaceList.
-// DescriptorList iterates through all child descriptors of Interface by utilizing
-// Interface.GetDescriptorList().
+// DescriptorList is used to iterate all of the USB descriptors of an Interface. It is created by
+// calling GetDescriptorList on an Interface. The returned descriptor pointers are valid for the
+// lifetime of the InterfaceList used to create the parent Interface. DescriptorList implements a
+// standard C++ iterator interface that returns usb_descriptor_header_t*.
 //
-// The InterfaceList will enumerate interfaces in the client, and will skip any alternate interfaces
-// if skip_alt is true (see page 268 of the USB 2.0 specification for more information).
+// Example Usage:
+//   std::optional<InterfaceList> interfaces;
+//   status = InterfaceList::Create(my_client, true, &interfaces);
+//   if (status != ZX_OK) {
+//     ...
+//   }
 //
-// Example Usage #1:
-//     std::optional<InterfaceList> my_list;
-//     status = InterfaceList::Create(my_client, true, &my_list);
-//     if (status != ZX_OK) {
-//         ...
+//   // Find the first descriptor of type usb_my_device_specific_desc_t.
+//   for (const auto& interface : *interfaces) {
+//     for (auto& descriptor: interface.GetDescriptorList()) {
+//       if (descriptor.b_descriptor_type == USB_DT_MY_DEVICE_SPECIFIC) {
+//         return make_optional<usb_my_device_specific_desc_t*>(
+//           reinterpret_cast<usb_my_device_specific_desc_t*>(&descriptor));
+//       }
 //     }
-//
-//     for (auto& interface : *my_list) {
-//         for (auto& descriptor : interface.GetDescriptorList()) {
-//             ...
-//         }
-//     }
-//
-// Example Usage #2:
-//     std::optional<InterfaceList> my_list;
-//     status = InterfaceList::Create(my_client, true, &my_list);
-//     if (status != ZX_OK) {
-//         ...
-//     }
-//
-//     for (auto& interface : *my_list) {
-//         auto dList_itr = interface.GetDescriptorList().begin(); // or cbegin().
-//         do {
-//             ...
-//         } while (++dList_itr != interface.GetDescriptorList().end());
-//     }
+//   }
 class DescriptorList {
  private:
   class iterator_impl;
@@ -249,8 +230,47 @@ class DescriptorList {
   const usb_interface_descriptor_t* descriptor_;
 };
 
-// EndpointList is owned by Interface, where Interface is accessed by an InterfaceList. It is
-// possible to enumerate all USB endpoint descriptors by utilizing Interface.getEndpointList().
+// Endpoint is accessed by iterating on EndpointList. It contains pointers to an endpoint descriptor
+// and its (optional) SuperSpeed companion descriptor (see usb3.2 ch9.6.7). The returned descriptor
+// pointers are valid for the lifetime of the InterfaceList used to create the EndpointList (see
+// EndpointList documentation below.)
+class Endpoint {
+ public:
+  Endpoint(const usb_endpoint_descriptor_t* descriptor,
+           std::optional<const usb_ss_ep_comp_descriptor_t*> ss_companion)
+      : descriptor_(descriptor), ss_companion_(ss_companion) {}
+
+  const usb_endpoint_descriptor_t* descriptor() const { return descriptor_; }
+
+  std::optional<const usb_ss_ep_comp_descriptor_t*> ss_companion() const { return ss_companion_; }
+  bool has_companion() const { return ss_companion_.has_value(); }
+
+ private:
+  const usb_endpoint_descriptor_t* descriptor_;
+  std::optional<const usb_ss_ep_comp_descriptor_t*> ss_companion_;
+};
+
+// EndpointList is used to iterate all of the USB endpoint descriptors of an Interface. It is
+// created by calling GetEndpointList on an Interface. The returned descriptor pointers are valid
+// for the lifetime of the InterfaceList used to create the parent Interface. EndpointList
+// implements a standard C++ iterator interface that returns Endpoint.
+//
+// Example Usage:
+//   std::optional<InterfaceList> interfaces;
+//   status = InterfaceList::Create(my_client, true, &interfaces);
+//   if (status != ZX_OK) {
+//     ...
+//   }
+//
+//   // Find the first interrupt endpoint and copy it for use by the driver.
+//   for (const auto& interface : *interfaces) {
+//     for (auto& endpoint : interface.GetEndpointList()) {
+//       if (usb_ep_direction(endpoint.descriptor()) == USB_ENDPOINT_IN &&
+//           usb_ep_type(endpoint.descriptor()) == USB_ENDPOINT_INTERRUPT) {
+//         return std::make_optional<usb_endpoint_descriptor_t>(*endpoint.descriptor());
+//       }
+//     }
+//   }
 class EndpointList {
  private:
   class iterator_impl;
@@ -276,14 +296,8 @@ class EndpointList {
    public:
     friend class EndpointList;
 
-    iterator_impl(const usb_desc_iter_t& iter, const usb_iter_endpoint_descriptor_t& endpoint)
-        : iter_(iter), endpoint_(endpoint) {}
-
     bool operator==(const iterator_impl& other) const {
-      const usb_endpoint_descriptor_t* a = &endpoint_.descriptor;
-      const usb_endpoint_descriptor_t* b = &other.endpoint_.descriptor;
-      // Note that within a configuration, endpoint addresses are unique.
-      return (a->b_endpoint_address == b->b_endpoint_address);
+      return endpoint_.descriptor() == other.endpoint_.descriptor();
     }
     bool operator!=(const iterator_impl& other) const { return !(*this == other); }
 
@@ -294,27 +308,31 @@ class EndpointList {
     }
 
     iterator_impl& operator++() {
-      endpoint_ = {};
-      ReadEp(&iter_, &endpoint_);
+      endpoint_ = ReadEp(&iter_);
       return *this;
     }
 
-    const usb_iter_endpoint_descriptor_t* endpoint() const { return &endpoint_; }
-    const usb_iter_endpoint_descriptor_t& operator*() const { return endpoint_; }
-    const usb_iter_endpoint_descriptor_t* operator->() const { return &endpoint_; }
+    const Endpoint& operator*() const { return endpoint_; }
+    const Endpoint* operator->() const { return &endpoint_; }
 
    private:
+    iterator_impl(const usb_desc_iter_t& iter, Endpoint endpoint)
+        : iter_(iter), endpoint_(endpoint) {}
+
     // Using the given iter, read the next endpoint descriptor(s).
-    static void ReadEp(usb_desc_iter_t* iter, usb_iter_endpoint_descriptor_t* out);
+    static Endpoint ReadEp(usb_desc_iter_t* iter);
 
     usb_desc_iter_t iter_;
-    usb_iter_endpoint_descriptor_t endpoint_;
+    Endpoint endpoint_;
   };
 
   usb_desc_iter_t iter_;
   const usb_interface_descriptor_t* descriptor_;
 };
 
+// Interface is accessed by iterating on InterfaceList. It contains a pointer to an interface
+// descriptor. The returned descriptor pointer is valid for the lifetime of the InterfaceList used
+// to create the Interface.
 class Interface {
  public:
   DescriptorList GetDescriptorList() const;
@@ -334,8 +352,11 @@ class Interface {
   usb_desc_iter_t iter_;
 };
 
-// An InterfaceList can be used for enumerating USB interfaces.  It implements a
-// standard C++ iterator interface, which can be used by a for loop.
+// An InterfaceList can be used for enumerating USB interfaces. It implements a standard C++
+// iterator interface that returns Interface. All descriptors accessed by child classes are valid
+// only for the lifetime of this InterfaceList object.
+//
+// The InterfaceList will skip any alternate interfaces if skip_alt is true (see usb2.0 ch9.6.5).
 class InterfaceList {
  private:
   class iterator_impl;
