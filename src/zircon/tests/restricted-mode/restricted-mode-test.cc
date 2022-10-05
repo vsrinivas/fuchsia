@@ -126,22 +126,22 @@ TEST(RestrictedMode, Basic) {
   uint64_t gs_val = 0;
   state.ip = (uint64_t)bounce;
   state.flags = 0;
-  state.rax = 1;
-  state.rbx = 2;
-  state.rcx = 3;
-  state.rdx = 4;
-  state.rsi = 5;
-  state.rdi = 6;
-  state.rbp = 7;
-  state.rsp = 8;
-  state.r8 = 9;
-  state.r9 = 10;
-  state.r10 = 11;
-  state.r11 = 12;
-  state.r12 = 13;
-  state.r13 = 14;
-  state.r14 = 15;
-  state.r15 = 16;
+  state.rax = 0x0101010101010101;
+  state.rbx = 0x0202020202020202;
+  state.rcx = 0x0303030303030303;
+  state.rdx = 0x0404040404040404;
+  state.rsi = 0x0505050505050505;
+  state.rdi = 0x0606060606060606;
+  state.rbp = 0x0707070707070707;
+  state.rsp = 0x0808080808080808;
+  state.r8 = 0x0909090909090909;
+  state.r9 = 0x0a0a0a0a0a0a0a0a;
+  state.r10 = 0x0b0b0b0b0b0b0b0b;
+  state.r11 = 0x0c0c0c0c0c0c0c0c;
+  state.r12 = 0x0d0d0d0d0d0d0d0d;
+  state.r13 = 0x0e0e0e0e0e0e0e0e;
+  state.r14 = 0x0f0f0f0f0f0f0f0f;
+  state.r15 = 0x1010101010101010;
   state.fs_base = (uintptr_t)&fs_val;
   state.gs_base = (uintptr_t)&gs_val;
 
@@ -164,27 +164,28 @@ TEST(RestrictedMode, Basic) {
   EXPECT_EQ((uintptr_t)&bounce_post_syscall, state.ip);
 
   // validate the state of the registers is what was written inside restricted mode
-  EXPECT_EQ(2, state.rax);
-  EXPECT_EQ(3, state.rbx);
+  // NOTE: each of the registers was incremented by one before exiting restricted mode
+  EXPECT_EQ(0x0101010101010102, state.rax);
+  EXPECT_EQ(0x0202020202020203, state.rbx);
   EXPECT_EQ(0, state.rcx);  // RCX is trashed by the syscall and set to zero
-  EXPECT_EQ(5, state.rdx);
-  EXPECT_EQ(6, state.rsi);
-  EXPECT_EQ(7, state.rdi);
-  EXPECT_EQ(8, state.rbp);
-  EXPECT_EQ(9, state.rsp);
-  EXPECT_EQ(10, state.r8);
-  EXPECT_EQ(11, state.r9);
-  EXPECT_EQ(12, state.r10);
+  EXPECT_EQ(0x0404040404040405, state.rdx);
+  EXPECT_EQ(0x0505050505050506, state.rsi);
+  EXPECT_EQ(0x0606060606060607, state.rdi);
+  EXPECT_EQ(0x0707070707070708, state.rbp);
+  EXPECT_EQ(0x0808080808080809, state.rsp);
+  EXPECT_EQ(0x090909090909090a, state.r8);
+  EXPECT_EQ(0x0a0a0a0a0a0a0a0b, state.r9);
+  EXPECT_EQ(0x0b0b0b0b0b0b0b0c, state.r10);
   EXPECT_EQ(0, state.r11);  // r11 is trashed by the syscall and set to zero
-  EXPECT_EQ(14, state.r12);
-  EXPECT_EQ(15, state.r13);
-  EXPECT_EQ(16, state.r14);
-  EXPECT_EQ(17, state.r15);
+  EXPECT_EQ(0x0d0d0d0d0d0d0d0e, state.r12);
+  EXPECT_EQ(0x0e0e0e0e0e0e0e0f, state.r13);
+  EXPECT_EQ(0x0f0f0f0f0f0f0f10, state.r14);
+  EXPECT_EQ(0x1010101010101011, state.r15);
 
   // validate that it was able to write to fs:0 and gs:0 while inside restricted mode
   // the post incremented values of rcx and r11 were written here
-  EXPECT_EQ(4, fs_val);
-  EXPECT_EQ(13, gs_val);
+  EXPECT_EQ(0x0303030303030304, fs_val);
+  EXPECT_EQ(0x0c0c0c0c0c0c0c0d, gs_val);
 }
 #endif  // __x86_64__
 
