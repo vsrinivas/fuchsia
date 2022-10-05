@@ -97,7 +97,7 @@ impl MessageStats {
 /// Underlying streams for a `FramedStreamWriter`
 enum FramedStreamWriterInner {
     Quic(AsyncQuicStreamWriter),
-    Circuit(circuit::stream::Writer, u64),
+    Circuit(circuit::stream::Writer, u64, circuit::Connection),
 }
 
 #[derive(Debug)]
@@ -113,15 +113,19 @@ impl FramedStreamWriter {
         Self { inner: FramedStreamWriterInner::Quic(quic), peer_node_id }
     }
 
-    #[allow(unused)]
-    pub fn from_circuit(writer: circuit::stream::Writer, id: u64, peer_node_id: NodeId) -> Self {
-        Self { inner: FramedStreamWriterInner::Circuit(writer, id), peer_node_id }
+    pub fn from_circuit(
+        writer: circuit::stream::Writer,
+        id: u64,
+        conn: circuit::Connection,
+        peer_node_id: NodeId,
+    ) -> Self {
+        Self { inner: FramedStreamWriterInner::Circuit(writer, id, conn), peer_node_id }
     }
 
     pub async fn abandon(&mut self) {
         match &mut self.inner {
             FramedStreamWriterInner::Quic(quic) => quic.abandon().await,
-            FramedStreamWriterInner::Circuit(writer, _) => {
+            FramedStreamWriterInner::Circuit(writer, _, _) => {
                 let (_reader, dead_writer) = circuit::stream::stream();
                 *writer = dead_writer;
             }
@@ -133,8 +137,8 @@ impl FramedStreamWriter {
             FramedStreamWriterInner::Quic(quic) => {
                 PeerConnRef::from_quic(quic.conn(), self.peer_node_id)
             }
-            FramedStreamWriterInner::Circuit(_, _) => {
-                unimplemented!("TODO: implement this after PeerConnRef supports it")
+            FramedStreamWriterInner::Circuit(_, _, conn) => {
+                PeerConnRef::from_circuit(conn, self.peer_node_id)
             }
         }
     }
@@ -142,7 +146,7 @@ impl FramedStreamWriter {
     pub fn id(&self) -> u64 {
         match &self.inner {
             FramedStreamWriterInner::Quic(quic) => quic.id(),
-            FramedStreamWriterInner::Circuit(_, id) => *id,
+            FramedStreamWriterInner::Circuit(_, id, _) => *id,
         }
     }
 
@@ -178,7 +182,7 @@ impl FramedStreamWriter {
                     quic.send(bytes, fin).await?;
                 }
             }
-            FramedStreamWriterInner::Circuit(writer, _) => {
+            FramedStreamWriterInner::Circuit(writer, _, _) => {
                 writer.write(header.len(), |buf| {
                     buf[..header.len()].copy_from_slice(&header);
                     Ok(header.len())
@@ -201,7 +205,7 @@ impl FramedStreamWriter {
 /// Underlying streams for a `FramedStreamReader`
 enum FramedStreamReaderInner {
     Quic(AsyncQuicStreamReader),
-    Circuit(circuit::stream::Reader, bool),
+    Circuit(circuit::stream::Reader, circuit::Connection),
 }
 
 impl FramedStreamReaderInner {
@@ -244,14 +248,13 @@ impl FramedStreamReader {
         }
     }
 
-    #[allow(unused)]
     pub fn from_circuit(
         reader: circuit::stream::Reader,
-        is_initiator: bool,
+        conn: circuit::Connection,
         peer_node_id: NodeId,
     ) -> Self {
         Self {
-            inner: FramedStreamReaderInner::Circuit(reader, is_initiator),
+            inner: FramedStreamReaderInner::Circuit(reader, conn),
             peer_node_id,
             read_state: ReadState::Initial,
             hdr: [0u8; FRAME_HEADER_LENGTH],
@@ -273,8 +276,8 @@ impl FramedStreamReader {
             FramedStreamReaderInner::Quic(quic) => {
                 PeerConnRef::from_quic(quic.conn(), self.peer_node_id)
             }
-            FramedStreamReaderInner::Circuit(_, _) => {
-                unimplemented!("TODO: implement this after PeerConnRef supports it")
+            FramedStreamReaderInner::Circuit(_, conn) => {
+                PeerConnRef::from_circuit(conn, self.peer_node_id)
             }
         }
     }
@@ -282,7 +285,7 @@ impl FramedStreamReader {
     pub fn is_initiator(&self) -> bool {
         match &self.inner {
             FramedStreamReaderInner::Quic(quic) => quic.is_initiator(),
-            FramedStreamReaderInner::Circuit(_, is_initiator) => *is_initiator,
+            FramedStreamReaderInner::Circuit(_, conn) => conn.is_client(),
         }
     }
 

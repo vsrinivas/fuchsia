@@ -76,8 +76,24 @@ pub struct PeerConnStats {
 }
 
 #[derive(Clone)]
+enum PeerConnInner {
+    Quic(Arc<AsyncConnection>),
+    Circuit(circuit::Connection),
+}
+
+impl PeerConnInner {
+    /// Convert a PeerConnInner to a PeerConnRefInner
+    fn into_ref(&self) -> PeerConnRefInner<'_> {
+        match self {
+            Self::Quic(p) => PeerConnRefInner::Quic(p),
+            Self::Circuit(p) => PeerConnRefInner::Circuit(p),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub(crate) struct PeerConn {
-    conn: Arc<AsyncConnection>,
+    inner: PeerConnInner,
     node_id: NodeId,
 }
 
@@ -89,31 +105,57 @@ impl std::fmt::Debug for PeerConn {
 
 impl PeerConn {
     pub fn from_quic(conn: Arc<AsyncConnection>, node_id: NodeId) -> Self {
-        PeerConn { conn, node_id }
+        PeerConn { inner: PeerConnInner::Quic(conn), node_id }
     }
 
-    pub fn quic_conn(&self) -> Arc<AsyncConnection> {
-        Arc::clone(&self.conn)
+    #[allow(unused)]
+    pub fn from_circuit(conn: circuit::Connection, node_id: NodeId) -> Self {
+        PeerConn { inner: PeerConnInner::Circuit(conn), node_id }
+    }
+
+    pub fn quic_conn(&self) -> Option<Arc<AsyncConnection>> {
+        match &self.inner {
+            PeerConnInner::Quic(conn) => Some(Arc::clone(&conn)),
+            PeerConnInner::Circuit(_) => None,
+        }
     }
 
     pub fn as_ref(&self) -> PeerConnRef<'_> {
-        PeerConnRef { conn: &self.conn, node_id: self.node_id }
+        PeerConnRef { inner: self.inner.into_ref(), node_id: self.node_id }
     }
 
-    pub async fn stats(&self) -> quiche::Stats {
-        self.conn.stats().await
+    pub async fn stats(&self) -> Option<quiche::Stats> {
+        match &self.inner {
+            PeerConnInner::Quic(conn) => Some(conn.stats().await),
+            PeerConnInner::Circuit(_) => None,
+        }
     }
 
     pub async fn is_established(&self) -> bool {
-        self.conn.is_established().await
+        match &self.inner {
+            PeerConnInner::Quic(conn) => conn.is_established().await,
+            // For QUIC, is_established indicates we are not in an intermediate phase of the
+            // handshake procedure. Circuits don't really have a rigid handshake procedure; as soon
+            // as we're returned a writer it's ready to use and that's all there is to know.
+            PeerConnInner::Circuit(_) => true,
+        }
     }
 
     pub async fn close(&self) {
-        self.conn.close().await
+        match &self.inner {
+            PeerConnInner::Quic(conn) => conn.close().await,
+            // TODO: Figure out what this should do.
+            PeerConnInner::Circuit(_) => (),
+        }
     }
 
     pub async fn recv(&self, packet: &mut [u8]) -> Result<(), Error> {
-        self.conn.recv(packet).await
+        match &self.inner {
+            PeerConnInner::Quic(conn) => conn.recv(packet).await,
+            PeerConnInner::Circuit(_) => {
+                unreachable!("Old link protocol tried to feed a packet to a circuit!")
+            }
+        }
     }
 
     pub fn node_id(&self) -> NodeId {
@@ -122,56 +164,146 @@ impl PeerConn {
 }
 
 #[derive(Clone, Copy)]
+enum PeerConnRefInner<'a> {
+    Quic(&'a Arc<AsyncConnection>),
+    Circuit(&'a circuit::Connection),
+}
+
+impl PeerConnRefInner<'_> {
+    /// Convert a PeerConnRefInner to a PeerConnInner
+    fn into_owned(&self) -> PeerConnInner {
+        match self {
+            Self::Quic(p) => PeerConnInner::Quic(Arc::clone(p)),
+            Self::Circuit(p) => PeerConnInner::Circuit((*p).clone()),
+        }
+    }
+}
+
+impl<'a> std::fmt::Debug for PeerConnRefInner<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PeerConnRefInner::Quic(conn) => write!(f, "{}", conn.trace_id()),
+            PeerConnRefInner::Circuit(_) => write!(f, "<circuit>"),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub(crate) struct PeerConnRef<'a> {
-    conn: &'a Arc<AsyncConnection>,
+    inner: PeerConnRefInner<'a>,
     node_id: NodeId,
 }
 
 impl<'a> std::fmt::Debug for PeerConnRef<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PeerConn({}; {})", self.node_id.0, self.conn.trace_id())
+        write!(f, "PeerConn({}; {:?})", self.node_id.0, self.inner)
     }
 }
 
 impl<'a> PeerConnRef<'a> {
     pub fn from_quic(conn: &'a Arc<AsyncConnection>, node_id: NodeId) -> Self {
-        PeerConnRef { conn, node_id }
+        PeerConnRef { inner: PeerConnRefInner::Quic(conn), node_id }
+    }
+
+    pub fn from_circuit(conn: &'a circuit::Connection, node_id: NodeId) -> Self {
+        PeerConnRef { inner: PeerConnRefInner::Circuit(conn), node_id }
     }
 
     pub fn into_peer_conn(&self) -> PeerConn {
-        PeerConn { conn: self.conn.clone(), node_id: self.node_id }
+        PeerConn { inner: self.inner.into_owned(), node_id: self.node_id }
     }
 
     pub fn endpoint(&self) -> Endpoint {
-        self.conn.endpoint()
+        match &self.inner {
+            PeerConnRefInner::Quic(conn) => conn.endpoint(),
+            PeerConnRefInner::Circuit(conn) => {
+                if conn.is_client() {
+                    Endpoint::Client
+                } else {
+                    Endpoint::Server
+                }
+            }
+        }
     }
 
     pub fn peer_node_id(&self) -> NodeId {
         self.node_id
     }
 
-    pub fn alloc_uni(&self) -> FramedStreamWriter {
-        FramedStreamWriter::from_quic(self.conn.alloc_uni(), self.node_id)
+    pub async fn alloc_uni(&self) -> Result<FramedStreamWriter, Error> {
+        match &self.inner {
+            PeerConnRefInner::Quic(conn) => {
+                Ok(FramedStreamWriter::from_quic(conn.alloc_uni(), self.node_id))
+            }
+            PeerConnRefInner::Circuit(conn) => {
+                let (circuit_reader, writer) = circuit::stream::stream();
+                let (_reader, circuit_writer) = circuit::stream::stream();
+                let id = conn.alloc_stream(circuit_reader, circuit_writer).await?;
+                Ok(FramedStreamWriter::from_circuit(writer, id, (*conn).clone(), self.node_id))
+            }
+        }
     }
 
-    pub fn alloc_bidi(&self) -> (FramedStreamWriter, FramedStreamReader) {
-        let (w, r) = self.conn.alloc_bidi();
-        (
-            FramedStreamWriter::from_quic(w, self.node_id),
-            FramedStreamReader::from_quic(r, self.node_id),
-        )
+    pub async fn alloc_bidi(&self) -> Result<(FramedStreamWriter, FramedStreamReader), Error> {
+        match &self.inner {
+            PeerConnRefInner::Quic(conn) => {
+                let (w, r) = conn.alloc_bidi();
+                Ok((
+                    FramedStreamWriter::from_quic(w, self.node_id),
+                    FramedStreamReader::from_quic(r, self.node_id),
+                ))
+            }
+            PeerConnRefInner::Circuit(conn) => {
+                let (circuit_reader, writer) = circuit::stream::stream();
+                let (reader, circuit_writer) = circuit::stream::stream();
+                let id = conn.alloc_stream(circuit_reader, circuit_writer).await?;
+                Ok((
+                    FramedStreamWriter::from_circuit(writer, id, (*conn).clone(), self.node_id),
+                    FramedStreamReader::from_circuit(reader, (*conn).clone(), self.node_id),
+                ))
+            }
+        }
     }
 
-    pub fn bind_uni_id(&self, id: u64) -> FramedStreamReader {
-        FramedStreamReader::from_quic(self.conn.bind_uni_id(id), self.node_id)
+    pub async fn bind_uni_id(&self, id: u64) -> Result<FramedStreamReader, Error> {
+        match &self.inner {
+            PeerConnRefInner::Quic(conn) => {
+                Ok(FramedStreamReader::from_quic(conn.bind_uni_id(id), self.node_id))
+            }
+            PeerConnRefInner::Circuit(conn) => Ok(FramedStreamReader::from_circuit(
+                conn.bind_stream(id)
+                    .await
+                    .ok_or_else(|| format_err!("Stream id {} unavailable", id))?
+                    .0,
+                (*conn).clone(),
+                self.node_id,
+            )),
+        }
     }
 
-    pub fn bind_id(&self, id: u64) -> (FramedStreamWriter, FramedStreamReader) {
-        let (w, r) = self.conn.bind_id(id);
-        (
-            FramedStreamWriter::from_quic(w, self.node_id),
-            FramedStreamReader::from_quic(r, self.node_id),
-        )
+    pub async fn bind_id(
+        &self,
+        id: u64,
+    ) -> Result<(FramedStreamWriter, FramedStreamReader), Error> {
+        match &self.inner {
+            PeerConnRefInner::Quic(conn) => {
+                let (w, r) = conn.bind_id(id);
+                Ok((
+                    FramedStreamWriter::from_quic(w, self.node_id),
+                    FramedStreamReader::from_quic(r, self.node_id),
+                ))
+            }
+            PeerConnRefInner::Circuit(conn) => {
+                let (r, w) = conn
+                    .bind_stream(id)
+                    .await
+                    .ok_or_else(|| format_err!("Stream id {} unavailable", id))?;
+                Ok((
+                    FramedStreamWriter::from_circuit(w, id, (*conn).clone(), self.node_id),
+                    FramedStreamReader::from_circuit(r, (*conn).clone(), self.node_id),
+                ))
+            }
+        }
     }
 }
 
@@ -392,7 +524,11 @@ async fn check_connectivity(router: Weak<Router>, conn: PeerConn) -> Result<(), 
                 sender_and_current_link.as_ref().map(|s_and_l| s_and_l.1.debug_id())
             );
             sender_and_current_link = Some((
-                Task::spawn(peer_to_link(conn.quic_conn(), conn.node_id(), new_link.clone())),
+                Task::spawn(peer_to_link(
+                    conn.quic_conn().expect("Should not run link updates for circuit connection!"),
+                    conn.node_id(),
+                    new_link.clone(),
+                )),
                 new_link,
             ));
         }
@@ -595,7 +731,7 @@ impl Peer {
         &self,
         transfer_key: TransferKey,
     ) -> Option<(FramedStreamWriter, FramedStreamReader)> {
-        let io = self.peer_conn_ref().alloc_bidi();
+        let io = self.peer_conn_ref().alloc_bidi().await.ok()?;
         let (tx, rx) = oneshot::channel();
         self.commands
             .as_ref()
@@ -619,9 +755,9 @@ impl Peer {
             destination: Some(self.node_id().into()),
             is_client: Some(self.endpoint == Endpoint::Client),
             is_established: Some(self.conn.is_established().await),
-            received_packets: Some(stats.recv as u64),
-            sent_packets: Some(stats.sent as u64),
-            lost_packets: Some(stats.lost as u64),
+            received_packets: stats.as_ref().map(|stats| stats.recv as u64),
+            sent_packets: stats.as_ref().map(|stats| stats.sent as u64),
+            lost_packets: stats.as_ref().map(|stats| stats.lost as u64),
             messages_sent: Some(self.channel_proxy_stats.sent_messages()),
             bytes_sent: Some(self.channel_proxy_stats.sent_bytes()),
             connect_to_service_sends: Some(self.conn_stats.connect_to_service.sent_messages()),
@@ -640,10 +776,10 @@ impl Peer {
             update_link_status_ack_send_bytes: Some(
                 self.conn_stats.update_link_status_ack.sent_bytes(),
             ),
-            round_trip_time_microseconds: Some(
-                stats.rtt.as_micros().try_into().unwrap_or(std::u64::MAX),
-            ),
-            congestion_window_bytes: Some(stats.cwnd as u64),
+            round_trip_time_microseconds: stats
+                .as_ref()
+                .map(|stats| stats.rtt.as_micros().try_into().unwrap_or(std::u64::MAX)),
+            congestion_window_bytes: stats.as_ref().map(|stats| stats.cwnd as u64),
             ..PeerConnectionDiagnosticInfo::EMPTY
         }
     }
@@ -1020,7 +1156,11 @@ async fn server_conn_stream(
                         stream_id: StreamId { id: stream_id },
                         transfer_key,
                     }) => {
-                        let (tx, rx) = conn_stream_writer.conn().bind_id(stream_id);
+                        let (tx, rx) = conn_stream_writer
+                            .conn()
+                            .bind_id(stream_id)
+                            .await
+                            .map_err(RunnerError::ServiceError)?;
                         router
                             .post_transfer(transfer_key, FoundTransfer::Remote(tx, rx))
                             .map_err(RunnerError::ServiceError)

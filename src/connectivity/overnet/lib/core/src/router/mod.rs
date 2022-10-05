@@ -741,7 +741,7 @@ impl Router {
             );
             // We allocate a drain stream to flush any messages we've buffered locally to the new
             // endpoint.
-            let drain_stream = conn.alloc_uni().into();
+            let drain_stream = conn.alloc_uni().await?.into();
             let (stream_ref_sender, stream_ref_receiver) = StreamRefSender::new();
             pair.remove_sender
                 .send(RemoveFromProxyTable::InitiateTransfer {
@@ -777,7 +777,7 @@ impl Router {
                     111 //std::backtrace::Backtrace::force_capture()
                 )
             }));
-            let (stream_writer, stream_reader) = conn.alloc_bidi();
+            let (stream_writer, stream_reader) = conn.alloc_bidi().await?;
             let stream_ref = StreamRef::Creating(StreamId { id: stream_writer.id() });
             Ok(match info.handle_type {
                 HandleType::Channel(rights) => {

@@ -53,7 +53,7 @@ where
         StreamRef::Creating(StreamId { id: stream_id }) => {
             let (app_chan, overnet_chan) = create_handles()?;
             let app_chan = app_chan.with_rights(rights)?;
-            let (stream_writer, stream_reader) = conn.bind_id(stream_id);
+            let (stream_writer, stream_reader) = conn.bind_id(stream_id).await?;
             let overnet_chan = overnet_chan.into_proxied()?;
             (
                 app_chan.into_handle(),
@@ -73,7 +73,8 @@ where
         }) => {
             let (app_chan, overnet_chan) = create_handles()?;
             let app_chan = app_chan.with_rights(rights)?;
-            let initial_stream_reader: FramedStreamReader = conn.bind_uni_id(stream_id).into();
+            let initial_stream_reader: FramedStreamReader =
+                conn.bind_uni_id(stream_id).await?.into();
             let opened_transfer = Weak::upgrade(&router)
                 .ok_or_else(|| format_err!("No router to handle draining stream ref"))?
                 .open_transfer(
@@ -108,7 +109,8 @@ where
             stream_id: StreamId { id: stream_id },
             transfer_key,
         }) => {
-            let initial_stream_reader: FramedStreamReader = conn.bind_uni_id(stream_id).into();
+            let initial_stream_reader: FramedStreamReader =
+                conn.bind_uni_id(stream_id).await?.into();
             let found_transfer = Weak::upgrade(&router)
                 .ok_or_else(|| format_err!("No router to handle draining stream ref"))?
                 .find_transfer(transfer_key)
