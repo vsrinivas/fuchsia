@@ -2036,6 +2036,8 @@ double DpDisplay::GetBacklightBrightness() {
 
 bool DpDisplay::HandleHotplug(bool long_pulse) {
   if (!long_pulse) {
+    // On short pulse, query the panel and then proceed as required by panel
+
     dpcd::SinkCount sink_count;
     if (!DpcdRead(dpcd::DPCD_SINK_COUNT, sink_count.reg_value_ptr(), 1)) {
       zxlogf(WARNING, "Failed to read sink count on hotplug");
@@ -2066,6 +2068,29 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
 
     return DoLinkTraining();
   }
+
+  // Handle long pulse.
+  //
+  // On Tiger Lake Type C ports, if the hotplug interrupt has a long pulse,
+  // it should read DFlex DP Scratch Pad register to find the port live state,
+  // and connect / disconnect the display accordingly.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev 2.0, Page 203, "HPD Interrupt
+  //             Sequence"
+  if (is_tgl(controller()->device_id()) && ddi() >= tgl_registers::DDI_TC_1 &&
+      ddi() <= tgl_registers::DDI_TC_6) {
+    auto dp_sp = tgl_registers::DynamicFlexIoScratchPad::GetForDdi(ddi()).ReadFrom(mmio_space());
+    auto type_c_live_state = dp_sp.type_c_live_state(ddi());
+
+    // The device has been already connected when `HandleHotplug` is called.
+    // If live state is non-zero, keep the existing connection; otherwise
+    // return false to disconnect the display.
+    return type_c_live_state !=
+           tgl_registers::DynamicFlexIoScratchPad::TypeCLiveState::kNoHotplugDisplay;
+  }
+
+  // On other platforms, a long pulse indicates that the hotplug status is
+  // toggled. So we disconnect the existing display.
   return false;
 }
 
