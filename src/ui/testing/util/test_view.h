@@ -68,8 +68,8 @@ class TestView : public fuchsia::ui::app::ViewProvider, public component_testing
   void DrawContent();
 
   // Helper method to draw a rectangle.
-  // (x, y, z) specifies the translation.
-  // (width, height) specifies the dimensions.
+  // (x, y, z) specifies the top-left corner of the rect.
+  // (width, height) specifies the rect's dimensions.
   // (red, green, blue, alpha) specifies the color.
   virtual void DrawRectangle(int32_t x, int32_t y, int32_t z, uint32_t width, uint32_t height,
                              uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha) = 0;

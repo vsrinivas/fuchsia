@@ -51,10 +51,8 @@ void TestView::DrawCoordinateGrid() {
   for (uint8_t i = 0; i < 2; i++) {
     for (uint8_t j = 0; j < 2; j++) {
       // Compute width and height as integers.
-      auto rect_width = ((2 * i + 1) * pane_width) / 2;
-      auto rect_height = ((2 * j + 1) * pane_height) / 2;
-      DrawRectangle(/* x = */ rect_width,
-                    /* y = */ rect_height,
+      DrawRectangle(/* x = */ i * pane_width,
+                    /* y = */ j * pane_height,
                     /* z = */ -20,
                     /* width = */ pane_width,
                     /* height = */ pane_height,
@@ -65,8 +63,8 @@ void TestView::DrawCoordinateGrid() {
     }
   }
 
-  DrawRectangle(/* x = */ view_width / 2,
-                /* y = */ view_height / 2,
+  DrawRectangle(/* x = */ 3 * view_width / 8,
+                /* y = */ 3 * view_height / 8,
                 /* z = */ -40,
                 /* width = */ view_width / 4,
                 /* height = */ view_height / 4,

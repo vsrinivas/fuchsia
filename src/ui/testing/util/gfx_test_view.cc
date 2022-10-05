@@ -79,7 +79,12 @@ void GfxTestView::DrawRectangle(int32_t x, int32_t y, int32_t z, uint32_t width,
   scenic::ShapeNode pane_node(session_.get());
   pane_node.SetShape(pane_shape);
   pane_node.SetMaterial(pane_material);
-  pane_node.SetTranslation(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
+
+  // On gfx, we translate the location of the center of the rect.
+  auto translation_x = x + (width / 2);
+  auto translation_y = y + (height / 2);
+  pane_node.SetTranslation(static_cast<float>(translation_x), static_cast<float>(translation_y),
+                           static_cast<float>(z));
   root_node_->AddChild(pane_node);
 }
 
