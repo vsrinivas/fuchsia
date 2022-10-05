@@ -1,9 +1,0 @@
-#!/bin/bash
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-#### CATEGORY=Run, inspect and debug
-### start component graph server to map component topology
-
-echo "The fx component-graph command has been moved to fx scrutiny."

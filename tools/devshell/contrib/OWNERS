@@ -4,7 +4,6 @@ per-file bindc = file: /src/devices/OWNERS
 per-file check-licenses=jcecil@google.com
 per-file clang-tidy=haowei@google.com,phosek@google.com
 per-file compdb=fmil@google.com
-per-file component-surveyor=geb@google.com
 per-file cpu-stats=crjohns@google.com
 per-file dart-remote-test=zra@google.com
 per-file disk-extract-serial-log=csuter@google.com
