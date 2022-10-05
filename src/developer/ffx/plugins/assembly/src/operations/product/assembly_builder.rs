@@ -1143,22 +1143,16 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // As packages from different bundles have different paths,
-              // this isn't currently working
     fn test_builder_catches_dupe_base_pkgs_across_aibs() {
         test_duplicates_across_aibs_impl(|a| &mut a.image_assembly.base);
     }
 
     #[test]
-    #[ignore] // As packages from different bundles have different paths,
-              // this isn't currently working
     fn test_builder_catches_dupe_cache_pkgs_across_aibs() {
         test_duplicates_across_aibs_impl(|a| &mut a.image_assembly.cache);
     }
 
     #[test]
-    #[ignore] // As packages from different bundles have different paths,
-              // this isn't currently working
     fn test_builder_catches_dupe_system_pkgs_across_aibs() {
         test_duplicates_across_aibs_impl(|a| &mut a.image_assembly.system);
     }
