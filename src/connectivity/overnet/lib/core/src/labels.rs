@@ -14,6 +14,18 @@ pub use quic::Endpoint;
 #[derive(PartialEq, PartialOrd, Eq, Ord, Clone, Copy, Hash, Debug)]
 pub struct NodeId(pub u64);
 
+impl NodeId {
+    /// Makes a string node ID for use with the circuit protocol.
+    pub fn circuit_string(&self) -> String {
+        format!("{:x}", self.0)
+    }
+
+    /// Turns a string node id from the circuit protocol into a `NodeId`
+    pub fn from_circuit_string(id: &str) -> Result<Self, ()> {
+        Ok(NodeId(u64::from_str_radix(id, 16).map_err(|_| ())?))
+    }
+}
+
 impl From<u64> for NodeId {
     fn from(id: u64) -> Self {
         NodeId(id)

@@ -108,7 +108,6 @@ impl PeerConn {
         PeerConn { inner: PeerConnInner::Quic(conn), node_id }
     }
 
-    #[allow(unused)]
     pub fn from_circuit(conn: circuit::Connection, node_id: NodeId) -> Self {
         PeerConn { inner: PeerConnInner::Circuit(conn), node_id }
     }
@@ -550,6 +549,85 @@ impl Peer {
 
     /// Construct a new client peer - spawns tasks to handle making control stream requests, and
     /// publishing link metadata
+    #[allow(unused)]
+    pub(crate) fn new_circuit_client(
+        conn: circuit::Connection,
+        conn_stream_writer: circuit::stream::Writer,
+        conn_stream_reader: circuit::stream::Reader,
+        service_observer: Observer<Vec<String>>,
+        router: &Arc<Router>,
+    ) -> Result<Arc<Self>, Error> {
+        let conn_id = ConnectionId::new();
+        let node_id =
+            NodeId::from_circuit_string(conn.from()).map_err(|_| format_err!("Invalid node ID"))?;
+        tracing::trace!(node_id = router.node_id().0, peer = node_id.0, ?conn_id, "NEW CLIENT",);
+        let (command_sender, command_receiver) = mpsc::channel(1);
+        let conn_stats = Arc::new(PeerConnStats::default());
+        Ok(Arc::new(Self {
+            endpoint: Endpoint::Client,
+            conn_id,
+            commands: Some(command_sender.clone()),
+            conn_stats: conn_stats.clone(),
+            channel_proxy_stats: Arc::new(MessageStats::default()),
+            shutdown: AtomicBool::new(false),
+            _task: Task::spawn(Peer::runner(
+                Endpoint::Client,
+                Arc::downgrade(router),
+                conn_id,
+                client_conn_stream(
+                    Arc::downgrade(router),
+                    node_id,
+                    RawConnection::Circuit(conn_stream_writer, conn_stream_reader, conn.clone()),
+                    command_receiver,
+                    service_observer,
+                    conn_stats,
+                ),
+            )),
+            conn: PeerConn::from_circuit(conn, node_id),
+        }))
+    }
+
+    /// Construct a new server peer - spawns tasks to handle responding to control stream requests
+    #[allow(unused)]
+    pub(crate) async fn new_circuit_server(
+        conn: circuit::Connection,
+        router: &Arc<Router>,
+    ) -> Result<Arc<Self>, Error> {
+        let conn_id = ConnectionId::new();
+        let node_id =
+            NodeId::from_circuit_string(conn.from()).map_err(|_| format_err!("Invalid node ID"))?;
+        tracing::trace!(node_id = router.node_id().0, peer = node_id.0, ?conn_id, "NEW SERVER",);
+        let (conn_stream_reader, conn_stream_writer) = conn
+            .bind_stream(0)
+            .await
+            .ok_or_else(|| format_err!("Could not establish connection"))?;
+        let conn_stats = Arc::new(PeerConnStats::default());
+        let channel_proxy_stats = Arc::new(MessageStats::default());
+        Ok(Arc::new(Self {
+            endpoint: Endpoint::Server,
+            conn_id,
+            commands: None,
+            conn_stats: conn_stats.clone(),
+            channel_proxy_stats: channel_proxy_stats.clone(),
+            shutdown: AtomicBool::new(false),
+            _task: Task::spawn(Peer::runner(
+                Endpoint::Server,
+                Arc::downgrade(router),
+                conn_id,
+                server_conn_stream(
+                    node_id,
+                    RawConnection::Circuit(conn_stream_writer, conn_stream_reader, conn.clone()),
+                    Arc::downgrade(router),
+                    conn_stats,
+                    channel_proxy_stats,
+                ),
+            )),
+            conn: PeerConn::from_circuit(conn, node_id),
+        }))
+    }
+
+    /// Construct a new client peer - spawns tasks to handle making control stream requests, and
+    /// publishing link metadata
     pub(crate) fn new_client(
         node_id: NodeId,
         local_node_id: NodeId,
@@ -588,8 +666,7 @@ impl Peer {
                     client_conn_stream(
                         Arc::downgrade(router),
                         node_id,
-                        conn_stream_writer,
-                        conn_stream_reader,
+                        RawConnection::Quic(conn_stream_writer, conn_stream_reader),
                         command_receiver,
                         service_observer,
                         conn_stats,
@@ -636,8 +713,7 @@ impl Peer {
                     ),
                     server_conn_stream(
                         node_id,
-                        conn_stream_writer,
-                        conn_stream_reader,
+                        RawConnection::Quic(conn_stream_writer, conn_stream_reader),
                         Arc::downgrade(router),
                         conn_stats,
                         channel_proxy_stats,
@@ -785,13 +861,17 @@ impl Peer {
     }
 }
 
+enum RawConnection {
+    Quic(AsyncQuicStreamWriter, AsyncQuicStreamReader),
+    Circuit(circuit::stream::Writer, circuit::stream::Reader, circuit::Connection),
+}
+
 const QUIC_CONNECTION_TIMEOUT: Duration = Duration::from_secs(60);
 
 async fn client_handshake(
     my_node_id: NodeId,
     peer_node_id: NodeId,
-    mut conn_stream_writer: AsyncQuicStreamWriter,
-    mut conn_stream_reader: AsyncQuicStreamReader,
+    mut conn: RawConnection,
     conn_stats: Arc<PeerConnStats>,
 ) -> Result<(FramedStreamWriter, FramedStreamReader), Error> {
     tracing::trace!(
@@ -805,17 +885,65 @@ async fn client_handshake(
         clipeer = ?peer_node_id,
         "send fidl header"
     );
-    conn_stream_writer
-        .send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false)
-        .on_timeout(QUIC_CONNECTION_TIMEOUT, || {
-            Err(format_err!("timeout initializing quic connection"))
-        })
-        .await?;
+    match &mut conn {
+        RawConnection::Quic(writer, _) => {
+            writer
+                .send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false)
+                .on_timeout(QUIC_CONNECTION_TIMEOUT, || {
+                    Err(format_err!("timeout initializing quic connection"))
+                })
+                .await?
+        }
+        RawConnection::Circuit(writer, _, _) => {
+            let msg = [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL];
+            writer.write(msg.len(), |buf| {
+                buf[..msg.len()].copy_from_slice(&msg);
+                Ok(msg.len())
+            })?;
+        }
+    };
     async move {
         tracing::trace!(my_node_id = my_node_id.0, clipeer = peer_node_id.0, "send config request");
         // Send config request
-        let mut conn_stream_writer =
-            FramedStreamWriter::from_quic(conn_stream_writer, peer_node_id);
+        let (mut conn_stream_writer, conn_stream_reader_fut) = match conn {
+            RawConnection::Quic(writer, mut reader) => {
+                (
+                    FramedStreamWriter::from_quic(writer, peer_node_id),
+                    async move {
+                        // Receive FIDL header
+                        tracing::trace!(
+                            my_node_id = my_node_id.0,
+                            clipeer = peer_node_id.0,
+                            "read fidl header"
+                        );
+                        let mut fidl_hdr = [0u8; 4];
+                        reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
+                        Result::<_, Error>::Ok(FramedStreamReader::from_quic(reader, peer_node_id))
+                    }
+                    .boxed(),
+                )
+            }
+            RawConnection::Circuit(writer, reader, conn) => {
+                (
+                    FramedStreamWriter::from_circuit(writer, 0, conn.clone(), peer_node_id),
+                    async move {
+                        // Receive FIDL header
+                        tracing::trace!(
+                            my_node_id = my_node_id.0,
+                            clipeer = peer_node_id.0,
+                            "read fidl header"
+                        );
+                        reader.read(4, |_| Ok(((), 4))).await?;
+                        Result::<_, Error>::Ok(FramedStreamReader::from_circuit(
+                            reader,
+                            conn,
+                            peer_node_id,
+                        ))
+                    }
+                    .boxed(),
+                )
+            }
+        };
         let coding_context = coding::DEFAULT_CONTEXT;
         conn_stream_writer
             .send(
@@ -825,14 +953,9 @@ async fn client_handshake(
                 &conn_stats.config,
             )
             .await?;
-        // Receive FIDL header
-        tracing::trace!(my_node_id = my_node_id.0, clipeer = peer_node_id.0, "read fidl header");
-        let mut fidl_hdr = [0u8; 4];
-        conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
         // Await config response
         tracing::trace!(my_node_id = my_node_id.0, clipeer = peer_node_id.0, "read config");
-        let mut conn_stream_reader =
-            FramedStreamReader::from_quic(conn_stream_reader, peer_node_id);
+        let mut conn_stream_reader = conn_stream_reader_fut.await?;
         let _ = Config::from_response(
             if let (FrameType::Data(coding_context), mut bytes, false) =
                 conn_stream_reader.next().await?
@@ -877,8 +1000,7 @@ impl Drop for TrackClientConnection {
 async fn client_conn_stream(
     router: Weak<Router>,
     peer_node_id: NodeId,
-    conn_stream_writer: AsyncQuicStreamWriter,
-    conn_stream_reader: AsyncQuicStreamReader,
+    conn: RawConnection,
     mut commands: mpsc::Receiver<ClientPeerCommand>,
     mut services: Observer<Vec<String>>,
     conn_stats: Arc<PeerConnStats>,
@@ -886,15 +1008,10 @@ async fn client_conn_stream(
     let get_router = move || Weak::upgrade(&router).ok_or_else(|| RunnerError::RouterGone);
     let my_node_id = get_router()?.node_id();
 
-    let (conn_stream_writer, mut conn_stream_reader) = client_handshake(
-        my_node_id,
-        peer_node_id,
-        conn_stream_writer,
-        conn_stream_reader,
-        conn_stats.clone(),
-    )
-    .map_err(RunnerError::HandshakeError)
-    .await?;
+    let (conn_stream_writer, mut conn_stream_reader) =
+        client_handshake(my_node_id, peer_node_id, conn, conn_stats.clone())
+            .map_err(RunnerError::HandshakeError)
+            .await?;
 
     let _track_connection = TrackClientConnection::new(&get_router()?, peer_node_id).await;
 
@@ -1044,19 +1161,46 @@ async fn client_conn_handle_incoming_frame(
 async fn server_handshake(
     my_node_id: NodeId,
     node_id: NodeId,
-    mut conn_stream_writer: AsyncQuicStreamWriter,
-    mut conn_stream_reader: AsyncQuicStreamReader,
+    conn: RawConnection,
     conn_stats: Arc<PeerConnStats>,
 ) -> Result<(FramedStreamWriter, FramedStreamReader), Error> {
     // Receive FIDL header
     tracing::trace!(my_node_id = my_node_id.0, svrpeer = node_id.0, "read fidl header");
-    let mut fidl_hdr = [0u8; 4];
-    conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
-    let mut conn_stream_reader = FramedStreamReader::from_quic(conn_stream_reader, node_id);
-    // Send FIDL header
-    tracing::trace!(my_node_id = my_node_id.0, svrpeer = node_id.0, "send fidl header");
-    conn_stream_writer.send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false).await?;
-    let mut conn_stream_writer = FramedStreamWriter::from_quic(conn_stream_writer, node_id);
+    let (mut conn_stream_reader, mut conn_stream_writer) = match conn {
+        RawConnection::Quic(mut writer, mut reader) => {
+            let mut fidl_hdr = [0u8; 4];
+            reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
+            // Send FIDL header
+            tracing::trace!(
+                my_node_id = my_node_id.0,
+                svrpeer = ?node_id,
+                "send fidl header"
+            );
+            writer.send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false).await?;
+            (
+                FramedStreamReader::from_quic(reader, node_id),
+                FramedStreamWriter::from_quic(writer, node_id),
+            )
+        }
+        RawConnection::Circuit(writer, reader, conn) => {
+            reader.read(4, |_| Ok(((), 4))).await.context("reading FIDL header")?;
+            // Send FIDL header
+            tracing::trace!(
+                my_node_id = my_node_id.0,
+                svrpeer = ?node_id,
+                "send fidl header"
+            );
+            let handshake = [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL];
+            writer.write(handshake.len(), |buf| {
+                buf[..handshake.len()].copy_from_slice(&handshake);
+                Ok(handshake.len())
+            })?;
+            (
+                FramedStreamReader::from_circuit(reader, conn.clone(), node_id),
+                FramedStreamWriter::from_circuit(writer, 0, conn.clone(), node_id),
+            )
+        }
+    };
     // Await config request
     tracing::trace!(my_node_id = my_node_id.0, svrpeer = node_id.0, "read config");
     let (_, mut response) = Config::negotiate(
@@ -1084,15 +1228,14 @@ async fn server_handshake(
 
 async fn server_conn_stream(
     node_id: NodeId,
-    conn_stream_writer: AsyncQuicStreamWriter,
-    conn_stream_reader: AsyncQuicStreamReader,
+    conn: RawConnection,
     router: Weak<Router>,
     conn_stats: Arc<PeerConnStats>,
     channel_proxy_stats: Arc<MessageStats>,
 ) -> Result<(), RunnerError> {
     let my_node_id = Weak::upgrade(&router).ok_or_else(|| RunnerError::RouterGone)?.node_id();
     let (conn_stream_writer, mut conn_stream_reader) =
-        server_handshake(my_node_id, node_id, conn_stream_writer, conn_stream_reader, conn_stats)
+        server_handshake(my_node_id, node_id, conn, conn_stats)
             .map_err(RunnerError::HandshakeError)
             .await?;
 
