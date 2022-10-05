@@ -23,7 +23,7 @@ pub trait OrCancel<F: Future, C: Future> {
 
 /// An error indicating that a future was cancelled.
 #[derive(PartialEq, Debug)]
-pub struct Cancelled;
+pub struct Cancelled<T>(pub T);
 
 impl<C: Future, F: Future> OrCancel<F, C> for F {
     fn or_cancelled(self, cancel_fut: C) -> OrCancelledFuture<F, C> {
@@ -41,11 +41,11 @@ pub struct OrCancelledFuture<F: Future, C: Future> {
 }
 
 impl<F: Future, C: Future> Future for OrCancelledFuture<F, C> {
-    type Output = Result<<F as Future>::Output, Cancelled>;
+    type Output = Result<<F as Future>::Output, Cancelled<<C as Future>::Output>>;
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
         match this.cancel_fut.poll(cx) {
-            Poll::Ready(_) => return Poll::Ready(Err(Cancelled)),
+            Poll::Ready(ready) => return Poll::Ready(Err(Cancelled(ready))),
             Poll::Pending => (),
         }
         match this.fut.poll(cx) {

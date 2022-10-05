@@ -10,13 +10,13 @@ pub struct TestParams {
     /// Test URL.
     pub test_url: String,
 
-    /// |timeout_seconds|: Test timeout. Must be more than zero.
+    /// Test timeout. Must be more than zero.
     pub timeout_seconds: Option<std::num::NonZeroU32>,
 
     /// Filter tests based on glob pattern(s).
     pub test_filters: Option<Vec<String>>,
 
-    // Run disabled tests.
+    /// Run disabled tests.
     pub also_run_disabled_tests: bool,
 
     /// Test concurrency count.
@@ -39,6 +39,9 @@ pub struct TestParams {
 pub struct RunParams {
     /// The behavior of the test run if a suite times out.
     pub timeout_behavior: TimeoutBehavior,
+
+    /// Time in seconds to wait for events to drain after timeout.
+    pub timeout_grace_seconds: u32,
 
     /// If set, stop executing tests after this number of normal test failures occur.
     pub stop_after_failures: Option<std::num::NonZeroU32>,

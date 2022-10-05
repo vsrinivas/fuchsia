@@ -18,7 +18,7 @@ use {
     fidl::Peered,
     fidl_fuchsia_io as fio, fidl_fuchsia_test_manager as ftest_manager, fuchsia_async as fasync,
     futures::{
-        future::{join_all, BoxFuture, Future, FutureExt, TryFutureExt},
+        future::{join_all, BoxFuture, FutureExt, TryFutureExt},
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
     },
     std::{borrow::Borrow, collections::VecDeque, io::Write, path::PathBuf},
@@ -32,18 +32,16 @@ use {
 /// This method is an async method returning a Future so that the lifetime of |reporter| is not
 /// tied to the lifetime of the Future.
 /// The returned Future resolves to LogCollectionOutcome when logs are processed.
-pub(crate) async fn drain_artifact<'a, E, T, F>(
+pub(crate) async fn drain_artifact<'a, E, T>(
     reporter: &'a EntityReporter<E, T>,
     artifact: ftest_manager::Artifact,
     log_opts: diagnostics::LogCollectionOptions,
-    log_timeout: diagnostics::LogTimeoutOptions<F>,
 ) -> Result<
     BoxFuture<'static, Result<Option<LogCollectionOutcome>, anyhow::Error>>,
     RunTestSuiteError,
 >
 where
     T: Borrow<DynReporter>,
-    F: Future + Send + 'static,
 {
     match artifact {
         ftest_manager::Artifact::Stdout(socket) => {
@@ -60,7 +58,6 @@ where
                 test_diagnostics::LogStream::from_syslog(syslog)?,
                 syslog_artifact,
                 log_opts,
-                log_timeout,
             )
             .map_ok(Some)
             .named("syslog")

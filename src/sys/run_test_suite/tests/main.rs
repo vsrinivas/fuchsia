@@ -75,6 +75,7 @@ fn new_test_params(test_url: &str) -> TestParams {
 fn new_run_params() -> run_test_suite_lib::RunParams {
     run_test_suite_lib::RunParams {
         timeout_behavior: run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
+        timeout_grace_seconds: 0,
         stop_after_failures: None,
         experimental_parallel_execution: None,
         accumulate_debug_data: false,
@@ -1078,16 +1079,11 @@ async fn test_timeout(reporter: TestMuxMuxReporter, output: TestOutputView, _: t
     test_params.timeout_seconds = TIMEOUT_SECONDS;
     let outcome =
         run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
-    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm'
-[RUNNING]	long_running
-[TIMED_OUT]	long_running
-
-Failed tests: long_running
-0 out of 1 tests passed...
-fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm completed with result: TIMED_OUT
-";
-    assert_output!(output.lock().as_slice(), expected_output);
     assert_eq!(outcome, Outcome::Timedout);
+    let expected_output =
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm completed with result: TIMED_OUT";
+    let output_lock = output.lock();
+    assert!(std::str::from_utf8(output_lock.as_slice()).unwrap().contains(expected_output));
 }
 
 #[fixture::fixture(run_with_reporter)]
@@ -1115,15 +1111,10 @@ async fn test_timeout_multiple_times(
     .await;
     assert_eq!(outcome, Outcome::Timedout);
 
-    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm'
-[RUNNING]	long_running
-[TIMED_OUT]	long_running
-
-Failed tests: long_running
-0 out of 1 tests passed...
-fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm completed with result: TIMED_OUT
-";
-    assert_output!(output.lock().as_ref(), expected_output);
+    let expected_output =
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm completed with result: TIMED_OUT";
+    let output_lock = output.lock();
+    assert!(std::str::from_utf8(output_lock.as_slice()).unwrap().contains(expected_output));
 
     let run_result = directory::TestRunResult::from_dir(output_dir.path()).expect("parse dir");
     assert_eq!(
@@ -1137,16 +1128,12 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_tes
                 == directory::MaybeUnknown::Known(directory::Outcome::Timedout)
         });
 
+    // The test could have timed out at any point in test execution (for example, either 0
+    // or 1 case found). Here we just check that 1 timed out without checking specifics.
     assert_eq!(timed_out_suites.len(), 1);
-    directory::testing::assert_suite_result(
-        output_dir.path(),
-        &timed_out_suites[0],
-        &ExpectedSuite::new(
-            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
-            directory::Outcome::Timedout,
-        )
-        .with_tag(TestTag::new("internal", "true"))
-        .with_case(ExpectedTestCase::new("long_running", directory::Outcome::Timedout)),
+    assert_eq!(
+        timed_out_suites[0].common.deref().name,
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm"
     );
 
     assert_eq!(not_started_suites.len(), 9);
@@ -1191,6 +1178,7 @@ async fn test_continue_on_timeout(
         test_params,
         run_test_suite_lib::RunParams {
             timeout_behavior: run_test_suite_lib::TimeoutBehavior::Continue,
+            timeout_grace_seconds: 0,
             stop_after_failures: None,
             experimental_parallel_execution: None,
             accumulate_debug_data: false,
@@ -1215,16 +1203,12 @@ async fn test_continue_on_timeout(
                 == directory::MaybeUnknown::Known(directory::Outcome::Timedout)
         });
 
+    // The test could have timed out at any point in test execution (for example, either 0
+    // or 1 case found). Here we just check that 1 timed out without checking specifics.
     assert_eq!(timed_out_suites.len(), 1);
-    directory::testing::assert_suite_result(
-        output_dir.path(),
-        &timed_out_suites[0],
-        &ExpectedSuite::new(
-            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
-            directory::Outcome::Timedout,
-        )
-        .with_tag(TestTag::new("internal", "true"))
-        .with_case(ExpectedTestCase::new("long_running", directory::Outcome::Timedout)),
+    assert_eq!(
+        timed_out_suites[0].common.deref().name,
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm"
     );
 
     assert_eq!(passing_suites.len(), 10);
@@ -1242,6 +1226,13 @@ async fn test_continue_on_timeout(
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)),
         );
     }
+
+    assert_eq!(
+        run_result.common.deref().outcome,
+        directory::MaybeUnknown::Known(directory::Outcome::Timedout)
+    );
+
+    assert_eq!(outcome, Outcome::Timedout);
 }
 
 #[fixture::fixture(run_with_reporter)]
@@ -1260,6 +1251,7 @@ async fn test_stop_after_n_failures(
                 ); 10],
                 run_test_suite_lib::RunParams {
                     timeout_behavior: run_test_suite_lib::TimeoutBehavior::Continue,
+                    timeout_grace_seconds: 0,
                     stop_after_failures: Some(5u32.try_into().unwrap()),
                     experimental_parallel_execution: None,
                     accumulate_debug_data: false,

@@ -62,6 +62,7 @@ pub async fn conformance(
                     test_params,
                     run_test_suite_lib::RunParams {
                         timeout_behavior: run_test_suite_lib::TimeoutBehavior::Continue,
+                        timeout_grace_seconds: 0,
                         stop_after_failures: None,
                         experimental_parallel_execution: None,
                         accumulate_debug_data: false,

@@ -153,6 +153,8 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             false => run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
             true => run_test_suite_lib::TimeoutBehavior::Continue,
         },
+        timeout_grace_seconds: ffx_config::get::<u64, _>("test.timeout_grace_seconds").await?
+            as u32,
         stop_after_failures: match cmd.stop_after_failures.map(std::num::NonZeroU32::new) {
             None => None,
             Some(None) => ffx_bail!("--stop-after-failures should be greater than zero."),

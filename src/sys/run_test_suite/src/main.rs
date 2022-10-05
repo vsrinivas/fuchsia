@@ -136,6 +136,7 @@ async fn main() {
             false => run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
             true => run_test_suite_lib::TimeoutBehavior::Continue,
         },
+        timeout_grace_seconds: 0,
         stop_after_failures: match stop_after_failures.map(std::num::NonZeroU32::new) {
             None => None,
             Some(None) => {

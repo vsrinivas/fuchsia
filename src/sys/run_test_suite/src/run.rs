@@ -7,30 +7,38 @@ use {
         artifacts,
         cancel::{Cancelled, NamedFutureExt, OrCancel},
         diagnostics::{self, LogDisplayConfiguration},
-        outcome::{Outcome, RunTestSuiteError, UnexpectedEventError},
+        outcome::{Lifecycle, Outcome, RunTestSuiteError, UnexpectedEventError},
         output::{self, ArtifactType, CaseId, RunReporter, SuiteId, SuiteReporter, Timestamp},
         params::{RunParams, TestParams, TimeoutBehavior},
         stream_util::StreamUtil,
         trace::duration,
     },
-    async_utils::event,
     diagnostics_data::Severity,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
+    futures::future::Either,
     futures::{prelude::*, stream::FuturesUnordered, StreamExt},
-    std::collections::{HashMap, HashSet},
-    std::convert::TryInto,
+    std::collections::HashMap,
     std::io::Write,
     std::path::PathBuf,
-    std::time::Duration,
+    std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     tracing::{error, info, warn},
 };
 
-/// Timeout for draining logs.
-const LOG_TIMEOUT_DURATION: Duration = Duration::from_secs(10);
+/// Struct used by |run_suite_and_collect_logs| to track the state of test cases and suites.
+struct CollectedEntityState<R> {
+    reporter: R,
+    name: String,
+    lifecycle: Lifecycle,
+    artifact_tasks:
+        Vec<fasync::Task<Result<Option<diagnostics::LogCollectionOutcome>, anyhow::Error>>>,
+}
 
 /// Collects results and artifacts for a single suite.
 // TODO(satsukiu): There's two ways to return an error here:
@@ -38,29 +46,31 @@ const LOG_TIMEOUT_DURATION: Duration = Duration::from_secs(10);
 // * Ok(Outcome::Error(RunTestSuiteError))
 // We should consider how to consolidate these.
 async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
-    mut running_suite: RunningSuite,
+    running_suite: RunningSuite,
     suite_reporter: &SuiteReporter<'_>,
     log_opts: diagnostics::LogCollectionOptions,
     cancel_fut: F,
 ) -> Result<Outcome, RunTestSuiteError> {
     duration!("collect_suite");
-    let mut test_cases = HashMap::new();
-    let mut test_case_reporters = HashMap::new();
-    let mut test_cases_in_progress = HashSet::new();
-    let mut test_cases_timed_out = HashSet::new();
-    let mut test_cases_output = HashMap::new();
+
+    let RunningSuite { mut event_stream, stopper, timeout, timeout_grace, .. } = running_suite;
+
+    let mut test_cases: HashMap<u32, CollectedEntityState<_>> = HashMap::new();
+    let mut suite_state = CollectedEntityState {
+        reporter: suite_reporter,
+        name: "".to_string(),
+        lifecycle: Lifecycle::Found,
+        artifact_tasks: vec![],
+    };
     let mut suite_finish_timestamp = Timestamp::Unknown;
     let mut outcome = Outcome::Passed;
-    let mut successful_completion = false;
-    let mut cancelled = false;
-    let mut suite_tasks = vec![];
-    let suite_events_done_event = event::Event::new();
 
     let collect_results_fut = async {
-        while let Some(event_result) = running_suite.next_event().named("next_event").await {
+        while let Some(event_result) = event_stream.next().named("next_event").await {
             match event_result {
                 Err(e) => {
-                    suite_reporter
+                    suite_state
+                        .reporter
                         .stopped(&output::ReportedOutcome::Error, Timestamp::Unknown)
                         .await?;
                     return Err(e);
@@ -72,82 +82,129 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                             test_case_name,
                             identifier,
                         }) => {
-                            let case_reporter = suite_reporter
-                                .new_case(&test_case_name, &CaseId(identifier))
-                                .await?;
-                            test_cases.insert(identifier, test_case_name);
-                            test_case_reporters.insert(identifier, case_reporter);
-                        }
-                        ftest_manager::SuiteEventPayload::CaseStarted(CaseStarted {
-                            identifier,
-                        }) => {
-                            let test_case_name = test_cases
-                                .get(&identifier)
-                                .ok_or(UnexpectedEventError::CaseStartedButNotFound { identifier })?
-                                .clone();
-                            let reporter = test_case_reporters.get(&identifier).unwrap();
-                            // TODO(fxbug.dev/79712): Record per-case runtime once we have an
-                            // accurate way to measure it.
-                            reporter.started(Timestamp::Unknown).await?;
-                            if test_cases_in_progress.contains(&identifier) {
-                                return Err(UnexpectedEventError::CaseStartedTwice {
+                            if test_cases.contains_key(&identifier) {
+                                return Err(UnexpectedEventError::InvalidCaseEvent {
+                                    last_state: Lifecycle::Found,
+                                    next_state: Lifecycle::Found,
                                     test_case_name,
                                     identifier,
                                 }
                                 .into());
-                            };
-                            test_cases_in_progress.insert(identifier);
+                            }
+                            test_cases.insert(
+                                identifier,
+                                CollectedEntityState {
+                                    reporter: suite_reporter
+                                        .new_case(&test_case_name, &CaseId(identifier))
+                                        .await?,
+                                    name: test_case_name,
+                                    lifecycle: Lifecycle::Found,
+                                    artifact_tasks: vec![],
+                                },
+                            );
+                        }
+                        ftest_manager::SuiteEventPayload::CaseStarted(CaseStarted {
+                            identifier,
+                        }) => {
+                            let entry = test_cases.get_mut(&identifier).ok_or(
+                                UnexpectedEventError::CaseEventButNotFound {
+                                    next_state: Lifecycle::Started,
+                                    identifier,
+                                },
+                            )?;
+                            match &entry.lifecycle {
+                                Lifecycle::Found => {
+                                    // TODO(fxbug.dev/79712): Record per-case runtime once we have an
+                                    // accurate way to measure it.
+                                    entry.reporter.started(Timestamp::Unknown).await?;
+                                    entry.lifecycle = Lifecycle::Started;
+                                }
+                                other => {
+                                    return Err(UnexpectedEventError::InvalidCaseEvent {
+                                        last_state: *other,
+                                        next_state: Lifecycle::Started,
+                                        test_case_name: entry.name.clone(),
+                                        identifier,
+                                    }
+                                    .into());
+                                }
+                            }
                         }
                         ftest_manager::SuiteEventPayload::CaseArtifact(CaseArtifact {
                             identifier,
                             artifact,
                         }) => {
-                            let reporter = test_case_reporters.get(&identifier).unwrap();
+                            let entry = test_cases.get_mut(&identifier).ok_or(
+                                UnexpectedEventError::CaseArtifactButNotFound { identifier },
+                            )?;
+                            if matches!(entry.lifecycle, Lifecycle::Finished) {
+                                return Err(UnexpectedEventError::CaseArtifactButFinished {
+                                    identifier,
+                                }
+                                .into());
+                            }
                             let artifact_fut = artifacts::drain_artifact(
-                                reporter,
+                                &entry.reporter,
                                 artifact,
                                 log_opts.clone(),
-                                diagnostics::LogTimeoutOptions {
-                                    timeout_fut: suite_events_done_event.wait_or_dropped(),
-                                    time_between_logs: LOG_TIMEOUT_DURATION,
-                                },
                             )
                             .await?;
-                            test_cases_output
-                                .entry(identifier)
-                                .or_insert(vec![])
-                                .push(fasync::Task::spawn(artifact_fut));
+                            entry.artifact_tasks.push(fasync::Task::spawn(artifact_fut));
                         }
                         ftest_manager::SuiteEventPayload::CaseStopped(CaseStopped {
                             identifier,
                             status,
                         }) => {
-                            test_cases_in_progress.remove(&identifier);
-                            // record timed out cases so we can cancel artifact collection for them
-                            if status == ftest_manager::CaseStatus::TimedOut {
-                                test_cases_timed_out.insert(identifier);
-                            };
-                            let reporter = test_case_reporters.get(&identifier).unwrap();
-                            // TODO(fxbug.dev/79712): Record per-case runtime once we have an
-                            // accurate way to measure it.
-                            reporter.stopped(&status.into(), Timestamp::Unknown).await?;
+                            let entry = test_cases.get_mut(&identifier).ok_or(
+                                UnexpectedEventError::CaseEventButNotFound {
+                                    next_state: Lifecycle::Stopped,
+                                    identifier,
+                                },
+                            )?;
+                            match &entry.lifecycle {
+                                Lifecycle::Started => {
+                                    // TODO(fxbug.dev/79712): Record per-case runtime once we have an
+                                    // accurate way to measure it.
+                                    entry
+                                        .reporter
+                                        .stopped(&status.into(), Timestamp::Unknown)
+                                        .await?;
+                                    entry.lifecycle = Lifecycle::Stopped;
+                                }
+                                other => {
+                                    return Err(UnexpectedEventError::InvalidCaseEvent {
+                                        last_state: *other,
+                                        next_state: Lifecycle::Stopped,
+                                        test_case_name: entry.name.clone(),
+                                        identifier,
+                                    }
+                                    .into());
+                                }
+                            }
                         }
                         ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished {
                             identifier,
                         }) => {
-                            // in case the test timed out, terminate artifact collection since it
-                            // may be hung.
-                            let test_case_name = test_cases.get(&identifier).ok_or(
-                                UnexpectedEventError::CaseFinishedButNotFound { identifier },
+                            let entry = test_cases.get_mut(&identifier).ok_or(
+                                UnexpectedEventError::CaseEventButNotFound {
+                                    next_state: Lifecycle::Finished,
+                                    identifier,
+                                },
                             )?;
-                            if test_cases_timed_out.remove(&identifier) {
-                                for t in test_cases_output.remove(&identifier).unwrap_or(vec![]) {
-                                    if let Some(Err(e)) = t.now_or_never() {
-                                        error!(
-                                            "Cannot write output for {}: {:?}",
-                                            test_case_name, e
-                                        );
+                            match &entry.lifecycle {
+                                Lifecycle::Stopped => {
+                                    // don't mark reporter finished yet, we want to finish draining
+                                    // artifacts separately.
+                                    entry.lifecycle = Lifecycle::Finished;
+                                }
+                                other => {
+                                    return Err(UnexpectedEventError::InvalidCaseEvent {
+                                        last_state: *other,
+                                        next_state: Lifecycle::Finished,
+                                        test_case_name: entry.name.clone(),
+                                        identifier,
                                     }
+                                    .into());
                                 }
                             }
                         }
@@ -158,36 +215,61 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                 suite_reporter,
                                 artifact,
                                 log_opts.clone(),
-                                diagnostics::LogTimeoutOptions {
-                                    timeout_fut: suite_events_done_event.wait_or_dropped(),
-                                    time_between_logs: LOG_TIMEOUT_DURATION,
-                                },
                             )
                             .await?;
-                            suite_tasks.push(fasync::Task::spawn(artifact_fut));
+                            suite_state.artifact_tasks.push(fasync::Task::spawn(artifact_fut));
                         }
                         ftest_manager::SuiteEventPayload::SuiteStarted(_) => {
-                            suite_reporter.started(timestamp).await?;
-                        }
-                        ftest_manager::SuiteEventPayload::SuiteStopped(SuiteStopped { status }) => {
-                            successful_completion = true;
-                            suite_finish_timestamp = timestamp;
-                            outcome = match status {
-                                ftest_manager::SuiteStatus::Passed => Outcome::Passed,
-                                ftest_manager::SuiteStatus::Failed => Outcome::Failed,
-                                ftest_manager::SuiteStatus::DidNotFinish => Outcome::Inconclusive,
-                                ftest_manager::SuiteStatus::TimedOut => Outcome::Timedout,
-                                ftest_manager::SuiteStatus::Stopped => Outcome::Failed,
-                                ftest_manager::SuiteStatus::InternalError => {
-                                    Outcome::error(UnexpectedEventError::InternalErrorSuiteStatus)
+                            match &suite_state.lifecycle {
+                                Lifecycle::Found => {
+                                    suite_state.reporter.started(timestamp).await?;
+                                    suite_state.lifecycle = Lifecycle::Started;
                                 }
-                                s => {
-                                    return Err(UnexpectedEventError::UnrecognizedSuiteStatus {
-                                        status: s,
+                                other => {
+                                    return Err(UnexpectedEventError::InvalidSuiteEvent {
+                                        last_state: *other,
+                                        next_state: Lifecycle::Started,
                                     }
                                     .into());
                                 }
-                            };
+                            }
+                        }
+                        ftest_manager::SuiteEventPayload::SuiteStopped(SuiteStopped { status }) => {
+                            match &suite_state.lifecycle {
+                                Lifecycle::Started => {
+                                    suite_state.lifecycle = Lifecycle::Stopped;
+                                    suite_finish_timestamp = timestamp;
+                                    outcome = match status {
+                                        ftest_manager::SuiteStatus::Passed => Outcome::Passed,
+                                        ftest_manager::SuiteStatus::Failed => Outcome::Failed,
+                                        ftest_manager::SuiteStatus::DidNotFinish => {
+                                            Outcome::Inconclusive
+                                        }
+                                        ftest_manager::SuiteStatus::TimedOut => Outcome::Timedout,
+                                        ftest_manager::SuiteStatus::Stopped => Outcome::Failed,
+                                        ftest_manager::SuiteStatus::InternalError => {
+                                            Outcome::error(
+                                                UnexpectedEventError::InternalErrorSuiteStatus,
+                                            )
+                                        }
+                                        s => {
+                                            return Err(
+                                                UnexpectedEventError::UnrecognizedSuiteStatus {
+                                                    status: s,
+                                                }
+                                                .into(),
+                                            );
+                                        }
+                                    };
+                                }
+                                other => {
+                                    return Err(UnexpectedEventError::InvalidSuiteEvent {
+                                        last_state: *other,
+                                        next_state: Lifecycle::Stopped,
+                                    }
+                                    .into());
+                                }
+                            }
                         }
                         ftest_manager::SuiteEventPayloadUnknown!() => {
                             warn!("Encountered unrecognized suite event");
@@ -196,81 +278,145 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                 }
             }
         }
-        suite_events_done_event.signal();
+        drop(event_stream); // Explicit drop here to force ownership move.
+        Ok(())
+    }
+    .boxed_local();
 
-        // complete collecting all case artifacts and signal completion
-        info!("Awaiting case artifacts");
-        for (identifier, test_case_reporter) in test_case_reporters.into_iter() {
-            for t in test_cases_output.remove(&identifier).unwrap_or(vec![]) {
-                match t.await {
-                    Err(e) => {
-                        let test_case_name = test_cases.get(&identifier).unwrap();
-                        error!("Failed to collect artifact for {}: {:?}", test_case_name, e);
-                    }
-                    Ok(Some(_log_result)) => warn!("Unexpectedly got log results for a test case"),
-                    Ok(None) => (),
-                }
+    let start_time = std::time::Instant::now();
+    let (stop_timeout_future, kill_timeout_future) = match timeout {
+        None => {
+            (futures::future::pending::<()>().boxed(), futures::future::pending::<()>().boxed())
+        }
+        Some(duration) => (
+            fasync::Timer::new(start_time + duration).boxed(),
+            fasync::Timer::new(start_time + duration + timeout_grace).boxed(),
+        ),
+    };
+
+    // This polls event collection and calling SuiteController::Stop on timeout simultaneously.
+    let collect_or_stop_fut = async move {
+        match futures::future::select(stop_timeout_future, collect_results_fut).await {
+            Either::Left((_stop_done, collect_fut)) => {
+                stopper.stop();
+                collect_fut.await
             }
-            test_case_reporter.finished().await?;
+            Either::Right((result, _)) => result,
+        }
+    };
+
+    // If kill timeout or cancel occur, we want to stop polling events.
+    // kill_fut resolves to the outcome to which results should be overwritten
+    // if it resolves.
+    let kill_fut = async move {
+        match futures::future::select(cancel_fut, kill_timeout_future).await {
+            Either::Left(_) => Outcome::Cancelled,
+            Either::Right(_) => Outcome::Timedout,
+        }
+    }
+    .shared();
+
+    let early_termination_outcome =
+        match collect_or_stop_fut.boxed_local().or_cancelled(kill_fut.clone()).await {
+            Ok(Ok(())) => None,
+            Ok(Err(e)) => return Err(e),
+            Err(Cancelled(outcome)) => Some(outcome),
+        };
+
+    // Finish collecting artifacts and report errors.
+    info!("Awaiting case artifacts");
+    let mut unfinished_test_case_names = vec![];
+    for (_, test_case) in test_cases.into_iter() {
+        let CollectedEntityState { reporter, name, lifecycle, artifact_tasks } = test_case;
+        match (lifecycle, early_termination_outcome.clone()) {
+            (Lifecycle::Started | Lifecycle::Found, Some(early)) => {
+                reporter.stopped(&early.into(), Timestamp::Unknown).await?;
+            }
+            (Lifecycle::Found, None) => {
+                unfinished_test_case_names.push(name.clone());
+                reporter.stopped(&Outcome::Inconclusive.into(), Timestamp::Unknown).await?;
+            }
+            (Lifecycle::Started, None) => {
+                unfinished_test_case_names.push(name.clone());
+                reporter.stopped(&Outcome::DidNotFinish.into(), Timestamp::Unknown).await?;
+            }
+            (Lifecycle::Stopped | Lifecycle::Finished, _) => (),
         }
 
-        // collect all logs
-        info!("Awaiting suite artifacts");
-        for t in suite_tasks {
-            match t.await {
+        let finish_artifacts_fut = FuturesUnordered::from_iter(artifact_tasks)
+            .map(|result| match result {
+                Err(e) => {
+                    error!("Failed to collect artifact for {}: {:?}", name, e);
+                }
+                Ok(Some(_log_result)) => warn!("Unexpectedly got log results for a test case"),
+                Ok(None) => (),
+            })
+            .collect::<()>();
+        if let Err(Cancelled(_)) = finish_artifacts_fut.or_cancelled(kill_fut.clone()).await {
+            warn!("Stopped polling artifacts for {} due to timeout", name);
+        }
+
+        reporter.finished().await?;
+    }
+    if !unfinished_test_case_names.is_empty() {
+        outcome = Outcome::error(UnexpectedEventError::CasesDidNotFinish {
+            cases: unfinished_test_case_names,
+        });
+    }
+
+    match (suite_state.lifecycle, early_termination_outcome) {
+        (Lifecycle::Found | Lifecycle::Started, Some(early)) => {
+            if matches!(&outcome, Outcome::Passed | Outcome::Failed) {
+                outcome = early;
+            }
+        }
+        (Lifecycle::Found | Lifecycle::Started, None) => {
+            outcome = Outcome::error(UnexpectedEventError::SuiteDidNotReportStop);
+        }
+        // If the suite successfully reported a result, don't alter it.
+        (Lifecycle::Stopped, _) => (),
+        // Finished doesn't happen since there's no SuiteFinished event.
+        (Lifecycle::Finished, _) => unreachable!(),
+    }
+
+    let restricted_logs_present = AtomicBool::new(false);
+    let finish_artifacts_fut = FuturesUnordered::from_iter(suite_state.artifact_tasks)
+        .then(|result| async {
+            match result {
                 Err(e) => {
                     error!("Failed to collect artifact for suite: {:?}", e);
                 }
                 Ok(Some(log_result)) => match log_result {
                     diagnostics::LogCollectionOutcome::Error { restricted_logs } => {
-                        let mut log_artifact =
-                            suite_reporter.new_artifact(&ArtifactType::RestrictedLog).await?;
+                        restricted_logs_present.store(true, Ordering::Relaxed);
+                        let mut log_artifact = match suite_reporter
+                            .new_artifact(&ArtifactType::RestrictedLog)
+                            .await
+                        {
+                            Ok(artifact) => artifact,
+                            Err(e) => {
+                                warn!("Error creating artifact to report restricted logs: {:?}", e);
+                                return;
+                            }
+                        };
                         for log in restricted_logs.iter() {
-                            writeln!(log_artifact, "{}", log)?;
-                        }
-                        if Outcome::Passed == outcome {
-                            outcome = Outcome::Failed;
+                            if let Err(e) = writeln!(log_artifact, "{}", log) {
+                                warn!("Error recording restricted logs: {:?}", e);
+                                return;
+                            }
                         }
                     }
                     diagnostics::LogCollectionOutcome::Passed => (),
                 },
                 Ok(None) => (),
             }
-        }
-
-        Ok(())
-    };
-
-    match collect_results_fut.boxed_local().or_cancelled(cancel_fut).await {
-        Ok(Ok(())) => (),
-        Ok(Err(e)) => return Err(e),
-        Err(Cancelled) => {
-            cancelled = true;
-        }
+        })
+        .collect::<()>();
+    if let Err(Cancelled(_)) = finish_artifacts_fut.or_cancelled(kill_fut).await {
+        warn!("Stopped polling artifacts due to timeout");
     }
-
-    // Test manager should always report CaseFinished before terminating the event stream.
-    if cancelled {
-        match outcome {
-            Outcome::Passed | Outcome::Failed => {
-                outcome = Outcome::Cancelled;
-            }
-            _ => {}
-        }
-    } else {
-        // If we read the events to completion , but there are missing events, this indicates
-        // an internal error.
-        if !test_cases_in_progress.is_empty() {
-            outcome = Outcome::error(UnexpectedEventError::CasesDidNotFinish {
-                cases: test_cases_in_progress
-                    .into_iter()
-                    .map(|id| test_cases.get(&id).unwrap().clone())
-                    .collect(),
-            });
-        }
-        if !successful_completion {
-            outcome = Outcome::error(UnexpectedEventError::SuiteDidNotReportStop);
-        }
+    if restricted_logs_present.into_inner() && matches!(outcome, Outcome::Passed) {
+        outcome = Outcome::Failed;
     }
 
     suite_reporter.stopped(&outcome.clone().into(), suite_finish_timestamp).await?;
@@ -285,8 +431,19 @@ type SuiteEventStream = std::pin::Pin<
 /// A test suite that is known to have started execution. A suite is considered started once
 /// any event is produced for the suite.
 struct RunningSuite {
-    event_stream: Option<SuiteEventStream>,
+    event_stream: SuiteEventStream,
+    stopper: RunningSuiteStopper,
     max_severity_logs: Option<Severity>,
+    timeout: Option<std::time::Duration>,
+    timeout_grace: std::time::Duration,
+}
+
+struct RunningSuiteStopper(Arc<ftest_manager::SuiteControllerProxy>);
+
+impl RunningSuiteStopper {
+    fn stop(self) {
+        let _ = self.0.stop();
+    }
 }
 
 impl RunningSuite {
@@ -297,8 +454,12 @@ impl RunningSuite {
     async fn wait_for_start(
         proxy: ftest_manager::SuiteControllerProxy,
         max_severity_logs: Option<Severity>,
+        timeout: Option<std::time::Duration>,
+        timeout_grace: std::time::Duration,
         max_pipelined: Option<usize>,
     ) -> Self {
+        let proxy = Arc::new(proxy);
+        let proxy_clone = proxy.clone();
         // Stream of fidl responses, with multiple concurrently active requests.
         let unprocessed_event_stream = futures::stream::repeat_with(move || {
             proxy.get_events().inspect(|events_result| match events_result {
@@ -322,7 +483,13 @@ impl RunningSuite {
         // Wait for the first event to be ready, which signals the suite has started.
         std::pin::Pin::new(&mut event_stream).peek().await;
 
-        Self { event_stream: Some(event_stream.boxed()), max_severity_logs }
+        Self {
+            event_stream: event_stream.boxed(),
+            stopper: RunningSuiteStopper(proxy_clone),
+            timeout,
+            timeout_grace,
+            max_severity_logs,
+        }
     }
 
     fn convert_to_result_vec(
@@ -336,29 +503,6 @@ impl RunningSuite {
             Ok(Err(e)) => vec![Err(e.into())],
             Err(e) => vec![Err(e.into())],
         }
-    }
-
-    async fn next_event(&mut self) -> Option<Result<ftest_manager::SuiteEvent, RunTestSuiteError>> {
-        match self.event_stream.take() {
-            Some(mut stream) => {
-                let next = stream.next().await;
-                if next.is_some() {
-                    self.event_stream = Some(stream);
-                } else {
-                    // Once we've exhausted all the events, drop the stream, which owns the proxy.
-                    // TODO(fxbug.dev/87976) - once fxbug.dev/87890 is fixed this is not needed.
-                    // The explicit drop isn't strictly necessary, but it's left here to
-                    // communicate that we NEED to close the proxy.
-                    drop(stream);
-                }
-                next
-            }
-            None => None,
-        }
-    }
-
-    fn max_severity_logs(&self) -> Option<Severity> {
-        self.max_severity_logs
     }
 }
 
@@ -393,21 +537,14 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
     let mut show_full_moniker = false;
     for (suite_id_raw, params) in test_params.into_iter().enumerate() {
         show_full_moniker = show_full_moniker || params.show_full_moniker;
-        let timeout: Option<i64> = match params.timeout_seconds {
-            Some(t) => {
-                const NANOS_IN_SEC: u64 = 1_000_000_000;
-                let secs: u32 = t.get();
-                let nanos: u64 = (secs as u64) * NANOS_IN_SEC;
-                // Unwrap okay here as max value (u32::MAX * 1_000_000_000) is 62 bits
-                Some(nanos.try_into().unwrap())
-            }
-            None => None,
-        };
+        let timeout = params
+            .timeout_seconds
+            .map(|seconds| std::time::Duration::from_secs(seconds.get() as u64));
+
         let run_options = fidl_fuchsia_test_manager::RunOptions {
             parallel: params.parallel,
             arguments: Some(params.test_args),
             run_disabled_tests: Some(params.also_run_disabled_tests),
-            timeout,
             case_filters_to_run: params.test_filters,
             log_iterator: Some(run_params.log_protocol.unwrap_or_else(diagnostics::get_type)),
             ..fidl_fuchsia_test_manager::RunOptions::EMPTY
@@ -418,9 +555,14 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
         suite.set_tags(params.tags).await;
         suite_reporters.insert(suite_id, suite);
         let (suite_controller, suite_server_end) = fidl::endpoints::create_proxy()?;
-        let suite_and_id_fut =
-            RunningSuite::wait_for_start(suite_controller, params.max_severity_logs, None)
-                .map(move |running_suite| (running_suite, suite_id));
+        let suite_and_id_fut = RunningSuite::wait_for_start(
+            suite_controller,
+            params.max_severity_logs,
+            timeout,
+            std::time::Duration::from_secs(run_params.timeout_grace_seconds as u64),
+            None,
+        )
+        .map(move |running_suite| (running_suite, suite_id));
         suite_start_futs.push(suite_and_id_fut);
         builder_proxy.add_suite(&params.test_url, run_options, suite_server_end)?;
     }
@@ -448,7 +590,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                 Ok(Some((running_suite, suite_id))) => (running_suite, suite_id),
                 // normal completion.
                 Ok(None) => break,
-                Err(Cancelled) => {
+                Err(Cancelled(_)) => {
                     stopped_prematurely = true;
                     final_outcome = Some(Outcome::Cancelled);
                     break;
@@ -459,7 +601,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
 
             let log_options = diagnostics::LogCollectionOptions {
                 min_severity: min_severity_logs,
-                max_severity: running_suite.max_severity_logs(),
+                max_severity: running_suite.max_severity_logs,
                 format: LogDisplayConfiguration { show_full_moniker },
             };
 
@@ -541,10 +683,6 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                                 max_severity: None,
                                 format: LogDisplayConfiguration { show_full_moniker },
                             },
-                            diagnostics::LogTimeoutOptions {
-                                timeout_fut: futures::future::pending::<()>(),
-                                time_between_logs: LOG_TIMEOUT_DURATION,
-                            },
                         )
                         .await?;
                         artifact_tasks.push(fasync::Task::spawn(artifact_fut));
@@ -574,7 +712,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
         .or_cancelled(cancel_fut_clone)
         .map(|cancelled_result| match cancelled_result {
             Ok(completed_result) => completed_result,
-            Err(Cancelled) => Ok(()),
+            Err(Cancelled(_)) => Ok(()),
         });
 
     // Use join instead of try_join as we want to poll the futures to completion
@@ -716,6 +854,23 @@ mod test {
         respond_to_get_events(&mut request_stream, vec![]).await;
     }
 
+    /// Serves all events to completion, then wait for the channel to close.
+    async fn serve_all_events_then_hang(
+        mut request_stream: ftest_manager::SuiteControllerRequestStream,
+        events: Vec<ftest_manager::SuiteEvent>,
+    ) {
+        const BATCH_SIZE: usize = 5;
+        let mut event_iter = events.into_iter();
+        while event_iter.len() > 0 {
+            respond_to_get_events(
+                &mut request_stream,
+                event_iter.by_ref().take(BATCH_SIZE).collect(),
+            )
+            .await;
+        }
+        let _requests = request_stream.collect::<Vec<_>>().await;
+    }
+
     /// Creates a SuiteEvent which is unpopulated, except for timestamp.
     /// This isn't representative of an actual event from test framework, but is sufficient
     /// to assert events are routed correctly.
@@ -740,14 +895,16 @@ mod test {
             drop(suite_request_stream);
         });
 
-        let mut running_suite = RunningSuite::wait_for_start(suite_proxy, None, None).await;
+        let mut running_suite =
+            RunningSuite::wait_for_start(suite_proxy, None, None, std::time::Duration::ZERO, None)
+                .await;
         assert_empty_events_eq!(
-            running_suite.next_event().await.unwrap().unwrap(),
+            running_suite.event_stream.next().await.unwrap().unwrap(),
             create_empty_event(0)
         );
-        assert!(running_suite.next_event().await.is_none());
+        assert!(running_suite.event_stream.next().await.is_none());
         // polling again should still give none.
-        assert!(running_suite.next_event().await.is_none());
+        assert!(running_suite.event_stream.next().await.is_none());
         suite_server_task.await;
     }
 
@@ -771,15 +928,17 @@ mod test {
             drop(suite_request_stream);
         });
 
-        let mut running_suite = RunningSuite::wait_for_start(suite_proxy, None, None).await;
+        let mut running_suite =
+            RunningSuite::wait_for_start(suite_proxy, None, None, std::time::Duration::ZERO, None)
+                .await;
 
         for num in 0..4 {
             assert_empty_events_eq!(
-                running_suite.next_event().await.unwrap().unwrap(),
+                running_suite.event_stream.next().await.unwrap().unwrap(),
                 create_empty_event(num)
             );
         }
-        assert!(running_suite.next_event().await.is_none());
+        assert!(running_suite.event_stream.next().await.is_none());
         suite_server_task.await;
     }
 
@@ -793,13 +952,15 @@ mod test {
             drop(suite_request_stream);
         });
 
-        let mut running_suite = RunningSuite::wait_for_start(suite_proxy, None, None).await;
+        let mut running_suite =
+            RunningSuite::wait_for_start(suite_proxy, None, None, std::time::Duration::ZERO, None)
+                .await;
         assert_empty_events_eq!(
-            running_suite.next_event().await.unwrap().unwrap(),
+            running_suite.event_stream.next().await.unwrap().unwrap(),
             create_empty_event(1)
         );
         assert_matches!(
-            running_suite.next_event().await,
+            running_suite.event_stream.next().await,
             Some(Err(RunTestSuiteError::Fidl(fidl::Error::ClientChannelClosed { .. })))
         );
         suite_server_task.await;
@@ -920,7 +1081,9 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite = RunningSuite::wait_for_start(proxy, None, None).await;
+            let suite =
+                RunningSuite::wait_for_start(proxy, None, None, std::time::Duration::ZERO, None)
+                    .await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -992,7 +1155,9 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite = RunningSuite::wait_for_start(proxy, None, None).await;
+            let suite =
+                RunningSuite::wait_for_start(proxy, None, None, std::time::Duration::ZERO, None)
+                    .await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1079,7 +1244,9 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite = RunningSuite::wait_for_start(proxy, None, Some(1)).await;
+            let suite =
+                RunningSuite::wait_for_start(proxy, None, None, std::time::Duration::ZERO, Some(1))
+                    .await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1163,7 +1330,9 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite = RunningSuite::wait_for_start(proxy, None, None).await;
+            let suite =
+                RunningSuite::wait_for_start(proxy, None, None, std::time::Duration::ZERO, None)
+                    .await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1224,11 +1393,7 @@ mod test {
             case_found_event(100, 0, "my_test_case"),
             case_started_event(200, 0),
             case_stdout_event(300, 0, stdout_read),
-            case_stopped_event(300, 0, ftest_manager::CaseStatus::TimedOut),
-            // artifact sent after stopped should be terminated too.
             case_stderr_event(300, 0, stderr_read),
-            case_finished_event(400, 0),
-            suite_stopped_event(500, ftest_manager::SuiteStatus::TimedOut),
         ];
 
         let (proxy, stream) = create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
@@ -1239,7 +1404,14 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite = RunningSuite::wait_for_start(proxy, None, None).await;
+            let suite = RunningSuite::wait_for_start(
+                proxy,
+                None,
+                Some(std::time::Duration::from_secs(2)),
+                std::time::Duration::ZERO,
+                None,
+            )
+            .await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1284,7 +1456,7 @@ mod test {
             assert!(suite.report.directories.is_empty());
         };
 
-        futures::future::join(serve_all_events(stream, all_events), test_fut).await;
+        futures::future::join(serve_all_events_then_hang(stream, all_events), test_fut).await;
     }
 
     // TODO(fxbug.dev/98222): add unit tests for suite artifacts too.
@@ -1402,6 +1574,7 @@ mod test {
             params.test_params,
             RunParams {
                 timeout_behavior: TimeoutBehavior::Continue,
+                timeout_grace_seconds: 0,
                 stop_after_failures: None,
                 experimental_parallel_execution: None,
                 accumulate_debug_data: false,
@@ -1726,6 +1899,7 @@ mod test {
 
         let run_params = RunParams {
             timeout_behavior: TimeoutBehavior::Continue,
+            timeout_grace_seconds: 0,
             stop_after_failures: None,
             experimental_parallel_execution: Some(max_parallel_suites),
             accumulate_debug_data: false,
@@ -1753,6 +1927,7 @@ mod test {
 
         let run_params = RunParams {
             timeout_behavior: TimeoutBehavior::Continue,
+            timeout_grace_seconds: 0,
             stop_after_failures: None,
             experimental_parallel_execution: None,
             accumulate_debug_data: false,

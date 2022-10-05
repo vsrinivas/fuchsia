@@ -86,23 +86,32 @@ pub enum UnexpectedEventError {
     )]
     CaseStartedButNotFound { identifier: u32 },
     #[error(
-        "received duplicate 'started' events for case {test_case_name:?} with id {identifier:?}"
+        "invalid case event to '{next_state:?}' received while in state '{last_state:?}' for case {test_case_name:?} with id {identifier:?}"
     )]
-    CaseStartedTwice { test_case_name: String, identifier: u32 },
+    InvalidCaseEvent {
+        last_state: Lifecycle,
+        next_state: Lifecycle,
+        test_case_name: String,
+        identifier: u32,
+    },
     #[error(
         "received an 'artifact' event for case with id {identifier:?} but no 'case_found' event"
     )]
     CaseArtifactButNotFound { identifier: u32 },
     #[error(
-        "received a 'finished' event for case with id {identifier:?} but no 'case_found' event"
+        "received an 'artifact' event for case with id {identifier:?} but the case is already finished"
     )]
-    CaseFinishedButNotFound { identifier: u32 },
+    CaseArtifactButFinished { identifier: u32 },
+    #[error(
+        "received a '{next_state:?}' event for case with id {identifier:?} but no 'case_found' event"
+    )]
+    CaseEventButNotFound { next_state: Lifecycle, identifier: u32 },
     #[error("received a 'stopped' event for case with id {identifier:?} but no 'started' event")]
-    CaseStoppedButNotStarted { test_case_name: String, identifier: u32 },
-    #[error("received an unhandled case status for case with id {identifier:?}: {status:?}")]
     UnrecognizedCaseStatus { status: ftest_manager::CaseStatus, identifier: u32 },
     #[error("server closed channel without reporting finish for cases: {cases:?}")]
     CasesDidNotFinish { cases: Vec<String> },
+    #[error("invalid suite event to '{next_state:?}' received while in state '{last_state:?}'")]
+    InvalidSuiteEvent { last_state: Lifecycle, next_state: Lifecycle },
     #[error("received an unhandled suite status: {status:?}")]
     UnrecognizedSuiteStatus { status: ftest_manager::SuiteStatus },
     #[error("server closed channel without reporting a result for the suite")]
@@ -111,6 +120,17 @@ pub enum UnexpectedEventError {
     InternalErrorSuiteStatus,
     #[error("missing required field {field} in {containing_struct}")]
     MissingRequiredField { containing_struct: &'static str, field: &'static str },
+}
+
+/// Lifecycle of a test suite or test case.
+/// This is internal implementation for ::crate::run, but is located here so it can be reported
+/// for debugging via RunTestSuiteError.
+#[derive(Clone, Copy, Debug)]
+pub enum Lifecycle {
+    Found,
+    Started,
+    Stopped,
+    Finished,
 }
 
 impl RunTestSuiteError {
