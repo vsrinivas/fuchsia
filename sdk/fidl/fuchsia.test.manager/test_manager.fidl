@@ -254,6 +254,11 @@ type SuiteEvent = resource table {
 /// order. There can be some `case_artifact` between `case_stopped` and
 /// `case_finished`. `suite_stopped` event will always fire when the whole
 /// suite has finished executing. Note `suite_artifact` may fire at any time.
+/// In the case where the client completely drains all events for a suite,
+/// `case_stopped` and `case_finished` will be reported for all found test
+/// cases, even if the test component fails to report a result.
+/// In the case a test is hung, GetEvents will hang and not complete, unless
+/// a timeout has been specified in RunOptions.
 type SuiteEventPayload = flexible resource union {
     /// A case was found.
     1: case_found CaseFound;

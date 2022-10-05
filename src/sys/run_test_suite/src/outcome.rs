@@ -101,8 +101,12 @@ pub enum UnexpectedEventError {
     CaseStoppedButNotStarted { test_case_name: String, identifier: u32 },
     #[error("received an unhandled case status for case with id {identifier:?}: {status:?}")]
     UnrecognizedCaseStatus { status: ftest_manager::CaseStatus, identifier: u32 },
+    #[error("server closed channel without reporting finish for cases: {cases:?}")]
+    CasesDidNotFinish { cases: Vec<String> },
     #[error("received an unhandled suite status: {status:?}")]
     UnrecognizedSuiteStatus { status: ftest_manager::SuiteStatus },
+    #[error("server closed channel without reporting a result for the suite")]
+    SuiteDidNotReportStop,
     #[error("received an InternalError suite status")]
     InternalErrorSuiteStatus,
 }

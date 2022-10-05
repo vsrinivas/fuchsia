@@ -150,10 +150,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                             identifier,
                             status,
                         }) => {
-                            // when a case errors out we handle it as if it never completed
-                            if status != ftest_manager::CaseStatus::Error {
-                                test_cases_in_progress.remove(&identifier);
-                            }
+                            test_cases_in_progress.remove(&identifier);
                             // record timed out cases so we can cancel artifact collection for them
                             if status == ftest_manager::CaseStatus::TimedOut {
                                 test_cases_timed_out.insert(identifier);
@@ -342,20 +339,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
         }
     }
 
-    // TODO(fxbug.dev/90037) - unless the suite was cancelled, this indicates an internal error.
     // Test manager should always report CaseFinished before terminating the event stream.
-    if !test_cases_in_progress.is_empty() {
-        match outcome {
-            Outcome::Passed | Outcome::Failed if !cancelled => {
-                warn!(
-                    "Some test cases in {} did not complete. This will soon return an internal error",
-                    running_suite.url()
-                );
-                outcome = Outcome::DidNotFinish;
-            }
-            _ => {}
-        }
-    }
     if cancelled {
         match outcome {
             Outcome::Passed | Outcome::Failed => {
@@ -363,18 +347,19 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
             }
             _ => {}
         }
-    }
-
-    // TODO(fxbug.dev/90037) - this actually indicates an internal error. In the case that
-    // run-test-suite drains all the events for the suite, test manager should've reported an
-    // outcome for the suite. We should remove this outcome and return a new error enum instead.
-    if !successful_completion && !cancelled {
-        warn!(
-            "No result was returned for {}. This will soon return an internal error",
-            running_suite.url()
-        );
-        if matches!(&outcome, Outcome::Passed | Outcome::Failed) {
-            outcome = Outcome::DidNotFinish;
+    } else {
+        // If we read the events to completion , but there are missing events, this indicates
+        // an internal error.
+        if !test_cases_in_progress.is_empty() {
+            outcome = Outcome::error(UnexpectedEventError::CasesDidNotFinish {
+                cases: test_cases_in_progress
+                    .into_iter()
+                    .map(|id| test_cases.get(&id).unwrap().clone())
+                    .collect(),
+            });
+        }
+        if !successful_completion {
+            outcome = Outcome::error(UnexpectedEventError::SuiteDidNotReportStop);
         }
     }
 
@@ -391,7 +376,6 @@ type SuiteEventStream = std::pin::Pin<
 /// any event is produced for the suite.
 struct RunningSuite {
     event_stream: Option<SuiteEventStream>,
-    url: String,
     max_severity_logs: Option<Severity>,
 }
 
@@ -402,7 +386,6 @@ impl RunningSuite {
     const DEFAULT_PIPELINED_REQUESTS: usize = 8;
     async fn wait_for_start(
         proxy: ftest_manager::SuiteControllerProxy,
-        url: String,
         max_severity_logs: Option<Severity>,
         max_pipelined: Option<usize>,
     ) -> Self {
@@ -429,7 +412,7 @@ impl RunningSuite {
         // Wait for the first event to be ready, which signals the suite has started.
         std::pin::Pin::new(&mut event_stream).peek().await;
 
-        Self { event_stream: Some(event_stream.boxed()), url, max_severity_logs }
+        Self { event_stream: Some(event_stream.boxed()), max_severity_logs }
     }
 
     fn convert_to_result_vec(
@@ -462,10 +445,6 @@ impl RunningSuite {
             }
             None => None,
         }
-    }
-
-    fn url(&self) -> &str {
-        &self.url
     }
 
     fn max_severity_logs(&self) -> Option<Severity> {
@@ -529,13 +508,9 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
         suite.set_tags(params.tags).await;
         suite_reporters.insert(suite_id, suite);
         let (suite_controller, suite_server_end) = fidl::endpoints::create_proxy()?;
-        let suite_and_id_fut = RunningSuite::wait_for_start(
-            suite_controller,
-            params.test_url.clone(),
-            params.max_severity_logs,
-            None,
-        )
-        .map(move |running_suite| (running_suite, suite_id));
+        let suite_and_id_fut =
+            RunningSuite::wait_for_start(suite_controller, params.max_severity_logs, None)
+                .map(move |running_suite| (running_suite, suite_id));
         suite_start_futs.push(suite_and_id_fut);
         builder_proxy.add_suite(&params.test_url, run_options, suite_server_end)?;
     }
@@ -821,8 +796,6 @@ mod test {
         },
     };
 
-    const TEST_URL: &str = "test.cm";
-
     async fn respond_to_get_events(
         request_stream: &mut ftest_manager::SuiteControllerRequestStream,
         events: Vec<ftest_manager::SuiteEvent>,
@@ -881,8 +854,7 @@ mod test {
             drop(suite_request_stream);
         });
 
-        let mut running_suite =
-            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None, None).await;
+        let mut running_suite = RunningSuite::wait_for_start(suite_proxy, None, None).await;
         assert_empty_events_eq!(
             running_suite.next_event().await.unwrap().unwrap(),
             create_empty_event(0)
@@ -913,8 +885,7 @@ mod test {
             drop(suite_request_stream);
         });
 
-        let mut running_suite =
-            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None, None).await;
+        let mut running_suite = RunningSuite::wait_for_start(suite_proxy, None, None).await;
 
         for num in 0..4 {
             assert_empty_events_eq!(
@@ -936,8 +907,7 @@ mod test {
             drop(suite_request_stream);
         });
 
-        let mut running_suite =
-            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None, None).await;
+        let mut running_suite = RunningSuite::wait_for_start(suite_proxy, None, None).await;
         assert_empty_events_eq!(
             running_suite.next_event().await.unwrap().unwrap(),
             create_empty_event(1)
@@ -1064,8 +1034,7 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite =
-                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, None).await;
+            let suite = RunningSuite::wait_for_start(proxy, None, None).await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1137,8 +1106,7 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite =
-                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, None).await;
+            let suite = RunningSuite::wait_for_start(proxy, None, None).await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1225,8 +1193,7 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite =
-                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, Some(1)).await;
+            let suite = RunningSuite::wait_for_start(proxy, None, Some(1)).await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1310,8 +1277,7 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite =
-                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, None).await;
+            let suite = RunningSuite::wait_for_start(proxy, None, None).await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1387,8 +1353,7 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite =
-                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, None).await;
+            let suite = RunningSuite::wait_for_start(proxy, None, None).await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,

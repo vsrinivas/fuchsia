@@ -991,9 +991,9 @@ async fn launch_and_test_incomplete_test(
                     directory::Outcome::Inconclusive
                 )
                 .with_tag(TestTag::new("internal", "true"))
-                .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Error))
+                .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Inconclusive))
                 .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
-                .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Error))
+                .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Inconclusive))
             )
     );
 }
@@ -1026,9 +1026,9 @@ async fn launch_and_test_invalid_test(
                 directory::Outcome::Inconclusive
             )
             .with_tag(TestTag::new("internal", "true"))
-            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Error))
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Inconclusive))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
-            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Error))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Inconclusive))
         )
     );
 }

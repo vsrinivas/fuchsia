@@ -316,7 +316,8 @@ impl From<ftest_manager::CaseStatus> for ReportedOutcome {
             ftest_manager::CaseStatus::Failed => Self::Failed,
             ftest_manager::CaseStatus::TimedOut => Self::Timedout,
             ftest_manager::CaseStatus::Skipped => Self::Skipped,
-            ftest_manager::CaseStatus::Error => Self::Error,
+            // Test case 'Error' indicates the test failed to report a result, not internal error.
+            ftest_manager::CaseStatus::Error => Self::DidNotFinish,
             ftest_manager::CaseStatusUnknown!() => {
                 panic!("unrecognized case status");
             }
