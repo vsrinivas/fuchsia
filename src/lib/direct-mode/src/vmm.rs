@@ -9,7 +9,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_fs::file::open_in_namespace,
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
-    fuchsia_zircon::{Guest, Status, Vmo},
+    fuchsia_zircon::{Guest, HandleBased, Rights, Status, Vmo},
     process_builder::StartupHandle,
     std::ffi::CString,
 };
@@ -36,11 +36,17 @@ pub async fn start(
     args: Vec<CString>,
     vars: Vec<CString>,
     paths: Vec<CString>,
-    handles: Vec<StartupHandle>,
+    mut handles: Vec<StartupHandle>,
 ) -> Result<()> {
     // Create the guest.
     let hypervisor = connect_to_protocol::<fkernel::HypervisorResourceMarker>()?;
     let (guest, guest_vmar) = Guest::direct(&hypervisor.get().await?)?;
+    if vars.iter().any(|x| x.as_bytes() == b"DIRECT_MODE=use_guest") {
+        handles.push(StartupHandle {
+            handle: guest.duplicate_handle(Rights::SAME_RIGHTS)?.into_handle(),
+            info: HandleInfo::new(HandleType::User0, 0),
+        });
+    }
 
     // Load the binary.
     let mut bin_vmo = open_in_namespace(
