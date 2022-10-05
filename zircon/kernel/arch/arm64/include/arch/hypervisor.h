@@ -12,7 +12,7 @@
 
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <fbl/ref_ptr.h>
-#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/aspace.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/page.h>
@@ -50,8 +50,8 @@ class Guest {
   zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                       uint64_t key);
 
-  hypervisor::GuestPhysicalAddressSpace& AddressSpace() { return gpas_; }
-  fbl::RefPtr<VmAddressRegion> RootVmar() const { return gpas_.RootVmar(); }
+  hypervisor::GuestPhysicalAspace& AddressSpace() { return gpa_; }
+  fbl::RefPtr<VmAddressRegion> RootVmar() const { return gpa_.RootVmar(); }
   hypervisor::TrapMap& Traps() { return traps_; }
 
   zx::status<uint16_t> AllocVpid() { return vpid_allocator_.TryAlloc(); }
@@ -59,7 +59,7 @@ class Guest {
 
  private:
   uint16_t vmid_;
-  hypervisor::GuestPhysicalAddressSpace gpas_;
+  hypervisor::GuestPhysicalAspace gpa_;
   hypervisor::TrapMap traps_;
   hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
 

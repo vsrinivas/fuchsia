@@ -15,7 +15,7 @@
 #include <arch/x86/hypervisor/vmx_state.h>
 #include <arch/x86/interrupts.h>
 #include <fbl/ref_ptr.h>
-#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/aspace.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/page.h>
@@ -71,12 +71,12 @@ class NormalGuest : public Guest {
   zx::status<uint16_t> TryAllocVpid() { return vpid_allocator_.TryAlloc(); }
   zx::status<> FreeVpid(uint16_t vpid) { return vpid_allocator_.Free(vpid); }
 
-  hypervisor::GuestPhysicalAddressSpace& AddressSpace() { return gpas_; }
-  fbl::RefPtr<VmAddressRegion> RootVmar() const override { return gpas_.RootVmar(); }
+  hypervisor::GuestPhysicalAspace& AddressSpace() { return gpa_; }
+  fbl::RefPtr<VmAddressRegion> RootVmar() const override { return gpa_.RootVmar(); }
   hypervisor::TrapMap& Traps() { return traps_; }
 
  private:
-  hypervisor::GuestPhysicalAddressSpace gpas_;
+  hypervisor::GuestPhysicalAspace gpa_;
   hypervisor::TrapMap traps_;
   hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
 };
@@ -89,12 +89,12 @@ class DirectGuest : public Guest {
   static zx::status<ktl::unique_ptr<Guest>> Create();
   ~DirectGuest() override;
 
-  hypervisor::DirectAddressSpace& AddressSpace() { return direct_aspace_; }
+  hypervisor::DirectPhysicalAspace& AddressSpace() { return dpa_; }
   fbl::RefPtr<VmAddressRegion> RootVmar() const override { return user_aspace_->RootVmar(); }
   VmAspace& user_aspace() { return *user_aspace_; }
 
  private:
-  hypervisor::DirectAddressSpace direct_aspace_;
+  hypervisor::DirectPhysicalAspace dpa_;
   fbl::RefPtr<VmAspace> user_aspace_;
 };
 

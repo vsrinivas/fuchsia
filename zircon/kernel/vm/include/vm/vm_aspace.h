@@ -29,7 +29,7 @@ class VmMapping;
 class VmAddressRegionOrMapping;
 
 namespace hypervisor {
-class GuestPhysicalAddressSpace;
+class GuestPhysicalAspace;
 }  // namespace hypervisor
 
 class VmObject;
@@ -266,7 +266,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // internal page fault routine, friended to be only called by vmm_page_fault_handler
   zx_status_t PageFault(vaddr_t va, uint flags);
   friend zx_status_t vmm_page_fault_handler(vaddr_t va, uint flags);
-  friend class hypervisor::GuestPhysicalAddressSpace;
+  friend class hypervisor::GuestPhysicalAspace;
 
   // magic
   fbl::Canary<fbl::magic("VMAS")> canary_;

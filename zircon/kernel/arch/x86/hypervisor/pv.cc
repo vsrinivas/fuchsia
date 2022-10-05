@@ -11,7 +11,7 @@
 
 #include <arch/hypervisor.h>
 #include <arch/x86/pv.h>
-#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/aspace.h>
 #include <ktl/atomic.h>
 #include <vm/physmap.h>
 
@@ -66,12 +66,12 @@ void calculate_scale_factor(uint64_t tsc_freq, uint32_t* mul, int8_t* shift) {
 
 }  // namespace
 
-zx::status<> pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
+zx::status<> pv_clock_update_boot_time(hypervisor::GuestPhysicalAspace* gpa,
                                        zx_vaddr_t guest_paddr) {
   // Zircon does not maintain a UTC or local time to set a meaningful boot time
   // hence the value is fixed at zero.
-  auto guest_ptr = gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_boot_time),
-                                        "pv_clock-boot-time-guest-mapping");
+  auto guest_ptr = gpa->CreateGuestPtr(guest_paddr, sizeof(pv_clock_boot_time),
+                                       "pv_clock-boot-time-guest-mapping");
   if (guest_ptr.is_error()) {
     return guest_ptr.take_error();
   }
@@ -83,11 +83,10 @@ zx::status<> pv_clock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gp
   return zx::ok();
 }
 
-zx::status<> pv_clock_reset_clock(PvClockState* pv_clock,
-                                  hypervisor::GuestPhysicalAddressSpace* gpas,
+zx::status<> pv_clock_reset_clock(PvClockState* pv_clock, hypervisor::GuestPhysicalAspace* gpa,
                                   zx_vaddr_t guest_paddr) {
-  auto guest_ptr = gpas->CreateGuestPtr(guest_paddr, sizeof(pv_clock_system_time),
-                                        "pv_clock-system-time-guest-mapping");
+  auto guest_ptr = gpa->CreateGuestPtr(guest_paddr, sizeof(pv_clock_system_time),
+                                       "pv_clock-system-time-guest-mapping");
   if (guest_ptr.is_error()) {
     return guest_ptr.take_error();
   }
@@ -100,8 +99,7 @@ zx::status<> pv_clock_reset_clock(PvClockState* pv_clock,
   return zx::ok();
 }
 
-void pv_clock_update_system_time(PvClockState* pv_clock,
-                                 hypervisor::GuestPhysicalAddressSpace* gpas) {
+void pv_clock_update_system_time(PvClockState* pv_clock, hypervisor::GuestPhysicalAspace* gpa) {
   if (!pv_clock->system_time) {
     return;
   }
@@ -130,10 +128,10 @@ void pv_clock_stop_clock(PvClockState* pv_clock) {
   pv_clock->guest_ptr.reset();
 }
 
-zx::status<> pv_clock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
+zx::status<> pv_clock_populate_offset(hypervisor::GuestPhysicalAspace* gpa,
                                       zx_vaddr_t guest_paddr) {
   auto guest_ptr =
-      gpas->CreateGuestPtr(guest_paddr, sizeof(PvClockOffset), "pv_clock-offset-guest-mapping");
+      gpa->CreateGuestPtr(guest_paddr, sizeof(PvClockOffset), "pv_clock-offset-guest-mapping");
   if (guest_ptr.is_error()) {
     return guest_ptr.take_error();
   }

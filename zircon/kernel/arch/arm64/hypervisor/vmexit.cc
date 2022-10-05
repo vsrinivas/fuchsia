@@ -156,7 +156,7 @@ void clean_invalidate_cache(zx_paddr_t table, size_t index_shift) {
 }
 
 zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* guest_state,
-                                      hypervisor::GuestPhysicalAddressSpace* gpas,
+                                      hypervisor::GuestPhysicalAspace* gpa,
                                       zx_port_packet_t* packet) {
   const SystemInstruction si(iss);
   const uint64_t reg = guest_state->x[si.xt];
@@ -187,7 +187,7 @@ zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* g
       if (mmu_enabled && dcaches_enabled) {
         // Clean/invalidate the pages. We don't strictly need the clean, but it
         // doesn't hurt.
-        clean_invalidate_cache(gpas->arch_aspace().arch_table_phys(), MMU_GUEST_TOP_SHIFT);
+        clean_invalidate_cache(gpa->arch_aspace().arch_table_phys(), MMU_GUEST_TOP_SHIFT);
 
         // Stop trapping MMU register accesses to improve performance.
         //
@@ -258,7 +258,7 @@ zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* g
       // been cleaned.
       uint64_t set_way = BITS_SHIFT(reg, 31, 4);
       if (set_way == 0) {
-        clean_invalidate_cache(gpas->arch_aspace().arch_table_phys(), MMU_GUEST_TOP_SHIFT);
+        clean_invalidate_cache(gpa->arch_aspace().arch_table_phys(), MMU_GUEST_TOP_SHIFT);
       }
 
       // If the MMU or caches are off, start monitoring guest SCTLR register
@@ -293,9 +293,9 @@ zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* g
 }
 
 zx_status_t handle_instruction_abort(GuestState* guest_state,
-                                     hypervisor::GuestPhysicalAddressSpace* gpas) {
+                                     hypervisor::GuestPhysicalAspace* gpa) {
   const zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
-  if (auto result = gpas->PageFault(guest_paddr); result.is_error()) {
+  if (auto result = gpa->PageFault(guest_paddr); result.is_error()) {
     dprintf(CRITICAL, "hypervisor: Unhandled guest instruction abort %#lx\n", guest_paddr);
     return result.status_value();
   }
@@ -303,13 +303,13 @@ zx_status_t handle_instruction_abort(GuestState* guest_state,
 }
 
 zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
-                              hypervisor::GuestPhysicalAddressSpace* gpas,
-                              hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
+                              hypervisor::GuestPhysicalAspace* gpa, hypervisor::TrapMap* traps,
+                              zx_port_packet_t* packet) {
   zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
   zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
   switch (trap.status_value()) {
     case ZX_ERR_NOT_FOUND:
-      if (auto result = gpas->PageFault(guest_paddr); result.is_error()) {
+      if (auto result = gpa->PageFault(guest_paddr); result.is_error()) {
         dprintf(CRITICAL, "hypervisor: Unhandled guest data abort %#lx\n", guest_paddr);
         return result.status_value();
       }
@@ -454,7 +454,7 @@ void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
 }
 
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
-                           hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
+                           hypervisor::GuestPhysicalAspace* gpa, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet) {
   LTRACEF("guest esr_el1: %#x\n", guest_state->system_state.esr_el1);
   LTRACEF("guest esr_el2: %#x\n", guest_state->esr_el2);
@@ -479,19 +479,19 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
       LTRACEF("handling system instruction\n");
       GUEST_STATS_INC(system_instructions);
       ktrace_vcpu_exit(VCPU_SYSTEM_INSTRUCTION, guest_state->system_state.elr_el2);
-      status = handle_system_instruction(syndrome.iss, *hcr, guest_state, gpas, packet);
+      status = handle_system_instruction(syndrome.iss, *hcr, guest_state, gpa, packet);
       break;
     case ExceptionClass::INSTRUCTION_ABORT:
       LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);
       GUEST_STATS_INC(instruction_aborts);
       ktrace_vcpu_exit(VCPU_INSTRUCTION_ABORT, guest_state->system_state.elr_el2);
-      status = handle_instruction_abort(guest_state, gpas);
+      status = handle_instruction_abort(guest_state, gpa);
       break;
     case ExceptionClass::DATA_ABORT:
       LTRACEF("handling data abort at %#lx\n", guest_state->hpfar_el2);
       GUEST_STATS_INC(data_aborts);
       ktrace_vcpu_exit(VCPU_DATA_ABORT, guest_state->system_state.elr_el2);
-      status = handle_data_abort(syndrome.iss, guest_state, gpas, traps, packet);
+      status = handle_data_abort(syndrome.iss, guest_state, gpa, traps, packet);
       break;
     case ExceptionClass::SERROR_INTERRUPT:
       LTRACEF("handling serror interrupt at %#lx\n", guest_state->hpfar_el2);

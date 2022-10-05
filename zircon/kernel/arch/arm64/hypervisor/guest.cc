@@ -9,7 +9,7 @@
 
 #include <arch/hypervisor.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
-#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/aspace.h>
 #include <vm/pmm.h>
 
 #include "el2_cpu_state_priv.h"
@@ -36,12 +36,12 @@ zx::status<ktl::unique_ptr<Guest>> Guest::Create() {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create();
-  if (gpas.is_error()) {
-    return gpas.take_error();
+  auto gpa = hypervisor::GuestPhysicalAspace::Create();
+  if (gpa.is_error()) {
+    return gpa.take_error();
   }
-  guest->gpas_ = ktl::move(*gpas);
-  guest->gpas_.arch_aspace().arch_set_asid(*vmid);
+  guest->gpa_ = ktl::move(*gpa);
+  guest->gpa_.arch_aspace().arch_set_asid(*vmid);
 
   zx_paddr_t gicv_paddr;
   zx_status_t status = gic_get_gicv(&gicv_paddr);
@@ -50,7 +50,7 @@ zx::status<ktl::unique_ptr<Guest>> Guest::Create() {
   // If `status is ZX_ERR_NOT_FOUND, we are running GICv3.
   // Otherwise, return `status`.
   if (status == ZX_OK) {
-    if (auto result = guest->gpas_.MapInterruptController(kGicvAddress, gicv_paddr, kGicvSize);
+    if (auto result = guest->gpa_.MapInterruptController(kGicvAddress, gicv_paddr, kGicvSize);
         result.is_error()) {
       return result.take_error();
     }
@@ -90,7 +90,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
   if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (auto result = gpas_.UnmapRange(addr, len); result.is_error()) {
+  if (auto result = gpa_.UnmapRange(addr, len); result.is_error()) {
     return result.status_value();
   }
   return traps_.InsertTrap(kind, addr, len, ktl::move(port), key).status_value();

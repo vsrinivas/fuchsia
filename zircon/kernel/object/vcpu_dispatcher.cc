@@ -12,7 +12,7 @@
 
 #include <arch/hypervisor.h>
 #include <fbl/alloc_checker.h>
-#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/aspace.h>
 #include <ktl/type_traits.h>
 #include <object/guest_dispatcher.h>
 #include <vm/vm_object.h>

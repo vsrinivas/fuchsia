@@ -9,7 +9,7 @@
 
 #include <zircon/types.h>
 
-#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/aspace.h>
 #include <hypervisor/trap_map.h>
 
 // clang-format off
@@ -338,8 +338,8 @@ struct InterruptCommandRegister {
 
 zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
                                   LocalApicState& local_apic_state, PvClockState& pv_clock,
-                                  hypervisor::GuestPhysicalAddressSpace& gpas,
-                                  hypervisor::TrapMap& traps, zx_port_packet_t& packet);
+                                  hypervisor::GuestPhysicalAspace& gpa, hypervisor::TrapMap& traps,
+                                  zx_port_packet_t& packet);
 
 zx_status_t vmexit_handler_direct(AutoVmcs& vmcs, GuestState& guest_state, VmAspace& user_aspace,
                                   uintptr_t& fs_base, zx_port_packet_t& packet);

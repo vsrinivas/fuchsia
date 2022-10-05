@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_GUEST_PHYSICAL_ADDRESS_SPACE_H_
-#define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_GUEST_PHYSICAL_ADDRESS_SPACE_H_
+#ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_ASPACE_H_
+#define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_ASPACE_H_
 
 #include <lib/zx/status.h>
 
@@ -55,21 +55,21 @@ class GuestPtr {
   zx_vaddr_t offset_;
 };
 
-class GuestPhysicalAddressSpace {
+class GuestPhysicalAspace {
  public:
-  static zx::status<GuestPhysicalAddressSpace> Create();
-  ~GuestPhysicalAddressSpace();
+  static zx::status<GuestPhysicalAspace> Create();
+  ~GuestPhysicalAspace();
 
-  GuestPhysicalAddressSpace() = default;
-  GuestPhysicalAddressSpace(GuestPhysicalAddressSpace&&) = default;
-  GuestPhysicalAddressSpace& operator=(GuestPhysicalAddressSpace&&) = default;
+  GuestPhysicalAspace() = default;
+  GuestPhysicalAspace(GuestPhysicalAspace&&) = default;
+  GuestPhysicalAspace& operator=(GuestPhysicalAspace&&) = default;
 
-  GuestPhysicalAddressSpace(const GuestPhysicalAddressSpace&) = delete;
-  GuestPhysicalAddressSpace& operator=(const GuestPhysicalAddressSpace&) = delete;
+  GuestPhysicalAspace(const GuestPhysicalAspace&) = delete;
+  GuestPhysicalAspace& operator=(const GuestPhysicalAspace&) = delete;
 
-  size_t size() const { return guest_aspace_->size(); }
-  ArchVmAspace& arch_aspace() { return guest_aspace_->arch_aspace(); }
-  fbl::RefPtr<VmAddressRegion> RootVmar() const { return guest_aspace_->RootVmar(); }
+  size_t size() const { return physical_aspace_->size(); }
+  ArchVmAspace& arch_aspace() { return physical_aspace_->arch_aspace(); }
+  fbl::RefPtr<VmAddressRegion> RootVmar() const { return physical_aspace_->RootVmar(); }
 
   bool IsMapped(zx_gpaddr_t guest_paddr) const;
   zx::status<> MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
@@ -78,30 +78,31 @@ class GuestPhysicalAddressSpace {
   zx::status<GuestPtr> CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name);
 
  private:
-  fbl::RefPtr<VmMapping> FindMapping(zx_gpaddr_t guest_paddr) const TA_REQ(guest_aspace_->lock());
+  fbl::RefPtr<VmMapping> FindMapping(zx_gpaddr_t guest_paddr) const
+      TA_REQ(physical_aspace_->lock());
 
-  fbl::RefPtr<VmAspace> guest_aspace_;
+  fbl::RefPtr<VmAspace> physical_aspace_;
 };
 
-class DirectAddressSpace {
+class DirectPhysicalAspace {
  public:
-  static zx::status<DirectAddressSpace> Create();
-  ~DirectAddressSpace();
+  static zx::status<DirectPhysicalAspace> Create();
+  ~DirectPhysicalAspace();
 
-  DirectAddressSpace() = default;
-  DirectAddressSpace(DirectAddressSpace&&) = default;
-  DirectAddressSpace& operator=(DirectAddressSpace&&) = default;
+  DirectPhysicalAspace() = default;
+  DirectPhysicalAspace(DirectPhysicalAspace&&) = default;
+  DirectPhysicalAspace& operator=(DirectPhysicalAspace&&) = default;
 
-  DirectAddressSpace(const DirectAddressSpace&) = delete;
-  DirectAddressSpace& operator=(const DirectAddressSpace&) = delete;
+  DirectPhysicalAspace(const DirectPhysicalAspace&) = delete;
+  DirectPhysicalAspace& operator=(const DirectPhysicalAspace&) = delete;
 
-  size_t size() const { return guest_aspace_->size(); }
-  ArchVmAspace& arch_aspace() { return guest_aspace_->arch_aspace(); }
+  size_t size() const { return physical_aspace_->size(); }
+  ArchVmAspace& arch_aspace() { return physical_aspace_->arch_aspace(); }
 
  private:
-  fbl::RefPtr<VmAspace> guest_aspace_;
+  fbl::RefPtr<VmAspace> physical_aspace_;
 };
 
 }  // namespace hypervisor
 
-#endif  // ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_GUEST_PHYSICAL_ADDRESS_SPACE_H_
+#endif  // ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_ASPACE_H_

@@ -87,19 +87,19 @@ Guest::~Guest() { free_vmx_state(); }
 
 // static
 zx::status<ktl::unique_ptr<Guest>> NormalGuest::Create() {
-  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create();
-  if (gpas.is_error()) {
-    return gpas.take_error();
+  auto gpa = hypervisor::GuestPhysicalAspace::Create();
+  if (gpa.is_error()) {
+    return gpa.take_error();
   }
   // Invalidate the EPT across all CPUs.
-  uint64_t eptp = ept_pointer_from_pml4(gpas->arch_aspace().arch_table_phys());
+  uint64_t eptp = ept_pointer_from_pml4(gpa->arch_aspace().arch_table_phys());
   broadcast_invept(eptp);
 
   auto guest = Guest::Create<NormalGuest>();
   if (guest.is_error()) {
     return guest.take_error();
   }
-  guest->gpas_ = ktl::move(*gpas);
+  guest->gpa_ = ktl::move(*gpa);
   return ktl::move(guest);
 }
 
@@ -129,7 +129,7 @@ zx_status_t NormalGuest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
   if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (auto result = gpas_.UnmapRange(addr, len); result.is_error()) {
+  if (auto result = gpa_.UnmapRange(addr, len); result.is_error()) {
     return result.status_value();
   }
   return traps_.InsertTrap(kind, addr, len, ktl::move(port), key).status_value();
@@ -137,12 +137,12 @@ zx_status_t NormalGuest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
 
 // static
 zx::status<ktl::unique_ptr<Guest>> DirectGuest::Create() {
-  auto direct_aspace = hypervisor::DirectAddressSpace::Create();
-  if (direct_aspace.is_error()) {
-    return direct_aspace.take_error();
+  auto dpa = hypervisor::DirectPhysicalAspace::Create();
+  if (dpa.is_error()) {
+    return dpa.take_error();
   }
   // Invalidate the EPT across all CPUs.
-  uint64_t eptp = ept_pointer_from_pml4(direct_aspace->arch_aspace().arch_table_phys());
+  uint64_t eptp = ept_pointer_from_pml4(dpa->arch_aspace().arch_table_phys());
   broadcast_invept(eptp);
 
   auto user_aspace = VmAspace::Create(kGuestKernelBaseOrSize, kGuestKernelBaseOrSize,
@@ -156,7 +156,7 @@ zx::status<ktl::unique_ptr<Guest>> DirectGuest::Create() {
   if (guest.is_error()) {
     return guest.take_error();
   }
-  guest->direct_aspace_ = ktl::move(*direct_aspace);
+  guest->dpa_ = ktl::move(*dpa);
   guest->user_aspace_ = ktl::move(user_aspace);
   return ktl::move(guest);
 }

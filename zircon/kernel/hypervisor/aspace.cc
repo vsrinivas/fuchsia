@@ -7,7 +7,8 @@
 #include <align.h>
 
 #include <fbl/alloc_checker.h>
-#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/aspace.h>
+#include <hypervisor/kernel_aspace.h>
 #include <kernel/range_check.h>
 #include <ktl/move.h>
 #include <vm/fault.h>
@@ -32,32 +33,32 @@ constexpr size_t kNumPhysmapPages = PHYSMAP_SIZE / PAGE_SIZE;
 
 namespace hypervisor {
 
-zx::status<GuestPhysicalAddressSpace> GuestPhysicalAddressSpace::Create() {
-  auto guest_aspace = VmAspace::Create(VmAspace::Type::GuestPhysical, "guest_physical");
-  if (!guest_aspace) {
+zx::status<GuestPhysicalAspace> GuestPhysicalAspace::Create() {
+  auto physical_aspace = VmAspace::Create(VmAspace::Type::GuestPhysical, "guest_physical");
+  if (!physical_aspace) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  GuestPhysicalAddressSpace gpas;
-  gpas.guest_aspace_ = ktl::move(guest_aspace);
-  return zx::ok(ktl::move(gpas));
+  GuestPhysicalAspace gpa;
+  gpa.physical_aspace_ = ktl::move(physical_aspace);
+  return zx::ok(ktl::move(gpa));
 }
 
-GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
-  // VmAspace maintains a circular reference with it's root VMAR. We need to
-  // destroy the VmAspace in order to break that reference and allow the
-  // VmAspace to be destructed.
-  if (guest_aspace_) {
-    guest_aspace_->Destroy();
+GuestPhysicalAspace::~GuestPhysicalAspace() {
+  if (physical_aspace_ != nullptr) {
+    // VmAspace maintains a circular reference with it's root VMAR. We need to
+    // destroy the VmAspace in order to break that reference and allow the
+    // VmAspace to be destructed.
+    physical_aspace_->Destroy();
   }
 }
 
-bool GuestPhysicalAddressSpace::IsMapped(zx_gpaddr_t guest_paddr) const {
-  Guard<CriticalMutex> guard(guest_aspace_->lock());
+bool GuestPhysicalAspace::IsMapped(zx_gpaddr_t guest_paddr) const {
+  Guard<CriticalMutex> guard(physical_aspace_->lock());
   return FindMapping(guest_paddr) != nullptr;
 }
 
-zx::status<> GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest_paddr,
-                                                               zx_paddr_t host_paddr, size_t len) {
+zx::status<> GuestPhysicalAspace::MapInterruptController(zx_gpaddr_t guest_paddr,
+                                                         zx_paddr_t host_paddr, size_t len) {
   fbl::RefPtr<VmObjectPhysical> vmo;
   zx_status_t status = VmObjectPhysical::Create(host_paddr, len, &vmo);
   if (status != ZX_OK) {
@@ -89,18 +90,18 @@ zx::status<> GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest
   return zx::ok();
 }
 
-zx::status<> GuestPhysicalAddressSpace::UnmapRange(zx_gpaddr_t guest_paddr, size_t len) {
+zx::status<> GuestPhysicalAspace::UnmapRange(zx_gpaddr_t guest_paddr, size_t len) {
   zx_status_t status = RootVmar()->UnmapAllowPartial(guest_paddr, len);
   return zx::make_status(status);
 }
 
-zx::status<> GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
+zx::status<> GuestPhysicalAspace::PageFault(zx_gpaddr_t guest_paddr) {
   __UNINITIALIZED LazyPageRequest page_request;
 
   zx_status_t status;
   do {
     {
-      Guard<CriticalMutex> guard(guest_aspace_->lock());
+      Guard<CriticalMutex> guard(physical_aspace_->lock());
       fbl::RefPtr<VmMapping> mapping = FindMapping(guest_paddr);
       if (!mapping) {
         return zx::error(ZX_ERR_NOT_FOUND);
@@ -133,8 +134,8 @@ zx::status<> GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   return zx::make_status(status);
 }
 
-zx::status<GuestPtr> GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,
-                                                               const char* name) {
+zx::status<GuestPtr> GuestPhysicalAspace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,
+                                                         const char* name) {
   const zx_gpaddr_t begin = ROUNDDOWN(guest_paddr, PAGE_SIZE);
   const zx_gpaddr_t end = ROUNDUP(guest_paddr + len, PAGE_SIZE);
   const zx_gpaddr_t mapping_len = end - begin;
@@ -146,7 +147,7 @@ zx::status<GuestPtr> GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest
   uint64_t mapping_object_offset;
   fbl::RefPtr<VmObject> vmo;
   {
-    Guard<CriticalMutex> guard(guest_aspace_->lock());
+    Guard<CriticalMutex> guard(physical_aspace_->lock());
     fbl::RefPtr<VmMapping> guest_mapping = FindMapping(begin);
     if (!guest_mapping) {
       return zx::error(ZX_ERR_NOT_FOUND);
@@ -188,8 +189,8 @@ zx::status<GuestPtr> GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest
   return zx::ok(GuestPtr(ktl::move(host_mapping), ktl::move(pinned_vmo), guest_paddr - begin));
 }
 
-fbl::RefPtr<VmMapping> GuestPhysicalAddressSpace::FindMapping(zx_gpaddr_t guest_paddr) const {
-  fbl::RefPtr<VmAddressRegion> region = guest_aspace_->RootVmarLocked();
+fbl::RefPtr<VmMapping> GuestPhysicalAspace::FindMapping(zx_gpaddr_t guest_paddr) const {
+  fbl::RefPtr<VmAddressRegion> region = physical_aspace_->RootVmarLocked();
   AssertHeld(region->lock_ref());
   for (fbl::RefPtr<VmAddressRegionOrMapping> next; (next = region->FindRegionLocked(guest_paddr));
        region = next->as_vm_address_region()) {
@@ -200,27 +201,27 @@ fbl::RefPtr<VmMapping> GuestPhysicalAddressSpace::FindMapping(zx_gpaddr_t guest_
   return nullptr;
 }
 
-zx::status<DirectAddressSpace> DirectAddressSpace::Create() {
-  auto guest_aspace = VmAspace::Create(VmAspace::Type::GuestPhysical, "guest_physical");
-  if (!guest_aspace) {
+zx::status<DirectPhysicalAspace> DirectPhysicalAspace::Create() {
+  auto physical_aspace = VmAspace::Create(VmAspace::Type::GuestPhysical, "guest_physical");
+  if (!physical_aspace) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  zx_status_t status = guest_aspace->arch_aspace().MapContiguous(0, 0, kNumPhysmapPages,
-                                                                 kContiguousMmuFlags, nullptr);
+  zx_status_t status = physical_aspace->arch_aspace().MapContiguous(0, 0, kNumPhysmapPages,
+                                                                    kContiguousMmuFlags, nullptr);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  DirectAddressSpace direct_aspace;
-  direct_aspace.guest_aspace_ = ktl::move(guest_aspace);
-  return zx::ok(ktl::move(direct_aspace));
+  DirectPhysicalAspace dpa;
+  dpa.physical_aspace_ = ktl::move(physical_aspace);
+  return zx::ok(ktl::move(dpa));
 }
 
-DirectAddressSpace::~DirectAddressSpace() {
-  if (guest_aspace_) {
-    zx_status_t status = guest_aspace_->arch_aspace().Unmap(
+DirectPhysicalAspace::~DirectPhysicalAspace() {
+  if (physical_aspace_ != nullptr) {
+    zx_status_t status = physical_aspace_->arch_aspace().Unmap(
         0, kNumPhysmapPages, ArchVmAspace::EnlargeOperation::Yes, nullptr);
     DEBUG_ASSERT(status == ZX_OK);
-    guest_aspace_->Destroy();
+    physical_aspace_->Destroy();
   }
 }
 

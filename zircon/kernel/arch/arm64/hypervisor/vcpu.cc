@@ -14,8 +14,8 @@
 #include <arch/ops.h>
 #include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
+#include <hypervisor/aspace.h>
 #include <hypervisor/cpu.h>
-#include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/ktrace.h>
 #include <kernel/event.h>
 #include <kernel/percpu.h>
@@ -166,8 +166,8 @@ static uint8_t num_aprs(uint8_t num_pres) { return static_cast<uint8_t>(1u << (n
 
 // static
 zx::status<ktl::unique_ptr<Vcpu>> Vcpu::Create(Guest& guest, zx_vaddr_t entry) {
-  hypervisor::GuestPhysicalAddressSpace& gpas = guest.AddressSpace();
-  if (entry >= gpas.size()) {
+  hypervisor::GuestPhysicalAspace& gpa = guest.AddressSpace();
+  if (entry >= gpa.size()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 

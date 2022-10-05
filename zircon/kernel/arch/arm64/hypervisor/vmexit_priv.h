@@ -10,7 +10,7 @@
 #include <zircon/types.h>
 
 #include <hwreg/bitfields.h>
-#include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/aspace.h>
 #include <hypervisor/trap_map.h>
 
 typedef struct zx_port_packet zx_port_packet_t;
@@ -154,7 +154,7 @@ struct SError {
 
 void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state);
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
-                           hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
+                           hypervisor::GuestPhysicalAspace* gpa, hypervisor::TrapMap* traps,
                            zx_port_packet_t* packet);
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_VMEXIT_PRIV_H_

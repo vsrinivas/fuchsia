@@ -9,8 +9,8 @@ import("//build/zircon/zx_library.gni")
 
 zx_library("hypervisor") {
   sources = [
+    "aspace.cc",
     "cpu.cc",
-    "guest_physical_address_space.cc",
     "hypervisor_unittest.cc",
     "ktrace.cc",
     "trap_map.cc",
@@ -30,7 +30,7 @@ zx_library("hypervisor") {
     # <hypervisor/id_allocator.h> has #include <bitmap/raw-bitmap.h>.
     "//zircon/system/ulib/bitmap:headers",
 
-    # <hypervisor/guest_physical_address_space.h> has #include <vm/vm_aspace.h>.
+    # <hypervisor/aspace.h> has #include <vm/vm_aspace.h>.
     "//zircon/kernel/vm:headers",
 
     # <hypervisor/interrupt_tracker.h> has #include <lib/ktrace.h>.

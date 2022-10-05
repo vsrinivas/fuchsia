@@ -198,7 +198,7 @@ zx_library("x86") {
     # arch/x86/apic.h has #include <dev/interrupt.h>.
     "//zircon/kernel/dev/interrupt:headers",
 
-    # arch/x86/hypervisor.h has #include <hypervisor/guest_physical_address_space.h>.
+    # arch/x86/hypervisor.h has #include <hypervisor/aspace.h>.
     "//zircon/kernel/hypervisor:headers",
 
     # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>.

@@ -809,7 +809,7 @@ zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs,
 
 zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs,
                              const GuestState& guest_state, LocalApicState& local_apic_state,
-                             PvClockState& pv_clock, hypervisor::GuestPhysicalAddressSpace& gpas) {
+                             PvClockState& pv_clock, hypervisor::GuestPhysicalAspace& gpa) {
   zx_paddr_t guest_paddr = guest_state.EdxEax();
 
   next_rip(exit_info, vmcs);
@@ -818,7 +818,7 @@ zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs,
     case kKvmSystemTimeMsr:
       vmcs.Invalidate();
       if ((guest_paddr & 1) != 0) {
-        return pv_clock_reset_clock(&pv_clock, &gpas, guest_paddr & ~static_cast<zx_paddr_t>(1))
+        return pv_clock_reset_clock(&pv_clock, &gpa, guest_paddr & ~static_cast<zx_paddr_t>(1))
             .status_value();
       } else {
         pv_clock_stop_clock(&pv_clock);
@@ -827,7 +827,7 @@ zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs,
     case kKvmBootTimeOld:
     case kKvmBootTime:
       vmcs.Invalidate();
-      return pv_clock_update_boot_time(&gpas, guest_paddr).status_value();
+      return pv_clock_update_boot_time(&gpa, guest_paddr).status_value();
     default:
       local_apic_state.interrupt_tracker.Interrupt(X86_INT_GP_FAULT);
       return ZX_OK;
@@ -836,7 +836,7 @@ zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs,
 
 zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs, const GuestState& guest_state,
                          LocalApicState& local_apic_state, PvClockState& pv_clock,
-                         hypervisor::GuestPhysicalAddressSpace& gpas, zx_port_packet& packet) {
+                         hypervisor::GuestPhysicalAspace& gpa, zx_port_packet& packet) {
   // On execution of wrmsr, rcx specifies the MSR and edx:eax contains the value to be written.
   switch (guest_state.ecx()) {
     case X86_MSR_IA32_APIC_BASE:
@@ -882,7 +882,7 @@ zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs, const GuestS
     case kKvmSystemTimeMsr:
     case kKvmBootTimeOld:
     case kKvmBootTime:
-      return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpas);
+      return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpa);
     default:
       dprintf(INFO, "hypervisor: Unhandled guest WRMSR %#lx\n", guest_state.rcx);
       local_apic_state.interrupt_tracker.Interrupt(X86_INT_GP_FAULT);
@@ -944,8 +944,8 @@ zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs& vmcs, bool read,
 }
 
 zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs& vmcs,
-                                 hypervisor::GuestPhysicalAddressSpace& gpas,
-                                 hypervisor::TrapMap& traps, zx_port_packet_t& packet) {
+                                 hypervisor::GuestPhysicalAspace& gpa, hypervisor::TrapMap& traps,
+                                 zx_port_packet_t& packet) {
   const EptViolationInfo ept_violation_info(vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION));
   zx_gpaddr_t guest_paddr = vmcs.Read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
   zx_status_t status =
@@ -962,11 +962,11 @@ zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs& vmcs,
 
   // If there was no trap associated with this address and it is outside of
   // guest physical address space, return failure.
-  if (guest_paddr >= gpas.size()) {
+  if (guest_paddr >= gpa.size()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (auto result = gpas.PageFault(guest_paddr); result.is_error()) {
+  if (auto result = gpa.PageFault(guest_paddr); result.is_error()) {
     dprintf(CRITICAL, "hypervisor: Unhandled EPT violation %#lx\n", guest_paddr);
     return result.status_value();
   }
@@ -1017,8 +1017,7 @@ bool is_cpl0(AutoVmcs& vmcs, GuestState& guest_state) {
 }
 
 zx_status_t handle_vmcall_regular(const ExitInfo& exit_info, AutoVmcs& vmcs,
-                                  GuestState& guest_state,
-                                  hypervisor::GuestPhysicalAddressSpace& gpas) {
+                                  GuestState& guest_state, hypervisor::GuestPhysicalAspace& gpa) {
   next_rip(exit_info, vmcs);
   if (!is_cpl0(vmcs, guest_state)) {
     guest_state.rax = VmCallStatus::NOT_PERMITTED;
@@ -1034,7 +1033,7 @@ zx_status_t handle_vmcall_regular(const ExitInfo& exit_info, AutoVmcs& vmcs,
         guest_state.rax = VmCallStatus::NOT_SUPPORTED;
         break;
       }
-      if (auto result = pv_clock_populate_offset(&gpas, info.arg[0]); result.is_error()) {
+      if (auto result = pv_clock_populate_offset(&gpa, info.arg[0]); result.is_error()) {
         dprintf(INFO, "hypervisor: Failed to populate lock offset with error %d\n",
                 result.status_value());
         guest_state.rax = VmCallStatus::FAULT;
@@ -1150,8 +1149,8 @@ VmCallInfo::VmCallInfo(const GuestState& guest_state) {
 
 zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
                                   LocalApicState& local_apic_state, PvClockState& pv_clock,
-                                  hypervisor::GuestPhysicalAddressSpace& gpas,
-                                  hypervisor::TrapMap& traps, zx_port_packet_t& packet) {
+                                  hypervisor::GuestPhysicalAspace& gpa, hypervisor::TrapMap& traps,
+                                  zx_port_packet_t& packet) {
   zx_status_t status;
   const ExitInfo exit_info(vmcs);
   switch (exit_info.exit_reason) {
@@ -1193,7 +1192,7 @@ zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
     case ExitReason::WRMSR:
       ktrace_vcpu_exit(VCPU_WRMSR, exit_info.guest_rip);
       GUEST_STATS_INC(wrmsr_instructions);
-      status = handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpas, packet);
+      status = handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpa, packet);
       break;
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
@@ -1204,7 +1203,7 @@ zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
     case ExitReason::EPT_VIOLATION:
       ktrace_vcpu_exit(VCPU_EPT_VIOLATION, exit_info.guest_rip);
       GUEST_STATS_INC(ept_violations);
-      status = handle_ept_violation(exit_info, vmcs, gpas, traps, packet);
+      status = handle_ept_violation(exit_info, vmcs, gpa, traps, packet);
       break;
     case ExitReason::XSETBV:
       ktrace_vcpu_exit(VCPU_XSETBV, exit_info.guest_rip);
@@ -1219,7 +1218,7 @@ zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
     case ExitReason::VMCALL:
       ktrace_vcpu_exit(VCPU_VMCALL, exit_info.guest_rip);
       GUEST_STATS_INC(vmcall_instructions);
-      status = handle_vmcall_regular(exit_info, vmcs, guest_state, gpas);
+      status = handle_vmcall_regular(exit_info, vmcs, guest_state, gpa);
       break;
     case ExitReason::EXCEPTION_OR_NMI:
     // Currently all exceptions, except NMIs, are delivered directly to guests.
