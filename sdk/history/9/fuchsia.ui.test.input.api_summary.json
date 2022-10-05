@@ -11,6 +11,12 @@
     },
     {
         "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/KeyboardInputListener.ReportReady",
+        "ordinal": "5440094144530781979",
+        "type": "() -> ()"
+    },
+    {
+        "kind": "protocol/member",
         "name": "fuchsia.ui.test.input/KeyboardInputListener.ReportTextInput",
         "ordinal": "5571992869676352977",
         "type": "(fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest payload)"

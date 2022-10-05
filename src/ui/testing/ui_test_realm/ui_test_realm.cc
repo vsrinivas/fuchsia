@@ -171,7 +171,7 @@ std::vector<std::string> AccessibilityServices(const UITestRealm::Config& config
   }
 
   return {fuchsia::accessibility::semantics::SemanticsManager::Name_,
-          fuchsia::accessibility::Magnifier::Name_};
+          fuchsia::accessibility::ColorTransform::Name_, fuchsia::accessibility::Magnifier::Name_};
 }
 
 // List of scene owner services available in the test realm.

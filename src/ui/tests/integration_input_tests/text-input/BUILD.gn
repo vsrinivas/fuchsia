@@ -5,11 +5,13 @@
 # By and large copied from //src/ui/tests/integration_input_tests/factory-reset-handler.
 
 import("//build/components.gni")
+import("//src/fonts/build/fonts.gni")
 
 group("text-input") {
   testonly = true
   deps = [
     ":tests",
+    "text-input-chromium",
     "text-input-flutter",
   ]
 }
@@ -18,12 +20,22 @@ group("tests") {
   testonly = true
   deps = [
     ":text-input-test",
+    "text-input-chromium",
     "text-input-flutter",
     "//src/ui/testing/test_ui_stack:test-ui-stack-flavors",
 
     # The deps below are necessary on minimal product configs.
+    "//src/chromium:web_engine",
     "//src/flutter",
   ]
+}
+
+font_collection("single-font-collection") {
+  testonly = true
+  product_config_path =
+      "//src/ui/testing/data/single-font-collection.fontcfg.json5"
+  local_asset_names = [ "Roboto-Regular.ttf" ]
+  font_service_pkg = "text-input-test"
 }
 
 executable("text-input-test-bin") {
@@ -31,17 +43,32 @@ executable("text-input-test-bin") {
   sources = [ "text-input-test.cc" ]
   output_name = "text-input-test"
   deps = [
+    "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp",
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_hlcpp",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_hlcpp",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_hlcpp",
+    "//sdk/fidl/fuchsia.fonts:fuchsia.fonts_hlcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_hlcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_hlcpp",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_hlcpp",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_hlcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene_hlcpp",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_hlcpp",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_hlcpp",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_hlcpp",
     "//sdk/fidl/fuchsia.ui.test.scene:fuchsia.ui.test.scene_hlcpp",
     "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
+    "//sdk/fidl/fuchsia.web:fuchsia.web_hlcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/component/cpp/testing:cpp",
@@ -51,7 +78,10 @@ executable("text-input-test-bin") {
     "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/json_parser:json_parser",
     "//src/lib/testing/loop_fixture",
+    "//src/ui/input/testing/fake_input_report_device",
+    "//src/ui/testing/ui_test_manager:ui_test_manager",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -68,8 +98,21 @@ fuchsia_component("text-input-test-component") {
 
 fuchsia_test_package("text-input-test") {
   test_components = [ ":text-input-test-component" ]
-  deps = [ "text-input-flutter:realm" ]
+  deps = [
+    ":single-font-collection",
+    "text-input-chromium:text-input-chromium-component",
+    "text-input-flutter:realm",
+    "//src/chromium:web_engine",
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/connectivity/network/netstack:component",
+    "//src/developer/build_info/testing:fake-build-info-component",
+    "//src/developer/memory/monitor:component",
+    "//src/fonts:font_provider_cm",
+    "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
+    "//src/ui/bin/text:text_manager_comp",
+  ]
   test_specs = {
+    parallel = 1
     log_settings = {
       # Do not fail the test if a message with level ERROR is logged.  Several
       # components will log ERROR if they miss a non-essential FIDL API in the

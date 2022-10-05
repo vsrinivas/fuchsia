@@ -23,8 +23,5 @@ group("integration_input_tests") {
 group("workstation_tests") {
   testonly = true
 
-  deps = [
-    "mouse:tests",
-    "text-input:tests",
-  ]
+  deps = [ "mouse:tests" ]
 }

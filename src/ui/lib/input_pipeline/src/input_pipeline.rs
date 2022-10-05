@@ -427,6 +427,8 @@ impl InputPipeline {
     /// This method will end when the request stream is closed. If the stream closes with an
     /// error the error will be returned in the Result.
     ///
+    /// **NOTE**: Only one stream is handled at a time. http://fxbug.dev/109722
+    ///
     /// # Parameters
     /// - `stream`: The stream of InputDeviceRegistryRequests.
     /// - `device_types`: The types of devices to watch for.

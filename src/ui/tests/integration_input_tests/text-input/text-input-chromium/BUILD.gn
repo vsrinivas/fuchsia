@@ -1,0 +1,47 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("text-input-chromium") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
+executable("bin") {
+  output_name = "text-input-chromium"
+  sources = [ "text-input-chromium.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_hlcpp",
+    "//sdk/fidl/fuchsia.web:fuchsia.web_hlcpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
+    "//src/chromium/web_engine/meta/shards:web_engine_view",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/json_parser",
+    "//third_party/rapidjson",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("text-input-chromium-component") {
+  testonly = true
+  component_name = "text-input-chromium"
+  manifest = "meta/text-input-chromium.cml"
+  deps = [
+    ":bin",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
+fuchsia_package("package") {
+  testonly = true
+  package_name = "text-input-chromium"
+  deps = [ ":text-input-chromium-component" ]
+}

@@ -6,7 +6,8 @@
         "//sdk/lib/syslog/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
-        "sys/testing/system-test.shard.cml",
+
+        //"sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
         "vulkan/client.shard.cml",
     ],
@@ -23,10 +24,16 @@
     offer: [
         {
             protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.logger.LogSink",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",
@@ -34,5 +41,18 @@
             from: "parent",
             to: "#realm_builder",
         },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#realm_builder",
+            subdir: "text-input-test",
+        },
     ],
+
+    // Used to be able to connect Chromium remote tools. Conflicts with
+    // system-test.shard.cml.
+    // See ../README.md for instructions.
+    facets: {
+        "fuchsia.test": { type: "chromium" },
+    },
 }

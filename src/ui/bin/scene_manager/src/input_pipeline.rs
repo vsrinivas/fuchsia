@@ -527,25 +527,34 @@ pub async fn handle_input_device_registry_request_streams(
 ) {
     // Use a high value device id to avoid conflicting device ids.
     let mut device_id = u32::MAX;
+
     while let Some(stream) = stream_receiver.next().await {
-        match InputPipeline::handle_input_device_registry_request_stream(
-            stream,
-            &input_device_types,
-            &input_event_sender,
-            &input_device_bindings,
-            device_id,
-        )
-        .await
-        {
-            Ok(()) => (),
-            Err(e) => {
-                warn!(
-                    "failure while serving InputDeviceRegistry: {}; \
-                     will continue serving other clients",
-                    e
-                );
+        let input_device_types_clone = input_device_types.clone();
+        let input_event_sender_clone = input_event_sender.clone();
+        let input_device_bindings_clone = input_device_bindings.clone();
+        // TODO(fxbug.dev/109772): Push this task down to InputPipeline.
+        // I didn't do that here, to keep the scope of this change small.
+        fasync::Task::local(async move {
+            match InputPipeline::handle_input_device_registry_request_stream(
+                stream,
+                &input_device_types_clone,
+                &input_event_sender_clone,
+                &input_device_bindings_clone,
+                device_id,
+            )
+            .await
+            {
+                Ok(()) => (),
+                Err(e) => {
+                    warn!(
+                        "failure while serving InputDeviceRegistry: {}; \
+                         will continue serving other clients",
+                        e
+                    );
+                }
             }
-        }
+        })
+        .detach();
         device_id -= 1;
     }
 }
