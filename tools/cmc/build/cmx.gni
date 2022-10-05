@@ -233,16 +233,11 @@ template("cmx") {
                            ])
   }
 
-  needs_debugdata = is_coverage
-
   cmc_merge("${target_name}_merge") {
     sources = [
       cmx_patches,
       included,
     ]
-    if (needs_debugdata) {
-      sources += [ "//build/config/sanitizers/debugdata.cmx" ]
-    }
     forward_variables_from(invoker,
                            [
                              "deps",
