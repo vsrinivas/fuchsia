@@ -11,3 +11,9 @@ platform_version.head_fuchsia_api_level = 4294967295
 
 # TODO(kjharland): Migrate callsites to platform_version.in_development_api_level
 in_development_api_level = platform_version.in_development_api_level
+
+declare_args() {
+  # If true, generate golden files for next api level. This is used by
+  # platform-version-roller when the API level is incremented.
+  include_next_api_level = false
+}
