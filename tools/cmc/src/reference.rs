@@ -37,7 +37,7 @@ const CHECK_REFERENCES_URL: &str = "https://fuchsia.dev/go/components/build-erro
 pub fn validate(
     component_manifest_path: &PathBuf,
     package_manifest_path: &PathBuf,
-    gn_label: Option<&String>,
+    context: Option<&String>,
 ) -> Result<(), Error> {
     let component_manifest = read_component_manifest(component_manifest_path)?;
     match get_component_runner(&component_manifest).as_deref() {
@@ -71,7 +71,7 @@ pub fn validate(
         return Ok(());
     }
 
-    Err(missing_binary_error(component_manifest_path, program_binary, package_targets, gn_label))
+    Err(missing_binary_error(component_manifest_path, program_binary, package_targets, context))
 }
 
 fn read_package_manifest(path: &PathBuf) -> Result<String, Error> {
@@ -178,9 +178,9 @@ fn missing_binary_error(
     component_manifest_path: &PathBuf,
     program_binary: String,
     package_targets: Vec<String>,
-    gn_label: Option<&String>,
+    context: Option<&String>,
 ) -> Error {
-    let header = gen_header(component_manifest_path, gn_label);
+    let header = gen_header(component_manifest_path, context);
     if package_targets.is_empty() {
         return Error::validate(format!("{}\n\tPackage deps is empty!", header));
     }
@@ -207,8 +207,8 @@ For more details, see {}",
     ))
 }
 
-fn gen_header(component_manifest_path: &PathBuf, gn_label: Option<&String>) -> String {
-    match gn_label {
+fn gen_header(component_manifest_path: &PathBuf, context: Option<&String>) -> String {
+    match context {
         Some(label) => format!(
             "Error found in: {}\n\tFailed to validate manifest: {:#?}",
             label, component_manifest_path

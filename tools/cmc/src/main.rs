@@ -60,8 +60,8 @@ fn run_cmc() -> Result<(), Error> {
                 must_use: &experimental_must_use_protocol,
             },
         )?,
-        opts::Commands::ValidateReferences { component_manifest, package_manifest, gn_label } => {
-            reference::validate(&component_manifest, &package_manifest, gn_label.as_ref())?
+        opts::Commands::ValidateReferences { component_manifest, package_manifest, context } => {
+            reference::validate(&component_manifest, &package_manifest, context.as_ref())?
         }
         opts::Commands::Merge { files, output, fromfile, depfile } => {
             merge::merge(files, output, fromfile, depfile)?

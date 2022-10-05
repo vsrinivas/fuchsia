@@ -68,8 +68,12 @@ pub enum Commands {
         )]
         package_manifest: PathBuf,
 
-        #[structopt(name = "GN Label", short = "l", long = "gn-label")]
-        gn_label: Option<String>,
+        #[structopt(
+            name = "Free text label, for instance as context for errors printed",
+            short = "e",
+            long = "context"
+        )]
+        context: Option<String>,
     },
 
     #[structopt(name = "merge")]

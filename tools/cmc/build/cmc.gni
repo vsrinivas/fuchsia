@@ -166,7 +166,7 @@ template("cmc_validate_references") {
       rebase_path(invoker.component_manifest, root_build_dir),
       "--package-manifest",
       rebase_path(package_manifest, root_build_dir),
-      "--gn-label",
+      "--context",
       invoker.label,
     ]
 
