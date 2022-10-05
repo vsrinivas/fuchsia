@@ -8,6 +8,8 @@
 toc:
 - title: "Overview"
   path: /docs/development/hardware/README.md
+- title: "Provisioning guides index"
+  path: /docs/development/hardware/provision/index.md
 - title: "Install Fuchsia on a Chromebook"
   path: /docs/development/hardware/chromebook.md
 - title: "Install Fuchsia on a NUC"
