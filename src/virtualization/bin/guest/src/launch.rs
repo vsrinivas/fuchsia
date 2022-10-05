@@ -42,7 +42,7 @@ impl GuestLaunch {
 
         println!("Starting {}", guest_type.to_string());
         let manager = services::connect_to_manager(guest_type)?;
-        let fidl_result = manager.launch_guest(config, guest_server_end).await;
+        let fidl_result = manager.launch(config, guest_server_end).await;
         if let Err(fidl::Error::ClientChannelClosed { .. }) = fidl_result {
             eprintln!("");
             eprintln!("Unable to connect to start the guest.");

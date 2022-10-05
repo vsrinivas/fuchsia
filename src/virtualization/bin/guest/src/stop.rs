@@ -22,8 +22,7 @@ enum ShutdownCommand {
 
 pub async fn handle_stop(args: &arguments::StopArgs) -> Result<(), Error> {
     let manager = services::connect_to_manager(args.guest_type)?;
-    let status =
-        manager.get_guest_info().await?.guest_status.expect("guest status should always be set");
+    let status = manager.get_info().await?.guest_status.expect("guest status should always be set");
     if status != GuestStatus::Starting && status != GuestStatus::Running {
         println!("Nothing to do - the guest is not running");
         return Ok(());
@@ -95,10 +94,10 @@ async fn graceful_stop_guest(
     let (guest_endpoint, guest_server_end) = create_proxy::<GuestMarker>()
         .map_err(|err| anyhow!("failed to create guest proxy: {}", err))?;
     manager
-        .connect_to_guest(guest_server_end)
+        .connect(guest_server_end)
         .await
-        .map_err(|err| anyhow!("failed to get a connect_to_guest response: {}", err))?
-        .map_err(|err| anyhow!("connect_to_guest failed with: {:?}", err))?;
+        .map_err(|err| anyhow!("failed to get a connect response: {}", err))?
+        .map_err(|err| anyhow!("connect failed with: {:?}", err))?;
 
     match guest {
         arguments::GuestType::Zircon => {
@@ -141,7 +140,7 @@ async fn force_stop_guest(
 ) -> Result<(), Error> {
     println!("Forcing {} to stop", guest.to_string());
     let start = fasync::Time::now();
-    manager.force_shutdown_guest().await?;
+    manager.force_shutdown().await?;
 
     print_guest_stop_time(fasync::Time::now() - start);
 
@@ -173,7 +172,7 @@ mod test {
             .expect("future should be ready")
             .unwrap()
             .unwrap()
-            .into_connect_to_guest()
+            .into_connect()
             .expect("received unexpected request on stream");
 
         responder.send(&mut Ok(())).expect("failed to send response");
@@ -231,7 +230,7 @@ mod test {
             .expect("future should be ready")
             .unwrap()
             .unwrap()
-            .into_force_shutdown_guest()
+            .into_force_shutdown()
             .expect("received unexpected request on stream");
         responder.send().expect("failed to send response");
 

@@ -22,16 +22,16 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
       : GuestManager(dispatcher, context, "/guest_pkg/", "data/guest.cfg") {}
 
   // |fuchsia::virtualization::GuestManager|
-  void LaunchGuest(fuchsia::virtualization::GuestConfig user_config,
-                   fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-                   LaunchGuestCallback callback) override;
-  void ForceShutdownGuest(ForceShutdownGuestCallback callback) override;
-  void ConnectToGuest(fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-                      ConnectToGuestCallback) override;
-  void GetGuestInfo(GetGuestInfoCallback callback) override;
+  void Launch(fuchsia::virtualization::GuestConfig user_config,
+              fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+              LaunchCallback callback) override;
+  void ForceShutdown(ForceShutdownCallback callback) override;
+  void Connect(fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+               ConnectCallback) override;
+  void GetInfo(GetInfoCallback callback) override;
 
   // Store a subset of the configuration. This can be queried while the guest is running using
-  // the GuestManager::GetGuestInfo FIDL message.
+  // the GuestManager::GetInfo FIDL message.
   void SnapshotConfig(const fuchsia::virtualization::GuestConfig& config);
 
   // Returns true if the guest was started, but hasn't stopped.
@@ -47,7 +47,7 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
  private:
   void HandleCreateResult(::fuchsia::virtualization::GuestLifecycle_Create_Result result,
                           fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-                          LaunchGuestCallback callback);
+                          LaunchCallback callback);
   void HandleRunResult(::fuchsia::virtualization::GuestLifecycle_Run_Result result);
   void HandleGuestStopped(fitx::result<::fuchsia::virtualization::GuestError> err);
 
@@ -67,7 +67,7 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
   zx::time stop_time_ = zx::time::infinite_past();
 
   // Snapshot of some of the configuration settings used to start this guest. This is
-  // informational only, and sent in response to a GetGuestInfo call.
+  // informational only, and sent in response to a GetInfo call.
   fuchsia::virtualization::GuestDescriptor guest_descriptor_;
 
   // Current state of the guest.

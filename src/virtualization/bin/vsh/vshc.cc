@@ -567,9 +567,9 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_port, std::vector<std::string> 
   fuchsia::virtualization::TerminaGuestManagerSyncPtr manager;
   context->svc()->Connect(manager.NewRequest());
 
-  fuchsia::virtualization::GuestManager_ConnectToGuest_Result get_guest_result;
+  fuchsia::virtualization::GuestManager_Connect_Result get_guest_result;
   fuchsia::virtualization::GuestSyncPtr guest;
-  manager->ConnectToGuest(guest.NewRequest(), &get_guest_result);
+  manager->Connect(guest.NewRequest(), &get_guest_result);
   if (get_guest_result.is_err()) {
     return ZX_ERR_UNAVAILABLE;
   }

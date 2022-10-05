@@ -79,7 +79,7 @@ class GuestManagerTest : public gtest::TestLoopFixture {
 TEST_F(GuestManagerTest, LaunchFailInvalidPath) {
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "invalid_path.cfg");
   bool launch_callback_called = false;
-  manager.LaunchGuest({}, {}, [&launch_callback_called](auto res) {
+  manager.Launch({}, {}, [&launch_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
     ASSERT_EQ(GuestManagerError::BAD_CONFIG, res.err());
     launch_callback_called = true;
@@ -91,7 +91,7 @@ TEST_F(GuestManagerTest, LaunchFailInvalidConfig) {
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/",
                        "data/configs/bad_schema_invalid_field.cfg");
   bool launch_callback_called = false;
-  manager.LaunchGuest({}, {}, [&launch_callback_called](auto res) {
+  manager.Launch({}, {}, [&launch_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
     ASSERT_EQ(GuestManagerError::BAD_CONFIG, res.err());
     launch_callback_called = true;
@@ -103,54 +103,54 @@ TEST_F(GuestManagerTest, ForceShutdownNonRunningGuest) {
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
 
   bool get_callback_called = false;
-  manager.GetGuestInfo([&get_callback_called](auto info) {
+  manager.GetInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::NOT_STARTED);
     get_callback_called = true;
   });
   ASSERT_TRUE(get_callback_called);
 
   bool shutdown_callback_called = false;
-  manager.ForceShutdownGuest([&shutdown_callback_called]() { shutdown_callback_called = true; });
+  manager.ForceShutdown([&shutdown_callback_called]() { shutdown_callback_called = true; });
   RunLoopUntilIdle();
   ASSERT_TRUE(shutdown_callback_called);
 
   // Shutting down a non-running guest does nothing, including changing state from NOT_STARTED
   // (for example to STOPPING or STOPPED).
   get_callback_called = false;
-  manager.GetGuestInfo([&get_callback_called](auto info) {
+  manager.GetInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::NOT_STARTED);
     get_callback_called = true;
   });
   ASSERT_TRUE(get_callback_called);
 }
 
-TEST_F(GuestManagerTest, ForceShutdownGuest) {
+TEST_F(GuestManagerTest, ForceShutdown) {
   bool launch_callback_called = false;
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
   fuchsia::virtualization::GuestConfig user_guest_config;
   fuchsia::virtualization::GuestPtr guest;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&launch_callback_called](auto res) {
-                        ASSERT_FALSE(res.is_err());
-                        launch_callback_called = true;
-                      });
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
 
   bool get_callback_called = false;
-  manager.GetGuestInfo([&get_callback_called](auto info) {
+  manager.GetInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::RUNNING);
     get_callback_called = true;
   });
   ASSERT_TRUE(get_callback_called);
 
   bool shutdown_callback_called = false;
-  manager.ForceShutdownGuest([&shutdown_callback_called]() { shutdown_callback_called = true; });
+  manager.ForceShutdown([&shutdown_callback_called]() { shutdown_callback_called = true; });
   RunLoopUntilIdle();
   ASSERT_TRUE(shutdown_callback_called);
 
   get_callback_called = false;
-  manager.GetGuestInfo([&get_callback_called](auto info) {
+  manager.GetInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::STOPPED);
     ASSERT_EQ(info.stop_error(), GuestError::CONTROLLER_FORCED_HALT);
     get_callback_called = true;
@@ -163,16 +163,16 @@ TEST_F(GuestManagerTest, VmmComponentCrash) {
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
   fuchsia::virtualization::GuestConfig user_guest_config;
   fuchsia::virtualization::GuestPtr guest;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&launch_callback_called](auto res) {
-                        ASSERT_FALSE(res.is_err());
-                        launch_callback_called = true;
-                      });
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
 
   bool get_callback_called = false;
-  manager.GetGuestInfo([&get_callback_called](auto info) {
+  manager.GetInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::RUNNING);
     get_callback_called = true;
   });
@@ -183,7 +183,7 @@ TEST_F(GuestManagerTest, VmmComponentCrash) {
   RunLoopUntilIdle();
 
   get_callback_called = false;
-  manager.GetGuestInfo([&get_callback_called](auto info) {
+  manager.GetInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(),
               fuchsia::virtualization::GuestStatus::VMM_UNEXPECTED_TERMINATION);
     get_callback_called = true;
@@ -192,34 +192,34 @@ TEST_F(GuestManagerTest, VmmComponentCrash) {
 }
 
 TEST_F(GuestManagerTest, FailedToCreateAndInitializeVmmWithRestart) {
-  // Inject a failure into LaunchGuest.
+  // Inject a failure into Launch.
   fake_guest_lifecycle_->set_create_response(fitx::error(GuestError::GUEST_INITIALIZATION_FAILURE));
   bool launch_callback_called = false;
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
   {
     fuchsia::virtualization::GuestConfig user_guest_config;
     fuchsia::virtualization::GuestPtr guest;
-    manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                        [&launch_callback_called](auto res) {
-                          ASSERT_TRUE(res.is_err());
-                          ASSERT_EQ(res.err(), GuestManagerError::START_FAILURE);
-                          launch_callback_called = true;
-                        });
+    manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                   [&launch_callback_called](auto res) {
+                     ASSERT_TRUE(res.is_err());
+                     ASSERT_EQ(res.err(), GuestManagerError::START_FAILURE);
+                     launch_callback_called = true;
+                   });
   }
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
 
-  // Second LaunchGuest succeeds.
+  // Second Launch succeeds.
   fake_guest_lifecycle_->set_create_response(fitx::ok());
   launch_callback_called = false;
   {
     fuchsia::virtualization::GuestConfig user_guest_config;
     fuchsia::virtualization::GuestPtr guest;
-    manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                        [&launch_callback_called](auto res) {
-                          ASSERT_FALSE(res.is_err());
-                          launch_callback_called = true;
-                        });
+    manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                   [&launch_callback_called](auto res) {
+                     ASSERT_FALSE(res.is_err());
+                     launch_callback_called = true;
+                   });
   }
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
@@ -230,16 +230,16 @@ TEST_F(GuestManagerTest, GuestInitiatedCleanShutdown) {
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
   fuchsia::virtualization::GuestConfig user_guest_config;
   fuchsia::virtualization::GuestPtr guest;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&launch_callback_called](auto res) {
-                        ASSERT_FALSE(res.is_err());
-                        launch_callback_called = true;
-                      });
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
 
   bool get_callback_called = false;
-  manager.GetGuestInfo([&get_callback_called](auto info) {
+  manager.GetInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::RUNNING);
     get_callback_called = true;
   });
@@ -250,7 +250,7 @@ TEST_F(GuestManagerTest, GuestInitiatedCleanShutdown) {
   RunLoopUntilIdle();
 
   get_callback_called = false;
-  manager.GetGuestInfo([&get_callback_called](auto info) {
+  manager.GetInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::STOPPED);
     ASSERT_FALSE(info.has_stop_error());  // Clean shutdown.
     get_callback_called = true;
@@ -275,11 +275,11 @@ TEST_F(GuestManagerTest, LaunchAndApplyUserGuestConfig) {
   });
   fuchsia::virtualization::GuestPtr guest;
   bool launch_callback_called = false;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&launch_callback_called](auto res) {
-                        ASSERT_FALSE(res.is_err());
-                        launch_callback_called = true;
-                      });
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
 
@@ -307,21 +307,21 @@ TEST_F(GuestManagerTest, DoubleLaunchFail) {
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
   fuchsia::virtualization::GuestConfig user_guest_config;
   fuchsia::virtualization::GuestPtr guest;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&launch_callback_called](auto res) {
-                        ASSERT_FALSE(res.is_err());
-                        launch_callback_called = true;
-                      });
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
 
   launch_callback_called = false;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&launch_callback_called](auto res) {
-                        ASSERT_TRUE(res.is_err());
-                        ASSERT_EQ(GuestManagerError::ALREADY_RUNNING, res.err());
-                        launch_callback_called = true;
-                      });
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_TRUE(res.is_err());
+                   ASSERT_EQ(GuestManagerError::ALREADY_RUNNING, res.err());
+                   launch_callback_called = true;
+                 });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
 }
@@ -330,7 +330,7 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
   bool get_callback_called = false;
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
 
-  manager.GetGuestInfo([&get_callback_called](auto info) {
+  manager.GetInfo([&get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::NOT_STARTED);
     ASSERT_FALSE(info.has_uptime());
     ASSERT_FALSE(info.has_guest_descriptor());
@@ -343,11 +343,11 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
   bool launch_callback_called = false;
   fuchsia::virtualization::GuestConfig user_guest_config;
   fuchsia::virtualization::GuestPtr guest;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&launch_callback_called](auto res) {
-                        ASSERT_FALSE(res.is_err());
-                        launch_callback_called = true;
-                      });
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
 
@@ -355,7 +355,7 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
       fake_guest_lifecycle_->take_guest_config();
 
   get_callback_called = false;
-  manager.GetGuestInfo([&finalized_config, &get_callback_called](auto info) {
+  manager.GetInfo([&finalized_config, &get_callback_called](auto info) {
     ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::RUNNING);
     ASSERT_GT(info.uptime(), 0);
     ASSERT_FALSE(info.has_stop_error());
@@ -387,12 +387,12 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
   ASSERT_TRUE(get_callback_called);
 }
 
-TEST_F(GuestManagerTest, ConnectToGuest) {
+TEST_F(GuestManagerTest, Connect) {
   bool connect_callback_called = false;
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
 
   fuchsia::virtualization::GuestPtr guest;
-  manager.ConnectToGuest(guest.NewRequest(), [&connect_callback_called](auto res) {
+  manager.Connect(guest.NewRequest(), [&connect_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
     ASSERT_EQ(GuestManagerError::NOT_RUNNING, res.err());
     connect_callback_called = true;
@@ -402,17 +402,17 @@ TEST_F(GuestManagerTest, ConnectToGuest) {
 
   bool launch_callback_called = false;
   fuchsia::virtualization::GuestConfig user_guest_config;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&launch_callback_called](auto res) {
-                        ASSERT_FALSE(res.is_err());
-                        launch_callback_called = true;
-                      });
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_FALSE(res.is_err());
+                   launch_callback_called = true;
+                 });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
   guest.Unbind();
 
   connect_callback_called = false;
-  manager.ConnectToGuest(guest.NewRequest(), [&connect_callback_called](auto res) {
+  manager.Connect(guest.NewRequest(), [&connect_callback_called](auto res) {
     ASSERT_FALSE(res.is_err());
     connect_callback_called = true;
   });
@@ -432,12 +432,12 @@ TEST_F(GuestManagerTest, DuplicateListenersProvidedByUserGuestConfig) {
 
   fuchsia::virtualization::GuestPtr guest;
   bool launch_callback_called = false;
-  fuchsia::virtualization::GuestManager_LaunchGuest_Result result;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&result, &launch_callback_called](auto res) {
-                        result = std::move(res);
-                        launch_callback_called = true;
-                      });
+  fuchsia::virtualization::GuestManager_Launch_Result result;
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&result, &launch_callback_called](auto res) {
+                   result = std::move(res);
+                   launch_callback_called = true;
+                 });
 
   ASSERT_TRUE(launch_callback_called);
   ASSERT_EQ(result.err(), GuestManagerError::BAD_CONFIG);
@@ -458,12 +458,12 @@ TEST_F(GuestManagerTest, UserProvidedInitialListeners) {
 
   bool launch_callback_called = false;
   fuchsia::virtualization::GuestPtr guest;
-  fuchsia::virtualization::GuestManager_LaunchGuest_Result result;
-  manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
-                      [&launch_callback_called](auto res) {
-                        ASSERT_TRUE(res.is_response());
-                        launch_callback_called = true;
-                      });
+  fuchsia::virtualization::GuestManager_Launch_Result result;
+  manager.Launch(std::move(user_guest_config), guest.NewRequest(),
+                 [&launch_callback_called](auto res) {
+                   ASSERT_TRUE(res.is_response());
+                   launch_callback_called = true;
+                 });
   RunLoopUntilIdle();
   ASSERT_TRUE(launch_callback_called);
 

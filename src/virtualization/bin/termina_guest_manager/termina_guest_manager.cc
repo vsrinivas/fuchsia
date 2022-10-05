@@ -88,7 +88,7 @@ fitx::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGues
 
 void TerminaGuestManager::StartGuest() {
   fuchsia::virtualization::GuestConfig cfg;
-  LaunchGuest(std::move(cfg), guest_controller_.NewRequest(), [](auto res) {
+  Launch(std::move(cfg), guest_controller_.NewRequest(), [](auto res) {
     if (res.is_err()) {
       FX_LOGS(INFO) << "Termina Guest failed to launch: " << static_cast<int32_t>(res.err());
     }
@@ -97,7 +97,7 @@ void TerminaGuestManager::StartGuest() {
 
 void TerminaGuestManager::OnGuestLaunched() {
   if (!guest_controller_) {
-    ConnectToGuest(guest_controller_.NewRequest(), [](auto res) {
+    Connect(guest_controller_.NewRequest(), [](auto res) {
       // This should only fail if the guest isn't started, which should not be possible here.
       FX_CHECK(res.is_response());
     });

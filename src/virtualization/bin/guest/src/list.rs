@@ -61,7 +61,7 @@ async fn get_detailed_information(
     let mut table = Table::new();
     table.set_format(*FORMAT_CLEAN);
 
-    let guest_info = manager.get_guest_info().await;
+    let guest_info = manager.get_info().await;
     if let Err(_) = guest_info {
         return Ok(format!("Failed to query guest information: {}", guest_type.to_string()));
     }
@@ -158,7 +158,7 @@ async fn get_enviornment_summary(
     table.set_titles(row!["Guest", "Status", "Uptime"]);
 
     for (name, manager) in managers {
-        match manager.get_guest_info().await {
+        match manager.get_info().await {
             Ok(guest_info) => table.add_row(row![
                 name,
                 guest_status_to_string(
@@ -192,7 +192,7 @@ mod test {
                 .await
                 .expect("mock manager expected a request")
                 .unwrap()
-                .into_get_guest_info()
+                .into_get_info()
                 .expect("unexpected call to mock manager");
 
             if let Some(guest_info) = response {

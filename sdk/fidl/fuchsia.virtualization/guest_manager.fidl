@@ -88,26 +88,26 @@ protocol GuestManager {
     ///     - ALREADY_RUNNING: The guest is already running. Stop the guest before launching again.
     ///     - START_FAILURE: Failed to initialize the VMM and devices, and start the guest. See
     ///         component logs for a more specific failure.
-    LaunchGuest(resource struct {
+    Launch(resource struct {
         guest_config GuestConfig;
         controller server_end:Guest;
     }) -> (struct {}) error GuestManagerError;
 
-    /// Forcibly shuts down a running guest. After ForceShutdownGuest returns, LaunchGuest can be
-    /// used to launch another guest.
-    ForceShutdownGuest() -> ();
+    /// Forcibly shuts down a running guest. After ForceShutdown returns, Launch can be used to
+    /// launch another guest.
+    ForceShutdown() -> ();
 
     /// Connect to a currently running guest.
     ///
     /// Possible errors:
     ///     - NOT_RUNNING: Attempted to connect to a guest in a non-running state. Ensure the guest
     ///         has launched before attempting to reconnect.
-    ConnectToGuest(resource struct {
+    Connect(resource struct {
         controller server_end:Guest;
     }) -> (struct {}) error GuestManagerError;
 
     /// Query guest info
-    GetGuestInfo() -> (resource struct {
+    GetInfo() -> (resource struct {
         guest_info GuestInfo;
     });
 };

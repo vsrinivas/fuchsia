@@ -78,9 +78,9 @@ fitx::result<GuestManagerError, GuestConfig> GuestManager::GetDefaultGuestConfig
 }
 
 // |fuchsia::virtualization::GuestManager|
-void GuestManager::LaunchGuest(GuestConfig user_config,
-                               fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-                               LaunchGuestCallback callback) {
+void GuestManager::Launch(GuestConfig user_config,
+                          fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+                          LaunchCallback callback) {
   if (is_guest_started()) {
     callback(fpromise::error(GuestManagerError::ALREADY_RUNNING));
     return;
@@ -154,8 +154,7 @@ void GuestManager::LaunchGuest(GuestConfig user_config,
 
 void GuestManager::HandleCreateResult(
     GuestLifecycle_Create_Result result,
-    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-    LaunchGuestCallback callback) {
+    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller, LaunchCallback callback) {
   if (result.is_err()) {
     HandleGuestStopped(fitx::error(result.err()));
     callback(fpromise::error(GuestManagerError::START_FAILURE));
@@ -190,7 +189,7 @@ void GuestManager::HandleGuestStopped(fitx::result<GuestError> err) {
   OnGuestStopped();
 }
 
-void GuestManager::ForceShutdownGuest(ForceShutdownGuestCallback callback) {
+void GuestManager::ForceShutdown(ForceShutdownCallback callback) {
   if (!lifecycle_.is_bound() || !is_guest_started()) {
     // VMM component isn't running.
     callback();
@@ -201,9 +200,8 @@ void GuestManager::ForceShutdownGuest(ForceShutdownGuestCallback callback) {
   lifecycle_->Stop([callback = std::move(callback)]() { callback(); });
 }
 
-void GuestManager::ConnectToGuest(
-    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-    fuchsia::virtualization::GuestManager::ConnectToGuestCallback callback) {
+void GuestManager::Connect(fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+                           fuchsia::virtualization::GuestManager::ConnectCallback callback) {
   if (is_guest_started()) {
     context_->svc()->Connect(std::move(controller));
     callback(fpromise::ok());
@@ -213,7 +211,7 @@ void GuestManager::ConnectToGuest(
   }
 }
 
-void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {
+void GuestManager::GetInfo(GetInfoCallback callback) {
   fuchsia::virtualization::GuestInfo info;
   info.set_guest_status(state_);
 

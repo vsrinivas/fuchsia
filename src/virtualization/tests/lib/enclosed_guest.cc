@@ -291,7 +291,6 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
   Logger::Get().Reset();
   PeriodicLogger logger;
 
-  fuchsia::virtualization::GuestManager_LaunchGuest_Result res;
   guest_manager_ =
       realm_services_
           ->Connect<fuchsia::virtualization::GuestManager>(guest_launch_info.interface_name)
@@ -303,8 +302,9 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
   const bool vsock_enabled =
       !guest_launch_info.config.has_virtio_vsock() || guest_launch_info.config.virtio_vsock();
 
+  fuchsia::virtualization::GuestManager_Launch_Result res;
   auto status =
-      guest_manager_->LaunchGuest(std::move(guest_launch_info.config), guest_.NewRequest(), &res);
+      guest_manager_->Launch(std::move(guest_launch_info.config), guest_.NewRequest(), &res);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failure launching guest " << guest_launch_info.url;
     return status;

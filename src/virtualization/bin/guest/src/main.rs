@@ -47,7 +47,7 @@ async fn main() -> Result<(), Error> {
             Ok(())
         }
         SubCommands::Serial(serial_args) => {
-            let guest = services::connect_to_guest(serial_args.guest_type).await?;
+            let guest = services::connect(serial_args.guest_type).await?;
             serial::handle_serial(guest).await
         }
         SubCommands::List(list_args) => {

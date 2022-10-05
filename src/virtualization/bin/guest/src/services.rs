@@ -106,11 +106,11 @@ pub fn connect_to_manager(
     Ok(manager)
 }
 
-pub async fn connect_to_guest(guest_type: GuestType) -> Result<GuestProxy, Error> {
+pub async fn connect(guest_type: GuestType) -> Result<GuestProxy, Error> {
     let guest_manager = connect_to_manager(guest_type)?;
     let (guest, guest_server_end) =
         fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
-    guest_manager.connect_to_guest(guest_server_end).await?.map_err(|err| anyhow!("{:?}", err))?;
+    guest_manager.connect(guest_server_end).await?.map_err(|err| anyhow!("{:?}", err))?;
 
     Ok(guest)
 }
