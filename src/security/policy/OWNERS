@@ -4,6 +4,7 @@ set noparent
 aarongreen@google.com
 benwright@google.com
 jsankey@google.com
+markdittmer@google.com
 zarvox@google.com
 
 per-file build_info_allowlist_* = file: /src/sys/appmgr/OWNERS
