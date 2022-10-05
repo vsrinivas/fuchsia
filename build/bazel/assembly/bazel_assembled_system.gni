@@ -62,13 +62,8 @@ template("bazel_assembled_system") {
                            [
                              "testonly",
                              "visibility",
+                             "deps",
                            ])
-
-    # Core SDK is necessary to run assembly rules from the Bazel SDK.
-    deps = [ "//sdk:core" ]
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
 
     no_output_dir_leaks = false
 

@@ -130,7 +130,10 @@ template("bazel_build_action") {
       args += [ "--" ] + invoker.extra_bazel_args
     }
 
-    deps = invoker.bazel_inputs + [ "//build/bazel:generate_main_workspace" ]
+    deps = invoker.bazel_inputs + [
+             "//build/bazel:generate_main_workspace",
+             "//sdk:core",
+           ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
