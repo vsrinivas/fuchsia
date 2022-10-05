@@ -90,11 +90,11 @@ fuchsia_component("integration-component") {
   ]
 }
 
-fuchsia_unittest_package("integration-lib-unittests") {
+fuchsia_unittest_package("power-manager-integration-lib-test") {
   deps = [ ":lib_test" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":integration-lib-unittests" ]
+  deps = [ ":power-manager-integration-lib-test" ]
 }

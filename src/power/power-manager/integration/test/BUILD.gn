@@ -32,7 +32,7 @@ rustc_test("integration-test") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_unittest_package("integration-test-package") {
+fuchsia_unittest_package("power-manager-integration-test") {
   manifest = "meta/power-manager-integration-test.cml"
   deps = [
     ":integration-test",
@@ -43,5 +43,5 @@ fuchsia_unittest_package("integration-test-package") {
 
 group("test") {
   testonly = true
-  deps = [ ":integration-test-package" ]
+  deps = [ ":power-manager-integration-test" ]
 }
