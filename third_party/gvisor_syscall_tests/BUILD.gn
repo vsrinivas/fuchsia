@@ -93,6 +93,7 @@ raw_packet_test_label = "raw_packet"
 udp_test_label = "udp"
 udp_unbound_test_label = "udp_unbound"
 generic_test_label = "generic"
+tcp_test_label = "tcp"
 
 source_set("${raw_packet_test_label}_socket_tests") {
   sources = [
@@ -181,27 +182,20 @@ source_set("${udp_test_label}_socket_tests") {
   testonly = true
 }
 
-source_set("${generic_test_label}_socket_tests") {
+source_set("${tcp_test_label}_socket_tests") {
   sources = [
     "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
     "gvisor/test/syscalls/linux/ip_socket_test_util.h",
-    "gvisor/test/syscalls/linux/socket.cc",
-    "gvisor/test/syscalls/linux/socket_blocking.cc",
-    "gvisor/test/syscalls/linux/socket_blocking.h",
     "gvisor/test/syscalls/linux/socket_generic.h",
     "gvisor/test/syscalls/linux/socket_generic_test_cases.cc",
-    "gvisor/test/syscalls/linux/socket_inet_loopback.cc",
-    "gvisor/test/syscalls/linux/socket_inet_loopback_isolated.cc",
-    "gvisor/test/syscalls/linux/socket_ip_loopback_blocking.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_generic.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_generic.h",
     "gvisor/test/syscalls/linux/socket_ip_tcp_generic_loopback.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_loopback.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_blocking.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_nonblock.cc",
-    "gvisor/test/syscalls/linux/socket_ip_tcp_udp_generic.cc",
-    "gvisor/test/syscalls/linux/socket_ip_unbound.cc",
     "gvisor/test/syscalls/linux/socket_non_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_non_blocking.h",
     "gvisor/test/syscalls/linux/socket_stream_blocking.cc",
     "gvisor/test/syscalls/linux/socket_stream_blocking.h",
     "gvisor/test/syscalls/linux/tcp_socket.cc",
@@ -210,18 +204,34 @@ source_set("${generic_test_label}_socket_tests") {
   ]
   deps = [
     ":gvisor_test_util",
-    "//third_party/abseil-cpp/absl/base:core_headers",
-    "//third_party/abseil-cpp/absl/base:endian",
-    "//third_party/abseil-cpp/absl/container:flat_hash_map",
-    "//third_party/abseil-cpp/absl/container:flat_hash_set",
+    "//third_party/abseil-cpp/absl/strings:str_format",
+    "//third_party/abseil-cpp/absl/time",
+  ]
+
+  testonly = true
+}
+
+source_set("${generic_test_label}_socket_tests") {
+  sources = [
+    "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/ip_socket_test_util.h",
+    "gvisor/test/syscalls/linux/socket.cc",
+    "gvisor/test/syscalls/linux/socket_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_blocking.h",
+    "gvisor/test/syscalls/linux/socket_inet_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_inet_loopback_isolated.cc",
+    "gvisor/test/syscalls/linux/socket_ip_loopback_blocking.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_udp_generic.cc",
+    "gvisor/test/syscalls/linux/socket_ip_unbound.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.h",
+  ]
+  deps = [
+    ":gvisor_test_util",
     "//third_party/abseil-cpp/absl/memory",
     "//third_party/abseil-cpp/absl/strings",
     "//third_party/abseil-cpp/absl/strings:str_format",
     "//third_party/abseil-cpp/absl/time",
-    "//third_party/abseil-cpp/absl/types:optional",
-    "//third_party/abseil-cpp/absl/types:variant",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
   ]
 
   testonly = true
@@ -259,6 +269,10 @@ tests = [
   {
     label = udp_unbound_test_label
     cq = false
+  },
+  {
+    label = tcp_test_label
+    cq = true
   },
 ]
 

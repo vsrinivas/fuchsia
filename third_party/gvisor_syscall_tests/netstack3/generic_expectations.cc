@@ -114,11 +114,7 @@ void AddNonPassingTests(TestMap& tests) {
 
   // Skip tests that will otherwise hang forever.
   // TODO(b/245940107): un-skip some of these when the data path is ready.
-  SkipTest(tests, "AllTCPSockets/*.*/*");
-  SkipTest(tests, "BlockingTCPSockets/*.*/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPResetAfterClose/*");
-  SkipTest(tests, "AllUnixDomainSockets/*.*/*");
-  SkipTest(tests, "AllInetTests/SimpleTcpSocketTest.*/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPListenClose/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPListenUnbound/*");
@@ -128,21 +124,6 @@ void AddNonPassingTests(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPFinWait2Test/*");
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPLinger2TimeoutAfterClose/*");
 
-  // Otherwise expect failure so we get a signal when they start passing.
-  for (const auto& index : {"2", "3", "6", "7"}) {
-    // Expect failure for tests that set the TCP_NODELAY socket option.
-    ExpectFailure(
-        tests, TestSelector::ParameterizedTest("NonBlockingTCPSockets", "NonBlockingSocketPairTest",
-                                               "ReadNothingAvailable", index));
-    ExpectFailure(
-        tests, TestSelector::ParameterizedTest("NonBlockingTCPSockets", "NonBlockingSocketPairTest",
-                                               "RecvNothingAvailable", index));
-    ExpectFailure(
-        tests, TestSelector::ParameterizedTest("NonBlockingTCPSockets", "NonBlockingSocketPairTest",
-                                               "RecvMsgNothingAvailable", index));
-  }
-
-  ExpectFailure(tests, "AllInetTests/TcpSocketTest.*/*");
   ExpectFailure(tests, "All/SocketInetLoopbackIsolatedTest.TCPFinWait2Test/*");
   ExpectFailure(tests,
                 "All/SocketInetLoopbackIsolatedTest.TCPPassiveCloseNoTimeWaitReuseTest/"
