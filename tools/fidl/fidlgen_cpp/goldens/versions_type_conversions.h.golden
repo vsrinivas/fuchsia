@@ -70,13 +70,17 @@ struct WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_versions::wire::Union, std::unique_ptr<::test_versions::Union>> {
-  static std::unique_ptr<::test_versions::Union> ToNatural(::test_versions::wire::Union src);
-  static ::test_versions::wire::Union ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_versions::Union> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_versions::wire::Union>, std::unique_ptr<::test_versions::Union>> {
+  static std::unique_ptr<::test_versions::Union> ToNatural(::fidl::WireOptional<::test_versions::wire::Union> src);
+  static ::fidl::WireOptional<::test_versions::wire::Union> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_versions::Union> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_versions::wire::Union> {
+  using type = ::test_versions::Union;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_versions::wire::Union>> {
   using type = std::unique_ptr<::test_versions::Union>;
 };
 template <>
@@ -85,7 +89,7 @@ struct WireTypeForNaturalType<::test_versions::Union> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_versions::Union>> {
-  using type = ::test_versions::wire::Union;
+  using type = ::fidl::WireOptional<::test_versions::wire::Union>;
 };
 
 #ifdef __Fuchsia__

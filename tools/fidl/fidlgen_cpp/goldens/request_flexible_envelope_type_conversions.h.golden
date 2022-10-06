@@ -82,13 +82,17 @@ struct WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::Flexibl
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>> {
-  static std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> ToNatural(::test_requestflexibleenvelope::wire::FlexibleFoo src);
-  static ::test_requestflexibleenvelope::wire::FlexibleFoo ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo>, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>> {
+  static std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> ToNatural(::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo> src);
+  static ::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_requestflexibleenvelope::wire::FlexibleFoo> {
+  using type = ::test_requestflexibleenvelope::FlexibleFoo;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo>> {
   using type = std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>;
 };
 template <>
@@ -97,7 +101,7 @@ struct WireTypeForNaturalType<::test_requestflexibleenvelope::FlexibleFoo> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>> {
-  using type = ::test_requestflexibleenvelope::wire::FlexibleFoo;
+  using type = ::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo>;
 };
 
 template <>
@@ -107,13 +111,17 @@ struct WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictF
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>> {
-  static std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> ToNatural(::test_requestflexibleenvelope::wire::StrictFoo src);
-  static ::test_requestflexibleenvelope::wire::StrictFoo ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo>, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>> {
+  static std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> ToNatural(::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo> src);
+  static ::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_requestflexibleenvelope::wire::StrictFoo> {
+  using type = ::test_requestflexibleenvelope::StrictFoo;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo>> {
   using type = std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>;
 };
 template <>
@@ -122,7 +130,7 @@ struct WireTypeForNaturalType<::test_requestflexibleenvelope::StrictFoo> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>> {
-  using type = ::test_requestflexibleenvelope::wire::StrictFoo;
+  using type = ::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo>;
 };
 
 #ifdef __Fuchsia__

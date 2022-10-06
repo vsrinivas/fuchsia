@@ -4762,12 +4762,12 @@ void fidl::WireServer<::test_protocols::MethodWithUnion>::dispatch_message(
 
 #ifdef __Fuchsia__
 void
-fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::Reply(::test_protocols::wire::TheUnion u) {
+fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::Reply(::fidl::WireOptional<::test_protocols::wire::TheUnion> u) {
   return MakeReply(u);
 }
 
 void
-fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::MakeReply(::test_protocols::wire::TheUnion u) {
+fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::MakeReply(::fidl::WireOptional<::test_protocols::wire::TheUnion> u) {
   ::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod> _response{ u };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
@@ -4779,12 +4779,12 @@ fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod
 
 
 void
-fidl::internal::WireBufferCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::Reply(::test_protocols::wire::TheUnion u) {
+fidl::internal::WireBufferCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::Reply(::fidl::WireOptional<::test_protocols::wire::TheUnion> u) {
   return MakeReply(u);
 }
 
 void
-fidl::internal::WireBufferCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::MakeReply(::test_protocols::wire::TheUnion u) {
+fidl::internal::WireBufferCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod>::MakeReply(::fidl::WireOptional<::test_protocols::wire::TheUnion> u) {
   ::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod> _response{ u };
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<::test_protocols::MethodWithUnion::UnionMethod>();
   ::fit::result<::fidl::Error, ::fidl::BufferSpan> _allocation =

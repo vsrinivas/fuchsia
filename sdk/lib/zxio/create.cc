@@ -65,10 +65,15 @@ class ZxioCreateOnOpenEventHandler final : public fidl::WireSyncEventHandler<fio
 
  protected:
   void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) final {
-    status_ = event->s;
-    if (event->s != ZX_OK)
-      return;
-    status_ = zxio_create_with_nodeinfo(std::move(node_), event->info, storage_);
+    status_ = [&event = *event, this] {
+      if (event.s != ZX_OK) {
+        return event.s;
+      }
+      if (!event.info.has_value()) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return zxio_create_with_nodeinfo(std::move(node_), event.info.value(), storage_);
+    }();
   }
 
   void OnRepresentation(fidl::WireEvent<fio::Node::OnRepresentation>* event) final {

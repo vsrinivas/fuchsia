@@ -184,13 +184,17 @@ struct WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::test_nu
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, std::unique_ptr<::test_nullable::SimpleUnion>> {
-  static std::unique_ptr<::test_nullable::SimpleUnion> ToNatural(::test_nullable::wire::SimpleUnion src);
-  static ::test_nullable::wire::SimpleUnion ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_nullable::SimpleUnion> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_nullable::wire::SimpleUnion>, std::unique_ptr<::test_nullable::SimpleUnion>> {
+  static std::unique_ptr<::test_nullable::SimpleUnion> ToNatural(::fidl::WireOptional<::test_nullable::wire::SimpleUnion> src);
+  static ::fidl::WireOptional<::test_nullable::wire::SimpleUnion> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_nullable::SimpleUnion> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_nullable::wire::SimpleUnion> {
+  using type = ::test_nullable::SimpleUnion;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_nullable::wire::SimpleUnion>> {
   using type = std::unique_ptr<::test_nullable::SimpleUnion>;
 };
 template <>
@@ -199,7 +203,7 @@ struct WireTypeForNaturalType<::test_nullable::SimpleUnion> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_nullable::SimpleUnion>> {
-  using type = ::test_nullable::wire::SimpleUnion;
+  using type = ::fidl::WireOptional<::test_nullable::wire::SimpleUnion>;
 };
 
 #ifdef __Fuchsia__

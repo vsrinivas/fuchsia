@@ -108,7 +108,7 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
     auto offers = child_->CreateOffers(arena);
     std::vector<fuchsia_component_decl::Offer> natural_offers;
     for (auto offer : offers) {
-      natural_offers.push_back(*fidl::ToNatural(offer));
+      natural_offers.push_back(fidl::ToNatural(offer));
     }
     auto args = fdf::NodeAddArgs{{
         .name = std::string("v1"),

@@ -71,13 +71,17 @@ struct WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle,
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, std::unique_ptr<::test_handlesintypes::UnionWithHandle>> {
-  static std::unique_ptr<::test_handlesintypes::UnionWithHandle> ToNatural(::test_handlesintypes::wire::UnionWithHandle src);
-  static ::test_handlesintypes::wire::UnionWithHandle ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_handlesintypes::UnionWithHandle> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>, std::unique_ptr<::test_handlesintypes::UnionWithHandle>> {
+  static std::unique_ptr<::test_handlesintypes::UnionWithHandle> ToNatural(::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle> src);
+  static ::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_handlesintypes::UnionWithHandle> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_handlesintypes::wire::UnionWithHandle> {
+  using type = ::test_handlesintypes::UnionWithHandle;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>> {
   using type = std::unique_ptr<::test_handlesintypes::UnionWithHandle>;
 };
 template <>
@@ -86,7 +90,7 @@ struct WireTypeForNaturalType<::test_handlesintypes::UnionWithHandle> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_handlesintypes::UnionWithHandle>> {
-  using type = ::test_handlesintypes::wire::UnionWithHandle;
+  using type = ::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>;
 };
 
 #endif  // __Fuchsia__

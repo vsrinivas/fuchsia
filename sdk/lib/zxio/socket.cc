@@ -37,14 +37,13 @@ namespace fnet = fuchsia_net;
 
 namespace {
 
-uint16_t fidl_protoassoc_to_protocol(const fpacketsocket::wire::ProtocolAssociation& protocol) {
-  // protocol has an invalid tag when it's not provided by the server (when the socket is not
-  // associated).
-  //
-  // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
-  if (protocol.has_invalid_tag()) {
+uint16_t fidl_protoassoc_to_protocol(
+    const fidl::WireOptional<fpacketsocket::wire::ProtocolAssociation>& optional_protocol) {
+  // protocol is not provided by the server (when the socket is not associated).
+  if (!optional_protocol.has_value()) {
     return 0;
   }
+  const fpacketsocket::wire::ProtocolAssociation& protocol = optional_protocol.value();
 
   switch (protocol.Which()) {
     case fpacketsocket::wire::ProtocolAssociation::Tag::kAll:
@@ -1931,11 +1930,10 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     }
     *out_code = 0;
     auto const& out = result.value()->addr;
-    // Result address has invalid tag when it's not provided by the server (when want_addr
-    // is false).
-    // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
-    if (want_addr && !out.has_invalid_tag()) {
-      *addrlen = static_cast<socklen_t>(zxio_fidl_to_sockaddr(out, addr, *addrlen));
+
+    // Result address is not provided by the server (when want_addr is false).
+    if (want_addr && out.has_value()) {
+      *addrlen = static_cast<socklen_t>(zxio_fidl_to_sockaddr(out.value(), addr, *addrlen));
     }
 
     fidl::ClientEnd<fsocket::StreamSocket>& control = result.value()->s;

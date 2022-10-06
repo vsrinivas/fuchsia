@@ -40,7 +40,7 @@ TEST(NodeAddArgsTest, MakeOfferNatural) {
 TEST(NodeAddArgsTest, MakeOfferWire) {
   fidl::Arena arena;
   auto offer = fidl::ToNatural(driver::MakeOffer(arena, kServiceName, kInstanceName));
-  CheckOffer(*offer);
+  CheckOffer(offer);
 }
 
 }  // namespace

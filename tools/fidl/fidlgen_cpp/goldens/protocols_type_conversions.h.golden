@@ -695,13 +695,17 @@ struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxRespon
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>> {
-  static std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> ToNatural(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult src);
-  static ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>> {
+  static std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> ToNatural(::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> src);
+  static ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> {
+  using type = ::test_protocols::WithErrorSyntaxResponseAsStructResult;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>> {
   using type = std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>;
 };
 template <>
@@ -710,7 +714,7 @@ struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxResponseAsStructR
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>> {
-  using type = ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult;
+  using type = ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>;
 };
 
 template <>
@@ -720,13 +724,17 @@ struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorA
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>> {
-  static std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>> {
+  static std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> ToNatural(::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult> src);
+  static ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult> {
+  using type = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>> {
   using type = std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>;
 };
 template <>
@@ -735,7 +743,7 @@ struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveR
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>> {
-  using type = ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult;
+  using type = ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>;
 };
 
 template <>
@@ -745,13 +753,17 @@ struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorA
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>> {
-  static std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult src);
-  static ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>> {
+  static std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> ToNatural(::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> src);
+  static ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> {
+  using type = ::test_protocols::WithErrorSyntaxErrorAsEnumResult;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>> {
   using type = std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>;
 };
 template <>
@@ -760,7 +772,7 @@ struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxErrorAsEnumResult
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>> {
-  using type = ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult;
+  using type = ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>;
 };
 
 #ifdef __Fuchsia__
@@ -772,13 +784,17 @@ struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandle
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>> {
-  static std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> ToNatural(::test_protocols::wire::WithErrorSyntaxHandleInResultResult src);
-  static ::test_protocols::wire::WithErrorSyntaxHandleInResultResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>> {
+  static std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> ToNatural(::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult> src);
+  static ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_protocols::wire::WithErrorSyntaxHandleInResultResult> {
+  using type = ::test_protocols::WithErrorSyntaxHandleInResultResult;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>> {
   using type = std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>;
 };
 template <>
@@ -787,7 +803,7 @@ struct WireTypeForNaturalType<::test_protocols::WithErrorSyntaxHandleInResultRes
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>> {
-  using type = ::test_protocols::wire::WithErrorSyntaxHandleInResultResult;
+  using type = ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>;
 };
 
 #endif  // __Fuchsia__
@@ -799,13 +815,17 @@ struct WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::test_prot
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_protocols::wire::TheUnion, std::unique_ptr<::test_protocols::TheUnion>> {
-  static std::unique_ptr<::test_protocols::TheUnion> ToNatural(::test_protocols::wire::TheUnion src);
-  static ::test_protocols::wire::TheUnion ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::TheUnion> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::TheUnion>, std::unique_ptr<::test_protocols::TheUnion>> {
+  static std::unique_ptr<::test_protocols::TheUnion> ToNatural(::fidl::WireOptional<::test_protocols::wire::TheUnion> src);
+  static ::fidl::WireOptional<::test_protocols::wire::TheUnion> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::TheUnion> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_protocols::wire::TheUnion> {
+  using type = ::test_protocols::TheUnion;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_protocols::wire::TheUnion>> {
   using type = std::unique_ptr<::test_protocols::TheUnion>;
 };
 template <>
@@ -814,7 +834,7 @@ struct WireTypeForNaturalType<::test_protocols::TheUnion> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_protocols::TheUnion>> {
-  using type = ::test_protocols::wire::TheUnion;
+  using type = ::fidl::WireOptional<::test_protocols::wire::TheUnion>;
 };
 
 #ifdef __Fuchsia__

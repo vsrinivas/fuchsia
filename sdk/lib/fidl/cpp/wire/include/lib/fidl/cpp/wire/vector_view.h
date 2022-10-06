@@ -133,7 +133,7 @@ class VectorView {
 
   // TODO(fxbug.dev/109737): |is_null| is used to check if an optional view type
   // is absent. This can be removed if optional view types switch to
-  // |fidl::Optional|.
+  // |fidl::WireOptional|.
   bool is_null() const { return data() == nullptr; }
 
   T& at(size_t offset) const { return data()[offset]; }

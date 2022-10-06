@@ -55,15 +55,15 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>>::ToNatural(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>>::ToNatural(::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>(WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>::ToNatural(std::move(src)));
+  return std::make_unique<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>(WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>::ToNatural(std::move(src.value())));
 }
-::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> src) {
+::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> src) {
   if (!src) {
-    return ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult();
+    return ::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>();
   }
   return WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>::ToWire(arena, std::move(*src));
 }

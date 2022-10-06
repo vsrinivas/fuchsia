@@ -686,7 +686,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 				r.nameVariants.HLCPP = makeName("std::unique_ptr").template(name.HLCPP)
 				r.nameVariants.Unified = makeName("std::unique_ptr").template(name.Unified)
 				if declType == fidlgen.UnionDeclType {
-					r.nameVariants.Wire = name.Wire
+					r.nameVariants.Wire = makeName("fidl::WireOptional").template(name.Wire)
 				} else {
 					r.nameVariants.Wire = makeName("fidl::ObjectView").template(name.Wire)
 				}

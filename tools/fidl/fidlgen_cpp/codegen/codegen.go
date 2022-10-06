@@ -47,6 +47,10 @@ func closeHandles(expr string, exprType cpp.Type) string {
 		buf.WriteString("\n}\n")
 		return buf.String()
 	case cpp.TypeKinds.Union:
+		// An optional union is wrapped in a `fidl::WireOptional`.
+		if exprType.Nullable {
+			return fmt.Sprintf("if (%s.has_value()) { %s->_CloseHandles(); }", expr, expr)
+		}
 		return fmt.Sprintf("%s._CloseHandles();", expr)
 	default:
 		// An optional struct is wrapped in a `fidl::ObjectView`.

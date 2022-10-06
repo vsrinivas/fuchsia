@@ -66,15 +66,15 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>>::ToNatural(::test_requestflexibleenvelope::wire::FlexibleFoo src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo>, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>>::ToNatural(::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_requestflexibleenvelope::FlexibleFoo>(WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, ::test_requestflexibleenvelope::FlexibleFoo>::ToNatural(std::move(src)));
+  return std::make_unique<::test_requestflexibleenvelope::FlexibleFoo>(WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, ::test_requestflexibleenvelope::FlexibleFoo>::ToNatural(std::move(src.value())));
 }
-::test_requestflexibleenvelope::wire::FlexibleFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> src) {
+::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo>, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> src) {
   if (!src) {
-    return ::test_requestflexibleenvelope::wire::FlexibleFoo();
+    return ::fidl::WireOptional<::test_requestflexibleenvelope::wire::FlexibleFoo>();
   }
   return WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, ::test_requestflexibleenvelope::FlexibleFoo>::ToWire(arena, std::move(*src));
 }
@@ -102,15 +102,15 @@ std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> WireNaturalConversi
   }
 }
 
-std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>>::ToNatural(::test_requestflexibleenvelope::wire::StrictFoo src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo>, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>>::ToNatural(::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_requestflexibleenvelope::StrictFoo>(WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToNatural(std::move(src)));
+  return std::make_unique<::test_requestflexibleenvelope::StrictFoo>(WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToNatural(std::move(src.value())));
 }
-::test_requestflexibleenvelope::wire::StrictFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> src) {
+::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo>, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> src) {
   if (!src) {
-    return ::test_requestflexibleenvelope::wire::StrictFoo();
+    return ::fidl::WireOptional<::test_requestflexibleenvelope::wire::StrictFoo>();
   }
   return WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::StrictFoo, ::test_requestflexibleenvelope::StrictFoo>::ToWire(arena, std::move(*src));
 }

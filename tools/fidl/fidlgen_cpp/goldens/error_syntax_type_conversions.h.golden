@@ -67,13 +67,17 @@ struct WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSy
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>> {
-  static std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> ToNatural(::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult src);
-  static ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>> {
+  static std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> ToNatural(::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult> src);
+  static ::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult> {
+  using type = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>> {
   using type = std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>;
 };
 template <>
@@ -82,7 +86,7 @@ struct WireTypeForNaturalType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhi
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult>> {
-  using type = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult;
+  using type = ::fidl::WireOptional<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>;
 };
 
 #ifdef __Fuchsia__

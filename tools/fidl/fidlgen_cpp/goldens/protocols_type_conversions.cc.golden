@@ -481,11 +481,11 @@ namespace internal {
 }
 
 ::test_protocols::MethodWithUnionUnionMethodResponse WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodResponse, ::test_protocols::MethodWithUnionUnionMethodResponse>::ToNatural(::test_protocols::wire::MethodWithUnionUnionMethodResponse src) {
-  return ::test_protocols::MethodWithUnionUnionMethodResponse(WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::std::unique_ptr<::test_protocols::TheUnion>>::ToNatural(std::move(src.u)));
+  return ::test_protocols::MethodWithUnionUnionMethodResponse(WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::TheUnion>, ::std::unique_ptr<::test_protocols::TheUnion>>::ToNatural(std::move(src.u)));
 }
 ::test_protocols::wire::MethodWithUnionUnionMethodResponse WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodResponse, ::test_protocols::MethodWithUnionUnionMethodResponse>::ToWire(fidl::AnyArena& arena, ::test_protocols::MethodWithUnionUnionMethodResponse src) {
   return ::test_protocols::wire::MethodWithUnionUnionMethodResponse{
-      .u = WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::std::unique_ptr<::test_protocols::TheUnion>>::ToWire(arena, std::move(src.u())),
+      .u = WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::TheUnion>, ::std::unique_ptr<::test_protocols::TheUnion>>::ToWire(arena, std::move(src.u())),
   };
 }
 
@@ -512,15 +512,15 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>>::ToNatural(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>>::ToNatural(::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_protocols::WithErrorSyntaxResponseAsStructResult>(WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult, ::test_protocols::WithErrorSyntaxResponseAsStructResult>::ToNatural(std::move(src)));
+  return std::make_unique<::test_protocols::WithErrorSyntaxResponseAsStructResult>(WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult, ::test_protocols::WithErrorSyntaxResponseAsStructResult>::ToNatural(std::move(src.value())));
 }
-::test_protocols::wire::WithErrorSyntaxResponseAsStructResult WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> src) {
+::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> src) {
   if (!src) {
-    return ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult();
+    return ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>();
   }
   return WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult, ::test_protocols::WithErrorSyntaxResponseAsStructResult>::ToWire(arena, std::move(*src));
 }
@@ -548,15 +548,15 @@ std::unique_ptr<::test_protocols::WithErrorSyntaxResponseAsStructResult> WireNat
   }
 }
 
-std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>>::ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>>::ToNatural(::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>(WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult, ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>::ToNatural(std::move(src)));
+  return std::make_unique<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>(WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult, ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>::ToNatural(std::move(src.value())));
 }
-::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> src) {
+::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> src) {
   if (!src) {
-    return ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult();
+    return ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>();
   }
   return WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult, ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult>::ToWire(arena, std::move(*src));
 }
@@ -584,15 +584,15 @@ std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> WireNat
   }
 }
 
-std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>>::ToNatural(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>>::ToNatural(::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_protocols::WithErrorSyntaxErrorAsEnumResult>(WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult, ::test_protocols::WithErrorSyntaxErrorAsEnumResult>::ToNatural(std::move(src)));
+  return std::make_unique<::test_protocols::WithErrorSyntaxErrorAsEnumResult>(WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult, ::test_protocols::WithErrorSyntaxErrorAsEnumResult>::ToNatural(std::move(src.value())));
 }
-::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> src) {
+::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> src) {
   if (!src) {
-    return ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult();
+    return ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>();
   }
   return WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult, ::test_protocols::WithErrorSyntaxErrorAsEnumResult>::ToWire(arena, std::move(*src));
 }
@@ -622,15 +622,15 @@ std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsEnumResult> WireNaturalC
   }
 }
 
-std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>>::ToNatural(::test_protocols::wire::WithErrorSyntaxHandleInResultResult src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>>::ToNatural(::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_protocols::WithErrorSyntaxHandleInResultResult>(WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, ::test_protocols::WithErrorSyntaxHandleInResultResult>::ToNatural(std::move(src)));
+  return std::make_unique<::test_protocols::WithErrorSyntaxHandleInResultResult>(WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, ::test_protocols::WithErrorSyntaxHandleInResultResult>::ToNatural(std::move(src.value())));
 }
-::test_protocols::wire::WithErrorSyntaxHandleInResultResult WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> src) {
+::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> src) {
   if (!src) {
-    return ::test_protocols::wire::WithErrorSyntaxHandleInResultResult();
+    return ::fidl::WireOptional<::test_protocols::wire::WithErrorSyntaxHandleInResultResult>();
   }
   return WireNaturalConversionTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, ::test_protocols::WithErrorSyntaxHandleInResultResult>::ToWire(arena, std::move(*src));
 }
@@ -656,15 +656,15 @@ std::unique_ptr<::test_protocols::WithErrorSyntaxHandleInResultResult> WireNatur
   }
 }
 
-std::unique_ptr<::test_protocols::TheUnion> WireNaturalConversionTraits<::test_protocols::wire::TheUnion, std::unique_ptr<::test_protocols::TheUnion>>::ToNatural(::test_protocols::wire::TheUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_protocols::TheUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::TheUnion>, std::unique_ptr<::test_protocols::TheUnion>>::ToNatural(::fidl::WireOptional<::test_protocols::wire::TheUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_protocols::TheUnion>(WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::test_protocols::TheUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_protocols::TheUnion>(WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::test_protocols::TheUnion>::ToNatural(std::move(src.value())));
 }
-::test_protocols::wire::TheUnion WireNaturalConversionTraits<::test_protocols::wire::TheUnion, std::unique_ptr<::test_protocols::TheUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::TheUnion> src) {
+::fidl::WireOptional<::test_protocols::wire::TheUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_protocols::wire::TheUnion>, std::unique_ptr<::test_protocols::TheUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_protocols::TheUnion> src) {
   if (!src) {
-    return ::test_protocols::wire::TheUnion();
+    return ::fidl::WireOptional<::test_protocols::wire::TheUnion>();
   }
   return WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::test_protocols::TheUnion>::ToWire(arena, std::move(*src));
 }

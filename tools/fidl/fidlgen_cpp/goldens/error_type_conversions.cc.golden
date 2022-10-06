@@ -55,15 +55,15 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_error::ExampleFooResult> WireNaturalConversionTraits<::test_error::wire::ExampleFooResult, std::unique_ptr<::test_error::ExampleFooResult>>::ToNatural(::test_error::wire::ExampleFooResult src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_error::ExampleFooResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_error::wire::ExampleFooResult>, std::unique_ptr<::test_error::ExampleFooResult>>::ToNatural(::fidl::WireOptional<::test_error::wire::ExampleFooResult> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_error::ExampleFooResult>(WireNaturalConversionTraits<::test_error::wire::ExampleFooResult, ::test_error::ExampleFooResult>::ToNatural(std::move(src)));
+  return std::make_unique<::test_error::ExampleFooResult>(WireNaturalConversionTraits<::test_error::wire::ExampleFooResult, ::test_error::ExampleFooResult>::ToNatural(std::move(src.value())));
 }
-::test_error::wire::ExampleFooResult WireNaturalConversionTraits<::test_error::wire::ExampleFooResult, std::unique_ptr<::test_error::ExampleFooResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_error::ExampleFooResult> src) {
+::fidl::WireOptional<::test_error::wire::ExampleFooResult> WireNaturalConversionTraits<::fidl::WireOptional<::test_error::wire::ExampleFooResult>, std::unique_ptr<::test_error::ExampleFooResult>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_error::ExampleFooResult> src) {
   if (!src) {
-    return ::test_error::wire::ExampleFooResult();
+    return ::fidl::WireOptional<::test_error::wire::ExampleFooResult>();
   }
   return WireNaturalConversionTraits<::test_error::wire::ExampleFooResult, ::test_error::ExampleFooResult>::ToWire(arena, std::move(*src));
 }

@@ -103,11 +103,11 @@ namespace internal {
 }
 
 ::test_nullable::StructWithNullableUnion WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableUnion, ::test_nullable::StructWithNullableUnion>::ToNatural(::test_nullable::wire::StructWithNullableUnion src) {
-  return ::test_nullable::StructWithNullableUnion(WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::std::unique_ptr<::test_nullable::SimpleUnion>>::ToNatural(std::move(src.val)));
+  return ::test_nullable::StructWithNullableUnion(WireNaturalConversionTraits<::fidl::WireOptional<::test_nullable::wire::SimpleUnion>, ::std::unique_ptr<::test_nullable::SimpleUnion>>::ToNatural(std::move(src.val)));
 }
 ::test_nullable::wire::StructWithNullableUnion WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableUnion, ::test_nullable::StructWithNullableUnion>::ToWire(fidl::AnyArena& arena, ::test_nullable::StructWithNullableUnion src) {
   return ::test_nullable::wire::StructWithNullableUnion{
-      .val = WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::std::unique_ptr<::test_nullable::SimpleUnion>>::ToWire(arena, std::move(src.val())),
+      .val = WireNaturalConversionTraits<::fidl::WireOptional<::test_nullable::wire::SimpleUnion>, ::std::unique_ptr<::test_nullable::SimpleUnion>>::ToWire(arena, std::move(src.val())),
   };
 }
 
@@ -134,15 +134,15 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_nullable::SimpleUnion> WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, std::unique_ptr<::test_nullable::SimpleUnion>>::ToNatural(::test_nullable::wire::SimpleUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_nullable::SimpleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_nullable::wire::SimpleUnion>, std::unique_ptr<::test_nullable::SimpleUnion>>::ToNatural(::fidl::WireOptional<::test_nullable::wire::SimpleUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_nullable::SimpleUnion>(WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::test_nullable::SimpleUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_nullable::SimpleUnion>(WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::test_nullable::SimpleUnion>::ToNatural(std::move(src.value())));
 }
-::test_nullable::wire::SimpleUnion WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, std::unique_ptr<::test_nullable::SimpleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_nullable::SimpleUnion> src) {
+::fidl::WireOptional<::test_nullable::wire::SimpleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_nullable::wire::SimpleUnion>, std::unique_ptr<::test_nullable::SimpleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_nullable::SimpleUnion> src) {
   if (!src) {
-    return ::test_nullable::wire::SimpleUnion();
+    return ::fidl::WireOptional<::test_nullable::wire::SimpleUnion>();
   }
   return WireNaturalConversionTraits<::test_nullable::wire::SimpleUnion, ::test_nullable::SimpleUnion>::ToWire(arena, std::move(*src));
 }

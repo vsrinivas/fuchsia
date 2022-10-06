@@ -78,12 +78,11 @@ func formatPrimitive(value gidlir.Value) string {
 }
 
 func (a *allocatorBuilder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
-	// Unions, StringView and VectorView in LLCPP represent nullability within the object rather than as
+	// StringView and VectorView in wire types represent nullability within the object rather than as
 	// as pointer to the object.
-	_, isUnion := decl.(*gidlmixer.UnionDecl)
 	_, isString := decl.(*gidlmixer.StringDecl)
 	_, isVector := decl.(*gidlmixer.VectorDecl)
-	isPointer := (decl.IsNullable() && !isUnion && !isString && !isVector)
+	isPointer := (decl.IsNullable() && !isString && !isVector)
 
 	switch value := value.(type) {
 	case bool:
@@ -190,9 +189,12 @@ func (a *allocatorBuilder) visitTable(value gidlir.Record, decl *gidlmixer.Table
 }
 
 func (a *allocatorBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.UnionDecl, isPointer bool) string {
-	union := a.assignNew(typeNameIgnoreNullable(decl), isPointer, "")
+	s := a.newVar()
+	unionRaw := a.assignNew(typeNameIgnoreNullable(decl), false, "")
 	if isPointer {
-		panic("Optional unions are accessed the same way as non-optional unions in LLCPP, without pointer indirection")
+		a.write("auto %s = fidl::WireOptional<%s>(std::move(%s));\n", s, typeNameIgnoreNullable(decl), unionRaw)
+	} else {
+		a.write("auto %s = std::move(%s);\n", s, unionRaw)
 	}
 
 	if len(value.Fields) == 1 {
@@ -206,13 +208,13 @@ func (a *allocatorBuilder) visitUnion(value gidlir.Record, decl *gidlmixer.Union
 		}
 		fieldRhs := a.visit(field.Value, fieldDecl)
 		if fieldDecl.IsInlinableInEnvelope() {
-			a.write("%s = %s::With%s(%s);\n", union, typeNameIgnoreNullable(decl), fidlgen.ToUpperCamelCase(field.Key.Name), fieldRhs)
+			a.write("%s = %s::With%s(%s);\n", s, typeNameIgnoreNullable(decl), fidlgen.ToUpperCamelCase(field.Key.Name), fieldRhs)
 		} else {
-			a.write("%s = %s::With%s(%s, %s);\n", union, typeNameIgnoreNullable(decl), fidlgen.ToUpperCamelCase(field.Key.Name), a.allocatorVar, fieldRhs)
+			a.write("%s = %s::With%s(%s, %s);\n", s, typeNameIgnoreNullable(decl), fidlgen.ToUpperCamelCase(field.Key.Name), a.allocatorVar, fieldRhs)
 		}
 	}
 
-	return fmt.Sprintf("std::move(%s)", union)
+	return fmt.Sprintf("std::move(%s)", s)
 }
 
 func (a *allocatorBuilder) visitArray(value []gidlir.Value, decl *gidlmixer.ArrayDecl, isPointer bool) string {

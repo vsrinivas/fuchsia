@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/wire/coding_errors.h>
 #include <lib/fidl/cpp/wire/object_view.h>
+#include <lib/fidl/cpp/wire/optional.h>
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
@@ -415,6 +416,27 @@ struct WireCodingTraits<fidl::ObjectView<T>, Constraint, IsRecursive> {
     }
     *position.As<void*>() = body.As<void>();
     WireCodingTraits<T, Constraint, IsRecursive>::Decode(decoder, body, inner_depth);
+  }
+};
+
+template <typename T, typename Constraint, bool IsRecursive>
+struct WireCodingTraits<fidl::WireOptional<T>, Constraint, IsRecursive> {
+ private:
+  using MemberTrait = WireCodingTraits<T, Constraint, IsRecursive>;
+
+ public:
+  static constexpr size_t inline_size = MemberTrait::inline_size;
+  static constexpr bool is_memcpy_compatible = MemberTrait::is_memcpy_compatible;
+
+  static void Encode(internal::WireEncoder* encoder, fidl::WireOptional<T>* value,
+                     fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    return MemberTrait::Encode(encoder, value, position, recursion_depth);
+  }
+
+  static void Decode(internal::WireDecoder* decoder, fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    return MemberTrait::Decode(decoder, position, recursion_depth);
   }
 };
 

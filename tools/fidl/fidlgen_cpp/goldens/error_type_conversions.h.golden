@@ -67,13 +67,17 @@ struct WireNaturalConversionTraits<::test_error::wire::ExampleFooResult, ::test_
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_error::wire::ExampleFooResult, std::unique_ptr<::test_error::ExampleFooResult>> {
-  static std::unique_ptr<::test_error::ExampleFooResult> ToNatural(::test_error::wire::ExampleFooResult src);
-  static ::test_error::wire::ExampleFooResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_error::ExampleFooResult> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_error::wire::ExampleFooResult>, std::unique_ptr<::test_error::ExampleFooResult>> {
+  static std::unique_ptr<::test_error::ExampleFooResult> ToNatural(::fidl::WireOptional<::test_error::wire::ExampleFooResult> src);
+  static ::fidl::WireOptional<::test_error::wire::ExampleFooResult> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_error::ExampleFooResult> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_error::wire::ExampleFooResult> {
+  using type = ::test_error::ExampleFooResult;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_error::wire::ExampleFooResult>> {
   using type = std::unique_ptr<::test_error::ExampleFooResult>;
 };
 template <>
@@ -82,7 +86,7 @@ struct WireTypeForNaturalType<::test_error::ExampleFooResult> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_error::ExampleFooResult>> {
-  using type = ::test_error::wire::ExampleFooResult;
+  using type = ::fidl::WireOptional<::test_error::wire::ExampleFooResult>;
 };
 
 #ifdef __Fuchsia__

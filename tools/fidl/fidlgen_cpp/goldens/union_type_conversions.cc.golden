@@ -24,11 +24,11 @@ namespace internal {
 }
 
 ::test_union::NullableUnionStruct WireNaturalConversionTraits<::test_union::wire::NullableUnionStruct, ::test_union::NullableUnionStruct>::ToNatural(::test_union::wire::NullableUnionStruct src) {
-  return ::test_union::NullableUnionStruct(WireNaturalConversionTraits<::test_union::wire::Union, ::std::unique_ptr<::test_union::Union>>::ToNatural(std::move(src.the_union)));
+  return ::test_union::NullableUnionStruct(WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::Union>, ::std::unique_ptr<::test_union::Union>>::ToNatural(std::move(src.the_union)));
 }
 ::test_union::wire::NullableUnionStruct WireNaturalConversionTraits<::test_union::wire::NullableUnionStruct, ::test_union::NullableUnionStruct>::ToWire(fidl::AnyArena& arena, ::test_union::NullableUnionStruct src) {
   return ::test_union::wire::NullableUnionStruct{
-      .the_union = WireNaturalConversionTraits<::test_union::wire::Union, ::std::unique_ptr<::test_union::Union>>::ToWire(arena, std::move(src.the_union())),
+      .the_union = WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::Union>, ::std::unique_ptr<::test_union::Union>>::ToWire(arena, std::move(src.the_union())),
   };
 }
 
@@ -60,11 +60,11 @@ namespace internal {
 }
 
 ::test_union::StructWithNullableXUnion WireNaturalConversionTraits<::test_union::wire::StructWithNullableXUnion, ::test_union::StructWithNullableXUnion>::ToNatural(::test_union::wire::StructWithNullableXUnion src) {
-  return ::test_union::StructWithNullableXUnion(WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion, ::std::unique_ptr<::test_union::OlderSimpleUnion>>::ToNatural(std::move(src.x1)));
+  return ::test_union::StructWithNullableXUnion(WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::OlderSimpleUnion>, ::std::unique_ptr<::test_union::OlderSimpleUnion>>::ToNatural(std::move(src.x1)));
 }
 ::test_union::wire::StructWithNullableXUnion WireNaturalConversionTraits<::test_union::wire::StructWithNullableXUnion, ::test_union::StructWithNullableXUnion>::ToWire(fidl::AnyArena& arena, ::test_union::StructWithNullableXUnion src) {
   return ::test_union::wire::StructWithNullableXUnion{
-      .x1 = WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion, ::std::unique_ptr<::test_union::OlderSimpleUnion>>::ToWire(arena, std::move(src.x1())),
+      .x1 = WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::OlderSimpleUnion>, ::std::unique_ptr<::test_union::OlderSimpleUnion>>::ToWire(arena, std::move(src.x1())),
   };
 }
 
@@ -106,15 +106,15 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_union::PizzaOrPasta> WireNaturalConversionTraits<::test_union::wire::PizzaOrPasta, std::unique_ptr<::test_union::PizzaOrPasta>>::ToNatural(::test_union::wire::PizzaOrPasta src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::PizzaOrPasta> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::PizzaOrPasta>, std::unique_ptr<::test_union::PizzaOrPasta>>::ToNatural(::fidl::WireOptional<::test_union::wire::PizzaOrPasta> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::PizzaOrPasta>(WireNaturalConversionTraits<::test_union::wire::PizzaOrPasta, ::test_union::PizzaOrPasta>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::PizzaOrPasta>(WireNaturalConversionTraits<::test_union::wire::PizzaOrPasta, ::test_union::PizzaOrPasta>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::PizzaOrPasta WireNaturalConversionTraits<::test_union::wire::PizzaOrPasta, std::unique_ptr<::test_union::PizzaOrPasta>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::PizzaOrPasta> src) {
+::fidl::WireOptional<::test_union::wire::PizzaOrPasta> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::PizzaOrPasta>, std::unique_ptr<::test_union::PizzaOrPasta>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::PizzaOrPasta> src) {
   if (!src) {
-    return ::test_union::wire::PizzaOrPasta();
+    return ::fidl::WireOptional<::test_union::wire::PizzaOrPasta>();
   }
   return WireNaturalConversionTraits<::test_union::wire::PizzaOrPasta, ::test_union::PizzaOrPasta>::ToWire(arena, std::move(*src));
 }
@@ -142,15 +142,15 @@ std::unique_ptr<::test_union::PizzaOrPasta> WireNaturalConversionTraits<::test_u
   }
 }
 
-std::unique_ptr<::test_union::ExplicitPizzaOrPasta> WireNaturalConversionTraits<::test_union::wire::ExplicitPizzaOrPasta, std::unique_ptr<::test_union::ExplicitPizzaOrPasta>>::ToNatural(::test_union::wire::ExplicitPizzaOrPasta src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::ExplicitPizzaOrPasta> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitPizzaOrPasta>, std::unique_ptr<::test_union::ExplicitPizzaOrPasta>>::ToNatural(::fidl::WireOptional<::test_union::wire::ExplicitPizzaOrPasta> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::ExplicitPizzaOrPasta>(WireNaturalConversionTraits<::test_union::wire::ExplicitPizzaOrPasta, ::test_union::ExplicitPizzaOrPasta>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::ExplicitPizzaOrPasta>(WireNaturalConversionTraits<::test_union::wire::ExplicitPizzaOrPasta, ::test_union::ExplicitPizzaOrPasta>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::ExplicitPizzaOrPasta WireNaturalConversionTraits<::test_union::wire::ExplicitPizzaOrPasta, std::unique_ptr<::test_union::ExplicitPizzaOrPasta>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitPizzaOrPasta> src) {
+::fidl::WireOptional<::test_union::wire::ExplicitPizzaOrPasta> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitPizzaOrPasta>, std::unique_ptr<::test_union::ExplicitPizzaOrPasta>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitPizzaOrPasta> src) {
   if (!src) {
-    return ::test_union::wire::ExplicitPizzaOrPasta();
+    return ::fidl::WireOptional<::test_union::wire::ExplicitPizzaOrPasta>();
   }
   return WireNaturalConversionTraits<::test_union::wire::ExplicitPizzaOrPasta, ::test_union::ExplicitPizzaOrPasta>::ToWire(arena, std::move(*src));
 }
@@ -180,15 +180,15 @@ std::unique_ptr<::test_union::ExplicitPizzaOrPasta> WireNaturalConversionTraits<
   }
 }
 
-std::unique_ptr<::test_union::FlexiblePizzaOrPasta> WireNaturalConversionTraits<::test_union::wire::FlexiblePizzaOrPasta, std::unique_ptr<::test_union::FlexiblePizzaOrPasta>>::ToNatural(::test_union::wire::FlexiblePizzaOrPasta src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::FlexiblePizzaOrPasta> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::FlexiblePizzaOrPasta>, std::unique_ptr<::test_union::FlexiblePizzaOrPasta>>::ToNatural(::fidl::WireOptional<::test_union::wire::FlexiblePizzaOrPasta> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::FlexiblePizzaOrPasta>(WireNaturalConversionTraits<::test_union::wire::FlexiblePizzaOrPasta, ::test_union::FlexiblePizzaOrPasta>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::FlexiblePizzaOrPasta>(WireNaturalConversionTraits<::test_union::wire::FlexiblePizzaOrPasta, ::test_union::FlexiblePizzaOrPasta>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::FlexiblePizzaOrPasta WireNaturalConversionTraits<::test_union::wire::FlexiblePizzaOrPasta, std::unique_ptr<::test_union::FlexiblePizzaOrPasta>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::FlexiblePizzaOrPasta> src) {
+::fidl::WireOptional<::test_union::wire::FlexiblePizzaOrPasta> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::FlexiblePizzaOrPasta>, std::unique_ptr<::test_union::FlexiblePizzaOrPasta>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::FlexiblePizzaOrPasta> src) {
   if (!src) {
-    return ::test_union::wire::FlexiblePizzaOrPasta();
+    return ::fidl::WireOptional<::test_union::wire::FlexiblePizzaOrPasta>();
   }
   return WireNaturalConversionTraits<::test_union::wire::FlexiblePizzaOrPasta, ::test_union::FlexiblePizzaOrPasta>::ToWire(arena, std::move(*src));
 }
@@ -216,15 +216,15 @@ std::unique_ptr<::test_union::FlexiblePizzaOrPasta> WireNaturalConversionTraits<
   }
 }
 
-std::unique_ptr<::test_union::StrictPizzaOrPasta> WireNaturalConversionTraits<::test_union::wire::StrictPizzaOrPasta, std::unique_ptr<::test_union::StrictPizzaOrPasta>>::ToNatural(::test_union::wire::StrictPizzaOrPasta src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::StrictPizzaOrPasta> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictPizzaOrPasta>, std::unique_ptr<::test_union::StrictPizzaOrPasta>>::ToNatural(::fidl::WireOptional<::test_union::wire::StrictPizzaOrPasta> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::StrictPizzaOrPasta>(WireNaturalConversionTraits<::test_union::wire::StrictPizzaOrPasta, ::test_union::StrictPizzaOrPasta>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::StrictPizzaOrPasta>(WireNaturalConversionTraits<::test_union::wire::StrictPizzaOrPasta, ::test_union::StrictPizzaOrPasta>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::StrictPizzaOrPasta WireNaturalConversionTraits<::test_union::wire::StrictPizzaOrPasta, std::unique_ptr<::test_union::StrictPizzaOrPasta>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictPizzaOrPasta> src) {
+::fidl::WireOptional<::test_union::wire::StrictPizzaOrPasta> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictPizzaOrPasta>, std::unique_ptr<::test_union::StrictPizzaOrPasta>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictPizzaOrPasta> src) {
   if (!src) {
-    return ::test_union::wire::StrictPizzaOrPasta();
+    return ::fidl::WireOptional<::test_union::wire::StrictPizzaOrPasta>();
   }
   return WireNaturalConversionTraits<::test_union::wire::StrictPizzaOrPasta, ::test_union::StrictPizzaOrPasta>::ToWire(arena, std::move(*src));
 }
@@ -258,15 +258,15 @@ std::unique_ptr<::test_union::StrictPizzaOrPasta> WireNaturalConversionTraits<::
   }
 }
 
-std::unique_ptr<::test_union::Union> WireNaturalConversionTraits<::test_union::wire::Union, std::unique_ptr<::test_union::Union>>::ToNatural(::test_union::wire::Union src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::Union> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::Union>, std::unique_ptr<::test_union::Union>>::ToNatural(::fidl::WireOptional<::test_union::wire::Union> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::Union>(WireNaturalConversionTraits<::test_union::wire::Union, ::test_union::Union>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::Union>(WireNaturalConversionTraits<::test_union::wire::Union, ::test_union::Union>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::Union WireNaturalConversionTraits<::test_union::wire::Union, std::unique_ptr<::test_union::Union>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::Union> src) {
+::fidl::WireOptional<::test_union::wire::Union> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::Union>, std::unique_ptr<::test_union::Union>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::Union> src) {
   if (!src) {
-    return ::test_union::wire::Union();
+    return ::fidl::WireOptional<::test_union::wire::Union>();
   }
   return WireNaturalConversionTraits<::test_union::wire::Union, ::test_union::Union>::ToWire(arena, std::move(*src));
 }
@@ -302,15 +302,15 @@ std::unique_ptr<::test_union::Union> WireNaturalConversionTraits<::test_union::w
   }
 }
 
-std::unique_ptr<::test_union::FlexibleUnion> WireNaturalConversionTraits<::test_union::wire::FlexibleUnion, std::unique_ptr<::test_union::FlexibleUnion>>::ToNatural(::test_union::wire::FlexibleUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::FlexibleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::FlexibleUnion>, std::unique_ptr<::test_union::FlexibleUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::FlexibleUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::FlexibleUnion>(WireNaturalConversionTraits<::test_union::wire::FlexibleUnion, ::test_union::FlexibleUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::FlexibleUnion>(WireNaturalConversionTraits<::test_union::wire::FlexibleUnion, ::test_union::FlexibleUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::FlexibleUnion WireNaturalConversionTraits<::test_union::wire::FlexibleUnion, std::unique_ptr<::test_union::FlexibleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::FlexibleUnion> src) {
+::fidl::WireOptional<::test_union::wire::FlexibleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::FlexibleUnion>, std::unique_ptr<::test_union::FlexibleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::FlexibleUnion> src) {
   if (!src) {
-    return ::test_union::wire::FlexibleUnion();
+    return ::fidl::WireOptional<::test_union::wire::FlexibleUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::FlexibleUnion, ::test_union::FlexibleUnion>::ToWire(arena, std::move(*src));
 }
@@ -344,15 +344,15 @@ std::unique_ptr<::test_union::FlexibleUnion> WireNaturalConversionTraits<::test_
   }
 }
 
-std::unique_ptr<::test_union::StrictUnion> WireNaturalConversionTraits<::test_union::wire::StrictUnion, std::unique_ptr<::test_union::StrictUnion>>::ToNatural(::test_union::wire::StrictUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::StrictUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictUnion>, std::unique_ptr<::test_union::StrictUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::StrictUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::StrictUnion>(WireNaturalConversionTraits<::test_union::wire::StrictUnion, ::test_union::StrictUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::StrictUnion>(WireNaturalConversionTraits<::test_union::wire::StrictUnion, ::test_union::StrictUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::StrictUnion WireNaturalConversionTraits<::test_union::wire::StrictUnion, std::unique_ptr<::test_union::StrictUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictUnion> src) {
+::fidl::WireOptional<::test_union::wire::StrictUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictUnion>, std::unique_ptr<::test_union::StrictUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictUnion> src) {
   if (!src) {
-    return ::test_union::wire::StrictUnion();
+    return ::fidl::WireOptional<::test_union::wire::StrictUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::StrictUnion, ::test_union::StrictUnion>::ToWire(arena, std::move(*src));
 }
@@ -374,15 +374,15 @@ std::unique_ptr<::test_union::StrictUnion> WireNaturalConversionTraits<::test_un
   }
 }
 
-std::unique_ptr<::test_union::FieldCollision> WireNaturalConversionTraits<::test_union::wire::FieldCollision, std::unique_ptr<::test_union::FieldCollision>>::ToNatural(::test_union::wire::FieldCollision src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::FieldCollision> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::FieldCollision>, std::unique_ptr<::test_union::FieldCollision>>::ToNatural(::fidl::WireOptional<::test_union::wire::FieldCollision> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::FieldCollision>(WireNaturalConversionTraits<::test_union::wire::FieldCollision, ::test_union::FieldCollision>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::FieldCollision>(WireNaturalConversionTraits<::test_union::wire::FieldCollision, ::test_union::FieldCollision>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::FieldCollision WireNaturalConversionTraits<::test_union::wire::FieldCollision, std::unique_ptr<::test_union::FieldCollision>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::FieldCollision> src) {
+::fidl::WireOptional<::test_union::wire::FieldCollision> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::FieldCollision>, std::unique_ptr<::test_union::FieldCollision>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::FieldCollision> src) {
   if (!src) {
-    return ::test_union::wire::FieldCollision();
+    return ::fidl::WireOptional<::test_union::wire::FieldCollision>();
   }
   return WireNaturalConversionTraits<::test_union::wire::FieldCollision, ::test_union::FieldCollision>::ToWire(arena, std::move(*src));
 }
@@ -410,15 +410,15 @@ std::unique_ptr<::test_union::FieldCollision> WireNaturalConversionTraits<::test
   }
 }
 
-std::unique_ptr<::test_union::ExplicitUnion> WireNaturalConversionTraits<::test_union::wire::ExplicitUnion, std::unique_ptr<::test_union::ExplicitUnion>>::ToNatural(::test_union::wire::ExplicitUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::ExplicitUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitUnion>, std::unique_ptr<::test_union::ExplicitUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::ExplicitUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::ExplicitUnion>(WireNaturalConversionTraits<::test_union::wire::ExplicitUnion, ::test_union::ExplicitUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::ExplicitUnion>(WireNaturalConversionTraits<::test_union::wire::ExplicitUnion, ::test_union::ExplicitUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::ExplicitUnion WireNaturalConversionTraits<::test_union::wire::ExplicitUnion, std::unique_ptr<::test_union::ExplicitUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitUnion> src) {
+::fidl::WireOptional<::test_union::wire::ExplicitUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitUnion>, std::unique_ptr<::test_union::ExplicitUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitUnion> src) {
   if (!src) {
-    return ::test_union::wire::ExplicitUnion();
+    return ::fidl::WireOptional<::test_union::wire::ExplicitUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::ExplicitUnion, ::test_union::ExplicitUnion>::ToWire(arena, std::move(*src));
 }
@@ -446,15 +446,15 @@ std::unique_ptr<::test_union::ExplicitUnion> WireNaturalConversionTraits<::test_
   }
 }
 
-std::unique_ptr<::test_union::ReverseOrdinalUnion> WireNaturalConversionTraits<::test_union::wire::ReverseOrdinalUnion, std::unique_ptr<::test_union::ReverseOrdinalUnion>>::ToNatural(::test_union::wire::ReverseOrdinalUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::ReverseOrdinalUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ReverseOrdinalUnion>, std::unique_ptr<::test_union::ReverseOrdinalUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::ReverseOrdinalUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::ReverseOrdinalUnion>(WireNaturalConversionTraits<::test_union::wire::ReverseOrdinalUnion, ::test_union::ReverseOrdinalUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::ReverseOrdinalUnion>(WireNaturalConversionTraits<::test_union::wire::ReverseOrdinalUnion, ::test_union::ReverseOrdinalUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::ReverseOrdinalUnion WireNaturalConversionTraits<::test_union::wire::ReverseOrdinalUnion, std::unique_ptr<::test_union::ReverseOrdinalUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ReverseOrdinalUnion> src) {
+::fidl::WireOptional<::test_union::wire::ReverseOrdinalUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ReverseOrdinalUnion>, std::unique_ptr<::test_union::ReverseOrdinalUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ReverseOrdinalUnion> src) {
   if (!src) {
-    return ::test_union::wire::ReverseOrdinalUnion();
+    return ::fidl::WireOptional<::test_union::wire::ReverseOrdinalUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::ReverseOrdinalUnion, ::test_union::ReverseOrdinalUnion>::ToWire(arena, std::move(*src));
 }
@@ -484,15 +484,15 @@ std::unique_ptr<::test_union::ReverseOrdinalUnion> WireNaturalConversionTraits<:
   }
 }
 
-std::unique_ptr<::test_union::FlexibleFoo> WireNaturalConversionTraits<::test_union::wire::FlexibleFoo, std::unique_ptr<::test_union::FlexibleFoo>>::ToNatural(::test_union::wire::FlexibleFoo src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::FlexibleFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::FlexibleFoo>, std::unique_ptr<::test_union::FlexibleFoo>>::ToNatural(::fidl::WireOptional<::test_union::wire::FlexibleFoo> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::FlexibleFoo>(WireNaturalConversionTraits<::test_union::wire::FlexibleFoo, ::test_union::FlexibleFoo>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::FlexibleFoo>(WireNaturalConversionTraits<::test_union::wire::FlexibleFoo, ::test_union::FlexibleFoo>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::FlexibleFoo WireNaturalConversionTraits<::test_union::wire::FlexibleFoo, std::unique_ptr<::test_union::FlexibleFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::FlexibleFoo> src) {
+::fidl::WireOptional<::test_union::wire::FlexibleFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::FlexibleFoo>, std::unique_ptr<::test_union::FlexibleFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::FlexibleFoo> src) {
   if (!src) {
-    return ::test_union::wire::FlexibleFoo();
+    return ::fidl::WireOptional<::test_union::wire::FlexibleFoo>();
   }
   return WireNaturalConversionTraits<::test_union::wire::FlexibleFoo, ::test_union::FlexibleFoo>::ToWire(arena, std::move(*src));
 }
@@ -520,15 +520,15 @@ std::unique_ptr<::test_union::FlexibleFoo> WireNaturalConversionTraits<::test_un
   }
 }
 
-std::unique_ptr<::test_union::StrictFoo> WireNaturalConversionTraits<::test_union::wire::StrictFoo, std::unique_ptr<::test_union::StrictFoo>>::ToNatural(::test_union::wire::StrictFoo src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::StrictFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictFoo>, std::unique_ptr<::test_union::StrictFoo>>::ToNatural(::fidl::WireOptional<::test_union::wire::StrictFoo> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::StrictFoo>(WireNaturalConversionTraits<::test_union::wire::StrictFoo, ::test_union::StrictFoo>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::StrictFoo>(WireNaturalConversionTraits<::test_union::wire::StrictFoo, ::test_union::StrictFoo>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::StrictFoo WireNaturalConversionTraits<::test_union::wire::StrictFoo, std::unique_ptr<::test_union::StrictFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictFoo> src) {
+::fidl::WireOptional<::test_union::wire::StrictFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictFoo>, std::unique_ptr<::test_union::StrictFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictFoo> src) {
   if (!src) {
-    return ::test_union::wire::StrictFoo();
+    return ::fidl::WireOptional<::test_union::wire::StrictFoo>();
   }
   return WireNaturalConversionTraits<::test_union::wire::StrictFoo, ::test_union::StrictFoo>::ToWire(arena, std::move(*src));
 }
@@ -558,15 +558,15 @@ std::unique_ptr<::test_union::StrictFoo> WireNaturalConversionTraits<::test_unio
   }
 }
 
-std::unique_ptr<::test_union::ExplicitFoo> WireNaturalConversionTraits<::test_union::wire::ExplicitFoo, std::unique_ptr<::test_union::ExplicitFoo>>::ToNatural(::test_union::wire::ExplicitFoo src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::ExplicitFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitFoo>, std::unique_ptr<::test_union::ExplicitFoo>>::ToNatural(::fidl::WireOptional<::test_union::wire::ExplicitFoo> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::ExplicitFoo>(WireNaturalConversionTraits<::test_union::wire::ExplicitFoo, ::test_union::ExplicitFoo>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::ExplicitFoo>(WireNaturalConversionTraits<::test_union::wire::ExplicitFoo, ::test_union::ExplicitFoo>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::ExplicitFoo WireNaturalConversionTraits<::test_union::wire::ExplicitFoo, std::unique_ptr<::test_union::ExplicitFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitFoo> src) {
+::fidl::WireOptional<::test_union::wire::ExplicitFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitFoo>, std::unique_ptr<::test_union::ExplicitFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitFoo> src) {
   if (!src) {
-    return ::test_union::wire::ExplicitFoo();
+    return ::fidl::WireOptional<::test_union::wire::ExplicitFoo>();
   }
   return WireNaturalConversionTraits<::test_union::wire::ExplicitFoo, ::test_union::ExplicitFoo>::ToWire(arena, std::move(*src));
 }
@@ -594,15 +594,15 @@ std::unique_ptr<::test_union::ExplicitFoo> WireNaturalConversionTraits<::test_un
   }
 }
 
-std::unique_ptr<::test_union::ExplicitStrictFoo> WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo, std::unique_ptr<::test_union::ExplicitStrictFoo>>::ToNatural(::test_union::wire::ExplicitStrictFoo src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::ExplicitStrictFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitStrictFoo>, std::unique_ptr<::test_union::ExplicitStrictFoo>>::ToNatural(::fidl::WireOptional<::test_union::wire::ExplicitStrictFoo> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::ExplicitStrictFoo>(WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo, ::test_union::ExplicitStrictFoo>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::ExplicitStrictFoo>(WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo, ::test_union::ExplicitStrictFoo>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::ExplicitStrictFoo WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo, std::unique_ptr<::test_union::ExplicitStrictFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitStrictFoo> src) {
+::fidl::WireOptional<::test_union::wire::ExplicitStrictFoo> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitStrictFoo>, std::unique_ptr<::test_union::ExplicitStrictFoo>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitStrictFoo> src) {
   if (!src) {
-    return ::test_union::wire::ExplicitStrictFoo();
+    return ::fidl::WireOptional<::test_union::wire::ExplicitStrictFoo>();
   }
   return WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo, ::test_union::ExplicitStrictFoo>::ToWire(arena, std::move(*src));
 }
@@ -632,15 +632,15 @@ std::unique_ptr<::test_union::ExplicitStrictFoo> WireNaturalConversionTraits<::t
   }
 }
 
-std::unique_ptr<::test_union::OlderSimpleUnion> WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion, std::unique_ptr<::test_union::OlderSimpleUnion>>::ToNatural(::test_union::wire::OlderSimpleUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::OlderSimpleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::OlderSimpleUnion>, std::unique_ptr<::test_union::OlderSimpleUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::OlderSimpleUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::OlderSimpleUnion>(WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion, ::test_union::OlderSimpleUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::OlderSimpleUnion>(WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion, ::test_union::OlderSimpleUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::OlderSimpleUnion WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion, std::unique_ptr<::test_union::OlderSimpleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::OlderSimpleUnion> src) {
+::fidl::WireOptional<::test_union::wire::OlderSimpleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::OlderSimpleUnion>, std::unique_ptr<::test_union::OlderSimpleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::OlderSimpleUnion> src) {
   if (!src) {
-    return ::test_union::wire::OlderSimpleUnion();
+    return ::fidl::WireOptional<::test_union::wire::OlderSimpleUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion, ::test_union::OlderSimpleUnion>::ToWire(arena, std::move(*src));
 }
@@ -676,15 +676,15 @@ std::unique_ptr<::test_union::OlderSimpleUnion> WireNaturalConversionTraits<::te
   }
 }
 
-std::unique_ptr<::test_union::NewerSimpleUnion> WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion, std::unique_ptr<::test_union::NewerSimpleUnion>>::ToNatural(::test_union::wire::NewerSimpleUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::NewerSimpleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::NewerSimpleUnion>, std::unique_ptr<::test_union::NewerSimpleUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::NewerSimpleUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::NewerSimpleUnion>(WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion, ::test_union::NewerSimpleUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::NewerSimpleUnion>(WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion, ::test_union::NewerSimpleUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::NewerSimpleUnion WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion, std::unique_ptr<::test_union::NewerSimpleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::NewerSimpleUnion> src) {
+::fidl::WireOptional<::test_union::wire::NewerSimpleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::NewerSimpleUnion>, std::unique_ptr<::test_union::NewerSimpleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::NewerSimpleUnion> src) {
   if (!src) {
-    return ::test_union::wire::NewerSimpleUnion();
+    return ::fidl::WireOptional<::test_union::wire::NewerSimpleUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion, ::test_union::NewerSimpleUnion>::ToWire(arena, std::move(*src));
 }
@@ -718,15 +718,15 @@ std::unique_ptr<::test_union::NewerSimpleUnion> WireNaturalConversionTraits<::te
   }
 }
 
-std::unique_ptr<::test_union::StrictSimpleXUnion> WireNaturalConversionTraits<::test_union::wire::StrictSimpleXUnion, std::unique_ptr<::test_union::StrictSimpleXUnion>>::ToNatural(::test_union::wire::StrictSimpleXUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::StrictSimpleXUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictSimpleXUnion>, std::unique_ptr<::test_union::StrictSimpleXUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::StrictSimpleXUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::StrictSimpleXUnion>(WireNaturalConversionTraits<::test_union::wire::StrictSimpleXUnion, ::test_union::StrictSimpleXUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::StrictSimpleXUnion>(WireNaturalConversionTraits<::test_union::wire::StrictSimpleXUnion, ::test_union::StrictSimpleXUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::StrictSimpleXUnion WireNaturalConversionTraits<::test_union::wire::StrictSimpleXUnion, std::unique_ptr<::test_union::StrictSimpleXUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictSimpleXUnion> src) {
+::fidl::WireOptional<::test_union::wire::StrictSimpleXUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictSimpleXUnion>, std::unique_ptr<::test_union::StrictSimpleXUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictSimpleXUnion> src) {
   if (!src) {
-    return ::test_union::wire::StrictSimpleXUnion();
+    return ::fidl::WireOptional<::test_union::wire::StrictSimpleXUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::StrictSimpleXUnion, ::test_union::StrictSimpleXUnion>::ToWire(arena, std::move(*src));
 }
@@ -750,15 +750,15 @@ std::unique_ptr<::test_union::StrictSimpleXUnion> WireNaturalConversionTraits<::
   }
 }
 
-std::unique_ptr<::test_union::XUnionContainingEmptyStruct> WireNaturalConversionTraits<::test_union::wire::XUnionContainingEmptyStruct, std::unique_ptr<::test_union::XUnionContainingEmptyStruct>>::ToNatural(::test_union::wire::XUnionContainingEmptyStruct src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::XUnionContainingEmptyStruct> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::XUnionContainingEmptyStruct>, std::unique_ptr<::test_union::XUnionContainingEmptyStruct>>::ToNatural(::fidl::WireOptional<::test_union::wire::XUnionContainingEmptyStruct> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::XUnionContainingEmptyStruct>(WireNaturalConversionTraits<::test_union::wire::XUnionContainingEmptyStruct, ::test_union::XUnionContainingEmptyStruct>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::XUnionContainingEmptyStruct>(WireNaturalConversionTraits<::test_union::wire::XUnionContainingEmptyStruct, ::test_union::XUnionContainingEmptyStruct>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::XUnionContainingEmptyStruct WireNaturalConversionTraits<::test_union::wire::XUnionContainingEmptyStruct, std::unique_ptr<::test_union::XUnionContainingEmptyStruct>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::XUnionContainingEmptyStruct> src) {
+::fidl::WireOptional<::test_union::wire::XUnionContainingEmptyStruct> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::XUnionContainingEmptyStruct>, std::unique_ptr<::test_union::XUnionContainingEmptyStruct>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::XUnionContainingEmptyStruct> src) {
   if (!src) {
-    return ::test_union::wire::XUnionContainingEmptyStruct();
+    return ::fidl::WireOptional<::test_union::wire::XUnionContainingEmptyStruct>();
   }
   return WireNaturalConversionTraits<::test_union::wire::XUnionContainingEmptyStruct, ::test_union::XUnionContainingEmptyStruct>::ToWire(arena, std::move(*src));
 }
@@ -780,15 +780,15 @@ std::unique_ptr<::test_union::XUnionContainingEmptyStruct> WireNaturalConversion
   }
 }
 
-std::unique_ptr<::test_union::StrictBoundedXUnion> WireNaturalConversionTraits<::test_union::wire::StrictBoundedXUnion, std::unique_ptr<::test_union::StrictBoundedXUnion>>::ToNatural(::test_union::wire::StrictBoundedXUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::StrictBoundedXUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictBoundedXUnion>, std::unique_ptr<::test_union::StrictBoundedXUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::StrictBoundedXUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::StrictBoundedXUnion>(WireNaturalConversionTraits<::test_union::wire::StrictBoundedXUnion, ::test_union::StrictBoundedXUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::StrictBoundedXUnion>(WireNaturalConversionTraits<::test_union::wire::StrictBoundedXUnion, ::test_union::StrictBoundedXUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::StrictBoundedXUnion WireNaturalConversionTraits<::test_union::wire::StrictBoundedXUnion, std::unique_ptr<::test_union::StrictBoundedXUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictBoundedXUnion> src) {
+::fidl::WireOptional<::test_union::wire::StrictBoundedXUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::StrictBoundedXUnion>, std::unique_ptr<::test_union::StrictBoundedXUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::StrictBoundedXUnion> src) {
   if (!src) {
-    return ::test_union::wire::StrictBoundedXUnion();
+    return ::fidl::WireOptional<::test_union::wire::StrictBoundedXUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::StrictBoundedXUnion, ::test_union::StrictBoundedXUnion>::ToWire(arena, std::move(*src));
 }
@@ -818,15 +818,15 @@ std::unique_ptr<::test_union::StrictBoundedXUnion> WireNaturalConversionTraits<:
   }
 }
 
-std::unique_ptr<::test_union::ExplicitXUnion> WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion, std::unique_ptr<::test_union::ExplicitXUnion>>::ToNatural(::test_union::wire::ExplicitXUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::ExplicitXUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitXUnion>, std::unique_ptr<::test_union::ExplicitXUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::ExplicitXUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::ExplicitXUnion>(WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion, ::test_union::ExplicitXUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::ExplicitXUnion>(WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion, ::test_union::ExplicitXUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::ExplicitXUnion WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion, std::unique_ptr<::test_union::ExplicitXUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitXUnion> src) {
+::fidl::WireOptional<::test_union::wire::ExplicitXUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::ExplicitXUnion>, std::unique_ptr<::test_union::ExplicitXUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::ExplicitXUnion> src) {
   if (!src) {
-    return ::test_union::wire::ExplicitXUnion();
+    return ::fidl::WireOptional<::test_union::wire::ExplicitXUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion, ::test_union::ExplicitXUnion>::ToWire(arena, std::move(*src));
 }
@@ -850,15 +850,15 @@ std::unique_ptr<::test_union::ExplicitXUnion> WireNaturalConversionTraits<::test
   }
 }
 
-std::unique_ptr<::test_union::UnionWithAttributes> WireNaturalConversionTraits<::test_union::wire::UnionWithAttributes, std::unique_ptr<::test_union::UnionWithAttributes>>::ToNatural(::test_union::wire::UnionWithAttributes src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::UnionWithAttributes> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::UnionWithAttributes>, std::unique_ptr<::test_union::UnionWithAttributes>>::ToNatural(::fidl::WireOptional<::test_union::wire::UnionWithAttributes> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::UnionWithAttributes>(WireNaturalConversionTraits<::test_union::wire::UnionWithAttributes, ::test_union::UnionWithAttributes>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::UnionWithAttributes>(WireNaturalConversionTraits<::test_union::wire::UnionWithAttributes, ::test_union::UnionWithAttributes>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::UnionWithAttributes WireNaturalConversionTraits<::test_union::wire::UnionWithAttributes, std::unique_ptr<::test_union::UnionWithAttributes>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::UnionWithAttributes> src) {
+::fidl::WireOptional<::test_union::wire::UnionWithAttributes> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::UnionWithAttributes>, std::unique_ptr<::test_union::UnionWithAttributes>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::UnionWithAttributes> src) {
   if (!src) {
-    return ::test_union::wire::UnionWithAttributes();
+    return ::fidl::WireOptional<::test_union::wire::UnionWithAttributes>();
   }
   return WireNaturalConversionTraits<::test_union::wire::UnionWithAttributes, ::test_union::UnionWithAttributes>::ToWire(arena, std::move(*src));
 }
@@ -876,15 +876,15 @@ std::unique_ptr<::test_union::UnionWithAttributes> WireNaturalConversionTraits<:
   }
 }
 
-std::unique_ptr<::test_union::EmptyFlexibleUnion> WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, std::unique_ptr<::test_union::EmptyFlexibleUnion>>::ToNatural(::test_union::wire::EmptyFlexibleUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::EmptyFlexibleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::EmptyFlexibleUnion>, std::unique_ptr<::test_union::EmptyFlexibleUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::EmptyFlexibleUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::EmptyFlexibleUnion>(WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, ::test_union::EmptyFlexibleUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::EmptyFlexibleUnion>(WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, ::test_union::EmptyFlexibleUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::EmptyFlexibleUnion WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, std::unique_ptr<::test_union::EmptyFlexibleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::EmptyFlexibleUnion> src) {
+::fidl::WireOptional<::test_union::wire::EmptyFlexibleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::EmptyFlexibleUnion>, std::unique_ptr<::test_union::EmptyFlexibleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::EmptyFlexibleUnion> src) {
   if (!src) {
-    return ::test_union::wire::EmptyFlexibleUnion();
+    return ::fidl::WireOptional<::test_union::wire::EmptyFlexibleUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::EmptyFlexibleUnion, ::test_union::EmptyFlexibleUnion>::ToWire(arena, std::move(*src));
 }
@@ -902,15 +902,15 @@ std::unique_ptr<::test_union::EmptyFlexibleUnion> WireNaturalConversionTraits<::
   }
 }
 
-std::unique_ptr<::test_union::OnlyReservedFlexibleUnion> WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, std::unique_ptr<::test_union::OnlyReservedFlexibleUnion>>::ToNatural(::test_union::wire::OnlyReservedFlexibleUnion src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_union::OnlyReservedFlexibleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::OnlyReservedFlexibleUnion>, std::unique_ptr<::test_union::OnlyReservedFlexibleUnion>>::ToNatural(::fidl::WireOptional<::test_union::wire::OnlyReservedFlexibleUnion> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_union::OnlyReservedFlexibleUnion>(WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, ::test_union::OnlyReservedFlexibleUnion>::ToNatural(std::move(src)));
+  return std::make_unique<::test_union::OnlyReservedFlexibleUnion>(WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, ::test_union::OnlyReservedFlexibleUnion>::ToNatural(std::move(src.value())));
 }
-::test_union::wire::OnlyReservedFlexibleUnion WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, std::unique_ptr<::test_union::OnlyReservedFlexibleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::OnlyReservedFlexibleUnion> src) {
+::fidl::WireOptional<::test_union::wire::OnlyReservedFlexibleUnion> WireNaturalConversionTraits<::fidl::WireOptional<::test_union::wire::OnlyReservedFlexibleUnion>, std::unique_ptr<::test_union::OnlyReservedFlexibleUnion>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::OnlyReservedFlexibleUnion> src) {
   if (!src) {
-    return ::test_union::wire::OnlyReservedFlexibleUnion();
+    return ::fidl::WireOptional<::test_union::wire::OnlyReservedFlexibleUnion>();
   }
   return WireNaturalConversionTraits<::test_union::wire::OnlyReservedFlexibleUnion, ::test_union::OnlyReservedFlexibleUnion>::ToWire(arena, std::move(*src));
 }

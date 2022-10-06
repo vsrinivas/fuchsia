@@ -73,15 +73,15 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_handlesintypes::UnionWithHandle> WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::ToNatural(::test_handlesintypes::wire::UnionWithHandle src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_handlesintypes::UnionWithHandle> WireNaturalConversionTraits<::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>, std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::ToNatural(::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_handlesintypes::UnionWithHandle>(WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToNatural(std::move(src)));
+  return std::make_unique<::test_handlesintypes::UnionWithHandle>(WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToNatural(std::move(src.value())));
 }
-::test_handlesintypes::wire::UnionWithHandle WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_handlesintypes::UnionWithHandle> src) {
+::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle> WireNaturalConversionTraits<::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>, std::unique_ptr<::test_handlesintypes::UnionWithHandle>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_handlesintypes::UnionWithHandle> src) {
   if (!src) {
-    return ::test_handlesintypes::wire::UnionWithHandle();
+    return ::fidl::WireOptional<::test_handlesintypes::wire::UnionWithHandle>();
   }
   return WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToWire(arena, std::move(*src));
 }

@@ -182,7 +182,8 @@ var1.v = std::move(var2);
 TEST(Conformance, GoldenUnionStruct_V2_Encode) {
   [[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
   auto var1 = test_conformance::wire::GoldenUnionStruct{};
-auto var2 = test_conformance::wire::GoldenUnion();
+auto var3 = test_conformance::wire::GoldenUnion();
+auto var2 = std::move(var3);
 var2 = test_conformance::wire::GoldenUnion::WithV(int16_t(1ull));
 var1.v = std::move(var2);
 
@@ -199,7 +200,8 @@ var1.v = std::move(var2);
 TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Encode) {
   [[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
   auto var1 = test_conformance::wire::GoldenNullableUnionStruct{};
-auto var2 = test_conformance::wire::GoldenUnion();
+auto var3 = test_conformance::wire::GoldenUnion();
+auto var2 = fidl::WireOptional<test_conformance::wire::GoldenUnion>(std::move(var3));
 var2 = test_conformance::wire::GoldenUnion::WithV(int16_t(1ull));
 var1.v = std::move(var2);
 
@@ -216,7 +218,7 @@ var1.v = std::move(var2);
 TEST(Conformance, GoldenNullableUnionStructNull_V2_Encode) {
   [[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
   auto var1 = test_conformance::wire::GoldenNullableUnionStruct{};
-var1.v = test_conformance::wire::GoldenUnion();
+var1.v = fidl::WireOptional<test_conformance::wire::GoldenUnion>();
 
   const auto expected_bytes = std::vector<uint8_t>{
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -687,7 +689,8 @@ var1.v = std::move(var2);
 TEST(Conformance, GoldenUnionStruct_V2_Decode) {
   [[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
   auto var1 = test_conformance::wire::GoldenUnionStruct{};
-auto var2 = test_conformance::wire::GoldenUnion();
+auto var3 = test_conformance::wire::GoldenUnion();
+auto var2 = std::move(var3);
 var2 = test_conformance::wire::GoldenUnion::WithV(int16_t(1ull));
 var1.v = std::move(var2);
 
@@ -711,7 +714,8 @@ var1.v = std::move(var2);
 TEST(Conformance, GoldenNullableUnionStructNonNull_V2_Decode) {
   [[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
   auto var1 = test_conformance::wire::GoldenNullableUnionStruct{};
-auto var2 = test_conformance::wire::GoldenUnion();
+auto var3 = test_conformance::wire::GoldenUnion();
+auto var2 = fidl::WireOptional<test_conformance::wire::GoldenUnion>(std::move(var3));
 var2 = test_conformance::wire::GoldenUnion::WithV(int16_t(1ull));
 var1.v = std::move(var2);
 
@@ -735,7 +739,7 @@ var1.v = std::move(var2);
 TEST(Conformance, GoldenNullableUnionStructNull_V2_Decode) {
   [[maybe_unused]] fidl::Arena<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
   auto var1 = test_conformance::wire::GoldenNullableUnionStruct{};
-var1.v = test_conformance::wire::GoldenUnion();
+var1.v = fidl::WireOptional<test_conformance::wire::GoldenUnion>();
 
   auto bytes = std::vector<uint8_t>{
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,

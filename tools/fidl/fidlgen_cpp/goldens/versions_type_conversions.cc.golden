@@ -51,15 +51,15 @@ namespace internal {
   }
 }
 
-std::unique_ptr<::test_versions::Union> WireNaturalConversionTraits<::test_versions::wire::Union, std::unique_ptr<::test_versions::Union>>::ToNatural(::test_versions::wire::Union src) {
-  if (src.has_invalid_tag()) {
+std::unique_ptr<::test_versions::Union> WireNaturalConversionTraits<::fidl::WireOptional<::test_versions::wire::Union>, std::unique_ptr<::test_versions::Union>>::ToNatural(::fidl::WireOptional<::test_versions::wire::Union> src) {
+  if (!src.has_value()) {
     return nullptr;
   }
-  return std::make_unique<::test_versions::Union>(WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions::Union>::ToNatural(std::move(src)));
+  return std::make_unique<::test_versions::Union>(WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions::Union>::ToNatural(std::move(src.value())));
 }
-::test_versions::wire::Union WireNaturalConversionTraits<::test_versions::wire::Union, std::unique_ptr<::test_versions::Union>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_versions::Union> src) {
+::fidl::WireOptional<::test_versions::wire::Union> WireNaturalConversionTraits<::fidl::WireOptional<::test_versions::wire::Union>, std::unique_ptr<::test_versions::Union>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_versions::Union> src) {
   if (!src) {
-    return ::test_versions::wire::Union();
+    return ::fidl::WireOptional<::test_versions::wire::Union>();
   }
   return WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions::Union>::ToWire(arena, std::move(*src));
 }

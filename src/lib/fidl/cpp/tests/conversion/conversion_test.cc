@@ -282,15 +282,17 @@ TEST(NaturalToWireConversion, Union) {
 TEST(WireToNaturalConversion, OptionalUnion) {
   fidl::Arena arena;
 
-  ASSERT_EQ(nullptr, fidl::ToNatural(test_types::wire::TestStrictXUnion()));
+  ASSERT_EQ(nullptr, fidl::ToNatural(fidl::WireOptional<test_types::wire::TestStrictXUnion>()));
 
   std::unique_ptr<test_types::TestStrictXUnion> union_with_uint32 =
-      fidl::ToNatural(test_types::wire::TestStrictXUnion::WithPrimitive(123));
+      fidl::ToNatural(fidl::WireOptional<test_types::wire::TestStrictXUnion>(
+          test_types::wire::TestStrictXUnion::WithPrimitive(123)));
   ASSERT_EQ(test_types::TestStrictXUnion::Tag::kPrimitive, union_with_uint32->Which());
   EXPECT_EQ(123, union_with_uint32->primitive().value());
 
   std::unique_ptr<test_types::UnionWithUint64> union_with_uint64 =
-      fidl::ToNatural(test_types::wire::UnionWithUint64::WithValue(arena, 123ll));
+      fidl::ToNatural(fidl::WireOptional<test_types::wire::UnionWithUint64>(
+          test_types::wire::UnionWithUint64::WithValue(arena, 123ll)));
   ASSERT_EQ(test_types::UnionWithUint64::Tag::kValue, union_with_uint64->Which());
   EXPECT_EQ(123ll, union_with_uint64->value().value());
 }
@@ -298,25 +300,27 @@ TEST(WireToNaturalConversion, OptionalUnion) {
 TEST(NaturalToWireConversion, OptionalUnion) {
   fidl::Arena arena;
 
-  test_types::wire::TestStrictXUnion empty =
+  fidl::WireOptional<test_types::wire::TestStrictXUnion> empty =
       fidl::ToWire(arena, std::unique_ptr<test_types::TestStrictXUnion>());
-  ASSERT_TRUE(empty.has_invalid_tag());
+  ASSERT_FALSE(empty.has_value());
 
-  test_types::wire::TestStrictXUnion xunion =
+  fidl::WireOptional<test_types::wire::TestStrictXUnion> xunion =
       fidl::ToWire(arena, std::make_unique<test_types::TestStrictXUnion>(
                               test_types::TestStrictXUnion::WithPrimitive(123)));
-  ASSERT_EQ(test_types::wire::TestStrictXUnion::Tag::kPrimitive, xunion.Which());
-  EXPECT_EQ(123, xunion.primitive());
+  ASSERT_TRUE(xunion.has_value());
+  ASSERT_EQ(test_types::wire::TestStrictXUnion::Tag::kPrimitive, xunion->Which());
+  EXPECT_EQ(123, xunion->primitive());
   // Inline union value.
-  EXPECT_FALSE(fidl_testing::ArenaChecker::IsPointerInArena(&xunion.primitive(), arena));
+  EXPECT_FALSE(fidl_testing::ArenaChecker::IsPointerInArena(&xunion->primitive(), arena));
 
-  test_types::wire::UnionWithUint64 union_with_uint64 = fidl::ToWire(
+  fidl::WireOptional<test_types::wire::UnionWithUint64> union_with_uint64 = fidl::ToWire(
       arena,
       std::make_unique<test_types::UnionWithUint64>(test_types::UnionWithUint64::WithValue(123ll)));
-  ASSERT_EQ(test_types::wire::UnionWithUint64::Tag::kValue, union_with_uint64.Which());
-  EXPECT_EQ(123ll, union_with_uint64.value());
+  ASSERT_TRUE(union_with_uint64.has_value());
+  ASSERT_EQ(test_types::wire::UnionWithUint64::Tag::kValue, union_with_uint64->Which());
+  EXPECT_EQ(123ll, union_with_uint64->value());
   // Inline union value.
-  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(&union_with_uint64.value(), arena));
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(&union_with_uint64->value(), arena));
 }
 
 TEST(WireToNaturalConversion, Table) {

@@ -82,13 +82,17 @@ struct WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray, ::test_
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_arrays::wire::UnionSmallArray, std::unique_ptr<::test_arrays::UnionSmallArray>> {
-  static std::unique_ptr<::test_arrays::UnionSmallArray> ToNatural(::test_arrays::wire::UnionSmallArray src);
-  static ::test_arrays::wire::UnionSmallArray ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_arrays::UnionSmallArray> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_arrays::wire::UnionSmallArray>, std::unique_ptr<::test_arrays::UnionSmallArray>> {
+  static std::unique_ptr<::test_arrays::UnionSmallArray> ToNatural(::fidl::WireOptional<::test_arrays::wire::UnionSmallArray> src);
+  static ::fidl::WireOptional<::test_arrays::wire::UnionSmallArray> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_arrays::UnionSmallArray> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_arrays::wire::UnionSmallArray> {
+  using type = ::test_arrays::UnionSmallArray;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_arrays::wire::UnionSmallArray>> {
   using type = std::unique_ptr<::test_arrays::UnionSmallArray>;
 };
 template <>
@@ -97,7 +101,7 @@ struct WireTypeForNaturalType<::test_arrays::UnionSmallArray> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_arrays::UnionSmallArray>> {
-  using type = ::test_arrays::wire::UnionSmallArray;
+  using type = ::fidl::WireOptional<::test_arrays::wire::UnionSmallArray>;
 };
 
 template <>
@@ -107,13 +111,17 @@ struct WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray, ::test_
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_arrays::wire::UnionLargeArray, std::unique_ptr<::test_arrays::UnionLargeArray>> {
-  static std::unique_ptr<::test_arrays::UnionLargeArray> ToNatural(::test_arrays::wire::UnionLargeArray src);
-  static ::test_arrays::wire::UnionLargeArray ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_arrays::UnionLargeArray> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_arrays::wire::UnionLargeArray>, std::unique_ptr<::test_arrays::UnionLargeArray>> {
+  static std::unique_ptr<::test_arrays::UnionLargeArray> ToNatural(::fidl::WireOptional<::test_arrays::wire::UnionLargeArray> src);
+  static ::fidl::WireOptional<::test_arrays::wire::UnionLargeArray> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_arrays::UnionLargeArray> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_arrays::wire::UnionLargeArray> {
+  using type = ::test_arrays::UnionLargeArray;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_arrays::wire::UnionLargeArray>> {
   using type = std::unique_ptr<::test_arrays::UnionLargeArray>;
 };
 template <>
@@ -122,7 +130,7 @@ struct WireTypeForNaturalType<::test_arrays::UnionLargeArray> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_arrays::UnionLargeArray>> {
-  using type = ::test_arrays::wire::UnionLargeArray;
+  using type = ::fidl::WireOptional<::test_arrays::wire::UnionLargeArray>;
 };
 
 #ifdef __Fuchsia__

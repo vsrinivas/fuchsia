@@ -137,11 +137,16 @@ zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) 
     const fidl::ClientEnd<fio::Node>& client_end() const { return client_end_; }
 
     void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override {
-      if (event->s != ZX_OK) {
-        result_ = zx::error(event->s);
-      } else {
-        result_ = fdio::create(std::move(client_end_), std::move(event->info));
-      }
+      result_ = [&event = *event, this]() -> zx::status<fdio_ptr> {
+        if (event.s != ZX_OK) {
+          return zx::error(event.s);
+        }
+        if (!event.info.has_value()) {
+          // Status was OK but the server did not give us an info union.
+          return zx::error(ZX_ERR_INVALID_ARGS);
+        }
+        return fdio::create(std::move(client_end_), std::move(event.info.value()));
+      }();
     }
 
     void OnRepresentation(fidl::WireEvent<fio::Node::OnRepresentation>* event) override {

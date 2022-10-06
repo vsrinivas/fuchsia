@@ -53,6 +53,11 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		return fmt.Sprintf("fidl::ClientEnd<%s>", cpp.EndpointDeclName(decl))
 	case *gidlmixer.ServerEndDecl:
 		return fmt.Sprintf("fidl::ServerEnd<%s>", cpp.EndpointDeclName(decl))
+	case *gidlmixer.UnionDecl:
+		if !ignoreNullable && decl.IsNullable() {
+			return fmt.Sprintf("fidl::WireOptional<%s>", declName(decl))
+		}
+		return declName(decl)
 	case gidlmixer.NamedDeclaration:
 		return declName(decl)
 	default:

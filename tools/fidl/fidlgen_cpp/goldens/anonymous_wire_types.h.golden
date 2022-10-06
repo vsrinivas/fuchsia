@@ -93,7 +93,7 @@ struct ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication> final
   bool HasUnknownData() const;
   ::fidl::Envelope<::fidl::StringView> func_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
-  ::fidl::Envelope<::fidl::VectorView<::test_anonymous::wire::Expression>> args_;
+  ::fidl::Envelope<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>> args_;
   ::fidl::Envelope<::test_anonymous::wire::Flags> flags_;
 
   friend class ::test_anonymous::wire::FunctionApplication;
@@ -141,11 +141,11 @@ class FunctionApplication {
     return max_ordinal_ >= 1 && frame_ptr_->func_.has_data();
   }
 
-  const ::fidl::VectorView<::test_anonymous::wire::Expression>& args() const {
+  const ::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>& args() const {
     ZX_ASSERT(has_args());
     return frame_ptr_->args_.get_data();
   }
-  ::fidl::VectorView<::test_anonymous::wire::Expression>& args() {
+  ::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>& args() {
     ZX_ASSERT(has_args());
     return frame_ptr_->args_.get_data();
   }
@@ -195,7 +195,7 @@ class FunctionApplication {
     frame_ptr_->func_.clear_data();
     return *this;
   }
-  FunctionApplication& set_args(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::Expression>> elem) {
+  FunctionApplication& set_args(::fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>> elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->args_.set_data(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
@@ -210,7 +210,7 @@ class FunctionApplication {
   FunctionApplication& set_args(::fidl::AnyArena& allocator, Args&&... args) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->args_.set_data(
-        ::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::Expression>>(allocator, std::forward<Args>(args)...));
+        ::fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>>(allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
     return *this;
   }
@@ -279,7 +279,7 @@ class ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::FunctionApp
     return *static_cast<BuilderImpl*>(this);
   }
 
-  BuilderImpl& args(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::Expression>> elem) {
+  BuilderImpl& args(::fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>> elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
     table_.frame_ptr_->args_.set_data(elem);
     table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(3));
@@ -317,7 +317,7 @@ class ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication> fina
 
   template <typename... Args>
   ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>& args(Args&&... args_) {
-    args(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::Expression>>(arena_.get(), std::forward<Args>(args_)...));
+    args(::fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>>(arena_.get(), std::forward<Args>(args_)...));
     return *this;
   }
 
@@ -789,9 +789,9 @@ struct OverrideTest {
 
   ::test_anonymous::wire::Op op = {};
 
-  ::test_anonymous::wire::Expression left = {};
+  ::fidl::WireOptional<::test_anonymous::wire::Expression> left = {};
 
-  ::test_anonymous::wire::Expression right = {};
+  ::fidl::WireOptional<::test_anonymous::wire::Expression> right = {};
 };
 
 extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
@@ -897,7 +897,7 @@ static_assert(sizeof(::test_anonymous::wire::OverrideTest) == TypeTraits<::test_
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::OverrideTest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 40;
-  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>());
+  static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::fidl::WireOptional<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<::fidl::WireOptional<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>());
   static constexpr bool kHasPadding = true;
   using Base = WireStructCodingTraitsBase<::test_anonymous::wire::OverrideTest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
@@ -909,8 +909,8 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::OverrideTest, 
     } else {
       internal::WireZeroPadding<uint64_t>(encoder, position + 0);
       internal::WireCodingTraits<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->op, position + 0, recursion_depth);
-      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Encode(encoder, &value->left, position + 8, recursion_depth);
-      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Encode(encoder, &value->right, position + 24, recursion_depth);
+      internal::WireCodingTraits<::fidl::WireOptional<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Encode(encoder, &value->left, position + 8, recursion_depth);
+      internal::WireCodingTraits<::fidl::WireOptional<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Encode(encoder, &value->right, position + 24, recursion_depth);
     }
   }
   static void Decode(
@@ -918,9 +918,9 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::OverrideTest, 
     if constexpr (!Base::are_members_memcpy_compatible) {
       internal::WireCodingTraits<::test_anonymous::wire::Op, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
           decoder, position + 0, recursion_depth);
-      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Decode(
+      internal::WireCodingTraits<::fidl::WireOptional<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Decode(
           decoder, position + 8, recursion_depth);
-      internal::WireCodingTraits<::test_anonymous::wire::Expression, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Decode(
+      internal::WireCodingTraits<::fidl::WireOptional<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintUnion<true>, IsRecursive>::Decode(
           decoder, position + 24, recursion_depth);
     }
     internal::WireCheckPadding<uint64_t>(decoder, position + 0, 0xffffffff00000000ull);
@@ -1186,7 +1186,7 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::FunctionApplic
           inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false, 100>, IsRecursive>::inline_size;
           break;
         case 2:
-          inline_size = ::fidl::internal::WireCodingTraits<::fidl::VectorView<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintUnion<true>, false, 5>, IsRecursive>::inline_size;
+          inline_size = ::fidl::internal::WireCodingTraits<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintUnion<true>, false, 5>, IsRecursive>::inline_size;
           break;
         case 3:
           inline_size = ::fidl::internal::WireCodingTraits<::test_anonymous::wire::Flags, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
@@ -1198,7 +1198,7 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::FunctionApplic
           encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false, 100>, IsRecursive>();
           break;
         case 2:
-          encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::VectorView<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintUnion<true>, false, 5>, IsRecursive>();
+          encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintUnion<true>, false, 5>, IsRecursive>();
           break;
         case 3:
           encode_fn = ::fidl::internal::MakeEncodeFn<::test_anonymous::wire::Flags, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
@@ -1227,7 +1227,7 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::FunctionApplic
           inline_size = ::fidl::internal::WireCodingTraits<::fidl::StringView, fidl::internal::WireCodingConstraintString<false, 100>, IsRecursive>::inline_size;
           break;
         case 2:
-          inline_size = ::fidl::internal::WireCodingTraits<::fidl::VectorView<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintUnion<true>, false, 5>, IsRecursive>::inline_size;
+          inline_size = ::fidl::internal::WireCodingTraits<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintUnion<true>, false, 5>, IsRecursive>::inline_size;
           break;
         case 3:
           inline_size = ::fidl::internal::WireCodingTraits<::test_anonymous::wire::Flags, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
@@ -1239,7 +1239,7 @@ struct ::fidl::internal::WireCodingTraits<::test_anonymous::wire::FunctionApplic
           decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::StringView, fidl::internal::WireCodingConstraintString<false, 100>, IsRecursive>();
           break;
         case 2:
-          decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::VectorView<::test_anonymous::wire::Expression>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintUnion<true>, false, 5>, IsRecursive>();
+          decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>, fidl::internal::WireCodingConstraintVector<fidl::internal::WireCodingConstraintUnion<true>, false, 5>, IsRecursive>();
           break;
         case 3:
           decode_fn = ::fidl::internal::MakeDecodeFn<::test_anonymous::wire::Flags, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();

@@ -368,16 +368,24 @@ TEST(WireTypes, Unions) {
   ASSERT_TRUE(int_union.is_int_value());
   ASSERT_EQ(1, int_union.int_value());
 
-  // A default constructed wire union is absent.
+  // A default constructed wire union is invalid.
   // It must be initialized with a valid member before use.
-  // One is not allowed to send absent unions through FIDL client/server APIs,
-  // unless those APIs take optional unions.
+  // One is not allowed to send invalid unions through FIDL client/server APIs.
   fuchsia_examples::wire::JsonValue default_union;
   ASSERT_TRUE(default_union.has_invalid_tag());
   default_union = fuchsia_examples::wire::JsonValue::WithStringValue(arena, "hello");
   ASSERT_FALSE(default_union.has_invalid_tag());
   ASSERT_TRUE(default_union.is_string_value());
   ASSERT_EQ(default_union.string_value().get(), "hello");
+
+  // Optional unions are represented with |fidl::WireOptional|.
+  fidl::WireOptional<fuchsia_examples::wire::JsonValue> optional_json;
+  ASSERT_FALSE(optional_json.has_value());
+  optional_json = fuchsia_examples::wire::JsonValue::WithIntValue(42);
+  ASSERT_TRUE(optional_json.has_value());
+  // |fidl::WireOptional| has a |std::optional|-like API.
+  fuchsia_examples::wire::JsonValue& value = optional_json.value();
+  ASSERT_TRUE(value.is_int_value());
 
   // A flexible union additionally supports querying if the active member was
   // not defined in the FIDL schema.

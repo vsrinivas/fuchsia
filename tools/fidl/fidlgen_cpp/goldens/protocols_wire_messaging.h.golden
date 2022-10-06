@@ -8946,7 +8946,7 @@ struct ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod> fina
 
   
   explicit WireResponse(::test_protocols::wire::MethodWithUnionUnionMethodResponse base) : ::test_protocols::wire::MethodWithUnionUnionMethodResponse(std::move(base)) {}
-  explicit WireResponse(::test_protocols::wire::TheUnion u) : ::test_protocols::wire::MethodWithUnionUnionMethodResponse{ .u = std::move(u)}{}
+  explicit WireResponse(::fidl::WireOptional<::test_protocols::wire::TheUnion> u) : ::test_protocols::wire::MethodWithUnionUnionMethodResponse{ .u = std::move(u)}{}
   WireResponse() = default;
 };
 
@@ -8974,7 +8974,7 @@ struct ::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion
   fidl_message_header_t header;
   
   ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod> body;
-  explicit TransactionalResponse(::test_protocols::wire::TheUnion u)
+  explicit TransactionalResponse(::fidl::WireOptional<::test_protocols::wire::TheUnion> u)
   : body(::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>(u)) {
     _InitHeader();
   }
@@ -9305,10 +9305,10 @@ class ::fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::Uni
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  void Reply(::test_protocols::wire::TheUnion u);
+  void Reply(::fidl::WireOptional<::test_protocols::wire::TheUnion> u);
 
  private:
-  void MakeReply(::test_protocols::wire::TheUnion u);
+  void MakeReply(::fidl::WireOptional<::test_protocols::wire::TheUnion> u);
 };
 
 template <>
@@ -9316,10 +9316,10 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_protocols::MethodWithUnio
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  void Reply(::test_protocols::wire::TheUnion u);
+  void Reply(::fidl::WireOptional<::test_protocols::wire::TheUnion> u);
 
  private:
-  void MakeReply(::test_protocols::wire::TheUnion u);
+  void MakeReply(::fidl::WireOptional<::test_protocols::wire::TheUnion> u);
 };
 
 template<>

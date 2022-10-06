@@ -161,13 +161,17 @@ struct WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::test_an
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_anonymous::wire::Expression, std::unique_ptr<::test_anonymous::Expression>> {
-  static std::unique_ptr<::test_anonymous::Expression> ToNatural(::test_anonymous::wire::Expression src);
-  static ::test_anonymous::wire::Expression ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_anonymous::Expression> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_anonymous::wire::Expression>, std::unique_ptr<::test_anonymous::Expression>> {
+  static std::unique_ptr<::test_anonymous::Expression> ToNatural(::fidl::WireOptional<::test_anonymous::wire::Expression> src);
+  static ::fidl::WireOptional<::test_anonymous::wire::Expression> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_anonymous::Expression> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_anonymous::wire::Expression> {
+  using type = ::test_anonymous::Expression;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_anonymous::wire::Expression>> {
   using type = std::unique_ptr<::test_anonymous::Expression>;
 };
 template <>
@@ -176,7 +180,7 @@ struct WireTypeForNaturalType<::test_anonymous::Expression> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_anonymous::Expression>> {
-  using type = ::test_anonymous::wire::Expression;
+  using type = ::fidl::WireOptional<::test_anonymous::wire::Expression>;
 };
 
 template <>
@@ -186,13 +190,17 @@ struct WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_a
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, std::unique_ptr<::test_anonymous::UnionMember>> {
-  static std::unique_ptr<::test_anonymous::UnionMember> ToNatural(::test_anonymous::wire::UnionMember src);
-  static ::test_anonymous::wire::UnionMember ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_anonymous::UnionMember> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_anonymous::wire::UnionMember>, std::unique_ptr<::test_anonymous::UnionMember>> {
+  static std::unique_ptr<::test_anonymous::UnionMember> ToNatural(::fidl::WireOptional<::test_anonymous::wire::UnionMember> src);
+  static ::fidl::WireOptional<::test_anonymous::wire::UnionMember> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_anonymous::UnionMember> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_anonymous::wire::UnionMember> {
+  using type = ::test_anonymous::UnionMember;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_anonymous::wire::UnionMember>> {
   using type = std::unique_ptr<::test_anonymous::UnionMember>;
 };
 template <>
@@ -201,7 +209,7 @@ struct WireTypeForNaturalType<::test_anonymous::UnionMember> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_anonymous::UnionMember>> {
-  using type = ::test_anonymous::wire::UnionMember;
+  using type = ::fidl::WireOptional<::test_anonymous::wire::UnionMember>;
 };
 
 template <>
@@ -211,13 +219,17 @@ struct WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMetho
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodResult, std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult>> {
-  static std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult> ToNatural(::test_anonymous::wire::SomeProtocolSomeMethodResult src);
-  static ::test_anonymous::wire::SomeProtocolSomeMethodResult ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult> src);
+struct WireNaturalConversionTraits<::fidl::WireOptional<::test_anonymous::wire::SomeProtocolSomeMethodResult>, std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult>> {
+  static std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult> ToNatural(::fidl::WireOptional<::test_anonymous::wire::SomeProtocolSomeMethodResult> src);
+  static ::fidl::WireOptional<::test_anonymous::wire::SomeProtocolSomeMethodResult> ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_anonymous::wire::SomeProtocolSomeMethodResult> {
+  using type = ::test_anonymous::SomeProtocolSomeMethodResult;
+};
+template <>
+struct NaturalTypeForWireType<::fidl::WireOptional<::test_anonymous::wire::SomeProtocolSomeMethodResult>> {
   using type = std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult>;
 };
 template <>
@@ -226,7 +238,7 @@ struct WireTypeForNaturalType<::test_anonymous::SomeProtocolSomeMethodResult> {
 };
 template <>
 struct WireTypeForNaturalType<std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult>> {
-  using type = ::test_anonymous::wire::SomeProtocolSomeMethodResult;
+  using type = ::fidl::WireOptional<::test_anonymous::wire::SomeProtocolSomeMethodResult>;
 };
 
 #ifdef __Fuchsia__
