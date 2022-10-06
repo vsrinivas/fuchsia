@@ -21,6 +21,9 @@ use {
     timeout::TimeoutError,
 };
 
+static BUG_FILING_ERROR_MESSAGE: &str =
+    "If you believe you have encountered a bug, please report it at http://fxbug.dev/new/ffx+User+Bug";
+
 #[derive(Debug, Clone)]
 pub struct RcsConnection {
     pub hoist: Hoist,
@@ -145,7 +148,7 @@ async fn knock_rcs_impl(rcs_proxy: &RemoteControlProxy) -> Result<(), KnockRcsEr
     rcs_proxy
         .connect(
             selectors::parse_selector::<VerboseError>(
-                "core/remote-control:out:fuchsia.developer.remotecontrol.RemoteControl",
+                "core/remote-control:expose:fuchsia.developer.remotecontrol.RemoteControl",
             )
             .unwrap(),
             knock_remote,
@@ -166,48 +169,108 @@ pub async fn connect_with_timeout(
     rcs_proxy: &RemoteControlProxy,
     server_end: fidl::Channel,
 ) -> Result<()> {
-    timeout::timeout(dur, rcs_proxy.connect(selectors::parse_selector::<VerboseError>(selector)?, server_end)
-        .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
-            fidl_result.map(|_| ()).map_err(|e| {
-                    match e {
-                        ConnectError::NoMatchingServices => {
-                            errors::ffx_error!(format!(
-"The plugin service selector '{}' did not match any services on the target.
+    let parsed_selector = selectors::parse_selector::<VerboseError>(selector)?;
 
-It is possible that the expected component is either not built into the system image, or that the
-package server has not been setup.
+    timeout::timeout(
+        dur,
+        rcs_proxy.connect(parsed_selector, server_end).map_ok_or_else(
+            |e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)),
+            |fidl_result| {
+                fidl_result.map(|_| ()).map_err(|e| match e {
+                    ConnectError::InstanceNotFound => errors::ffx_error!(
+                        "Error connecting to `{}`.
+                        
+The component instance could not be found in the component topology.
+It is possible that the target is on an older version of Fuchsia and the component's
+position in the topology has since moved.
 
-For users, ensure your Fuchsia device is registered with ffx. To do this you can run:
+Plugin developers: You can run `ffx component capability` to find a component that
+exposes this capability.
 
-$ ffx target repository register -r $IMAGE_TYPE --alias fuchsia.com
+{}
+",
+                        selector,
+                        BUG_FILING_ERROR_MESSAGE
+                    )
+                    .into(),
+                    ConnectError::InstanceCannotResolve => errors::ffx_error!(
+                        "Error connecting to `{}`.
+                        
+The component instance could not be resolved by Component Manager.
+It is possible that the component was not built into the system image, or that your
+package server has not been set up.
 
-For plugin developers, it may be possible that the moniker you're attempting to connect to is
-incorrect. You can use `ffx component select moniker '<selector>'` to explore the component topology
-of your target device to fix this selector if this is the case.
+Plugin developers: You can use `ffx component resolve` to get more information about why
+the component could not be resolved by Component Manager. You can also use `ffx component show`
+to get detailed information about this component.
 
-If you believe you have encountered a bug after walking through the above please report it at
-http://fxbug.dev/new/ffx+User+Bug",
-                            selector)).into()
-                        }
-                        ConnectError::MultipleMatchingServices => {
-                            errors::ffx_error!(
-                                format!(
-"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
-If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new/ffx+User+Bug.
+{}
+",
+                        selector,
+                        BUG_FILING_ERROR_MESSAGE
+                    )
+                    .into(),
+                    ConnectError::BadSelector => errors::ffx_error!(
+                        "Error connecting to `{}`.
 
-Plugin developers: you can use `ffx component select moniker '{}'` to see which services matched the provided selector.",
-                                    selector, selector)).into()
-                        }
-                        _ => {
-                            anyhow::anyhow!(
-                                format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, selector)
-                            )
-                        }
-                    }
+The remote-control component is reporting that the selector supplied by this plugin
+is invalid.
+
+This is most likely due to an incompatibility with this version of `ffx` and the target
+device.
+
+{}
+",
+                        selector,
+                        BUG_FILING_ERROR_MESSAGE
+                    )
+                    .into(),
+                    ConnectError::ProtocolNotExposed => errors::ffx_error!(
+                        "Error connecting to `{}`.
+
+The component instance does not expose the requested protocol.
+
+Plugin developers: You can run `ffx component capability` to find a component that
+exposes this capability. You can also use `ffx component show` to get detailed information
+about this component.
+
+{}
+",
+                        selector,
+                        BUG_FILING_ERROR_MESSAGE
+                    )
+                    .into(),
+                    ConnectError::Internal => errors::ffx_error!(
+                        "Error connecting to `{}`.
+
+The remote-control component encountered an unexpected error connecting to the protocol.
+There may be more information about this error in the target logs (`ffx log`).
+
+{}
+",
+                        selector,
+                        BUG_FILING_ERROR_MESSAGE
+                    )
+                    .into(),
                 })
-        })).await.map_err(|_| errors::ffx_error!("Timed out connecting to service: '{}'.
-This is likely due to a sudden shutdown or disconnect of the target.
-If you have encountered what you think is a bug, Please report it at http://fxbug.dev/new/ffx+User+Bug
+            },
+        ),
+    )
+    .await
+    .map_err(|_| {
+        errors::ffx_error!(
+            "Error connecting to `{}`.
+            
+Timed out connecting to the capability.
 
-To diagnose the issue, use `ffx doctor`.", selector).into()).and_then(|r| r)
+This could be due to a sudden shutdown or disconnect of the target.
+Run `ffx doctor` to verify that ffx can still connect to the target.
+
+{}",
+            selector,
+            BUG_FILING_ERROR_MESSAGE
+        )
+        .into()
+    })
+    .and_then(|r| r)
 }

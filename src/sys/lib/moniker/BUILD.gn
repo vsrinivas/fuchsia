@@ -11,9 +11,11 @@ rustc_library("moniker") {
   edition = "2021"
 
   visibility = [
+    "//src/developer/ffx/lib/rcs/*",
     "//src/developer/ffx/plugins/component/*",
     "//src/developer/ffx/plugins/inspect/*",
     "//src/developer/ffx/plugins/log/*",
+    "//src/developer/remote-control/*",
     "//src/lib/component_hub/*",
     "//src/security/scrutiny/*",
     "//src/sys/component_manager/*",

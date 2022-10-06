@@ -315,11 +315,7 @@ pub async fn serve_rcs(
         match request {
             Ok(rcs::RemoteControlRequest::Connect { selector: _, service_chan, responder }) => {
                 let server_end = ServerEnd::<fuzz::ManagerMarker>::new(service_chan);
-                let mut response = Ok(rcs::ServiceMatch {
-                    moniker: vec!["moniker".to_string()],
-                    subdir: "subdir".to_string(),
-                    service: "service".to_string(),
-                });
+                let mut response = Ok(());
                 responder.send(&mut response)?;
                 task = Some(create_task(
                     serve_manager(server_end, fuzzer.clone(), writer.clone()),

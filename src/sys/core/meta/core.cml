@@ -706,14 +706,6 @@
             subdir: "ssh",
         },
 
-        // Note: this is the v2 root hub. The hub in the `expose` section below
-        // is the v1 root hub.
-        {
-            directory: "hub",
-            from: "parent",
-            to: "#remote-control",
-        },
-
         // Note: These protocols are scoped to the root of the component topoology,
         // hence the `.root` suffix
         {

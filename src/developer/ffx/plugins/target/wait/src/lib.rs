@@ -111,9 +111,7 @@ mod tests {
         fidl_fuchsia_developer_ffx::{
             TargetCollectionMarker, TargetCollectionRequest, TargetRequest, TargetRequestStream,
         },
-        fidl_fuchsia_developer_remotecontrol::{
-            RemoteControlRequest, RemoteControlRequestStream, ServiceMatch,
-        },
+        fidl_fuchsia_developer_remotecontrol::{RemoteControlRequest, RemoteControlRequestStream},
         futures::TryStreamExt,
     };
 
@@ -127,13 +125,7 @@ mod tests {
                             std::future::pending::<()>().await;
                         })
                         .detach();
-                        responder
-                            .send(&mut Ok(ServiceMatch {
-                                moniker: vec![],
-                                subdir: "foo".to_string(),
-                                service: "bar".to_string(),
-                            }))
-                            .unwrap();
+                        responder.send(&mut Ok(())).unwrap();
                     }
                     e => panic!("unexpected request: {:?}", e),
                 }

@@ -31,6 +31,19 @@ type TunnelError = strict enum {
     CALLBACK_ERROR = 3;
 };
 
+type ConnectError = strict enum : uint32 {
+    // The selector provided to the Connect method is invalid.
+    BAD_SELECTOR = 1;
+    // The component instance was not found in the topology.
+    INSTANCE_NOT_FOUND = 2;
+    // The component instance could not be resolved.
+    INSTANCE_CANNOT_RESOLVE = 3;
+    // The component instance does not expose the specified protocol.
+    PROTOCOL_NOT_EXPOSED = 4;
+    // An internal error occurred when invoking Connect.
+    INTERNAL = 5;
+};
+
 @discoverable
 protocol RemoteControl {
     /// Returns the input.
@@ -74,21 +87,12 @@ protocol RemoteControl {
         response IdentifyHostResponse;
     }) error IdentifyHostError;
 
-    // Connects a channel to a service, given a selector and a channel iff the selector
-    // matches exactly one service on the system.
-    // If successful, returns information about the service connected to.
+    // Connects a channel to a protocol capability exposed by a component instance.
+    // The selector cannot use wildcards and must connect to the `expose` namespace.
     Connect(resource struct {
         selector diagnostics.Selector;
         service_chan zx.handle:CHANNEL;
-    }) -> (struct {
-        match ServiceMatch;
-    }) error ConnectError;
-
-    Select(struct {
-        selector diagnostics.Selector;
-    }) -> (struct {
-        matches vector<ServiceMatch>:MAX_NUM_MATCHES;
-    }) error SelectError;
+    }) -> (struct {}) error ConnectError;
 
     // AddId adds an identifier that can be recovered from IdentifyHost in order
     // to match this peer against a list of possible source peers. Callers are
