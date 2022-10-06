@@ -50,7 +50,7 @@ static fuchsia::camera3::StreamProperties DefaultStreamProperties() {
 
 static fuchsia::sysmem::BufferCollectionConstraints DefaultBufferConstraints() {
   return {.usage = {.cpu = fuchsia::sysmem::cpuUsageWrite},
-          .min_buffer_count_for_camping = 2,
+          .min_buffer_count = 4,
           .has_buffer_memory_constraints = true,
           .buffer_memory_constraints{.ram_domain_supported = true},
           .image_format_constraints_count = 1,

@@ -106,10 +106,12 @@ void ImagePipe2::AddBufferCollection(
 
   // Set constraints for |local_token|.
   fuchsia::sysmem::BufferCollectionConstraints constraints;
-  // ImagePipe2 persistently holds a single buffer reference for the active image and transiently
-  // holds a second when a new one is requested for presentation but the current one has not yet
-  // been released.
-  constraints.min_buffer_count_for_camping = 2;
+
+  // Let the client determine the number of buffers in the collection. Normally the client will
+  // need more than one buffer, but they don't have to be in the same collection. Some clients
+  // (e.g. WebEngine) allocate multiple buffer collections with 1 buffer in each collection.
+  constraints.min_buffer_count = 1;
+
   // Used because every constraints need to have a usage.
   constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageSampled;
   status = buffer_collection->SetConstraints(true /* has_constraints */, constraints);
