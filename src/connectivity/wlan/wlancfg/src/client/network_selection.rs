@@ -693,6 +693,7 @@ mod tests {
                 network_config::{PastConnectionData, PastConnectionsByBssid},
                 SavedNetworksManager,
             },
+            mode_management::Defect,
             telemetry::ScanIssue,
             util::testing::{
                 create_inspect_persistence_channel, create_wlan_hasher, generate_channel,
@@ -843,6 +844,10 @@ mod tests {
             _country_code: Option<[u8; types::REGION_CODE_LEN]>,
         ) -> Result<(), Error> {
             unimplemented!()
+        }
+
+        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
+            unimplemented!();
         }
     }
 

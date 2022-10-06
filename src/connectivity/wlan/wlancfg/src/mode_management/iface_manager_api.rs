@@ -6,7 +6,7 @@ use {
     crate::{
         access_point::{state_machine as ap_fsm, types as ap_types},
         client::types as client_types,
-        mode_management::iface_manager_types::*,
+        mode_management::{iface_manager_types::*, Defect},
         regulatory_manager::REGION_CODE_LEN,
     },
     anyhow::Error,
@@ -73,6 +73,9 @@ pub trait IfaceManagerApi {
         &mut self,
         country_code: Option<[u8; REGION_CODE_LEN]>,
     ) -> Result<(), Error>;
+
+    /// Logs a defect encountered while attempting to control an interface.
+    async fn report_defect(&mut self, defect: Defect) -> Result<(), Error>;
 }
 
 #[derive(Clone)]
@@ -196,13 +199,23 @@ impl IfaceManagerApi for IfaceManager {
         self.sender.try_send(IfaceManagerRequest::SetCountry(req))?;
         receiver.await?
     }
+
+    async fn report_defect(&mut self, defect: Defect) -> Result<(), Error> {
+        let (responder, receiver) = oneshot::channel();
+        let req = ReportDefectRequest { defect, responder };
+        self.sender.try_send(IfaceManagerRequest::ReportDefect(req))?;
+        Ok(receiver.await?)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::{access_point::types, config_management::network_config::Credential},
+        crate::{
+            access_point::types, config_management::network_config::Credential,
+            mode_management::PhyFailure,
+        },
         anyhow::format_err,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
@@ -288,6 +301,7 @@ mod tests {
             };
 
             match req {
+                // Result<(), Err> responder values
                 IfaceManagerRequest::Disconnect(DisconnectRequest { responder, .. })
                 | IfaceManagerRequest::StopClientConnections(StopClientConnectionsRequest {
                     responder,
@@ -298,29 +312,30 @@ mod tests {
                 })
                 | IfaceManagerRequest::StopAp(StopApRequest { responder, .. })
                 | IfaceManagerRequest::StopAllAps(StopAllApsRequest { responder, .. })
-                | IfaceManagerRequest::SetCountry(SetCountryRequest { responder, .. }) => {
+                | IfaceManagerRequest::SetCountry(SetCountryRequest { responder, .. })
+                | IfaceManagerRequest::Connect(ConnectRequest { responder, .. }) => {
                     handle_negative_test_result_responder(responder, failure_mode);
                 }
-                IfaceManagerRequest::Connect(ConnectRequest { responder, .. }) => {
-                    handle_negative_test_result_responder(responder, failure_mode);
-                }
+                // Result<ClientSmeProxy, Err>
                 IfaceManagerRequest::GetScanProxy(ScanProxyRequest { responder }) => {
                     handle_negative_test_result_responder(responder, failure_mode);
                 }
+                // Result<oneshot::Receiver<()>, Err>
                 IfaceManagerRequest::StartAp(StartApRequest { responder, .. }) => {
                     handle_negative_test_result_responder(responder, failure_mode);
                 }
+                // Unit responder values
                 IfaceManagerRequest::RecordIdleIface(RecordIdleIfaceRequest {
                     responder, ..
                 })
                 | IfaceManagerRequest::AddIface(AddIfaceRequest { responder, .. })
-                | IfaceManagerRequest::RemoveIface(RemoveIfaceRequest { responder, .. }) => {
+                | IfaceManagerRequest::RemoveIface(RemoveIfaceRequest { responder, .. })
+                | IfaceManagerRequest::ReportDefect(ReportDefectRequest { responder, .. }) => {
                     handle_negative_test_responder(responder, failure_mode);
                 }
-                IfaceManagerRequest::HasIdleIface(HasIdleIfaceRequest { responder }) => {
-                    handle_negative_test_responder(responder, failure_mode);
-                }
-                IfaceManagerRequest::HasWpa3Iface(HasWpa3IfaceRequest { responder }) => {
+                // Boolean responder values
+                IfaceManagerRequest::HasIdleIface(HasIdleIfaceRequest { responder })
+                | IfaceManagerRequest::HasWpa3Iface(HasWpa3IfaceRequest { responder }) => {
                     handle_negative_test_responder(responder, failure_mode);
                 }
             }
@@ -1096,7 +1111,6 @@ mod tests {
         // Verify the service sees the request
         let next_message = test_values.receiver.next();
         pin_mut!(next_message);
-
         assert_variant!(
             test_values.exec.run_until_stalled(&mut next_message),
             Poll::Ready(Some(IfaceManagerRequest::StopAllAps(StopAllApsRequest{
@@ -1268,5 +1282,62 @@ mod tests {
             test_values.exec.run_until_stalled(&mut set_country_fut),
             Poll::Ready(Err(_))
         );
+    }
+
+    #[fuchsia::test]
+    fn test_report_defect_succeeds() {
+        let mut test_values = test_setup();
+        let defect = Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 2 });
+        let report_fut = test_values.iface_manager.report_defect(defect);
+        pin_mut!(report_fut);
+
+        assert_variant!(test_values.exec.run_until_stalled(&mut report_fut), Poll::Pending);
+
+        // Verify that the request has come through.
+        let next_message = test_values.receiver.next();
+        pin_mut!(next_message);
+
+        assert_variant!(
+            test_values.exec.run_until_stalled(&mut next_message),
+            Poll::Ready(Some(IfaceManagerRequest::ReportDefect(ReportDefectRequest {
+                defect, responder
+            }))) => {
+                assert_eq!(defect, Defect::Phy(PhyFailure::IfaceCreationFailure {phy_id: 2}));
+                responder.send(()).expect("failed to send defect response");
+            }
+        );
+
+        // Verify that the defect reporter receives the response.
+        assert_variant!(test_values.exec.run_until_stalled(&mut report_fut), Poll::Ready(Ok(())));
+    }
+
+    #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
+    #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    #[fuchsia::test(add_test_attr = false)]
+    fn report_defect_negative_test(failure_mode: NegativeTestFailureMode) {
+        let mut test_values = test_setup();
+
+        let defect = Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 2 });
+        let report_fut = test_values.iface_manager.report_defect(defect);
+        pin_mut!(report_fut);
+
+        let service_fut =
+            iface_manager_api_negative_test(test_values.receiver, failure_mode.clone());
+        pin_mut!(service_fut);
+
+        match failure_mode {
+            NegativeTestFailureMode::RequestFailure => {}
+            _ => {
+                // Run the request and the servicing of the request
+                assert_variant!(test_values.exec.run_until_stalled(&mut report_fut), Poll::Pending);
+                assert_variant!(
+                    test_values.exec.run_until_stalled(&mut service_fut),
+                    Poll::Ready(())
+                );
+            }
+        }
+
+        // Verify that the client gets the response
+        assert_variant!(test_values.exec.run_until_stalled(&mut report_fut), Poll::Ready(Err(_)));
     }
 }

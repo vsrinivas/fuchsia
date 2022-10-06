@@ -6,6 +6,7 @@ use {
     crate::{
         access_point::{state_machine as ap_fsm, types as ap_types},
         client::types as client_types,
+        mode_management::Defect,
         regulatory_manager::REGION_CODE_LEN,
     },
     anyhow::Error,
@@ -97,6 +98,12 @@ pub struct SetCountryRequest {
 }
 
 #[derive(Debug)]
+pub struct ReportDefectRequest {
+    pub defect: Defect,
+    pub responder: oneshot::Sender<()>,
+}
+
+#[derive(Debug)]
 pub enum IfaceManagerRequest {
     Disconnect(DisconnectRequest),
     Connect(ConnectRequest),
@@ -113,6 +120,7 @@ pub enum IfaceManagerRequest {
     HasWpa3Iface(HasWpa3IfaceRequest),
     #[allow(unused)]
     SetCountry(SetCountryRequest),
+    ReportDefect(ReportDefectRequest),
 }
 
 pub(crate) struct SetCountryOperationState {

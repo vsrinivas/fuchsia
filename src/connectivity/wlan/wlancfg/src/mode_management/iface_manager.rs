@@ -18,6 +18,7 @@ use {
             iface_manager_api::IfaceManagerApi,
             iface_manager_types::*,
             phy_manager::{CreateClientIfacesReason, PhyManagerApi},
+            Defect,
         },
         telemetry::{TelemetryEvent, TelemetrySender},
         util::{future_with_metadata, listener},
@@ -878,6 +879,14 @@ impl IfaceManagerService {
         }
         info!("Roam scan time was not set, matching iface not found.");
     }
+
+    /// Log a defect encountered while using an interface.
+    pub async fn record_defect(&mut self, defect: Defect) {
+        // Centralize all of the defect accounting in the PhyManager so that it can make recovery
+        // decisions.
+        let mut phy_manager = self.phy_manager.lock().await;
+        phy_manager.record_defect(defect).await;
+    }
 }
 
 /// Returns whether the security support indicates WPA3 support.
@@ -1258,6 +1267,11 @@ pub(crate) async fn serve_iface_manager_requests(
                             initiate_set_country(&mut iface_manager, req);
                         operation_futures.push(regulatory_fut);
                     }
+                    IfaceManagerRequest::ReportDefect(ReportDefectRequest { defect, responder }) => {
+                        if responder.send(iface_manager.record_defect(defect).await).is_err() {
+                            error!("could not respond to RecordDefectRequest");
+                        }
+                    }
                 };
             }
         }
@@ -1276,7 +1290,7 @@ mod tests {
             },
             mode_management::{
                 phy_manager::{self, PhyManagerError},
-                Defect,
+                PhyFailure,
             },
             regulatory_manager::REGION_CODE_LEN,
             telemetry::{TelemetryEvent, TelemetrySender},
@@ -1432,6 +1446,7 @@ mod tests {
         country_code: Option<[u8; REGION_CODE_LEN]>,
         client_connections_enabled: bool,
         client_ifaces: Vec<u16>,
+        defects: Vec<Defect>,
     }
 
     #[async_trait]
@@ -1540,8 +1555,8 @@ mod tests {
             unimplemented!();
         }
 
-        async fn record_defect(&mut self, _defect: Defect) {
-            unimplemented!();
+        async fn record_defect(&mut self, defect: Defect) {
+            self.defects.push(defect);
         }
     }
 
@@ -1642,6 +1657,7 @@ mod tests {
             country_code: None,
             client_connections_enabled: true,
             client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         };
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -1698,6 +1714,7 @@ mod tests {
             country_code: None,
             client_connections_enabled: true,
             client_ifaces: vec![],
+            defects: vec![],
         };
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
@@ -2195,6 +2212,7 @@ mod tests {
             country_code: None,
             client_connections_enabled: true,
             client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         }));
 
         // Configure the mock CSM with the expected connect request
@@ -2584,6 +2602,7 @@ mod tests {
             country_code: None,
             client_connections_enabled: true,
             client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         }));
 
         // Create a PhyManager with a single, known client iface.
@@ -2789,6 +2808,7 @@ mod tests {
             country_code: None,
             client_connections_enabled: true,
             client_ifaces: vec![],
+            defects: vec![],
         }));
 
         {
@@ -2816,6 +2836,7 @@ mod tests {
             country_code: None,
             client_connections_enabled: false,
             client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         }));
 
         // Delete all client records initially.
@@ -4297,6 +4318,10 @@ mod tests {
         ) -> Result<(), Error> {
             unimplemented!()
         }
+
+        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
+            unimplemented!()
+        }
     }
 
     #[fuchsia::test]
@@ -4505,6 +4530,7 @@ mod tests {
             country_code: None,
             client_connections_enabled: true,
             client_ifaces: vec![],
+            defects: vec![],
         },
         TestType::Pass;
         "successfully started client connections"
@@ -4517,7 +4543,8 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
-            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         },
         TestType::Fail;
         "failed to start client connections"
@@ -4530,7 +4557,8 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
-            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         },
         TestType::ClientError;
         "client dropped receiver"
@@ -4578,7 +4606,8 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
-            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         },
         TestType::Pass;
         "successfully stopped client connections"
@@ -4591,7 +4620,8 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
-            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         },
         TestType::Fail;
         "failed to stop client connections"
@@ -4604,7 +4634,8 @@ mod tests {
             set_country_ok: true,
             country_code: None,
             client_connections_enabled: true,
-            client_ifaces: vec![TEST_CLIENT_IFACE_ID]
+            client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         },
         TestType::ClientError;
         "client dropped receiver"
@@ -4733,6 +4764,34 @@ mod tests {
             req,
             stop_receiver,
             test_values.monitor_service_stream,
+            test_type,
+        );
+    }
+
+    #[test_case(TestType::Pass; "successfully reported defect")]
+    #[test_case(TestType::ClientError; "client dropped receiving end")]
+    #[fuchsia::test(add_test_attr = false)]
+    fn service_record_defect_test(test_type: TestType) {
+        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec);
+
+        // Create an IfaceManager.
+        let (iface_manager, _) = create_iface_manager_with_client(&test_values, false);
+
+        // Record a defect.
+        let (responder, receiver) = oneshot::channel();
+        let req = ReportDefectRequest {
+            defect: Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 3 }),
+            responder,
+        };
+        let req = IfaceManagerRequest::ReportDefect(req);
+
+        run_service_test_with_unit_return(
+            &mut exec,
+            test_values.network_selector,
+            iface_manager,
+            req,
+            receiver,
             test_type,
         );
     }
@@ -5347,6 +5406,7 @@ mod tests {
             country_code: None,
             client_connections_enabled: true,
             client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         }));
         let fut = iface_manager.has_wpa3_capable_client();
         pin_mut!(fut);
@@ -5371,6 +5431,7 @@ mod tests {
             country_code: None,
             client_connections_enabled: true,
             client_ifaces: vec![TEST_CLIENT_IFACE_ID],
+            defects: vec![],
         }));
         let fut = iface_manager.has_wpa3_capable_client();
         pin_mut!(fut);
@@ -5436,6 +5497,7 @@ mod tests {
             country_code: None,
             client_connections_enabled,
             client_ifaces: vec![],
+            defects: vec![],
         }));
 
         let mut iface_manager = IfaceManagerService::new(
@@ -5506,5 +5568,51 @@ mod tests {
                 sme_handler_supported: false,
             },
         }
+    }
+
+    /// Ensure that defect reports are passed through to the PhyManager.
+    #[fuchsia::test]
+    fn test_record_defect() {
+        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec);
+        let phy_manager = Arc::new(Mutex::new(FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            country_code: None,
+            client_connections_enabled: true,
+            client_ifaces: vec![],
+            defects: vec![],
+        }));
+        let mut iface_manager = IfaceManagerService::new(
+            phy_manager.clone(),
+            test_values.client_update_sender.clone(),
+            test_values.ap_update_sender.clone(),
+            test_values.monitor_service_proxy.clone(),
+            test_values.saved_networks.clone(),
+            test_values.network_selector.clone(),
+            test_values.telemetry_sender.clone(),
+            test_values.stats_sender.clone(),
+        );
+
+        {
+            let defect_fut = iface_manager
+                .record_defect(Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 2 }));
+            pin_mut!(defect_fut);
+
+            // The future should complete immediately.
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+
+        // Verify that the defect has been recorded.
+        let phy_manager_fut = phy_manager.lock();
+        pin_mut!(phy_manager_fut);
+        assert_variant!(
+            exec.run_until_stalled(&mut phy_manager_fut),
+            Poll::Ready(phy_manager) => {
+                assert_eq!(phy_manager.defects, vec![Defect::Phy(PhyFailure::IfaceCreationFailure {phy_id: 2})])
+            }
+        );
     }
 }

@@ -577,6 +577,7 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::network_config::Credential,
+            mode_management::Defect,
             util::testing::{
                 fakes::FakeSavedNetworksManager, generate_random_sme_scan_result,
                 validate_sme_scan_request_and_send_results,
@@ -686,6 +687,10 @@ mod tests {
             _country_code: Option<[u8; types::REGION_CODE_LEN]>,
         ) -> Result<(), Error> {
             unimplemented!()
+        }
+
+        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
+            unimplemented!();
         }
     }
 

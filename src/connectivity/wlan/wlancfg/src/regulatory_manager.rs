@@ -80,6 +80,7 @@ mod tests {
         crate::{
             access_point::{state_machine as ap_fsm, types as ap_types},
             client::types as client_types,
+            mode_management::Defect,
             regulatory_manager::REGION_CODE_LEN,
         },
         anyhow::{format_err, Error},
@@ -495,6 +496,10 @@ mod tests {
                 .next()
                 .await
                 .expect("internal error: failed to receive fake response from test case")
+        }
+
+        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
+            unimplemented!();
         }
     }
 }

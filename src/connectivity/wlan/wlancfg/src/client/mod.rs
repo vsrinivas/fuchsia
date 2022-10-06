@@ -492,6 +492,7 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
+            mode_management::Defect,
             telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::fakes::FakeSavedNetworksManager,
         },
@@ -656,6 +657,10 @@ mod tests {
             _country_code: Option<[u8; client_types::REGION_CODE_LEN]>,
         ) -> Result<(), Error> {
             unimplemented!()
+        }
+
+        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
+            unimplemented!();
         }
     }
 
@@ -1803,6 +1808,10 @@ mod tests {
             &mut self,
             _country_code: Option<[u8; client_types::REGION_CODE_LEN]>,
         ) -> Result<(), Error> {
+            unimplemented!()
+        }
+
+        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
             unimplemented!()
         }
     }

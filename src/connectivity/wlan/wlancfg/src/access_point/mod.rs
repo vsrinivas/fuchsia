@@ -354,7 +354,10 @@ fn log_ap_request(request: &fidl_policy::AccessPointControllerRequest) {
 mod tests {
     use {
         super::*,
-        crate::{client::types as client_types, regulatory_manager::REGION_CODE_LEN},
+        crate::{
+            client::types as client_types, mode_management::Defect,
+            regulatory_manager::REGION_CODE_LEN,
+        },
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
         fuchsia_async as fasync,
@@ -473,6 +476,10 @@ mod tests {
             _country_code: Option<[u8; REGION_CODE_LEN]>,
         ) -> Result<(), Error> {
             unimplemented!()
+        }
+
+        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
+            unimplemented!();
         }
     }
 
