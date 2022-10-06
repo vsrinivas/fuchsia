@@ -55,6 +55,8 @@ go_library("lib") {
     "modules.go",
     "modules_test.go",
     "product_bundle.go",
+    "product_bundle2.go",
+    "product_bundle2_test.go",
     "product_bundle_test.go",
     "product_size_checker_output.go",
     "product_size_checker_output_test.go",

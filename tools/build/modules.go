@@ -36,6 +36,7 @@ type Modules struct {
 	packageRepositories      []PackageRepo
 	platforms                []DimensionSet
 	prebuiltBinarySets       []PrebuiltBinarySet
+	productBundles           []ProductBundle
 	sdkArchives              []SDKArchive
 	testListLocation         []string
 	testSpecs                []TestSpec
@@ -64,6 +65,7 @@ func NewModules(buildDir string) (*Modules, error) {
 		"package-repositories.json":        &m.packageRepositories,
 		"platforms.json":                   &m.platforms,
 		"prebuilt_binaries.json":           &m.prebuiltBinarySets,
+		"product_bundles.json":             &m.productBundles,
 		"sdk_archives.json":                &m.sdkArchives,
 		"tests.json":                       &m.testSpecs,
 		"test_durations.json":              &m.testDurations,
@@ -152,6 +154,10 @@ func (m Modules) PrebuiltBinarySets() []PrebuiltBinarySet {
 
 func (m Modules) ProductSizeCheckerOutput() []ProductSizeCheckerOutput {
 	return m.productSizeCheckerOutput
+}
+
+func (m Modules) ProductBundles() []ProductBundle {
+	return m.productBundles
 }
 
 func (m Modules) SDKArchives() []SDKArchive {
