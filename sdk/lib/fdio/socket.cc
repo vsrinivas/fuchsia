@@ -7,11 +7,13 @@
 #include <lib/fit/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/socket.h>
+#include <lib/zxio/bsdsocket.h>
 #include <lib/zxio/cpp/cmsg.h>
 #include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/cpp/dgram_cache.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/socket_address.h>
+#include <lib/zxio/cpp/transitional.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
 #include <net/if.h>
@@ -118,95 +120,6 @@ namespace fnet = fuchsia_net;
 
 namespace {
 
-// A helper structure to keep a packet info and any members' variants
-// allocations on the stack.
-struct PacketInfo {
-  zx_status_t LoadSockAddr(const sockaddr* addr, size_t addr_len) {
-    // Address length larger than sockaddr_storage causes an error for API compatibility only.
-    if (addr == nullptr || addr_len > sizeof(sockaddr_storage)) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    switch (addr->sa_family) {
-      case AF_PACKET: {
-        if (addr_len < sizeof(sockaddr_ll)) {
-          return ZX_ERR_INVALID_ARGS;
-        }
-        const auto& s = *reinterpret_cast<const sockaddr_ll*>(addr);
-        protocol_ = ntohs(s.sll_protocol);
-        interface_id_ = s.sll_ifindex;
-        switch (s.sll_halen) {
-          case 0:
-            eui48_storage_.reset();
-            return ZX_OK;
-          case ETH_ALEN: {
-            fnet::wire::MacAddress address;
-            static_assert(decltype(address.octets)::size() == ETH_ALEN,
-                          "eui48 address must have the same size as ETH_ALEN");
-            static_assert(sizeof(s.sll_addr) == ETH_ALEN + 2);
-            memcpy(address.octets.data(), s.sll_addr, ETH_ALEN);
-            eui48_storage_ = address;
-            return ZX_OK;
-          }
-          default:
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-      }
-      default:
-        return ZX_ERR_INVALID_ARGS;
-    }
-  }
-
-  template <typename F>
-  std::invoke_result_t<F, fidl::ObjectView<fpacketsocket::wire::PacketInfo>> WithFIDL(F fn) {
-    auto packet_info = [this]() -> fpacketsocket::wire::PacketInfo {
-      return {
-          .protocol = protocol_,
-          .interface_id = interface_id_,
-          .addr =
-              [this]() {
-                if (eui48_storage_.has_value()) {
-                  return fpacketsocket::wire::HardwareAddress::WithEui48(
-                      fidl::ObjectView<fnet::wire::MacAddress>::FromExternal(
-                          &eui48_storage_.value()));
-                }
-                return fpacketsocket::wire::HardwareAddress::WithNone({});
-              }(),
-      };
-    }();
-    return fn(fidl::ObjectView<fpacketsocket::wire::PacketInfo>::FromExternal(&packet_info));
-  }
-
- private:
-  decltype(fpacketsocket::wire::PacketInfo::protocol) protocol_;
-  decltype(fpacketsocket::wire::PacketInfo::interface_id) interface_id_;
-  std::optional<fnet::wire::MacAddress> eui48_storage_;
-};
-
-std::optional<size_t> total_iov_len(const struct msghdr& msg) {
-  size_t total = 0;
-  for (int i = 0; i < msg.msg_iovlen; ++i) {
-    const iovec& iov = msg.msg_iov[i];
-    if (iov.iov_base == nullptr && iov.iov_len != 0) {
-      return std::nullopt;
-    }
-    total += iov.iov_len;
-  }
-  return total;
-}
-
-size_t set_trunc_flags_and_return_out_actual(struct msghdr& msg, size_t written, size_t truncated,
-                                             int flags) {
-  if (truncated != 0) {
-    msg.msg_flags |= MSG_TRUNC;
-  } else {
-    msg.msg_flags &= ~MSG_TRUNC;
-  }
-  if ((flags & MSG_TRUNC) != 0) {
-    written += truncated;
-  }
-  return written;
-}
-
 uint32_t zxio_signals_to_events(zx_signals_t signals) {
   uint32_t events = 0;
   if (signals & ZXIO_SIGNAL_PEER_CLOSED) {
@@ -219,235 +132,6 @@ uint32_t zxio_signals_to_events(zx_signals_t signals) {
     events |= POLLRDHUP | POLLIN;
   }
   return events;
-}
-
-int16_t ParseSocketLevelControlMessage(
-    fidl::WireTableBuilder<fsocket::wire::SocketSendControlData>& fidl_socket, int type,
-    const void* data, socklen_t len) {
-  // TODO(https://fxbug.dev/88984): Validate unsupported SOL_SOCKET control messages.
-  return 0;
-}
-
-int16_t ParseIpLevelControlMessage(
-    fidl::WireTableBuilder<fsocket::wire::IpSendControlData>& fidl_ip, int type, const void* data,
-    socklen_t len) {
-  switch (type) {
-    case IP_TTL: {
-      int ttl;
-      if (len != CMSG_LEN(sizeof(ttl))) {
-        return EINVAL;
-      }
-      memcpy(&ttl, data, sizeof(ttl));
-      if (ttl < 0 || ttl > std::numeric_limits<uint8_t>::max()) {
-        return EINVAL;
-      }
-      // N.B. This extra validation is performed here in the client since the payload
-      // might be processed by the Netstack asynchronously.
-      //
-      // See: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket
-      if (ttl == 0) {
-        return EINVAL;
-      }
-      fidl_ip.ttl(static_cast<uint8_t>(ttl));
-      return 0;
-    }
-    default:
-      // TODO(https://fxbug.dev/88984): Validate unsupported SOL_IP control messages.
-      return 0;
-  }
-}
-
-int16_t ParseIpv6LevelControlMessage(
-    fidl::WireTableBuilder<fsocket::wire::Ipv6SendControlData>& fidl_ipv6,
-    fidl::AnyArena& allocator, int type, const void* data, socklen_t data_len) {
-  switch (type) {
-    case IPV6_HOPLIMIT: {
-      int hoplimit;
-      if (data_len != CMSG_LEN(sizeof(hoplimit))) {
-        return EINVAL;
-      }
-      memcpy(&hoplimit, data, sizeof(hoplimit));
-      if (hoplimit < -1 || hoplimit > std::numeric_limits<uint8_t>::max()) {
-        return EINVAL;
-      }
-      // Ignore hoplimit if it's -1 as it it is interpreted as if the cmsg was not present.
-      //
-      // https://github.com/torvalds/linux/blob/eaa54b1458c/net/ipv6/udp.c#L1531
-      if (hoplimit != -1) {
-        fidl_ipv6.hoplimit(static_cast<uint8_t>(hoplimit));
-      }
-      return 0;
-    }
-    case IPV6_PKTINFO: {
-      in6_pktinfo pktinfo;
-      if (data_len != CMSG_LEN(sizeof(pktinfo))) {
-        return EINVAL;
-      }
-      memcpy(&pktinfo, data, sizeof(pktinfo));
-      fsocket::wire::Ipv6PktInfoSendControlData fidl_pktinfo{
-          .iface = static_cast<uint64_t>(pktinfo.ipi6_ifindex),
-      };
-      static_assert(sizeof(pktinfo.ipi6_addr) == sizeof(fidl_pktinfo.local_addr.addr),
-                    "mismatch between size of FIDL and in6_pktinfo IPv6 addresses");
-      memcpy(fidl_pktinfo.local_addr.addr.data(), &pktinfo.ipi6_addr, sizeof(pktinfo.ipi6_addr));
-      fidl_ipv6.pktinfo(fidl_pktinfo);
-      return 0;
-    }
-    default:
-      // TODO(https://fxbug.dev/88984): Validate unsupported SOL_IPV6 control messages.
-      return 0;
-  }
-}
-
-template <typename F>
-int16_t ParseMultipleControlMessages(const struct msghdr& msg, fidl::AnyArena& allocator,
-                                     F parse_control_message) {
-  if (msg.msg_control == nullptr && msg.msg_controllen != 0) {
-    return static_cast<int16_t>(EFAULT);
-  }
-
-  socklen_t total_cmsg_len = 0;
-  for (cmsghdr* cmsg = CMSG_FIRSTHDR(&msg); cmsg != nullptr; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-    const cmsghdr& cmsg_ref = *cmsg;
-    total_cmsg_len += cmsg_ref.cmsg_len;
-
-    // Validate the header length.
-    // https://github.com/torvalds/linux/blob/42eb8fdac2f/include/linux/socket.h#L119-L122
-    if (msg.msg_controllen < total_cmsg_len || cmsg_ref.cmsg_len < sizeof(cmsghdr)) {
-      return static_cast<int16_t>(EINVAL);
-    }
-
-    int16_t err = parse_control_message(allocator, cmsg_ref);
-    if (err != 0) {
-      return err;
-    }
-  }
-  return 0;
-}
-
-fit::result<int16_t, fsocket::wire::NetworkSocketSendControlData> ParseNetworkSocketSendControlData(
-    const struct msghdr& msg, fidl::AnyArena& allocator) {
-  fidl::WireTableBuilder fidl_socket = fsocket::wire::SocketSendControlData::Builder(allocator);
-  fidl::WireTableBuilder fidl_ip = fsocket::wire::IpSendControlData::Builder(allocator);
-  fidl::WireTableBuilder fidl_ipv6 = fsocket::wire::Ipv6SendControlData::Builder(allocator);
-  int16_t err = ParseMultipleControlMessages(
-      msg, allocator,
-      [&fidl_socket, &fidl_ip, &fidl_ipv6](fidl::AnyArena& allocator,
-                                           const cmsghdr& cmsg) -> int16_t {
-        switch (cmsg.cmsg_level) {
-          case SOL_SOCKET:
-            return ParseSocketLevelControlMessage(fidl_socket, cmsg.cmsg_type, CMSG_DATA(&cmsg),
-                                                  cmsg.cmsg_len);
-          case SOL_IP:
-            return ParseIpLevelControlMessage(fidl_ip, cmsg.cmsg_type, CMSG_DATA(&cmsg),
-                                              cmsg.cmsg_len);
-          case SOL_IPV6:
-            return ParseIpv6LevelControlMessage(fidl_ipv6, allocator, cmsg.cmsg_type,
-                                                CMSG_DATA(&cmsg), cmsg.cmsg_len);
-          default:
-            return 0;
-        }
-      });
-
-  if (err != 0) {
-    return fit::error(err);
-  }
-
-  return fit::success(fsocket::wire::NetworkSocketSendControlData::Builder(allocator)
-                          .socket(fidl_socket.Build())
-                          .ip(fidl_ip.Build())
-                          .ipv6(fidl_ipv6.Build())
-                          .Build());
-}
-
-template <typename T>
-fit::result<int16_t, T> ParseControlMessages(const struct msghdr& msg, fidl::AnyArena& allocator);
-
-template <>
-fit::result<int16_t, fsocket::wire::DatagramSocketSendControlData>
-ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(const struct msghdr& msg,
-                                                                   fidl::AnyArena& allocator) {
-  fit::result fidl_net = ParseNetworkSocketSendControlData(msg, allocator);
-  if (fidl_net.is_error()) {
-    return fidl_net.take_error();
-  }
-
-  return fit::success(fsocket::wire::DatagramSocketSendControlData::Builder(allocator)
-                          .network(fidl_net.value())
-                          .Build());
-}
-
-template <>
-fit::result<int16_t, fsocket::wire::NetworkSocketSendControlData>
-ParseControlMessages<fsocket::wire::NetworkSocketSendControlData>(const struct msghdr& msg,
-                                                                  fidl::AnyArena& allocator) {
-  return ParseNetworkSocketSendControlData(msg, allocator);
-}
-
-fit::result<int16_t, fsocket::wire::SocketSendControlData> ParseSocketSendControlData(
-    const struct msghdr& msg, fidl::AnyArena& allocator) {
-  fidl::WireTableBuilder fidl_socket = fsocket::wire::SocketSendControlData::Builder(allocator);
-  int16_t err = ParseMultipleControlMessages(
-      msg, allocator, [&fidl_socket](fidl::AnyArena& allocator, const cmsghdr& cmsg) -> int16_t {
-        switch (cmsg.cmsg_level) {
-          case SOL_SOCKET:
-            return ParseSocketLevelControlMessage(fidl_socket, cmsg.cmsg_type, CMSG_DATA(&cmsg),
-                                                  cmsg.cmsg_len);
-          default:
-            return 0;
-        }
-      });
-
-  if (err != 0) {
-    return fit::error(err);
-  }
-
-  return fit::success(fidl_socket.Build());
-}
-
-template <>
-fit::result<int16_t, fsocket::wire::SocketSendControlData>
-ParseControlMessages<fsocket::wire::SocketSendControlData>(const struct msghdr& msg,
-                                                           fidl::AnyArena& allocator) {
-  return ParseSocketSendControlData(msg, allocator);
-}
-
-template <>
-fit::result<int16_t, fpacketsocket::wire::SendControlData>
-ParseControlMessages<fpacketsocket::wire::SendControlData>(const struct msghdr& msg,
-                                                           fidl::AnyArena& allocator) {
-  fit::result fidl_socket = ParseSocketSendControlData(msg, allocator);
-  if (fidl_socket.is_error()) {
-    return fidl_socket.take_error();
-  }
-
-  return fit::success(
-      fpacketsocket::wire::SendControlData::Builder(allocator).socket(fidl_socket.value()).Build());
-}
-
-fsocket::wire::RecvMsgFlags to_recvmsg_flags(int flags) {
-  fsocket::wire::RecvMsgFlags r;
-  if (flags & MSG_PEEK) {
-    r |= fsocket::wire::RecvMsgFlags::kPeek;
-  }
-  return r;
-}
-
-fsocket::wire::SendMsgFlags to_sendmsg_flags(int flags) { return fsocket::wire::SendMsgFlags(); }
-
-uint8_t fidl_pkttype_to_pkttype(const fpacketsocket::wire::PacketType type) {
-  switch (type) {
-    case fpacketsocket::wire::PacketType::kHost:
-      return PACKET_HOST;
-    case fpacketsocket::wire::PacketType::kBroadcast:
-      return PACKET_BROADCAST;
-    case fpacketsocket::wire::PacketType::kMulticast:
-      return PACKET_MULTICAST;
-    case fpacketsocket::wire::PacketType::kOtherHost:
-      return PACKET_OTHERHOST;
-    case fpacketsocket::wire::PacketType::kOutgoing:
-      return PACKET_OUTGOING;
-  }
 }
 
 // Prevent divergence in flag bitmasks between libc and fuchsia.posix.socket FIDL library.
@@ -667,18 +351,6 @@ struct base_socket : public remote {
   virtual fidl::WireSyncClient<typename T::FidlProtocol>& GetClient() = 0;
 };
 
-void recvmsg_populate_socketaddress(const fnet::wire::SocketAddress& fidl, void* addr,
-                                    socklen_t& addr_len) {
-  // Result address has invalid tag when it's not provided by the server (when the address
-  // is not requested).
-  // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
-  if (fidl.has_invalid_tag()) {
-    return;
-  }
-
-  addr_len = zxio_fidl_to_sockaddr(fidl, addr, addr_len);
-}
-
 struct StreamSocket {
   using FidlProtocol = fsocket::StreamSocket;
 };
@@ -688,92 +360,20 @@ struct DatagramSocket {
 };
 
 struct SynchronousDatagramSocket {
-  using FidlProtocol = fsocket::SynchronousDatagramSocket;
-  using FidlSockAddr = SocketAddress;
-  using FidlSendControlData = fsocket::wire::DatagramSocketSendControlData;
   using zxio_type = zxio_synchronous_datagram_socket_t;
-
-  static void recvmsg_populate_msgname(
-      const fsocket::wire::SynchronousDatagramSocketRecvMsgResponse& response, void* addr,
-      socklen_t& addr_len) {
-    recvmsg_populate_socketaddress(response.addr, addr, addr_len);
-  }
-
-  static void handle_sendmsg_response(
-      const fsocket::wire::SynchronousDatagramSocketSendMsgResponse& response,
-      ssize_t expected_len) {
-    // TODO(https://fxbug.dev/82346): Drop len from the response as SendMsg does
-    // does not perform partial writes.
-    ZX_DEBUG_ASSERT_MSG(response.len == expected_len, "got SendMsg(...) = %ld, want = %ld",
-                        response.len, expected_len);
-  }
+  using FidlProtocol = zxio_type::FidlProtocol;
 };
 
 struct RawSocket {
-  using FidlProtocol = frawsocket::Socket;
-  using FidlSockAddr = SocketAddress;
-  using FidlSendControlData = fsocket::wire::NetworkSocketSendControlData;
   using zxio_type = zxio_raw_socket_t;
-
-  static void recvmsg_populate_msgname(const frawsocket::wire::SocketRecvMsgResponse& response,
-                                       void* addr, socklen_t& addr_len) {
-    recvmsg_populate_socketaddress(response.addr, addr, addr_len);
-  }
-
-  static void handle_sendmsg_response(const frawsocket::wire::SocketSendMsgResponse& response,
-                                      ssize_t expected_len) {
-    // TODO(https://fxbug.dev/82346): Drop this method once DatagramSocket.SendMsg
-    // no longer returns a length field.
-  }
+  using FidlProtocol = zxio_type::FidlProtocol;
 };
 
 struct PacketSocket {
-  using FidlProtocol = fpacketsocket::Socket;
-  using FidlSockAddr = PacketInfo;
-  using FidlSendControlData = fpacketsocket::wire::SendControlData;
   using zxio_type = zxio_packet_socket_t;
-
-  static void recvmsg_populate_msgname(const fpacketsocket::wire::SocketRecvMsgResponse& response,
-                                       void* addr, socklen_t& addr_len) {
-    fidl::ObjectView view = response.packet_info;
-    if (!view) {
-      // The packet info field is not provided by the server (when it is not requested).
-      return;
-    }
-
-    const fpacketsocket::wire::RecvPacketInfo& info = *view;
-
-    sockaddr_ll sll = {
-        .sll_family = AF_PACKET,
-        .sll_protocol = htons(info.packet_info.protocol),
-        .sll_ifindex = static_cast<int>(info.packet_info.interface_id),
-        .sll_hatype = zxio_fidl_hwtype_to_arphrd(info.interface_type),
-        .sll_pkttype = fidl_pkttype_to_pkttype(info.packet_type),
-    };
-    zxio_populate_from_fidl_hwaddr(info.packet_info.addr, sll);
-    memcpy(addr, &sll, std::min(sizeof(sll), static_cast<size_t>(addr_len)));
-    addr_len = sizeof(sll);
-  }
-
-  static void handle_sendmsg_response(const fpacketsocket::wire::SocketSendMsgResponse& response,
-                                      ssize_t expected_len) {
-    // TODO(https://fxbug.dev/82346): Drop this method once DatagramSocket.SendMsg
-    // no longer returns a length field.
-  }
+  using FidlProtocol = zxio_type::FidlProtocol;
 };
 
-template <typename R, typename = int>
-struct FitxResultHasValue : std::false_type {};
-template <typename R>
-struct FitxResultHasValue<R, decltype(&R::value, 0)> : std::true_type {};
-template <typename T, typename R>
-typename std::enable_if<FitxResultHasValue<R>::value>::type HandleSendMsgResponse(const R& result,
-                                                                                  size_t total) {
-  T::handle_sendmsg_response(*result->value(), total);
-}
-template <typename T, typename R>
-typename std::enable_if<!FitxResultHasValue<T>::value>::type HandleSendMsgResponse(const R& result,
-                                                                                   size_t total) {}
 template <typename T, typename = std::enable_if_t<std::is_same_v<T, SynchronousDatagramSocket> ||
                                                   std::is_same_v<T, RawSocket> ||
                                                   std::is_same_v<T, PacketSocket>>>
@@ -820,141 +420,12 @@ struct socket_with_event : virtual public base_socket<T> {
 
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override {
-    size_t datalen = 0;
-    for (int i = 0; i < msg->msg_iovlen; ++i) {
-      datalen += msg->msg_iov[i].iov_len;
-    }
-
-    bool want_addr = msg->msg_namelen != 0 && msg->msg_name != nullptr;
-    bool want_cmsg = msg->msg_controllen != 0 && msg->msg_control != nullptr;
-    auto response = GetClient()->RecvMsg(want_addr, static_cast<uint32_t>(datalen), want_cmsg,
-                                         to_recvmsg_flags(flags));
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    *out_code = 0;
-
-    T::recvmsg_populate_msgname(*result.value(), msg->msg_name, msg->msg_namelen);
-
-    {
-      auto const& out = result.value()->data;
-
-      const uint8_t* data = out.begin();
-      size_t remaining = out.count();
-      for (int i = 0; remaining != 0 && i < msg->msg_iovlen; ++i) {
-        iovec const& iov = msg->msg_iov[i];
-        if (iov.iov_base != nullptr) {
-          size_t actual = std::min(iov.iov_len, remaining);
-          memcpy(iov.iov_base, data, actual);
-          data += actual;
-          remaining -= actual;
-        } else if (iov.iov_len != 0) {
-          *out_code = EFAULT;
-          return ZX_OK;
-        }
-      }
-      *out_actual = set_trunc_flags_and_return_out_actual(*msg, out.count() - remaining,
-                                                          result.value()->truncated, flags);
-    }
-
-    if (want_cmsg) {
-      FidlControlDataProcessor proc(msg->msg_control, msg->msg_controllen);
-      // The synchronous datagram protocol returns all control messages found in the FIDL
-      // response. This behavior is implemented using a "filter" that allows everything through.
-      msg->msg_controllen =
-          proc.Store(result.value()->control, RequestedCmsgSet::AllRequestedCmsgSet());
-    } else {
-      msg->msg_controllen = 0;
-    }
-
-    return ZX_OK;
+    return zxio_recvmsg(&zxio_socket_with_event().io, msg, flags, out_actual, out_code);
   }
 
   zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override {
-    // TODO(https://fxbug.dev/110570) Add tests with msg as nullptr.
-    if (msg == nullptr) {
-      *out_code = EFAULT;
-      return ZX_OK;
-    }
-    const msghdr& msghdr_ref = *msg;
-    typename T::FidlSockAddr addr;
-    // Attempt to load socket address if either name or namelen is set.
-    // If only one is set, it'll result in INVALID_ARGS.
-    if (msghdr_ref.msg_namelen != 0 || msghdr_ref.msg_name != nullptr) {
-      zx_status_t status =
-          addr.LoadSockAddr(static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-
-    std::optional opt_total = total_iov_len(msghdr_ref);
-    if (!opt_total.has_value()) {
-      *out_code = EFAULT;
-      return ZX_OK;
-    }
-    size_t total = opt_total.value();
-
-    fidl::Arena allocator;
-    fit::result cmsg_result =
-        ParseControlMessages<typename T::FidlSendControlData>(msghdr_ref, allocator);
-    if (cmsg_result.is_error()) {
-      *out_code = cmsg_result.error_value();
-      return ZX_OK;
-    }
-    const typename T::FidlSendControlData& cdata = cmsg_result.value();
-
-    std::vector<uint8_t> data;
-    auto vec = fidl::VectorView<uint8_t>();
-    switch (msg->msg_iovlen) {
-      case 0: {
-        break;
-      }
-      case 1: {
-        const iovec& iov = *msg->msg_iov;
-        vec = fidl::VectorView<uint8_t>::FromExternal(static_cast<uint8_t*>(iov.iov_base),
-                                                      iov.iov_len);
-        break;
-      }
-      default: {
-        // TODO(https://fxbug.dev/84965): avoid this copy.
-        data.reserve(total);
-        for (int i = 0; i < msg->msg_iovlen; ++i) {
-          const iovec& iov = msg->msg_iov[i];
-          std::copy_n(static_cast<const uint8_t*>(iov.iov_base), iov.iov_len,
-                      std::back_inserter(data));
-        }
-        vec = fidl::VectorView<uint8_t>::FromExternal(data);
-      }
-    }
-
-    // TODO(https://fxbug.dev/58503): Use better representation of nullable union when
-    // available. Currently just using a default-initialized union with an invalid tag.
-    auto response = addr.WithFIDL([&](auto address) {
-      return GetClient()->SendMsg(address, vec, cdata, to_sendmsg_flags(flags));
-    });
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    HandleSendMsgResponse<T, decltype(result)>(result, total);
-
-    *out_code = 0;
-    // SendMsg does not perform partial writes.
-    *out_actual = total;
-    return ZX_OK;
+    return zxio_sendmsg(&zxio_socket_with_event().io, msg, flags, out_actual, out_code);
   }
 
  protected:
@@ -1186,7 +657,8 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
 
     size_t truncated =
         meta.payload_len() > payload_bytes_read ? meta.payload_len() - payload_bytes_read : 0;
-    *out_actual = set_trunc_flags_and_return_out_actual(*msg, payload_bytes_read, truncated, flags);
+    *out_actual =
+        zxio_set_trunc_flags_and_return_out_actual(*msg, payload_bytes_read, truncated, flags);
 
     if (cmsg_requested) {
       FidlControlDataProcessor proc(msg->msg_control, msg->msg_controllen);
@@ -1209,7 +681,7 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
       return ZX_OK;
     }
     const msghdr& msghdr_ref = *msg;
-    std::optional opt_total = total_iov_len(msghdr_ref);
+    std::optional opt_total = zxio_total_iov_len(msghdr_ref);
     if (!opt_total.has_value()) {
       *out_code = EFAULT;
       return ZX_OK;
@@ -1230,7 +702,7 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
     // TODO(https://fxbug.dev/103740): Avoid allocating into this arena.
     fidl::Arena alloc;
     fit::result cmsg_result =
-        ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(msghdr_ref, alloc);
+        ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(alloc, msghdr_ref);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();
       return ZX_OK;
@@ -1545,7 +1017,7 @@ struct stream_socket : public socket_with_zx_socket<StreamSocket> {
     const msghdr& msghdr_ref = *msg;
     fidl::Arena allocator;
     fit::result cmsg_result =
-        ParseControlMessages<fsocket::wire::SocketSendControlData>(msghdr_ref, allocator);
+        ParseControlMessages<fsocket::wire::SocketSendControlData>(allocator, msghdr_ref);
     if (cmsg_result.is_error()) {
       *out_code = cmsg_result.error_value();
       return ZX_OK;

@@ -31,9 +31,11 @@
 		zxio_read_at;
 		zxio_readv;
 		zxio_readv_at;
+		zxio_recvmsg;
 		zxio_release;
 		zxio_rename;
 		zxio_seek;
+		zxio_sendmsg;
 		zxio_set_window_size;
 		zxio_setsockopt;
 		zxio_shutdown;

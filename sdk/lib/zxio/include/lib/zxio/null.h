@@ -86,6 +86,10 @@ zx_status_t zxio_default_getsockopt(zxio_t* io, int level, int optname, void* op
                                     socklen_t* optlen, int16_t* out_code);
 zx_status_t zxio_default_setsockopt(zxio_t* io, int level, int optname, const void* optval,
                                     socklen_t optlen, int16_t* out_code);
+zx_status_t zxio_default_recvmsg(zxio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                                 int16_t* out_code);
+zx_status_t zxio_default_sendmsg(zxio_t* io, const struct msghdr* msg, int flags,
+                                 size_t* out_actual, int16_t* out_code);
 zx_status_t zxio_default_ioctl(zxio_t* io, int request, int16_t* out_code, va_list va);
 
 // An ops table filled with the default implementations.
@@ -137,6 +141,8 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .getpeername = zxio_default_getpeername,
     .getsockopt = zxio_default_getsockopt,
     .setsockopt = zxio_default_setsockopt,
+    .recvmsg = zxio_default_recvmsg,
+    .sendmsg = zxio_default_sendmsg,
     .ioctl = zxio_default_ioctl,
 };
 

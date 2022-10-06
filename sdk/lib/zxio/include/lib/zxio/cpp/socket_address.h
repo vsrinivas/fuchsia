@@ -5,11 +5,16 @@
 #ifndef LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_SOCKET_ADDRESS_H_
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_SOCKET_ADDRESS_H_
 
+#include <fidl/fuchsia.net/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
+#include <lib/fidl/cpp/wire/object_view.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 #include <zircon/types.h>
 
 #include <functional>
+#include <optional>
+#include <type_traits>
 #include <variant>
 
 #include <netpacket/packet.h>
@@ -70,11 +75,38 @@ class SocketAddress {
 socklen_t zxio_fidl_to_sockaddr(const fuchsia_net::wire::SocketAddress& fidl, void* addr,
                                 socklen_t addr_len);
 
-// Returns |type| as an ARPHRD_* device type.
-uint16_t zxio_fidl_hwtype_to_arphrd(fuchsia_posix_socket_packet::wire::HardwareType type);
+// A helper structure to keep a packet info and any members' variants
+// allocations on the stack.
+class PacketInfo {
+ public:
+  zx_status_t LoadSockAddr(const sockaddr* addr, size_t addr_len);
 
-// Writes |addr| as a sockaddr_ll in |s|.
-void zxio_populate_from_fidl_hwaddr(const fuchsia_posix_socket_packet::wire::HardwareAddress& addr,
-                                    sockaddr_ll& s);
+  template <typename F>
+  std::invoke_result_t<F, fidl::ObjectView<fuchsia_posix_socket_packet::wire::PacketInfo>> WithFIDL(
+      F fn) {
+    auto packet_info = [this]() -> fuchsia_posix_socket_packet::wire::PacketInfo {
+      return {
+          .protocol = protocol_,
+          .interface_id = interface_id_,
+          .addr =
+              [this]() {
+                if (eui48_storage_.has_value()) {
+                  return fuchsia_posix_socket_packet::wire::HardwareAddress::WithEui48(
+                      fidl::ObjectView<fuchsia_net::wire::MacAddress>::FromExternal(
+                          &eui48_storage_.value()));
+                }
+                return fuchsia_posix_socket_packet::wire::HardwareAddress::WithNone({});
+              }(),
+      };
+    }();
+    return fn(fidl::ObjectView<fuchsia_posix_socket_packet::wire::PacketInfo>::FromExternal(
+        &packet_info));
+  }
+
+ private:
+  decltype(fuchsia_posix_socket_packet::wire::PacketInfo::protocol) protocol_;
+  decltype(fuchsia_posix_socket_packet::wire::PacketInfo::interface_id) interface_id_;
+  std::optional<fuchsia_net::wire::MacAddress> eui48_storage_;
+};
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_SOCKET_ADDRESS_H_

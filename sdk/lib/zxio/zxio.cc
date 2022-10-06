@@ -536,6 +536,26 @@ zx_status_t zxio_setsockopt(zxio_t* io, int level, int optname, const void* optv
   return zio->ops->setsockopt(io, level, optname, optval, optlen, out_code);
 }
 
+zx_status_t zxio_recvmsg(zxio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                         int16_t* out_code) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->recvmsg(io, msg, flags, out_actual, out_code);
+}
+
+zx_status_t zxio_sendmsg(zxio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
+                         int16_t* out_code) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->sendmsg(io, msg, flags, out_actual, out_code);
+}
+
 template <typename T>
 zx::status<fidl::UnownedClientEnd<T>> connect_socket_provider(
     zxio_service_connector service_connector) {

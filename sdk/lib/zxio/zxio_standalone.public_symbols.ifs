@@ -33,9 +33,11 @@ Symbols:
   - { Name: zxio_read_at, Type: Func }
   - { Name: zxio_readv, Type: Func }
   - { Name: zxio_readv_at, Type: Func }
+  - { Name: zxio_recvmsg, Type: Func }
   - { Name: zxio_release, Type: Func }
   - { Name: zxio_rename, Type: Func }
   - { Name: zxio_seek, Type: Func }
+  - { Name: zxio_sendmsg, Type: Func }
   - { Name: zxio_set_window_size, Type: Func }
   - { Name: zxio_setsockopt, Type: Func }
   - { Name: zxio_shutdown, Type: Func }

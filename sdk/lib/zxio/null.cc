@@ -205,6 +205,18 @@ zx_status_t zxio_default_setsockopt(zxio_t* io, int level, int optname, const vo
   return ZX_OK;
 }
 
+zx_status_t zxio_default_recvmsg(zxio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                                 int16_t* out_code) {
+  *out_code = ENOTSOCK;
+  return ZX_OK;
+}
+
+zx_status_t zxio_default_sendmsg(zxio_t* io, const struct msghdr* msg, int flags,
+                                 size_t* out_actual, int16_t* out_code) {
+  *out_code = ENOTSOCK;
+  return ZX_OK;
+}
+
 zx_status_t zxio_default_ioctl(zxio_t* io, int request, int16_t* out_code, va_list va) {
   *out_code = ENOTTY;
   return ZX_OK;

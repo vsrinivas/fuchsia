@@ -7,7 +7,9 @@
 
 #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
+#include <lib/fit/result.h>
 #include <lib/zxio/cpp/dgram_cache.h>
+#include <sys/socket.h>
 
 #include <span>
 
@@ -39,5 +41,27 @@ class FidlControlDataProcessor {
 
   cpp20::span<unsigned char> buffer_;
 };
+
+template <typename T>
+fit::result<int16_t, T> ParseControlMessages(fidl::AnyArena& allocator, const struct msghdr& msg);
+
+template <>
+fit::result<int16_t, fuchsia_posix_socket::wire::DatagramSocketSendControlData>
+ParseControlMessages<fuchsia_posix_socket::wire::DatagramSocketSendControlData>(
+    fidl::AnyArena& allocator, const struct msghdr& msg);
+
+template <>
+fit::result<int16_t, fuchsia_posix_socket::wire::NetworkSocketSendControlData>
+ParseControlMessages<fuchsia_posix_socket::wire::NetworkSocketSendControlData>(
+    fidl::AnyArena& allocator, const struct msghdr& msg);
+
+template <>
+fit::result<int16_t, fuchsia_posix_socket::wire::SocketSendControlData>
+ParseControlMessages<fuchsia_posix_socket::wire::SocketSendControlData>(fidl::AnyArena& allocator,
+                                                                        const struct msghdr& msg);
+template <>
+fit::result<int16_t, fuchsia_posix_socket_packet::wire::SendControlData>
+ParseControlMessages<fuchsia_posix_socket_packet::wire::SendControlData>(fidl::AnyArena& allocator,
+                                                                         const struct msghdr& msg);
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_CMSG_H_

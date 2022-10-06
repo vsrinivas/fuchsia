@@ -61,6 +61,14 @@ ZXIO_EXPORT zx_status_t zxio_getsockopt(zxio_t* io, int level, int optname, void
 ZXIO_EXPORT zx_status_t zxio_setsockopt(zxio_t* io, int level, int optname, const void* optval,
                                         socklen_t optlen, int16_t* out_code);
 
+// Receives a message from a socket and sets |*out_actual| to the total bytes received.
+ZXIO_EXPORT zx_status_t zxio_recvmsg(zxio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                                     int16_t* out_code);
+
+// Sends a message from a socket and sets |*out_actual| to the total bytes sent.
+ZXIO_EXPORT zx_status_t zxio_sendmsg(zxio_t* io, const struct msghdr* msg, int flags,
+                                     size_t* out_actual, int16_t* out_code);
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_BSDSOCKET_H_

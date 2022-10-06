@@ -9,12 +9,20 @@
 #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/zx/debuglog.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/socket.h>
 #include <lib/zxio/cpp/dgram_cache.h>
 #include <lib/zxio/ops.h>
+#include <lib/zxio/types.h>
+#include <sys/socket.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <mutex>
 
 // This header exposes some guts of zxio in order to transition fdio to build on
 // top of zxio.
@@ -39,9 +47,11 @@ static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.SynchronousDatagramSocket object.
 using zxio_synchronous_datagram_socket_t = struct zxio_synchronous_datagram_socket {
+  using FidlProtocol = fuchsia_posix_socket::SynchronousDatagramSocket;
+
   zxio_t io;
   zx::eventpair event;
-  fidl::WireSyncClient<fuchsia_posix_socket::SynchronousDatagramSocket> client;
+  fidl::WireSyncClient<FidlProtocol> client;
 };
 
 static_assert(sizeof(zxio_synchronous_datagram_socket_t) <= sizeof(zxio_storage_t),
@@ -87,9 +97,11 @@ static_assert(sizeof(zxio_stream_socket_t) <= sizeof(zxio_storage_t),
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.raw.Socket object.
 using zxio_raw_socket_t = struct zxio_raw_socket {
+  using FidlProtocol = fuchsia_posix_socket_raw::Socket;
+
   zxio_t io;
   zx::eventpair event;
-  fidl::WireSyncClient<fuchsia_posix_socket_raw::Socket> client;
+  fidl::WireSyncClient<FidlProtocol> client;
 };
 
 static_assert(sizeof(zxio_raw_socket_t) <= sizeof(zxio_storage_t),
@@ -99,9 +111,11 @@ static_assert(sizeof(zxio_raw_socket_t) <= sizeof(zxio_storage_t),
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.packet.Socket object.
 using zxio_packet_socket_t = struct zxio_packet_socket {
+  using FidlProtocol = fuchsia_posix_socket_packet::Socket;
+
   zxio_t io;
   zx::eventpair event;
-  fidl::WireSyncClient<fuchsia_posix_socket_packet::Socket> client;
+  fidl::WireSyncClient<FidlProtocol> client;
 };
 
 static_assert(sizeof(zxio_packet_socket_t) <= sizeof(zxio_storage_t),

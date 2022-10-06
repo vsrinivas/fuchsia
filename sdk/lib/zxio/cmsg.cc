@@ -172,3 +172,205 @@ socklen_t FidlControlDataProcessor::StoreControlMessage(int level, int type, con
 
   return static_cast<socklen_t>(bytes_consumed);
 }
+
+int16_t ParseSocketLevelControlMessage(
+    fidl::WireTableBuilder<fsocket::wire::SocketSendControlData>& fidl_socket, int type,
+    const void* data, socklen_t len) {
+  // TODO(https://fxbug.dev/88984): Validate unsupported SOL_SOCKET control messages.
+  return 0;
+}
+
+int16_t ParseIpLevelControlMessage(
+    fidl::WireTableBuilder<fsocket::wire::IpSendControlData>& fidl_ip, int type, const void* data,
+    socklen_t len) {
+  switch (type) {
+    case IP_TTL: {
+      int ttl;
+      if (len != CMSG_LEN(sizeof(ttl))) {
+        return EINVAL;
+      }
+      memcpy(&ttl, data, sizeof(ttl));
+      if (ttl < 0 || ttl > std::numeric_limits<uint8_t>::max()) {
+        return EINVAL;
+      }
+      // N.B. This extra validation is performed here in the client since the payload
+      // might be processed by the Netstack asynchronously.
+      //
+      // See: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket
+      if (ttl == 0) {
+        return EINVAL;
+      }
+      fidl_ip.ttl(static_cast<uint8_t>(ttl));
+      return 0;
+    }
+    default:
+      // TODO(https://fxbug.dev/88984): Validate unsupported SOL_IP control messages.
+      return 0;
+  }
+}
+
+int16_t ParseIpv6LevelControlMessage(
+    fidl::WireTableBuilder<fsocket::wire::Ipv6SendControlData>& fidl_ipv6, int type,
+    const void* data, socklen_t data_len) {
+  switch (type) {
+    case IPV6_HOPLIMIT: {
+      int hoplimit;
+      if (data_len != CMSG_LEN(sizeof(hoplimit))) {
+        return EINVAL;
+      }
+      memcpy(&hoplimit, data, sizeof(hoplimit));
+      if (hoplimit < -1 || hoplimit > std::numeric_limits<uint8_t>::max()) {
+        return EINVAL;
+      }
+      // Ignore hoplimit if it's -1 as it it is interpreted as if the cmsg was not present.
+      //
+      // https://github.com/torvalds/linux/blob/eaa54b1458c/net/ipv6/udp.c#L1531
+      if (hoplimit != -1) {
+        fidl_ipv6.hoplimit(static_cast<uint8_t>(hoplimit));
+      }
+      return 0;
+    }
+    case IPV6_PKTINFO: {
+      in6_pktinfo pktinfo;
+      if (data_len != CMSG_LEN(sizeof(pktinfo))) {
+        return EINVAL;
+      }
+      memcpy(&pktinfo, data, sizeof(pktinfo));
+      fsocket::wire::Ipv6PktInfoSendControlData fidl_pktinfo{
+          .iface = static_cast<uint64_t>(pktinfo.ipi6_ifindex),
+      };
+      static_assert(sizeof(pktinfo.ipi6_addr) == sizeof(fidl_pktinfo.local_addr.addr),
+                    "mismatch between size of FIDL and in6_pktinfo IPv6 addresses");
+      memcpy(fidl_pktinfo.local_addr.addr.data(), &pktinfo.ipi6_addr, sizeof(pktinfo.ipi6_addr));
+      fidl_ipv6.pktinfo(fidl_pktinfo);
+      return 0;
+    }
+    default:
+      // TODO(https://fxbug.dev/88984): Validate unsupported SOL_IPV6 control messages.
+      return 0;
+  }
+}
+
+template <typename F>
+int16_t ParseMultipleControlMessages(fidl::AnyArena& allocator, const struct msghdr& msg,
+                                     F parse_control_message) {
+  if (msg.msg_control == nullptr && msg.msg_controllen != 0) {
+    return static_cast<int16_t>(EFAULT);
+  }
+
+  socklen_t total_cmsg_len = 0;
+  for (cmsghdr* cmsg = CMSG_FIRSTHDR(&msg); cmsg != nullptr; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+    const cmsghdr& cmsg_ref = *cmsg;
+    total_cmsg_len += cmsg_ref.cmsg_len;
+
+    // Validate the header length.
+    // https://github.com/torvalds/linux/blob/42eb8fdac2f/include/linux/socket.h#L119-L122
+    if (msg.msg_controllen < total_cmsg_len || cmsg_ref.cmsg_len < sizeof(cmsghdr)) {
+      return static_cast<int16_t>(EINVAL);
+    }
+
+    int16_t err = parse_control_message(allocator, cmsg_ref);
+    if (err != 0) {
+      return err;
+    }
+  }
+  return 0;
+}
+
+fit::result<int16_t, fsocket::wire::NetworkSocketSendControlData> ParseNetworkSocketSendControlData(
+    fidl::AnyArena& allocator, const struct msghdr& msg) {
+  fidl::WireTableBuilder fidl_socket = fsocket::wire::SocketSendControlData::Builder(allocator);
+  fidl::WireTableBuilder fidl_ip = fsocket::wire::IpSendControlData::Builder(allocator);
+  fidl::WireTableBuilder fidl_ipv6 = fsocket::wire::Ipv6SendControlData::Builder(allocator);
+  int16_t err = ParseMultipleControlMessages(
+      allocator, msg,
+      [&fidl_socket, &fidl_ip, &fidl_ipv6](fidl::AnyArena& allocator,
+                                           const cmsghdr& cmsg) -> int16_t {
+        switch (cmsg.cmsg_level) {
+          case SOL_SOCKET:
+            return ParseSocketLevelControlMessage(fidl_socket, cmsg.cmsg_type, CMSG_DATA(&cmsg),
+                                                  cmsg.cmsg_len);
+          case SOL_IP:
+            return ParseIpLevelControlMessage(fidl_ip, cmsg.cmsg_type, CMSG_DATA(&cmsg),
+                                              cmsg.cmsg_len);
+          case SOL_IPV6:
+            return ParseIpv6LevelControlMessage(fidl_ipv6, cmsg.cmsg_type, CMSG_DATA(&cmsg),
+                                                cmsg.cmsg_len);
+          default:
+            return 0;
+        }
+      });
+
+  if (err != 0) {
+    return fit::error(err);
+  }
+
+  return fit::success(fsocket::wire::NetworkSocketSendControlData::Builder(allocator)
+                          .socket(fidl_socket.Build())
+                          .ip(fidl_ip.Build())
+                          .ipv6(fidl_ipv6.Build())
+                          .Build());
+}
+
+template <>
+fit::result<int16_t, fuchsia_posix_socket::wire::DatagramSocketSendControlData>
+ParseControlMessages<fuchsia_posix_socket::wire::DatagramSocketSendControlData>(
+    fidl::AnyArena& allocator, const struct msghdr& msg) {
+  fit::result fidl_net = ParseNetworkSocketSendControlData(allocator, msg);
+  if (fidl_net.is_error()) {
+    return fidl_net.take_error();
+  }
+
+  return fit::success(fuchsia_posix_socket::wire::DatagramSocketSendControlData::Builder(allocator)
+                          .network(fidl_net.value())
+                          .Build());
+}
+
+template <>
+fit::result<int16_t, fuchsia_posix_socket::wire::NetworkSocketSendControlData>
+ParseControlMessages<fuchsia_posix_socket::wire::NetworkSocketSendControlData>(
+    fidl::AnyArena& allocator, const struct msghdr& msg) {
+  return ParseNetworkSocketSendControlData(allocator, msg);
+}
+
+fit::result<int16_t, fsocket::wire::SocketSendControlData> ParseSocketSendControlData(
+    fidl::AnyArena& allocator, const struct msghdr& msg) {
+  fidl::WireTableBuilder fidl_socket = fsocket::wire::SocketSendControlData::Builder(allocator);
+  int16_t err = ParseMultipleControlMessages(
+      allocator, msg, [&fidl_socket](fidl::AnyArena& allocator, const cmsghdr& cmsg) -> int16_t {
+        switch (cmsg.cmsg_level) {
+          case SOL_SOCKET:
+            return ParseSocketLevelControlMessage(fidl_socket, cmsg.cmsg_type, CMSG_DATA(&cmsg),
+                                                  cmsg.cmsg_len);
+          default:
+            return 0;
+        }
+      });
+
+  if (err != 0) {
+    return fit::error(err);
+  }
+
+  return fit::success(fidl_socket.Build());
+}
+
+template <>
+fit::result<int16_t, fuchsia_posix_socket::wire::SocketSendControlData>
+ParseControlMessages<fuchsia_posix_socket::wire::SocketSendControlData>(fidl::AnyArena& allocator,
+                                                                        const struct msghdr& msg) {
+  return ParseSocketSendControlData(allocator, msg);
+}
+
+template <>
+fit::result<int16_t, fuchsia_posix_socket_packet::wire::SendControlData>
+ParseControlMessages<fuchsia_posix_socket_packet::wire::SendControlData>(fidl::AnyArena& allocator,
+                                                                         const struct msghdr& msg) {
+  fit::result fidl_socket = ParseSocketSendControlData(allocator, msg);
+  if (fidl_socket.is_error()) {
+    return fidl_socket.take_error();
+  }
+
+  return fit::success(fuchsia_posix_socket_packet::wire::SendControlData::Builder(allocator)
+                          .socket(fidl_socket.value())
+                          .Build());
+}

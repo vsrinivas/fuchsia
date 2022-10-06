@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
-#include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/zxio/cpp/socket_address.h>
 #include <netinet/icmp6.h>
 #include <netinet/if_ether.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
-#include <zircon/types.h>
 
+#include <algorithm>
+#include <cstring>
 #include <functional>
+#include <optional>
 #include <variant>
 
 #include <netpacket/packet.h>
@@ -185,31 +186,37 @@ socklen_t zxio_fidl_to_sockaddr(const fuchsia_net::wire::SocketAddress& fidl, vo
   }
 }
 
-uint16_t zxio_fidl_hwtype_to_arphrd(const fpacketsocket::wire::HardwareType type) {
-  switch (type) {
-    case fpacketsocket::wire::HardwareType::kNetworkOnly:
-      return ARPHRD_NONE;
-    case fpacketsocket::wire::HardwareType::kEthernet:
-      return ARPHRD_ETHER;
-    case fpacketsocket::wire::HardwareType::kLoopback:
-      return ARPHRD_LOOPBACK;
+zx_status_t PacketInfo::LoadSockAddr(const sockaddr* addr, size_t addr_len) {
+  // Address length larger than sockaddr_storage causes an error for API compatibility only.
+  if (addr == nullptr || addr_len > sizeof(sockaddr_storage)) {
+    return ZX_ERR_INVALID_ARGS;
   }
-}
-
-void zxio_populate_from_fidl_hwaddr(const fpacketsocket::wire::HardwareAddress& addr,
-                                    sockaddr_ll& s) {
-  switch (addr.Which()) {
-    case fpacketsocket::wire::HardwareAddress::Tag::kUnknown:
-      // The server is newer than us and sending a variant we don't understand.
-      __FALLTHROUGH;
-    case fpacketsocket::wire::HardwareAddress::Tag::kNone:
-      s.sll_halen = 0;
-      break;
-    case fpacketsocket::wire::HardwareAddress::Tag::kEui48: {
-      const fnet::wire::MacAddress& eui48 = addr.eui48();
-      static_assert(std::size(decltype(s.sll_addr){}) == decltype(eui48.octets)::size() + 2);
-      std::copy(eui48.octets.begin(), eui48.octets.end(), std::begin(s.sll_addr));
-      s.sll_halen = decltype(eui48.octets)::size();
-    } break;
+  switch (addr->sa_family) {
+    case AF_PACKET: {
+      if (addr_len < sizeof(sockaddr_ll)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      const auto& s = *reinterpret_cast<const sockaddr_ll*>(addr);
+      protocol_ = ntohs(s.sll_protocol);
+      interface_id_ = s.sll_ifindex;
+      switch (s.sll_halen) {
+        case 0:
+          eui48_storage_.reset();
+          return ZX_OK;
+        case ETH_ALEN: {
+          fnet::wire::MacAddress address;
+          static_assert(decltype(address.octets)::size() == ETH_ALEN,
+                        "eui48 address must have the same size as ETH_ALEN");
+          static_assert(sizeof(s.sll_addr) == ETH_ALEN + 2);
+          memcpy(address.octets.data(), s.sll_addr, ETH_ALEN);
+          eui48_storage_ = address;
+          return ZX_OK;
+        }
+        default:
+          return ZX_ERR_NOT_SUPPORTED;
+      }
+    }
+    default:
+      return ZX_ERR_INVALID_ARGS;
   }
 }
