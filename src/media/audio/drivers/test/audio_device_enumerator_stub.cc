@@ -11,12 +11,9 @@
 namespace media::audio::drivers::test {
 
 // fuchsia::media::AudioDeviceEnumerator impl
-void AudioDeviceEnumeratorStub::Start(
-    std::unique_ptr<component_testing::LocalComponentHandles> handles) {
-  handles_ = std::move(handles);
-  ASSERT_EQ(
-      handles_->outgoing()->AddPublicService(audio_device_enumerator_bindings_.GetHandler(this)),
-      ZX_OK);
+void AudioDeviceEnumeratorStub::OnStart() {
+  ASSERT_EQ(outgoing()->AddPublicService(audio_device_enumerator_bindings_.GetHandler(this)),
+            ZX_OK);
 }
 void AudioDeviceEnumeratorStub::GetDevices(GetDevicesCallback get_devices_cbk) {}
 void AudioDeviceEnumeratorStub::GetDeviceGain(uint64_t dev_id, GetDeviceGainCallback dev_gain_cbk) {

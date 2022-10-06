@@ -96,6 +96,7 @@ executable("realm_builder_test_bin") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fostr/fidl/fuchsia.component.decl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

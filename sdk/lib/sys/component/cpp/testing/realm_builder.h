@@ -168,25 +168,20 @@ class Realm final {
 
 #if __Fuchsia_API_level__ >= 9
   // Add a component by implementing a factory function that creates and returns
-  // a new instance of a |LocalComponent|-derived class. The factory function
-  // will be called whenever the local child is started.
+  // a new instance of a |LocalComponentImpl|-derived class. The factory
+  // function will be called whenever the local child is started.
   //
-  // After returning the |LocalComponent|, the RealmBuilder framework will call
-  // |LocalComponent::Start(handles)| with the |LocalComponentHandles|, which
-  // implements the component's runtime. Often, this involves serving
-  // capabilities implemented by the local component.
-  //
-  // Important: In most cases, |Start(handles)| must save the handles, typically
-  // by moving the handles to a field of the |LocalComponent|, before returning.
-  // For example, `handles_ = std::move(handles);` (unless the component calls
-  // `handles->Exit()` before returning from |Start(handles)|).
+  // After returning the |LocalComponentImpl|, the RealmBuilder framework will
+  // call |LocalComponentImpl::OnStart()|. Component handles (|ns()|, |svc()|,
+  // and |outgoing()|) are not available during the |LocalComponentImpl|
+  // construction, but are available when |OnStart()| is invoked.
   //
   // If the component's associated |ComponentController| receives a |Stop()|
-  // request, the |LocalComponent::Stop()| method will be called. A derived
-  // |LocalComponent| class can override the |Stop()| method if the component
-  // wishes to take some action during component stop.
+  // request, the |LocalComponentImpl::OnStop()| method will be called. A
+  // derived |LocalComponentImpl| class can override the |OnStop()| method if
+  // the component wishes to take some action during component stop.
   //
-  // A |LocalComponent| can also self-terminate, by calling `handles->Exit()`.
+  // A |LocalComponentImpl| can also self-terminate, by calling `Exit()`.
   //
   // Names must be unique. Duplicate names will result in a panic.
   Realm& AddLocalChild(const std::string& child_name, LocalComponentFactory local_impl,
@@ -241,7 +236,7 @@ class Realm final {
 
   std::string GetResolvedName(const std::string& child_name);
 
-  Realm& AddLocalChildImpl(const std::string& child_name, LocalComponentImpl local_impl,
+  Realm& AddLocalChildImpl(const std::string& child_name, LocalComponentKind local_impl,
                            ChildOptions options = kDefaultChildOptions);
 
   fuchsia::component::test::RealmSyncPtr realm_proxy_;
@@ -298,6 +293,7 @@ class RealmBuilder final {
   // Add a component by LocalComponentFactory.
   //
   // See |Realm.AddLocalChild| for more details.
+
   RealmBuilder& AddLocalChild(const std::string& child_name, LocalComponentFactory local_impl,
                               ChildOptions options = kDefaultChildOptions);
 #endif

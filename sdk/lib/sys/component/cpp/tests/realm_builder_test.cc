@@ -23,6 +23,7 @@
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/component/cpp/tests/utils.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
@@ -50,8 +51,6 @@ constexpr char kEchoServerUrl[] =
 constexpr char kEchoServerScUrl[] = "#meta/echo_server_sc.cm";
 constexpr char kEchoServerRelativeUrl[] = "#meta/echo_server.cm";
 constexpr char kEchoServiceServerUrl[] = "#meta/echo_service_server.cm";
-
-constexpr zx::duration kStopTimeout = zx::msec(500);
 
 class RealmBuilderTest : public gtest::RealLoopFixture {};
 
@@ -224,7 +223,54 @@ TEST_F(RealmBuilderTest, RoutesProtocolFromRelativeChild) {
   EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
-class LocalEchoServer : public test::placeholders::Echo, public LocalComponent {
+class LocalEchoServerByPtr : public test::placeholders::Echo, public LocalComponent {
+ public:
+  explicit LocalEchoServerByPtr(async_dispatcher_t* dispatcher, fit::closure on_start = nullptr,
+                                fit::closure on_destruct = nullptr)
+      : dispatcher_(dispatcher),
+        on_start_(std::move(on_start)),
+        on_destruct_(std::move(on_destruct)),
+        called_(false) {}
+
+  explicit LocalEchoServerByPtr(fit::closure quit_loop, async_dispatcher_t* dispatcher)
+      : quit_loop_(std::move(quit_loop)), dispatcher_(dispatcher), called_(false) {}
+
+  ~LocalEchoServerByPtr() override {
+    if (on_destruct_) {
+      on_destruct_();
+    }
+  }
+
+  void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
+    callback(std::move(value));
+    called_ = true;
+    if (quit_loop_) {
+      quit_loop_();
+    }
+  }
+
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+    if (on_start_) {
+      on_start_();
+    }
+    handles_ = std::move(handles);
+    ASSERT_EQ(handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)),
+              ZX_OK);
+  }
+
+  bool WasCalled() const { return called_; }
+
+ private:
+  fit::closure quit_loop_;
+  async_dispatcher_t* dispatcher_;
+  fit::closure on_start_;
+  fit::closure on_destruct_;
+  fidl::BindingSet<test::placeholders::Echo> bindings_;
+  bool called_;
+  std::unique_ptr<LocalComponentHandles> handles_;
+};
+
+class LocalEchoServer : public test::placeholders::Echo, public LocalComponentImpl {
  public:
   explicit LocalEchoServer(async_dispatcher_t* dispatcher, fit::closure on_start = nullptr,
                            fit::closure on_destruct = nullptr, bool exit_after_serve = false)
@@ -249,17 +295,15 @@ class LocalEchoServer : public test::placeholders::Echo, public LocalComponent {
     if (quit_loop_) {
       quit_loop_();
     } else if (exit_after_serve_) {
-      handles_->Exit(ZX_ERR_CANCELED);
+      Exit(ZX_ERR_CANCELED);
     }
   }
 
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+  void OnStart() override {
     if (on_start_) {
       on_start_();
     }
-    handles_ = std::move(handles);
-    ASSERT_EQ(handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)),
-              ZX_OK);
+    ASSERT_EQ(outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)), ZX_OK);
   }
 
   bool WasCalled() const { return called_; }
@@ -272,10 +316,9 @@ class LocalEchoServer : public test::placeholders::Echo, public LocalComponent {
   fidl::BindingSet<test::placeholders::Echo> bindings_;
   bool exit_after_serve_;
   bool called_;
-  std::unique_ptr<LocalComponentHandles> handles_;
 };
 
-// Tests and demonstrates that the deprecated AddLocalComponent(LocalComponent*)
+// Tests and demonstrates that the deprecated AddLocalChild(LocalComponent*)
 // still works.
 //
 // The Realm does not manage the lifecycle of LocalComponents added by raw
@@ -290,7 +333,7 @@ class LocalEchoServer : public test::placeholders::Echo, public LocalComponent {
 // The component cannot be restarted.
 TEST_F(RealmBuilderTest, RoutesProtocolFromLocalComponentRawPointer) {
   static constexpr char kEchoServer[] = "echo_server";
-  LocalEchoServer local_echo_server(QuitLoopClosure(), dispatcher());
+  LocalEchoServerByPtr local_echo_server(QuitLoopClosure(), dispatcher());
   auto realm_builder = RealmBuilder::Create();
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -309,12 +352,13 @@ TEST_F(RealmBuilderTest, RoutesProtocolFromLocalComponentRawPointer) {
 }
 
 // Demonstrates the recommended pattern for implementing a restartable
-// LocalComponent. A new LocalComponent is returned when requested. After
-// instance initiallization, the LocalComponentRunner calls `Start()`, where
-// the instance should capture the handles and create and store the bindings.
+// LocalComponentImpl. A new LocalComponentImpl is returned when requested.
+// After instance initialization, the LocalComponentRunner calls `OnStart()`,
+// and the handles are accessible via ns(), svc(), and outgoing(). The instance
+// should create and store the bindings.
 //
-// The component instance will continue to serve requests until the component
-// is stopped, or until it is destroyed with the Realm.
+// The component instance will continue to serve requests until the component is
+// stopped, or until it is destroyed with the Realm.
 TEST_F(RealmBuilderTest, RoutesProtocolUsesLocalComponentFactory) {
   static constexpr char kEchoServer[] = "echo_server";
   auto realm_builder = RealmBuilder::Create();
@@ -335,6 +379,14 @@ TEST_F(RealmBuilderTest, RoutesProtocolUsesLocalComponentFactory) {
   RunLoop();
 }
 
+// Demonstrates a LocalComponentImpl can restart after exit.
+//
+// Note that a test flake was reported in fxbug.dev/111225 in this test.
+// This test can occasionally time out, which probably means that at least
+// one of the expected events is not always occurring.
+//
+// I've added error handles on the proxies, and logging to track expected
+// events. If the flake happens again, the logs will help me understand why.
 TEST_F(RealmBuilderTest, ComponentCanStopAndBeRestarted) {
   static constexpr char kEchoServer[] = "echo_server";
   auto realm_builder = RealmBuilder::Create();
@@ -343,8 +395,17 @@ TEST_F(RealmBuilderTest, ComponentCanStopAndBeRestarted) {
   bool destructed = false;
   realm_builder.AddLocalChild(kEchoServer, [&]() {
     return std::make_unique<LocalEchoServer>(
-        dispatcher(), /*on_start=*/[&started]() { started = true; },
-        /*on_destruct=*/[&destructed]() { destructed = true; }, /*exit_after_serve=*/true);
+        dispatcher(), /*on_start=*/
+        [&started]() {
+          FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: started = true";
+          started = true;
+        },
+        /*on_destruct=*/
+        [&destructed]() {
+          FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: destructed = true";
+          destructed = true;
+        },
+        /*exit_after_serve=*/true);
   });
   realm_builder.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
                                .source = ChildRef{kEchoServer},
@@ -352,11 +413,17 @@ TEST_F(RealmBuilderTest, ComponentCanStopAndBeRestarted) {
   auto realm = realm_builder.Build(dispatcher());
   test::placeholders::EchoPtr echo;
   ASSERT_EQ(realm.Connect(echo.NewRequest()), ZX_OK);
+  echo.set_error_handler([&](zx_status_t status) {
+    FX_PLOGS(INFO, status) << "ComponentCanStopAndBeRestarted: Echo proxy error";
+  });
   echo->EchoString("hello", [&](fidl::StringPtr response) {
-    ASSERT_EQ(response, "hello");
+    FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: got_response = true, response = " << response;
     got_response = true;
+    ASSERT_EQ(response, "hello");
   });
 
+  FX_LOGS(INFO)
+      << "ComponentCanStopAndBeRestarted: waiting for started && got_response && destructed";
   RunLoopUntil([&]() { return started && got_response && destructed; });
 
   // reset the flags
@@ -367,51 +434,20 @@ TEST_F(RealmBuilderTest, ComponentCanStopAndBeRestarted) {
   // The component destructed, but it will start up again when another request
   // is made.
   ASSERT_EQ(realm.Connect(echo.NewRequest()), ZX_OK);
+  echo.set_error_handler([&](zx_status_t status) {
+    FX_PLOGS(INFO, status) << "ComponentCanStopAndBeRestarted: Echo proxy error";
+  });
   echo->EchoString("You're back!", [&](fidl::StringPtr response) {
+    FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: got_response = true, second response = "
+                  << response;
+    got_response = true;
     ASSERT_EQ(response, "You're back!");
-    got_response = true;
   });
 
+  FX_LOGS(INFO)
+      << "ComponentCanStopAndBeRestarted: waiting again for started && got_response && destructed";
   RunLoopUntil([&]() { return started && got_response && destructed; });
-}
-
-TEST_F(RealmBuilderTest, RawPointerComponentCannotBeRestarted) {
-  static constexpr char kEchoServer[] = "echo_server";
-  auto realm_builder = RealmBuilder::Create();
-  bool started = false;
-  bool got_response = false;
-  LocalEchoServer echo_server(
-      dispatcher(), /*on_start=*/[&started]() { started = true; }, /*on_destruct=*/nullptr,
-      /*exit_after_serve=*/true);
-  realm_builder.AddLocalChild(kEchoServer, &echo_server);
-  realm_builder.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
-                               .source = ChildRef{kEchoServer},
-                               .targets = {ParentRef()}});
-  auto realm = realm_builder.Build(dispatcher());
-  test::placeholders::EchoPtr echo;
-  ASSERT_EQ(realm.Connect(echo.NewRequest()), ZX_OK);
-  echo->EchoString("hello", [&](fidl::StringPtr response) {
-    ASSERT_EQ(response, "hello");
-    got_response = true;
-  });
-
-  RunLoopUntil([&]() { return started && got_response; });
-
-  RunLoopUntilIdle();
-
-  // reset the flags
-  started = false;
-  got_response = false;
-
-  // Try to make another request, but since exit_after_server was true,
-  // the component should no longer be available to the LocalComponentRunner.
-  ASSERT_EQ(realm.Connect(echo.NewRequest()), ZX_OK);
-  echo->EchoString("You're back!",
-                   [&](fidl::StringPtr response) { ASSERT_EQ(response, "You're back!"); });
-
-  ASSERT_DEATH({ RunLoop(); },
-               "Component manager requested a named LocalComponent that is unregistered, already "
-               "running, or not restartable.");
+  FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: done";
 }
 
 // Tests and demonstrates a discouraged pattern for calling AddLocalChild()
@@ -452,21 +488,21 @@ TEST_F(RealmBuilderTest, RoutesProtocolFromPrebuiltLocalComponentInstance) {
   EXPECT_TRUE(local_echo_server_ptr->WasCalled());
 }
 
-class EchoClientSyncLocalComponent : public LocalComponent {
+class EchoClientSyncLocalComponent : public LocalComponentImpl {
  public:
   explicit EchoClientSyncLocalComponent(fit::closure on_success)
       : on_success_(std::move(on_success)) {}
 
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+  void OnStart() override {
     test::placeholders::EchoSyncPtr echo;
-    ASSERT_EQ(handles->svc().Connect<test::placeholders::Echo>(echo.NewRequest()), ZX_OK);
+    ASSERT_EQ(svc().Connect<test::placeholders::Echo>(echo.NewRequest()), ZX_OK);
     fidl::StringPtr response;
     ASSERT_EQ(echo->EchoString("milk", &response), ZX_OK);
     ASSERT_EQ(response, fidl::StringPtr("milk"));
     if (on_success_) {
       on_success_();
     }
-    handles->Exit();
+    Exit();
   }
 
  private:
@@ -502,31 +538,29 @@ TEST_F(RealmBuilderTest, RoutesProtocolToLocalComponentSync) {
   RunLoopUntil([&success]() { return success; });
 }
 
-class EchoClientLocalComponent : public LocalComponent {
+class EchoClientLocalComponent : public LocalComponentImpl {
  public:
   explicit EchoClientLocalComponent(fit::closure on_success) : on_success_(std::move(on_success)) {}
 
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
-    handles_ = std::move(handles);
-    ASSERT_EQ(handles_->svc().Connect<test::placeholders::Echo>(echo_.NewRequest()), ZX_OK);
+  void OnStart() override {
+    ASSERT_EQ(svc().Connect<test::placeholders::Echo>(echo_.NewRequest()), ZX_OK);
     echo_->EchoString("hello", [&](const fidl::StringPtr& response) {
       ASSERT_EQ("hello", response);
       if (on_success_) {
         on_success_();
       }
-      handles_->Exit();
+      Exit();
     });
   }
 
  private:
-  std::unique_ptr<LocalComponentHandles> handles_;
   test::placeholders::EchoPtr echo_;
   fit::closure on_success_;
 };
 
 // Tests and demonstrates creating a local client-only component that uses
 // an asynchronous proxy binding to call a service and get a response. Since
-// the call is asynchronous, the component must not call `handles->Exit()`
+// the call is asynchronous, the component must not call `Exit()`
 // until it gets a response.
 TEST_F(RealmBuilderTest, RoutesProtocolToLocalComponentAsync) {
   static constexpr char kEchoClient[] = "echo_client";
@@ -549,55 +583,6 @@ TEST_F(RealmBuilderTest, RoutesProtocolToLocalComponentAsync) {
                                .targets = {ChildRef{kEchoServer}}});
   auto realm = realm_builder.Build(dispatcher());
   RunLoopUntil([&success]() { return success; });
-}
-
-class EchoClientLocalComponentDropsHandles : public LocalComponent {
- public:
-  explicit EchoClientLocalComponentDropsHandles(fit::closure on_success)
-      : on_success_(std::move(on_success)) {}
-
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
-    test::placeholders::EchoPtr echo;
-    ASSERT_EQ(handles->svc().Connect<test::placeholders::Echo>(echo.NewRequest()), ZX_OK);
-    echo->EchoString("hello", [&](const fidl::StringPtr& response) {
-      ASSERT_EQ("hello", response);
-      if (on_success_) {
-        on_success_();
-      }
-      handles->Exit();
-    });
-  }
-
- private:
-  fit::closure on_success_;
-};
-
-// Tests and demonstrates creating a local client-only component that should
-// continue running after `Start()` but if it doesn't capture the
-// LocalComponentHandles, the RealmBuilder API will fail an assertion.
-TEST_F(RealmBuilderTest, CrashesIfLocalComponentDropsHandlesWhileRunning) {
-  static constexpr char kEchoClient[] = "echo_client";
-  static constexpr char kEchoServer[] = "echo_server";
-
-  auto realm_builder = RealmBuilder::Create();
-  bool success = false;
-  realm_builder.AddLocalChild(
-      kEchoClient,
-      [&success]() {
-        return std::make_unique<EchoClientLocalComponentDropsHandles>(
-            [&success]() { success = true; });
-      },
-      ChildOptions{.startup_mode = StartupMode::EAGER});
-  realm_builder.AddChild(kEchoServer, kEchoServerUrl);
-  realm_builder.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
-                               .source = ChildRef{kEchoServer},
-                               .targets = {ChildRef{kEchoClient}}});
-  realm_builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
-                               .source = ParentRef(),
-                               .targets = {ChildRef{kEchoServer}}});
-  auto realm = realm_builder.Build(dispatcher());
-  ASSERT_DEATH({ RunLoopUntil([&success]() { return success; }); },
-               R"(The LocalComponent::Start\(\) method must save the LocalComponentHandles)");
 }
 
 TEST_F(RealmBuilderTest, RoutesServiceFromChild) {
@@ -677,24 +662,22 @@ TEST_F(RealmBuilderTest, RoutesProtocolFromLocalComponentInSubRealm) {
   RunLoop();
 }
 
-class FileReader : public LocalComponent {
+class FileReader : public LocalComponentImpl {
  public:
   explicit FileReader(fit::closure quit_loop) : quit_loop_(std::move(quit_loop)) {}
 
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
-    handles_ = std::move(handles);
+  void OnStart() override {
     started_ = true;
     quit_loop_();
   }
 
   std::string GetContentsAt(std::string_view dirpath, std::string_view filepath) {
-    ZX_ASSERT_MSG(handles_ != nullptr,
-                  "FileReader/GetContentsAt called before FileReader was started.");
+    ZX_ASSERT_MSG(started_, "FileReader/GetContentsAt called before FileReader was started.");
 
     constexpr static size_t kMaxBufferSize = 1024;
     static char kReadBuffer[kMaxBufferSize];
 
-    int dirfd = fdio_ns_opendir(handles_->ns());
+    int dirfd = fdio_ns_opendir(ns());
     ZX_ASSERT_MSG(dirfd > 0, "Failed to open root ns as a file descriptor: %s", strerror(errno));
 
     std::stringstream path_builder;
@@ -715,7 +698,6 @@ class FileReader : public LocalComponent {
  private:
   fit::closure quit_loop_;
   bool started_ = false;
-  std::unique_ptr<LocalComponentHandles> handles_;
 };
 
 TEST_F(RealmBuilderTest, RoutesReadOnlyDirectory) {
@@ -783,7 +765,7 @@ TEST_F(RealmBuilderTest, BuildsRealmFromRelativeUrl) {
   EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
-class SimpleComponent : public component_testing::LocalComponent {
+class SimpleComponent : public component_testing::LocalComponentImpl {
  public:
   SimpleComponent() = default;
   explicit SimpleComponent(fit::closure on_destruct)
@@ -795,12 +777,9 @@ class SimpleComponent : public component_testing::LocalComponent {
     }
   }
 
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
-    handles_ = std::move(handles);
-    started_ = true;
-  }
+  void OnStart() override { started_ = true; }
 
-  void Stop() override { stopping_ = true; }
+  void OnStop() override { stopping_ = true; }
 
   bool IsStarted() const { return started_; }
 
@@ -809,6 +788,30 @@ class SimpleComponent : public component_testing::LocalComponent {
  private:
   bool started_ = false;
   bool stopping_ = false;
+  std::unique_ptr<fit::closure> on_destruct_;
+};
+
+class SimpleComponentByPtr : public component_testing::LocalComponent {
+ public:
+  SimpleComponentByPtr() = default;
+  explicit SimpleComponentByPtr(fit::closure on_destruct)
+      : on_destruct_(std::make_unique<fit::closure>(std::move(on_destruct))) {}
+
+  ~SimpleComponentByPtr() override {
+    if (on_destruct_) {
+      (*on_destruct_)();
+    }
+  }
+
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+    handles_ = std::move(handles);
+    started_ = true;
+  }
+
+  bool IsStarted() const { return started_; }
+
+ private:
+  bool started_ = false;
   std::unique_ptr<fit::closure> on_destruct_;
   std::unique_ptr<LocalComponentHandles> handles_;
 };
@@ -854,7 +857,7 @@ TEST_F(RealmBuilderTest, LocalComponentGetsDestructedOnExit) {
   ASSERT_EQ(destructors_called, components.size());
 }
 
-// This test asserts that the LocalComponent::Stop() method is called when
+// This test asserts that the LocalComponentImpl::OnStop() method is called when
 // the component is stopped (which confirms that the ComponentController
 // would have also been dropped).
 TEST_F(RealmBuilderTest, LocalComponentGetsStop) {
@@ -902,61 +905,12 @@ TEST_F(RealmBuilderTest, LocalComponentGetsStop) {
   }
 }
 
-// This test asserts that the same test that invokes LocalComponent::Stop()
-// does not invoke Stop() if the LocalComponent was added via raw pointer.
-// This behavior is required because the pointer is not guaranteed to be valid,
-// though we assume it is valid long enough to call Start(), since existing
-// uses of the now-deprecated AddLocalChild(LocalComponent*) currently work.
-TEST_F(RealmBuilderTest, RawPtrLocalChildDoesNotGetStop) {
-  auto realm_builder = RealmBuilder::Create();
-
-  realm_builder.AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::sys2::LifecycleController::Name_}},
-            .source = FrameworkRef(),
-            .targets = {ParentRef{}}});
-
-  std::vector<SimpleComponent> components(3);
-  for (size_t i = 0; i < components.size(); ++i) {
-    std::string name = "numbered" + std::to_string(i);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    realm_builder.AddLocalChild(name, &components[i],
-                                ChildOptions{.startup_mode = StartupMode::EAGER});
-#pragma clang diagnostic pop
-  }
-
-  auto realm = std::make_optional<RealmRoot>(realm_builder.Build(dispatcher()));
-  for (const auto& component : components) {
-    ASSERT_FALSE(component.IsStarted());
-    ASSERT_FALSE(component.IsStopping());
-  }
-
-  // Verify all components have started.
-  for (const auto& component : components) {
-    RunLoopUntil([&]() { return component.IsStarted(); });
-  }
-
-  for (const auto& component : components) {
-    ASSERT_FALSE(component.IsStopping());
-  }
-
-  // Stop the components and verify all components have been asked to stop.
-  auto lifecycle_controller = realm->Connect<fuchsia::sys2::LifecycleController>();
-  for (size_t i = 0; i < components.size(); ++i) {
-    std::string const moniker = "./numbered" + std::to_string(i);
-    lifecycle_controller->Stop(moniker, false,
-                               [](auto result) { ASSERT_TRUE(result.is_response()); });
-    RunLoopWithTimeoutOrUntil([&]() { return components[i].IsStopping(); }, kStopTimeout);
-    ASSERT_FALSE(components[i].IsStopping());
-  }
-}
-
-// This test is nearly identicaly to the RealmBuilderTest.RoutesProtocolFromChild
-// test case above. The only difference is that it provides a svc directory
-// from the sys::Context singleton object to the Realm::Builder::Create method.
-// If the test passes, it must follow that Realm::Builder supplied a Context
-// object internally, otherwise the test component wouldn't be able to connect
-// to fuchsia.component.Realm protocol.
+// This test is nearly identically to the
+// RealmBuilderTest.RoutesProtocolFromChild test case above. The only difference
+// is that it provides a svc directory from the sys::Context singleton object to
+// the Realm::Builder::Create method. If the test passes, it must follow that
+// Realm::Builder supplied a Context object internally, otherwise the test
+// component wouldn't be able to connect to fuchsia.component.Realm protocol.
 TEST_F(RealmBuilderTest, UsesProvidedSvcDirectory) {
   auto context = sys::ComponentContext::Create();
   static constexpr char kEchoServer[] = "echo_server";
@@ -1016,6 +970,80 @@ TEST_F(RealmBuilderTest, CanCreateLongChildName) {
   }
 }
 
+TEST_F(RealmBuilderTest, PanicsWhenUsingHandlesFromConstructor) {
+  class UseNsTooEarly : public LocalComponentImpl {
+   public:
+    UseNsTooEarly() { ns(); }
+
+    void OnStart() {}
+  };
+
+  ASSERT_DEATH(
+      {
+        auto realm_builder = RealmBuilder::Create();
+        realm_builder.AddLocalChild(
+            "child", []() { return std::make_unique<UseNsTooEarly>(); },
+            ChildOptions{.startup_mode = StartupMode::EAGER});
+        auto realm = realm_builder.Build(dispatcher());
+        RunLoop();
+      },
+      "LocalComponentImpl::ns\\(\\) cannot be called until RealmBuilder calls OnStart\\(\\)");
+
+  class UseSvcTooEarly : public LocalComponentImpl {
+   public:
+    UseSvcTooEarly() { svc(); }
+
+    void OnStart() {}
+  };
+
+  ASSERT_DEATH(
+      {
+        auto realm_builder = RealmBuilder::Create();
+        realm_builder.AddLocalChild(
+            "child", []() { return std::make_unique<UseSvcTooEarly>(); },
+            ChildOptions{.startup_mode = StartupMode::EAGER});
+        auto realm = realm_builder.Build(dispatcher());
+        RunLoop();
+      },
+      "LocalComponentImpl::svc\\(\\) cannot be called until RealmBuilder calls OnStart\\(\\)");
+
+  class UseOutgoingTooEarly : public LocalComponentImpl {
+   public:
+    UseOutgoingTooEarly() { outgoing(); }
+
+    void OnStart() {}
+  };
+
+  ASSERT_DEATH(
+      {
+        auto realm_builder = RealmBuilder::Create();
+        realm_builder.AddLocalChild(
+            "child", []() { return std::make_unique<UseOutgoingTooEarly>(); },
+            ChildOptions{.startup_mode = StartupMode::EAGER});
+        auto realm = realm_builder.Build(dispatcher());
+        RunLoop();
+      },
+      "LocalComponentImpl::outgoing\\(\\) cannot be called until RealmBuilder calls OnStart\\(\\)");
+
+  class CallExitTooEarly : public LocalComponentImpl {
+   public:
+    CallExitTooEarly() { Exit(); }
+
+    void OnStart() {}
+  };
+
+  ASSERT_DEATH(
+      {
+        auto realm_builder = RealmBuilder::Create();
+        realm_builder.AddLocalChild(
+            "child", []() { return std::make_unique<CallExitTooEarly>(); },
+            ChildOptions{.startup_mode = StartupMode::EAGER});
+        auto realm = realm_builder.Build(dispatcher());
+        RunLoop();
+      },
+      "LocalComponentImpl::Exit\\(\\) cannot be called until RealmBuilder calls OnStart\\(\\)");
+}
+
 TEST_F(RealmBuilderTest, PanicsWhenBuildCalledMultipleTimes) {
   ASSERT_DEATH(
       {
@@ -1040,14 +1068,14 @@ TEST(RealmBuilderUnittest, PanicsIfChildNameIsEmpty) {
       },
       "");
 
-  class BasicLocalImpl : public LocalComponent {
-    void Start(std::unique_ptr<LocalComponentHandles> /* mock_handles */) override {}
+  class BasicLocalImpl : public LocalComponentImpl {
+    void OnStart() override {}
   };
   ASSERT_DEATH(
       {
         auto realm_builder = RealmBuilder::Create();
-        realm_builder.AddLocalChild("",
-                                    []() -> std::unique_ptr<LocalComponent> { return nullptr; });
+        realm_builder.AddLocalChild(
+            "", []() -> std::unique_ptr<LocalComponentImpl> { return nullptr; });
       },
       "");
 }
@@ -1111,11 +1139,11 @@ TEST(DirectoryContentsUnittest, PanicWhenGivenInvalidPath) {
       "");
 }
 
-class PlaceholderComponent : public LocalComponent {
+class PlaceholderComponent : public LocalComponentImpl {
  public:
   PlaceholderComponent() = default;
 
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {}
+  void OnStart() override {}
 };
 
 constexpr char kRoutingTestChildName[] = "foobar";

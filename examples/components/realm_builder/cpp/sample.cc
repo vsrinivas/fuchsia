@@ -80,30 +80,26 @@ TEST_F(RealmBuilderTest, RoutesFromEcho) {
 }
 
 // [START mock_component_impl_cpp]
-class LocalEchoServerImpl : public fidl::examples::routing::echo::Echo, public LocalComponent {
+class LocalEchoServerImpl : public fidl::examples::routing::echo::Echo, public LocalComponentImpl {
  public:
   explicit LocalEchoServerImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+
+  // Override `OnStart` from `LocalComponentImpl` class.
+  void OnStart() override {
+    // When `OnStart()` is called, this implementation can call methods to
+    // access handles to the component's incoming capabilities (`ns()` and
+    // `svc()`) and outgoing capabilities (`outgoing()`).
+    ASSERT_EQ(outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)), ZX_OK);
+  }
 
   // Override `EchoString` from `Echo` protocol.
   void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
     callback(std::move(value));
   }
 
-  // Override `Start` from `LocalComponent` class.
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
-    // Keep reference to `handles` in member variable.
-    // This class contains handles to the component's incoming
-    // and outgoing capabilities.
-    handles_ = std::move(handles);
-
-    ASSERT_EQ(handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)),
-              ZX_OK);
-  }
-
  private:
   async_dispatcher_t* dispatcher_;
   fidl::BindingSet<fidl::examples::routing::echo::Echo> bindings_;
-  std::unique_ptr<LocalComponentHandles> handles_;
 };
 // [END mock_component_impl_cpp]
 

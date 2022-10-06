@@ -66,10 +66,11 @@ class LocalComponentInstance final : public fuchsia::component::runner::Componen
 
   fidl::Binding<fuchsia::component::runner::ComponentController> binding_;
 
-  // If the component calls `handles->Exit()` during `LocalComponent::Start()`,
-  // the LocalComponentInstance will _not_ immediately call `Exit()`. It will
-  // save the provided status, and call `Exit()` after the component has
-  // `started_`.
+  // If a |LocalComponentImpl| calls `Exit()` during
+  // `LocalComponentImpl::OnStart()`, the LocalComponentInstance will _not_
+  // immediately call `LocalComponentInstance::Exit()`. It will save the
+  // provided status, and call `LocalComponentInstance::Exit()` after the
+  // component has `started_`.
   cpp17::optional<zx_status_t> pending_exit_status_;
 
   // Set to true at the beginning of `Start()`, and false at the completion
@@ -90,7 +91,7 @@ class LocalComponentInstance final : public fuchsia::component::runner::Componen
   fit::closure on_stop_;
 };
 
-using LocalComponents = std::map<std::string, LocalComponentImpl>;
+using LocalComponents = std::map<std::string, LocalComponentKind>;
 using LocalComponentInstances = std::map<std::string, std::unique_ptr<LocalComponentInstance>>;
 
 class LocalComponentRunner final : fuchsia::component::runner::ComponentRunner {
@@ -138,7 +139,7 @@ class LocalComponentRunner::Builder final {
 
   std::unique_ptr<LocalComponentRunner> Build(async_dispatcher_t* dispatcher);
 
-  void Register(std::string name, LocalComponentImpl mock);
+  void Register(std::string name, LocalComponentKind mock);
 
  private:
   bool Contains(std::string name) const;

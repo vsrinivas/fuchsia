@@ -26,7 +26,7 @@
 
 namespace component_testing {
 
-class LocalComponent;
+class LocalComponentImpl;
 
 namespace internal {
 class LocalComponentInstance;
@@ -105,19 +105,15 @@ class LocalComponentHandles final {
   // "/svc" in the namespace object returned by `ns()`.
   sys::ServiceDirectory svc();
 
-  // If the component calls |handles->Exit()|, the ComponentController binding
-  // will be dropped, which informs component manager that the component has
-  // stopped. For |LocalComponent| created by a |LocalComponentFactory| will
-  // also cause the Realm to drop the |LocalComponent|, which should destruct
-  // the component and the handles and bindings held by the component. Therefore
-  // the |LocalComponent| should not do anything else after calling
-  // |handles->Exit()|.
-  void Exit(zx_status_t return_code = ZX_OK);
-
   // [START_EXCLUDE]
  private:
+  friend LocalComponentImpl;
   friend internal::LocalComponentInstance;
   friend internal::LocalComponentRunner;
+
+  // Called by LocalComponentImpl::Exit().
+  void Exit(zx_status_t return_code = ZX_OK);
+
   fit::function<void(zx_status_t)> on_exit_;
   fit::closure on_destruct_;
   fdio_ns_t* namespace_;
@@ -128,6 +124,64 @@ class LocalComponentHandles final {
 
 // [START mock_interface_cpp]
 // The interface for backing implementations of components with a Source of Mock.
+class LocalComponentImpl {
+ public:
+  virtual ~LocalComponentImpl();
+
+  // Invoked when the Component Manager issues a Start request to the component.
+  // |mock_handles| contains the outgoing directory and namespace of
+  // the component.
+  virtual void OnStart() = 0;
+
+  // The LocalComponentImpl derived class may override this method to be informed if
+  // ComponentController::Stop() was called on the controller associated with
+  // the component instance. The ComponentController binding will be dropped
+  // automatically, immediately after LocalComponentImpl::OnStop() returns.
+  virtual void OnStop() {}
+
+  // The component can call this method to terminate its instance. This will
+  // release the handles, and drop the |ComponentController|, informing
+  // component manager that the component has stopped. Calling |Exit()| will
+  // also cause the Realm to drop the |LocalComponentImpl|, which should
+  // destruct the component, and the handles and bindings held by the component.
+  // Therefore the |LocalComponentImpl| should not do anything else after
+  // calling |Exit()|.
+  //
+  // This method is not valid until |OnStart()| is invoked.
+  void Exit(zx_status_t return_code = ZX_OK);
+
+  // Returns the namespace provided to the mock component.
+  //
+  // This method is not valid until |OnStart()| is invoked.
+  fdio_ns_t* ns();
+
+  // Returns a wrapper around the component's outgoing directory. The mock
+  // component may publish capabilities using the returned object.
+  //
+  // This method is not valid until |OnStart()| is invoked.
+  sys::OutgoingDirectory* outgoing();
+
+  // Convenience method to construct a ServiceDirectory by opening a handle to
+  // "/svc" in the namespace object returned by `ns()`.
+  //
+  // This method is not valid until |OnStart()| is invoked.
+  sys::ServiceDirectory svc();
+
+ private:
+  friend internal::LocalComponentRunner;
+  // The |LocalComponentHandles| are set by the |LocalComponentRunner| after
+  // construction by the factory, and before calling |OnStart()|
+  std::unique_ptr<LocalComponentHandles> handles_;
+};
+// [END mock_interface_cpp]
+
+// The use of this class is DEPRECATED.
+//
+// The interface for backing implementations of components with a Source of Mock
+// when added by deprecated method AddLocalChild(..., LocalComponent*, ...).
+//
+// TODO(fxbug.dev/109804): Remove this class when all uses have migrated to
+// `AddLocalChild(..., LocalComponentFactory, ...)`.
 class LocalComponent {
  public:
   virtual ~LocalComponent();
@@ -136,28 +190,20 @@ class LocalComponent {
   // |mock_handles| contains the outgoing directory and namespace of
   // the component.
   virtual void Start(std::unique_ptr<LocalComponentHandles> mock_handles) = 0;
-
-  // This method is only called for LocalComponent instances returned from a
-  // LocalComponentFactory (that is, for a component added to the realm
-  // via |RealmBuilder::AddLocalChild(name, LocalComponentFactory)|).
-  //
-  // The LocalComponent derived class may override this method to be informed if
-  // ComponentController::Stop() was called on the controller associated with
-  // the component instance. The ComponentController binding will be dropped
-  // automatically, immediately after LocalComponent::Stop() returns.
-  virtual void Stop() {}
 };
-// [END mock_interface_cpp]
 
-// Type for a function that returns a new |LocalComponent| when component
+// Type for a function that returns a new |LocalComponentImpl| when component
 // manager requests a new component instance.
 //
 // See |Realm.AddLocalChild| for more details.
-using LocalComponentFactory = fit::function<std::unique_ptr<LocalComponent>()>;
+using LocalComponentFactory = fit::function<std::unique_ptr<LocalComponentImpl>()>;
 
 // Type for either variation of implementation passed to AddLocalChild(): the
 // deprecated raw pointer, or one of the valid callback functions.
-using LocalComponentImpl = cpp17::variant<LocalComponent*, LocalComponentFactory>;
+//
+// TODO(fxbug.dev/109804): Remove this variant when all uses have migrated to
+// `AddLocalChild(..., LocalComponentFactory, ...)`.
+using LocalComponentKind = cpp17::variant<LocalComponent*, LocalComponentFactory>;
 
 using StartupMode = fuchsia::component::decl::StartupMode;
 

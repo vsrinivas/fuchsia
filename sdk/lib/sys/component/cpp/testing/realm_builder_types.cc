@@ -53,6 +53,33 @@ bool IsValidPath(std::string_view path) {
 
 LocalComponent::~LocalComponent() = default;
 
+LocalComponentImpl::~LocalComponentImpl() = default;
+
+fdio_ns_t* LocalComponentImpl::ns() {
+  ZX_ASSERT_MSG(handles_,
+                "LocalComponentImpl::ns() cannot be called until RealmBuilder calls OnStart()");
+  return handles_->ns();
+}
+
+sys::OutgoingDirectory* LocalComponentImpl::outgoing() {
+  ZX_ASSERT_MSG(
+      handles_,
+      "LocalComponentImpl::outgoing() cannot be called until RealmBuilder calls OnStart()");
+  return handles_->outgoing();
+}
+
+sys::ServiceDirectory LocalComponentImpl::svc() {
+  ZX_ASSERT_MSG(handles_,
+                "LocalComponentImpl::svc() cannot be called until RealmBuilder calls OnStart()");
+  return handles_->svc();
+}
+
+void LocalComponentImpl::Exit(zx_status_t return_code) {
+  ZX_ASSERT_MSG(handles_,
+                "LocalComponentImpl::Exit() cannot be called until RealmBuilder calls OnStart()");
+  return handles_->Exit(return_code);
+}
+
 LocalComponentHandles::LocalComponentHandles(fdio_ns_t* ns, sys::OutgoingDirectory outgoing_dir)
     : namespace_(ns), outgoing_dir_(std::move(outgoing_dir)) {}
 

@@ -76,15 +76,15 @@ Realm& Realm::AddLegacyChild(const std::string& child_name, const std::string& u
 
 Realm& Realm::AddLocalChild(const std::string& child_name, LocalComponent* local_impl,
                             ChildOptions options) {
-  return AddLocalChildImpl(child_name, LocalComponentImpl(local_impl), options);
+  return AddLocalChildImpl(child_name, LocalComponentKind(local_impl), options);
 }
 
 Realm& Realm::AddLocalChild(const std::string& child_name, LocalComponentFactory local_impl,
                             ChildOptions options) {
-  return AddLocalChildImpl(child_name, LocalComponentImpl(std::move(local_impl)), options);
+  return AddLocalChildImpl(child_name, LocalComponentKind(std::move(local_impl)), options);
 }
 
-Realm& Realm::AddLocalChildImpl(const std::string& child_name, LocalComponentImpl local_impl,
+Realm& Realm::AddLocalChildImpl(const std::string& child_name, LocalComponentKind local_impl,
                                 ChildOptions options) {
   if (cpp17::holds_alternative<LocalComponent*>(local_impl)) {
     ZX_SYS_ASSERT_NOT_NULL(cpp17::get<LocalComponent*>(local_impl));
@@ -293,7 +293,7 @@ RealmBuilder& RealmBuilder::AddLocalChild(const std::string& child_name, LocalCo
 RealmBuilder& RealmBuilder::AddLocalChild(const std::string& child_name,
                                           LocalComponentFactory local_impl, ChildOptions options) {
   ZX_ASSERT_MSG(!child_name.empty(), "child_name can't be empty");
-  root_.AddLocalChildImpl(child_name, LocalComponentImpl(std::move(local_impl)), options);
+  root_.AddLocalChildImpl(child_name, LocalComponentKind(std::move(local_impl)), options);
   return *this;
 }
 

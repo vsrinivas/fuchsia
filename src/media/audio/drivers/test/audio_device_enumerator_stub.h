@@ -14,9 +14,9 @@
 namespace media::audio::drivers::test {
 
 class AudioDeviceEnumeratorStub : public fuchsia::media::AudioDeviceEnumerator,
-                                  public component_testing::LocalComponent {
+                                  public component_testing::LocalComponentImpl {
  public:
-  void Start(std::unique_ptr<component_testing::LocalComponentHandles> mock_handles) override;
+  void OnStart() override;
 
   // fuchsia::media::AudioDeviceEnumerator impl
   void GetDevices(GetDevicesCallback get_devices_callback) final;
@@ -33,7 +33,6 @@ class AudioDeviceEnumeratorStub : public fuchsia::media::AudioDeviceEnumerator,
   bool channel_available() const { return channel_.is_valid(); }
 
  private:
-  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> audio_device_enumerator_bindings_;
 
