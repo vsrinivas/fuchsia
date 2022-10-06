@@ -16,6 +16,7 @@
 #include <fbl/vector.h>
 
 #include "proxy-protocol.h"
+#include "src/devices/bus/drivers/platform/platform-interrupt.h"
 
 // This class, along with PlatformProxyDevice, represent a platform device.
 // Platform devices run in separate devhosts than the platform bus driver.
@@ -95,6 +96,7 @@ class PlatformDevice : public PlatformDeviceType,
   inline uint32_t vid() const { return vid_; }
   inline uint32_t pid() const { return pid_; }
   inline uint32_t did() const { return did_; }
+  inline uint32_t instance_id() const { return instance_id_; }
 
   // Device protocol implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -130,6 +132,8 @@ class PlatformDevice : public PlatformDeviceType,
   zx_status_t RpcGetDeviceInfo(pdev_device_info_t* out_info);
   zx_status_t RpcGetMetadata(uint32_t index, uint32_t* out_type, uint8_t* buf, uint32_t buf_size,
                              uint32_t* actual);
+
+  zx_status_t CreateInterruptFragments();
 
   PlatformBus* bus_;
   char name_[ZX_DEVICE_NAME_MAX + 1];

@@ -242,6 +242,7 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_PLATFORM_DEV_PID".to_string(), 0x0301));
     keys.push(("BIND_PLATFORM_DEV_DID".to_string(), 0x0302));
     keys.push(("BIND_PLATFORM_DEV_INSTANCE_ID".to_string(), 0x0304));
+    keys.push(("BIND_PLATFORM_DEV_INTERRUPT_ID".to_string(), 0x0305));
 
     // ACPI binding variables at 0x04XX
     keys.push(("BIND_ACPI_BUS_TYPE".to_string(), 0x0400));

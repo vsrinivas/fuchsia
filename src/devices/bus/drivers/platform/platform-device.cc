@@ -19,8 +19,11 @@
 #include <string.h>
 #include <zircon/syscalls/resource.h>
 
+#include <fbl/string_printf.h>
+
 #include "src/devices/bus/drivers/platform/node-util.h"
 #include "src/devices/bus/drivers/platform/platform-bus.h"
+#include "src/devices/bus/drivers/platform/platform-interrupt.h"
 
 namespace platform_bus {
 
@@ -72,7 +75,7 @@ zx_status_t PlatformDevice::Create(fpbus::Node node, zx_device_t* parent, Platfo
                                    Type type, std::unique_ptr<platform_bus::PlatformDevice>* out) {
   fbl::AllocChecker ac;
   std::unique_ptr<platform_bus::PlatformDevice> dev(
-      new (&ac) platform_bus::PlatformDevice(parent, bus, type, node));
+      new (&ac) platform_bus::PlatformDevice(parent, bus, type, std::move(node)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -94,13 +97,29 @@ PlatformDevice::PlatformDevice(zx_device_t* parent, PlatformBus* bus, Type type,
       instance_id_(node.instance_id().value_or(0)),
       node_(std::move(node)),
       outgoing_(driver::OutgoingDirectory::Create(fdf::Dispatcher::GetCurrent()->get())) {
-  strlcpy(name_, node.name().value_or("no name?").data(), sizeof(name_));
+  strlcpy(name_, node_.name().value_or("no name?").data(), sizeof(name_));
 }
 
 zx_status_t PlatformDevice::Init() {
   if (type_ == Protocol) {
     // Protocol devices implement a subset of the platform bus protocol.
     restricted_ = std::make_unique<RestrictPlatformBus>(bus_);
+  }
+
+  if (node_.irq().has_value()) {
+    for (uint32_t i = 0; i < node_.irq()->size(); i++) {
+      auto fragment = std::make_unique<PlatformInterruptFragment>(
+          parent(), this, i, fdf::Dispatcher::GetCurrent()->async_dispatcher());
+      zx_status_t status = fragment->Add(fbl::StringPrintf("%s-irq%03u", name_, i).data(), this,
+                                         node_.irq().value()[i]);
+      if (status != ZX_OK) {
+        zxlogf(WARNING, "Failed to create interrupt fragment %u", i);
+        continue;
+      }
+
+      // The DDK takes ownership of the device.
+      __UNUSED auto unused = fragment.release();
+    }
   }
 
   return ZX_OK;

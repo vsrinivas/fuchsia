@@ -20,6 +20,10 @@ type Irq = table {
     1: irq uint32;
     /// `ZX_INTERRUPT_MODE_*` flags
     2: mode uint32;
+
+    /// Properties for this interrupt's fragment. Only used in DFv2.
+    3: properties
+            vector<fuchsia.driver.framework.NodeProperty>:fuchsia.driver.framework.MAX_PROPERTY_COUNT;
 };
 
 type Bti = table {

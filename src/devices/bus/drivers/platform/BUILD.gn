@@ -26,6 +26,7 @@ fuchsia_driver("platform-bus-driver") {
     "cpu-trace.cc",
     "platform-bus.cc",
     "platform-device.cc",
+    "platform-interrupt.cc",
   ]
   deps = [
     ":platform-bus-bind",
@@ -35,6 +36,7 @@ fuchsia_driver("platform-bus-driver") {
     "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.interrupt:fuchsia.hardware.interrupt_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/lib/driver2:cpp",
@@ -95,6 +97,7 @@ test("platform-bus-unittest") {
     "platform-bus-unittest.cc",
     "platform-bus.cc",
     "platform-device.cc",
+    "platform-interrupt.cc",
   ]
   deps = [
     ":platform-bus-bind",
@@ -105,6 +108,7 @@ test("platform-bus-unittest") {
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.powerimpl:fuchsia.hardware.powerimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.interrupt:fuchsia.hardware.interrupt_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_cpp_wire",
     "//sdk/lib/driver2:cpp",

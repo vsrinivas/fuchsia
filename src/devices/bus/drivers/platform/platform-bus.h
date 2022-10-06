@@ -15,6 +15,7 @@
 #include <lib/ddk/device.h>
 #include <lib/driver2/outgoing_directory.h>
 #include <lib/fdf/cpp/channel.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/iommu.h>
@@ -116,6 +117,8 @@ class PlatformBus : public PlatformBusType,
 
   driver::OutgoingDirectory& outgoing() { return outgoing_; }
 
+  fdf::UnownedDispatcher dispatcher() { return dispatcher_->borrow(); }
+
  private:
   fdf::WireClient<fuchsia_hardware_platform_bus::SysSuspend> suspend_cb_;
 
@@ -168,6 +171,7 @@ class PlatformBus : public PlatformBusType,
 
   zx_device_t* protocol_passthrough_ = nullptr;
   driver::OutgoingDirectory outgoing_;
+  fdf::UnownedDispatcher dispatcher_;
 };
 
 }  // namespace platform_bus
