@@ -10,6 +10,7 @@ use {
     serde_json::Value,
     std::{
         collections::HashSet,
+        ffi::OsStr,
         fs,
         io::{BufRead, BufReader, Write},
         iter::FromIterator,
@@ -77,6 +78,11 @@ pub fn check_includes(
     includepath: &Vec<PathBuf>,
     includeroot: &PathBuf,
 ) -> Result<(), Error> {
+    if file.extension() == Some(OsStr::new("cmx")) {
+        // Don't worry about v1 manifests anymore.
+        return Ok(());
+    }
+
     if let Some(path) = fromfile {
         let reader = BufReader::new(fs::File::open(path)?);
         for line in reader.lines() {
@@ -114,7 +120,9 @@ pub fn check_includes(
 
     // Write includes to depfile
     if let Some(depfile_path) = depfile {
-        write_depfile(depfile_path, stamp, &actual)?;
+        let mut inputs = actual.clone();
+        inputs.push(file.clone());
+        write_depfile(depfile_path, stamp, &inputs)?;
     }
 
     Ok(())
@@ -682,7 +690,7 @@ mod tests {
     fn test_expect_nothing() {
         let ctx = TestContext::new();
         let cmx1_path = ctx.new_include(
-            "some1.cmx",
+            "some1.cml",
             json!({
                 "program": {
                     "binary": "bin/hello_world"
@@ -694,7 +702,7 @@ mod tests {
         ctx.assert_no_depfile();
 
         let cmx2_path = ctx.new_include(
-            "some2.cmx",
+            "some2.cml",
             json!({
                 "include": [],
                 "program": {
@@ -705,7 +713,7 @@ mod tests {
         assert_matches!(ctx.check_includes(&cmx2_path, vec![]), Ok(()));
 
         let cmx3_path = ctx.new_include(
-            "some3.cmx",
+            "some3.cml",
             json!({
                 "include": [ "foo.cmx" ],
                 "program": {
@@ -719,42 +727,42 @@ mod tests {
     #[test]
     fn test_expect_something_present() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_include(
-            "some.cmx",
+        let cml_path = ctx.new_include(
+            "some.cml",
             json!({
-                "include": [ "foo.cmx", "bar.cmx" ],
+                "include": [ "foo.cml", "bar.cml" ],
                 "program": {
                     "binary": "bin/hello_world"
                 }
             }),
         );
-        let foo_path = ctx.new_include("foo.cmx", json!({}));
-        let bar_path = ctx.new_include("bar.cmx", json!({}));
-        assert_matches!(ctx.check_includes(&cmx_path, vec!["bar.cmx".into()]), Ok(()));
+        let foo_path = ctx.new_include("foo.cml", json!({}));
+        let bar_path = ctx.new_include("bar.cml", json!({}));
+        assert_matches!(ctx.check_includes(&cml_path, vec!["bar.cml".into()]), Ok(()));
         // Note that inputs are sorted to keep depfile contents stable,
         // so bar.cmx comes before foo.cmx.
-        ctx.assert_depfile_eq(&ctx.stamp, &[&bar_path, &foo_path]);
+        ctx.assert_depfile_eq(&ctx.stamp, &[&bar_path, &foo_path, &cml_path]);
     }
 
     #[test]
     fn test_expect_something_missing() {
         let ctx = TestContext::new();
-        let cmx1_path = ctx.new_include(
-            "some1.cmx",
+        let cml1_path = ctx.new_include(
+            "some1.cml",
             json!({
-                "include": [ "foo.cmx", "bar.cmx" ],
+                "include": [ "foo.cml", "bar.cml" ],
                 "program": {
                     "binary": "bin/hello_world"
                 }
             }),
         );
-        ctx.new_include("foo.cmx", json!({}));
-        ctx.new_include("bar.cmx", json!({}));
-        assert_matches!(ctx.check_includes(&cmx1_path, vec!["qux.cmx".into()]),
-                        Err(Error::Validate { filename, .. }) if filename == cmx1_path.to_str().map(String::from));
+        ctx.new_include("foo.cml", json!({}));
+        ctx.new_include("bar.cml", json!({}));
+        assert_matches!(ctx.check_includes(&cml1_path, vec!["qux.cml".into()]),
+                        Err(Error::Validate { filename, .. }) if filename == cml1_path.to_str().map(String::from));
 
-        let cmx2_path = ctx.new_include(
-            "some2.cmx",
+        let cml2_path = ctx.new_include(
+            "some2.cml",
             json!({
                 // No includes
                 "program": {
@@ -762,50 +770,50 @@ mod tests {
                 }
             }),
         );
-        assert_matches!(ctx.check_includes(&cmx2_path, vec!["qux.cmx".into()]),
-                        Err(Error::Validate { filename, .. }) if filename == cmx2_path.to_str().map(String::from));
+        assert_matches!(ctx.check_includes(&cml2_path, vec!["qux.cml".into()]),
+                        Err(Error::Validate { filename, .. }) if filename == cml2_path.to_str().map(String::from));
     }
 
     #[test]
     fn test_expect_something_transitive() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_include(
-            "some.cmx",
+        let cml_path = ctx.new_include(
+            "some.cml",
             json!({
-                "include": [ "foo.cmx" ],
+                "include": [ "foo.cml" ],
                 "program": {
                     "binary": "bin/hello_world"
                 }
             }),
         );
-        ctx.new_include("foo.cmx", json!({"include": [ "bar.cmx" ]}));
-        ctx.new_include("bar.cmx", json!({}));
-        assert_matches!(ctx.check_includes(&cmx_path, vec!["bar.cmx".into()]), Ok(()));
+        ctx.new_include("foo.cml", json!({"include": [ "bar.cml" ]}));
+        ctx.new_include("bar.cml", json!({}));
+        assert_matches!(ctx.check_includes(&cml_path, vec!["bar.cml".into()]), Ok(()));
     }
 
     #[test]
     fn test_expect_fromfile() {
         let ctx = TestContext::new();
-        let cmx_path = ctx.new_include(
-            "some.cmx",
+        let cml_path = ctx.new_include(
+            "some.cml",
             json!({
-                "include": [ "foo.cmx", "bar.cmx" ],
+                "include": [ "foo.cml", "bar.cml" ],
                 "program": {
                     "binary": "bin/hello_world"
                 }
             }),
         );
-        ctx.new_include("foo.cmx", json!({}));
-        ctx.new_include("bar.cmx", json!({}));
+        ctx.new_include("foo.cml", json!({}));
+        ctx.new_include("bar.cml", json!({}));
 
         let mut fromfile = LineWriter::new(File::create(ctx.fromfile.clone()).unwrap());
-        writeln!(fromfile, "foo.cmx").unwrap();
-        writeln!(fromfile, "bar.cmx").unwrap();
-        assert_matches!(ctx.check_includes(&cmx_path, vec![]), Ok(()));
+        writeln!(fromfile, "foo.cml").unwrap();
+        writeln!(fromfile, "bar.cml").unwrap();
+        assert_matches!(ctx.check_includes(&cml_path, vec![]), Ok(()));
 
         // Add another include that's missing
-        writeln!(fromfile, "qux.cmx").unwrap();
-        assert_matches!(ctx.check_includes(&cmx_path, vec![]),
-                        Err(Error::Validate { filename, .. }) if filename == cmx_path.to_str().map(String::from));
+        writeln!(fromfile, "qux.cml").unwrap();
+        assert_matches!(ctx.check_includes(&cml_path, vec![]),
+                        Err(Error::Validate { filename, .. }) if filename == cml_path.to_str().map(String::from));
     }
 }

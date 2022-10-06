@@ -21,12 +21,6 @@ import("//tools/cmc/build/cmx.gni")
 #     Type: string
 #     Default: target_name
 #
-#   check_includes (optional)
-#     Check against expect_includes() in deps.
-#     Warning: Do not disable this unless there is a good, documented reason.
-#     Type: boolean
-#     Default: true
-#
 #   restricted_features (optional)
 #     The set of restricted CML features to allow. Only applicable to v2 components.
 #     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
@@ -79,7 +73,6 @@ template("fuchsia_component_manifest") {
                                "manifest",
                                "metadata",
                                "restricted_features",
-                               "check_includes",
                                "testonly",
                                "visibility",
                                "experimental_force_runner",
@@ -94,6 +87,13 @@ template("fuchsia_component_manifest") {
         # NOTE: must be kept in sync with path in fuchsia_structured_config.gni
         config_values_package_path = "meta/$component_name.cvf"
       }
+
+      if (!defined(metadata)) {
+        metadata = {
+        }
+      }
+      metadata.component_manifest_path = [ manifest ]
+      metadata.component_manifest_path_barrier = []
     }
 
     # Add the manifest
@@ -238,7 +238,6 @@ template("fuchsia_component") {
                                  "manifest",
                                  "metadata",
                                  "restricted_features",
-                                 "check_includes",
                                  "testonly",
                                  "visibility",
                                  "experimental_force_runner",
@@ -256,6 +255,38 @@ template("fuchsia_component") {
       cm_label = ":$cm_target"
     } else {
       cm_label = invoker.cm_label
+    }
+
+    if (!defined(invoker.check_includes) || invoker.check_includes) {
+      _find_manifest_target = "${target_name}_locate_manifest"
+      generated_file(_find_manifest_target) {
+        forward_variables_from(invoker, [ "testonly" ])
+        visibility = [ ":*" ]
+        outputs = [ "$target_out_dir/$_find_manifest_target.json" ]
+        data_keys = [ "component_manifest_path" ]
+        walk_keys = [ "component_manifest_path_barrier" ]
+        rebase = root_build_dir
+        output_conversion = "json"
+        deps = [ cm_label ]
+      }
+      _find_manifest_target = ":$_find_manifest_target"
+
+      _include_check_target = "${target_name}_check_includes"
+      cmc_check_includes(_include_check_target) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+        inputs = get_target_outputs(_find_manifest_target)
+        visibility = [ ":*" ]
+
+        if (!defined(deps)) {
+          deps = []
+        }
+        deps += [ _find_manifest_target ]
+      }
+      _include_check_target = ":$_include_check_target"
     }
 
     # Check that the files the manifest references are going to be packaged
@@ -309,6 +340,9 @@ template("fuchsia_component") {
 
       if (check_references) {
         deps += [ validate_target ]
+      }
+      if (defined(_include_check_target)) {
+        deps += [ _include_check_target ]
       }
 
       metadata = {

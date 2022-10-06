@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/python/python_action.gni")
 import("//tools/cmc/build/cmc.gni")
 
 # Declares that any components that are dependent on this target (directly or
@@ -98,14 +99,7 @@ template("collect_expected_includes") {
                              "visibility",
                            ])
     outputs = [ "$target_out_dir/${target_name}_expected_includes" ]
-    ext = get_path_info(manifest, "extension")
-    if (ext == "cmx") {
-      data_keys = [ "cmc_expected_includes_cmx" ]
-    } else if (ext == "cml") {
-      data_keys = [ "cmc_expected_includes_cml" ]
-    } else {
-      assert(false, "Unexpected manifest extension for " + manifest)
-    }
+    data_keys = [ "cmc_expected_includes_cml" ]
     walk_keys = [ "expect_includes_barrier" ]
   }
 }
@@ -114,46 +108,57 @@ template("collect_expected_includes") {
 #
 # Parameters
 #
-#   manifest (required)
-#     [file] The path to the cmx file that is to be processed
+#   inputs (required)
+#     [list] Paths to JSON files containing manifest paths from GN metadata.
 #
 #   deps
 #   testonly
 #   visibility
 template("cmc_check_includes") {
+  assert(defined(invoker.inputs), "must provide inputs to cmc_check_includes")
+
   expected_includes_label = "${target_name}_expected_includes"
   collect_expected_includes(expected_includes_label) {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "manifest",
                              "metadata",
                              "testonly",
                              "visibility",
                            ])
   }
 
-  cmc(target_name) {
+  cmc_label = "//tools/cmc:install"
+  cmc_out_path = "${root_build_dir}/host-tools/cmc"
+
+  python_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "inputs",
                              "testonly",
                              "visibility",
                            ])
+    binary_label = "//tools/cmc/build:check_includes_script"
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":" + expected_includes_label ]
-    inputs =
-        [ invoker.manifest ] + get_target_outputs(":" + expected_includes_label)
+    deps += [
+      ":" + expected_includes_label,
+      cmc_label,
+    ]
+    inputs += get_target_outputs(":" + expected_includes_label)
+    inputs += [ cmc_out_path ]
     outputs = [ "$target_out_dir/$target_name.gn_stamp" ]
     depfile = "$target_gen_dir/$target_name.d"
 
     args = [
+             "--cmc-path",
+             rebase_path(cmc_out_path, root_build_dir),
              "--stamp",
              rebase_path(outputs[0], root_build_dir),
-             "check-includes",
-             rebase_path(invoker.manifest, root_build_dir),
+             "--manifest-metadata",
+             rebase_path(inputs[0], root_build_dir),
              "--fromfile",
              rebase_path(inputs[1], root_build_dir),
              "--depfile",

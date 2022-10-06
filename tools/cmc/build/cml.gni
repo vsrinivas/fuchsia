@@ -16,10 +16,6 @@ import("//tools/cmc/build/expect_includes.gni")
 #     [path] Name for the output.
 #     If not specified, the target name is used.
 #
-#   check_includes (optional)
-#     [boolean] Whether to check against expect_includes() in deps.
-#     Default: true
-#
 #   restricted_features (optional)
 #     [list of strings] The set of restricted CML features to allow.
 #     The set of features is allowlisted here: //tools/cmc/build/restricted/BUILD.gn
@@ -33,23 +29,6 @@ import("//tools/cmc/build/expect_includes.gni")
 #   testonly (optional)
 #   visibility (optional)
 template("cm") {
-  if (!defined(invoker.check_includes) || invoker.check_includes) {
-    check_includes_target = "${target_name}_check_includes"
-    cmc_check_includes(check_includes_target) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "manifest",
-                               "testonly",
-                             ])
-      visibility = [ ":*" ]
-    }
-
-    if (!defined(invoker.deps)) {
-      invoker.deps = []
-    }
-    invoker.deps += [ ":" + check_includes_target ]
-  }
   input_manifest = invoker.manifest
 
   # for the profile variant we need to inject a use clause for DebugData.
@@ -75,6 +54,9 @@ template("cm") {
                                "testonly",
                              ])
       visibility = [ ":*" ]
+    }
+    if (!defined(invoker.deps)) {
+      invoker.deps = []
     }
     invoker.deps += [ ":${target_name}_merge" ]
     merged = get_target_outputs(":${target_name}_merge")

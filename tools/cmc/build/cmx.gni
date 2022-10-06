@@ -169,28 +169,9 @@ template("cmx_format") {
 #   output_name (optional)
 #     [path] Name for the output.
 #     If not specified, the target name is used.
-#
-#   check_includes (optional)
-#     [boolean] Whether to check against expect_includes() in deps.
-#     Default: true
 template("cmx") {
   if (!defined(invoker.deps)) {
     invoker.deps = []
-  }
-
-  if (!defined(invoker.check_includes) || invoker.check_includes) {
-    check_includes_target = "${target_name}_check_includes"
-    cmc_check_includes(check_includes_target) {
-      forward_variables_from(invoker,
-                             [
-                               "check_includes",
-                               "deps",
-                               "manifest",
-                               "testonly",
-                             ])
-      visibility = [ ":*" ]
-    }
-    invoker.deps += [ ":" + check_includes_target ]
   }
 
   cmx_include("${target_name}_include.cmx") {
