@@ -212,4 +212,10 @@ type Struct = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints)
 }
 
+TEST(EnumsTests, GoodSimpleEnum) {
+  TestLibrary library;
+  library.AddFile("good/simple_enum.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 }  // namespace

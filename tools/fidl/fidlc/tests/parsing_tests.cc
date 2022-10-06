@@ -837,4 +837,10 @@ type Foo = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
+TEST(ParsingTests, BadMissingEqualsValueEnum) {
+  TestLibrary library;
+  library.AddFile("bad/unexpected_token_of_kind.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
+}
+
 }  // namespace

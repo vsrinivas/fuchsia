@@ -10,6 +10,8 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 -->
 
+<<error-catalog/_fi-0008.md>>
+
 <<error-catalog/_fi-0018.md>>
 
 <<error-catalog/_fi-0033.md>>

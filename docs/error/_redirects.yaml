@@ -8,6 +8,8 @@
 
 # Errcat redirects for the "fi" domain.
 redirects:
+- from: /fuchsia-src/error/fi-0008
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0008
 - from: /fuchsia-src/error/fi-0018
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0018
 - from: /fuchsia-src/error/fi-0033

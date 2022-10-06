@@ -22,8 +22,8 @@ constexpr UndocumentedErrorDef<5, char> ErrInvalidOctDigit("invalid oct digit '{
 constexpr UndocumentedErrorDef<6, std::string_view> ErrExpectedDeclaration(
     "invalid declaration type {}");
 constexpr UndocumentedErrorDef<7> ErrUnexpectedToken("found unexpected token");
-constexpr UndocumentedErrorDef<8, Token::KindAndSubkind, Token::KindAndSubkind>
-    ErrUnexpectedTokenOfKind("unexpected token {}, was expecting {}");
+constexpr ErrorDef<8, Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedTokenOfKind(
+    "unexpected token {}, was expecting {}");
 constexpr UndocumentedErrorDef<9, Token::KindAndSubkind, Token::KindAndSubkind>
     ErrUnexpectedIdentifier("unexpected identifier {}, was expecting {}");
 constexpr UndocumentedErrorDef<10, std::string_view> ErrInvalidIdentifier(
