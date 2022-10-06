@@ -1,0 +1,104 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/product.gni")
+
+# Path to the manifest file used to populate the bazel inputs available
+# from the @legacy_ninja_build_outputs repository. This must be relative
+# to the Ninja output directory, and must be kept in sync with
+# toplevel.WORKSPACE.bazel and toplevel.MODULE.bazel. For more details
+# see comments in //build/bazel/BUILD.gn
+bazel_inputs_manifest = "$root_build_dir/gen/build/bazel/legacy_ninja_build_outputs.inputs_manifest.json"
+
+# This header defines the list of all dependencies used to collect the
+# bazel_input_xxx() target definitions that will populate the special
+# `@legacy_ninja_build_outputs` Bazel repository.
+#
+#   gn_labels_for_bazel_inputs:
+#     a list of GN labels to bazel_input_xxx() targets, or to targets
+#     that have them in their dependency tree.
+#
+#     IMPORTANT: Targets belonging to //vendor/... are not allowed in
+#     this list, i.e. these labels should only point to BUILD.gn that
+#     belong to the open-source Fuchsia checkout. For vendor-specific
+#     labels, use extra_gn_labels_for_bazel_inputs instead (see below).
+#
+#   extra_gn_labels_for_bazel_inputs:
+#     A list of extra labels to bazel inputs, which can be set in args.gn.
+#     Useful to list any label that is part of //vendor/..., or to add
+#     experimental labels during local development.
+#
+gn_labels_for_bazel_inputs = [
+  "//build/bazel:build_args_bazel_inputs",
+  "//build/bazel/tests/bazel_input_resource_directory:bazel_inputs",
+  "//build/bazel/tests/build_action",
+  "//sdk:core",
+]
+
+_assembly_deps = [ "assembly:bazel_platform_aibs" ]
+if (use_bringup_assembly) {
+  _assembly_deps += [
+    "//build/images/bringup:bringup.bazel_images_config_inputs",
+    "//build/images/bringup:bringup.bazel_legacy_aib",
+  ]
+} else {
+  _assembly_deps += [
+    "//build/images/fuchsia:fuchsia.bazel_images_config_inputs",
+    "//build/images/fuchsia:fuchsia.bazel_legacy_aib",
+  ]
+}
+gn_labels_for_bazel_inputs += _assembly_deps
+
+declare_args() {
+  # A list of extra labels to bazel_input_xxx() targets that complement
+  # `gn_labels_for_bazel_inputs`. These labels can be defined anywhere,
+  # including the //vendor/... directory.
+  #
+  # This can be set in args.gn by vendor-specific build configurations.
+  # Consider the following example from a fictitious
+  # //vendor/acme/proprietary/BUILD.gn file:
+  #
+  #      # Generate the firmware for our device.
+  #      action("generate_firmware") {
+  #        ...
+  #      }
+  #
+  #      # Ensure the generated firmware is visible to Bazel as a filegroup()
+  #      # @legacy_ninja_build_outputs repository//:acme_firmware
+  #      bazel_input_resource("acme_firmware") {
+  #        deps = [ ":generate_firmware" ]
+  #        sources = get_target_outputs(deps[0])
+  #        outputs = [ "{{source_file_part}}" ]
+  #        visibility = [ ":*" ]
+  #      }
+  #
+  #      # Build the installer with Bazel.
+  #      bazel_build_action("build_installer") {
+  #        bazel_targets = "//vendor/acme/proprietary/installer"
+  #        bazel_inputs = [ ":acme_firmware" ]
+  #        bazel_outputs = [ "vendor/acme/proprietary/installer/installer" ]
+  #        ninja_outputs = [ "installer" ]
+  #      }
+  #
+  # Which requires the following, which could be in args.gn, or in a file
+  # imported from it (e.g. //vendor/acme/products/device.gni):
+  #
+  #    extra_gn_labels_for_bazel_inputs = [
+  #      "//vendor/acme/proprietary:build_installer"
+  #    ]
+  #
+  # In order to ensure that the @legacy_ninja_build_outputs//:acme_firmware
+  # filegroup() will be defined and properly generated before building
+  # vendor/acme/proprietary:build_installer with Ninja:
+  #
+  extra_gn_labels_for_bazel_inputs = []
+}
+
+# Check that none of the dependencies listed in |gn_labels_for_bazel_inputs|
+# belong to //vendor/.
+foreach(dep, gn_labels_for_bazel_inputs) {
+  assert(
+      string_replace("##{dep}", "##//vendor/", "") == "##{dep}",
+      "Dependencies that belong to //vendor/ should not got into gn_labels_for_bazel_inputs$0x0a" + "Add then to extra_gn_labels_for_bazel_inputs in your args.gn instead!")
+}

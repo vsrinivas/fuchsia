@@ -4,6 +4,7 @@
 
 import("//build/bazel/bazel_inputs.gni")
 import("//build/bazel/bazel_workspace.gni")
+import("//build/bazel/legacy_ninja_build_outputs.gni")
 import("//build/images/vbmeta.gni")
 import("//build/product.gni")
 
@@ -35,33 +36,11 @@ assert(current_toolchain == default_toolchain,
 bazel_inputs_manifest("legacy_ninja_build_outputs") {
   testonly = true
 
-  # IMPORTANT: Keep this in sync with toplevel.WORKSPACE.bazel
-  output = "$root_build_dir/gen/build/bazel/legacy_ninja_build_outputs.inputs_manifest.json"
+  output = bazel_inputs_manifest
 
-  # IMPORTANT: All bazel_input_resource_xxx() targets must be reachable
-  # from this dependencies list!
-  inputs_deps = [
-    ":build_args_bazel_inputs",
-    "//build/bazel/tests/bazel_input_resource_directory:bazel_inputs",
-    "//build/bazel/tests/build_action:bazel_inputs",
-
-    # This dependency is required to properly populate @fuchsia_sdk for
-    # @rules_fuchsia//:fuchsia/workspace/fuchsia_sdk_repository.bzl
-    "//sdk:core",
-  ]
-
-  inputs_deps += [ "assembly:bazel_platform_aibs" ]
-  if (use_bringup_assembly) {
-    inputs_deps += [
-      "//build/images/bringup:bringup.bazel_images_config_inputs",
-      "//build/images/bringup:bringup.bazel_legacy_aib",
-    ]
-  } else {
-    inputs_deps += [
-      "//build/images/fuchsia:fuchsia.bazel_images_config_inputs",
-      "//build/images/fuchsia:fuchsia.bazel_legacy_aib",
-    ]
-  }
+  # IMPORTANT: All bazel_input_xxx() targets must be reachable from this
+  # dependencies list!
+  inputs_deps = gn_labels_for_bazel_inputs + extra_gn_labels_for_bazel_inputs
 }
 
 # Used by bazel_build_action() to only allow one concurrent `bazel build`
@@ -110,6 +89,12 @@ action("generate_main_workspace") {
     "//prebuilt/third_party/bazel/${host_os}-${host_cpu}/bazel",
   ]
 
+  deps = [
+    # This dependency is required to properly populate @fuchsia_sdk for
+    # @rules_fuchsia//:fuchsia/workspace/fuchsia_sdk_repository.bzl
+    "//sdk:core",
+  ]
+
   outputs = [
     "$target_gen_dir/bazel",
     "$target_gen_dir/generated-info.json",
@@ -151,6 +136,10 @@ action("generate_fuchsia_sdk_repository") {
       },
     ]
   }
+
+  # This cannot be hermetic as well since it creates a ton of
+  # files in the output base that cannot be listed in advance.
+  hermetic_deps = false
 }
 
 # Generate a build_args.bzl file that contains Bazel-specific constant

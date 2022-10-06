@@ -8,6 +8,7 @@
 import argparse
 import errno
 import filecmp
+import json
 import os
 import shlex
 import shutil
@@ -42,6 +43,15 @@ def main():
     parser.add_argument(
         '--workspace-dir', required=True, help='Bazel workspace path')
     parser.add_argument(
+        '--inputs-manifest',
+        help=
+        'Path to the manifest file describing Ninja outputs as bazel inputs.')
+    parser.add_argument(
+        '--bazel-inputs',
+        default=[],
+        nargs='*',
+        help='Labels of GN bazel_input_xxx() targets for this action.')
+    parser.add_argument(
         '--bazel-targets',
         action='append',
         default=[],
@@ -73,6 +83,31 @@ def main():
         return parser.error(
             'The --bazel-outputs and --ninja-outputs lists must have the same size!'
         )
+
+    if args.bazel_inputs:
+        if not args.inputs_manifest:
+            return parser.error(
+                '--inputs-manifest is required with --bazel-inputs')
+
+        # Verify that all bazel input labels are pare of the inputs manifest.
+        # If not, print a user-friendly message that explains the situation and
+        # how to fix it.
+        with open(args.inputs_manifest) as f:
+            inputs_manifest = json.load(f)
+
+        all_input_labels = set(e['gn_label'] for e in inputs_manifest)
+        unknown_labels = set(args.bazel_inputs) - all_input_labels
+        if unknown_labels:
+            print(
+                '''ERROR: The following bazel_inputs labels are not listed in the Bazel inputs manifest:
+
+  %s
+
+These labels must be in one of `gn_labels_for_bazel_inputs` or `extra_gn_labels_for_bazel_inputs`.
+For more details, see the comments in //build/bazel/legacy_ninja_build_outputs.gni.
+''' % '\n  '.join(list(unknown_labels)),
+                file=sys.stderr)
+            return 1
 
     if args.extra_bazel_args and args.extra_bazel_args[0] != '--':
         return parser.error(

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bazel/bazel_workspace.gni")
+import("//build/bazel/legacy_ninja_build_outputs.gni")
 
 assert(current_toolchain == default_toolchain)
 
@@ -113,8 +114,19 @@ template("bazel_build_action") {
     _outputs += [ target_gen_dir + "/" + path ]
   }
 
+  _inputs = []
+  foreach(label, invoker.bazel_inputs) {
+    _inputs += [ get_label_info(label, "label_with_toolchain") ]
+  }
+
   action(target_name) {
     script = "//build/bazel/scripts/bazel_build_action.py"
+
+    # NOTE: Do not add bazel_inputs_manifest to the list of inputs
+    # because *nothing* should depend on the target that generates
+    # it. Moreoever, it is testonly=true, which would prevent
+    # non-testonly bazel_build_action() from being added to the GN graph.
+    # This is "safe" because the file is generated at GN gen time.
     inputs = [ bazel_launcher ]
     outputs = _outputs
     args = [
@@ -122,10 +134,12 @@ template("bazel_build_action") {
              rebase_path(bazel_launcher, root_build_dir),
              "--workspace-dir",
              rebase_path(bazel_workspace_dir, root_build_dir),
-             "--bazel-outputs",
-           ] + invoker.bazel_outputs + [ "--bazel-targets" ] +
-           invoker.bazel_targets + [ "--ninja-outputs" ] +
-           rebase_path(_outputs, root_build_dir)
+             "--inputs-manifest",
+             rebase_path(bazel_inputs_manifest, root_build_dir),
+             "--bazel-inputs",
+           ] + _inputs + [ "--bazel-outputs" ] + invoker.bazel_outputs +
+           [ "--bazel-targets" ] + invoker.bazel_targets +
+           [ "--ninja-outputs" ] + rebase_path(_outputs, root_build_dir)
     if (defined(invoker.extra_bazel_args)) {
       args += [ "--" ] + invoker.extra_bazel_args
     }
