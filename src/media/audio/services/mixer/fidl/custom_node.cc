@@ -264,7 +264,7 @@ CustomNode::ChildSourceNode::ChildSourceNode(std::string_view name,
                                              PipelineStagePtr pipeline_stage, NodePtr parent,
                                              GraphDetachedThreadPtr detached_thread,
                                              const Format& format, zx::duration presentation_delay)
-    : Node(name, /*is_meta=*/false, parent->reference_clock(), pipeline_direction,
+    : Node(Type::kCustom, name, parent->reference_clock(), pipeline_direction,
            std::move(pipeline_stage), std::move(parent)),
       format_(format),
       presentation_delay_(presentation_delay) {
@@ -289,7 +289,7 @@ CustomNode::ChildDestNode::ChildDestNode(std::string_view name,
                                          PipelineDirection pipeline_direction,
                                          PipelineStagePtr pipeline_stage, NodePtr parent,
                                          GraphDetachedThreadPtr detached_thread)
-    : Node(name, /*is_meta=*/false, parent->reference_clock(), pipeline_direction,
+    : Node(Type::kCustom, name, parent->reference_clock(), pipeline_direction,
            std::move(pipeline_stage), std::move(parent)) {
   set_thread(std::move(detached_thread));
 }
@@ -309,7 +309,7 @@ bool CustomNode::ChildDestNode::AllowsDest() const { return true; }
 
 CustomNode::CustomNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                        PipelineDirection pipeline_direction)
-    : Node(name, /*is_meta=*/true, std::move(reference_clock), pipeline_direction,
+    : Node(Type::kMeta, name, std::move(reference_clock), pipeline_direction,
            /*pipeline_stage=*/nullptr, /*parent=*/nullptr) {}
 
 void CustomNode::InitializeChildNodes(PipelineStagePtr pipeline_stage, NodePtr parent,

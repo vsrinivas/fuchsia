@@ -19,14 +19,14 @@ namespace media_audio {
 // nullptr, this typically implies that `node` is a producer node where the downstream delay does
 // not depend on an incoming source node.
 //
-// REQUIRED: !node.is_meta()
+// REQUIRED: node.type() != Node::Type::kMeta
 // REQUIRED: if source != nullptr, then source is in node->sources()
 zx::duration ComputeDownstreamDelay(const Node& node, const Node* source);
 
 // Computes the total upstream delay starting from a given `node` in a mix graph. This includes the
 // delay added by `node`, plus the delay from all incoming paths.
 //
-// REQUIRED: !node.is_meta()
+// REQUIRED: node.type() != Node::Type::kMeta
 zx::duration ComputeUpstreamDelay(const Node& node);
 
 // Reports whether there exists a path from `source` to `dest`. The nodes may be ordinary nodes
@@ -92,7 +92,7 @@ bool ExistsPath(const Node& source, const Node& dest);
 //
 // Returns the set of PipelineStages that must move to `new_thread->pipeline_thread()`.
 //
-// REQUIRED: !node->is_meta()
+// REQUIRED: node.type() != Node::Type::kMeta
 std::vector<PipelineStagePtr> MoveNodeToThread(Node& node, std::shared_ptr<GraphThread> new_thread,
                                                std::shared_ptr<GraphThread> expected_thread);
 
@@ -104,7 +104,7 @@ std::vector<PipelineStagePtr> MoveNodeToThread(Node& node, std::shared_ptr<Graph
 // The return value is the set of PipelineStages whose count has changed. PipelineStages are grouped
 // by thread ID to simplify how this result is used in node.cc.
 //
-// REQUIRED: !node->is_meta()
+// REQUIRED: node.type() != Node::Type::kMeta
 std::unordered_map<ThreadId, std::unordered_map<PipelineStagePtr, int64_t>>
 RecomputeMaxDownstreamConsumers(Node& node);
 

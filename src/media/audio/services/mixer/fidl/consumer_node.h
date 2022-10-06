@@ -46,7 +46,6 @@ class ConsumerNode : public Node {
   void Stop(ConsumerStage::StopCommand cmd) const;
 
   // Implements `Node`.
-  bool is_consumer() const final { return true; }
   zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
  private:
@@ -57,7 +56,6 @@ class ConsumerNode : public Node {
                const Format& format, std::shared_ptr<CommandQueue> command_queue,
                std::shared_ptr<GraphMixThread> mix_thread);
 
-  // Implementation of Node.
   NodePtr CreateNewChildSource() final {
     UNREACHABLE << "CreateNewChildSource should not be called on ordinary nodes";
   }

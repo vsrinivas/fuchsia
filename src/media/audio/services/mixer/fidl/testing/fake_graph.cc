@@ -7,6 +7,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
+#include <unordered_map>
+
 #include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
@@ -20,17 +22,24 @@ namespace {
 
 const Format kDefaultFormat = Format::CreateOrDie({fuchsia_audio::SampleType::kInt16, 1, 16000});
 
+Node::Type NodeTypeFromId(const std::unordered_map<NodeId, Node::Type>& types, NodeId id) {
+  if (const auto it = types.find(id); it != types.end()) {
+    return it->second;
+  }
+  return Node::Type::kFake;
+}
+
 }  // namespace
 
-FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, PipelineDirection pipeline_direction,
+FakeNode::FakeNode(FakeGraph& graph, NodeId id, Type type, PipelineDirection pipeline_direction,
                    FakeNodePtr parent, const Format* format)
-    : Node(std::string("Node") + std::to_string(id), is_meta, DefaultClock(), pipeline_direction,
-           is_meta ? nullptr
-                   : FakePipelineStage::Create({
-                         .name = "PipelineStage" + std::to_string(id),
-                         .format = *format,
-                         .reference_clock = DefaultUnreadableClock(),
-                     }),
+    : Node(type, std::string("Node") + std::to_string(id), DefaultClock(), pipeline_direction,
+           type == Node::Type::kMeta ? nullptr
+                                     : FakePipelineStage::Create({
+                                           .name = "PipelineStage" + std::to_string(id),
+                                           .format = *format,
+                                           .reference_clock = DefaultUnreadableClock(),
+                                       }),
            std::move(parent)),
       graph_(graph) {}
 
@@ -85,6 +94,14 @@ FakeGraph::FakeGraph(Args args)
       default_pipeline_direction_(args.default_pipeline_direction),
       global_task_queue_(std::make_shared<GlobalTaskQueue>()),
       detached_thread_(std::make_shared<GraphDetachedThread>(global_task_queue_)) {
+  // Populate `types`.
+  std::unordered_map<NodeId, Node::Type> types;
+  for (const auto& [type, nodes] : args.types) {
+    for (auto id : nodes) {
+      types[id] = type;
+    }
+  }
+
   // Populate `formats_`.
   for (auto& [format_ptr, nodes] : args.formats) {
     auto format = std::make_shared<Format>(*format_ptr);
@@ -100,12 +117,12 @@ FakeGraph::FakeGraph(Args args)
     if (meta_args.built_in_children) {
       std::vector<NodePtr> builtin_sources;
       for (auto id : meta_args.source_children) {
-        builtin_sources.push_back(CreateOrdinaryNode(id, meta));
+        builtin_sources.push_back(CreateOrdinaryNode(id, meta, NodeTypeFromId(types, id)));
       }
 
       std::vector<NodePtr> builtin_dests;
       for (auto id : meta_args.dest_children) {
-        builtin_dests.push_back(CreateOrdinaryNode(id, meta));
+        builtin_dests.push_back(CreateOrdinaryNode(id, meta, NodeTypeFromId(types, id)));
       }
 
       meta->SetBuiltInChildren(std::move(builtin_sources), std::move(builtin_dests));
@@ -113,17 +130,17 @@ FakeGraph::FakeGraph(Args args)
     }
 
     for (auto id : meta_args.source_children) {
-      meta->AddChildSource(CreateOrdinaryNode(id, meta));
+      meta->AddChildSource(CreateOrdinaryNode(id, meta, NodeTypeFromId(types, id)));
     }
     for (auto id : meta_args.dest_children) {
-      meta->AddChildDest(CreateOrdinaryNode(id, meta));
+      meta->AddChildDest(CreateOrdinaryNode(id, meta, NodeTypeFromId(types, id)));
     }
   }
 
   // Create all edges.
   for (auto& edge : args.edges) {
-    auto source = CreateOrdinaryNode(edge.source, nullptr);
-    auto dest = CreateOrdinaryNode(edge.dest, nullptr);
+    auto source = CreateOrdinaryNode(edge.source, nullptr, NodeTypeFromId(types, edge.source));
+    auto dest = CreateOrdinaryNode(edge.dest, nullptr, NodeTypeFromId(types, edge.dest));
     // Ordinary nodes can have at most one destination.
     if (source->dest()) {
       FX_CHECK(source->dest() == dest)
@@ -140,7 +157,7 @@ FakeGraph::FakeGraph(Args args)
   // unconnected, none of these nodes should exist yet.
   for (auto& n : args.unconnected_ordinary_nodes) {
     FX_CHECK(nodes_.find(n) == nodes_.end()) << "node " << n << " already created";
-    CreateOrdinaryNode(n, nullptr);
+    CreateOrdinaryNode(n, nullptr, NodeTypeFromId(types, n));
   }
 
   // Assign to threads.
@@ -169,7 +186,7 @@ FakeGraph::~FakeGraph() {
     Node::Destroy(*global_task_queue_, detached_thread_, node);
     // Also clear PipelineStage sources. This is necessary in certain error-case tests, such as
     // tests that intentionally create cycles.
-    if (!node->is_meta()) {
+    if (node->type() != Node::Type::kMeta) {
       auto stage = node->fake_pipeline_stage();
       while (!stage->sources().empty()) {
         stage->RemoveSource(*stage->sources().begin());
@@ -190,7 +207,7 @@ FakeGraphThreadPtr FakeGraph::CreateThread(std::optional<ThreadId> id) {
 FakeNodePtr FakeGraph::CreateMetaNode(std::optional<NodeId> id) {
   if (id) {
     if (auto it = nodes_.find(*id); it != nodes_.end()) {
-      FX_CHECK(it->second->is_meta())
+      FX_CHECK(it->second->type() == Node::Type::kMeta)
           << "node " << *id << " cannot be both a meta and ordinary node";
       return it->second;
     }
@@ -199,15 +216,16 @@ FakeNodePtr FakeGraph::CreateMetaNode(std::optional<NodeId> id) {
   }
 
   std::shared_ptr<FakeNode> node(
-      new FakeNode(*this, *id, true, PipelineDirectionForNode(*id), nullptr, nullptr));
+      new FakeNode(*this, *id, Node::Type::kMeta, PipelineDirectionForNode(*id), nullptr, nullptr));
   nodes_[*id] = node;
   return node;
 }
 
-FakeNodePtr FakeGraph::CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr parent) {
+FakeNodePtr FakeGraph::CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr parent,
+                                          Node::Type type) {
   if (id) {
     if (auto it = nodes_.find(*id); it != nodes_.end()) {
-      FX_CHECK(!it->second->is_meta())
+      FX_CHECK(it->second->type() != Node::Type::kMeta)
           << "node " << *id << " cannot be both a meta and ordinary node";
       // If parent is specified, it must match.
       if (parent) {
@@ -226,7 +244,7 @@ FakeNodePtr FakeGraph::CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr 
       parent ? parent->pipeline_direction() : PipelineDirectionForNode(*id);
 
   std::shared_ptr<FakeNode> node(
-      new FakeNode(*this, *id, false, pipeline_direction, parent, format));
+      new FakeNode(*this, *id, type, pipeline_direction, parent, format));
   nodes_[*id] = node;
   node->set_thread(detached_thread_);
   node->fake_pipeline_stage()->set_thread(detached_thread_->pipeline_thread());

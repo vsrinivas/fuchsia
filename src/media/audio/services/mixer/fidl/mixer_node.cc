@@ -63,7 +63,7 @@ zx::duration MixerNode::GetSelfPresentationDelayForSource(const Node* source) co
 
 MixerNode::MixerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                      PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage)
-    : Node(name, /*is_meta=*/false, std::move(reference_clock), pipeline_direction,
+    : Node(Type::kMixer, name, std::move(reference_clock), pipeline_direction,
            std::move(pipeline_stage), /*parent=*/nullptr) {}
 
 bool MixerNode::CanAcceptSourceFormat(const Format& format) const { return true; }

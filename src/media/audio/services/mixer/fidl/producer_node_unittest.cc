@@ -69,6 +69,8 @@ TEST(ProducerNodeTest, CreateEdgeSuccess) {
       .detached_thread = graph.detached_thread(),
   });
 
+  ASSERT_NE(producer, nullptr);
+  EXPECT_EQ(producer->type(), Node::Type::kProducer);
   EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
   EXPECT_EQ(producer->reference_clock(), clock);
   EXPECT_EQ(producer->thread(), graph.detached_thread());

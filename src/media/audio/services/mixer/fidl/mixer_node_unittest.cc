@@ -33,6 +33,7 @@ TEST(MixerNodeTest, Create) {
       .detached_thread = graph.detached_thread(),
   });
   ASSERT_NE(mixer_node, nullptr);
+  EXPECT_EQ(mixer_node->type(), Node::Type::kMixer);
   EXPECT_EQ(mixer_node->reference_clock(), DefaultClock());
   EXPECT_EQ(mixer_node->pipeline_stage()->format(), dest_format);
   EXPECT_EQ(mixer_node->pipeline_stage()->thread(), graph.detached_thread()->pipeline_thread());

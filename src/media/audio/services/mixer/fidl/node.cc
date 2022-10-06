@@ -30,9 +30,9 @@ bool HasNode(const std::vector<NodePtr>& nodes, const NodePtr& node) {
 bool HasSourceInChildren(const std::vector<NodePtr>& children, const NodePtr& source) {
   FX_CHECK(source);
   // Should only be used if `source` is not a meta node (to avoid unnecessary computation).
-  FX_CHECK(!source->is_meta());
+  FX_CHECK(source->type() != Node::Type::kMeta);
   return std::find_if(children.cbegin(), children.cend(), [&source](const NodePtr& child) {
-           FX_CHECK(!child->is_meta());
+           FX_CHECK(child->type() != Node::Type::kMeta);
            return HasNode(child->sources(), source);
          }) != children.cend();
 }
@@ -40,26 +40,26 @@ bool HasSourceInChildren(const std::vector<NodePtr>& children, const NodePtr& so
 bool HasDestInChildren(const std::vector<NodePtr>& children, const NodePtr& dest) {
   FX_CHECK(dest);
   return std::find_if(children.cbegin(), children.cend(), [&dest](const NodePtr& child) {
-           FX_CHECK(!child->is_meta());
-           return dest->is_meta() ? HasNode(dest->child_sources(), child->dest())
-                                  : dest == child->dest();
+           FX_CHECK(child->type() != Node::Type::kMeta);
+           return dest->type() == Node::Type::kMeta ? HasNode(dest->child_sources(), child->dest())
+                                                    : dest == child->dest();
          }) != children.cend();
 }
 
 }  // namespace
 
-Node::Node(std::string_view name, bool is_meta, std::shared_ptr<Clock> reference_clock,
+Node::Node(Type type, std::string_view name, std::shared_ptr<Clock> reference_clock,
            PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage, NodePtr parent)
-    : name_(name),
-      is_meta_(is_meta),
+    : type_(type),
+      name_(name),
       reference_clock_(std::move(reference_clock)),
       pipeline_direction_(pipeline_direction),
       pipeline_stage_(std::move(pipeline_stage)),
       parent_(std::move(parent)) {
   if (parent_) {
-    FX_CHECK(parent_->is_meta_);
+    FX_CHECK(parent_->type_ == Type::kMeta);
   }
-  if (is_meta_) {
+  if (type_ == Type::kMeta) {
     FX_CHECK(!parent_);          // nested meta nodes are not allowed
     FX_CHECK(!pipeline_stage_);  // meta nodes cannot own PipelineStages
   } else {
@@ -84,7 +84,7 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
   NodePtr dest_parent;
 
   // Create a node in source->child_dests() if needed.
-  if (source->is_meta()) {
+  if (source->type() == Type::kMeta) {
     if (HasDestInChildren(source->child_dests(), dest)) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
     }
@@ -98,7 +98,7 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
   }
 
   // Create a node in dest->child_sources() if needed.
-  if (dest->is_meta()) {
+  if (dest->type() == Type::kMeta) {
     if (HasSourceInChildren(dest->child_sources(), source)) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
     }
@@ -212,7 +212,7 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
   NodePtr source_parent;
   NodePtr dest_parent;
 
-  if (source->is_meta()) {
+  if (source->type() == Type::kMeta) {
     // Find the node in `source->child_dests()` that connects to `dest` or a child of `dest`.
     NodePtr child;
     for (auto& c : source->child_dests()) {
@@ -230,7 +230,7 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     source = child;
   }
 
-  if (dest->is_meta()) {
+  if (dest->type() == Type::kMeta) {
     // Find the node in `dest->child_sources()` that connects to `source`.
     NodePtr child;
     for (auto& c : dest->child_sources()) {
@@ -328,7 +328,7 @@ void Node::Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detache
     // When deleting an edge A->B, if A is a dynamically-created child node, then we should delete
     // the edge [A.parent]->B to ensure we cleanup state in A.parent.
     auto lift_source_to_parent = [](NodePtr a) {
-      if (a->is_meta() || !a->parent()) {
+      if (a->type() == Type::kMeta || !a->parent()) {
         return a;
       }
       if (auto meta = a->parent(); meta->built_in_children_) {
@@ -340,7 +340,7 @@ void Node::Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detache
 
     // Similarly for B->A.
     auto lift_dest_to_parent = [](NodePtr a) {
-      if (a->is_meta() || !a->parent()) {
+      if (a->type() == Type::kMeta || !a->parent()) {
         return a;
       }
       if (auto meta = a->parent(); meta->built_in_children_) {
@@ -355,7 +355,7 @@ void Node::Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detache
     FX_CHECK(result.is_ok()) << result.error();
   };
 
-  if (!node->is_meta()) {
+  if (node->type() != Type::kMeta) {
     const auto& sources = node->sources();
     while (!sources.empty()) {
       delete_edge(sources.front(), node);
@@ -391,58 +391,58 @@ void Node::Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detache
 }
 
 const std::vector<NodePtr>& Node::sources() const {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   return sources_;
 }
 
 NodePtr Node::dest() const {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   return dest_;
 }
 
 const std::vector<NodePtr>& Node::child_sources() const {
-  FX_CHECK(is_meta_);
+  FX_CHECK(type_ == Type::kMeta);
   return child_sources_;
 }
 
 const std::vector<NodePtr>& Node::child_dests() const {
-  FX_CHECK(is_meta_);
+  FX_CHECK(type_ == Type::kMeta);
   return child_dests_;
 }
 
 NodePtr Node::parent() const {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   return parent_;
 }
 
 PipelineStagePtr Node::pipeline_stage() const {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   return pipeline_stage_;
 }
 
 std::shared_ptr<GraphThread> Node::thread() const {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   return thread_;
 }
 
 void Node::set_thread(std::shared_ptr<GraphThread> t) {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   thread_ = t;
 }
 
 int64_t Node::max_downstream_consumers() const {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   return max_downstream_consumers_;
 }
 
 void Node::set_max_downstream_consumers(int64_t max) {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   max_downstream_consumers_ = max;
 }
 
 void Node::SetBuiltInChildren(std::vector<NodePtr> child_sources,
                               std::vector<NodePtr> child_dests) {
-  FX_CHECK(is_meta_);
+  FX_CHECK(type_ == Type::kMeta);
   FX_CHECK(child_sources_.empty());
   FX_CHECK(child_dests_.empty());
 
@@ -452,33 +452,33 @@ void Node::SetBuiltInChildren(std::vector<NodePtr> child_sources,
 }
 
 void Node::AddSource(NodePtr source) {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   FX_CHECK(source);
   sources_.push_back(std::move(source));
 }
 
 void Node::SetDest(NodePtr dest) {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   FX_CHECK(dest);
   dest_ = std::move(dest);
 }
 
 void Node::AddChildSource(NodePtr child_source) {
-  FX_CHECK(is_meta_);
+  FX_CHECK(type_ == Type::kMeta);
   FX_CHECK(!built_in_children_);
   FX_CHECK(child_source);
   child_sources_.push_back(std::move(child_source));
 }
 
 void Node::AddChildDest(NodePtr child_dest) {
-  FX_CHECK(is_meta_);
+  FX_CHECK(type_ == Type::kMeta);
   FX_CHECK(!built_in_children_);
   FX_CHECK(child_dest);
   child_dests_.push_back(std::move(child_dest));
 }
 
 void Node::RemoveSource(NodePtr source) {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   FX_CHECK(source);
 
   const auto it = std::find(sources_.begin(), sources_.end(), source);
@@ -487,7 +487,7 @@ void Node::RemoveSource(NodePtr source) {
 }
 
 void Node::RemoveDest(NodePtr dest) {
-  FX_CHECK(!is_meta_);
+  FX_CHECK(type_ != Type::kMeta);
   FX_CHECK(dest);
   FX_CHECK(dest_ == dest);
 
@@ -495,7 +495,7 @@ void Node::RemoveDest(NodePtr dest) {
 }
 
 void Node::RemoveChildSource(NodePtr child_source) {
-  FX_CHECK(is_meta_);
+  FX_CHECK(type_ == Type::kMeta);
   FX_CHECK(!built_in_children_);
   FX_CHECK(child_source);
 
@@ -506,7 +506,7 @@ void Node::RemoveChildSource(NodePtr child_source) {
 }
 
 void Node::RemoveChildDest(NodePtr child_dest) {
-  FX_CHECK(is_meta_);
+  FX_CHECK(type_ == Type::kMeta);
   FX_CHECK(!built_in_children_);
   FX_CHECK(child_dest);
 

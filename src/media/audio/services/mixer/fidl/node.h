@@ -137,64 +137,69 @@ class Node {
   static void Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread,
                       NodePtr node);
 
+  // Node type. Except for `kMeta`, all types refer to ordinary nodes.
+  enum class Type {
+    kConsumer,
+    kProducer,
+    kMixer,
+    kCustom,
+    kMeta,
+    kFake,  // for test use only
+  };
+
+  // Returns the type of this node.
+  [[nodiscard]] Type type() const { return type_; }
+
   // Returns the node's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
   [[nodiscard]] std::string_view name() const { return name_; }
-
-  // Reports whether this is a meta node.
-  [[nodiscard]] bool is_meta() const { return is_meta_; }
 
   // Returns the reference clock used by this node. For ordinary nodes, this corresponds
   // to the same clock used by the underlying `pipeline_stage()`.
   [[nodiscard]] std::shared_ptr<Clock> reference_clock() const { return reference_clock_; }
 
   // Returns this ordinary node's source edges.
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   [[nodiscard]] const std::vector<NodePtr>& sources() const;
 
   // Returns this ordinary node's destination edge, or nullptr if none.
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   [[nodiscard]] NodePtr dest() const;
 
   // Returns this meta node's child source nodes.
-  // REQUIRED: is_meta()
+  // REQUIRED: type() == Type::kMeta
   [[nodiscard]] const std::vector<NodePtr>& child_sources() const;
 
   // Returns this meta node's child destination nodes.
-  // REQUIRED: is_meta()
+  // REQUIRED: type() == Type::kMeta
   [[nodiscard]] const std::vector<NodePtr>& child_dests() const;
 
   // Returns the parent of this node, or nullptr if this is not a child of a meta node.
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   [[nodiscard]] NodePtr parent() const;
 
   // Returns the PipelineStage owned by this node.
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   [[nodiscard]] PipelineStagePtr pipeline_stage() const;
 
   // Returns the thread which controls this node's PipelineStage. This is eventually-consistent with
   // value returned by `pipeline_stage()->thread()`.
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   [[nodiscard]] std::shared_ptr<GraphThread> thread() const;
 
   // Set the Thread which controls our PipelineStage. Caller is responsible for asynchronously
   // updating `PipelineStage::thread()` as described in ../docs/execution_model.md.
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   void set_thread(std::shared_ptr<GraphThread> t);
 
   // Reports the kind of pipeline this node participates in.
   [[nodiscard]] PipelineDirection pipeline_direction() const { return pipeline_direction_; }
 
-  // Reports whether this node is a consumer, making it special in two ways: it never has any
-  // outgoing edges, and it runs on a fixed thread (meaning `thread()` never changes).
-  // REQUIRED: !is_meta()
-  [[nodiscard]] virtual bool is_consumer() const = 0;
-
   // Reports the maximum number of consumer nodes on any downstream path from this node, where a
   // "downstream path" is a path starting from any outgoing (destination) edge from this node. If
-  // `is_consumer()`, this is always zero.
+  // `type() == Type::kConsumer`, this is always zero.
   //
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   [[nodiscard]] int64_t max_downstream_consumers() const;
 
   // Sets max_downstream_consumers.
@@ -204,12 +209,12 @@ class Node {
   // This typically consists of the internal processing delay contribution of this node with respect
   // to `source` edge.
   //
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   // REQUIRED: source == nullptr or source in `sources()`
   virtual zx::duration GetSelfPresentationDelayForSource(const Node* source) const = 0;
 
  protected:
-  Node(std::string_view name, bool is_meta, std::shared_ptr<Clock> reference_clock,
+  Node(Type type, std::string_view name, std::shared_ptr<Clock> reference_clock,
        PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage, NodePtr parent);
   virtual ~Node() = default;
 
@@ -226,27 +231,27 @@ class Node {
   // Creates an ordinary child node to accept the next source edge.
   // Returns nullptr if no more child source nodes can be created.
   //
-  // REQUIRED: is_meta()
+  // REQUIRED: type() == Type::kMeta
   virtual NodePtr CreateNewChildSource() = 0;
 
   // Creates an ordinary child node to accept the next destination edge.
   // Returns nullptr if no more child destination nodes can be created.
   //
-  // REQUIRED: is_meta()
+  // REQUIRED: type() == Type::kMeta
   virtual NodePtr CreateNewChildDest() = 0;
 
   // Called just after a source edge is removed from a meta node. This allows subclasses to delete
   // any bookkeeping for that edge. This does not need to be reimplemented by all subclasses. The
   // default implementation is a no-op.
   //
-  // REQUIRED: is_meta()
+  // REQUIRED: type() == Type::kMeta
   virtual void DestroyChildSource(NodePtr child_source) {}
 
   // Called just after a destination edge is removed from a meta node. This allows subclasses to
   // delete any bookkeeping for that edge. This does not need to be reimplemented by all subclasses.
   // The default implementation is a no-op.
   //
-  // REQUIRED: is_meta()
+  // REQUIRED: type() == Type::kMeta
   virtual void DestroyChildDest(NodePtr child_dest) {}
 
   // Called by Destroy just after incoming links, outgoing links, and child nodes have been removed.
@@ -259,25 +264,25 @@ class Node {
   // Reports whether this node can accept a source edge with the given format. If MaxSources() is 0,
   // this should return false.
   //
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   virtual bool CanAcceptSourceFormat(const Format& format) const = 0;
 
   // Reports the maximum number of source edges allowed, or `std::nullopt` for no limit.
   //
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   virtual std::optional<size_t> MaxSources() const = 0;
 
   // Reports whether this node can accept a destination edge, i.e. whether it can be a source for
   // any other node.
   //
-  // REQUIRED: !is_meta()
+  // REQUIRED: type() != Type::kMeta
   virtual bool AllowsDest() const = 0;
 
   // Sets built-in child nodes for this meta node. If a meta node has built-in children, this must
   // be called immediately after the meta node is created. See "META NODE CHILDREN" in the class
   // comments.
   //
-  // REQUIRED: is_meta()
+  // REQUIRED: type() == Type::kMeta
   void SetBuiltInChildren(std::vector<NodePtr> child_sources, std::vector<NodePtr> child_dests);
 
  private:
@@ -295,8 +300,8 @@ class Node {
   void RemoveChildSource(NodePtr child_source);
   void RemoveChildDest(NodePtr child_dest);
 
+  const Type type_;
   const std::string name_;
-  const bool is_meta_;
   const std::shared_ptr<Clock> reference_clock_;
   const PipelineDirection pipeline_direction_;
   const PipelineStagePtr pipeline_stage_;
@@ -305,7 +310,7 @@ class Node {
   // This is nullptr iff there is no parent.
   const NodePtr parent_;
 
-  // If !is_meta_.
+  // If `type_ != Type::kMeta`.
   // To allow walking the graph in any direction, we maintain pointers in both directions.
   // Hence we have the invariant: a->HasSource(b) iff b->dest_ == a
   std::vector<NodePtr> sources_;
@@ -313,7 +318,7 @@ class Node {
   std::shared_ptr<GraphThread> thread_;
   int64_t max_downstream_consumers_ = 0;
 
-  // If is_meta_.
+  // If `type_ == Type::kMeta`.
   std::vector<NodePtr> child_sources_;
   std::vector<NodePtr> child_dests_;
   bool built_in_children_ = false;

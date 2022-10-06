@@ -24,9 +24,9 @@ using ::testing::ElementsAre;
 // - (meta -> meta)
 //
 // In these scenarios:
-// - (error) source already connected to the same node node (if !source->is_meta)
-// - (error) source already connected to a different node (if !source->is_meta)
-// - (error) source has too many dest edges (if source->is_meta)
+// - (error) source already connected to the same node node (if `source->type() != Type::kMeta`)
+// - (error) source already connected to a different node (if `source->type() != Type::kMeta`)
+// - (error) source has too many dest edges (if `source->type() == Type::kMeta`)
 // - (error) dest has too many source edges
 // - (error) dest doesn't accept source's format
 // - (error) dest is an output pipeline, source is an input pipeline
@@ -919,10 +919,9 @@ TEST(NodeCreateDeleteEdgeTest, ThreadMoves) {
           },
       // The "dest" node starts on thread 1, while all other nodes start on the detached thread.
       .unconnected_ordinary_nodes = {13},
+      .types = {{Node::Type::kConsumer, {2}}},
       .threads = {{1, {13}}},
   });
-
-  graph.node(2)->SetIsConsumer(true);
 
   auto q = graph.global_task_queue();
   auto source = graph.node(12);
@@ -1032,15 +1031,13 @@ TEST(NodeCreateDeleteEdgeTest, MaxDownstreamConsumers) {
               {5, 6},
           },
       .unconnected_ordinary_nodes = {7},
+      .types = {{Node::Type::kConsumer, {2, 7}}},
       .threads =
           {
               {1, {1, 2}},
               {2, {7}},
           },
   });
-
-  graph.node(2)->SetIsConsumer(true);
-  graph.node(7)->SetIsConsumer(true);
 
   auto q = graph.global_task_queue();
   auto source = graph.node(6);

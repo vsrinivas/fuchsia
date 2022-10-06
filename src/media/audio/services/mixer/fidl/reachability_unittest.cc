@@ -387,9 +387,9 @@ TEST(ReachabilityTest, MoveNodeToThread) {
               {10, 11},  // H -> G
               {11, 12},  // G -> N
           },
+      .types = {{Node::Type::kConsumer, {2}}},
   });
 
-  graph.node(2)->SetIsConsumer(true);
   auto old_thread = graph.detached_thread();
   auto new_thread = graph.CreateThread(1);
 
@@ -428,9 +428,8 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamConsumersOrdinaryNodes) {
               {7, 8},
               {8, 9},
           },
+      .types = {{Node::Type::kConsumer, {9}}},
   });
-
-  graph.node(9)->SetIsConsumer(true);
 
   // Recompute the node above the consumer.
   EXPECT_THAT(
@@ -544,11 +543,8 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamConsumersMetaNodes) {
               {35, 7},
               {45, 8},
           },
+      .types = {{Node::Type::kConsumer, {21, 41, 100}}},
   });
-
-  graph.node(21)->SetIsConsumer(true);
-  graph.node(41)->SetIsConsumer(true);
-  graph.node(100)->SetIsConsumer(true);
 
   RecomputeMaxDownstreamConsumers(*graph.node(46));
   RecomputeMaxDownstreamConsumers(*graph.node(16));
@@ -606,15 +602,13 @@ TEST(ReachabilityTest, RecomputeMaxDownstreamConsumersMultipleThreads) {
               {5, 6},
               {6, 7},
           },
+      .types = {{Node::Type::kConsumer, {2, 7}}},
       .threads =
           {
               {1, {1, 2}},
               {2, {4, 5, 6, 7}},
           },
   });
-
-  graph.node(2)->SetIsConsumer(true);
-  graph.node(7)->SetIsConsumer(true);
 
   // Recompute all nodes above the consumer
   EXPECT_THAT(RecomputeMaxDownstreamConsumers(*graph.node(6)),

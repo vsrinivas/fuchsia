@@ -106,11 +106,13 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
       .detached_thread = graph.detached_thread(),
   });
   ASSERT_NE(custom_node, nullptr);
+  EXPECT_EQ(custom_node->type(), Node::Type::kMeta);
   EXPECT_EQ(custom_node->reference_clock(), DefaultClock());
   ASSERT_EQ(custom_node->child_sources().size(), 1ul);
   ASSERT_EQ(custom_node->child_dests().size(), 1ul);
 
   const auto& child_source_node = custom_node->child_sources().front();
+  EXPECT_EQ(child_source_node->type(), Node::Type::kCustom);
   // Presentation delay of child source should be set to `10 + 6 - 1 = 15` frames at `kFrameRate`.
   EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
             zx::nsec(1'500'000'000));
@@ -123,6 +125,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_source_node->pipeline_stage()->format(), kFormat);
 
   const auto& child_dest_node = custom_node->child_dests().front();
+  EXPECT_EQ(child_dest_node->type(), Node::Type::kCustom);
   // Presentation delay of child destination should be set to zero.
   EXPECT_EQ(child_dest_node->GetSelfPresentationDelayForSource(/*source=*/nullptr), zx::nsec(0));
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());

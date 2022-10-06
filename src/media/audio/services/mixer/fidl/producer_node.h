@@ -46,14 +46,13 @@ class ProducerNode : public Node {
   static std::shared_ptr<ProducerNode> Create(Args args);
 
   // Implements `Node`.
-  bool is_consumer() const final { return false; }
   zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
  private:
   ProducerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage,
                NodePtr parent)
-      : Node(name, /*is_meta=*/false, std::move(reference_clock), pipeline_direction,
+      : Node(Type::kProducer, name, std::move(reference_clock), pipeline_direction,
              std::move(pipeline_stage), std::move(parent)) {}
 
   NodePtr CreateNewChildSource() final {

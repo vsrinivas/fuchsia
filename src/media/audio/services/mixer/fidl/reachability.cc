@@ -47,7 +47,7 @@ const Node* ParentOfChildSourceNode(const Node& n) {
 // of a meta node, the meta node's child_dest nodes are "immediately downstream".
 template <typename Fn>
 void ForEachDownstreamEdge(const Node& node, Fn fn) {
-  FX_CHECK(!node.is_meta());
+  FX_CHECK(node.type() != Node::Type::kMeta);
 
   // Three cases:
   //
@@ -81,7 +81,7 @@ void ForEachDownstreamEdge(const Node& node, Fn fn) {
 // node, the meta node's child_source nodes are "immediate upstream".
 template <typename Fn>
 void ForEachUpstreamEdge(const Node& node, Fn fn) {
-  FX_CHECK(!node.is_meta());
+  FX_CHECK(node.type() != Node::Type::kMeta);
 
   // Three cases:
   //
@@ -111,8 +111,8 @@ void ForEachUpstreamEdge(const Node& node, Fn fn) {
 }  // namespace
 
 zx::duration ComputeDownstreamDelay(const Node& node, const Node* source) {
-  FX_CHECK(!node.is_meta());
-  FX_CHECK(!source || !source->is_meta());
+  FX_CHECK(node.type() != Node::Type::kMeta);
+  FX_CHECK(!source || source->type() != Node::Type::kMeta);
 
   const auto self_delay = node.GetSelfPresentationDelayForSource(source);
   auto max_downstream_delay = zx::nsec(0);
@@ -127,7 +127,7 @@ zx::duration ComputeDownstreamDelay(const Node& node, const Node* source) {
 }
 
 zx::duration ComputeUpstreamDelay(const Node& node) {
-  FX_CHECK(!node.is_meta());
+  FX_CHECK(node.type() != Node::Type::kMeta);
 
   auto max_upstream_delay = zx::nsec(0);
   int64_t num_sources = 0;
@@ -156,7 +156,7 @@ bool ExistsPath(const Node& source, const Node& dest) {
     visited.insert(n);
 
     // Push each outgoing edge.
-    if (n->is_meta()) {
+    if (n->type() == Node::Type::kMeta) {
       // Meta -> Child destination
       for (auto& child : n->child_dests()) {
         if (PushNode(visited, stack, *child, dest)) {
@@ -216,7 +216,7 @@ std::vector<PipelineStagePtr> MoveNodeToThread(Node& node, std::shared_ptr<Graph
     out.push_back(node->pipeline_stage());
 
     ForEachUpstreamEdge(*node, [&stack](Node& source) {
-      if (!source.is_consumer()) {
+      if (source.type() != Node::Type::kConsumer) {
         stack.push_back(&source);
       }
     });
@@ -227,7 +227,7 @@ std::vector<PipelineStagePtr> MoveNodeToThread(Node& node, std::shared_ptr<Graph
 
 std::unordered_map<ThreadId, std::unordered_map<PipelineStagePtr, int64_t>>
 RecomputeMaxDownstreamConsumers(Node& node) {
-  FX_CHECK(!node.is_meta());
+  FX_CHECK(node.type() != Node::Type::kMeta);
 
   // TODO(fxbug.dev/87651): This implements "longest path in a DAG". This implementation is
   // worst-case exponential in pathological cases, such as graphs with repeated fan in/out from a
@@ -244,7 +244,7 @@ RecomputeMaxDownstreamConsumers(Node& node) {
     int64_t max_count = 0;
     ForEachDownstreamEdge(*node, [&max_count](const Node& dest) {
       int64_t count = dest.max_downstream_consumers();
-      if (dest.is_consumer()) {
+      if (dest.type() == Node::Type::kConsumer) {
         count++;
       }
       max_count = std::max(max_count, count);

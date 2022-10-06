@@ -46,7 +46,7 @@ ConsumerNode::ConsumerNode(std::string_view name, std::shared_ptr<Clock> referen
                            PipelineDirection pipeline_direction, ConsumerStagePtr pipeline_stage,
                            const Format& format, std::shared_ptr<CommandQueue> command_queue,
                            std::shared_ptr<GraphMixThread> mix_thread)
-    : Node(name, /*is_meta=*/false, std::move(reference_clock), pipeline_direction, pipeline_stage,
+    : Node(Type::kConsumer, name, std::move(reference_clock), pipeline_direction, pipeline_stage,
            /*parent=*/nullptr),
       format_(format),
       command_queue_(std::move(command_queue)),
