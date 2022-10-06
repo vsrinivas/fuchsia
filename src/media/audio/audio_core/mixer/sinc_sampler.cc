@@ -55,7 +55,7 @@ std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType
   }
 
   struct MakePublicCtor : SincSampler {
-    MakePublicCtor(Gain::Limits gain_limits, std::unique_ptr<Sampler> sinc_sampler)
+    MakePublicCtor(Gain::Limits gain_limits, std::shared_ptr<Sampler> sinc_sampler)
         : SincSampler(gain_limits, std::move(sinc_sampler)) {}
   };
   return std::make_unique<MakePublicCtor>(gain_limits, std::move(sinc_sampler));

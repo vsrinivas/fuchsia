@@ -27,7 +27,7 @@ class PointSampler : public Mixer {
            bool accumulate) override;
 
  protected:
-  PointSampler(Gain::Limits gain_limits, std::unique_ptr<media_audio::Sampler> point_sampler)
+  PointSampler(Gain::Limits gain_limits, std::shared_ptr<media_audio::Sampler> point_sampler)
       : Mixer(point_sampler->pos_filter_length() - Fixed::FromRaw(1),
               point_sampler->neg_filter_length() - Fixed::FromRaw(1), std::move(point_sampler),
               gain_limits) {}

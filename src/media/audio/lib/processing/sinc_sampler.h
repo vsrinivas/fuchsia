@@ -17,7 +17,7 @@ namespace media_audio {
 class SincSampler : public Sampler {
  public:
   // Creates new `SincSampler` for a given `source_format` and `dest_format`.
-  static std::unique_ptr<Sampler> Create(const Format& source_format, const Format& dest_format);
+  static std::shared_ptr<Sampler> Create(const Format& source_format, const Format& dest_format);
 
  protected:
   SincSampler(Fixed pos_filter_length, Fixed neg_filter_length)

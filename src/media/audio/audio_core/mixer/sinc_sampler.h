@@ -27,7 +27,7 @@ class SincSampler : public Mixer {
            bool accumulate) override;
 
  protected:
-  SincSampler(Gain::Limits gain_limits, std::unique_ptr<media_audio::Sampler> sinc_sampler)
+  SincSampler(Gain::Limits gain_limits, std::shared_ptr<media_audio::Sampler> sinc_sampler)
       : Mixer(sinc_sampler->pos_filter_length() - Fixed::FromRaw(1),
               sinc_sampler->neg_filter_length() - Fixed::FromRaw(1), std::move(sinc_sampler),
               gain_limits) {}

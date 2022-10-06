@@ -293,7 +293,7 @@ void Sampler::State::AdvancePositionsBy(int64_t dest_frames, bool advance_source
   }
 }
 
-std::unique_ptr<Sampler> Sampler::Create(const Format& source_format, const Format& dest_format,
+std::shared_ptr<Sampler> Sampler::Create(const Format& source_format, const Format& dest_format,
                                          Type type) {
   TRACE_DURATION("audio", "Sampler::Create");
 

@@ -255,14 +255,14 @@ class SincSamplerImpl : public SincSampler {
 
 // Helper functions to expand the combinations of possible `SincSamplerImpl` configurations.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-std::unique_ptr<Sampler> CreateWith(const Format& source_format, const Format& dest_format) {
-  return std::make_unique<SincSamplerImpl<SourceSampleType, SourceChannelCount, DestChannelCount>>(
+std::shared_ptr<Sampler> CreateWith(const Format& source_format, const Format& dest_format) {
+  return std::make_shared<SincSamplerImpl<SourceSampleType, SourceChannelCount, DestChannelCount>>(
       static_cast<int32_t>(source_format.frames_per_second()),
       static_cast<int32_t>(dest_format.frames_per_second()));
 }
 
 template <typename SourceSampleType, size_t SourceChannelCount>
-std::unique_ptr<Sampler> CreateWith(const Format& source_format, const Format& dest_format) {
+std::shared_ptr<Sampler> CreateWith(const Format& source_format, const Format& dest_format) {
   switch (dest_format.channels()) {
     case 1:
       return CreateWith<SourceSampleType, SourceChannelCount, 1>(source_format, dest_format);
@@ -287,7 +287,7 @@ std::unique_ptr<Sampler> CreateWith(const Format& source_format, const Format& d
 }
 
 template <typename SourceSampleType>
-std::unique_ptr<Sampler> CreateWith(const Format& source_format, const Format& dest_format) {
+std::shared_ptr<Sampler> CreateWith(const Format& source_format, const Format& dest_format) {
   switch (source_format.channels()) {
     case 1:
       return CreateWith<SourceSampleType, 1>(source_format, dest_format);
@@ -306,7 +306,7 @@ std::unique_ptr<Sampler> CreateWith(const Format& source_format, const Format& d
 
 }  // namespace
 
-std::unique_ptr<Sampler> SincSampler::Create(const Format& source_format,
+std::shared_ptr<Sampler> SincSampler::Create(const Format& source_format,
                                              const Format& dest_format) {
   TRACE_DURATION("audio", "SincSampler::Create");
 

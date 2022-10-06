@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <cstdint>
+#include <memory>
 #include <optional>
 
 #include "src/media/audio/lib/format2/fixed.h"
@@ -254,7 +255,7 @@ class Sampler {
   // `type` is specified explicitly (i.e. `type != Type::kDefault`), this will either return a
   // `Sampler` of that requested `type`, or `nullptr` if a `Sampler` with that `type` cannot be
   // created with the given configuration.
-  static std::unique_ptr<Sampler> Create(const Format& source_format, const Format& dest_format,
+  static std::shared_ptr<Sampler> Create(const Format& source_format, const Format& dest_format,
                                          Type type = Type::kDefault);
 
   // Default destructor.

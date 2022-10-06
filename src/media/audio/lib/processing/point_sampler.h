@@ -16,7 +16,7 @@ namespace media_audio {
 class PointSampler : public Sampler {
  public:
   // Creates new `PointSampler` for a given `source_format` and `dest_format`.
-  static std::unique_ptr<Sampler> Create(const Format& source_format, const Format& dest_format);
+  static std::shared_ptr<Sampler> Create(const Format& source_format, const Format& dest_format);
 
  protected:
   PointSampler(Fixed pos_filter_length, Fixed neg_filter_length)

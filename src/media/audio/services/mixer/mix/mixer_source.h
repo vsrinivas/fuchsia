@@ -107,7 +107,7 @@ class MixerSource {
   std::shared_ptr<Clock> dest_clock_;
   std::shared_ptr<Clock> source_clock_;
 
-  std::unique_ptr<Sampler> sampler_;
+  std::shared_ptr<Sampler> sampler_;
   std::unique_ptr<SilencePaddingStage> source_;
 
   std::unordered_set<GainControlId> source_gain_ids_;

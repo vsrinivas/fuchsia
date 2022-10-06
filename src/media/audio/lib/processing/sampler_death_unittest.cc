@@ -4,6 +4,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <limits>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -41,7 +42,7 @@ class SamplerDeathTest : public testing::TestWithParam<Sampler::Type> {
   Sampler& sampler() { return *sampler_; }
 
  private:
-  std::unique_ptr<Sampler> sampler_;
+  std::shared_ptr<Sampler> sampler_;
   std::vector<float> source_samples_;
   std::vector<float> dest_samples_;
 };

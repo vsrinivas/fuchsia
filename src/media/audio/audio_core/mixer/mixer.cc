@@ -16,7 +16,7 @@ namespace media::audio {
 constexpr int64_t Mixer::kScaleArrLen;
 
 Mixer::Mixer(Fixed pos_filter_width, Fixed neg_filter_width,
-             std::unique_ptr<media_audio::Sampler> sampler, Gain::Limits gain_limits)
+             std::shared_ptr<media_audio::Sampler> sampler, Gain::Limits gain_limits)
     : gain(gain_limits),
       pos_filter_width_(pos_filter_width),
       neg_filter_width_(neg_filter_width),

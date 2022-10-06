@@ -196,7 +196,7 @@ class Mixer {
   };
 
   Mixer(Fixed pos_filter_width, Fixed neg_filter_width,
-        std::unique_ptr<media_audio::Sampler> sampler, Gain::Limits gain_limits);
+        std::shared_ptr<media_audio::Sampler> sampler, Gain::Limits gain_limits);
 
   media_audio::Sampler& sampler() {
     FX_DCHECK(sampler_);
@@ -211,7 +211,7 @@ class Mixer {
   const Fixed pos_filter_width_;
   const Fixed neg_filter_width_;
 
-  std::unique_ptr<media_audio::Sampler> sampler_;
+  std::shared_ptr<media_audio::Sampler> sampler_;
 };
 
 }  // namespace media::audio

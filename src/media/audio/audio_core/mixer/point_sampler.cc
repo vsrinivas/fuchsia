@@ -60,7 +60,7 @@ std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamTyp
   }
 
   struct MakePublicCtor : PointSampler {
-    MakePublicCtor(Gain::Limits gain_limits, std::unique_ptr<Sampler> point_sampler)
+    MakePublicCtor(Gain::Limits gain_limits, std::shared_ptr<Sampler> point_sampler)
         : PointSampler(gain_limits, std::move(point_sampler)) {}
   };
   return std::make_unique<MakePublicCtor>(gain_limits, std::move(point_sampler));
