@@ -346,6 +346,7 @@ pub(crate) trait SocketTypeStateMut<'a> {
             State = Self::State,
             SharingState = Self::SharingState,
             Addr = Self::Addr,
+            Id = Self::Id,
         > + Debug;
 
     fn get_by_id_mut(
@@ -358,7 +359,7 @@ pub(crate) trait SocketTypeStateMut<'a> {
         addr: Self::Addr,
         state: S,
         sharing_state: Self::SharingState,
-    ) -> Result<Self::Id, (InsertError, S, Self::SharingState)>;
+    ) -> Result<Self::Entry, (InsertError, S, Self::SharingState)>;
 
     fn entry(self, id: &Self::Id) -> Option<Self::Entry>;
 
@@ -371,11 +372,14 @@ pub(crate) trait SocketTypeStateMut<'a> {
 }
 
 pub(crate) trait SocketTypeStateEntry: Sized {
+    type Id;
     type State;
     type SharingState;
     type Addr;
 
     fn get(&self) -> &(Self::State, Self::SharingState, Self::Addr);
+
+    fn id(&self) -> Self::Id;
 
     fn get_state_mut(&mut self) -> &mut Self::State;
 
@@ -497,7 +501,7 @@ where
         socket_addr: Self::Addr,
         state: St,
         tag_state: Self::SharingState,
-    ) -> Result<Self::Id, (InsertError, St, Self::SharingState)> {
+    ) -> Result<Self::Entry, (InsertError, St, Self::SharingState)> {
         let Self(id_to_sock, addr_to_state, _) = self;
         match S::check_for_conflicts(&tag_state, &socket_addr, &addr_to_state) {
             Err(e) => return Err((e, state, tag_state)),
@@ -508,29 +512,31 @@ where
 
         match addr_to_state.entry(addr) {
             Entry::Occupied(mut o) => {
-                let id = o.map_mut(|bound| {
+                let id_entry = o.map_mut(|bound| {
                     let bound = match Convert::from_bound_mut(bound) {
                         Some(bound) => bound,
                         None => unreachable!("found {:?} for address {:?}", bound, socket_addr),
                     };
                     match AddrState::try_get_dest(bound, &tag_state) {
                         Ok(v) => {
-                            let index = id_to_sock.push((state.into(), tag_state, socket_addr));
-                            v.push(index.into());
-                            Ok(index)
+                            let idmap_entry =
+                                id_to_sock.push_entry((state.into(), tag_state, socket_addr));
+                            v.push(idmap_entry.key().clone().into());
+                            Ok(idmap_entry)
                         }
                         Err(IncompatibleError) => Err((InsertError::Exists, state, tag_state)),
                     }
                 })?;
-                Ok(id.into())
+                Ok(SocketStateEntry { id_entry, addr_entry: o, _marker: Default::default() })
             }
             Entry::Vacant(v) => {
-                let index = id_to_sock.push((state.into(), tag_state, socket_addr));
-                let (_state, tag_state, _addr): &(Self::State, _, Self::Addr) =
-                    id_to_sock.get(index).unwrap();
-                let _: SocketMapOccupiedEntry<'_, _, _> =
-                    v.insert(Convert::to_bound(AddrState::new(tag_state, index.into())));
-                Ok(index.into())
+                let id_entry = id_to_sock.push_entry((state.into(), tag_state, socket_addr));
+                let (_state, tag_state, _addr): &(Self::State, _, Self::Addr) = id_entry.get();
+                let addr_entry = v.insert(Convert::to_bound(AddrState::new(
+                    tag_state,
+                    id_entry.key().clone().into(),
+                )));
+                Ok(SocketStateEntry { id_entry, addr_entry, _marker: Default::default() })
             }
         }
     }
@@ -565,6 +571,7 @@ where
     Bound<S>: Tagged<AddrVec<A>>,
     AddrState::Id: From<usize>,
 {
+    type Id = AddrState::Id;
     type State = State;
     type SharingState = SharingState;
     type Addr = Addr;
@@ -572,6 +579,11 @@ where
     fn get(&self) -> &(Self::State, Self::SharingState, Self::Addr) {
         let Self { id_entry, addr_entry: _, _marker } = self;
         id_entry.get()
+    }
+
+    fn id(&self) -> AddrState::Id {
+        let Self { id_entry, addr_entry: _, _marker } = self;
+        id_entry.key().clone().into()
     }
 
     fn get_state_mut(&mut self) -> &mut Self::State {
@@ -1043,7 +1055,12 @@ mod tests {
 
         let addr = LISTENER_ADDR;
 
-        let id = bound.listeners_mut().try_insert(addr, 0, 'v').unwrap();
+        let id = {
+            let entry = bound.listeners_mut().try_insert(addr, 0, 'v').unwrap();
+            assert_eq!(entry.get(), &(0, 'v', addr));
+            entry.id()
+        };
+
         assert_eq!(bound.listeners().get_by_id(&id), Some(&(0, 'v', addr)));
         assert_eq!(bound.listeners().get_by_addr(&addr), Some(&Multiple('v', vec![id])));
 
@@ -1059,7 +1076,12 @@ mod tests {
 
         let addr = CONN_ADDR;
 
-        let id = bound.conns_mut().try_insert(addr, 0u16, 'v').unwrap();
+        let id = {
+            let entry = bound.conns_mut().try_insert(addr, 0u16, 'v').unwrap();
+            assert_eq!(entry.get(), &(0, 'v', addr));
+            entry.id()
+        };
+
         assert_eq!(bound.conns().get_by_id(&id), Some(&(0, 'v', addr)));
         assert_eq!(bound.conns().get_by_addr(&addr), Some(&Multiple('v', vec![id])));
 
@@ -1096,10 +1118,10 @@ mod tests {
         });
 
         for addr in listener_addrs.iter().cloned() {
-            let _: Listener = bound.listeners_mut().try_insert(addr, 1u8, 'a').unwrap();
+            let _entry = bound.listeners_mut().try_insert(addr, 1u8, 'a').unwrap();
         }
         for addr in conn_addrs.iter().cloned() {
-            let _: Conn = bound.conns_mut().try_insert(addr, 1u16, 'a').unwrap();
+            let _entry = bound.conns_mut().try_insert(addr, 1u16, 'a').unwrap();
         }
         let expected_addrs = listener_addrs
             .into_iter()
@@ -1116,8 +1138,8 @@ mod tests {
         let mut bound = FakeBoundSocketMap::default();
         let addr = LISTENER_ADDR;
 
-        let _id = bound.listeners_mut().try_insert(addr, 0, 'a').unwrap();
-        assert_eq!(
+        let _: Listener = bound.listeners_mut().try_insert(addr, 0, 'a').unwrap().id();
+        assert_matches!(
             bound.listeners_mut().try_insert(addr, 0, 'b'),
             Err((InsertError::Exists, 0, 'b'))
         );
@@ -1133,8 +1155,8 @@ mod tests {
             ListenerAddr { device: Some(DummyDeviceId), ..addr }
         };
 
-        let _id = bound.listeners_mut().try_insert(addr, 0, 'a').unwrap();
-        assert_eq!(
+        let _: Listener = bound.listeners_mut().try_insert(addr, 0, 'a').unwrap().id();
+        assert_matches!(
             bound.listeners_mut().try_insert(shadows_addr, 0, 'b'),
             Err((InsertError::ShadowAddrExists, 0, 'b'))
         );
@@ -1153,8 +1175,8 @@ mod tests {
             },
         };
 
-        let _id = bound.listeners_mut().try_insert(addr, 0u8, 'a').unwrap();
-        assert_eq!(
+        let _: Listener = bound.listeners_mut().try_insert(addr, 0u8, 'a').unwrap().id();
+        assert_matches!(
             bound.conns_mut().try_insert(shadows_addr, 0u16, 'b'),
             Err((InsertError::ShadowAddrExists, 0, 'b'))
         );
@@ -1166,8 +1188,8 @@ mod tests {
         let mut bound = FakeBoundSocketMap::default();
         let addr = LISTENER_ADDR;
 
-        let a = bound.listeners_mut().try_insert(addr, 0, 'x').unwrap();
-        let b = bound.listeners_mut().try_insert(addr, 0, 'x').unwrap();
+        let a = bound.listeners_mut().try_insert(addr, 0, 'x').unwrap().id();
+        let b = bound.listeners_mut().try_insert(addr, 0, 'x').unwrap().id();
         assert_ne!(a, b);
 
         assert_eq!(bound.listeners_mut().remove(&a), Some((0, 'x', addr)));
@@ -1180,8 +1202,8 @@ mod tests {
         let mut bound = FakeBoundSocketMap::default();
         let addr = CONN_ADDR;
 
-        let a = bound.conns_mut().try_insert(addr, 0u16, 'x').unwrap();
-        let b = bound.conns_mut().try_insert(addr, 0u16, 'x').unwrap();
+        let a = bound.conns_mut().try_insert(addr, 0u16, 'x').unwrap().id();
+        let b = bound.conns_mut().try_insert(addr, 0u16, 'x').unwrap().id();
         assert_ne!(a, b);
 
         assert_eq!(bound.conns_mut().remove(&a), Some((0, 'x', addr)));
@@ -1205,8 +1227,8 @@ mod tests {
             device: None,
         };
 
-        let first = bound.listeners_mut().try_insert(first_addr, 0u8, 'a').unwrap();
-        let second = bound.listeners_mut().try_insert(second_addr, 0u8, 'b').unwrap();
+        let first = bound.listeners_mut().try_insert(first_addr, 0u8, 'a').unwrap().id();
+        let second = bound.listeners_mut().try_insert(second_addr, 0u8, 'b').unwrap().id();
 
         // Moving from (1, "aaa") to (1, None) should fail since it is shadowed
         // by (1, "yyy"), and vise versa.
@@ -1235,7 +1257,7 @@ mod tests {
         let mut map = FakeBoundSocketMap::default();
         let addr = LISTENER_ADDR;
         let listener_id =
-            map.listeners_mut().try_insert(addr.clone(), 0u8, 'x').expect("failed to insert");
+            map.listeners_mut().try_insert(addr.clone(), 0u8, 'x').expect("failed to insert").id();
         let (val, _, _) =
             map.listeners_mut().get_by_id_mut(&listener_id).expect("failed to get listener");
         *val = 2;
@@ -1248,7 +1270,7 @@ mod tests {
         let mut map = FakeBoundSocketMap::default();
         let addr = CONN_ADDR;
         let conn_id =
-            map.conns_mut().try_insert(addr.clone(), 0u16, 'a').expect("failed to insert");
+            map.conns_mut().try_insert(addr.clone(), 0u16, 'a').expect("failed to insert").id();
         let (val, _, _) = map.conns_mut().get_by_id_mut(&conn_id).expect("failed to get conn");
         *val = 2;
 
@@ -1260,7 +1282,7 @@ mod tests {
         let mut map = FakeBoundSocketMap::default();
         let addr = CONN_ADDR;
         let conn_id =
-            map.conns_mut().try_insert(addr.clone(), 0u16, 'a').expect("failed to insert");
+            map.conns_mut().try_insert(addr.clone(), 0u16, 'a').expect("failed to insert").id();
         assert_matches!(map.conns_mut().remove(&conn_id), Some((0, 'a', CONN_ADDR)));
 
         assert!(map.conns_mut().entry(&conn_id).is_none());

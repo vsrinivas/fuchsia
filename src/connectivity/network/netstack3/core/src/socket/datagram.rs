@@ -509,7 +509,7 @@ where
                 )
                 .map_err(|(e, state, _sharing): (_, _, S::ListenerSharingState)| (e, state))
             {
-                Ok(listener) => Ok(listener),
+                Ok(entry) => Ok(entry.id()),
                 Err((e, TakeMemberships(entry))) => {
                     // Drop the occupied entry, leaving it in the unbound socket
                     // IdMap.
@@ -579,6 +579,7 @@ where
             .listeners_mut()
             .try_insert(addr, ListenerState { ip_options }, sharing.into())
             .expect("inserting listener for disconnected socket failed")
+            .id()
     })
 }
 

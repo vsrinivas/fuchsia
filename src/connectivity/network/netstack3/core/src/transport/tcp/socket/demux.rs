@@ -25,7 +25,7 @@ use crate::{
     },
     socket::{
         address::{AddrVecIter, ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr},
-        AddrVec, SocketTypeState as _, SocketTypeStateMut as _,
+        AddrVec, SocketTypeState as _, SocketTypeStateEntry as _, SocketTypeStateMut as _,
     },
     transport::tcp::{
         buffer::SendPayload,
@@ -261,7 +261,8 @@ where
                                         // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
                                         (),
                                     )
-                                    .expect("failed to create a new connection");
+                                    .expect("failed to create a new connection")
+                                    .id();
                                 assert_eq!(
                                     ctx.schedule_timer_instant(
                                         poll_send_at,

@@ -314,7 +314,7 @@ mod tests {
     use super::*;
     use crate::{
         ip::{testutil::DummyDeviceId, IpExt},
-        socket::{BoundSocketMap, InsertError, SocketTypeStateMut as _},
+        socket::{BoundSocketMap, InsertError, SocketTypeStateEntry as _, SocketTypeStateMut as _},
     };
 
     struct TransportSocketPosixSpec<I: Ip> {
@@ -539,11 +539,11 @@ mod tests {
                         AddrVec::Conn(c) => map
                             .conns_mut()
                             .try_insert(c.clone(), (), options)
-                            .map(|id| Socket::Conn(id, c)),
+                            .map(|entry| Socket::Conn(entry.id(), c)),
                         AddrVec::Listen(l) => map
                             .listeners_mut()
                             .try_insert(l.clone(), (), options)
-                            .map(|id| Socket::Listener(id, l)),
+                            .map(|entry| Socket::Listener(entry.id(), l)),
                     }
                     .expect("insert_failed")
                 })

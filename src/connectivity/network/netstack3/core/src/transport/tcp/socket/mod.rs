@@ -63,7 +63,7 @@ use crate::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         AddrVec, Bound, BoundSocketMap, IncompatibleError, InsertError, RemoveResult,
         SocketAddrTypeTag, SocketMapAddrStateSpec, SocketMapConflictPolicy, SocketMapStateSpec,
-        SocketTypeState as _, SocketTypeStateMut as _,
+        SocketTypeState as _, SocketTypeStateEntry as _, SocketTypeStateMut as _,
     },
     transport::tcp::{
         buffer::{IntoBuffers, ReceiveBuffer, SendBuffer},
@@ -544,7 +544,10 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                         // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
                         (),
                     )
-                    .map(|MaybeListenerId(x)| BoundId(x))
+                    .map(|entry| {
+                        let MaybeListenerId(x) = entry.id();
+                        BoundId(x)
+                    })
                     .map_err(|_: (InsertError, MaybeListener<_>, ())| {
                         assert_eq!(inactive.insert(idmap_key, inactive_state), None);
                         BindError::Conflict
@@ -960,7 +963,8 @@ where
             // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
             (),
         )
-        .expect("failed to insert connection");
+        .expect("failed to insert connection")
+        .id();
 
     ip_transport_ctx
         .send_ip_packet(ctx, &ip_sock, tcp_serialize_segment(syn, conn_addr.ip), None)

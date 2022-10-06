@@ -1484,7 +1484,8 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
                 let listener = bound
                     .listeners_mut()
                     .try_insert(original_addr, ListenerState { ip_options }, sharing)
-                    .expect("reinserting just-removed listener failed");
+                    .expect("reinserting just-removed listener failed")
+                    .id();
                 (e, listener)
             })
         })
@@ -1563,7 +1564,8 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
                     )
                     .unwrap_or_else(|(e, _, _): (_, ConnState<_, _>, PosixSharingOptions)| {
                         unreachable!("reinserting just-removed connected socket failed: {:?}", e)
-                    });
+                    })
+                    .id();
                 (e, conn)
             })
         })
@@ -2141,6 +2143,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
         bound
             .conns_mut()
             .try_insert(c, ConnState { socket: ip_sock, clear_device_on_disconnect }, sharing)
+            .map(|entry| entry.id())
             .map_err(
                 |(_, ConnState { socket, clear_device_on_disconnect: _ }, _): (
                     InsertError,

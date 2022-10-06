@@ -251,6 +251,15 @@ impl<T> IdMap<T> {
     /// of items held by the [`IdMap`]. This can happen if the internal
     /// structure gets fragmented.
     pub fn push(&mut self, item: T) -> Key {
+        *self.push_entry(item).key()
+    }
+
+    /// Inserts `item` into the [`IdMap`] and returns an [`OccupiedEntry`] for
+    /// it.
+    ///
+    /// Like [`IdMap::push`] except that it returns an entry instead of an
+    /// index.
+    pub fn push_entry(&mut self, item: T) -> OccupiedEntry<'_, usize, T> {
         if let Some(FreeList { head, .. }) = self.freelist.as_mut() {
             let ret = *head;
             let old =
@@ -269,13 +278,13 @@ impl<T> IdMap<T> {
                 }
                 None => self.freelist = None,
             }
-            ret
+            OccupiedEntry { key: ret, id_map: self }
         } else {
             // If we run out of freelist, we simply push a new entry into the
             // underlying vector.
             let key = self.data.len();
             self.data.push(IdMapEntry::Allocated(item));
-            key
+            OccupiedEntry { key, id_map: self }
         }
     }
 
