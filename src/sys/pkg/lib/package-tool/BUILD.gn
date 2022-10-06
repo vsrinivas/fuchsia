@@ -28,7 +28,10 @@ if (is_host) {
       "//src/lib/fuchsia-url",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-merkle",
+      "//third_party/rust_crates:assert_matches",
+      "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:pretty_assertions",
+      "//third_party/rust_crates:tuf",
     ]
 
     sources = [

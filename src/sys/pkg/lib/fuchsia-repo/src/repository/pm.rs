@@ -5,6 +5,7 @@
 use {
     crate::{
         range::Range,
+        repo_keys,
         repository::{Error, FileSystemRepository, RepoProvider, RepoStorage, RepositorySpec},
         resource::Resource,
     },
@@ -37,6 +38,17 @@ impl PmRepository {
         let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path);
 
         Self { pm_repo_path, repo }
+    }
+
+    /// Tries to return the pm repository [RepoKeys]. Returns an empty [RepoKeys] if the `keys/`
+    /// directory does not exist in the repository.
+    pub fn repo_keys(&self) -> Result<repo_keys::RepoKeys, repo_keys::ParseError> {
+        let keys_path = self.pm_repo_path.join("keys");
+        if keys_path.exists() {
+            repo_keys::RepoKeys::from_dir(keys_path.as_std_path())
+        } else {
+            Ok(repo_keys::RepoKeys::builder().build())
+        }
     }
 }
 
