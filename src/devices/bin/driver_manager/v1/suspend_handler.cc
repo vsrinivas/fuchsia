@@ -17,8 +17,8 @@
 
 namespace {
 
-void SuspendFallback(const zx::resource& root_resource, uint32_t flags, zx::vmo mexec_kernel_zbi,
-                     zx::vmo mexec_data_zbi) {
+void SuspendFallback(const zx::resource& root_resource, const zx::resource& mexec_resource,
+                     uint32_t flags, zx::vmo mexec_kernel_zbi, zx::vmo mexec_data_zbi) {
   LOGF(INFO, "Suspend fallback with flags %#08x", flags);
   const char* what = "zx_system_powerctl";
   zx_status_t status = ZX_OK;
@@ -48,7 +48,7 @@ void SuspendFallback(const zx::resource& root_resource, uint32_t flags, zx::vmo 
     status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_MEXEC) {
     LOGF(INFO, "About to mexec...");
-    status = mexec::BootZbi(root_resource.borrow(), std::move(mexec_kernel_zbi),
+    status = mexec::BootZbi(mexec_resource.borrow(), std::move(mexec_kernel_zbi),
                             std::move(mexec_data_zbi));
     what = "zx_system_mexec";
   }
@@ -139,7 +139,7 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
       DumpSuspendTaskDependencies(suspend_task_.get());
     }
 
-    SuspendFallback(coordinator_->root_resource(), sflags_,
+    SuspendFallback(coordinator_->root_resource(), coordinator_->mexec_resource(), sflags_,
                     std::move(coordinator_->mexec_kernel_zbi()),
                     std::move(coordinator_->mexec_data_zbi()));
     // Unless in test env, we should not reach here.
@@ -172,7 +172,7 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
     // Although this is called the SuspendFallback we expect to end up here for most operations
     // that execute a flavor of reboot because Zircon can handle most reboot operations on most
     // platforms.
-    SuspendFallback(coordinator_->root_resource(), sflags_,
+    SuspendFallback(coordinator_->root_resource(), coordinator_->mexec_resource(), sflags_,
                     std::move(coordinator_->mexec_kernel_zbi()),
                     std::move(coordinator_->mexec_data_zbi()));
     // if we get here the system did not suspend successfully

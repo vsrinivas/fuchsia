@@ -797,7 +797,7 @@ zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (zx_status_t status = mexec::PrepareDataZbi(root_resource().borrow(), data_zbi.borrow());
+  if (zx_status_t status = mexec::PrepareDataZbi(mexec_resource().borrow(), data_zbi.borrow());
       status != ZX_OK) {
     LOGF(ERROR, "Failed to prepare mexec data ZBI: %s", zx_status_get_string(status));
     return status;

@@ -58,6 +58,7 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.driver.development.DriverIndex",
                 "fuchsia.driver.index.DriverIndex",
+                "fuchsia.kernel.MexecResource",
                 "fuchsia.kernel.RootJob",
 
                 // This is only used when the kernel commandline flag devmgr.enable-ephemeral

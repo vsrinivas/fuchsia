@@ -92,6 +92,8 @@ enum class DriverHostCrashPolicy {
 struct CoordinatorConfig {
   // Initial root resource from the kernel.
   zx::resource root_resource;
+  // Mexec resource from the kernel.
+  zx::resource mexec_resource;
   // Job for all driver_hosts.
   zx::job driver_host_job;
   // Event that is signaled by the kernel in OOM situation.
@@ -178,6 +180,7 @@ class Coordinator : public CompositeManagerBridge,
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
+  const zx::resource& mexec_resource() const { return config_.mexec_resource; }
   zx::duration resume_timeout() const { return config_.resume_timeout; }
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
   SystemPowerState shutdown_system_state() const { return shutdown_system_state_; }

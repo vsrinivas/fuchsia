@@ -116,6 +116,8 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
 static const std::string kRootJobPath = "/svc/" + std::string(fuchsia::kernel::RootJob::Name_);
 static const std::string kRootResourcePath =
     "/svc/" + std::string(fuchsia::boot::RootResource::Name_);
+static const std::string kMexecResourcePath =
+    "/svc/" + std::string(fuchsia::kernel::MexecResource::Name_);
 
 // Get the root job from the root job service.
 zx_status_t get_root_job(zx::job* root_job) {
@@ -139,6 +141,19 @@ zx_status_t get_root_resource(zx::resource* root_resource) {
     return status;
   }
   return root_resource_ptr->Get(root_resource);
+}
+
+// Get the mexec resource from the mexec resource service. Not receiving the
+// startup handle is logged, but not fatal.  In test environments, it would not
+// be present.
+zx_status_t get_mexec_resource(zx::resource* mexec_resource) {
+  fuchsia::kernel::MexecResourceSyncPtr mexec_resource_ptr;
+  zx_status_t status = fdio_service_connect(
+      kMexecResourcePath.c_str(), mexec_resource_ptr.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  return mexec_resource_ptr->Get(mexec_resource);
 }
 
 }  // namespace
@@ -224,6 +239,10 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
     return status;
+  }
+  status = get_mexec_resource(&config.mexec_resource);
+  if (status != ZX_OK) {
+    LOGF(INFO, "Failed to get mexec resource, assuming test environment and continuing");
   }
 
   zx_handle_t oom_event;
