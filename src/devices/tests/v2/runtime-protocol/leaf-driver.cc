@@ -72,7 +72,7 @@ class LeafDriver : public driver::DriverBase {
 
   fpromise::promise<void, zx_status_t> CallSetter() {
     return fidl_fpromise::as_promise(setter_->Set({kMagic}))
-        .then([&](fpromise::result<void, fidl::AnyErrorIn<ft::Setter::Set>>& result)
+        .then([&](fpromise::result<void, fidl::ErrorsIn<ft::Setter::Set>>& result)
                   -> fpromise::promise<void, zx_status_t> {
           if (result.is_error()) {
             zx_status_t status = result.error().is_domain_error()
@@ -86,20 +86,19 @@ class LeafDriver : public driver::DriverBase {
 
   fpromise::promise<void, zx_status_t> CallGetter() {
     return fidl_fpromise::as_promise(getter_->Get())
-        .then(
-            [&](fpromise::result<ft::GetterGetResponse, fidl::AnyErrorIn<ft::Getter::Get>>& result)
-                -> fpromise::promise<void, zx_status_t> {
-              if (result.is_error()) {
-                zx_status_t status = result.error().is_domain_error()
-                                         ? result.error().domain_error()
-                                         : result.error().framework_error().status();
-                return fpromise::make_error_promise(status);
-              }
-              if (result.value() != kMagic) {
-                return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
-              }
-              return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
-            });
+        .then([&](fpromise::result<ft::GetterGetResponse, fidl::ErrorsIn<ft::Getter::Get>>& result)
+                  -> fpromise::promise<void, zx_status_t> {
+          if (result.is_error()) {
+            zx_status_t status = result.error().is_domain_error()
+                                     ? result.error().domain_error()
+                                     : result.error().framework_error().status();
+            return fpromise::make_error_promise(status);
+          }
+          if (result.value() != kMagic) {
+            return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
+          }
+          return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
+        });
   }
 
   result<void, zx_status_t> CallAck() {

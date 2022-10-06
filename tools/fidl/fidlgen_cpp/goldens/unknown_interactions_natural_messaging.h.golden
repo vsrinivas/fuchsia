@@ -1040,9 +1040,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>>::result;
 
  protected:
   Result() = default;
@@ -1092,9 +1092,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse>::result;
 
  protected:
   Result() = default;
@@ -1144,9 +1144,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse>::result;
 
  protected:
   Result() = default;
@@ -1196,9 +1196,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResponse>::result;
 
  protected:
   Result() = default;
@@ -1388,9 +1388,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>>::result;
 
  protected:
   Result() = default;
@@ -1430,9 +1430,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse>::result;
 
  protected:
   Result() = default;
@@ -1472,9 +1472,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse>::result;
 
  protected:
   Result() = default;
@@ -1514,9 +1514,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse>::result;
 
  protected:
   Result() = default;
@@ -3305,9 +3305,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>>::result;
 
  protected:
   Result() = default;
@@ -3357,9 +3357,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse>::result;
 
  protected:
   Result() = default;
@@ -3409,9 +3409,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse>::result;
 
  protected:
   Result() = default;
@@ -3461,9 +3461,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse>::result;
 
  protected:
   Result() = default;
@@ -4690,9 +4690,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>>::result;
 
  protected:
   Result() = default;
@@ -4742,9 +4742,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse>::result;
 
  protected:
   Result() = default;
@@ -4794,9 +4794,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse>::result;
 
  protected:
   Result() = default;
@@ -4846,9 +4846,9 @@ class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknown
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> final : public ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> final : public ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse>::result;
 
  protected:
   Result() = default;

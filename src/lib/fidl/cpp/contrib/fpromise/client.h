@@ -52,7 +52,7 @@ struct ValueTypeOrVoid<T, std::void_t<typename T::value_type>> {
 // where |SuccessType| is the payload type for when the FIDL call succeeds, or
 // |void| if the FIDL call has an empty/zero-argument payload.
 // where |ErrorType| is |fidl::Error| if the FIDL call does not use application
-// errors, and |fidl::AnyErrorIn<MyProtocol::FidlMethod>| otherwise. |MyProtocol|
+// errors, and |fidl::ErrorsIn<MyProtocol::FidlMethod>| otherwise. |MyProtocol|
 // and |FidlMethod| are all placeholders to be replaced by the actual protocol
 // and method names.
 template <typename FidlMethod>

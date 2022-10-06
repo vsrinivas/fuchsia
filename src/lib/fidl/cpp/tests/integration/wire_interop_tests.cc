@@ -303,7 +303,7 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
             [&](fidl::Result<fidl_cpp_wire_interop_test::Interop::TryRoundTrip>& result) {
               ASSERT_FALSE(result.is_ok());
               ASSERT_TRUE(result.is_error());
-              fidl::AnyErrorIn<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> error =
+              fidl::ErrorsIn<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> error =
                   result.error_value();
               ASSERT_TRUE(error.is_domain_error());
               EXPECT_STATUS(ZX_ERR_INVALID_ARGS, error.domain_error());
@@ -840,8 +840,7 @@ TEST_F(UnifiedSyncClientToWireServer, TryRoundTrip) {
         client()->TryRoundTrip(std::move(request));
     ASSERT_FALSE(result.is_ok());
     ASSERT_TRUE(result.is_error());
-    fidl::AnyErrorIn<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> error =
-        result.error_value();
+    fidl::ErrorsIn<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> error = result.error_value();
     ASSERT_TRUE(error.is_domain_error());
     EXPECT_STATUS(ZX_ERR_INVALID_ARGS, error.domain_error());
     EXPECT_EQ(3, server.num_calls);

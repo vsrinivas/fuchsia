@@ -263,21 +263,21 @@ The precise definition that it expands to depends on the shape of the method:
 * When the method uses the error syntax:
   - When the method response payload is an empty struct:
     `fidl::Result<FooMethod>` inherits
-    `fit::result<fidl::AnyErrorIn<FooMethod>>` (see `AnyErrorIn` below).
+    `fit::result<fidl::ErrorsIn<FooMethod>>` (see `ErrorsIn` below).
   - When the method response payload is not an empty struct:
     `fidl::Result<FooMethod>` inherits
-  `fit::result<fidl::AnyErrorIn<FooMethod>, FooMethodPayload>`.
+  `fit::result<fidl::ErrorsIn<FooMethod>, FooMethodPayload>`.
 
-`AnyErrorIn` is used to implement [error folding][error-folding] of transport
+`ErrorsIn` is used to implement [error folding][error-folding] of transport
 and application errors, such that one may query `is_ok()` once on the result
 object to determine whether the call succeeded at all layers of abstractions:
 
 ```c++
-// |AnyErrorIn<Method>| represents the set of all possible errors during
+// |ErrorsIn<Method>| represents the set of all possible errors during
 // |Method|:
 // - Transport errors
 // - Application errors in the |Method| error syntax
-class fidl::AnyErrorIn<fuchsia_example::Speak::TryGreet> {
+class fidl::ErrorsIn<fuchsia_example::Speak::TryGreet> {
  public:
   bool is_framework_error();
   fidl::Error framework_error();
@@ -336,7 +336,7 @@ client->TryGreet({std::string("hi")}).Then(
     [] (fidl::Result<fuchsia_example::Speak::TryGreet>& result) {
       // fidl::Result<fuchsia_example::Speak::TryGreet> =
       //     fit::result<
-      //         fidl::AnyErrorIn<fuchsia_example::Speak::TryGreet>,
+      //         fidl::ErrorsIn<fuchsia_example::Speak::TryGreet>,
       //         fuchsia_example::SpeakTryGreetPayload>;
 
       // Check both transport and application error.
@@ -357,7 +357,7 @@ client->TryGreet({std::string("hi")}).Then(
 client->TryEmptyAck().Then(
     [] (fidl::Result<fuchsia_example::Speak::TryGreet>& result) {
       // fidl::Result<fuchsia_example::Speak::TryGreet> =
-      //     fit::result<fidl::AnyErrorIn<fuchsia_example::Speak::TryEmptyAck>>;
+      //     fit::result<fidl::ErrorsIn<fuchsia_example::Speak::TryEmptyAck>>;
 
       // Check both transport and application error.
       if (!result.is_ok()) {
@@ -406,7 +406,7 @@ fit::result<fidl::Error> result = client->EmptyAck({std::string("hi")});
 fit::result<fidl::Error> result = client->OneWay({42});
 
 // Example for error syntax:
-fit::result<fidl::AnyErrorIn<TryEmptyAck>> result = client->TryEmptyAck();
+fit::result<fidl::ErrorsIn<TryEmptyAck>> result = client->TryEmptyAck();
 ```
 
 Note that two-way methods with absent response bodies have the same return value
@@ -630,7 +630,7 @@ On the client side, users can ask the transport error object if the method was
 unknown:
 
 ```c++
-class fidl::AnyErrorIn<ErrorSyntaxFlexible> {
+class fidl::ErrorsIn<ErrorSyntaxFlexible> {
   bool is_framework_error();
   fidl::Error framework_error();
   // Potential API:

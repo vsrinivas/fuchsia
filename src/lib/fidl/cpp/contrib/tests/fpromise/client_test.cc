@@ -113,13 +113,13 @@ TEST(Client, PromisifyApplicationErrorMethodCasePrimitiveError) {
   fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), server.get());
   fidl::Client client(std::move(endpoints->client), loop.dispatcher());
 
-  fpromise::promise<void, fidl::AnyErrorIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>
+  fpromise::promise<void, fidl::ErrorsIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>
       p = fidl_fpromise::as_promise(client->NoArgsPrimitiveError({{.should_error = true}}));
   endpoints->server.reset();
 
   auto task = p.then(
       [&](fpromise::result<
-          void, fidl::AnyErrorIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>& result) {
+          void, fidl::ErrorsIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>& result) {
         ASSERT_TRUE(result.is_error());
         ASSERT_TRUE(result.error().is_domain_error());
         ASSERT_EQ(42, result.error().domain_error());
@@ -140,12 +140,12 @@ TEST(Client, PromisifyApplicationErrorMethodCaseCustomError) {
   fidl::Client client(std::move(endpoints->client), loop.dispatcher());
 
   fpromise::promise<test_error_methods::ErrorMethodsManyArgsCustomErrorResponse,
-                    fidl::AnyErrorIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>
+                    fidl::ErrorsIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>
       p = fidl_fpromise::as_promise(client->ManyArgsCustomError({{.should_error = true}}));
 
   auto task = p.then(
       [&](fpromise::result<test_error_methods::ErrorMethodsManyArgsCustomErrorResponse,
-                           fidl::AnyErrorIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>&
+                           fidl::ErrorsIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>&
               result) {
         ASSERT_TRUE(result.is_error());
         ASSERT_TRUE(result.error().is_domain_error());
@@ -178,12 +178,12 @@ TEST(Client, PromisifyApplicationErrorMethodCaseNoArgsSuccess) {
   fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), server.get());
   fidl::Client client(std::move(endpoints->client), loop.dispatcher());
 
-  fpromise::promise<void, fidl::AnyErrorIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>
+  fpromise::promise<void, fidl::ErrorsIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>
       p = fidl_fpromise::as_promise(client->NoArgsPrimitiveError({{.should_error = false}}));
 
   auto task = p.then(
       [&](fpromise::result<
-          void, fidl::AnyErrorIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>& result) {
+          void, fidl::ErrorsIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>& result) {
         ASSERT_TRUE(result.is_ok());
         loop.Quit();
       });
@@ -202,12 +202,12 @@ TEST(Client, PromisifyApplicationErrorMethodCaseManyArgsSuccess) {
   fidl::Client client(std::move(endpoints->client), loop.dispatcher());
 
   fpromise::promise<test_error_methods::ErrorMethodsManyArgsCustomErrorResponse,
-                    fidl::AnyErrorIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>
+                    fidl::ErrorsIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>
       p = fidl_fpromise::as_promise(client->ManyArgsCustomError({{.should_error = false}}));
 
   auto task = p.then(
       [&](fpromise::result<test_error_methods::ErrorMethodsManyArgsCustomErrorResponse,
-                           fidl::AnyErrorIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>&
+                           fidl::ErrorsIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>&
               result) {
         ASSERT_TRUE(result.is_ok());
         ASSERT_EQ(test_error_methods::ErrorMethodsManyArgsCustomErrorResponse(1, 2, 3),

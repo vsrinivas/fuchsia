@@ -93,7 +93,7 @@ var (
 	NaturalRequest          = fidlNs.member("Request")
 	NaturalResponse         = fidlNs.member("Response")
 	NaturalEvent            = fidlNs.member("Event")
-	NaturalAnyErrorIn       = fidlNs.member("AnyErrorIn")
+	NaturalErrorsIn         = fidlNs.member("ErrorsIn")
 	NaturalResult           = transportNs.member("Result")
 	MessageTraits           = internalNs.member("MessageTraits")
 	MessageBase             = internalNs.member("MessageBase")
@@ -594,7 +594,7 @@ type unifiedMethod struct {
 	NaturalResponse          name
 	NaturalResponseConverter name
 	NaturalResult            name
-	NaturalAnyErrorIn        name
+	NaturalErrorsIn          name
 	ResponseMessageTraits    name
 	NaturalEvent             name
 	NaturalEventConverter    name
@@ -612,7 +612,7 @@ func newUnifiedMethod(methodMarker name, unifiedTypes unifiedMessagingDetails) u
 	naturalRequest := NaturalRequest.template(methodMarker)
 	naturalResponse := NaturalResponse.template(methodMarker)
 	naturalResult := NaturalResult.template(methodMarker)
-	naturalAnyErrorIn := NaturalAnyErrorIn.template(methodMarker)
+	naturalErrorsIn := NaturalErrorsIn.template(methodMarker)
 	naturalEvent := NaturalEvent.template(methodMarker)
 	common := unifiedTypes.NaturalServer.nest(methodMarker.Self())
 	return unifiedMethod{
@@ -622,7 +622,7 @@ func newUnifiedMethod(methodMarker name, unifiedTypes unifiedMessagingDetails) u
 		NaturalResponse:          naturalResponse,
 		NaturalResponseConverter: NaturalMessageConverter.template(naturalResponse),
 		NaturalResult:            naturalResult,
-		NaturalAnyErrorIn:        naturalAnyErrorIn,
+		NaturalErrorsIn:          naturalErrorsIn,
 		ResponseMessageTraits:    MessageTraits.template(naturalResponse),
 		NaturalEvent:             naturalEvent,
 		NaturalEventConverter:    NaturalMessageConverter.template(naturalEvent),
@@ -801,9 +801,9 @@ func (m Method) NaturalResultBase() string {
 	if m.Result != nil {
 		if m.Result.HasError {
 			if len(m.Result.ValueParameters) > 0 {
-				return fmt.Sprintf("::fit::result<%s, %s>", m.NaturalAnyErrorIn, m.Result.ValueTypeDecl)
+				return fmt.Sprintf("::fit::result<%s, %s>", m.NaturalErrorsIn, m.Result.ValueTypeDecl)
 			} else {
-				return fmt.Sprintf("::fit::result<%s>", m.NaturalAnyErrorIn)
+				return fmt.Sprintf("::fit::result<%s>", m.NaturalErrorsIn)
 			}
 		} else {
 			if len(m.Result.ValueParameters) > 0 {

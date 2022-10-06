@@ -546,9 +546,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse>::result;
 
  protected:
   Result() = default;
@@ -615,9 +615,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::test_protocollayouts_imported::ImportUnionPayload>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::test_protocollayouts_imported::ImportUnionPayload>::result;
 
  protected:
   Result() = default;
@@ -684,9 +684,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::test_protocollayouts_imported::ImportUnionPayload>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::test_protocollayouts_imported::ImportUnionPayload>::result;
 
  protected:
   Result() = default;
@@ -753,9 +753,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::test_protocollayouts::LocalUnionPayload> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::test_protocollayouts::LocalUnionPayload> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::test_protocollayouts::LocalUnionPayload>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::test_protocollayouts::LocalUnionPayload>::result;
 
  protected:
   Result() = default;
@@ -822,9 +822,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
+class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>::result;
 
  protected:
   Result() = default;

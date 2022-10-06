@@ -78,9 +78,9 @@ namespace test_error {
 }  // namespace test_error
 
 template <>
-class ::fidl::Result<::test_error::Example::Foo> final : public ::fit::result<::fidl::AnyErrorIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse> {
+class ::fidl::Result<::test_error::Example::Foo> final : public ::fit::result<::fidl::ErrorsIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse>::result;
 
  protected:
   Result() = default;

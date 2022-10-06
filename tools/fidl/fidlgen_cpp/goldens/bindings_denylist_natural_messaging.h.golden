@@ -381,9 +381,9 @@ namespace test_bindingsdenylist {
 }  // namespace test_bindingsdenylist
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final : public ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse>::result;
 
  protected:
   Result() = default;
@@ -427,9 +427,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
 };
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final : public ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse>::result;
 
  protected:
   Result() = default;
@@ -473,9 +473,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
 };
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final : public ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse>::result;
 
  protected:
   Result() = default;
@@ -519,9 +519,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
 };
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final : public ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse>::result;
 
  protected:
   Result() = default;
@@ -565,9 +565,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
 };
 
 template <>
-class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final : public ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> {
+class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final : public ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>::result;
 
  protected:
   Result() = default;

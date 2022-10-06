@@ -98,9 +98,9 @@ namespace test_errorsyntax {
 }  // namespace test_errorsyntax
 
 template <>
-class ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final : public ::fit::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> {
+class ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final : public ::fit::result<::fidl::ErrorsIn<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResponse>::result;
 
  protected:
   Result() = default;
@@ -144,9 +144,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_errorsyn
 };
 
 template <>
-class ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final : public ::fit::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
+class ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final : public ::fit::result<::fidl::ErrorsIn<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::result;
 
  protected:
   Result() = default;

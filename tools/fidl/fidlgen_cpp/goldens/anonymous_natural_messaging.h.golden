@@ -78,9 +78,9 @@ namespace test_anonymous {
 }  // namespace test_anonymous
 
 template <>
-class ::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod> final : public ::fit::result<::fidl::AnyErrorIn<::test_anonymous::SomeProtocol::SomeMethod>, ::test_anonymous::SomeProtocolSomeMethodResponse> {
+class ::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod> final : public ::fit::result<::fidl::ErrorsIn<::test_anonymous::SomeProtocol::SomeMethod>, ::test_anonymous::SomeProtocolSomeMethodResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_anonymous::SomeProtocol::SomeMethod>, ::test_anonymous::SomeProtocolSomeMethodResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_anonymous::SomeProtocol::SomeMethod>, ::test_anonymous::SomeProtocolSomeMethodResponse>::result;
 
  protected:
   Result() = default;

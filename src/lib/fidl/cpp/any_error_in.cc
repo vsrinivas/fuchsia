@@ -9,8 +9,8 @@
 
 namespace fidl::internal {
 
-size_t AnyErrorInBase::FormatImpl(const char* prelude, FormattingBuffer& buffer,
-                                  fit::inline_callback<size_t(char*, size_t)> display_error) {
+size_t ErrorsInBase::FormatImpl(const char* prelude, FormattingBuffer& buffer,
+                                fit::inline_callback<size_t(char*, size_t)> display_error) {
   int num_would_write = 0;
   if (prelude != nullptr) {
     num_would_write = snprintf(buffer.begin(), buffer.size(), "%s", prelude);
@@ -24,7 +24,7 @@ size_t AnyErrorInBase::FormatImpl(const char* prelude, FormattingBuffer& buffer,
   return display_error(begin, len) + num_would_write;
 }
 
-const char* AnyErrorInBase::kFrameworkErrorPrelude = nullptr;
-const char* AnyErrorInBase::kDomainErrorPrelude = "FIDL method domain error: ";
+const char* ErrorsInBase::kFrameworkErrorPrelude = nullptr;
+const char* ErrorsInBase::kDomainErrorPrelude = "FIDL method domain error: ";
 
 }  // namespace fidl::internal

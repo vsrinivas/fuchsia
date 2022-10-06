@@ -629,9 +629,9 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
+class ::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::fit::result<::fidl::ErrorsIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_protocols::WithErrorSyntax::ResponseAsStruct>, ::test_protocols::WithErrorSyntaxResponseAsStructResponse>::result;
 
  protected:
   Result() = default;
@@ -675,9 +675,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::fit::result<::fidl::ErrorsIn<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::result;
 
  protected:
   Result() = default;
@@ -721,9 +721,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+class ::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::fit::result<::fidl::ErrorsIn<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::ErrorAsEnum>>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_protocols::WithErrorSyntax::ErrorAsEnum>>::result;
 
  protected:
   Result() = default;
@@ -767,9 +767,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult> final : public ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::HandleInResult>, ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
+class ::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult> final : public ::fit::result<::fidl::ErrorsIn<::test_protocols::WithErrorSyntax::HandleInResult>, ::test_protocols::WithErrorSyntaxHandleInResultResponse> {
  public:
-  using ::fit::result<::fidl::AnyErrorIn<::test_protocols::WithErrorSyntax::HandleInResult>, ::test_protocols::WithErrorSyntaxHandleInResultResponse>::result;
+  using ::fit::result<::fidl::ErrorsIn<::test_protocols::WithErrorSyntax::HandleInResult>, ::test_protocols::WithErrorSyntaxHandleInResultResponse>::result;
 
  protected:
   Result() = default;

@@ -78,15 +78,15 @@ class Event;
 // - When the method uses the error syntax:
 //     - When the method response payload is an empty struct:
 //
-//           fit::result<fidl::AnyErrorIn<Method>>
+//           fit::result<fidl::ErrorsIn<Method>>
 //
 //     - When the method response payload is not an empty struct:
 //
-//           fit::result<fidl::AnyErrorIn<Method>, MethodPayload>
+//           fit::result<fidl::ErrorsIn<Method>, MethodPayload>
 //
 //       where |MethodPayload| is the success type.
 //
-// See also |fidl::AnyErrorIn|.
+// See also |fidl::ErrorsIn|.
 template <typename Method>
 class Result;
 
