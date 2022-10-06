@@ -85,6 +85,8 @@ zx_status_t SdioFunctionDevice::SdioGetInBandIntr(zx::interrupt* out_irq) {
   return sdio_parent_->SdioGetInBandIntr(function_, out_irq);
 }
 
+void SdioFunctionDevice::SdioAckInBandIntr() { return sdio_parent_->SdioAckInBandIntr(function_); }
+
 zx_status_t SdioFunctionDevice::SdioIoAbort() { return sdio_parent_->SdioIoAbort(function_); }
 
 zx_status_t SdioFunctionDevice::SdioIntrPending(bool* out_pending) {

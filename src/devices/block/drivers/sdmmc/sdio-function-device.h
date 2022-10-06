@@ -47,7 +47,7 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
   zx_status_t SdioDoRwTxn(sdio_rw_txn_t* txn);
   zx_status_t SdioDoRwByte(bool write, uint32_t addr, uint8_t write_byte, uint8_t* out_read_byte);
   zx_status_t SdioGetInBandIntr(zx::interrupt* out_irq);
-  void SdioAckInBandIntr() {}
+  void SdioAckInBandIntr();
   zx_status_t SdioIoAbort();
   zx_status_t SdioIntrPending(bool* out_pending);
   zx_status_t SdioDoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,

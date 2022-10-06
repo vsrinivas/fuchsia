@@ -628,6 +628,16 @@ zx_status_t SdioControllerDevice::SdioGetInBandIntr(uint8_t fn_idx, zx::interrup
   return sdio_irqs_[fn_idx].duplicate(ZX_RIGHT_SAME_RIGHTS, out_irq);
 }
 
+void SdioControllerDevice::SdioAckInBandIntr(uint8_t fn_idx) {
+  // Don't ack for function 0 interrupts. This should not be possible given the child devices we've
+  // added, but check for it just in case.
+  if (SdioFnIdxValid(fn_idx) && fn_idx != 0) {
+    fbl::AutoLock lock(&lock_);
+    interrupt_enabled_mask_ |= 1 << fn_idx;
+    sdmmc_.host().AckInBandInterrupt();
+  }
+}
+
 void SdioControllerDevice::InBandInterruptCallback() { sync_completion_signal(&irq_signal_); }
 
 int SdioControllerDevice::SdioIrqThread() {
@@ -642,10 +652,20 @@ int SdioControllerDevice::SdioIrqThread() {
     }
 
     uint8_t intr_byte;
-    zx_status_t st = SdioDoRwByte(false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0, &intr_byte);
-    if (st != ZX_OK) {
-      zxlogf(ERROR, "Failed reading intr pending reg. status: %d", st);
-      return thrd_error;
+    {
+      fbl::AutoLock lock(&lock_);
+
+      zx_status_t st =
+          SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, 0, &intr_byte);
+      if (st != ZX_OK) {
+        zxlogf(ERROR, "Failed reading intr pending reg. status: %d", st);
+        return thrd_error;
+      }
+
+      // Only trigger interrupts for functions that have ack'd the previous interrupt. Clear the
+      // enabled bits for these functions.
+      intr_byte &= interrupt_enabled_mask_;
+      interrupt_enabled_mask_ &= ~intr_byte;
     }
 
     for (uint8_t i = 1; SdioFnIdxValid(i); i++) {

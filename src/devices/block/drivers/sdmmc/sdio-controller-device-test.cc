@@ -224,6 +224,7 @@ TEST_F(SdioControllerDeviceTest, MultiplexInterrupts) {
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 1);
   EXPECT_OK(interrupt1.ack());
+  dut_->SdioAckInBandIntr(1);
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b1111'1110}, 0);
   sdmmc_.TriggerInBandInterrupt();
@@ -231,18 +232,22 @@ TEST_F(SdioControllerDeviceTest, MultiplexInterrupts) {
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 1);
   EXPECT_OK(interrupt1.ack());
+  dut_->SdioAckInBandIntr(1);
 
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 2);
   EXPECT_OK(interrupt2.ack());
+  dut_->SdioAckInBandIntr(2);
 
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 4);
   EXPECT_OK(interrupt4.ack());
+  dut_->SdioAckInBandIntr(4);
 
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 7);
   EXPECT_OK(interrupt7.ack());
+  dut_->SdioAckInBandIntr(7);
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b1010'0010}, 0);
   sdmmc_.TriggerInBandInterrupt();
@@ -250,10 +255,12 @@ TEST_F(SdioControllerDeviceTest, MultiplexInterrupts) {
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 1);
   EXPECT_OK(interrupt1.ack());
+  dut_->SdioAckInBandIntr(1);
 
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 7);
   EXPECT_OK(interrupt7.ack());
+  dut_->SdioAckInBandIntr(7);
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b0011'0110}, 0);
   sdmmc_.TriggerInBandInterrupt();
@@ -261,10 +268,12 @@ TEST_F(SdioControllerDeviceTest, MultiplexInterrupts) {
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 1);
   EXPECT_OK(interrupt1.ack());
+  dut_->SdioAckInBandIntr(1);
 
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 2);
   EXPECT_OK(interrupt2.ack());
+  dut_->SdioAckInBandIntr(2);
 
   EXPECT_OK(port.wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 4);

@@ -59,6 +59,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
                            uint8_t* out_read_byte) TA_EXCL(lock_);
   zx_status_t SdioGetInBandIntr(uint8_t fn_idx, zx::interrupt* out_irq);
+  void SdioAckInBandIntr(uint8_t fn_idx);
   zx_status_t SdioIoAbort(uint8_t fn_idx) TA_EXCL(lock_);
   zx_status_t SdioIntrPending(uint8_t fn_idx, bool* out_pending);
   zx_status_t SdioDoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
@@ -141,6 +142,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
                                                 SdioTxnPosition current_position) TA_REQ(lock_);
 
   int SdioIrqThread();
+  uint8_t interrupt_enabled_mask_ TA_GUARDED(lock_) = UINT8_MAX;
 
   fbl::Mutex irq_thread_lock_;  // Used to make thread start and stop atomic.
   thrd_t irq_thread_ TA_GUARDED(irq_thread_lock_) = 0;
