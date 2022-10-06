@@ -22,7 +22,7 @@ TEST(MagmaSystemDevice, GetDeviceId) {
   uint32_t test_id = 0xdeadbeef;
 
   auto msd_dev = new MsdMockDevice_GetDeviceId(test_id);
-  auto device = MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr);
+  auto device = MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev));
 
   uint32_t device_id = device->GetDeviceId();
   // For now device_id is invalid
@@ -35,7 +35,7 @@ TEST(MagmaSystemDevice, GetDeviceId) {
 
 TEST(MagmaSystemDevice, MaximumInflightMessages) {
   auto msd_dev = new MsdMockDevice_GetDeviceId(0 /* device_id*/);
-  auto device = MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr);
+  auto device = MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev));
 
   uint64_t value;
   EXPECT_TRUE(device->Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, &value));
@@ -45,7 +45,7 @@ TEST(MagmaSystemDevice, MaximumInflightMessages) {
 
 TEST(MagmaSystemDevice, GetIcdList) {
   auto msd_dev = MsdDeviceUniquePtr(new MsdMockDevice);
-  auto device = MagmaSystemDevice::Create(std::move(msd_dev), nullptr);
+  auto device = MagmaSystemDevice::Create(std::move(msd_dev));
 
   std::vector<msd_icd_info_t> icds;
   magma_status_t status = device->GetIcdList(&icds);

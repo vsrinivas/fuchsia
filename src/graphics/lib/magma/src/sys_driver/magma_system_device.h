@@ -30,13 +30,11 @@ class MagmaSystemSemaphore;
 
 class MagmaSystemDevice {
  public:
-  static std::unique_ptr<MagmaSystemDevice> Create(msd_device_unique_ptr_t msd_device,
-                                                   void* device_handle) {
-    return std::make_unique<MagmaSystemDevice>(std::move(msd_device), device_handle);
+  static std::unique_ptr<MagmaSystemDevice> Create(msd_device_unique_ptr_t msd_device) {
+    return std::make_unique<MagmaSystemDevice>(std::move(msd_device));
   }
 
-  MagmaSystemDevice(msd_device_unique_ptr_t msd_dev, void* device_handle)
-      : msd_dev_(std::move(msd_dev)), device_handle_(device_handle) {
+  MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev)) {
     connection_map_ = std::make_unique<std::unordered_map<std::thread::id, Connection>>();
   }
 
@@ -48,7 +46,6 @@ class MagmaSystemDevice {
       std::unique_ptr<magma::PlatformHandle> server_notification_endpoint);
 
   msd_device_t* msd_dev() { return msd_dev_.get(); }
-  void* device_handle() const { return device_handle_; }
 
   // Returns the device id. 0 is invalid.
   uint32_t GetDeviceId();
@@ -56,8 +53,10 @@ class MagmaSystemDevice {
   // Called on driver thread
   void Shutdown();
 
-  // Called on driver thread
-  void StartConnectionThread(std::shared_ptr<magma::PlatformConnection> platform_connection);
+  // Called on driver thread.  |device_handle| may be used by the connection thread for
+  // initialization/configuration but should not be retained.
+  void StartConnectionThread(std::shared_ptr<magma::PlatformConnection> platform_connection,
+                             void* device_handle);
 
   // Called on connection thread
   void ConnectionClosed(std::thread::id thread_id);
@@ -77,7 +76,6 @@ class MagmaSystemDevice {
 
  private:
   msd_device_unique_ptr_t msd_dev_;
-  void* device_handle_;
   uint64_t perf_count_access_token_id_ = 0u;
 
   struct Connection {

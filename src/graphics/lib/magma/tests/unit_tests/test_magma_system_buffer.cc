@@ -38,8 +38,8 @@ TEST(MagmaSystemBuffer, Create) {
 
   auto msd_drv = msd_driver_create();
   auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-  auto dev = std::shared_ptr<MagmaSystemDevice>(
-      MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), nullptr));
+  auto dev =
+      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
   auto msd_connection = msd_device_open(msd_dev, 0);
   ASSERT_NE(msd_connection, nullptr);
   auto connection = std::unique_ptr<MagmaSystemConnection>(

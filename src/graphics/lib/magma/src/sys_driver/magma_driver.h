@@ -27,7 +27,7 @@ class MagmaDriver {
     if (!msd_dev)
       return DRETP(nullptr, "msd_create_device failed");
 
-    return MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), device_handle);
+    return MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev));
   }
 
   static std::unique_ptr<MagmaDriver> Create() {

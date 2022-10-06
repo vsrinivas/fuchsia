@@ -34,12 +34,12 @@ std::shared_ptr<magma::PlatformConnection> MagmaSystemDevice::Open(
 }
 
 void MagmaSystemDevice::StartConnectionThread(
-    std::shared_ptr<magma::PlatformConnection> platform_connection) {
+    std::shared_ptr<magma::PlatformConnection> platform_connection, void* device_handle) {
   std::unique_lock<std::mutex> lock(connection_list_mutex_);
 
   auto shutdown_event = platform_connection->ShutdownEvent();
   std::thread thread(magma::PlatformConnection::RunLoop, std::move(platform_connection),
-                     device_handle());
+                     device_handle);
 
   connection_map_->insert(std::pair<std::thread::id, Connection>(
       thread.get_id(), Connection{std::move(thread), std::move(shutdown_event)}));

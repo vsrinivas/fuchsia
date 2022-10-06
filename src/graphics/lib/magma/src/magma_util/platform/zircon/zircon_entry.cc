@@ -103,7 +103,7 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
       return;
     }
 
-    this->magma_system_device_->StartConnectionThread(std::move(connection));
+    this->magma_system_device_->StartConnectionThread(std::move(connection), zxdev());
   }
 
   void DumpState(DumpStateRequestView request, DumpStateCompleter::Sync& _completer) override {

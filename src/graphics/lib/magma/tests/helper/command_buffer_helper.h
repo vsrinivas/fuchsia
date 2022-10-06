@@ -24,8 +24,8 @@ class CommandBufferHelper {
     auto msd_dev = msd_driver_create_device(msd_drv.get(), device_handle);
     if (!msd_dev)
       return DRETP(nullptr, "failed to create msd device");
-    auto dev = std::shared_ptr<MagmaSystemDevice>(
-        MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev), device_handle));
+    auto dev =
+        std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
     uint32_t ctx_id = 0;
     auto msd_connection_t = msd_device_open(msd_dev, 0);
     if (!msd_connection_t)

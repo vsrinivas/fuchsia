@@ -98,7 +98,7 @@ struct sysdrv_device_t : public fidl::WireServer<DeviceType> {
       return;
     }
 
-    this->magma_system_device->StartConnectionThread(std::move(connection));
+    this->magma_system_device->StartConnectionThread(std::move(connection), zx_device_gpu);
   }
 
   void DumpState(DumpStateRequestView request, DumpStateCompleter::Sync& _completer) override {
