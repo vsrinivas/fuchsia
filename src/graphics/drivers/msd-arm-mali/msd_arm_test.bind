@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.platform;
+using fuchsia.arm.platform;
+using fuchsia.compat;
+
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.arm.platform.BIND_PLATFORM_DEV_VID.ARM;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.arm.platform.BIND_PLATFORM_DEV_DID.MAGMA_MALI;
+fuchsia.compat.LIBNAME == "libmsd_arm_test.so";

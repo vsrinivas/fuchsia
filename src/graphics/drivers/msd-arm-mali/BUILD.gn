@@ -62,11 +62,12 @@ magma_pdev_entry("msd_arm_entry") {
 }
 
 driver_bind_rules("msd_arm_test_bind") {
-  rules = "msd_arm.bind"
+  rules = "msd_arm_test.bind"
   header_output = "test_bind.h"
   disable_autobind = true
   deps = [
     "//src/devices/bind/fuchsia.arm.platform",
+    "//src/devices/bind/fuchsia.compat",
     "//src/devices/bind/fuchsia.platform",
   ]
 }

@@ -6,12 +6,7 @@ import("//products/minimal.gni")
 
 include_shell_commands_package = true
 
-product_system_image_deps = [
-  # Test drivers will only be loaded as tests require. They should be removed from production
-  # products that have limited storage.
-  # TODO(fxbug.dev/3150): Move to a regular package.
-  "//src/graphics/lib/magma/tests:test-drivers",
-]
+product_system_image_deps = []
 
 # Remove all minimal build kernel flags.
 product_bootfs_labels -= [ "//products/kernel_cmdline:minimal" ]

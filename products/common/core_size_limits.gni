@@ -26,7 +26,7 @@ size_checker_input = {
   # expected to grow when there is temporarily more than 1 copy.
   icu_data_creep_limit = 9232384  # 8.80 MiB
 
-  core_limit = 18498978  # 17.642 MiB
+  core_limit = 19691938  # 18.780 MiB
   core_creep_limit = 155648  # 152.0 KiB
 
   components = [
@@ -56,7 +56,7 @@ size_checker_input = {
         "packages/system/pkgfs_non_static_pkgs_allowlist_eng",
         "packages/system/disable-executability-restrictions",
       ]
-      limit = 8599899  # 8.202 MiB
+      limit = 7406939  # 7.064 MiB
       creep_limit = 40960  # 40.0 KiB
     },
     {

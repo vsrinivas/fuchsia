@@ -21,4 +21,18 @@ product_assembly_configuration("core") {
   }
   product = {
   }
+  base_driver_packages = [
+    {
+      package_target = "//src/graphics/drivers/msd-arm-mali:msd-arm-mali-test"
+      driver_components = [ "meta/libmsd_arm_test.cm" ]
+    },
+    {
+      package_target = "//src/graphics/drivers/msd-intel-gen:msd-intel-gen-test"
+      driver_components = [ "meta/libmsd_intel_test.cm" ]
+    },
+    {
+      package_target = "//src/graphics/drivers/msd-vsi-vip:msd-vsi-vip-test"
+      driver_components = [ "meta/libmsd_vsi_test.cm" ]
+    },
+  ]
 }
