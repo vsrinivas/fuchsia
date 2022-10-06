@@ -98,10 +98,19 @@ ThreadConfigMgrError ThreadConfigManager::ReadConfigValueFromBinArray(const std:
                                                                       uint8_t* value,
                                                                       size_t value_size,
                                                                       size_t* actual_size) const {
-  rapidjson::Value config_value;
   ThreadConfigMgrError error = kThreadConfigMgrNoError;
-  if ((error = ReadKVPair(key, config_value)) != kThreadConfigMgrNoError) {
-    return error;
+  const std::lock_guard<std::mutex> read_lock(config_mutex_);
+  otPlatLog(OT_LOG_LEVEL_DEBG, otLogRegion::OT_LOG_REGION_PLATFORM, "RapidJSONAllocator size: %d", config_.GetAllocator().Size());
+  rapidjson::Value::MemberIterator it = config_.FindMember(key);
+
+  if (it == config_.MemberEnd()) {
+    return kThreadConfigMgrErrorConfigNotFound;
+  }
+
+  rapidjson::Value& config_value = it->value;
+
+  if (config_value.IsNull()) {
+    return kThreadConfigMgrErrorConfigNotFound;
   } else if (!config_value.IsArray()) {
     // An entry exists but it is not of appropriate type
     return kThreadConfigMgrErrorConflictingTypes;
