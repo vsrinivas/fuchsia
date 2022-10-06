@@ -1402,7 +1402,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                 rcv_residual: _,
                 expiry,
             }) => {
-                if *expiry >= now {
+                if *expiry <= now {
                     *self = State::Closed(Closed { reason: UserError::ConnectionClosed });
                 }
                 None
@@ -2894,8 +2894,14 @@ mod test {
 
         assert_matches!(state, State::TimeWait(_));
 
+        const SMALLEST_DURATION: Duration = Duration::from_secs(1);
         assert_eq!(state.poll_send_at(), Some(clock.now() + MSL * 2));
-        clock.sleep(MSL * 2);
+        clock.sleep(MSL * 2 - SMALLEST_DURATION);
+        // The state should still be in time wait before the time out.
+        assert_eq!(state.poll_send(u32::MAX, clock.now()), None);
+        assert_matches!(state, State::TimeWait(_));
+        clock.sleep(SMALLEST_DURATION);
+        // The state should become closed.
         assert_eq!(state.poll_send(u32::MAX, clock.now()), None);
         assert_eq!(state, State::Closed(Closed { reason: UserError::ConnectionClosed }));
     }
@@ -3012,8 +3018,14 @@ mod test {
         // TIME-WAIT.
         assert_matches!(state, State::TimeWait(_));
 
+        const SMALLEST_DURATION: Duration = Duration::from_secs(1);
         assert_eq!(state.poll_send_at(), Some(clock.now() + MSL * 2));
-        clock.sleep(MSL * 2);
+        clock.sleep(MSL * 2 - SMALLEST_DURATION);
+        // The state should still be in time wait before the time out.
+        assert_eq!(state.poll_send(u32::MAX, clock.now()), None);
+        assert_matches!(state, State::TimeWait(_));
+        clock.sleep(SMALLEST_DURATION);
+        // The state should become closed.
         assert_eq!(state.poll_send(u32::MAX, clock.now()), None);
         assert_eq!(state, State::Closed(Closed { reason: UserError::ConnectionClosed }));
     }
