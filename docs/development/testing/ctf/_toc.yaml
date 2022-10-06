@@ -15,7 +15,7 @@ toc:
   - title: "Contributing Tests"
     path: /docs/development/testing/ctf/contributing_tests.md
   - title: "CTF Test Realm"
-    path: /docs/development/testing/ctf/test_realm.md
+    path: /docs/development/testing/ctf/test_collection.md
   - title: "Testing Guidelines"
     path: /docs/development/testing/ctf/testing_guidelines.md
   - title: "Diagnosing Test Failures"

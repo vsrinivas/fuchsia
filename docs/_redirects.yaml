@@ -22,6 +22,8 @@ redirects:
 - from: /docs/development/testing/cts/test_realm.md
   to: /docs/development/testing/ctf/test_realm.md
 
+- from: /docs/development/testing/ctf/test_realm.md
+  to: /docs/development/testing/ctf/test_collection.md
 
 - from: /docs/development/testing/cts/diagnosing_test_failures.md
   to: /docs/development/testing/ctf/diagnosing_test_failures.md

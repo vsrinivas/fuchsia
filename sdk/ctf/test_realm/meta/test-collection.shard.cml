@@ -4,6 +4,14 @@
 //
 // If you modify this file, update docs/development/testing/cts/test_realm.md.
 //
+// The test manager uses this manifest shard to define a collection where all CTF
+// tests run.  Tests add themselves to the collection by declaring:
+//
+//         facets: {
+//           "fuchsia.test": { type: "cts" },
+//         }
+//
+// Or by including //sdk/ctf/test_realm/meta/cts.shard.cml.
 {
     collections: [
         {
