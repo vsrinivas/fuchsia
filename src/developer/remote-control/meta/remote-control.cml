@@ -27,7 +27,6 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.buildinfo.Provider",
-                "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
                 "fuchsia.device.NameProvider",
                 "fuchsia.fuzzer.Manager",
                 "fuchsia.hwinfo.Device",

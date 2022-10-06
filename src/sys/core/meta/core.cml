@@ -534,11 +534,6 @@
             subdir: "diagnostics-persistence",
         },
         {
-            protocol: "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
-            from: "#remote-diagnostics-bridge",
-            to: "#remote-control",
-        },
-        {
             protocol: [
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
