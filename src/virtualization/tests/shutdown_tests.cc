@@ -17,7 +17,7 @@ class RestartableGuest : public T {
       return status;
     }
 
-    // TODO(fxbug.dev/106692): Remove once Debian flakes are resolved.
+    // TODO(fxbug.dev/111315): Remove once the test UI stack can create a second view.
     if (std::is_same<T, DebianEnclosedGuest>::value) {
       launch_info->config.set_virtio_gpu(false);
     }
@@ -26,9 +26,9 @@ class RestartableGuest : public T {
   }
 };
 
-// TODO(fxbug.dev/104989): Add Termina once its guest manager doesn't need to be destroyed.
 using RestartableGuests =
-    ::testing::Types<RestartableGuest<DebianEnclosedGuest>, RestartableGuest<ZirconEnclosedGuest>>;
+    ::testing::Types<RestartableGuest<DebianEnclosedGuest>, RestartableGuest<ZirconEnclosedGuest>,
+                     RestartableGuest<TerminaEnclosedGuest>>;
 
 template <class T>
 using RestartableGuestTest = GuestTest<T>;
@@ -41,7 +41,7 @@ TYPED_TEST(RestartableGuestTest, ForceRestartGuestInRealm) {
   // Restarting the guest without destroying the realm that the guest manager was launched into
   // validates that the out of process devices were correctly cleaned up upon guest termination.
   ASSERT_EQ(ZX_OK, this->GetEnclosedGuest().ForceRestart(guest_launch_info,
-                                                         zx::deadline_after(zx::min(5))));
+                                                         zx::deadline_after(zx::min(3))));
 }
 
 }  // namespace
