@@ -284,13 +284,15 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
   if (result.is_error()) {
     return false;
   }
+  auto driver_path = result.value();
 
-  if (libname.find('/') == std::string_view::npos) {
-    std::string abs_libname = std::string("/boot/driver/") + std::string(libname);
-    return result.value() == abs_libname;
+  // If `libname` is a relative path then check if `driver_path` ends with
+  // `libname`.
+  if (!libname.empty() && libname[0] != '/' && libname.length() <= driver_path.length()) {
+    return !driver_path.compare(driver_path.length() - libname.length(), libname.length(), libname);
   }
 
-  return result.value() == libname;
+  return driver_path == libname;
 }
 
 void DriverLoader::AddDeviceGroup(fuchsia_driver_framework::wire::DeviceGroup group,
