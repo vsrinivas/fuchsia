@@ -10,7 +10,10 @@ use {
         repo_builder::RepoBuilder, repo_client::RepoClient, repo_keys::RepoKeys,
         repository::PmRepository,
     },
-    std::fs::File,
+    std::{
+        fs::File,
+        io::{BufWriter, Write},
+    },
 };
 
 pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
@@ -28,20 +31,25 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     client.update().await?;
 
     // Load in all the package manifests up front so we'd error out if any are missing or malformed.
+    let mut deps = vec![];
     let mut packages = vec![];
     for package_manifest_path in cmd.package_manifests {
         packages.push(
             PackageManifest::try_load_from(package_manifest_path.as_std_path())
                 .with_context(|| format!("reading package manifest {}", package_manifest_path))?,
         );
+
+        deps.push(package_manifest_path);
     }
 
     for package_list_manifest_path in cmd.package_list_manifests {
-        let file = File::open(package_list_manifest_path)?;
+        let file = File::open(&package_list_manifest_path)?;
 
         for package_manifest_path in PackageManifestList::from_reader(file)? {
             packages.push(PackageManifest::try_load_from(package_manifest_path)?);
         }
+
+        deps.push(package_list_manifest_path);
     }
 
     // Publish all the packages.
@@ -54,6 +62,24 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     }
 
     repo_builder.commit().await?;
+
+    if let Some(depfile_path) = cmd.depfile {
+        let timestamp_path = cmd.repo_path.join("repository").join("timestamp.json");
+
+        let file =
+            File::create(&depfile_path).with_context(|| format!("creating {}", depfile_path))?;
+
+        let mut file = BufWriter::new(file);
+
+        write!(file, "{}:", timestamp_path)?;
+
+        for path in deps {
+            // Spaces are separators, so spaces in filenames must be escaped.
+            let path = path.as_str().replace(' ', "\\ ");
+
+            write!(file, " {}", path)?;
+        }
+    }
 
     Ok(())
 }
@@ -75,6 +101,7 @@ mod tests {
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
+            depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -103,6 +130,7 @@ mod tests {
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
+            depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -134,6 +162,7 @@ mod tests {
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
+            depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -145,6 +174,7 @@ mod tests {
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
+            depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -167,6 +197,7 @@ mod tests {
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: true,
+            depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -219,12 +250,18 @@ mod tests {
         let pkg_list2_manifest_path = root.join("list2.json");
         pkg_list2_manifest.to_writer(File::create(&pkg_list2_manifest_path).unwrap()).unwrap();
 
+        let depfile_path = root.join("deps");
+
         // Publish the packages.
         let cmd = RepoPublishCommand {
             keys: None,
-            package_manifests: vec![pkg1_manifest_path, pkg2_manifest_path],
-            package_list_manifests: vec![pkg_list1_manifest_path, pkg_list2_manifest_path],
+            package_manifests: vec![pkg1_manifest_path.clone(), pkg2_manifest_path.clone()],
+            package_list_manifests: vec![
+                pkg_list1_manifest_path.clone(),
+                pkg_list2_manifest_path.clone(),
+            ],
             time_versioning: false,
+            depfile: Some(depfile_path.clone()),
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -252,5 +289,17 @@ mod tests {
                 );
             }
         }
+
+        assert_eq!(
+            std::fs::read_to_string(&depfile_path).unwrap(),
+            format!(
+                "{}: {} {} {} {}",
+                repo_path.join("repository").join("timestamp.json"),
+                pkg1_manifest_path,
+                pkg2_manifest_path,
+                pkg_list1_manifest_path,
+                pkg_list2_manifest_path
+            )
+        );
     }
 }

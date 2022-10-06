@@ -238,7 +238,7 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_creation_manifest_not_exist() {
+    async fn test_creation_manifest_does_not_exist() {
         let tempdir = tempfile::tempdir().unwrap();
         let root = Utf8Path::from_path(tempdir.path()).unwrap();
 

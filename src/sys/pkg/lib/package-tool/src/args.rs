@@ -83,6 +83,9 @@ pub struct RepoPublishCommand {
     )]
     pub time_versioning: bool,
 
+    #[argh(option, description = "produce a depfile file")]
+    pub depfile: Option<Utf8PathBuf>,
+
     #[argh(positional, description = "path to the repository directory")]
     pub repo_path: Utf8PathBuf,
 }
