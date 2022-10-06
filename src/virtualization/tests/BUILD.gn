@@ -50,7 +50,6 @@ resource("termina_extras_img") {
 group("tests") {
   testonly = true
   deps = [
-    ":termina_container_tests_pkg",
     ":virtualization_balloon_tests_pkg",
     ":virtualization_block_tests_pkg",
     ":virtualization_core_tests_pkg",
@@ -64,6 +63,11 @@ group("tests") {
     "lib:tests",
     "virtio_input_test_util:tests($host_toolchain)",
   ]
+
+  # The termina_container_tests are quite slow on debug builds and sometimes time out.
+  if (!is_debug) {
+    deps += [ ":termina_container_tests_pkg" ]
+  }
 
   # TODO(fxbug.dev/12616): These tests currently do not work on arm64.
   if (current_cpu == "x64") {
