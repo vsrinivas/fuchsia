@@ -1176,6 +1176,12 @@ impl MemoryManager {
         state.read_memory(addr, bytes)
     }
 
+    pub fn read_buffer(&self, buffer: &UserBuffer) -> Result<Vec<u8>, Errno> {
+        let mut buf = vec![0u8; buffer.length];
+        self.read_memory(buffer.address, &mut buf)?;
+        Ok(buf)
+    }
+
     pub fn read_object<T: FromBytes>(&self, user: UserRef<T>) -> Result<T, Errno> {
         // SAFETY: T is FromBytes, which means that any bit pattern is valid. Interpreting T as u8
         // is safe because T's alignment requirements are larger than u8.
@@ -1235,8 +1241,7 @@ impl MemoryManager {
             if buffer.address.is_null() && buffer.length == 0 {
                 continue;
             }
-            let mut bytes = vec![0; buffer.length];
-            self.read_memory(buffer.address, &mut bytes)?;
+            let bytes = self.read_buffer(buffer)?;
             if callback(&bytes)?.is_none() {
                 break;
             }
