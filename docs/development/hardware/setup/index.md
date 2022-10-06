@@ -1,4 +1,4 @@
-# Provisioning guides index
+# Device setup guides index
 
 The table below is a comprehensive index of all guides related to getting
 Fuchsia running on a device. Use the dropdown menu next to the table to filter
