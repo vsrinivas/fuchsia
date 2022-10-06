@@ -117,7 +117,6 @@ void Osd::TryResolvePendingRdma() {
 }
 
 config_stamp_t Osd::GetLastConfigStampApplied() {
-  ZX_DEBUG_ASSERT(initialized_);
   fbl::AutoLock lock(&rdma_lock_);
   if (rdma_active_) {
     TryResolvePendingRdma();
@@ -213,53 +212,7 @@ Osd::Osd(bool supports_afbc, uint32_t fb_width, uint32_t fb_height, uint32_t dis
       inspect_node_.CreateUint("last_rdma_pending_in_vsync_timestamp_ns", 0);
 }
 
-zx_status_t Osd::Init(ddk::PDev& pdev) {
-  if (initialized_) {
-    return ZX_OK;
-  }
-
-  // Map vpu mmio used by the OSD object
-  zx_status_t status = pdev.MapMmio(MMIO_VPU, &vpu_mmio_);
-  if (status != ZX_OK) {
-    DISP_ERROR("osd: Could not map VPU mmio");
-    return status;
-  }
-
-  // Get BTI from parent
-  status = pdev.GetBti(0, &bti_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get BTI handle");
-    return status;
-  }
-
-  // Map RDMA Done Interrupt
-  status = pdev.GetInterrupt(IRQ_RDMA, 0, &rdma_irq_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not map RDMA interrupt");
-    return status;
-  }
-
-  auto start_thread = [](void* arg) { return static_cast<Osd*>(arg)->RdmaIrqThread(); };
-  status = thrd_create_with_name(&rdma_irq_thread_, start_thread, this, "rdma_irq_thread");
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not create rdma_thread");
-    return status;
-  }
-
-  // Setup RDMA
-  status = SetupRdma();
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not setup RDMA");
-    return status;
-  }
-
-  // OSD object is ready to be used.
-  initialized_ = true;
-  return ZX_OK;
-}
-
 void Osd::Disable(config_stamp_t config_stamp) {
-  ZX_DEBUG_ASSERT(initialized_);
   StopRdma();
   Osd1CtrlStatReg::Get().ReadFrom(&(*vpu_mmio_)).set_blk_en(0).WriteTo(&(*vpu_mmio_));
   fbl::AutoLock lock(&rdma_lock_);
@@ -267,7 +220,6 @@ void Osd::Disable(config_stamp_t config_stamp) {
 }
 
 void Osd::Enable(void) {
-  ZX_DEBUG_ASSERT(initialized_);
   Osd1CtrlStatReg::Get().ReadFrom(&(*vpu_mmio_)).set_blk_en(1).WriteTo(&(*vpu_mmio_));
 }
 
@@ -962,7 +914,6 @@ zx_status_t Osd::SetGamma(GammaChannel channel, const float* data) {
 }
 
 void Osd::SetMinimumRgb(uint8_t minimum_rgb) {
-  ZX_DEBUG_ASSERT(initialized_);
   // According to spec, minimum rgb should be set as follows:
   // Shift value by 2bits (8bit -> 10bit) and write new value for
   // each channel separately.
@@ -1035,7 +986,6 @@ zx_status_t Osd::ConfigAfbc() {
 }
 
 void Osd::HwInit() {
-  ZX_DEBUG_ASSERT(initialized_);
   // Setup VPP horizontal width
   WRITE32_REG(VPU, VPP_POSTBLEND_H_SIZE, display_width_);
 
@@ -1101,7 +1051,6 @@ void Osd::HwInit() {
 
 #define REG_OFFSET (0x20 << 2)
 void Osd::Dump() {
-  ZX_DEBUG_ASSERT(initialized_);
   DumpNonRdmaRegisters();
   DumpRdmaRegisters();
 }
@@ -1278,6 +1227,56 @@ void Osd::Release() {
   rdma_irq_.destroy();
   thrd_join(rdma_irq_thread_, nullptr);
   rdma_pmt_.unpin();
+}
+
+// static
+zx::status<std::unique_ptr<Osd>> Osd::Create(ddk::PDev* pdev, bool supports_afbc, uint32_t fb_width,
+                                             uint32_t fb_height, uint32_t display_width,
+                                             uint32_t display_height, inspect::Node* parent_node) {
+  fbl::AllocChecker ac;
+  std::unique_ptr<Osd> self(new (&ac) Osd(supports_afbc, fb_width, fb_height, display_width,
+                                          display_height, parent_node));
+  if (!ac.check()) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+
+  // Map vpu mmio used by the OSD object
+  zx_status_t status = pdev->MapMmio(MMIO_VPU, &self->vpu_mmio_);
+  if (status != ZX_OK) {
+    DISP_ERROR("osd: Could not map VPU mmio");
+    return zx::error(status);
+  }
+
+  // Get BTI from parent
+  status = pdev->GetBti(0, &self->bti_);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not get BTI handle");
+    return zx::error(status);
+  }
+
+  // Map RDMA Done Interrupt
+  status = pdev->GetInterrupt(IRQ_RDMA, 0, &self->rdma_irq_);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not map RDMA interrupt");
+    return zx::error(status);
+  }
+
+  auto start_thread = [](void* arg) { return static_cast<Osd*>(arg)->RdmaIrqThread(); };
+  status =
+      thrd_create_with_name(&self->rdma_irq_thread_, start_thread, self.get(), "rdma_irq_thread");
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not create rdma_thread");
+    return zx::error(status);
+  }
+
+  // Setup RDMA
+  status = self->SetupRdma();
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not setup RDMA");
+    return zx::error(status);
+  }
+
+  return zx::ok(self.release());
 }
 
 }  // namespace amlogic_display

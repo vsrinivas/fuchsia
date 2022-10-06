@@ -166,10 +166,13 @@ struct RdmaChannelContainer {
  */
 class Osd {
  public:
-  Osd(bool supports_afbc, uint32_t fb_width, uint32_t fb_height, uint32_t display_width,
-      uint32_t display_height, inspect::Node* parent_node);
+  static zx::status<std::unique_ptr<Osd>> Create(ddk::PDev* pdev, bool supports_afbc,
+                                                 uint32_t fb_width, uint32_t fb_height,
+                                                 uint32_t display_width, uint32_t display_height,
+                                                 inspect::Node* parent_node);
 
-  zx_status_t Init(ddk::PDev& pdev);
+  Osd(Osd& other) = delete;
+
   void HwInit();
 
   // Disable the OSD and set the latest stamp to |config_stamp|.
@@ -206,6 +209,8 @@ class Osd {
   void SetMinimumRgb(uint8_t minimum_rgb);
 
  private:
+  Osd(bool supports_afbc, uint32_t fb_width, uint32_t fb_height, uint32_t display_width,
+      uint32_t display_height, inspect::Node* parent_node);
   void DefaultSetup();
   // this function sets up scaling based on framebuffer and actual display
   // dimensions. The scaling IP and registers and undocumented.
@@ -291,8 +296,6 @@ class Osd {
   // If this flag is not set, we should not disable gamma in the absence
   // of a gamma table since that might have been provided by earlier boot stages.
   bool osd_enabled_gamma_ = false;
-
-  bool initialized_ = false;
 
   // Diagnostic variables:
 

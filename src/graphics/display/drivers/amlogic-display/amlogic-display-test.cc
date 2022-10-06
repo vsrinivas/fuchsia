@@ -169,32 +169,30 @@ TEST(AmlogicDisplay, SysmemRequirements_BgraOnly) {
 
 TEST(AmlogicDisplay, FloatToFix3_10) {
   inspect::Inspector inspector;
-  amlogic_display::Osd osd = amlogic_display::Osd(true, 100, 100, 100, 100, &inspector.GetRoot());
-  EXPECT_EQ(0x0000, osd.FloatToFixed3_10(0.0f));
-  EXPECT_EQ(0x0066, osd.FloatToFixed3_10(0.1f));
-  EXPECT_EQ(0x1f9a, osd.FloatToFixed3_10(-0.1f));
+  EXPECT_EQ(0x0000, amlogic_display::Osd::FloatToFixed3_10(0.0f));
+  EXPECT_EQ(0x0066, amlogic_display::Osd::FloatToFixed3_10(0.1f));
+  EXPECT_EQ(0x1f9a, amlogic_display::Osd::FloatToFixed3_10(-0.1f));
   // Test for maximum positive (<4)
-  EXPECT_EQ(0x0FFF, osd.FloatToFixed3_10(4.0f));
-  EXPECT_EQ(0x0FFF, osd.FloatToFixed3_10(40.0f));
-  EXPECT_EQ(0x0FFF, osd.FloatToFixed3_10(3.9999f));
+  EXPECT_EQ(0x0FFF, amlogic_display::Osd::FloatToFixed3_10(4.0f));
+  EXPECT_EQ(0x0FFF, amlogic_display::Osd::FloatToFixed3_10(40.0f));
+  EXPECT_EQ(0x0FFF, amlogic_display::Osd::FloatToFixed3_10(3.9999f));
   // Test for minimum negative (>= -4)
-  EXPECT_EQ(0x1000, osd.FloatToFixed3_10(-4.0f));
-  EXPECT_EQ(0x1000, osd.FloatToFixed3_10(-14.0f));
+  EXPECT_EQ(0x1000, amlogic_display::Osd::FloatToFixed3_10(-4.0f));
+  EXPECT_EQ(0x1000, amlogic_display::Osd::FloatToFixed3_10(-14.0f));
 }
 
 TEST(AmlogicDisplay, FloatToFixed2_10) {
   inspect::Inspector inspector;
-  amlogic_display::Osd osd = amlogic_display::Osd(true, 100, 100, 100, 100, &inspector.GetRoot());
-  EXPECT_EQ(0x0000, osd.FloatToFixed2_10(0.0f));
-  EXPECT_EQ(0x0066, osd.FloatToFixed2_10(0.1f));
-  EXPECT_EQ(0x0f9a, osd.FloatToFixed2_10(-0.1f));
+  EXPECT_EQ(0x0000, amlogic_display::Osd::FloatToFixed2_10(0.0f));
+  EXPECT_EQ(0x0066, amlogic_display::Osd::FloatToFixed2_10(0.1f));
+  EXPECT_EQ(0x0f9a, amlogic_display::Osd::FloatToFixed2_10(-0.1f));
   // Test for maximum positive (<2)
-  EXPECT_EQ(0x07FF, osd.FloatToFixed2_10(2.0f));
-  EXPECT_EQ(0x07FF, osd.FloatToFixed2_10(20.0f));
-  EXPECT_EQ(0x07FF, osd.FloatToFixed2_10(1.9999f));
+  EXPECT_EQ(0x07FF, amlogic_display::Osd::FloatToFixed2_10(2.0f));
+  EXPECT_EQ(0x07FF, amlogic_display::Osd::FloatToFixed2_10(20.0f));
+  EXPECT_EQ(0x07FF, amlogic_display::Osd::FloatToFixed2_10(1.9999f));
   // Test for minimum negative (>= -2)
-  EXPECT_EQ(0x0800, osd.FloatToFixed2_10(-2.0f));
-  EXPECT_EQ(0x0800, osd.FloatToFixed2_10(-14.0f));
+  EXPECT_EQ(0x0800, amlogic_display::Osd::FloatToFixed2_10(-2.0f));
+  EXPECT_EQ(0x0800, amlogic_display::Osd::FloatToFixed2_10(-14.0f));
 }
 
 TEST(AmlogicDisplay, NoLeakCaptureCanvas) {

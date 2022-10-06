@@ -115,19 +115,13 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   }
 
   root_node_ = inspector_.GetRoot().CreateChild("amlogic-display");
-  osd_ = fbl::make_unique_checked<amlogic_display::Osd>(
-      &ac, vout_->supports_afbc(), vout_->fb_width(), vout_->fb_height(), vout_->display_width(),
+  auto osd_or_status = amlogic_display::Osd::Create(
+      &pdev_, vout_->supports_afbc(), vout_->fb_width(), vout_->fb_height(), vout_->display_width(),
       vout_->display_height(), &root_node_);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+  if (osd_or_status.is_error()) {
+    return osd_or_status.status_value();
   }
-
-  // Initialize osd object
-  status = osd_->Init(pdev_);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not initialize OSD object\n");
-    return status;
-  }
+  osd_ = std::move(osd_or_status).value();
 
   osd_->HwInit();
   current_image_valid_ = false;
