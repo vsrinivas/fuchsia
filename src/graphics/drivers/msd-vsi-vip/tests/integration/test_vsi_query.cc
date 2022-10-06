@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "helper/test_device_helper.h"
-#include "magma.h"
+#include "magma/magma.h"
 #include "magma_vendor_queries.h"
 #include "magma_vsi_vip_devices.h"
 #include "magma_vsi_vip_types.h"

@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_LINUX_LINUX_PLATFORM_CONNECTION_CLIENT_H_
 #define SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_LINUX_LINUX_PLATFORM_CONNECTION_CLIENT_H_
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include "platform_connection_client.h"

@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "magma.h"
-#include "magma_sysmem.h"
+#include "magma/magma.h"
+#include "magma/magma_sysmem.h"
 #include "magma_util/status.h"
 #include "platform_buffer.h"
 

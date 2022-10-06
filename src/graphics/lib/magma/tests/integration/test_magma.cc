@@ -24,7 +24,7 @@
 #include "fidl/fuchsia.logger/cpp/wire.h"
 #include "fidl/fuchsia.tracing.provider/cpp/wire.h"
 #include "fuchsia/sysmem/cpp/fidl.h"
-#include "magma_sysmem.h"
+#include "magma/magma_sysmem.h"
 #include "platform_logger.h"
 #include "platform_trace_provider.h"
 #endif
@@ -37,8 +37,8 @@
 #include <gtest/gtest.h>
 
 #include "helper/magma_map_cpu.h"
-#include "magma.h"
-#include "magma_common_defs.h"
+#include "magma/magma.h"
+#include "magma/magma_common_defs.h"
 #include "magma_intel_gen_defs.h"
 #include "src/graphics/drivers/msd-arm-mali/include/magma_arm_mali_types.h"
 #include "src/graphics/drivers/msd-arm-mali/include/magma_vendor_queries.h"

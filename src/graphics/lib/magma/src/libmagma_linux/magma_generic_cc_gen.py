@@ -42,7 +42,7 @@ def codegen_warning():
 # Includes lists.
 def includes():
     ret = ''
-    ret += '#include "magma.h"\n'
+    ret += '#include "magma/magma.h"\n'
     ret += '#include "src/graphics/lib/magma/include/virtio/virtio_magma.h"\n'
     ret += '#include "src/graphics/lib/magma/src/libmagma_linux/virtmagma_util.h"\n'
     return ret

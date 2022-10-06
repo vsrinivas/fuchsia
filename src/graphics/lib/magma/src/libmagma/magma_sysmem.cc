@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magma_sysmem.h"
+#include "magma/magma_sysmem.h"
 
 #include "magma_util/macros.h"
 #include "platform_sysmem_connection.h"

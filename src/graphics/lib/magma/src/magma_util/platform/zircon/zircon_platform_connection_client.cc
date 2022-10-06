@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 #include "magma_util/dlog.h"
 #include "platform_connection_client.h"
 #include "zircon_platform_handle.h"

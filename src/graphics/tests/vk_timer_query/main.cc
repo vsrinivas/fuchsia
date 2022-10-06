@@ -12,7 +12,7 @@
 
 #include "../vkreadback/vkreadback.h"
 #include "helper/test_device_helper.h"
-#include "magma.h"
+#include "magma/magma.h"
 #include "magma_vendor_queries.h"
 #include "src/lib/fxl/test/test_settings.h"
 

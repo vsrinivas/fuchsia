@@ -9,7 +9,7 @@
 
 #include <functional>
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 
 using gen_pte_t = uint64_t;
 

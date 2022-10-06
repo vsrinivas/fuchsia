@@ -11,9 +11,9 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/object.h>
 #include <limits.h>
-#include <magma.h>
 
 #include <gtest/gtest.h>
+#include <magma/magma.h>
 
 class MagmaVsi {
  public:

@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 
 #include "helper/test_device_helper.h"
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 #include "src/graphics/tests/common/utils.h"
 #include "src/graphics/tests/common/vulkan_context.h"
 

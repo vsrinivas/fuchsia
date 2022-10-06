@@ -5,7 +5,7 @@
 #ifndef MAGMA_INTEL_GEN_DEFS_H
 #define MAGMA_INTEL_GEN_DEFS_H
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 
 #define MAGMA_VENDOR_ID_INTEL 0x8086
 

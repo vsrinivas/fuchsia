@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "magma.h"
+#include "magma/magma.h"
 #include "magma_util/macros.h"
 #include "magma_util/status.h"
 #include "msd_defs.h"

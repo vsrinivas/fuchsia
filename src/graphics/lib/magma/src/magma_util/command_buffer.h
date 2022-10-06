@@ -5,12 +5,13 @@
 #ifndef SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_COMMAND_BUFFER_H_
 #define SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_COMMAND_BUFFER_H_
 
-#include <magma_common_defs.h>
 #include <platform_semaphore.h>
 #include <platform_trace.h>
 
 #include <memory>
 #include <vector>
+
+#include <magma/magma_common_defs.h>
 
 #include "accessor.h"
 #include "macros.h"

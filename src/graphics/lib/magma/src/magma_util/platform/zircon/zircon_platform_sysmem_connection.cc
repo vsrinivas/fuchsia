@@ -10,7 +10,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 #include "magma_util/macros.h"
 #include "platform_sysmem_connection.h"
 #include "platform_thread.h"

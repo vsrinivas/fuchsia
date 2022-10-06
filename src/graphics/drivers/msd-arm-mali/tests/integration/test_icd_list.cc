@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 
 #include "helper/test_device_helper.h"
-#include "magma.h"
+#include "magma/magma.h"
 #include "magma_util/macros.h"
 #include "src/graphics/drivers/msd-arm-mali/include/magma_vendor_queries.h"
 

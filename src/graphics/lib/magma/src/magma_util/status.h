@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_STATUS_H_
 #define SRC_GRAPHICS_LIB_MAGMA_SRC_MAGMA_UTIL_STATUS_H_
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 
 namespace magma {
 

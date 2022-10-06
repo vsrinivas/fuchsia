@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MSD_VSI_VIP_INCLUDE_MAGMA_VENDOR_QUERIES_H_
 #define SRC_GRAPHICS_DRIVERS_MSD_VSI_VIP_INCLUDE_MAGMA_VENDOR_QUERIES_H_
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 
 #define MAGMA_VENDOR_ID_VSI 0x10001  // VK_VENDOR_ID_VIV
 

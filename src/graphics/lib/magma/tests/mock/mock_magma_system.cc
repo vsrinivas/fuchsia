@@ -4,8 +4,8 @@
 
 #include <unordered_map>
 
-#include "magma.h"
-#include "magma_sysmem.h"
+#include "magma/magma.h"
+#include "magma/magma_sysmem.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"

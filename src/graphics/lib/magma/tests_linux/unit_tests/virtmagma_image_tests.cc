@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <magma.h>
 #include <sys/mman.h>
 
 #include <gtest/gtest.h>
+#include <magma/magma.h>
 
 #include "drm_fourcc.h"
 

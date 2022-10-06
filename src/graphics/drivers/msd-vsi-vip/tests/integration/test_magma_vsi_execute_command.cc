@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magma.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -12,6 +11,7 @@
 
 #include <gtest/gtest.h>
 #include <helper/magma_map_cpu.h>
+#include <magma/magma.h>
 
 #include "test_magma_vsi.h"
 

@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 
 enum VsiVipCompressionOption : uint8_t {
   kVsiVipCompressionOptionNone = 0x0,

@@ -7,7 +7,7 @@
 
 #include <inttypes.h>
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 
 // Transfers ownership of |device_handle|.
 typedef magma_status_t (*magma_open_device_t)(uint32_t device_handle, uint32_t table_size,

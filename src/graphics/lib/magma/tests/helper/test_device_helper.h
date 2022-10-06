@@ -15,7 +15,7 @@
 
 #include <gtest/gtest.h>
 
-#include "magma.h"
+#include "magma/magma.h"
 
 namespace magma {
 class TestDeviceBase {

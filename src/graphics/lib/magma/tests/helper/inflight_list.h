@@ -7,7 +7,7 @@
 
 #include <deque>
 
-#include "magma.h"
+#include "magma/magma.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "magma_util/status.h"

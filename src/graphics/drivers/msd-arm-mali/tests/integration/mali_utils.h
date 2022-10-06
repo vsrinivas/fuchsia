@@ -6,7 +6,7 @@
 
 #include "helper/magma_map_cpu.h"
 #include "helper/test_device_helper.h"
-#include "magma.h"
+#include "magma/magma.h"
 #include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"

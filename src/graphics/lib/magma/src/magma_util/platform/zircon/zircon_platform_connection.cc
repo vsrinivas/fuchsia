@@ -6,7 +6,7 @@
 
 #include <optional>
 
-#include "magma_common_defs.h"
+#include "magma/magma_common_defs.h"
 #include "zircon_platform_status.h"
 
 namespace {
