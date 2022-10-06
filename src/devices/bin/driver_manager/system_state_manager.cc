@@ -52,6 +52,7 @@ void SystemStateManager::SetMexecZbis(SetMexecZbisRequestView request,
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to prepare to mexec on shutdown: %s", zx_status_get_string(status));
     completer.ReplyError(status);
+    return;
   }
   LOGF(INFO, "Prepared to mexec on shutdown");
   completer.ReplySuccess();
