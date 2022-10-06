@@ -34,6 +34,61 @@ def ResolvePackage(package, version):
     return CallCipd(["describe", package, "-version", version])
 
 
+def GetSplitRustToolchainPaths(packages, host_platforms, target_platforms=None):
+    """
+    Separating `package = rust` into Host/Target packages. This function will
+    remove the unified `rust` package when separating into Host/Target packages.
+    """
+    CIPD_RUST_PREFIX = "fuchsia/third_party/rust"
+    DEFAULT_TARGET_PLATFORMS = [
+        "aarch64-unknown-linux-gnu",
+        "fuchsia",
+        "wasm32-unknown-unknown",
+        "x86_64-apple-darwin",
+        "x86_64-unknown-linux-gnu",
+    ]
+    rust_toolchain_packages = []
+    if "rust" not in packages:
+        return rust_toolchain_packages
+
+    if target_platforms is None:
+        target_platforms = DEFAULT_TARGET_PLATFORMS
+
+    host_packages = [
+        "%s/%s/%s" % (CIPD_RUST_PREFIX, "host", host_platform)
+        for host_platform in host_platforms
+    ]
+
+    target_packages = [
+        "%s/%s/%s" % (CIPD_RUST_PREFIX, "target", target_platform)
+        for target_platform in target_platforms
+    ]
+
+    rust_toolchain_packages = host_packages + target_packages
+
+    # Removing unified `rust` package
+    packages.remove("rust")
+
+    return rust_toolchain_packages
+
+
+def GetRustToolchainCommands(rust_toolchain_packages, tag):
+    rust_command = []
+    if not rust_toolchain_packages:
+        return rust_command
+
+    # Only download ${platform} Host toolchain packages
+    rust_command += ["-package", "fuchsia/third_party/rust/host/${platform}=%s" % (tag)]
+
+    for package in rust_toolchain_packages:
+        # Skip host packages, keep all target
+        if "fuchsia/third_party/rust/host" in package:
+            continue
+        rust_command += ["-package", "%s=%s" % (package, tag)]
+
+    return rust_command
+
+
 def main():
     parser = argparse.ArgumentParser(
         "fx roll-compiler",
@@ -74,6 +129,9 @@ before commands are run for any package.
     if not args.package:
         args.package = ["clang"]
 
+    # Rust separate host/target toolchain
+    rust_toolchain_packages = GetSplitRustToolchainPaths(args.package, args.platforms)
+
     packages = [
         package if "/" in package else "fuchsia/third_party/" + package
         for package in args.package
@@ -87,19 +145,24 @@ before commands are run for any package.
         ]
         return tag
 
-    all_packages = [
-        ResolvePackage("%s/%s" % (package, platform), args.version)
-            for platform in args.platforms
-            for package in packages
+    packages_to_resolve = [
+        "%s/%s" % (package, platform)
+        for platform in args.platforms
+        for package in packages
+    ] + rust_toolchain_packages
+
+    resolved_packages = [
+        ResolvePackage(package, args.version) for package in packages_to_resolve
     ]
 
     package_tags = {
-        package["pin"]["package"]: PackageTag(package) for package in all_packages
+        package["pin"]["package"]: PackageTag(package) for package in resolved_packages
     }
     tag_set = set(t for t in package_tags.values())
     if len(tag_set) != 1:
         sys.stderr.write(
-            f"Not all packages have matching {args.tag} tags at version {args.version}:\n")
+            f"Not all packages have matching {args.tag} tags at version {args.version}:\n"
+        )
         json.dump(package_tags, sys.stderr, sort_keys=True, indent=4)
         sys.stderr.write("\n")
         sys.exit(1)
@@ -110,6 +173,8 @@ before commands are run for any package.
     cmd = [JIRI, "edit"]
     for package in packages:
         cmd += ["-package", "%s/${platform}=%s" % (package, tag)]
+    cmd += GetRustToolchainCommands(rust_toolchain_packages, tag)
+
     cmd.append(args.manifest)
 
     def DryRun(args):
