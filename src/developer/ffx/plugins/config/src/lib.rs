@@ -34,7 +34,8 @@ pub async fn exec_config(config: ConfigCommand) -> Result<()> {
 
 fn output<W: Write + Sync>(mut writer: W, value: Option<Value>) -> Result<()> {
     match value {
-        Some(v) => writeln!(writer, "{}", v).map_err(|e| anyhow!("{}", e)),
+        Some(v) => writeln!(writer, "{}", serde_json::to_string_pretty(&v).unwrap())
+            .map_err(|e| anyhow!("{}", e)),
         // Use 2 error code so wrapper scripts don't need check for the string to differentiate
         // errors.
         None => ffx_bail_with_code!(2, "Value not found"),
@@ -48,9 +49,11 @@ fn output_array<W: Write + Sync>(
     match values {
         Ok(v) => {
             if v.len() == 1 {
-                writeln!(writer, "{}", v[0]).map_err(|e| anyhow!("{}", e))
+                writeln!(writer, "{}", serde_json::to_string_pretty(&v[0]).unwrap())
+                    .map_err(|e| anyhow!("{}", e))
             } else {
-                writeln!(writer, "{}", Value::Array(v)).map_err(|e| anyhow!("{}", e))
+                writeln!(writer, "{}", serde_json::to_string_pretty(&Value::Array(v)).unwrap())
+                    .map_err(|e| anyhow!("{}", e))
             }
         }
         // Use 2 error code so wrapper scripts don't need check for the string to differentiate
