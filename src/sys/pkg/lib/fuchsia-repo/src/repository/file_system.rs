@@ -38,20 +38,75 @@ use {
     },
 };
 
+/// Describes how package blobs should be copied into the repository.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CopyMode {
+    /// Copy package blobs into the repository.
+    ///
+    /// This will create a Copy-on-Write (reflink) on file systems that support it.
+    #[default]
+    Copy,
+
+    /// Create hard links from the package blobs into the repository.
+    HardLink,
+}
+
+/// A builder to create a repository contained on the local file system.
+pub struct FileSystemRepositoryBuilder {
+    metadata_repo_path: Utf8PathBuf,
+    blob_repo_path: Utf8PathBuf,
+    copy_mode: CopyMode,
+}
+
+impl FileSystemRepositoryBuilder {
+    /// Creates a [FileSystemRepositoryBuilder] where the TUF metadata is stored in
+    /// `metadata_repo_path`, and the blobs are stored in `blob_repo_path`.
+    pub fn new(metadata_repo_path: Utf8PathBuf, blob_repo_path: Utf8PathBuf) -> Self {
+        FileSystemRepositoryBuilder {
+            metadata_repo_path,
+            blob_repo_path,
+            copy_mode: CopyMode::Copy,
+        }
+    }
+
+    /// Select which [CopyMode] to use when copying files into the repository.
+    pub fn copy_mode(mut self, copy_mode: CopyMode) -> Self {
+        self.copy_mode = copy_mode;
+        self
+    }
+
+    /// Build a [FileSystemRepository].
+    pub fn build(self) -> FileSystemRepository {
+        FileSystemRepository {
+            metadata_repo_path: self.metadata_repo_path.clone(),
+            blob_repo_path: self.blob_repo_path,
+            copy_mode: self.copy_mode,
+            tuf_repo: TufFileSystemRepositoryBuilder::new(self.metadata_repo_path).build(),
+        }
+    }
+}
+
 /// Serve a repository from the file system.
 #[derive(Debug)]
 pub struct FileSystemRepository {
     metadata_repo_path: Utf8PathBuf,
     blob_repo_path: Utf8PathBuf,
+    copy_mode: CopyMode,
     tuf_repo: TufFileSystemRepository<Pouf1>,
 }
 
 impl FileSystemRepository {
+    /// Construct a [FileSystemRepositoryBuilder].
+    pub fn builder(
+        metadata_repo_path: Utf8PathBuf,
+        blob_repo_path: Utf8PathBuf,
+    ) -> FileSystemRepositoryBuilder {
+        FileSystemRepositoryBuilder::new(metadata_repo_path, blob_repo_path)
+    }
+
     /// Construct a [FileSystemRepository].
     pub fn new(metadata_repo_path: Utf8PathBuf, blob_repo_path: Utf8PathBuf) -> Self {
-        let tuf_repo = TufFileSystemRepositoryBuilder::new(metadata_repo_path.clone()).build();
-
-        Self { metadata_repo_path, blob_repo_path, tuf_repo }
+        Self::builder(metadata_repo_path, blob_repo_path).build()
     }
 
     fn fetch<'a>(
@@ -259,11 +314,17 @@ impl RepoStorage for FileSystemRepository {
 
         async move {
             let dst = dst?;
-            let temp_path = create_temp_file(&dst).await?;
 
-            async_fs::copy(src, &temp_path).await?;
-
-            temp_path.persist(dst)?;
+            match self.copy_mode {
+                CopyMode::Copy => {
+                    let temp_path = create_temp_file(&dst).await?;
+                    async_fs::copy(src, &temp_path).await?;
+                    temp_path.persist(dst)?;
+                }
+                CopyMode::HardLink => {
+                    async_fs::hard_link(src, &dst).await?;
+                }
+            }
 
             Ok(())
         }
@@ -456,5 +517,74 @@ mod tests {
         // after shutting down our stream.
         drop(watch_stream);
         fasync::Timer::new(Duration::from_millis(100)).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_store_blob_copy() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let metadata_repo_path = dir.join("metadata");
+        let blob_repo_path = dir.join("blobs");
+        std::fs::create_dir(&metadata_repo_path).unwrap();
+        std::fs::create_dir(&blob_repo_path).unwrap();
+
+        let repo = FileSystemRepository::builder(metadata_repo_path, blob_repo_path.clone())
+            .copy_mode(CopyMode::Copy)
+            .build();
+
+        // Store the blob.
+        let contents = b"hello world";
+        let path = dir.join("my-blob");
+        std::fs::write(&path, contents).unwrap();
+
+        let hash = fuchsia_merkle::from_slice(contents).root();
+        assert_matches!(repo.store_blob(&hash, &path).await, Ok(()));
+
+        // Make sure we can read it back.
+        let blob_path = blob_repo_path.join(hash.to_string());
+        let actual = std::fs::read(blob_path).unwrap();
+        assert_eq!(&actual, &contents[..]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_store_blob_hard_link() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let metadata_repo_path = dir.join("metadata");
+        let blob_repo_path = dir.join("blobs");
+        std::fs::create_dir(&metadata_repo_path).unwrap();
+        std::fs::create_dir(&blob_repo_path).unwrap();
+
+        let repo = FileSystemRepository::builder(metadata_repo_path, blob_repo_path.clone())
+            .copy_mode(CopyMode::HardLink)
+            .build();
+
+        // Store the blob.
+        let contents = b"hello world";
+        let path = dir.join("my-blob");
+        std::fs::write(&path, contents).unwrap();
+
+        let hash = fuchsia_merkle::from_slice(contents).root();
+        assert_matches!(repo.store_blob(&hash, &path).await, Ok(()));
+
+        // Make sure we can read it back.
+        let blob_path = blob_repo_path.join(hash.to_string());
+        let actual = std::fs::read(&blob_path).unwrap();
+        assert_eq!(&actual, &contents[..]);
+
+        #[cfg(target_family = "unix")]
+        async fn check_links(blob_path: &Utf8Path) {
+            use std::os::unix::fs::MetadataExt as _;
+
+            assert_eq!(std::fs::metadata(blob_path).unwrap().nlink(), 2);
+        }
+
+        #[cfg(not(target_family = "unix"))]
+        async fn check_links(_blob_path: &Utf8Path) {}
+
+        // Make sure the hard link count was incremented.
+        check_links(&blob_path).await;
     }
 }

@@ -6,7 +6,10 @@ use {
     crate::{
         range::Range,
         repo_keys,
-        repository::{Error, FileSystemRepository, RepoProvider, RepoStorage, RepositorySpec},
+        repository::{
+            CopyMode, Error, FileSystemRepository, FileSystemRepositoryBuilder, RepoProvider,
+            RepoStorage, RepositorySpec,
+        },
         resource::Resource,
     },
     anyhow::Result,
@@ -23,6 +26,33 @@ use {
     },
 };
 
+pub struct PmRepositoryBuilder {
+    pm_repo_path: Utf8PathBuf,
+    builder: FileSystemRepositoryBuilder,
+}
+
+impl PmRepositoryBuilder {
+    pub fn new(pm_repo_path: Utf8PathBuf) -> Self {
+        let metadata_repo_path = pm_repo_path.join("repository");
+        let blob_repo_path = metadata_repo_path.join("blobs");
+
+        PmRepositoryBuilder {
+            pm_repo_path,
+            builder: FileSystemRepositoryBuilder::new(metadata_repo_path, blob_repo_path),
+        }
+    }
+
+    /// Select which [CopyMode] to use when copying files into the repository.
+    pub fn copy_mode(mut self, copy_mode: CopyMode) -> Self {
+        self.builder = self.builder.copy_mode(copy_mode);
+        self
+    }
+
+    pub fn build(self) -> PmRepository {
+        PmRepository { pm_repo_path: self.pm_repo_path, repo: self.builder.build() }
+    }
+}
+
 /// Serve a repository from a local pm repository.
 #[derive(Debug)]
 pub struct PmRepository {
@@ -31,13 +61,13 @@ pub struct PmRepository {
 }
 
 impl PmRepository {
+    pub fn builder(pm_repo_path: Utf8PathBuf) -> PmRepositoryBuilder {
+        PmRepositoryBuilder::new(pm_repo_path)
+    }
+
     /// Construct a [PmRepository].
     pub fn new(pm_repo_path: Utf8PathBuf) -> Self {
-        let metadata_repo_path = pm_repo_path.join("repository");
-        let blob_repo_path = metadata_repo_path.join("blobs");
-        let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path);
-
-        Self { pm_repo_path, repo }
+        Self::builder(pm_repo_path).build()
     }
 
     /// Tries to return the pm repository [RepoKeys]. Returns an empty [RepoKeys] if the `keys/`

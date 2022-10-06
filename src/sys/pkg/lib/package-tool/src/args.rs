@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, camino::Utf8PathBuf, std::path::PathBuf};
+use {argh::FromArgs, camino::Utf8PathBuf, fuchsia_repo::repository::CopyMode, std::path::PathBuf};
 
 /// Builds a package.
 #[derive(FromArgs, PartialEq, Debug, Default)]
@@ -89,6 +89,22 @@ pub struct RepoPublishCommand {
     #[argh(option, description = "produce a depfile file")]
     pub depfile: Option<Utf8PathBuf>,
 
+    #[argh(
+        option,
+        default = "CopyMode::Copy",
+        from_str_fn(parse_copy_mode),
+        description = "mode used to copy blobs to repository. Either 'copy' or 'hard-link' (default 'copy')"
+    )]
+    pub copy_mode: CopyMode,
+
     #[argh(positional, description = "path to the repository directory")]
     pub repo_path: Utf8PathBuf,
+}
+
+fn parse_copy_mode(value: &str) -> Result<CopyMode, String> {
+    match value {
+        "copy" => Ok(CopyMode::Copy),
+        "hard-link" => Ok(CopyMode::HardLink),
+        _ => Err(format!("unknown copy mode {}", value)),
+    }
 }

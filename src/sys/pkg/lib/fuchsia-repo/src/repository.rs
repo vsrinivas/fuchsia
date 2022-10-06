@@ -25,10 +25,12 @@ mod pm;
 #[cfg(test)]
 pub(crate) mod repo_tests;
 
-pub use file_system::FileSystemRepository;
-pub use gcs_repository::GcsRepository;
-pub use http_repository::HttpRepository;
-pub use pm::PmRepository;
+pub use {
+    file_system::{CopyMode, FileSystemRepository, FileSystemRepositoryBuilder},
+    gcs_repository::GcsRepository,
+    http_repository::HttpRepository,
+    pm::PmRepository,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {

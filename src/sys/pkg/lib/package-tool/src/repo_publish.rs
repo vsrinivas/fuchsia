@@ -17,7 +17,7 @@ use {
 };
 
 pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
-    let repo = PmRepository::new(cmd.repo_path.clone());
+    let repo = PmRepository::builder(cmd.repo_path.clone()).copy_mode(cmd.copy_mode).build();
 
     // Load the keys. If we weren't passed in a keys file, try to read it from the repository.
     let repo_keys = if let Some(repo_keys_path) = cmd.keys {
@@ -88,8 +88,12 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, assert_matches::assert_matches, camino::Utf8Path, chrono::Utc,
-        fuchsia_repo::test_utils, tuf::metadata::Metadata as _,
+        super::*,
+        assert_matches::assert_matches,
+        camino::Utf8Path,
+        chrono::Utc,
+        fuchsia_repo::{repository::CopyMode, test_utils},
+        tuf::metadata::Metadata as _,
     };
 
     #[fuchsia::test]
@@ -104,6 +108,7 @@ mod tests {
             time_versioning: false,
             clean: false,
             depfile: None,
+            copy_mode: CopyMode::Copy,
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -134,6 +139,8 @@ mod tests {
             time_versioning: false,
             clean: false,
             depfile: None,
+            copy_mode: CopyMode::Copy,
+
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -167,6 +174,7 @@ mod tests {
             time_versioning: false,
             clean: false,
             depfile: None,
+            copy_mode: CopyMode::Copy,
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -180,6 +188,7 @@ mod tests {
             time_versioning: false,
             clean: false,
             depfile: None,
+            copy_mode: CopyMode::Copy,
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -204,6 +213,7 @@ mod tests {
             time_versioning: true,
             clean: false,
             depfile: None,
+            copy_mode: CopyMode::Copy,
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -269,6 +279,7 @@ mod tests {
             time_versioning: false,
             clean: false,
             depfile: Some(depfile_path.clone()),
+            copy_mode: CopyMode::Copy,
             repo_path: repo_path.to_path_buf(),
         };
         assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
@@ -331,6 +342,7 @@ mod tests {
             time_versioning: false,
             clean: false,
             depfile: None,
+            copy_mode: CopyMode::Copy,
             repo_path: repo_path.to_path_buf(),
         };
         assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
@@ -357,6 +369,7 @@ mod tests {
             time_versioning: false,
             clean: true,
             depfile: None,
+            copy_mode: CopyMode::Copy,
             repo_path: repo_path.to_path_buf(),
         };
         assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
