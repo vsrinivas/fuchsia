@@ -13,7 +13,6 @@
             "fuchsia.accessibility.semantics.SemanticsManager",
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.device.NameProvider",
-            "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",

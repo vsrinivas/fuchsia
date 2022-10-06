@@ -20,7 +20,6 @@ group("tests") {
     "base-resolver:tests",
     "component_manager:tests",
     "core:tests",
-    "device_settings:tests",
     "early_boot_instrumentation:tests",
     "full-resolver:tests",
     "fuzzing:tests",

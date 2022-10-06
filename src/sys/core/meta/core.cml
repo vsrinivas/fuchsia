@@ -18,10 +18,6 @@
             environment: "#core-env",
         },
         {
-            name: "device_settings",
-            url: "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cm",
-        },
-        {
             name: "debug-dash-launcher",
             url: "fuchsia-pkg://fuchsia.com/debug-dash-launcher#meta/debug_dash_launcher.cm",
         },
@@ -394,7 +390,6 @@
                 "#debug-dash-launcher",
                 "#debug_serial",
                 "#detect",
-                "#device_settings",
                 "#diagnostics-kcounter",
                 "#diagnostics-persistence",
                 "#font_provider",

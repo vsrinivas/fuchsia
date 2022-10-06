@@ -68,10 +68,6 @@
             from: "parent",
         },
         {
-            protocol: "fuchsia.devicesettings.DeviceSettingsManager",
-            from: "#device_settings",
-        },
-        {
             protocol: "fuchsia.sysmem.Allocator",
             from: "#sysmem_connector",
         },

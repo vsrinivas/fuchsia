@@ -116,10 +116,6 @@ protocol InterceptedComponent {
 /// `TestHarness.Run()`. A malformed `TestHarnessSpec` will cause `TestHarness`
 /// connection to close with an epitaph of `ZX_ERR_INVALID_ARGS`.
 ///
-/// By default, the following services are made available to the hermetic
-/// environment:
-///  * fuchsia.devicesettings.DeviceSettingsManager
-///
 /// Additional services may be supplied using using
 /// `TestHarnessSpec.env_services_to_inherit` and
 /// `TestHarnessSpec.injected_services`. Additional services override the

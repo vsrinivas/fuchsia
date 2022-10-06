@@ -64,7 +64,6 @@ group("all") {
     "//src/performance/trace_stress",
     "//src/performance/traceutil:zedmon_test($host_toolchain)",
     "//src/power:tests",
-    "//src/sys/device_settings:device_settings_manager",
     "//src/sys/sysmgr/integration_tests",
     "//src/ui/a11y/bundles:tests",
     "//src/ui/bin/shortcut:tests",

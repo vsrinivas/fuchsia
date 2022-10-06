@@ -68,7 +68,6 @@ legacy_base_package_labels += [
   "//src/recovery/factory_reset",
   "//src/security/root_ssl_certificates",
   "//src/sys/activity",
-  "//src/sys/device_settings:device_settings_manager",
   "//src/sys/full-resolver",  # This seems needed to run the session manager
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",

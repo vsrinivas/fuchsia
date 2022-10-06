@@ -1,5 +1,0 @@
-# fxbug.dev/47602 - visibility auditors
-per-file BUILD.gn=benwright@google.com
-per-file BUILD.gn=jsankey@google.com
-per-file BUILD.gn=zarvox@google.com
-per-file BUILD.gn=shayba@google.com

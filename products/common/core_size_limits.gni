@@ -76,7 +76,6 @@ size_checker_input = {
         # [START_EXCLUDE]
         "packages/base/appmgr",
         "packages/base/component_index",
-        "packages/base/device_settings_manager",
         "packages/base/stash",
         "packages/base/sysmgr",
 
