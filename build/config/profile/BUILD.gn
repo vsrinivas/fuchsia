@@ -48,10 +48,6 @@ variant("coverage") {
     dynamic_linker_flags = "-dynamic-linker=coverage/ld.so.1"
     ldflags = [ "-Wl,$dynamic_linker_flags" ]
     rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
-
-    # TODO(fxbug.dev/83653): Remove this workaround after we diagnose and address
-    # the compiler issue, see the bug for more details.
-    libs = [ "./llvm_profile_counter_bias.ld" ]
   }
 
   # Enable runtime counter relocation in Linux.
@@ -81,10 +77,6 @@ variant("coverage-cts") {
     dynamic_linker_flags = "-dynamic-linker=coverage-cts/ld.so.1"
     ldflags = [ "-Wl,$dynamic_linker_flags" ]
     rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
-
-    # TODO(fxbug.dev/83653): Remove this workaround after we diagnose and address
-    # the compiler issue, see the bug for more details.
-    libs = [ "./llvm_profile_counter_bias.ld" ]
   }
 
   # Enable runtime counter relocation in Linux.
