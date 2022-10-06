@@ -5,6 +5,7 @@
 use crate::input_device::{Handled, InputDeviceEvent, InputEvent, UnhandledInputEvent};
 use crate::input_handler::UnhandledInputHandler;
 use async_trait::async_trait;
+use fidl_fuchsia_ui_input3::{KeyMeaning, Modifiers, NonPrintableKey};
 use fuchsia_syslog::fx_log_debug;
 use keymaps::{LockStateKeys, ModifierState};
 use std::cell::RefCell;
@@ -64,10 +65,66 @@ impl UnhandledInputHandler for ModifierHandler {
 impl ModifierHandler {
     /// Creates a new [ModifierHandler].
     pub fn new() -> Rc<Self> {
-        Rc::new(ModifierHandler {
+        Rc::new(Self {
             modifier_state: RefCell::new(ModifierState::new()),
             lock_state: RefCell::new(LockStateKeys::new()),
         })
+    }
+}
+
+/// Tracks the state of the modifiers that are tied to the key meaning (as opposed to hardware
+/// keys).
+#[derive(Debug)]
+pub struct ModifierMeaningHandler {
+    /// The tracked state of the modifiers.
+    modifier_state: RefCell<ModifierState>,
+}
+
+impl ModifierMeaningHandler {
+    /// Creates a new [ModifierMeaningHandler].
+    pub fn new() -> Rc<Self> {
+        Rc::new(Self { modifier_state: RefCell::new(ModifierState::new()) })
+    }
+}
+
+#[async_trait(?Send)]
+impl UnhandledInputHandler for ModifierMeaningHandler {
+    async fn handle_unhandled_input_event(
+        self: Rc<Self>,
+        unhandled_input_event: UnhandledInputEvent,
+    ) -> Vec<InputEvent> {
+        match unhandled_input_event {
+            UnhandledInputEvent {
+                device_event: InputDeviceEvent::Keyboard(mut event),
+                device_descriptor,
+                event_time,
+                trace_id: _,
+            } if event.get_key_meaning()
+                == Some(KeyMeaning::NonPrintableKey(NonPrintableKey::AltGraph)) =>
+            {
+                // The "obvious" rewrite of this if and the match guard above is
+                // unstable, so doing it this way.
+                if let Some(key_meaning) = event.get_key_meaning() {
+                    self.modifier_state
+                        .borrow_mut()
+                        .update_with_key_meaning(event.get_event_type(), key_meaning);
+                    let new_modifier =
+                        event.get_modifiers().unwrap_or(Modifiers::empty())
+                            | self.modifier_state.borrow().get_state();
+                    event = event.into_with_modifiers(Some(new_modifier));
+                    fx_log_debug!("additinal modifiers and lock state applied: {:?}", &event);
+                }
+                vec![InputEvent {
+                    device_event: InputDeviceEvent::Keyboard(event),
+                    device_descriptor,
+                    event_time,
+                    handled: Handled::No,
+                    trace_id: None,
+                }]
+            }
+            // Pass other events through.
+            _ => vec![InputEvent::from(unhandled_input_event)],
+        }
     }
 }
 
@@ -106,6 +163,48 @@ mod tests {
                 .into_with_lock_state(Some(LockState::CAPS_LOCK)),
         ));
         assert_eq!(vec![expected], result);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_key_meaning_decoration() {
+        let handler = ModifierMeaningHandler::new();
+        {
+            let input_event = get_unhandled_input_event(
+                KeyboardEvent::new(Key::RightAlt, KeyEventType::Pressed)
+                    .into_with_key_meaning(Some(KeyMeaning::NonPrintableKey(
+                        NonPrintableKey::AltGraph,
+                    )))
+                    .into_with_modifiers(Some(Modifiers::CAPS_LOCK)),
+            );
+            let result = handler.clone().handle_unhandled_input_event(input_event.clone()).await;
+            let expected = InputEvent::from(get_unhandled_input_event(
+                KeyboardEvent::new(Key::RightAlt, KeyEventType::Pressed)
+                    .into_with_key_meaning(Some(KeyMeaning::NonPrintableKey(
+                        NonPrintableKey::AltGraph,
+                    )))
+                    .into_with_modifiers(Some(Modifiers::ALT_GRAPH | Modifiers::CAPS_LOCK)),
+            ));
+            assert_eq!(vec![expected], result);
+        }
+        {
+            let input_event = get_unhandled_input_event(
+                KeyboardEvent::new(Key::RightAlt, KeyEventType::Released)
+                    .into_with_key_meaning(Some(KeyMeaning::NonPrintableKey(
+                        NonPrintableKey::AltGraph,
+                    )))
+                    .into_with_modifiers(Some(Modifiers::CAPS_LOCK)),
+            );
+            let handler = handler.clone();
+            let result = handler.handle_unhandled_input_event(input_event.clone()).await;
+            let expected = InputEvent::from(get_unhandled_input_event(
+                KeyboardEvent::new(Key::RightAlt, KeyEventType::Released)
+                    .into_with_key_meaning(Some(KeyMeaning::NonPrintableKey(
+                        NonPrintableKey::AltGraph,
+                    )))
+                    .into_with_modifiers(Some(Modifiers::CAPS_LOCK)),
+            ));
+            assert_eq!(vec![expected], result);
+        }
     }
 
     // CapsLock  """"""\______/""""""""""\_______/"""

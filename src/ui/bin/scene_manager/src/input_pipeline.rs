@@ -244,6 +244,7 @@ async fn build_input_pipeline_assembly(
             assembly = add_text_settings_handler(assembly);
             assembly = add_keyboard_handler(assembly);
             assembly = add_keymap_handler(assembly);
+            assembly = add_key_meaning_modifier_handler(assembly);
             assembly = assembly.add_autorepeater();
             assembly = add_dead_keys_handler(assembly, icu_data_loader);
             assembly = add_immersive_mode_shortcut_handler(assembly);
@@ -348,6 +349,12 @@ fn add_chromebook_keyboard_handler(assembly: InputPipelineAssembly) -> InputPipe
 /// Hooks up the modifier keys handler.
 fn add_modifier_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
     assembly.add_handler(input_pipeline::modifier_handler::ModifierHandler::new())
+}
+
+/// Hooks up the modifier keys handler based on key meanings.  This must come
+/// after the keymap handler.
+fn add_key_meaning_modifier_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
+    assembly.add_handler(input_pipeline::modifier_handler::ModifierMeaningHandler::new())
 }
 
 /// Hooks up the inspect handler.

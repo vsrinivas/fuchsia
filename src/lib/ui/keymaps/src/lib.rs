@@ -304,10 +304,9 @@ impl ModifierState {
                 Key::CapsLock => self.state.insert(Modifiers::CAPS_LOCK),
                 Key::NumLock => self.state.insert(Modifiers::NUM_LOCK),
                 Key::ScrollLock => self.state.insert(Modifiers::SCROLL_LOCK),
-                // These modifiers are not defined yet in Key.
+                // These modifiers are not defined in Key.
                 // Key::Function
                 // Key::Symbol
-                // Key::AltGraph
 
                 // For "sided" modifiers, we must also maintain the "side-less"
                 // bit. Here, and everywhere below.
@@ -393,6 +392,24 @@ impl ModifierState {
                     if !self.test(Modifiers::LEFT_CTRL) {
                         self.state.remove(Modifiers::CTRL);
                     }
+                }
+                _ => {}
+            },
+        }
+    }
+
+    /// Update the modifier tracker with this event.
+    pub fn update_with_key_meaning(&mut self, event: KeyEventType, key_meaning: KeyMeaning) {
+        match event {
+            KeyEventType::Pressed | KeyEventType::Sync => match key_meaning {
+                KeyMeaning::NonPrintableKey(NonPrintableKey::AltGraph) => {
+                    self.state.insert(Modifiers::ALT_GRAPH)
+                }
+                _ => {}
+            },
+            KeyEventType::Released | KeyEventType::Cancel => match key_meaning {
+                KeyMeaning::NonPrintableKey(NonPrintableKey::AltGraph) => {
+                    self.state.remove(Modifiers::ALT_GRAPH)
                 }
                 _ => {}
             },
@@ -936,6 +953,23 @@ mod tests {
         modifier_state.update(KeyEventType::Released, Key::CapsLock);
         assert!(!modifier_state.test(Modifiers::SHIFT));
         assert!(!modifier_state.test(Modifiers::CAPS_LOCK));
+    }
+
+    #[test]
+    fn test_key_meaning_modifier_tracker() {
+        let mut modifier_state: ModifierState = Default::default();
+        assert!(!modifier_state.test(Modifiers::ALT_GRAPH));
+
+        modifier_state.update_with_key_meaning(
+            KeyEventType::Pressed,
+            KeyMeaning::NonPrintableKey(NonPrintableKey::AltGraph),
+        );
+        assert!(modifier_state.test(Modifiers::ALT_GRAPH));
+        modifier_state.update_with_key_meaning(
+            KeyEventType::Released,
+            KeyMeaning::NonPrintableKey(NonPrintableKey::AltGraph),
+        );
+        assert!(!modifier_state.test(Modifiers::ALT_GRAPH));
     }
 
     // CapsLock            ________/""""""""""\_______/"""""\_____
