@@ -99,6 +99,7 @@ if (is_fuchsia) {
     packages = files.packages_json
     system_a = files.images_json
     version_file = build_info_files.version
+    board_name = "fake_board"
     epoch = "1"
   }
 
