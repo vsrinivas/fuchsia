@@ -507,13 +507,6 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
   const auto& invocation = type_ctor->resolved_params;
   std::string key = parent_type_kind == TypeKind::kConcrete ? "type" : "element_type";
 
-  // Special case: type "bytes" is a builtin alias, so it will have no
-  // user-specified arg type.
-  if (type->kind == flat::Type::Kind::kVector && invocation.element_type_raw == nullptr) {
-    GenerateObjectMember(key, type, position);
-    return;
-  }
-
   GenerateObjectPunctuation(position);
   EmitObjectKey(key);
   GenerateObject([&]() {
