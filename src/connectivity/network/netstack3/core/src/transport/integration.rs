@@ -33,8 +33,11 @@ impl<C: NonSyncContext> UdpStateContext<Ipv4, C> for &'_ SyncCtx<C> {
         crate::ip::device::leave_ip_multicast::<Ipv4, _, _>(self, ctx, device, addr);
     }
 
-    fn with_sockets<O, F: FnOnce(&UdpSockets<Ipv4, DeviceId>) -> O>(&self, cb: F) -> O {
-        cb(&self.state.transport.udpv4.sockets.read())
+    fn with_sockets<O, F: FnOnce(&Self::IpSocketsCtx, &UdpSockets<Ipv4, DeviceId>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        cb(self, &self.state.transport.udpv4.sockets.read())
     }
 
     fn with_sockets_mut<
@@ -73,8 +76,11 @@ impl<C: NonSyncContext> UdpStateContext<Ipv6, C> for &'_ SyncCtx<C> {
         crate::ip::device::leave_ip_multicast::<Ipv6, _, _>(self, ctx, device, addr);
     }
 
-    fn with_sockets<O, F: FnOnce(&UdpSockets<Ipv6, DeviceId>) -> O>(&self, cb: F) -> O {
-        cb(&self.state.transport.udpv6.sockets.read())
+    fn with_sockets<O, F: FnOnce(&Self::IpSocketsCtx, &UdpSockets<Ipv6, DeviceId>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        cb(self, &self.state.transport.udpv6.sockets.read())
     }
 
     fn with_sockets_mut<

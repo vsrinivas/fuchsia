@@ -800,7 +800,7 @@ pub(crate) mod testutil {
             device::state::{AddrConfig, AddressState, AssignedAddress as _, IpDeviceState},
             forwarding::ForwardingTable,
             testutil::DummyDeviceId,
-            IpDeviceId, SendIpPacketMeta,
+            HopLimits, IpDeviceId, SendIpPacketMeta, TransportIpContext, DEFAULT_HOP_LIMITS,
         },
     };
 
@@ -814,6 +814,30 @@ pub(crate) mod testutil {
     pub(crate) struct DummyIpSocketCtx<I: IpDeviceStateIpExt, D> {
         pub(crate) table: ForwardingTable<I, D>,
         device_state: HashMap<D, IpDeviceState<DummyInstant, I>>,
+    }
+
+    impl<
+            I: IpExt + IpDeviceStateIpExt,
+            DeviceId: IpDeviceId + 'static,
+            Id,
+            Event: Debug,
+            NonSyncCtxState,
+        > TransportIpContext<I, DummyNonSyncCtx<Id, Event, NonSyncCtxState>>
+        for DummyIpSocketCtx<I, DeviceId>
+    {
+        fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {
+            device.map_or(DEFAULT_HOP_LIMITS, |device| {
+                let hop_limit = self.get_device_state(device).default_hop_limit;
+                HopLimits { unicast: hop_limit, multicast: hop_limit }
+            })
+        }
+
+        fn get_device_with_assigned_addr(
+            &self,
+            addr: SpecifiedAddr<<I>::Addr>,
+        ) -> Option<Self::DeviceId> {
+            self.find_device_with_addr(addr)
+        }
     }
 
     impl<I: IpDeviceStateIpExt, DeviceId: IpDeviceId + 'static> IpDeviceIdContext<I>
@@ -957,9 +981,9 @@ pub(crate) mod testutil {
             })
         }
 
-        pub(crate) fn get_device_state(&self, device: D) -> &IpDeviceState<DummyInstant, I> {
+        pub(crate) fn get_device_state(&self, device: &D) -> &IpDeviceState<DummyInstant, I> {
             let Self { device_state, table: _ } = self;
-            device_state.get(&device).unwrap_or_else(|| panic!("no device {}", device))
+            device_state.get(device).unwrap_or_else(|| panic!("no device {}", device))
         }
     }
 

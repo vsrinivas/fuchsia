@@ -26,7 +26,7 @@ use crate::{
     error::{LocalAddressError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::{
         socket::{IpSock, IpSockCreationError, IpSocketHandler, SendOptions},
-        HopLimits, IpDeviceId, IpExt,
+        HopLimits, IpDeviceId, IpExt, TransportIpContext,
     },
     socket::{
         self,
@@ -194,7 +194,7 @@ fn leave_all_joined_groups<
 pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
     /// The synchronized context passed to the callback provided to
     /// `with_sockets_mut`.
-    type IpSocketsCtx: IpSocketHandler<A::IpVersion, C, DeviceId = A::DeviceId>;
+    type IpSocketsCtx: TransportIpContext<A::IpVersion, C, DeviceId = A::DeviceId>;
 
     /// Requests that the specified device join the given multicast group.
     ///
@@ -221,21 +221,17 @@ pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
         addr: MulticastAddr<A::IpAddr>,
     );
 
-    /// Gets the ID for the device that has the given address assigned.
-    ///
-    /// Returns `None` if no such device exists.
-    fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<A::IpAddr>) -> Option<A::DeviceId>;
-
     /// Calls the function with an immutable reference to the datagram sockets.
-    fn with_sockets<O, F: FnOnce(&DatagramSockets<A, S>) -> O>(&self, cb: F) -> O;
+    fn with_sockets<O, F: FnOnce(&Self::IpSocketsCtx, &DatagramSockets<A, S>) -> O>(
+        &self,
+        cb: F,
+    ) -> O;
 
     /// Calls the function with a mutable reference to the datagram sockets.
     fn with_sockets_mut<O, F: FnOnce(&mut Self::IpSocketsCtx, &mut DatagramSockets<A, S>) -> O>(
         &mut self,
         cb: F,
     ) -> O;
-
-    fn get_default_hop_limits(&self, device: Option<&A::DeviceId>) -> HopLimits;
 }
 
 pub(crate) trait DatagramStateNonSyncContext<A: SocketMapAddrSpec> {
@@ -435,10 +431,7 @@ where
     S::UnboundSharingState: Clone + Into<S::ListenerSharingState>,
     S::ListenerSharingState: Default,
 {
-    // Borrow the state immutably so that sync_ctx can be used to make other
-    // calls inside the closure.
-    let (addr, device, identifier) =
-        sync_ctx.with_sockets(|DatagramSockets { bound, unbound }| {
+    sync_ctx.with_sockets_mut(|sync_ctx, DatagramSockets { bound, unbound }| {
             let identifier = match local_id {
                 Some(local_id) => Ok(local_id),
                 None => {
@@ -463,7 +456,7 @@ where
             let UnboundSocketState { device, sharing: _, ip_options: _ } = unbound
                 .get(id.clone().into())
                 .unwrap_or_else(|| panic!("unbound ID {:?} is invalid", id));
-            Ok(match addr {
+            let (addr, device, identifier) = match addr {
                 Some(addr) => {
                     // Extract the specified address and the device. The device
                     // is either the one from the address or the one to which
@@ -484,14 +477,8 @@ where
                     (Some(addr), device, identifier)
                 }
                 None => (None, device.clone(), identifier),
-            })
-        })?;
+            };
 
-    // Re-borrow the state mutably.
-    // TODO(https://fxbug.dev/108008): Combine this with the above when
-    // with_sockets_mut provides an additional context argument.
-    sync_ctx.with_sockets_mut(
-        |_sync_ctx, DatagramSockets { unbound, bound,  }, | {
             let unbound_entry = match unbound.entry(id.clone().into()) {
                 IdMapEntry::Vacant(_) => panic!("unbound ID {:?} is invalid", id),
                 IdMapEntry::Occupied(o) => o,
@@ -731,7 +718,7 @@ where
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
 {
-    sync_ctx.with_sockets(|state| {
+    sync_ctx.with_sockets(|_sync_ctx, state| {
         let DatagramSockets { bound, unbound } = state;
         match id.into() {
             DatagramSocketId::Unbound(id) => {
@@ -775,9 +762,8 @@ pub enum SetMulticastMembershipError {
 
 fn pick_matching_interface<
     A: SocketMapAddrSpec,
-    S,
     C: DatagramStateNonSyncContext<A>,
-    SC: DatagramStateContext<A, C, S>,
+    SC: TransportIpContext<A::IpVersion, C, DeviceId = A::DeviceId>,
 >(
     sync_ctx: &SC,
     interface: MulticastMembershipInterfaceSelector<A::IpAddr, A::DeviceId>,
@@ -795,9 +781,8 @@ fn pick_matching_interface<
 
 fn pick_interface_for_addr<
     A: SocketMapAddrSpec,
-    S,
     C: DatagramStateNonSyncContext<A>,
-    SC: DatagramStateContext<A, C, S>,
+    SC: TransportIpContext<A::IpVersion, C, DeviceId = A::DeviceId>,
 >(
     _sync_ctx: &SC,
     _addr: MulticastAddr<A::IpAddr>,
@@ -876,9 +861,9 @@ where
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
 {
     let id = id.into();
-    let interface = pick_matching_interface(sync_ctx, interface)?;
 
-    let interface = sync_ctx.with_sockets(|state| {
+    let (change, interface) = sync_ctx.with_sockets_mut(|sync_ctx, state| {
+        let interface = pick_matching_interface(sync_ctx, interface)?;
         let DatagramSockets { bound, unbound } = state;
         let bound_device = match id.clone() {
             DatagramSocketId::Unbound(id) => {
@@ -904,7 +889,7 @@ where
         // If the socket is bound to a device, check that against the provided
         // interface ID. If none was provided, use the bound device. If there is
         // none, try to pick a device using the provided address.
-        match (bound_device, interface) {
+        let interface = match (bound_device, interface) {
             (Some(bound_device), None) => Ok(bound_device.clone()),
             (None, Some(interface)) => Ok(interface),
             (Some(bound_device), Some(interface)) => (bound_device == &interface)
@@ -912,13 +897,8 @@ where
                 .ok_or(SetMulticastMembershipError::WrongDevice),
             (None, None) => pick_interface_for_addr(sync_ctx, multicast_group)
                 .ok_or(SetMulticastMembershipError::NoDeviceAvailable),
-        }
-    })?;
+        }?;
 
-    // Re-borrow the state mutably here now that we have picked an interface.
-    // This can be folded into the above if we can teach our context traits that
-    // the UDP state can be borrowed while the interface picking code runs.
-    let change = sync_ctx.with_sockets_mut(|_sync_ctx, state| {
         let DatagramSockets { bound, unbound } = state;
         let ip_options = match id {
             DatagramSocketId::Unbound(id) => {
@@ -949,6 +929,7 @@ where
         multicast_memberships
             .apply_membership_change(multicast_group, &interface, want_membership)
             .ok_or(SetMulticastMembershipError::NoMembershipChange)
+            .map(|change| (change, interface))
     })?;
 
     match change {
@@ -1077,7 +1058,7 @@ where
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     A::IpVersion: IpExt,
 {
-    sync_ctx.with_sockets(|sockets| {
+    sync_ctx.with_sockets(|sync_ctx, sockets| {
         let (options, device) = get_options_device(sockets, id.into());
         let IpOptions { hop_limits, multicast_memberships: _ } = options;
         hop_limits.get_limits_with_defaults(&sync_ctx.get_default_hop_limits(device.as_ref()))
@@ -1098,7 +1079,7 @@ mod test {
         data_structures::socketmap::SocketMap,
         ip::{
             device::state::IpDeviceStateIpExt, socket::testutil::DummyIpSocketCtx,
-            testutil::DummyDeviceId,
+            testutil::DummyDeviceId, DEFAULT_HOP_LIMITS,
         },
         socket::{IncompatibleError, InsertError, RemoveResult},
         testutil::DummyNonSyncCtx,
@@ -1234,9 +1215,6 @@ mod test {
         state: DummyIpSocketCtx<I, D>,
     }
 
-    const DEFAULT_HOP_LIMITS: HopLimits =
-        HopLimits { unicast: nonzero!(34u8), multicast: nonzero!(99u8) };
-
     impl<I: DatagramIpExt, D: IpDeviceId + 'static>
         DatagramStateContext<DummyAddrSpec<I, D>, DummyNonSyncCtx, DummyStateSpec<I, D>>
         for DummyDatagramState<I, D>
@@ -1261,30 +1239,18 @@ mod test {
             unimplemented!("not required for any existing tests")
         }
 
-        fn get_device_with_assigned_addr(
-            &self,
-            addr: SpecifiedAddr<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
-        ) -> Option<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId> {
-            let Self { state, sockets: _ } = self;
-            state.find_device_with_addr(addr)
-        }
-
-        fn get_default_hop_limits(
-            &self,
-            _device: Option<&<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId>,
-        ) -> HopLimits {
-            DEFAULT_HOP_LIMITS
-        }
-
         fn with_sockets<
             O,
-            F: FnOnce(&DatagramSockets<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>) -> O,
+            F: FnOnce(
+                &Self::IpSocketsCtx,
+                &DatagramSockets<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>,
+            ) -> O,
         >(
             &self,
             cb: F,
         ) -> O {
-            let Self { sockets, state: _ } = self;
-            cb(sockets)
+            let Self { sockets, state } = self;
+            cb(state, sockets)
         }
 
         fn with_sockets_mut<
