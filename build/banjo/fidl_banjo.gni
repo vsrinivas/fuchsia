@@ -8,13 +8,12 @@ import("//build/rust/rustc_library.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
 template("_fidl_banjo_c") {
-  c_target_name = "${target_name}_banjo_c"
-  c_fidlgen_target_name = "${c_target_name}_generate"
-  c_config_target_name = "${c_target_name}_config"
-
+  c_target_name = target_name
+  c_fidlgen_target_name = "${target_name}_generate"
+  c_config_target_name = "${target_name}_config"
   c_header_path = string_replace(invoker.library_name, ".", "/")
   c_header_path = string_replace(c_header_path, "_", "-")
-  c_header_include_base = "${invoker.gen_dir}/$c_target_name"
+  c_header_include_base = "${invoker.gen_dir}/$target_name"
   c_header_file = "$c_header_include_base/$c_header_path/c/banjo.h"
 
   if (current_toolchain == fidl_toolchain) {
@@ -88,11 +87,11 @@ template("_fidl_banjo_c") {
 }
 
 template("_fidl_banjo_cpp") {
-  c_target_name = "${target_name}_banjo_c"
-  cpp_target_name = "${target_name}_banjo_cpp"
-  cpp_mock_target_name = "${cpp_target_name}_mock"
-  cpp_public_fidlgen_target_name = "${cpp_target_name}_public_generate"
-  cpp_private_fidlgen_target_name = "${cpp_target_name}_private_generate"
+  c_target_name = "${invoker.fidl_target}_banjo_c"
+  cpp_target_name = target_name
+  cpp_mock_target_name = "${target_name}_mock"
+  cpp_public_fidlgen_target_name = "${target_name}_public_generate"
+  cpp_private_fidlgen_target_name = "${target_name}_private_generate"
   cpp_mock_fidlgen_target_name = "${cpp_mock_target_name}_generate"
 
   cpp_header_path = string_replace(invoker.library_name, ".", "/")
@@ -263,12 +262,11 @@ template("_fidl_banjo_cpp") {
 }
 
 template("_fidl_banjo_rust") {
-  rust_target_name = "${target_name}_banjo_rust"
-  rust_fidlgen_target_name = "${rust_target_name}_generate"
-
+  rust_target_name = target_name
+  rust_fidlgen_target_name = "${target_name}_generate"
   rust_library_name = "banjo_" + string_replace(invoker.library_name, ".", "_")
   rust_file_name = "$rust_library_name.rs"
-  rust_source_file = "${invoker.gen_dir}/$rust_target_name/$rust_file_name"
+  rust_source_file = "${invoker.gen_dir}/$target_name/$rust_file_name"
 
   if (current_toolchain == fidl_toolchain) {
     # Run fidlgen_banjo on the IR and generate Rust code.
@@ -348,6 +346,10 @@ template("_fidl_banjo_rust") {
 #    - Required: The name of the FIDL library.
 #    - Type: string
 #
+#  * fidl_target
+#    - Required: The name of the associated fidl() target.
+#    - Type: string
+#
 #  * fidl_ir_json
 #    - Required: The path to the associated FIDL IR JSON file.
 #    - Type: path
@@ -371,6 +373,7 @@ template("fidl_banjo") {
                              "visibility",
                              "public_deps",
                              "library_name",
+                             "fidl_target",
                              "fidl_ir_json",
                              "fidl_ir_target",
                            ])
@@ -378,18 +381,18 @@ template("fidl_banjo") {
     gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   }
 
-  _fidl_banjo_c(target_name) {
-    forward_variables_from(params, "*")
+  _fidl_banjo_c("${target_name}_c") {
+    forward_variables_from(params, "*", [ "fidl_target" ])
   }
 
-  _fidl_banjo_cpp(target_name) {
+  _fidl_banjo_cpp("${target_name}_cpp") {
     forward_variables_from(params, "*")
     if (current_toolchain != fidl_toolchain) {
       forward_variables_from(invoker, [ "sdk_category" ])
     }
   }
 
-  _fidl_banjo_rust(target_name) {
-    forward_variables_from(params, "*")
+  _fidl_banjo_rust("${target_name}_rust") {
+    forward_variables_from(params, "*", [ "fidl_target" ])
   }
 }

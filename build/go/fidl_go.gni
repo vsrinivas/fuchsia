@@ -15,6 +15,10 @@ import("//build/go/toolchain.gni")
 #    - Required: The name of the FIDL library.
 #    - Type: string
 #
+#  * fidl_target
+#    - Required: The name of the associated fidl() target.
+#    - Type: string
+#
 #  * fidl_ir_json
 #    - Required: The path to the associated FIDL IR JSON file.
 #    - Type: path
@@ -32,18 +36,24 @@ template("fidl_go") {
 
   assert(defined(invoker.library_name),
          "fidl_go(\"$target_name\") must define `library_name`")
+  assert(defined(invoker.fidl_target),
+         "fidl_go(\"$target_name\") must define `fidl_target`")
   assert(defined(invoker.fidl_ir_json),
          "fidl_go(\"$target_name\") must define `fidl_ir_json`")
   assert(defined(invoker.fidl_ir_target),
          "fidl_go(\"$target_name\") must define `fidl_ir_target`")
 
-  main_target = "${target_name}_go"
-  generation_target = "${target_name}_go_generate"
+  main_target = target_name
+  generation_target = "${target_name}_generate"
 
-  forward_variables_from(invoker, [ "library_name" ])
+  forward_variables_from(invoker,
+                         [
+                           "fidl_target",
+                           "library_name",
+                         ])
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  library_dir = "$fidl_target_gen_dir/$target_name/$library_name.fidl"
+  library_dir = "$fidl_target_gen_dir/$fidl_target/$library_name.fidl"
   impl_filename = "$library_dir/impl.go"
   pkg_name_filename = "$library_dir/pkg_name"
 
@@ -51,8 +61,8 @@ template("fidl_go") {
     forward_variables_from(invoker,
                            [
                              "testonly",
-                             "fidl_ir_json",
                              "fidl_ir_target",
+                             "fidl_ir_json",
                            ])
 
     visibility = [

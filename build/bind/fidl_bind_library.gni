@@ -12,6 +12,10 @@ import("//build/bind/bind.gni")
 #    - Required: The name of the FIDL library.
 #    - Type: string
 #
+#  * fidl_target
+#    - Required: The name of the associated fidl() target.
+#    - Type: string
+#
 #  * fidl_ir_json
 #    - Required: The path to the associated FIDL IR JSON file.
 #    - Type: path
@@ -26,23 +30,30 @@ import("//build/bind/bind.gni")
 template("fidl_bind_library") {
   assert(defined(invoker.library_name),
          "fidl_bind_library(\"$target_name\") must define `library_name`")
+  assert(defined(invoker.fidl_target),
+         "fidl_bind_library(\"$target_name\") must define `fidl_target`")
   assert(defined(invoker.fidl_ir_json),
          "fidl_bind_library(\"$target_name\") must define `fidl_ir_json`")
   assert(defined(invoker.fidl_ir_target),
          "fidl_bind_library(\"$target_name\") must define `fidl_ir_target`")
 
-  generation_target_name = "${target_name}_bindlib_generate"
+  main_target = target_name
+  generation_target = "${target_name}_generate"
 
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
 
-  forward_variables_from(invoker, [ "library_name" ])
+  forward_variables_from(invoker,
+                         [
+                           "fidl_target",
+                           "library_name",
+                         ])
   bind_library_file_name = "${library_name}.bind"
   generated_bind_library =
-      "$fidl_target_gen_dir/$target_name/fidl_bindlibs/$bind_library_file_name"
+      "$fidl_target_gen_dir/$fidl_target/fidl_bindlibs/$bind_library_file_name"
 
   if (current_toolchain == fidl_toolchain) {
-    compiled_action(generation_target_name) {
+    compiled_action(generation_target) {
       forward_variables_from(invoker,
                              [
                                "testonly",
@@ -79,14 +90,14 @@ template("fidl_bind_library") {
                ])
   }
 
-  bind_library("${target_name}_bindlib") {
+  bind_library(main_target) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
 
-    source_dep = ":$generation_target_name($fidl_toolchain)"
+    source_dep = ":$generation_target($fidl_toolchain)"
     source = generated_bind_library
     name = library_name
   }

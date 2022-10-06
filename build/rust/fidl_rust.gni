@@ -15,6 +15,10 @@ import("//build/rust/rustc_library.gni")
 #    - Required: The name of the FIDL library.
 #    - Type: string
 #
+#  * fidl_target
+#    - Required: The name of the associated fidl() target.
+#    - Type: string
+#
 #  * fidl_ir_json
 #    - Required: The path to the associated FIDL IR JSON file.
 #    - Type: path
@@ -29,19 +33,26 @@ import("//build/rust/rustc_library.gni")
 template("fidl_rust") {
   assert(defined(invoker.library_name),
          "fidl_rust(\"$target_name\") must define `library_name`")
+  assert(defined(invoker.fidl_target),
+         "fidl_rust(\"$target_name\") must define `fidl_target`")
   assert(defined(invoker.fidl_ir_json),
          "fidl_rust(\"$target_name\") must define `fidl_ir_json`")
   assert(defined(invoker.fidl_ir_target),
          "fidl_rust(\"$target_name\") must define `fidl_ir_target`")
 
-  main_target = "${target_name}_rust"
-  generation_target = "${target_name}_rust_generate"
+  main_target = target_name
+  generation_target = "${target_name}_generate"
 
-  crate_name = "fidl_" + string_replace(invoker.library_name, ".", "_")
+  forward_variables_from(invoker,
+                         [
+                           "fidl_target",
+                           "library_name",
+                         ])
+  crate_name = "fidl_" + string_replace(library_name, ".", "_")
 
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  file_stem = "$fidl_target_gen_dir/$target_name/$crate_name"
+  file_stem = "$fidl_target_gen_dir/$fidl_target/$crate_name"
 
   if (current_toolchain == fidl_toolchain) {
     filename = "$file_stem.rs"

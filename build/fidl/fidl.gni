@@ -114,6 +114,8 @@ template("fidl") {
       library_name = invoker.name
     }
 
+    fidl_target = target_name
+
     # The FIDL IR target, to be forwarded to each backend as a dependency.
     fidl_ir_target = ":${target_name}_compile_fidlc($fidl_toolchain)"
     fidl_ir_json = get_label_info(fidl_ir_target, "target_gen_dir") +
@@ -164,7 +166,7 @@ template("fidl") {
 
   dart_only = [ "dart_analysis" ]
   if (is_dart) {
-    fidl_dart(target_name) {
+    fidl_dart("${target_name}_dart") {
       forward_variables_from(invoker,
                              dart_only + [
                                    "testonly",
@@ -179,7 +181,7 @@ template("fidl") {
   }
 
   if (is_go) {
-    fidl_go(target_name) {
+    fidl_go("${target_name}_go") {
       forward_variables_from(invoker,
                              [
                                "testonly",
@@ -208,7 +210,7 @@ template("fidl") {
       forward_variables_from(extra_parameters, "*")
     }
 
-    fidl_rust(target_name) {
+    fidl_rust("${target_name}_rust") {
       forward_variables_from(invoker,
                              [
                                "testonly",
@@ -218,7 +220,7 @@ template("fidl") {
       forward_variables_from(extra_parameters, "*")
     }
 
-    fidl_bind_library(target_name) {
+    fidl_bind_library("${target_name}_bindlib") {
       forward_variables_from(invoker,
                              [
                                "testonly",
@@ -227,7 +229,7 @@ template("fidl") {
       forward_variables_from(extra_parameters, "*")
     }
 
-    fidl_banjo(target_name) {
+    fidl_banjo("${target_name}_banjo") {
       forward_variables_from(invoker,
                              [
                                "testonly",
@@ -237,24 +239,29 @@ template("fidl") {
       forward_variables_from(extra_parameters, "*")
     }
 
-    fidl_tables(target_name) {
+    fidl_tables("${target_name}_tables") {
       forward_variables_from(invoker,
                              [
                                "testonly",
                                "visibility",
                              ])
+      forward_variables_from(extra_parameters, [ "fidl_target" ])
     }
 
     # The C client/server are only provided on Fuchsia, not host.
     if (is_fuchsia) {
-      fidl_c(target_name) {
+      fidl_c("${target_name}_c") {
         forward_variables_from(invoker,
                                [
                                  "testonly",
                                  "visibility",
                                  "public_deps",
                                ])
-        forward_variables_from(extra_parameters, [ "library_name" ])
+        forward_variables_from(extra_parameters,
+                               [
+                                 "library_name",
+                                 "fidl_target",
+                               ])
       }
     }
   } else {
