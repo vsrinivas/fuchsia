@@ -39,6 +39,12 @@ describes the complete syntax for a config schema.
 Once your component has a configuration schema, you must define values for the
 declared fields, either using Software Assembly or GN.
 
+**Googlers only**: if your component is configured differently for eng and non-eng
+[build types][build-types], you must
+[add verification of your structured configuration][sc-verification] before you check it in.
+
+There are two ways to define config values: in a JSON5 file or inline in GN.
+
 ## Define configuration values using Software Assembly
 
 If your component's configuration varies between products, see the documentation
@@ -266,6 +272,9 @@ To set all of a component's values in code without using packaged values:
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/config/integration_test/rust/lib.rs" region_tag="config_empty" adjust_indentation="auto" %}
   ```
 
+<!-- TODO(fxbug.dev/104819): Link to fxbug.dev page when better documentation is available.  -->
+[build-types] https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0115_build_types
 [cml-ref-doc]: https://fuchsia.dev/reference/cml#config
 [sa-sc-docs]: assembling_structured_config.md
 [rb-feature-matrix]: /docs/development/testing/components/realm_builder.md#language-feature-matrix
+[sc-verification] https://fuchsia.dev/fuchsia-src/development/verification/build-integration#verifying-structured-configuration-files
