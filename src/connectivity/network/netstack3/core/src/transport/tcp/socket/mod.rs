@@ -68,7 +68,7 @@ use crate::{
     transport::tcp::{
         buffer::{IntoBuffers, ReceiveBuffer, SendBuffer},
         socket::{demux::tcp_serialize_segment, isn::IsnGenerator},
-        state::{Closed, Initial, State, Takeable},
+        state::{CloseError, Closed, Initial, State, Takeable},
     },
     DeviceId, Instant, NonSyncContext, SyncCtx,
 };
@@ -366,6 +366,10 @@ struct Connection<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: Sen
     acceptor: Option<Acceptor>,
     state: State<II, R, S, ActiveOpen>,
     ip_sock: IpSock<I, D, DefaultSendOptions>,
+    /// The user has indicated that this connection will never be used again, we
+    /// keep the connection in the socketmap to perform the shutdown but it will
+    /// be auto removed once the state reaches Closed.
+    defunct: bool,
 }
 
 /// The Listener state.
@@ -493,11 +497,15 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
         netstack_buffers: C::ProvidedBuffers,
     ) -> Result<ConnectionId, ConnectError>;
 
+    fn shutdown_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError>;
+    fn close_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError>;
+
     fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<Self::DeviceId>;
     fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr, Self::DeviceId>;
     fn get_listener_info(&self, id: ListenerId) -> BoundInfo<I::Addr, Self::DeviceId>;
     fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr, Self::DeviceId>;
     fn do_send(&mut self, ctx: &mut C, conn_id: ConnectionId);
+    fn handle_timer(&mut self, ctx: &mut C, conn_id: ConnectionId);
 }
 
 impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<I, C> for SC {
@@ -686,6 +694,34 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
         )
     }
 
+    fn shutdown_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError> {
+        self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
+            let (conn, (), addr) =
+                sockets.socketmap.conns_mut().get_by_id_mut(&id.into()).expect("invalid conn ID");
+            conn.state.close()?;
+            Ok(do_send_inner(id, conn, addr, ip_transport_ctx, ctx))
+        })
+    }
+
+    fn close_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError> {
+        self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
+            let (conn, (), addr) =
+                sockets.socketmap.conns_mut().get_by_id_mut(&id.into()).expect("invalid conn ID");
+            conn.defunct = true;
+            let already_closed = match conn.state.close() {
+                Err(CloseError::NoConnection) => true,
+                Err(CloseError::Closing) => return Err(CloseError::Closing),
+                Ok(()) => matches!(conn.state, State::Closed(_)),
+            };
+            if already_closed {
+                assert_matches!(sockets.socketmap.conns_mut().remove(&id), Some(_));
+                let _: Option<_> = ctx.cancel_timer(TimerId(id, I::VERSION));
+                return Ok(());
+            }
+            Ok(do_send_inner(id, conn, addr, ip_transport_ctx, ctx))
+        })
+    }
+
     fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<SC::DeviceId> {
         self.with_tcp_sockets(|sockets| {
             let TcpSockets { socketmap: _, inactive, port_alloc: _ } = sockets;
@@ -726,7 +762,19 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
     fn do_send(&mut self, ctx: &mut C, conn_id: ConnectionId) {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
             if let Some((conn, (), addr)) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id) {
-                do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx)
+                do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx);
+            }
+        })
+    }
+
+    fn handle_timer(&mut self, ctx: &mut C, conn_id: ConnectionId) {
+        self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
+            if let Some((conn, (), addr)) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id) {
+                do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx);
+                if conn.defunct && matches!(conn.state, State::Closed(_)) {
+                    assert_matches!(sockets.socketmap.conns_mut().remove(&conn_id), Some(_));
+                    let _: Option<_> = ctx.cancel_timer(TimerId(conn_id, I::VERSION));
+                }
             }
         })
     }
@@ -750,30 +798,28 @@ fn do_send_inner<I, SC, C>(
     C: TcpNonSyncContext,
     SC: BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
-    let (ip_sock, ser) =
-        if let Some(seg) = conn.state.poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, ctx.now()) {
-            (conn.ip_sock.clone(), tcp_serialize_segment(seg, addr.ip.clone()))
-        } else {
-            return;
-        };
+    if let Some(seg) = conn.state.poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, ctx.now()) {
+        let ser = tcp_serialize_segment(seg, addr.ip.clone());
+        ip_transport_ctx.send_ip_packet(ctx, &conn.ip_sock, ser, None).unwrap_or_else(
+            |(body, err)| {
+                // Currently there are a few call sites to `do_send_inner` and they
+                // don't really care about the error, with Rust's strict
+                // `unused_result` lint, not returning an error that no one
+                // would care makes the code less cumbersome to write. So We do
+                // not return the error to caller but just log it instead. If
+                // we find a case where the caller is interested in the error,
+                // then we can always come back and change this.
+                log::debug!(
+                    "failed to send an ip packet on {:?}, body: {:?}, err: {:?}",
+                    conn_id,
+                    body,
+                    err
+                )
+            },
+        );
+    }
 
-    let poll_send_at = conn.state.poll_send_at();
-    ip_transport_ctx.send_ip_packet(ctx, &ip_sock, ser, None).unwrap_or_else(|(body, err)| {
-        // Currently there are a few call sites to `do_send_inner` and they
-        // don't really care about the error, with Rust's strict
-        // `unused_result` lint, not returning an error that no one
-        // would care makes the code less cumbersome to write. So We do
-        // not return the error to caller but just log it instead. If
-        // we find a case where the caller is interested in the error,
-        // then we can always come back and change this.
-        log::debug!(
-            "failed to send an ip packet on {:?}, body: {:?}, err: {:?}",
-            conn_id,
-            body,
-            err
-        )
-    });
-    if let Some(instant) = poll_send_at {
+    if let Some(instant) = conn.state.poll_send_at() {
         let _: Option<_> = ctx.schedule_timer_instant(instant, TimerId(conn_id, I::VERSION));
     }
 }
@@ -959,7 +1005,7 @@ where
         .conns_mut()
         .try_insert(
             conn_addr.clone(),
-            Connection { acceptor: None, state, ip_sock: ip_sock.clone() },
+            Connection { acceptor: None, state, ip_sock: ip_sock.clone(), defunct: false },
             // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
             (),
         )
@@ -975,6 +1021,37 @@ where
         })?;
     assert_eq!(ctx.schedule_timer_instant(poll_send_at, TimerId(conn_id, I::VERSION)), None);
     Ok(conn_id)
+}
+
+/// Closes the connection. The user has promised that they will not use `id`
+/// again, we can reclaim the connection after the connection becomes `Closed`.
+pub fn close_conn<I, C>(
+    mut sync_ctx: &SyncCtx<C>,
+    ctx: &mut C,
+    id: ConnectionId,
+) -> Result<(), CloseError>
+where
+    I: IpExt,
+    C: NonSyncContext,
+{
+    with_ip_version!(Ip, I, close_conn(&mut sync_ctx, ctx, id))
+}
+
+/// Shuts down the write-half of the connection. Calling this function signals
+/// the other side of the connection that we will not be sending anything over
+/// the connection; The connection will still stay in the socketmap even after
+/// reaching `Closed` state. The user needs to call `close_conn` in order to
+/// remove it.
+pub fn shutdown_conn<I, C>(
+    mut sync_ctx: &SyncCtx<C>,
+    ctx: &mut C,
+    id: ConnectionId,
+) -> Result<(), CloseError>
+where
+    I: IpExt,
+    C: NonSyncContext,
+{
+    with_ip_version!(Ip, I, shutdown_conn(&mut sync_ctx, ctx, id))
 }
 
 /// Information about an unbound socket.
@@ -1098,8 +1175,8 @@ pub(crate) fn handle_timer<SC, C>(
     SC: TcpSyncContext<Ipv4, C> + TcpSyncContext<Ipv6, C>,
 {
     match version {
-        IpVersion::V4 => TcpSocketHandler::<Ipv4, _>::do_send(sync_ctx, ctx, conn_id),
-        IpVersion::V6 => TcpSocketHandler::<Ipv6, _>::do_send(sync_ctx, ctx, conn_id),
+        IpVersion::V4 => TcpSocketHandler::<Ipv4, _>::handle_timer(sync_ctx, ctx, conn_id),
+        IpVersion::V6 => TcpSocketHandler::<Ipv6, _>::handle_timer(sync_ctx, ctx, conn_id),
     }
 }
 
@@ -1444,16 +1521,21 @@ mod tests {
         }
     }
 
-    fn new_test_net<I: TcpTestIpExt>() -> DummyNetwork<
+    type TcpTestNetwork<I> = DummyNetwork<
         &'static str,
-        SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
+        SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
         TcpCtx<I>,
-        impl DummyNetworkLinks<
-            SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
-            SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
+        fn(
             &'static str,
-        >,
-    > {
+            SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
+        ) -> Vec<(
+            &'static str,
+            SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
+            Option<core::time::Duration>,
+        )>,
+    >;
+
+    fn new_test_net<I: TcpTestIpExt>() -> TcpTestNetwork<I> {
         DummyNetwork::new(
             [
                 (
@@ -1512,7 +1594,7 @@ mod tests {
     {
         assert_eq!(I::VERSION, version);
         let DummyCtxWithSyncCtx { sync_ctx, non_sync_ctx } = ctx;
-        TcpSocketHandler::<I, _>::do_send(sync_ctx, non_sync_ctx, conn_id)
+        TcpSocketHandler::<I, _>::handle_timer(sync_ctx, non_sync_ctx, conn_id)
     }
 
     /// The following test sets up two connected testing context - one as the
@@ -1528,7 +1610,8 @@ mod tests {
         bind_client: bool,
         seed: u128,
         drop_rate: f64,
-    ) where
+    ) -> (TcpTestNetwork<I>, ConnectionId, ConnectionId)
+    where
         MockBufferIpTransportCtx<I>:
             BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
     {
@@ -1631,7 +1714,12 @@ mod tests {
                 .expect("failed to retrieve the client socket");
             assert_matches!(
                 state,
-                Connection { acceptor: None, state: State::Established(_), ip_sock: _ }
+                Connection {
+                    acceptor: None,
+                    state: State::Established(_),
+                    ip_sock: _,
+                    defunct: false
+                }
             )
         };
 
@@ -1665,6 +1753,8 @@ mod tests {
             net.sync_ctx(REMOTE).outer.sockets.get_listener_by_id_mut(server),
             Some(&mut Listener::new(backlog)),
         );
+
+        (net, client, accepted)
     }
 
     #[ip_test]
@@ -1676,7 +1766,8 @@ mod tests {
         set_logger_for_test();
         for bind_client in [true, false] {
             for listen_addr in [I::UNSPECIFIED_ADDRESS, *I::DUMMY_CONFIG.remote_ip] {
-                bind_listen_connect_accept_inner::<I>(listen_addr, bind_client, 0, 0.0);
+                let (_net, _client, _accepted) =
+                    bind_listen_connect_accept_inner::<I>(listen_addr, bind_client, 0, 0.0);
             }
         }
     }
@@ -1791,7 +1882,8 @@ mod tests {
             Connection {
                 acceptor: None,
                 state: State::Closed(Closed { reason: UserError::ConnectionReset }),
-                ip_sock: _
+                ip_sock: _,
+                defunct: false,
             }
         );
     }
@@ -1804,7 +1896,8 @@ mod tests {
     {
         set_logger_for_test();
         run_with_many_seeds(|seed| {
-            bind_listen_connect_accept_inner::<I>(I::UNSPECIFIED_ADDRESS, false, seed, 0.2)
+            let (_net, _client, _accepted) =
+                bind_listen_connect_accept_inner::<I>(I::UNSPECIFIED_ADDRESS, false, seed, 0.2);
         });
     }
 
@@ -1894,5 +1987,78 @@ mod tests {
             TcpSocketHandler::get_connection_info(&sync_ctx, connected),
             ConnectionInfo { local_addr: local, remote_addr: remote, device: None }
         );
+    }
+
+    #[ip_test]
+    fn connection_close<I: Ip + TcpTestIpExt>()
+    where
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
+    {
+        set_logger_for_test();
+        let (mut net, local, remote) =
+            bind_listen_connect_accept_inner::<I>(I::UNSPECIFIED_ADDRESS, false, 0, 0.0);
+        net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            assert_matches!(TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, remote), Ok(()));
+        });
+        net.run_until_idle(handle_frame, handle_timer);
+        net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            sync_ctx.with_tcp_sockets(|sockets| {
+                let (conn, (), _addr) =
+                    sockets.socketmap.conns().get_by_id(&remote).expect("invalid conn ID");
+                assert_matches!(conn.state, State::FinWait2(_));
+            })
+        });
+        net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            assert_matches!(TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, local), Ok(()));
+        });
+        net.run_until_idle(handle_frame, handle_timer);
+
+        for (name, id) in [(LOCAL, local), (REMOTE, remote)] {
+            net.with_context(name, |TcpCtx { sync_ctx, non_sync_ctx }| {
+                sync_ctx.with_tcp_sockets(|sockets| {
+                    assert_matches!(sockets.socketmap.conns().get_by_id(&id), None);
+                })
+            });
+        }
+    }
+
+    #[ip_test]
+    fn connection_shutdown_then_close<I: Ip + TcpTestIpExt>()
+    where
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
+    {
+        set_logger_for_test();
+        let (mut net, local, remote) =
+            bind_listen_connect_accept_inner::<I>(I::UNSPECIFIED_ADDRESS, false, 0, 0.0);
+
+        for (name, id) in [(LOCAL, local), (REMOTE, remote)] {
+            net.with_context(name, |TcpCtx { sync_ctx, non_sync_ctx }| {
+                assert_matches!(
+                    TcpSocketHandler::shutdown_conn(sync_ctx, non_sync_ctx, id),
+                    Ok(())
+                );
+                sync_ctx.with_tcp_sockets(|sockets| {
+                    let (conn, (), _addr) =
+                        sockets.socketmap.conns().get_by_id(&remote).expect("invalid conn ID");
+                    assert_matches!(conn.state, State::FinWait1(_));
+                })
+            });
+        }
+        net.run_until_idle(handle_frame, handle_timer);
+        for (name, id) in [(LOCAL, local), (REMOTE, remote)] {
+            net.with_context(name, |TcpCtx { sync_ctx, non_sync_ctx }| {
+                sync_ctx.with_tcp_sockets(|sockets| {
+                    let (conn, (), _addr) =
+                        sockets.socketmap.conns().get_by_id(&remote).expect("invalid conn ID");
+                    assert_matches!(conn.state, State::Closed(_));
+                });
+                assert_matches!(TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, id), Ok(()));
+                sync_ctx.with_tcp_sockets(|sockets| {
+                    assert_matches!(sockets.socketmap.conns().get_by_id(&id), None);
+                })
+            });
+        }
     }
 }

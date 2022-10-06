@@ -129,11 +129,24 @@ where
                             .get_by_id_mut(&conn_id)
                             .expect("inconsistent state: invalid connection id");
 
+                        let Connection { acceptor: _, state, ip_sock, defunct } = conn;
+
                         // Send the reply to the segment immediately.
-                        let (reply, passive_open) = conn.state.on_segment::<_, C>(incoming, now);
+                        let (reply, passive_open) = state.on_segment::<_, C>(incoming, now);
+
+                        // If the incoming segment caused the state machine to
+                        // enter Closed state, and the user has already promised
+                        // not to use the connection again, we can remove the
+                        // connection from the socketmap.
+                        if *defunct && matches!(state, State::Closed(_)) {
+                            assert_matches!(sockets.socketmap.conns_mut().remove(&conn_id), Some(_));
+                            let _: Option<_> = ctx.cancel_timer(TimerId(conn_id, I::VERSION));
+                            return true;
+                        }
+
                         if let Some(seg) = reply {
                             let body = tcp_serialize_segment(seg, conn_addr.ip);
-                            match ip_transport_ctx.send_ip_packet(ctx, &conn.ip_sock, body, None) {
+                            match ip_transport_ctx.send_ip_packet(ctx, &ip_sock, body, None) {
                                 Ok(()) => {}
                                 Err((body, err)) => {
                                     // TODO(https://fxbug.dev/101993): Increment the counter.
@@ -152,6 +165,7 @@ where
                                 acceptor: Some(Acceptor::Pending(listener_id)),
                                 state: _,
                                 ip_sock: _,
+                                defunct: _,
                             } => {
                                 let listener_id = *listener_id;
                                 conn.acceptor = Some(Acceptor::Ready(listener_id));
@@ -257,6 +271,7 @@ where
                                             ))),
                                             state,
                                             ip_sock: ip_sock.clone(),
+                                            defunct: false,
                                         },
                                         // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
                                         (),

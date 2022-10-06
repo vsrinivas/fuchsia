@@ -902,8 +902,11 @@ pub(crate) enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen> {
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-enum CloseError {
+/// Possible errors for closing a connection
+pub enum CloseError {
+    /// The connection is already being closed.
     Closing,
+    /// There is no connection to be closed.
     NoConnection,
 }
 
@@ -1460,7 +1463,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
 
     /// Corresponds to the [CLOSE](https://tools.ietf.org/html/rfc793#page-60)
     /// user call.
-    fn close(&mut self) -> Result<(), CloseError>
+    pub(super) fn close(&mut self) -> Result<(), CloseError>
     where
         ActiveOpen: IntoBuffers<R, S>,
     {
