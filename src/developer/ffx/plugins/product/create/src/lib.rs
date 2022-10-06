@@ -72,6 +72,10 @@ fn write_upload_manifest<W: Write>(
     writer: W,
 ) -> Result<()> {
     let mut upload_manifest = UploadManifestV1::default();
+    upload_manifest.entries.push(UploadEntry {
+        source: out_dir.as_ref().join("product_bundle.json"),
+        destination: "product_bundle.json".into(),
+    });
 
     // Add the images from the partitions config.
     for partition in &product_bundle.partitions.bootstrap_partitions {
@@ -331,6 +335,7 @@ mod test {
             write!(&mut file, "contents").unwrap();
             path
         };
+        let product_bundle_path = create_test_file("product_bundle.json");
         let bootstrap_path = create_test_file("bootstrap");
         let bootloader_path = create_test_file("bootloader");
         let unlock_credential_path = create_test_file("unlock_credential");
@@ -366,6 +371,10 @@ mod test {
             serde_json::json!({
                 "version": "1",
                 "entries": [
+                    {
+                        "source": product_bundle_path.path_to_string().unwrap(),
+                        "destination": "product_bundle.json",
+                    },
                     {
                         "source": bootstrap_path.path_to_string().unwrap(),
                         "destination": "bootstrap",
