@@ -58,7 +58,7 @@ pub struct Cluster {
 }
 
 // TODO (fxbug.dev/102987): Support CPU stats logging by performance groups for X86.
-pub fn vmo_to_topology(vmo: zx::Vmo, length: u32) -> Result<Vec<Cluster>> {
+fn vmo_to_topology(vmo: zx::Vmo, length: u32) -> Result<Vec<Cluster>> {
     let mut max_performance_class = 0;
     let mut clusters_to_cpus = BTreeMap::new();
     let mut performance_classes = Vec::new();
@@ -344,13 +344,18 @@ pub mod tests {
     use {
         super::*,
         anyhow::{format_err, Error},
+        assert_matches::assert_matches,
+        fidl_fuchsia_kernel::{CpuStats, PerCpuStats},
         fuchsia_zbi_abi::{
             ArchitectureInfo, Entity, ZbiTopologyArchitecture, ZbiTopologyArmInfo,
             ZbiTopologyCluster, ZbiTopologyEntityType, ZbiTopologyNode, ZbiTopologyProcessor,
         },
+        futures::{task::Poll, FutureExt, TryStreamExt},
+        inspect::assert_data_tree,
+        std::{cell::Cell, pin::Pin},
     };
 
-    pub fn generate_cluster_node(performance_class: u8) -> ZbiTopologyNode {
+    fn generate_cluster_node(performance_class: u8) -> ZbiTopologyNode {
         const ZBI_TOPOLOGY_NO_PARENT: u16 = 0xFFFF;
         ZbiTopologyNode {
             entity_type: ZbiTopologyEntityType::ZbiTopologyEntityCluster as u8,
@@ -359,7 +364,7 @@ pub mod tests {
         }
     }
 
-    pub fn generate_processor_node(parent_index: u16, logical_id: u16) -> ZbiTopologyNode {
+    fn generate_processor_node(parent_index: u16, logical_id: u16) -> ZbiTopologyNode {
         ZbiTopologyNode {
             entity_type: ZbiTopologyEntityType::ZbiTopologyEntityProcessor as u8,
             parent_index: parent_index,
@@ -384,7 +389,7 @@ pub mod tests {
     }
 
     // Write ZbiTopologyNode into a VMO buffer.
-    pub fn create_vmo_from_topology_nodes(
+    fn create_vmo_from_topology_nodes(
         nodes: Vec<ZbiTopologyNode>,
     ) -> Result<(zx::Vmo, u64), Error> {
         let vmo_size = (ZBI_TOPOLOGY_NODE_SIZE * nodes.len()) as u64;
@@ -397,6 +402,114 @@ pub mod tests {
                 .map_err(|e| format_err!("Failed to write data to vmo: {}", e))?;
         }
         Ok((vmo, vmo_size))
+    }
+
+    fn setup_fake_cpu_stats_service(
+        mut get_cpu_stats: impl FnMut() -> fkernel::CpuStats + 'static,
+    ) -> (fkernel::StatsProxy, fasync::Task<()>) {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fkernel::StatsMarker>().unwrap();
+        let task = fasync::Task::local(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(fkernel::StatsRequest::GetCpuStats { responder }) => {
+                        let _ = responder.send(&mut get_cpu_stats());
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+
+        (proxy, task)
+    }
+
+    // Convenience function to create a CPU stats driver for test usage.
+    // Returns a tuple of:
+    // - Vec<fasync::Task<()>>: Tasks for handling driver query stream.
+    // - CpuStatsDriver: Fake CPU stats driver for test usage.
+    // - Rc<Cell<[i64; 5]>>: Pointer for setting CPU stats in the driver.
+    pub fn create_cpu_stats_driver() -> (Vec<fasync::Task<()>>, CpuStatsDriver, Rc<Cell<[i64; 5]>>)
+    {
+        let mut tasks = Vec::new();
+        let cpu_idle_time = Rc::new(Cell::new([0, 0, 0, 0, 0]));
+        let cpu_idle_time_clone = cpu_idle_time.clone();
+        let (proxy, task) = setup_fake_cpu_stats_service(move || CpuStats {
+            actual_num_cpus: 5,
+            per_cpu_stats: Some(vec![
+                PerCpuStats { idle_time: Some(cpu_idle_time_clone.get()[0]), ..PerCpuStats::EMPTY },
+                PerCpuStats { idle_time: Some(cpu_idle_time_clone.get()[1]), ..PerCpuStats::EMPTY },
+                PerCpuStats { idle_time: Some(cpu_idle_time_clone.get()[2]), ..PerCpuStats::EMPTY },
+                PerCpuStats { idle_time: Some(cpu_idle_time_clone.get()[3]), ..PerCpuStats::EMPTY },
+                PerCpuStats { idle_time: Some(cpu_idle_time_clone.get()[4]), ..PerCpuStats::EMPTY },
+            ]),
+        });
+        tasks.push(task);
+
+        let (vmo, size) = create_vmo_from_topology_nodes(vec![
+            generate_cluster_node(/*performance_class*/ 0),
+            generate_processor_node(/*parent_index*/ 0, /*logical_id*/ 0),
+            generate_processor_node(/*parent_index*/ 0, /*logical_id*/ 1),
+            generate_cluster_node(/*performance_class*/ 1),
+            generate_processor_node(/*parent_index*/ 3, /*logical_id*/ 2),
+            generate_processor_node(/*parent_index*/ 3, /*logical_id*/ 3),
+            generate_processor_node(/*parent_index*/ 3, /*logical_id*/ 4),
+        ])
+        .unwrap();
+        let topology = vmo_to_topology(vmo, size as u32).unwrap();
+        let cpu_stats_driver = CpuStatsDriver { proxy, topology: Some(topology) };
+
+        (tasks, cpu_stats_driver, cpu_idle_time)
+    }
+
+    struct Runner {
+        inspector: inspect::Inspector,
+        inspect_root: inspect::Node,
+
+        _tasks: Vec<fasync::Task<()>>,
+
+        cpu_idle_time: Rc<Cell<[i64; 5]>>,
+
+        cpu_stats_driver: Rc<CpuStatsDriver>,
+
+        // Fields are dropped in declaration order. Always drop executor last because we hold other
+        // zircon objects tied to the executor in this struct, and those can't outlive the executor.
+        //
+        // See
+        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.TestExecutor.html
+        // - https://doc.rust-lang.org/reference/destructors.html.
+        executor: fasync::TestExecutor,
+    }
+
+    impl Runner {
+        fn new() -> Self {
+            let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+            executor.set_fake_time(fasync::Time::from_nanos(0));
+
+            let inspector = inspect::Inspector::new();
+            let inspect_root = inspector.root().create_child("MetricsLogger");
+
+            let (tasks, driver, cpu_idle_time) = create_cpu_stats_driver();
+            let cpu_stats_driver = Rc::new(driver);
+
+            Self {
+                executor,
+                inspector,
+                inspect_root,
+                cpu_idle_time,
+                cpu_stats_driver,
+                _tasks: tasks,
+            }
+        }
+
+        fn iterate_task(&mut self, task: &mut Pin<Box<dyn futures::Future<Output = ()>>>) -> bool {
+            let wakeup_time = match self.executor.wake_next_timer() {
+                Some(t) => t,
+                None => return false,
+            };
+            self.executor.set_fake_time(wakeup_time);
+            let _ = self.executor.run_until_stalled(task);
+            true
+        }
     }
 
     #[test]
@@ -432,6 +545,131 @@ pub mod tests {
                 Cluster { max_perf_scale: 0.5, cpu_indexes: vec![0, 1] },
                 Cluster { max_perf_scale: 1.0, cpu_indexes: vec![2, 3, 4] }
             ]
+        );
+    }
+
+    #[test]
+    fn test_logging_cpu_stats_to_inspect() {
+        let mut runner = Runner::new();
+
+        runner.cpu_idle_time.set([0, 0, 0, 0, 0]);
+
+        let client_id = "test".to_string();
+        let client_inspect = runner.inspect_root.create_child(&client_id);
+        let poll = runner.executor.run_until_stalled(
+            &mut CpuLoadLogger::new(
+                runner.cpu_stats_driver.clone(),
+                100,
+                Some(350),
+                &client_inspect,
+                client_id,
+                false,
+            )
+            .boxed_local(),
+        );
+
+        let cpu_load_logger = match poll {
+            Poll::Ready(Ok(cpu_load_logger)) => cpu_load_logger,
+            _ => panic!("Failed to create CpuLoadLogger"),
+        };
+        let mut task = cpu_load_logger.log_cpu_usages().boxed_local();
+        assert_matches!(runner.executor.run_until_stalled(&mut task), Poll::Pending);
+
+        // Check CpuLoadLogger added before first query.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        CpuLoadLogger: {
+                        }
+                    }
+                }
+            }
+        );
+
+        runner.cpu_idle_time.set([50_000_000, 0, 0, 0, 0]);
+        // Run the first logging task.
+        runner.iterate_task(&mut task);
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 100i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 75.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 100.0,
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        // Run the second logging task.
+        runner.iterate_task(&mut task);
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 200i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 100.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 100.0,
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        runner.cpu_idle_time.set([50_000_000, 0, 30_000_000, 0, 0]);
+        // Run the third logging task.
+        runner.iterate_task(&mut task);
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 300i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 100.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 90.0,
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        // Finish the remaining task.
+        runner.iterate_task(&mut task);
+
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                    }
+                }
+            }
         );
     }
 }

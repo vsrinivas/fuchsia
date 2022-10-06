@@ -536,3 +536,457 @@ impl InspectData {
         self.statistics[index][Statistics::Avg as usize].set(avg as f64);
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        super::*,
+        assert_matches::assert_matches,
+        futures::{task::Poll, FutureExt, TryStreamExt},
+        inspect::assert_data_tree,
+        std::{cell::Cell, pin::Pin},
+    };
+
+    fn setup_fake_temperature_driver(
+        mut get_temperature: impl FnMut() -> f32 + 'static,
+    ) -> (ftemperature::DeviceProxy, fasync::Task<()>) {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<ftemperature::DeviceMarker>().unwrap();
+        let task = fasync::Task::local(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(ftemperature::DeviceRequest::GetTemperatureCelsius { responder }) => {
+                        let _ = responder.send(zx::Status::OK.into_raw(), get_temperature());
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+
+        (proxy, task)
+    }
+
+    fn setup_fake_power_driver(
+        mut get_power: impl FnMut() -> f32 + 'static,
+    ) -> (fpower::DeviceProxy, fasync::Task<()>) {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fpower::DeviceMarker>().unwrap();
+        let task = fasync::Task::local(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(fpower::DeviceRequest::GetPowerWatts { responder }) => {
+                        let _ = responder.send(&mut Ok(get_power()));
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+
+        (proxy, task)
+    }
+
+    // Convenience function to create a vector of two temperature drivers for test usage.
+    // Returns a tuple of:
+    // - Vec<fasync::Task<()>>: Tasks for handling driver query stream.
+    // - Vec<TemperatureDriver>: Fake temperature drivers for test usage.
+    // - Rc<Cell<f32>>: Pointer for setting fake temperature data in the first driver.
+    // - Rc<Cell<f32>>> Pointer for setting fake temperature data in the second driver.
+    pub fn create_temperature_drivers(
+    ) -> (Vec<fasync::Task<()>>, Vec<TemperatureDriver>, Rc<Cell<f32>>, Rc<Cell<f32>>) {
+        let mut tasks = Vec::new();
+        let cpu_temperature = Rc::new(Cell::new(0.0));
+        let cpu_temperature_clone = cpu_temperature.clone();
+        let (cpu_temperature_proxy, task) =
+            setup_fake_temperature_driver(move || cpu_temperature_clone.get());
+        tasks.push(task);
+        let gpu_temperature = Rc::new(Cell::new(0.0));
+        let gpu_temperature_clone = gpu_temperature.clone();
+        let (gpu_temperature_proxy, task) =
+            setup_fake_temperature_driver(move || gpu_temperature_clone.get());
+        tasks.push(task);
+
+        let temperature_drivers = vec![
+            TemperatureDriver {
+                alias: Some("cpu".to_string()),
+                topological_path: "/dev/fake/cpu_temperature".to_string(),
+                proxy: cpu_temperature_proxy,
+            },
+            TemperatureDriver {
+                alias: None,
+                topological_path: "/dev/fake/gpu_temperature".to_string(),
+                proxy: gpu_temperature_proxy,
+            },
+        ];
+
+        (tasks, temperature_drivers, cpu_temperature, gpu_temperature)
+    }
+
+    // Convenience function to create a vector of two power drivers for test usage.
+    // Returns a tuple of:
+    // - Vec<fasync::Task<()>>: Tasks for handling driver query stream.
+    // - Vec<PowerDriver>: Fake power drivers for test usage.
+    // - Rc<Cell<f32>>: Pointer for setting fake power data in the first driver.
+    // - Rc<Cell<f32>>> Pointer for setting fake power data in the second driver.
+    pub fn create_power_drivers(
+    ) -> (Vec<fasync::Task<()>>, Vec<PowerDriver>, Rc<Cell<f32>>, Rc<Cell<f32>>) {
+        let mut tasks = Vec::new();
+        let power_1 = Rc::new(Cell::new(0.0));
+        let power_1_clone = power_1.clone();
+        let (power_1_proxy, task) = setup_fake_power_driver(move || power_1_clone.get());
+        tasks.push(task);
+        let power_2 = Rc::new(Cell::new(0.0));
+        let power_2_clone = power_2.clone();
+        let (power_2_proxy, task) = setup_fake_power_driver(move || power_2_clone.get());
+        tasks.push(task);
+
+        let power_drivers = vec![
+            PowerDriver {
+                alias: Some("power_1".to_string()),
+                topological_path: "/dev/fake/power_1".to_string(),
+                proxy: power_1_proxy,
+            },
+            PowerDriver {
+                alias: None,
+                topological_path: "/dev/fake/power_2".to_string(),
+                proxy: power_2_proxy,
+            },
+        ];
+        (tasks, power_drivers, power_1, power_2)
+    }
+
+    struct Runner {
+        inspector: inspect::Inspector,
+        inspect_root: inspect::Node,
+
+        _tasks: Vec<fasync::Task<()>>,
+
+        cpu_temperature: Rc<Cell<f32>>,
+        gpu_temperature: Rc<Cell<f32>>,
+        temperature_drivers: Rc<Vec<TemperatureDriver>>,
+
+        power_1: Rc<Cell<f32>>,
+        power_2: Rc<Cell<f32>>,
+        power_drivers: Rc<Vec<PowerDriver>>,
+
+        // Fields are dropped in declaration order. Always drop executor last because we hold other
+        // zircon objects tied to the executor in this struct, and those can't outlive the executor.
+        //
+        // See
+        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.TestExecutor.html
+        // - https://doc.rust-lang.org/reference/destructors.html.
+        executor: fasync::TestExecutor,
+    }
+
+    impl Runner {
+        fn new() -> Self {
+            let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+            executor.set_fake_time(fasync::Time::from_nanos(0));
+
+            let inspector = inspect::Inspector::new();
+            let inspect_root = inspector.root().create_child("MetricsLogger");
+
+            let mut tasks = vec![];
+            let (temperature_tasks, drivers, cpu_temperature, gpu_temperature) =
+                create_temperature_drivers();
+            let temperature_drivers = Rc::new(drivers);
+            tasks.extend(temperature_tasks);
+            let (power_tasks, drivers, power_1, power_2) = create_power_drivers();
+            let power_drivers = Rc::new(drivers);
+            tasks.extend(power_tasks);
+
+            Self {
+                executor,
+                inspector,
+                inspect_root,
+                cpu_temperature,
+                gpu_temperature,
+                temperature_drivers,
+                power_1,
+                power_2,
+                power_drivers,
+                _tasks: tasks,
+            }
+        }
+
+        fn iterate_task(&mut self, task: &mut Pin<Box<dyn futures::Future<Output = ()>>>) -> bool {
+            let wakeup_time = match self.executor.wake_next_timer() {
+                Some(t) => t,
+                None => return false,
+            };
+            self.executor.set_fake_time(wakeup_time);
+            let _ = self.executor.run_until_stalled(task);
+            true
+        }
+    }
+
+    #[test]
+    fn test_logging_temperature_to_inspect() {
+        let mut runner = Runner::new();
+
+        let client_id = "test".to_string();
+        let client_inspect = runner.inspect_root.create_child(&client_id);
+        let poll = runner.executor.run_until_stalled(
+            &mut TemperatureLogger::new(
+                runner.temperature_drivers.clone(),
+                100,
+                None,
+                Some(1_000),
+                &client_inspect,
+                client_id,
+                false,
+                false,
+            )
+            .boxed_local(),
+        );
+
+        let temperature_logger = match poll {
+            Poll::Ready(Ok(temperature_logger)) => temperature_logger,
+            _ => panic!("Failed to create TemperatureLogger"),
+        };
+        let mut task = temperature_logger.log_data().boxed_local();
+        assert_matches!(runner.executor.run_until_stalled(&mut task), Poll::Pending);
+
+        // Check TemperatureLogger added before first temperature poll.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        TemperatureLogger: {
+                        }
+                    }
+                }
+            }
+        );
+
+        // For the first 9 steps, CPU and GPU temperature are logged to Insepct.
+        for i in 0..9 {
+            runner.cpu_temperature.set(30.0 + i as f32);
+            runner.gpu_temperature.set(40.0 + i as f32);
+            runner.iterate_task(&mut task);
+            assert_data_tree!(
+                runner.inspector,
+                root: {
+                    MetricsLogger: {
+                        test: {
+                            TemperatureLogger: {
+                                "elapsed time (ms)": 100 * (1 + i as i64),
+                                "cpu": {
+                                    "data (°C)": runner.cpu_temperature.get() as f64,
+                                },
+                                "/dev/fake/gpu_temperature": {
+                                    "data (°C)": runner.gpu_temperature.get() as f64,
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        }
+
+        // With one more time step, the end time has been reached.
+        runner.iterate_task(&mut task);
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                    }
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_logging_power_to_inspect() {
+        let mut runner = Runner::new();
+
+        runner.power_1.set(2.0);
+        runner.power_2.set(5.0);
+
+        let client_id = "test".to_string();
+        let client_inspect = runner.inspect_root.create_child(&client_id);
+        let poll = runner.executor.run_until_stalled(
+            &mut PowerLogger::new(
+                runner.power_drivers.clone(),
+                100,
+                Some(100),
+                Some(200),
+                &client_inspect,
+                client_id,
+                false,
+                false,
+            )
+            .boxed_local(),
+        );
+
+        let power_logger = match poll {
+            Poll::Ready(Ok(power_logger)) => power_logger,
+            _ => panic!("Failed to create PowerLogger"),
+        };
+        let mut task = power_logger.log_data().boxed_local();
+        assert_matches!(runner.executor.run_until_stalled(&mut task), Poll::Pending);
+
+        // Check PowerLogger added before first power sensor poll.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        PowerLogger: {
+                        }
+                    }
+                }
+            }
+        );
+
+        // Run 1 logging task.
+        assert!(runner.iterate_task(&mut task));
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        PowerLogger: {
+                            "elapsed time (ms)": 100i64,
+                            "power_1": {
+                                "data (W)":2.0,
+                                "statistics": {
+                                    "(start ms, end ms]": vec![0i64, 100i64],
+                                    "max (W)": 2.0,
+                                    "min (W)": 2.0,
+                                    "average (W)": 2.0,
+                                }
+                            },
+                            "/dev/fake/power_2": {
+                                "data (W)": 5.0,
+                                "statistics": {
+                                    "(start ms, end ms]": vec![0i64, 100i64],
+                                    "max (W)": 5.0,
+                                    "min (W)": 5.0,
+                                    "average (W)": 5.0,
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        // Finish the remaining task.
+        assert!(runner.iterate_task(&mut task));
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                    }
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_logging_statistics_to_inspect() {
+        let mut runner = Runner::new();
+
+        let client_id = "test".to_string();
+        let client_inspect = runner.inspect_root.create_child(&client_id);
+        let poll = runner.executor.run_until_stalled(
+            &mut TemperatureLogger::new(
+                runner.temperature_drivers.clone(),
+                100,
+                Some(300),
+                Some(1_000),
+                &client_inspect,
+                client_id,
+                false,
+                false,
+            )
+            .boxed_local(),
+        );
+
+        let temperature_logger = match poll {
+            Poll::Ready(Ok(temperature_logger)) => temperature_logger,
+            _ => panic!("Failed to create TemperatureLogger"),
+        };
+        let mut task = temperature_logger.log_data().boxed_local();
+        assert_matches!(runner.executor.run_until_stalled(&mut task), Poll::Pending);
+
+        for i in 0..9 {
+            runner.cpu_temperature.set(30.0 + i as f32);
+            runner.gpu_temperature.set(40.0 + i as f32);
+            runner.iterate_task(&mut task);
+
+            if i < 2 {
+                // Check statistics data is not available for the first 200 ms.
+                assert_data_tree!(
+                    runner.inspector,
+                    root: {
+                        MetricsLogger: {
+                            test: {
+                                TemperatureLogger: {
+                                    "elapsed time (ms)": 100 * (1 + i as i64),
+                                    "cpu": {
+                                        "data (°C)": runner.cpu_temperature.get() as f64,
+                                    },
+                                    "/dev/fake/gpu_temperature": {
+                                        "data (°C)": runner.gpu_temperature.get() as f64,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                );
+            } else {
+                // Check statistics data is updated every 300 ms.
+                assert_data_tree!(
+                    runner.inspector,
+                    root: {
+                        MetricsLogger: {
+                            test: {
+                                TemperatureLogger: {
+                                    "elapsed time (ms)": 100 * (i + 1 as i64),
+                                    "cpu": {
+                                        "data (°C)": (30 + i) as f64,
+                                        "statistics": {
+                                            "(start ms, end ms]":
+                                                vec![100 * (i - 2 - (i + 1) % 3 as i64),
+                                                     100 * (i + 1 - (i + 1) % 3 as i64)],
+                                            "max (°C)": (30 + i - (i + 1) % 3) as f64,
+                                            "min (°C)": (28 + i - (i + 1) % 3) as f64,
+                                            "average (°C)": (29 + i - (i + 1) % 3) as f64,
+                                        }
+                                    },
+                                    "/dev/fake/gpu_temperature": {
+                                        "data (°C)": (40 + i) as f64,
+                                        "statistics": {
+                                            "(start ms, end ms]":
+                                                vec![100 * (i - 2 - (i + 1) % 3 as i64),
+                                                     100 * (i + 1 - (i + 1) % 3 as i64)],
+                                            "max (°C)": (40 + i - (i + 1) % 3) as f64,
+                                            "min (°C)": (38 + i - (i + 1) % 3) as f64,
+                                            "average (°C)": (39 + i - (i + 1) % 3) as f64,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                );
+            }
+        }
+
+        // With one more time step, the end time has been reached.
+        runner.iterate_task(&mut task);
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                    }
+                }
+            }
+        );
+    }
+}

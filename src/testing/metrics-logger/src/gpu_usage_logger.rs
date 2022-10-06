@@ -272,10 +272,16 @@ impl InspectData {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
+    use {
+        super::*,
+        assert_matches::assert_matches,
+        futures::{task::Poll, FutureExt, TryStreamExt},
+        inspect::assert_data_tree,
+        std::{cell::Cell, pin::Pin},
+    };
 
     // Write magma_total_time_query_result into a VMO buffer.
-    pub fn create_magma_total_time_query_result_vmo(
+    fn create_magma_total_time_query_result_vmo(
         gpu_time_ns: u64,
         monotonic_time_ns: u64,
     ) -> Result<zx::Vmo, Error> {
@@ -292,11 +298,214 @@ pub mod tests {
         Ok(vmo)
     }
 
+    fn setup_fake_gpu_driver(
+        mut query: impl FnMut(fgpu::QueryId) -> fgpu::DeviceQueryResult + 'static,
+    ) -> (fgpu::DeviceProxy, fasync::Task<()>) {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fgpu::DeviceMarker>().unwrap();
+        let task = fasync::Task::local(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(fgpu::DeviceRequest::Query { query_id, responder }) => {
+                        let _ = responder.send(&mut query(query_id));
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+
+        (proxy, task)
+    }
+
+    // Convenience function to create a vector of one GPU driver for test usage.
+    // Returns a tuple of:
+    // - Vec<fasync::Task<()>>: Tasks for handling driver query stream.
+    // - Vec<GpuDriver>: Fake GPU drivers for test usage.
+    // - Rc<Cell<u64>>: Pointer for setting fake gpu active time in the driver.
+    // - Rc<Cell<u64>>> Pointer for setting fake monotonic time in the driver.
+    pub fn create_gpu_drivers(
+    ) -> (Vec<fasync::Task<()>>, Vec<GpuDriver>, Rc<Cell<u64>>, Rc<Cell<u64>>) {
+        let mut tasks = Vec::new();
+
+        let gpu_time_ns = Rc::new(Cell::new(0 as u64));
+        let gpu_time_ns_clone = gpu_time_ns.clone();
+        let monotonic_time_ns = Rc::new(Cell::new(0 as u64));
+        let monotonic_time_ns_clone = monotonic_time_ns.clone();
+        let (gpu_proxy, task) = setup_fake_gpu_driver(move |query_id| match query_id {
+            fgpu::QueryId::MagmaQueryTotalTime => {
+                let vmo = create_magma_total_time_query_result_vmo(
+                    gpu_time_ns_clone.get(),
+                    monotonic_time_ns_clone.get(),
+                )
+                .unwrap();
+                Ok(fgpu::DeviceQueryResponse::BufferResult(vmo))
+            }
+            _ => panic!("Unexpected query ID {:?} (expected MagmaQueryTotalTime)", query_id),
+        });
+        tasks.push(task);
+
+        let gpu_drivers = vec![GpuDriver {
+            alias: None,
+            topological_path: "/dev/fake/gpu".to_string(),
+            proxy: gpu_proxy,
+        }];
+
+        (tasks, gpu_drivers, gpu_time_ns, monotonic_time_ns)
+    }
+
+    struct Runner {
+        inspector: inspect::Inspector,
+        inspect_root: inspect::Node,
+
+        _tasks: Vec<fasync::Task<()>>,
+
+        gpu_time_ns: Rc<Cell<u64>>,
+        monotonic_time_ns: Rc<Cell<u64>>,
+
+        gpu_drivers: Rc<Vec<GpuDriver>>,
+
+        // Fields are dropped in declaration order. Always drop executor last because we hold other
+        // zircon objects tied to the executor in this struct, and those can't outlive the executor.
+        //
+        // See
+        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.TestExecutor.html
+        // - https://doc.rust-lang.org/reference/destructors.html.
+        executor: fasync::TestExecutor,
+    }
+
+    impl Runner {
+        fn new() -> Self {
+            let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+            executor.set_fake_time(fasync::Time::from_nanos(0));
+
+            let inspector = inspect::Inspector::new();
+            let inspect_root = inspector.root().create_child("MetricsLogger");
+
+            let (tasks, drivers, gpu_time_ns, monotonic_time_ns) = create_gpu_drivers();
+            let gpu_drivers = Rc::new(drivers);
+
+            Self {
+                executor,
+                inspector,
+                inspect_root,
+                gpu_time_ns,
+                monotonic_time_ns,
+                gpu_drivers,
+                _tasks: tasks,
+            }
+        }
+
+        fn iterate_task(&mut self, task: &mut Pin<Box<dyn futures::Future<Output = ()>>>) -> bool {
+            let wakeup_time = match self.executor.wake_next_timer() {
+                Some(t) => t,
+                None => return false,
+            };
+            self.executor.set_fake_time(wakeup_time);
+            let _ = self.executor.run_until_stalled(task);
+            true
+        }
+    }
+
     #[test]
     fn test_vmo_to_magma_total_time_query_result() {
         let vmo = create_magma_total_time_query_result_vmo(1221, 11333).unwrap();
         let result = vmo_to_magma_total_time_query_result(vmo).unwrap();
         assert_eq!(result.gpu_time_ns, 1221);
         assert_eq!(result.monotonic_time_ns, 11333);
+    }
+
+    #[test]
+    fn test_logging_gpu_usage_to_inspect() {
+        let mut runner = Runner::new();
+
+        let client_id = "test".to_string();
+        let client_inspect = runner.inspect_root.create_child(&client_id);
+        let poll = runner.executor.run_until_stalled(
+            &mut GpuUsageLogger::new(
+                runner.gpu_drivers.clone(),
+                100,
+                Some(1_000),
+                &client_inspect,
+                client_id,
+                false,
+            )
+            .boxed_local(),
+        );
+
+        let gpu_usage_logger = match poll {
+            Poll::Ready(Ok(gpu_usage_logger)) => gpu_usage_logger,
+            _ => panic!("Failed to create GpuUsageLogger"),
+        };
+
+        // Starting logging for 1 second at 100ms intervals. When the query stalls, the logging task
+        // will be waiting on its timer.
+        let mut task = gpu_usage_logger.log_gpu_usages().boxed_local();
+        assert_matches!(runner.executor.run_until_stalled(&mut task), Poll::Pending);
+
+        // Check GpuUsageLogger added before first poll.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        GpuUsageLogger: {
+                        }
+                    }
+                }
+            }
+        );
+
+        // For the first 9 steps, GPU usage is logged to Insepct.
+        for i in 0..5 {
+            runner.gpu_time_ns.set((i + 1) * 50);
+            runner.monotonic_time_ns.set((i + 1) * 100);
+            runner.iterate_task(&mut task);
+            assert_data_tree!(
+                runner.inspector,
+                root: {
+                    MetricsLogger: {
+                        test: {
+                            GpuUsageLogger: {
+                                "elapsed time (ms)": 100 * (1 + i as i64),
+                                "/dev/fake/gpu": {
+                                    "GPU usage (%)": 50 as f64,
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        }
+        for i in 5..9 {
+            runner.monotonic_time_ns.set((i + 1) * 100);
+            runner.iterate_task(&mut task);
+            assert_data_tree!(
+                runner.inspector,
+                root: {
+                    MetricsLogger: {
+                        test: {
+                            GpuUsageLogger: {
+                                "elapsed time (ms)": 100 * (1 + i as i64),
+                                "/dev/fake/gpu": {
+                                    "GPU usage (%)": 0 as f64,
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        }
+
+        // With one more time step, the end time has been reached.
+        runner.iterate_task(&mut task);
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                    }
+                }
+            }
+        );
     }
 }
