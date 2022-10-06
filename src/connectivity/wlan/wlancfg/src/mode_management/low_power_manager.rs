@@ -76,7 +76,10 @@ mod tests {
     use {
         super::*,
         crate::{
-            mode_management::phy_manager::{CreateClientIfacesReason, PhyManagerError},
+            mode_management::{
+                phy_manager::{CreateClientIfacesReason, PhyManagerError},
+                Defect,
+            },
             regulatory_manager::REGION_CODE_LEN,
         },
         anyhow::format_err,
@@ -382,6 +385,10 @@ mod tests {
             } else {
                 Err(format_err!("failed to set power state"))
             }
+        }
+
+        async fn record_defect(&mut self, _defect: Defect) {
+            unimplemented!();
         }
     }
 }

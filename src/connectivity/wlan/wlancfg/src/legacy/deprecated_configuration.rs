@@ -69,9 +69,11 @@ impl DeprecatedConfigurator {
 mod tests {
     use {
         super::*,
-        crate::mode_management::phy_manager::PhyManagerError,
         crate::{
-            mode_management::phy_manager::CreateClientIfacesReason,
+            mode_management::{
+                phy_manager::{CreateClientIfacesReason, PhyManagerError},
+                Defect,
+            },
             regulatory_manager::REGION_CODE_LEN,
         },
         async_trait::async_trait,
@@ -173,6 +175,10 @@ mod tests {
             &mut self,
             _low_power_enabled: fidl_common::PowerSaveType,
         ) -> Result<zx::Status, anyhow::Error> {
+            unimplemented!();
+        }
+
+        async fn record_defect(&mut self, _defect: Defect) {
             unimplemented!();
         }
     }

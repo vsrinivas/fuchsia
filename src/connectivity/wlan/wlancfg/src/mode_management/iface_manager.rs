@@ -1274,7 +1274,10 @@ mod tests {
             config_management::{
                 Credential, NetworkIdentifier, SavedNetworksManager, SecurityType,
             },
-            mode_management::phy_manager::{self, PhyManagerError},
+            mode_management::{
+                phy_manager::{self, PhyManagerError},
+                Defect,
+            },
             regulatory_manager::REGION_CODE_LEN,
             telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::{create_inspect_persistence_channel, create_wlan_hasher, poll_sme_req},
@@ -1534,6 +1537,10 @@ mod tests {
             &mut self,
             _low_power_enabled: fidl_fuchsia_wlan_common::PowerSaveType,
         ) -> Result<fuchsia_zircon::Status, anyhow::Error> {
+            unimplemented!();
+        }
+
+        async fn record_defect(&mut self, _defect: Defect) {
             unimplemented!();
         }
     }

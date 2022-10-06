@@ -8,13 +8,11 @@ use {
         telemetry::TelemetrySender, util::listener,
     },
     anyhow::Error,
+    fuchsia_async as fasync,
     futures::{channel::mpsc, lock::Mutex, Future},
     std::sync::Arc,
     void::Void,
 };
-
-#[cfg(test)]
-use fuchsia_async as fasync;
 
 mod iface_manager;
 pub mod iface_manager_api;
@@ -55,27 +53,34 @@ pub fn create_iface_manager(
     (iface_manager_sender, iface_manager_service)
 }
 
-#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PhyFailure {
+    IfaceCreationFailure { phy_id: u16 },
+    IfaceDestructionFailure { phy_id: u16 },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Defect {
+    Phy(PhyFailure),
+}
+
 #[derive(Debug, PartialEq)]
 struct Event<T: PartialEq> {
     value: T,
     time: fasync::Time,
 }
 
-#[cfg(test)]
 impl<T: PartialEq> Event<T> {
     fn new(value: T, time: fasync::Time) -> Self {
         Event { value, time }
     }
 }
 
-#[cfg(test)]
-struct EventHistory<T: PartialEq> {
+pub struct EventHistory<T: PartialEq> {
     events: Vec<Event<T>>,
     retention_time: fuchsia_zircon::Duration,
 }
 
-#[cfg(test)]
 impl<T: PartialEq> EventHistory<T> {
     fn new(retention_seconds: u32) -> Self {
         EventHistory {
@@ -90,12 +95,14 @@ impl<T: PartialEq> EventHistory<T> {
         self.retain_unexpired_events(curr_time);
     }
 
+    #[cfg(test)]
     fn event_count(&mut self, value: T) -> usize {
         let curr_time = fasync::Time::now();
         self.retain_unexpired_events(curr_time);
         self.events.iter().filter(|event| event.value == value).count()
     }
 
+    #[cfg(test)]
     fn time_since_last_event(&mut self, value: T) -> Option<fuchsia_zircon::Duration> {
         let curr_time = fasync::Time::now();
         self.retain_unexpired_events(curr_time);

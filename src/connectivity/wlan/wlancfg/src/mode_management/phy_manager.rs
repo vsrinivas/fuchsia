@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        mode_management::iface_manager::wpa3_supported,
+        mode_management::{iface_manager::wpa3_supported, Defect, EventHistory, PhyFailure},
         regulatory_manager::REGION_CODE_LEN,
         telemetry::{TelemetryEvent, TelemetrySender},
     },
@@ -18,6 +18,10 @@ use {
     std::collections::{HashMap, HashSet},
     thiserror::Error,
 };
+
+// Number of seconds that recoverable event histories should be stored.  Since thresholds have not
+// yet been established, zero this out so that memory does not increase unnecessarily.
+const DEFECT_RETENTION_SECONDS: u32 = 0;
 
 /// Errors raised while attempting to query information about or configure PHYs and ifaces.
 #[derive(Debug, Error)]
@@ -55,6 +59,7 @@ pub(crate) struct PhyContainer {
     // based on security features (e.g. for WPA3).
     client_ifaces: HashMap<u16, fidl_common::SecuritySupport>,
     ap_ifaces: HashSet<u16>,
+    defects: EventHistory<Defect>,
 }
 
 #[async_trait]
@@ -139,6 +144,10 @@ pub trait PhyManagerApi {
         &mut self,
         power_state: fidl_common::PowerSaveType,
     ) -> Result<fuchsia_zircon::Status, anyhow::Error>;
+
+    /// Store a record for the provided defect.  When it becomes possible, potentially recover the
+    /// offending PHY.
+    async fn record_defect(&mut self, defect: Defect);
 }
 
 /// Maintains a record of all PHYs that are present and their associated interfaces.
@@ -162,6 +171,7 @@ impl PhyContainer {
             supported_mac_roles: supported_mac_roles.into_iter().collect(),
             client_ifaces: HashMap::new(),
             ap_ifaces: HashSet::new(),
+            defects: EventHistory::<Defect>::new(DEFECT_RETENTION_SECONDS),
         }
     }
 }
@@ -381,6 +391,10 @@ impl PhyManagerApi for PhyManager {
                         Err(e) => {
                             warn!("Failed to recover iface for PHY {}: {:?}", client_phy, e);
                             error_encountered = Err(e);
+                            self.record_defect(Defect::Phy(PhyFailure::IfaceCreationFailure {
+                                phy_id: *client_phy,
+                            }))
+                            .await;
                             continue;
                         }
                     };
@@ -422,9 +436,10 @@ impl PhyManagerApi for PhyManager {
 
         let client_capable_phys = self.phys_for_role(fidl_common::WlanMacRole::Client);
         let mut result = Ok(());
+        let mut failing_phys = Vec::new();
 
         for client_phy in client_capable_phys.iter() {
-            let phy_container =
+            let mut phy_container =
                 self.phys.get_mut(&client_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
 
             // Continue tracking interface IDs for which deletion fails.
@@ -435,6 +450,7 @@ impl PhyManagerApi for PhyManager {
                     Ok(()) => {}
                     Err(e) => {
                         result = Err(e);
+                        failing_phys.push(*client_phy);
                         if let Some(_) = lingering_ifaces.insert(iface_id, security_support) {
                             warn!("Unexpected duplicate lingering iface for id {}", iface_id);
                         };
@@ -442,6 +458,13 @@ impl PhyManagerApi for PhyManager {
                 }
             }
             phy_container.client_ifaces = lingering_ifaces;
+        }
+
+        if result.is_err() {
+            for phy_id in failing_phys {
+                self.record_defect(Defect::Phy(PhyFailure::IfaceDestructionFailure { phy_id }))
+                    .await
+            }
         }
 
         result
@@ -492,14 +515,24 @@ impl PhyManagerApi for PhyManager {
                     Some(mac) => mac.to_array(),
                     None => NULL_MAC_ADDR,
                 };
-                let iface_id = create_iface(
+                let iface_id = match create_iface(
                     &self.device_monitor,
                     *ap_phy_id,
                     fidl_common::WlanMacRole::Ap,
                     mac,
                     &self.telemetry_sender,
                 )
-                .await?;
+                .await
+                {
+                    Ok(iface_id) => iface_id,
+                    Err(e) => {
+                        self.record_defect(Defect::Phy(PhyFailure::IfaceCreationFailure {
+                            phy_id: *ap_phy_id,
+                        }))
+                        .await;
+                        return Err(e);
+                    }
+                };
 
                 let _ = phy_container.ap_ifaces.insert(iface_id);
                 return Ok(Some(iface_id));
@@ -520,28 +553,43 @@ impl PhyManagerApi for PhyManager {
     }
 
     async fn destroy_ap_iface(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
+        let mut result = Ok(());
+        let mut failing_phy = None;
+
         // If the interface has already been destroyed, return Ok.  Only error out in the case that
         // the request to destroy the interface results in a failure.
-        for (_, phy_container) in self.phys.iter_mut() {
+        for (phy_id, phy_container) in self.phys.iter_mut() {
             if phy_container.ap_ifaces.remove(&iface_id) {
                 match destroy_iface(&self.device_monitor, iface_id, &self.telemetry_sender).await {
                     Ok(()) => {}
                     Err(e) => {
                         let _ = phy_container.ap_ifaces.insert(iface_id);
-                        return Err(e);
+                        result = Err(e);
+                        failing_phy = Some(*phy_id);
                     }
                 }
+                break;
             }
         }
-        Ok(())
+
+        match (result.as_ref(), failing_phy) {
+            (Err(_), Some(phy_id)) => {
+                self.record_defect(Defect::Phy(PhyFailure::IfaceDestructionFailure { phy_id }))
+                    .await
+            }
+            _ => {}
+        }
+
+        result
     }
 
     async fn destroy_all_ap_ifaces(&mut self) -> Result<(), PhyManagerError> {
         let ap_capable_phys = self.phys_for_role(fidl_common::WlanMacRole::Ap);
         let mut result = Ok(());
+        let mut failing_phys = Vec::new();
 
         for ap_phy in ap_capable_phys.iter() {
-            let phy_container =
+            let mut phy_container =
                 self.phys.get_mut(&ap_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
 
             // Continue tracking interface IDs for which deletion fails.
@@ -551,12 +599,23 @@ impl PhyManagerApi for PhyManager {
                     Ok(()) => {}
                     Err(e) => {
                         result = Err(e);
+                        failing_phys.push(ap_phy);
                         let _ = lingering_ifaces.insert(iface_id);
                     }
                 }
             }
             phy_container.ap_ifaces = lingering_ifaces;
         }
+
+        if result.is_err() {
+            for phy_id in failing_phys {
+                self.record_defect(Defect::Phy(PhyFailure::IfaceDestructionFailure {
+                    phy_id: *phy_id,
+                }))
+                .await
+            }
+        }
+
         result
     }
 
@@ -622,6 +681,17 @@ impl PhyManagerApi for PhyManager {
         }
 
         Ok(final_status)
+    }
+
+    async fn record_defect(&mut self, defect: Defect) {
+        match defect {
+            Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id })
+            | Defect::Phy(PhyFailure::IfaceDestructionFailure { phy_id }) => {
+                if let Some(container) = self.phys.get_mut(&phy_id) {
+                    container.defects.add_event(defect)
+                }
+            }
+        }
     }
 }
 
@@ -1156,6 +1226,55 @@ mod tests {
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert!(phy_container.client_ifaces.contains_key(&fake_iface_id));
         assert_eq!(phy_container.client_ifaces.get(&fake_iface_id), Some(&fake_security_support()));
+        assert!(phy_container.defects.events.is_empty());
+    }
+
+    /// Tests the case where a PHY is added after client connections have been enabled but creating
+    /// an interface for the new PHY fails.  In this case, the PHY is not added.
+    ///
+    /// If this behavior changes, defect accounting needs to be updated and tested here.
+    #[fuchsia::test]
+    fn add_phy_with_iface_creation_failure() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let mut test_values = test_setup();
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
+
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
+
+        {
+            let start_connections_fut = phy_manager
+                .create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections);
+            pin_mut!(start_connections_fut);
+            assert!(exec.run_until_stalled(&mut start_connections_fut).is_ready());
+        }
+
+        // Add a new phy.  Since client connections have been started, it should also create a
+        // client iface.
+        {
+            let add_phy_fut = phy_manager.add_phy(fake_phy_id);
+            pin_mut!(add_phy_fut);
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            send_get_supported_mac_roles_response(
+                &mut exec,
+                &mut test_values.monitor_stream,
+                Ok(fake_mac_roles),
+            );
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
+            // Send back an error to mimic a failure to create an interface.
+            send_create_iface_response(&mut exec, &mut test_values.monitor_stream, None);
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
+        }
+
+        assert!(!phy_manager.phys.contains_key(&fake_phy_id));
     }
 
     /// Tests the case where a new PHY is discovered after the country code has been set.
@@ -1862,6 +1981,56 @@ mod tests {
         assert!(phy_container.ap_ifaces.contains(&fake_iface_id));
     }
 
+    /// This test validates the behavior when stopping client connections fails.
+    #[fuchsia::test]
+    fn destroy_all_client_ifaces_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
+
+        // Drop the monitor stream so that the request to destroy the interface fails.
+        drop(test_values.monitor_stream);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_iface_id = 1;
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
+        let mut phy_container = PhyContainer::new(fake_mac_roles);
+
+        // For the sake of this test, force the retention period to be indefinite to make sure
+        // that an event is logged.
+        phy_container.defects = EventHistory::<Defect>::new(u32::MAX);
+
+        {
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
+
+            // Insert the fake iface
+            let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
+            let _ = phy_container.client_ifaces.insert(fake_iface_id, fake_security_support());
+
+            // Stop client connections and expect the future to fail immediately.
+            let stop_clients_future = phy_manager.destroy_all_client_ifaces();
+            pin_mut!(stop_clients_future);
+            assert!(exec.run_until_stalled(&mut stop_clients_future).is_ready());
+        }
+
+        // Ensure that the client interface is still present
+        assert!(phy_manager.phys.contains_key(&fake_phy_id));
+
+        let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
+        assert!(phy_container.client_ifaces.contains_key(&fake_iface_id));
+        assert_eq!(phy_container.defects.events.len(), 1);
+        assert_eq!(
+            phy_container.defects.events[0].value,
+            Defect::Phy(PhyFailure::IfaceDestructionFailure { phy_id: 1 })
+        );
+    }
+
     /// Tests the PhyManager's response to a request for an AP when no PHYs are present.  The
     /// expectation is that the PhyManager will return None in this case.
     #[fuchsia::test]
@@ -1921,6 +2090,47 @@ mod tests {
         }
 
         assert!(phy_manager.phys[&fake_phy_id].ap_ifaces.contains(&fake_iface_id));
+    }
+
+    /// Tests the case where an AP interface is requested but interface creation fails.
+    #[fuchsia::test]
+    fn get_ap_iface_creation_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
+
+        // Drop the monitor stream so that the request to destroy the interface fails.
+        drop(test_values.monitor_stream);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
+        let mut phy_container = PhyContainer::new(fake_mac_roles.clone());
+
+        // For the sake of this test, force the retention period to be indefinite to make sure
+        // that an event is logged.
+        phy_container.defects = EventHistory::<Defect>::new(u32::MAX);
+
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
+
+        {
+            let get_ap_future = phy_manager.create_or_get_ap_iface();
+
+            pin_mut!(get_ap_future);
+            assert!(exec.run_until_stalled(&mut get_ap_future).is_ready());
+        }
+
+        assert!(phy_manager.phys[&fake_phy_id].ap_ifaces.is_empty());
+        assert_eq!(phy_manager.phys[&fake_phy_id].defects.events.len(), 1);
+        assert_eq!(
+            phy_manager.phys[&fake_phy_id].defects.events[0].value,
+            Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 1 })
+        );
     }
 
     /// Tests the PhyManager's response to a create_or_get_ap_iface call when there is a PHY with an AP iface
@@ -2024,6 +2234,7 @@ mod tests {
 
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert!(!phy_container.ap_ifaces.contains(&fake_iface_id));
+        assert!(phy_container.defects.events.is_empty());
     }
 
     /// This test attempts to stop an invalid AP iface ID.  The expectation is that a valid iface
@@ -2066,8 +2277,61 @@ mod tests {
 
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert!(phy_container.ap_ifaces.contains(&fake_iface_id));
+        assert!(phy_container.defects.events.is_empty());
     }
 
+    /// This test fails to stop a valid AP iface on a PhyManager.  The expectation is that the
+    /// PhyManager should retain the AP interface and log a defect.
+    #[fuchsia::test]
+    fn stop_ap_iface_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
+
+        // Drop the monitor stream so that the request to destroy the interface fails.
+        drop(test_values.monitor_stream);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_iface_id = 1;
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
+
+        {
+            let mut phy_container = PhyContainer::new(fake_mac_roles.clone());
+
+            // For the sake of this test, force the retention period to be indefinite to make sure
+            // that an event is logged.
+            phy_container.defects = EventHistory::<Defect>::new(u32::MAX);
+
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
+
+            // Insert the fake iface
+            let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
+            let _ = phy_container.ap_ifaces.insert(fake_iface_id);
+
+            // Remove the AP iface ID
+            let destroy_ap_iface_future = phy_manager.destroy_ap_iface(fake_iface_id);
+            pin_mut!(destroy_ap_iface_future);
+            assert!(exec.run_until_stalled(&mut destroy_ap_iface_future).is_ready());
+        }
+
+        assert!(phy_manager.phys.contains_key(&fake_phy_id));
+
+        let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
+        assert!(phy_container.ap_ifaces.contains(&fake_iface_id));
+        assert_eq!(phy_container.defects.events.len(), 1);
+        assert_eq!(
+            phy_container.defects.events[0].value,
+            Defect::Phy(PhyFailure::IfaceDestructionFailure { phy_id: 1 })
+        );
+    }
+
+    /// This test attempts to stop an invalid AP iface ID.  The expectation is that a valid iface
     /// This test creates two AP ifaces for a PHY that supports AP ifaces.  destroy_all_ap_ifaces is then
     /// called on the PhyManager.  The expectation is that both AP ifaces should be destroyed and
     /// the records of the iface IDs should be removed from the PhyContainer.
@@ -2113,6 +2377,7 @@ mod tests {
 
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert!(phy_container.ap_ifaces.is_empty());
+        assert!(phy_container.defects.events.is_empty());
     }
 
     /// This test calls destroy_all_ap_ifaces on a PhyManager that only has a client iface.  The expectation
@@ -2153,6 +2418,61 @@ mod tests {
 
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert!(phy_container.client_ifaces.contains_key(&fake_iface_id));
+        assert!(phy_container.defects.events.is_empty());
+    }
+
+    /// This test validates the behavior when destroying all AP interfaces fails.
+    #[fuchsia::test]
+    fn stop_all_ap_ifaces_fails() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
+
+        // Drop the monitor stream so that the request to destroy the interface fails.
+        drop(test_values.monitor_stream);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // ifaces are added.
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
+
+        {
+            let mut phy_container = PhyContainer::new(fake_mac_roles.clone());
+
+            // For the sake of this test, force the retention period to be indefinite to make sure
+            // that an event is logged.
+            phy_container.defects = EventHistory::<Defect>::new(u32::MAX);
+
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
+
+            // Insert the fake iface
+            let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
+            let _ = phy_container.ap_ifaces.insert(0);
+            let _ = phy_container.ap_ifaces.insert(1);
+
+            // Expect interface destruction to finish immediately.
+            let destroy_ap_iface_future = phy_manager.destroy_all_ap_ifaces();
+            pin_mut!(destroy_ap_iface_future);
+            assert!(exec.run_until_stalled(&mut destroy_ap_iface_future).is_ready());
+        }
+
+        assert!(phy_manager.phys.contains_key(&fake_phy_id));
+
+        let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
+        assert_eq!(phy_container.ap_ifaces.len(), 2);
+        assert_eq!(phy_container.defects.events.len(), 2);
+        assert_eq!(
+            phy_container.defects.events[0].value,
+            Defect::Phy(PhyFailure::IfaceDestructionFailure { phy_id: 1 })
+        );
+        assert_eq!(
+            phy_container.defects.events[1].value,
+            Defect::Phy(PhyFailure::IfaceDestructionFailure { phy_id: 1 })
+        );
     }
 
     /// Verifies that setting a suggested AP MAC address results in that MAC address being used as
@@ -2269,6 +2589,49 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Ready(_));
     }
 
+    /// Tests the case where creating a client interface fails while starting client connections.
+    #[fuchsia::test]
+    fn test_iface_creation_fails_during_start_client_connections() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
+
+        // Drop the monitor stream so that the request to create the interface fails.
+        drop(test_values.monitor_stream);
+
+        // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
+        // iface is added.
+        let fake_phy_id = 1;
+        let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
+        let mut phy_container = PhyContainer::new(fake_mac_roles.clone());
+
+        // For the sake of this test, force the retention period to be indefinite to make sure
+        // that an event is logged.
+        phy_container.defects = EventHistory::<Defect>::new(u32::MAX);
+
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
+
+        {
+            // Start client connections so that an IfaceRequest is issued for the client.
+            let start_client_future = phy_manager
+                .create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections);
+            pin_mut!(start_client_future);
+            assert!(exec.run_until_stalled(&mut start_client_future).is_ready());
+        }
+
+        // Verify that a defect has been logged.
+        assert_eq!(phy_manager.phys[&fake_phy_id].defects.events.len(), 1);
+        assert_eq!(
+            phy_manager.phys[&fake_phy_id].defects.events[0].value,
+            Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 1 })
+        );
+    }
+
+    /// Tests get_phy_ids() when no PHYs are present. The expectation is that the PhyManager will
     /// Tests get_phy_ids() when no PHYs are present. The expectation is that the PhyManager will
     /// return an empty `Vec` in this case.
     #[run_singlethreaded(test)]
@@ -2393,6 +2756,7 @@ mod tests {
                 supported_mac_roles: HashSet::new(),
                 client_ifaces: HashMap::new(),
                 ap_ifaces: HashSet::new(),
+                defects: EventHistory::new(DEFECT_RETENTION_SECONDS),
             },
         );
         let _ = phy_manager.phys.insert(
@@ -2401,6 +2765,7 @@ mod tests {
                 supported_mac_roles: HashSet::new(),
                 client_ifaces: HashMap::new(),
                 ap_ifaces: HashSet::new(),
+                defects: EventHistory::new(DEFECT_RETENTION_SECONDS),
             },
         );
 
@@ -2482,6 +2847,7 @@ mod tests {
                 supported_mac_roles: HashSet::new(),
                 client_ifaces: HashMap::new(),
                 ap_ifaces: HashSet::new(),
+                defects: EventHistory::new(DEFECT_RETENTION_SECONDS),
             },
         );
 
