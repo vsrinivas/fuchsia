@@ -153,6 +153,9 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
           gain_state.agc_enabled = response->state.has_enabled() && response->state.enabled();
         }
         break;
+      default:
+        // TODO(fxbug.dev/110245): Handle default case.
+        break;
     }
   }
   gain_format_ = zx::ok(gain_format);

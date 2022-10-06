@@ -98,7 +98,7 @@ zx_status_t PciBackend::ConfigureInterruptMode() {
     }
     irq_handles().push_back(std::move(interrupt));
   }
-  irq_mode() = mode;
+  irq_mode() = static_cast<uint8_t>(mode);
   zxlogf(DEBUG, "%s: using %s IRQ mode (irq_cnt = %u)", tag(),
          (irq_mode() == PCI_INTERRUPT_MODE_MSI_X ? "MSI-X" : "legacy"), irq_cnt);
   return ZX_OK;

@@ -80,7 +80,8 @@ zx_status_t IntelThermal::Bind() {
   }
 
   if (description.value().is_error()) {
-    zxlogf(ERROR, "EvaluateObject failed: %d", int(description.value().error_value()));
+    zxlogf(ERROR, "EvaluateObject failed: %d",
+           static_cast<uint32_t>(description.value().error_value()));
     return ZX_ERR_INTERNAL;
   }
 
@@ -131,7 +132,8 @@ void IntelThermal::DdkInit(ddk::InitTxn txn) {
   }
 
   if (result.value().is_error()) {
-    zxlogf(ERROR, "InstallNotifyHandler failed: %d", int(result.value().error_value()));
+    zxlogf(ERROR, "InstallNotifyHandler failed: %d",
+           static_cast<uint32_t>(result.value().error_value()));
     txn.Reply(ZX_ERR_INTERNAL);
     return;
   }
@@ -248,7 +250,7 @@ void IntelThermal::SetTripCelsius(SetTripCelsiusRequestView request,
     return;
   }
   if (result.value().is_error()) {
-    zxlogf(ERROR, "Failed to call PAT0: %d", int(result.value().error_value()));
+    zxlogf(ERROR, "Failed to call PAT0: %d", static_cast<uint32_t>(result.value().error_value()));
     completer.Reply(ZX_ERR_INTERNAL);
     return;
   }
@@ -274,7 +276,8 @@ zx::status<uint64_t> IntelThermal::EvaluateInteger(const char* name) {
   }
 
   if (result.value().is_error()) {
-    zxlogf(ERROR, "EvaluateObject(%s) failed: %d", name, int(result.value().error_value()));
+    zxlogf(ERROR, "EvaluateObject(%s) failed: %d", name,
+           static_cast<uint32_t>(result.value().error_value()));
     return zx::error(ZX_ERR_INTERNAL);
   }
 

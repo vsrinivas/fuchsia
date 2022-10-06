@@ -242,7 +242,7 @@ void VirtualAudioControlImpl::AddInput(AddInputRequestView request,
                                                dispatcher_);
   if (!result.is_ok()) {
     zxlogf(ERROR, "Input device creation failed with status %d",
-           static_cast<int32_t>(result.error_value()));
+           fidl::ToUnderlying(result.error_value()));
     completer.ReplyError(result.error_value());
     return;
   }
@@ -258,7 +258,7 @@ void VirtualAudioControlImpl::AddOutput(AddOutputRequestView request,
                                                dispatcher_);
   if (!result.is_ok()) {
     zxlogf(ERROR, "Output device creation failed with status %d",
-           static_cast<int32_t>(result.error_value()));
+           fidl::ToUnderlying(result.error_value()));
     completer.ReplyError(result.error_value());
     return;
   }

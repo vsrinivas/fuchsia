@@ -4,6 +4,7 @@
 
 #include "src/media/audio/services/mixer/fidl/graph_creator_server.h"
 
+#include <fidl/fuchsia.audio.mixer/cpp/natural_ostream.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>

@@ -18,7 +18,10 @@ use {
     },
     fidl_fuchsia_component::{self as fcomponent, RealmMarker},
     fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_fs_startup::{CheckOptions, FormatOptions, StartOptions, StartupMarker},
+    fidl_fuchsia_fs_startup::{
+        CheckOptions, CompressionAlgorithm, EvictionPolicyOverride, FormatOptions, StartOptions,
+        StartupMarker,
+    },
     fidl_fuchsia_fxfs::MountOptions,
     fidl_fuchsia_io as fio,
     fuchsia_async::OnSignals,
@@ -240,8 +243,11 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         if let Mode::Component { reuse_component_after_serving, .. } = self.config.mode() {
             let exposed_dir = self.get_component_exposed_dir().await?;
             let proxy = connect_to_protocol_at_dir_root::<StartupMarker>(&exposed_dir)?;
+            let mut options = StartOptions::new_empty();
+            options.write_compression_algorithm = CompressionAlgorithm::ZstdChunked;
+            options.cache_eviction_policy_override = EvictionPolicyOverride::None;
             proxy
-                .start(self.get_block_handle()?.into(), &mut StartOptions::new_empty())
+                .start(self.get_block_handle()?.into(), &mut options)
                 .await?
                 .map_err(Status::from_raw)?;
 

@@ -260,7 +260,8 @@ fpromise::promise<void, zx_status_t> ChromiumosEcCore::BindFidlClients(
                        result.FormatDescription().data());
                 completer.complete_error(result.status());
               } else if (result->is_error()) {
-                zxlogf(ERROR, "Failed to install notify handler: %u", int(result->error_value()));
+                zxlogf(ERROR, "Failed to install notify handler: %u",
+                       static_cast<uint32_t>(result->error_value()));
                 completer.complete_error(ZX_ERR_INTERNAL);
               } else {
                 completer.complete_ok();

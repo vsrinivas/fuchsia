@@ -47,9 +47,10 @@ ACPI_OBJECT_TYPE FidlTypeToAcpiType(fuchsia_hardware_acpi::wire::ObjectType type
       return ACPI_TYPE_STRING;
     case ObjectType::kThermalZone:
       return ACPI_TYPE_THERMAL;
+    default:
+      zxlogf(ERROR, "Unknown ACPI object type %d", static_cast<uint32_t>(type));
+      return ACPI_TYPE_ANY;
   }
-  zxlogf(ERROR, "Unknown ACPI object type %d", int(type));
-  return ACPI_TYPE_ANY;
 }
 
 fuchsia_hardware_acpi::wire::ObjectType AcpiTypeToFidlType(ACPI_OBJECT_TYPE type) {

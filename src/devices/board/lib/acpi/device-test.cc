@@ -259,7 +259,7 @@ TEST_F(AcpiDeviceTest, TestAcquireGlobalLockImplicitRelease) {
   {
     auto result = fidl_client_->AcquireGlobalLock();
     ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result->is_ok(), "ACPI error %d", int(result->error_value()));
+    ASSERT_TRUE(result->is_ok(), "ACPI error %d", static_cast<uint32_t>(result->error_value()));
 
     std::thread thread([&acquired, &running, this]() {
       sync_completion_signal(&running);
@@ -373,7 +373,7 @@ TEST_F(AcpiDeviceTest, RemoveAndAddNotifyHandler) {
     auto result = fidl_client_->InstallNotifyHandler(
         fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
     ASSERT_OK(result.status());
-    ASSERT_FALSE(result->is_error(), "error %d", int(result->error_value()));
+    ASSERT_FALSE(result->is_error(), "error %d", static_cast<uint32_t>(result->error_value()));
   }
 
   // Destroy the server, which will close the channel.
@@ -1535,7 +1535,7 @@ TEST_F(AcpiDeviceTest, TestSetWakeDeviceBlockDevice) {
 
   auto result = fidl_client_->SetWakeDevice(3);
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->is_ok(), "ACPI error %d", int(result->error_value()));
+  ASSERT_TRUE(result->is_ok(), "ACPI error %d", static_cast<uint32_t>(result->error_value()));
 
   // Check that only device 1 is set as a wake source.
   for (acpi::test::WakeGpe gpe : wake_gpes) {

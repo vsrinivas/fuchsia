@@ -185,7 +185,7 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
   } else if (DataFilesystemFormat() == "fxfs") {
     expected_fs_type = fuchsia_fs::VfsType::kFxfs;
   }
-  EXPECT_EQ(fs_type, expected_fs_type);
+  EXPECT_EQ(fs_type, fidl::ToUnderlying(expected_fs_type));
 
   struct statvfs buf;
   ASSERT_EQ(fstatvfs(fd.get(), &buf), 0);

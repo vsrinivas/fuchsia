@@ -984,7 +984,7 @@ ACPI_STATUS Device::AddressSpaceHandler(uint32_t function, ACPI_PHYSICAL_ADDRESS
         return AE_ERROR;
       }
       if (result->is_error()) {
-        return result->error_value();
+        return static_cast<ACPI_STATUS>(result->error_value());
       }
       *value = result->value()->value;
       break;
@@ -996,7 +996,7 @@ ACPI_STATUS Device::AddressSpaceHandler(uint32_t function, ACPI_PHYSICAL_ADDRESS
         return AE_ERROR;
       }
       if (result->is_error()) {
-        return result->error_value();
+        return static_cast<ACPI_STATUS>(result->error_value());
       }
       break;
     }

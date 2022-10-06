@@ -203,7 +203,7 @@ zx_status_t AcpiLid::UpdateLidStateLocked() {
   }
 
   if (result.value().is_error()) {
-    zxlogf(ERROR, "EvaluateObject failed: %d", int(result.value().error_value()));
+    zxlogf(ERROR, "EvaluateObject failed: %d", static_cast<uint32_t>(result.value().error_value()));
     return ZX_ERR_INTERNAL;
   }
 

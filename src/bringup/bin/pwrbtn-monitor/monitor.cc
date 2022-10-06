@@ -28,7 +28,7 @@ zx_status_t PowerButtonMonitor::DoAction() {
     case Action::kShutdown:
       return SendPoweroff();
     default:
-      printf("pwrbtn-monitor: unknown action %d\n", int(action_));
+      printf("pwrbtn-monitor: unknown action %d\n", fidl::ToUnderlying(action_));
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

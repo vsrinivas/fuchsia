@@ -55,12 +55,12 @@ void e1000_read_pci_cfg(struct e1000_hw* hw, u32 reg, u16* value) {
 }
 
 void e1000_pci_set_mwi(struct e1000_hw* hw) {
-  hw2pci(hw)->pci->WriteConfig16(fuchsia_hardware_pci::Config::kCommand,
+  hw2pci(hw)->pci->WriteConfig16(fidl::ToUnderlying(fuchsia_hardware_pci::Config::kCommand),
                                  hw->bus.pci_cmd_word | CMD_MEM_WRT_INVALIDATE);
 }
 
 void e1000_pci_clear_mwi(struct e1000_hw* hw) {
-  hw2pci(hw)->pci->WriteConfig16(fuchsia_hardware_pci::Config::kCommand,
+  hw2pci(hw)->pci->WriteConfig16(fidl::ToUnderlying(fuchsia_hardware_pci::Config::kCommand),
                                  (hw->bus.pci_cmd_word & ~CMD_MEM_WRT_INVALIDATE));
 }
 
@@ -146,7 +146,7 @@ zx_status_t e1000_pci_configure_interrupt_mode(const struct e1000_pci* pci,
   fuchsia_hardware_pci::InterruptMode mode;
   zx_status_t status = pci->pci->ConfigureInterruptMode(requested_irq_count, &mode);
   if (status == ZX_OK) {
-    *out_mode = mode;
+    *out_mode = static_cast<pci_interrupt_mode_t>(mode);
   }
   return status;
 }

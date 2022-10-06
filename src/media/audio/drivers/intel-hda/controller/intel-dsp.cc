@@ -99,7 +99,7 @@ zx::status<> IntelDsp::ParseNhlt() {
     return zx::error(result.status());
   }
   if (result->is_error()) {
-    LOG(ERROR, "NHLT query failed: %d", int(result->error_value()));
+    LOG(ERROR, "NHLT query failed: %d", fidl::ToUnderlying(result->error_value()));
     return zx::error(ZX_ERR_INTERNAL);
   }
   if (!result->value()->result.is_resources() || result->value()->result.resources().empty() ||

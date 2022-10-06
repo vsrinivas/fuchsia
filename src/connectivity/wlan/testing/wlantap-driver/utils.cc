@@ -41,11 +41,11 @@ zx_status_t ConvertBandInfoToCapability(const wlan_device::BandInfo& in,
                                         wlan_softmac_band_capability_t* out) {
   memset(out, 0, sizeof(*out));
   switch (in.band) {
-    case WLAN_BAND_TWO_GHZ:
-      out->band = wlan_common::WlanBand::kTwoGhz;
+    case wlan_common::WlanBand::kTwoGhz:
+      out->band = WLAN_BAND_TWO_GHZ;
       break;
-    case WLAN_BAND_FIVE_GHZ:
-      out->band = wlan_common::WlanBand::kFiveGhz;
+    case wlan_common::WlanBand::kFiveGhz:
+      out->band = WLAN_BAND_FIVE_GHZ;
       break;
     default:
       zxlogf(ERROR, "Invalid band: %u", static_cast<uint8_t>(in.band));

@@ -17,21 +17,34 @@ enum class {{ .Name }} : {{ .Type }} {
 {{ else }}
 {{ .Docs }}
 class {{ .Name }} final {
-public:
-  constexpr {{ .Name }}() : value_(Unknown()) {}
+ private:
+  enum class EnumForSwitching_ : {{ .Type }} {
+    {{- range .Members }}
+      {{ .Docs }}
+      {{ .Name }} = {{ .Value }},
+    {{- end }}
+
+    _do_not_handle_this__write_a_default_case_instead = {{ .UnusedEnumValueForTmpl | printf "%#x" }},
+  };
+
+  constexpr explicit {{ .Name }}(EnumForSwitching_ value) : value_(static_cast<{{ .Type }}>(value)) {}
+
+ public:
+  constexpr {{ .Name }}() : value_(static_cast<{{ .Type }}>(Unknown())) {}
   constexpr explicit {{ .Name }}({{ .Type }} value) : value_(value) {}
-  constexpr operator {{ .Type }}() const { return value_; }
+  constexpr operator EnumForSwitching_() const { return static_cast<EnumForSwitching_>(value_); }
+  constexpr explicit operator {{ .Type }}() const { return value_; }
 
   constexpr bool IsUnknown() const {
     {{ if .Members }}
-    switch (value_) {
-      {{ range .Members }}
-      {{ if not .IsUnknown }}
-    case {{ .Value }}:
-      {{ end }}
-      {{ end }}
-      return false;
-    }
+      switch (value_) {
+        {{ range .Members }}
+          {{- if not .IsUnknown }}
+            case {{ .Value }}:
+          {{ end }}
+        {{ end }}
+        return false;
+      }
     {{- end }}
     return true;
   }
@@ -47,13 +60,13 @@ public:
     static const {{ $.Name }} {{ .Name }};
   {{- end }}
 
-private:
+ private:
   {{ .Type }} value_;
 };
 
 {{- range $member := .Members }}
 constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} =
-  {{ $ }}({{ $member.Value }});
+    {{ $ }}({{ $member.Value }});
 {{- end }}
 {{ end }}
 
@@ -63,7 +76,13 @@ template <>
 struct fidl::internal::DisplayError<{{ . }}> {
   static size_t Format(const {{ . }}& value, char* destination, size_t capacity);
 };
+
 {{- end }}
+
+{{ EnsureNamespace "fidl" }}
+constexpr inline auto ToUnderlying({{ . }} value) -> {{ .Type }} {
+  return static_cast<{{ .Type }}>(value);
+}
 
 {{ end }}
 

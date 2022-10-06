@@ -52,6 +52,7 @@ source_set("fidl") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp_natural_ostream",
     "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp_wire",
     "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_cpp_wire",
     "//sdk/lib/fit",
@@ -89,6 +90,7 @@ executable("fidl_unittests") {
 
   deps = [
     ":fidl",
+    "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp_natural_ostream",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/processing:prebuilt_coefficient_tables",

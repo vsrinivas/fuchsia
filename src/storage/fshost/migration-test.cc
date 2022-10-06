@@ -108,8 +108,9 @@ TEST_F(MigrationTest, MigratesZxcryptMinfs) {
   // The filesystem should be automatically mounted.
   auto [root_fd, fs_type] = WaitForMount("data");
   EXPECT_TRUE(root_fd);
-  EXPECT_EQ(fs_type, DataFilesystemFormat() == "fxfs" ? fuchsia_fs::VfsType::kFxfs
-                                                      : fuchsia_fs::VfsType::kF2Fs);
+  EXPECT_EQ(fs_type, DataFilesystemFormat() == "fxfs"
+                         ? fidl::ToUnderlying(fuchsia_fs::VfsType::kFxfs)
+                         : fidl::ToUnderlying(fuchsia_fs::VfsType::kF2Fs));
 
   // The data should have been copied over.
   auto fd = fbl::unique_fd(::openat(root_fd.get(), "file", O_RDONLY));

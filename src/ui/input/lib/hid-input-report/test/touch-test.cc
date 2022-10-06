@@ -501,7 +501,7 @@ TEST(TouchscreenTest, AtlasTouchpad) {
     uint16_t input_mode;
     memcpy(&input_mode, reinterpret_cast<uint8_t*>(&input_mode_data) + sizeof(uint8_t),
            sizeof(input_mode));
-    EXPECT_EQ(input_mode, static_cast<uint16_t>(kInputModeTestVal));
+    EXPECT_EQ(static_cast<uint32_t>(input_mode), static_cast<uint32_t>(kInputModeTestVal));
 
     multitouch_selective_reporting_rpt_t selective_reporting_data = {};
     result = selective_reporting.SetFeatureReport(

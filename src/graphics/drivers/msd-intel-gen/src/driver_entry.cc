@@ -65,8 +65,8 @@ struct sysdrv_device_t : public fidl::WireServer<DeviceType> {
     zx_handle_t result_buffer = ZX_HANDLE_INVALID;
     uint64_t result = 0;
 
-    magma::Status status =
-        this->magma_system_device->Query(request->query_id, &result_buffer, &result);
+    magma::Status status = this->magma_system_device->Query(fidl::ToUnderlying(request->query_id),
+                                                            &result_buffer, &result);
     if (!status.ok()) {
       _completer.ReplyError(magma::ToZxStatus(status.get()));
       return;

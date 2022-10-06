@@ -187,7 +187,7 @@ TEST_F(FakePciProtocolTests, SetInterruptMode) {
   ASSERT_OK(pci().SetInterruptMode(mode, 1));
   pci::RunAsync(loop_, [&] {
     ASSERT_EQ(1, fake_pci().GetIrqCount());
-    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+    ASSERT_EQ(fidl::ToUnderlying(mode), fake_pci().GetIrqMode());
   });
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetInterruptMode(mode, 2));
 
@@ -195,25 +195,25 @@ TEST_F(FakePciProtocolTests, SetInterruptMode) {
   ASSERT_OK(pci().SetInterruptMode(mode, 1));
   pci::RunAsync(loop_, [&] {
     ASSERT_EQ(1, fake_pci().GetIrqCount());
-    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+    ASSERT_EQ(fidl::ToUnderlying(mode), fake_pci().GetIrqMode());
   });
 
   ASSERT_OK(pci().SetInterruptMode(mode, 2));
   pci::RunAsync(loop_, [&] {
     ASSERT_EQ(2, fake_pci().GetIrqCount());
-    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+    ASSERT_EQ(fidl::ToUnderlying(mode), fake_pci().GetIrqMode());
   });
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetInterruptMode(mode, 3));
   pci::RunAsync(loop_, [&] {
     ASSERT_EQ(2, fake_pci().GetIrqCount());
-    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+    ASSERT_EQ(fidl::ToUnderlying(mode), fake_pci().GetIrqMode());
   });
 
   ASSERT_OK(pci().SetInterruptMode(mode, 4));
   pci::RunAsync(loop_, [&] {
     ASSERT_EQ(4, fake_pci().GetIrqCount());
-    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+    ASSERT_EQ(fidl::ToUnderlying(mode), fake_pci().GetIrqMode());
   });
 }
 
@@ -488,7 +488,7 @@ TEST_F(FakePciProtocolTests, PciGetFirstAndNextCapability) {
   config->read(&val, PCI_CONFIG_CAPABILITIES_PTR, sizeof(val));
   ASSERT_EQ(0x50, val);
   config->read(&val, offset1, sizeof(val));
-  ASSERT_EQ(fuchsia_hardware_pci::CapabilityId::kVendor, val);
+  ASSERT_EQ(fidl::ToUnderlying(fuchsia_hardware_pci::CapabilityId::kVendor), val);
   config->read(&val, offset1 + 2, sizeof(val));
   ASSERT_EQ(6, val);
 

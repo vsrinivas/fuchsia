@@ -65,10 +65,12 @@ void TestSilence(NumberType expected_silent_value) {
   }
 }
 
-TEST(StreamConverterTest, SilenceUnsigned8) { TestSilence<kUint8, uint8_t>(0x80); }
-TEST(StreamConverterTest, SilenceSigned16) { TestSilence<kInt16, int16_t>(0); }
-TEST(StreamConverterTest, SilenceSigned32) { TestSilence<kInt32, int32_t>(0); }
-TEST(StreamConverterTest, SilenceFloat) { TestSilence<kFloat32, float>(0.0f); }
+TEST(StreamConverterTest, SilenceUnsigned8) {
+  TestSilence<fidl::ToUnderlying(kUint8), uint8_t>(0x80);
+}
+TEST(StreamConverterTest, SilenceSigned16) { TestSilence<fidl::ToUnderlying(kInt16), int16_t>(0); }
+TEST(StreamConverterTest, SilenceSigned32) { TestSilence<fidl::ToUnderlying(kInt32), int32_t>(0); }
+TEST(StreamConverterTest, SilenceFloat) { TestSilence<fidl::ToUnderlying(kFloat32), float>(0.0f); }
 
 // When we specify source data in uint8/int16/int32 formats, it improves readability to specify
 // expected values in that format as well. The expected array itself is float[], so we use this

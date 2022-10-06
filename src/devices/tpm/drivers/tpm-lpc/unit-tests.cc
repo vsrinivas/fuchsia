@@ -78,7 +78,8 @@ TEST_F(TpmLpcTest, TestTpmRead) {
 
   std::vector<uint8_t> expected{0xFF, 0xFF, 0xFF, 0xFF};
 
-  auto& sts_reg = fake_mmio_.FakeRegister(fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts);
+  auto& sts_reg = fake_mmio_.FakeRegister(
+      static_cast<uint16_t>(fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts));
   sts_reg.SetReadCallback([]() { return 0xFFFFFFFFFFFFFFFF; });
   auto read = client->Read(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, 4);
   ASSERT_TRUE(read.ok());

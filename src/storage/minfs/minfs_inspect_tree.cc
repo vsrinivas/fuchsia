@@ -36,7 +36,7 @@ void MinfsInspectTree::Initialize(const fs::FilesystemInfo& fs_info, const Super
     std::lock_guard guard(info_mutex_);
     info_ = {
         .id = fs_info.fs_id,
-        .type = fs_info.fs_type,
+        .type = fidl::ToUnderlying(fs_info.fs_type),
         .name = fs_info.name,
         .version_major = kMinfsCurrentMajorVersion,
         .version_minor = kMinfsCurrentMinorVersion,

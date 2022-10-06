@@ -136,7 +136,8 @@ void FakePciProtocol::GetInterruptModes(GetInterruptModesCompleter::Sync& comple
 
 void FakePciProtocol::SetInterruptMode(SetInterruptModeRequestView request,
                                        SetInterruptModeCompleter::Sync& completer) {
-  zx_status_t status = PciSetInterruptMode(request->mode, request->requested_irq_count);
+  zx_status_t status =
+      PciSetInterruptMode(fidl::ToUnderlying(request->mode), request->requested_irq_count);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -159,7 +160,7 @@ void FakePciProtocol::GetCapabilities(GetCapabilitiesRequestView request,
                                       GetCapabilitiesCompleter::Sync& completer) {
   std::vector<uint8_t> capabilities;
   uint8_t offset;
-  zx_status_t status = PciGetFirstCapability(request->id, &offset);
+  zx_status_t status = PciGetFirstCapability(fidl::ToUnderlying(request->id), &offset);
   if (status != ZX_OK) {
     completer.Close(status);
     return;
@@ -168,7 +169,7 @@ void FakePciProtocol::GetCapabilities(GetCapabilitiesRequestView request,
 
   uint8_t out_offset;
   while (true) {
-    status = PciGetNextCapability(request->id, offset, &out_offset);
+    status = PciGetNextCapability(fidl::ToUnderlying(request->id), offset, &out_offset);
     if (status == ZX_ERR_NOT_FOUND) {
       break;
     } else if (status != ZX_OK) {

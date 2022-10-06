@@ -184,10 +184,25 @@ constexpr inline void BitsMember::operator^=(
 }
 
 class Op final {
+ private:
+  enum class EnumForSwitching_ : uint32_t {
+
+    kAdd = 1u,
+
+    kMul = 2u,
+
+    kDiv = 3u,
+
+    _do_not_handle_this__write_a_default_case_instead = 0xffffffff,
+  };
+
+  constexpr explicit Op(EnumForSwitching_ value) : value_(static_cast<uint32_t>(value)) {}
+
  public:
-  constexpr Op() : value_(Unknown()) {}
+  constexpr Op() : value_(static_cast<uint32_t>(Unknown())) {}
   constexpr explicit Op(uint32_t value) : value_(value) {}
-  constexpr operator uint32_t() const { return value_; }
+  constexpr operator EnumForSwitching_() const { return static_cast<EnumForSwitching_>(value_); }
+  constexpr explicit operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
     switch (value_) {
@@ -231,13 +246,33 @@ struct fidl::internal::DisplayError<::test_anonymous::Op> {
   static size_t Format(const ::test_anonymous::Op& value, char* destination, size_t capacity);
 };
 
+namespace fidl {
+
+constexpr inline auto ToUnderlying(::test_anonymous::Op value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
+
+}  // namespace fidl
 namespace test_anonymous {
 
 class SomeProtocolSomeMethodError final {
+ private:
+  enum class EnumForSwitching_ : uint32_t {
+
+    kErrorOne = 1u,
+
+    kErrorTwo = 2u,
+
+    _do_not_handle_this__write_a_default_case_instead = 0xffffffff,
+  };
+
+  constexpr explicit SomeProtocolSomeMethodError(EnumForSwitching_ value) : value_(static_cast<uint32_t>(value)) {}
+
  public:
-  constexpr SomeProtocolSomeMethodError() : value_(Unknown()) {}
+  constexpr SomeProtocolSomeMethodError() : value_(static_cast<uint32_t>(Unknown())) {}
   constexpr explicit SomeProtocolSomeMethodError(uint32_t value) : value_(value) {}
-  constexpr operator uint32_t() const { return value_; }
+  constexpr operator EnumForSwitching_() const { return static_cast<EnumForSwitching_>(value_); }
+  constexpr explicit operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
     switch (value_) {
@@ -276,6 +311,10 @@ struct fidl::internal::DisplayError<::test_anonymous::SomeProtocolSomeMethodErro
 };
 
 namespace fidl {
+
+constexpr inline auto ToUnderlying(::test_anonymous::SomeProtocolSomeMethodError value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
 
 template <>
 struct IsFidlType<::test_anonymous::Flags> : public std::true_type {};

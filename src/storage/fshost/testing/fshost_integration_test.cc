@@ -118,7 +118,7 @@ std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(
 
     struct statfs buf;
     EXPECT_EQ(fstatfs(fd.get(), &buf), 0) << ": " << strerror(errno);
-    if (buf.f_type != fuchsia_fs::VfsType::kMemfs)
+    if (buf.f_type != fidl::ToUnderlying(fuchsia_fs::VfsType::kMemfs))
       return std::make_pair(std::move(fd), buf.f_type);
 
     sleep(1);

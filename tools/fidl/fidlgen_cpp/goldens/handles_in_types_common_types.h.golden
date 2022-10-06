@@ -26,6 +26,10 @@ struct fidl::internal::DisplayError<::test_handlesintypes::ObjType> {
 
 namespace fidl {
 
+constexpr inline auto ToUnderlying(::test_handlesintypes::ObjType value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
+
 template <>
 struct IsFidlType<::test_handlesintypes::ObjType> : public std::true_type {};
 template <>

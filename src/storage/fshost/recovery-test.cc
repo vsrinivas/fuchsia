@@ -68,7 +68,7 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   // Minfs should be automatically mounted.
   auto [fd, fs_type] = WaitForMount("data");
   EXPECT_TRUE(fd);
-  uint64_t expected_type = 0ul;
+  fuchsia_fs::VfsType expected_type;
   if (DataFilesystemFormat() == "minfs") {
     expected_type = fuchsia_fs::VfsType::kMinfs;
   } else if (DataFilesystemFormat() == "fxfs") {
@@ -78,7 +78,7 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   } else {
     ASSERT_TRUE(false);
   }
-  EXPECT_EQ(fs_type, expected_type);
+  EXPECT_EQ(fs_type, fidl::ToUnderlying(expected_type));
 
   // No crash reports should have been filed.
   auto client_end = component::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
@@ -147,7 +147,7 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
   // The new filesystem should be automatically mounted.
   auto [fd, fs_type] = WaitForMount("data");
   EXPECT_TRUE(fd);
-  uint64_t expected_type = 0ul;
+  fuchsia_fs::VfsType expected_type;
   if (DataFilesystemFormat() == "minfs") {
     expected_type = fuchsia_fs::VfsType::kMinfs;
   } else if (DataFilesystemFormat() == "fxfs") {
@@ -157,7 +157,7 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
   } else {
     ASSERT_TRUE(false);
   }
-  EXPECT_EQ(fs_type, expected_type);
+  EXPECT_EQ(fs_type, fidl::ToUnderlying(expected_type));
 
   // If fshost was configured to use (e.g.) Fxfs and the magic was Fxfs' magic, then fshost will
   // treat this as a corruption and file a crash report.  If the magic was something else, fshost

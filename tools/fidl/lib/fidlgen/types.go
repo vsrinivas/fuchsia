@@ -247,6 +247,20 @@ var unsignedSubtypes = map[PrimitiveSubtype]struct{}{
 	Uint64: {},
 }
 
+var numberOfBits = map[PrimitiveSubtype]int{
+	Bool:    8,
+	Int8:    8,
+	Int16:   16,
+	Int32:   32,
+	Int64:   64,
+	Uint8:   8,
+	Uint16:  16,
+	Uint32:  32,
+	Uint64:  64,
+	Float32: 32,
+	Float64: 64,
+}
+
 // IsSigned indicates whether this subtype represents a signed number such as
 // `int16`, or `float32`.
 func (typ PrimitiveSubtype) IsSigned() bool {
@@ -263,6 +277,16 @@ func (typ PrimitiveSubtype) IsUnsigned() bool {
 // IsFloat indicates whether this subtype represents a floating-point number.
 func (typ PrimitiveSubtype) IsFloat() bool {
 	return typ == Float32 || typ == Float64
+}
+
+// NumberOfBits returns the number of bits used to represent this primitive in FIDL.
+func (typ PrimitiveSubtype) NumberOfBits() int {
+	return numberOfBits[typ]
+}
+
+// NumberOfBytes returns the number of bytes used to represent this primitive in FIDL.
+func (typ PrimitiveSubtype) NumberOfBytes() int {
+	return numberOfBits[typ] / 8
 }
 
 type InternalSubtype string

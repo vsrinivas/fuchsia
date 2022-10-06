@@ -90,7 +90,8 @@ void AcpiBattery::DdkInit(ddk::InitTxn txn) {
   }
 
   if (result.value().is_error()) {
-    zxlogf(ERROR, "Failed to InstallNotifyHandler: %d", int(result.value().error_value()));
+    zxlogf(ERROR, "Failed to InstallNotifyHandler: %d",
+           static_cast<uint32_t>(result.value().error_value()));
     status = ZX_ERR_INTERNAL;
     return;
   }
@@ -122,7 +123,7 @@ zx_status_t AcpiBattery::CheckAcpiState() {
   }
 
   if (result.value().is_error()) {
-    zxlogf(ERROR, "EvaluateObject failed: %d", int(result.value().error_value()));
+    zxlogf(ERROR, "EvaluateObject failed: %d", static_cast<uint32_t>(result.value().error_value()));
     return ZX_ERR_INTERNAL;
   }
 
@@ -156,7 +157,7 @@ zx_status_t AcpiBattery::CheckAcpiBatteryInformation() {
   }
 
   if (result.value().is_error()) {
-    zxlogf(ERROR, "EvaluateObject failed: %d", int(result.value().error_value()));
+    zxlogf(ERROR, "EvaluateObject failed: %d", static_cast<uint32_t>(result.value().error_value()));
     return ZX_ERR_INTERNAL;
   }
 
@@ -214,7 +215,7 @@ zx_status_t AcpiBattery::CheckAcpiBatteryState() {
   }
 
   if (result.value().is_error()) {
-    zxlogf(ERROR, "EvaluateObject failed: %d", int(result.value().error_value()));
+    zxlogf(ERROR, "EvaluateObject failed: %d", static_cast<uint32_t>(result.value().error_value()));
     return ZX_ERR_INTERNAL;
   }
 

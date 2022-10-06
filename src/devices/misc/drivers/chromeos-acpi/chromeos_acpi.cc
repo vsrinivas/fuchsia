@@ -186,7 +186,7 @@ zx_status_t ChromeosAcpi::EvaluateObjectHelper(const char* name,
   }
 
   if (result->is_error()) {
-    zxlogf(ERROR, "MLST failed: %d", int(result->error_value()));
+    zxlogf(ERROR, "MLST failed: %d", static_cast<uint32_t>(result->error_value()));
     return ZX_ERR_NOT_SUPPORTED;
   }
 

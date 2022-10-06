@@ -448,7 +448,7 @@ zx_status_t I2cHidbus::ReadI2cHidDesc(I2cHidDesc* hiddesc) {
   }
 
   if (result->is_status()) {
-    zxlogf(ERROR, "EvaluateObject failed: 0x%x", int(result->status_val()));
+    zxlogf(ERROR, "EvaluateObject failed: 0x%x", fidl::ToUnderlying(result->status_val()));
     return ZX_ERR_INTERNAL;
   }
 

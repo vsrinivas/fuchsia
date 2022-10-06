@@ -20,7 +20,7 @@ void InspectTree::Initialize() {
     std::lock_guard guard(info_mutex_);
     info_ = {
         .id = fs_info.value().fs_id,
-        .type = fs_info.value().fs_type,
+        .type = fidl::ToUnderlying(fs_info.value().fs_type),
         .name = fs_info.value().name,
         .version_major = fs_->GetSuperblockInfo().GetRawSuperblock().major_ver,
         .version_minor = fs_->GetSuperblockInfo().GetRawSuperblock().minor_ver,

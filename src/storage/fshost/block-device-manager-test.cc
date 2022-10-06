@@ -132,7 +132,7 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   } else if (DataFilesystemFormat() == "fxfs") {
     expected_fs_type = fuchsia_fs::VfsType::kFxfs;
   }
-  EXPECT_EQ(fs_type, expected_fs_type);
+  EXPECT_EQ(fs_type, fidl::ToUnderlying(expected_fs_type));
 
   // FVM will be at something like "/dev/sys/platform/00:00:2d/ramctl/ramdisk-1/block/fvm"
   std::string fvm_path = ramdisk_or.value().path() + "/fvm";
@@ -212,7 +212,7 @@ TEST_F(BlockDeviceManagerIntegration, MinfsPartitionsRenamedToPreferredName) {
   } else if (DataFilesystemFormat() == "fxfs") {
     expected_fs_type = fuchsia_fs::VfsType::kFxfs;
   }
-  EXPECT_EQ(fs_type, expected_fs_type);
+  EXPECT_EQ(fs_type, fidl::ToUnderlying(expected_fs_type));
 
   // FVM will be at something like "/dev/sys/platform/00:00:2d/ramctl/ramdisk-1/block/fvm"
   std::string fvm_path = ramdisk_or.value().path() + "/fvm";
@@ -254,7 +254,7 @@ TEST_F(BlockDeviceManagerIntegration, StartBlobfsComponent) {
            &query_completion](fidl::WireUnownedResult<fuchsia_io::Node::QueryFilesystem>& res) {
         EXPECT_EQ(res.status(), ZX_OK);
         EXPECT_EQ(res.value().s, ZX_OK);
-        EXPECT_EQ(res.value().info->fs_type, fuchsia_fs::VfsType::kBlobfs);
+        EXPECT_EQ(res.value().info->fs_type, fidl::ToUnderlying(fuchsia_fs::VfsType::kBlobfs));
         sync_completion_signal(query_completion);
       });
 

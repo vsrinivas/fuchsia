@@ -126,7 +126,7 @@ void Cr50SpiDevice::Read(ReadRequestView request, ReadCompleter::Sync &completer
   }
   WaitForReady();
   fidl::VectorView<uint8_t> buffer(alloc, request->count);
-  auto result = DoXfer(request->address, buffer, false);
+  auto result = DoXfer(fidl::ToUnderlying(request->address), buffer, false);
   if (result.is_error()) {
     completer.ReplyError(result.error_value());
   } else {
@@ -136,7 +136,7 @@ void Cr50SpiDevice::Read(ReadRequestView request, ReadCompleter::Sync &completer
 
 void Cr50SpiDevice::Write(WriteRequestView request, WriteCompleter::Sync &completer) {
   WaitForReady();
-  auto result = DoXfer(request->address, request->data, true);
+  auto result = DoXfer(fidl::ToUnderlying(request->address), request->data, true);
   if (result.is_error()) {
     completer.ReplyError(result.error_value());
   } else {

@@ -93,3 +93,13 @@ TEST(Enum, Clone) {
   FlexibleEnum fe2 = fe1;
   EXPECT_EQ(fe1, fe2);
 }
+
+TEST(Enum, ToUnderlying) {
+  auto se = fidl::ToUnderlying(StrictEnum::kB);
+  static_assert(std::is_same_v<decltype(se), uint32_t>);
+  EXPECT_EQ(se, 2u);
+
+  auto fe = fidl::ToUnderlying(FlexibleEnum::kB);
+  static_assert(std::is_same_v<decltype(fe), uint32_t>);
+  EXPECT_EQ(fe, 2u);
+}

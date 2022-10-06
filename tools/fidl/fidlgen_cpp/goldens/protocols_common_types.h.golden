@@ -26,6 +26,10 @@ struct fidl::internal::DisplayError<::test_protocols::ErrorEnum> {
 
 namespace fidl {
 
+constexpr inline auto ToUnderlying(::test_protocols::ErrorEnum value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
+
 template <>
 struct IsFidlType<::test_protocols::ErrorEnum> : public std::true_type {};
 template <>

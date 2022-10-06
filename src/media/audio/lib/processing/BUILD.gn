@@ -46,6 +46,7 @@ source_set("processing") {
 
   deps = [
     ":coefficient_table",
+    "//sdk/fidl/fuchsia.audio:fuchsia.audio_cpp_natural_ostream",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/trace",
   ]

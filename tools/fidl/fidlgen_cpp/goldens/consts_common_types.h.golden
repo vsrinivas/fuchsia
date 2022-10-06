@@ -111,6 +111,10 @@ struct fidl::internal::DisplayError<::test_consts::EnumType> {
 
 namespace fidl {
 
+constexpr inline auto ToUnderlying(::test_consts::EnumType value) -> int32_t {
+  return static_cast<int32_t>(value);
+}
+
 template <>
 struct IsFidlType<::test_consts::BitsType> : public std::true_type {};
 template <>

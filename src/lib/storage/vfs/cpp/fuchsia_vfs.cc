@@ -80,7 +80,7 @@ fuchsia_io::wire::FilesystemInfo FilesystemInfo::ToFidl() const {
   out.fs_id = fs_id;
   out.block_size = block_size;
   out.max_filename_size = max_filename_size;
-  out.fs_type = fs_type;
+  out.fs_type = static_cast<uint32_t>(fs_type);
 
   ZX_DEBUG_ASSERT(name.size() < fuchsia_io::wire::kMaxFsNameBuffer);
   out.name[name.copy(reinterpret_cast<char*>(out.name.data()),

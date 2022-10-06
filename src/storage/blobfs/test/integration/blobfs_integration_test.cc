@@ -466,7 +466,7 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   ASSERT_EQ(name, kFsName) << "Unexpected filesystem mounted";
   EXPECT_EQ(info.block_size, kBlobfsBlockSize);
   EXPECT_EQ(info.max_filename_size, 64U);
-  EXPECT_EQ(info.fs_type, fuchsia_fs::VfsType::kBlobfs);
+  EXPECT_EQ(info.fs_type, static_cast<uint32_t>(fuchsia_fs::VfsType::kBlobfs));
   EXPECT_NE(info.fs_id, 0ul);
 
   // Check that used_bytes are within a reasonable range

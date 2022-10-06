@@ -4,14 +4,15 @@
 
 #include "src/media/audio/lib/processing/point_sampler.h"
 
+#include <fidl/fuchsia.audio/cpp/natural_ostream.h>
+#include <fidl/fuchsia.audio/cpp/wire_types.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 #include <algorithm>
 #include <cstdint>
 #include <memory>
 
-#include "fidl/fuchsia.audio/cpp/wire_types.h"
-#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"

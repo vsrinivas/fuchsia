@@ -4,6 +4,7 @@
 
 #include "src/media/audio/services/mixer/fidl/node.h"
 
+#include <fidl/fuchsia.audio.mixer/cpp/natural_ostream.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>

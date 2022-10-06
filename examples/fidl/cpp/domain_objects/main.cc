@@ -75,6 +75,10 @@ TEST(NaturalTypes, Enums) {
   // They may be explicitly casted to their underlying type.
   ASSERT_EQ(static_cast<uint32_t>(fuchsia_examples::LocationType::kMuseum), 1u);
 
+  // They may also be casted to their underlying type without specifying the precise type.
+  uint32_t strict_underlying = fidl::ToUnderlying(fuchsia_examples::LocationType::kMuseum);
+  ASSERT_EQ(strict_underlying, 1u);
+
   // Enums support switch case statements.
   // A strict enum can be switched exhaustively.
   (void)[=] {

@@ -116,7 +116,8 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data,
 
   for (size_t band_idx = 0; band_idx < band_caps_count; ++band_idx) {
     wlan_common_wire::WlanBand band_id = bands[band_idx];
-    const struct ieee80211_supported_band* sband = &nvm_data->bands[band_id];  // source
+    const struct ieee80211_supported_band* sband =
+        &nvm_data->bands[fidl::ToUnderlying(band_id)];  // source
     wlan_softmac_wire::WlanSoftmacBandCapability* band_cap =
         &band_cap_list[band_idx];  // destination
 

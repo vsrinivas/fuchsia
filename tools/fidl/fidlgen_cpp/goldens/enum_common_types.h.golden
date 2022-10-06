@@ -24,13 +24,33 @@ struct fidl::internal::DisplayError<::test_enum::MyStrictEnum> {
   static size_t Format(const ::test_enum::MyStrictEnum& value, char* destination, size_t capacity);
 };
 
+namespace fidl {
+
+constexpr inline auto ToUnderlying(::test_enum::MyStrictEnum value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
+
+}  // namespace fidl
 namespace test_enum {
 
 class MyFlexibleEnum final {
+ private:
+  enum class EnumForSwitching_ : uint32_t {
+
+    kFoo = 1u,
+
+    kBar = 2u,
+
+    _do_not_handle_this__write_a_default_case_instead = 0xffffffff,
+  };
+
+  constexpr explicit MyFlexibleEnum(EnumForSwitching_ value) : value_(static_cast<uint32_t>(value)) {}
+
  public:
-  constexpr MyFlexibleEnum() : value_(Unknown()) {}
+  constexpr MyFlexibleEnum() : value_(static_cast<uint32_t>(Unknown())) {}
   constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
-  constexpr operator uint32_t() const { return value_; }
+  constexpr operator EnumForSwitching_() const { return static_cast<EnumForSwitching_>(value_); }
+  constexpr explicit operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
     switch (value_) {
@@ -68,13 +88,35 @@ struct fidl::internal::DisplayError<::test_enum::MyFlexibleEnum> {
   static size_t Format(const ::test_enum::MyFlexibleEnum& value, char* destination, size_t capacity);
 };
 
+namespace fidl {
+
+constexpr inline auto ToUnderlying(::test_enum::MyFlexibleEnum value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
+
+}  // namespace fidl
 namespace test_enum {
 
 class MyFlexibleEnumWithCustomUnknown final {
+ private:
+  enum class EnumForSwitching_ : uint32_t {
+
+    kFoo = 1u,
+
+    kBar = 2u,
+
+    kCustomUnknown = 3u,
+
+    _do_not_handle_this__write_a_default_case_instead = 0xffffffff,
+  };
+
+  constexpr explicit MyFlexibleEnumWithCustomUnknown(EnumForSwitching_ value) : value_(static_cast<uint32_t>(value)) {}
+
  public:
-  constexpr MyFlexibleEnumWithCustomUnknown() : value_(Unknown()) {}
+  constexpr MyFlexibleEnumWithCustomUnknown() : value_(static_cast<uint32_t>(Unknown())) {}
   constexpr explicit MyFlexibleEnumWithCustomUnknown(uint32_t value) : value_(value) {}
-  constexpr operator uint32_t() const { return value_; }
+  constexpr operator EnumForSwitching_() const { return static_cast<EnumForSwitching_>(value_); }
+  constexpr explicit operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
     switch (value_) {
@@ -116,13 +158,29 @@ struct fidl::internal::DisplayError<::test_enum::MyFlexibleEnumWithCustomUnknown
   static size_t Format(const ::test_enum::MyFlexibleEnumWithCustomUnknown& value, char* destination, size_t capacity);
 };
 
+namespace fidl {
+
+constexpr inline auto ToUnderlying(::test_enum::MyFlexibleEnumWithCustomUnknown value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
+
+}  // namespace fidl
 namespace test_enum {
 
 class MyEmptyFlexibleEnum final {
+ private:
+  enum class EnumForSwitching_ : uint32_t {
+
+    _do_not_handle_this__write_a_default_case_instead = 0xffffffff,
+  };
+
+  constexpr explicit MyEmptyFlexibleEnum(EnumForSwitching_ value) : value_(static_cast<uint32_t>(value)) {}
+
  public:
-  constexpr MyEmptyFlexibleEnum() : value_(Unknown()) {}
+  constexpr MyEmptyFlexibleEnum() : value_(static_cast<uint32_t>(Unknown())) {}
   constexpr explicit MyEmptyFlexibleEnum(uint32_t value) : value_(value) {}
-  constexpr operator uint32_t() const { return value_; }
+  constexpr operator EnumForSwitching_() const { return static_cast<EnumForSwitching_>(value_); }
+  constexpr explicit operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
     return true;
@@ -146,6 +204,10 @@ struct fidl::internal::DisplayError<::test_enum::MyEmptyFlexibleEnum> {
 };
 
 namespace fidl {
+
+constexpr inline auto ToUnderlying(::test_enum::MyEmptyFlexibleEnum value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
 
 template <>
 struct IsFidlType<::test_enum::MyStrictEnum> : public std::true_type {};

@@ -107,6 +107,10 @@ struct fidl::internal::DisplayError<::test_placementofattributes::ExampleEnum> {
 
 namespace fidl {
 
+constexpr inline auto ToUnderlying(::test_placementofattributes::ExampleEnum value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
+
 template <>
 struct IsFidlType<::test_placementofattributes::ExampleBits> : public std::true_type {};
 template <>

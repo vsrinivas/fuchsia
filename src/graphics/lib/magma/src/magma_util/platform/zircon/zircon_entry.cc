@@ -71,7 +71,7 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
     uint64_t result = 0;
 
     magma::Status status = this->magma_system_device_->Query(
-        request->query_id, result_buffer.reset_and_get_address(), &result);
+        fidl::ToUnderlying(request->query_id), result_buffer.reset_and_get_address(), &result);
     if (!status.ok()) {
       _completer.ReplyError(magma::ToZxStatus(status.get()));
       return;

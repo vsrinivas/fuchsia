@@ -1318,7 +1318,7 @@ TEST_F(MacInterfaceTest, SetKeysTKIP) {
     builder.key(tkip_key);
     builder.cipher_oui(cipher_oui);
     // TKIP Pairwise: although we support it but not recommended (deprecated protocol).
-    builder.cipher_type(fuchsia_wlan_ieee80211::wire::CipherSuiteType::kTkip);
+    builder.cipher_type(fidl::ToUnderlying(fuchsia_wlan_ieee80211::wire::CipherSuiteType::kTkip));
     builder.key_type(fuchsia_hardware_wlan_associnfo::wire::WlanKeyType::kPairwise);
     builder.key_idx(0);
     builder.rsc(0);
@@ -1332,7 +1332,7 @@ TEST_F(MacInterfaceTest, SetKeysTKIP) {
 
     builder.key(tkip_key);
     builder.cipher_oui(cipher_oui);
-    builder.cipher_type(fuchsia_wlan_ieee80211::wire::CipherSuiteType::kTkip);
+    builder.cipher_type(fidl::ToUnderlying(fuchsia_wlan_ieee80211::wire::CipherSuiteType::kTkip));
     builder.key_type(fuchsia_hardware_wlan_associnfo::wire::WlanKeyType::kIgtk);
     builder.key_idx(1);
     builder.rsc(0);

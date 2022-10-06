@@ -5,7 +5,9 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_HLCPP_CONVERSION_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_HLCPP_CONVERSION_H_
 
+#include <lib/fidl/cpp/enum.h>
 #include <lib/fidl/cpp/string.h>
+#include <lib/fidl/cpp/wire/wire_types.h>
 
 #include <optional>
 #include <type_traits>
@@ -243,7 +245,9 @@ struct HLCPPToNaturalTraits<std::unique_ptr<HLCPP>> {
 template <typename Natural, typename HLCPP>
 struct NaturalToHLCPPTraitsEnum {
   using HLCPPType = HLCPP;
-  static inline HLCPPType Convert(const Natural& value) { return HLCPPType(value); }
+  static inline HLCPPType Convert(const Natural& value) {
+    return HLCPPType(fidl::ToUnderlying(value));
+  }
 };
 
 /* HLCPP to Natural trait for enums */

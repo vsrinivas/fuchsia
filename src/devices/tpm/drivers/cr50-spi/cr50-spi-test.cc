@@ -210,7 +210,8 @@ TEST_F(Cr50SpiTest, TestTpmRead) {
   proto.ConnectServer(server->TakeChannel());
 
   std::vector<uint8_t> expected{1, 2, 3, 4};
-  ExpectMessage(false, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, {}, expected);
+  ExpectMessage(false, fidl::ToUnderlying(fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts),
+                {}, expected);
   auto read = client->Read(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, 4);
   ASSERT_TRUE(read.ok());
   ASSERT_TRUE(read->is_ok());
@@ -233,7 +234,8 @@ TEST_F(Cr50SpiTest, TestTpmWrite) {
   proto.ConnectServer(server->TakeChannel());
 
   std::vector<uint8_t> expected{4, 4, 2, 0};
-  ExpectMessage(true, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, expected, {});
+  ExpectMessage(true, fidl::ToUnderlying(fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts),
+                expected, {});
   auto read = client->Write(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts,
                             fidl::VectorView<uint8_t>::FromExternal(expected));
   ASSERT_TRUE(read.ok());

@@ -124,7 +124,7 @@ void TpmLpc::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
     return;
   }
   fidl::VectorView<uint8_t> buffer(alloc, request->count);
-  auto result = PerformTransfer(request->address, buffer, false);
+  auto result = PerformTransfer(static_cast<uint16_t>(request->address), buffer, false);
   if (result.is_error()) {
     completer.ReplyError(result.error_value());
   } else {
@@ -134,7 +134,7 @@ void TpmLpc::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
 
 void TpmLpc::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   fbl::AutoLock lock(&device_lock_);
-  auto result = PerformTransfer(request->address, request->data, true);
+  auto result = PerformTransfer(static_cast<uint16_t>(request->address), request->data, true);
   if (result.is_error()) {
     completer.ReplyError(result.error_value());
   } else {

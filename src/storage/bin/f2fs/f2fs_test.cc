@@ -107,6 +107,10 @@ TEST_F(F2fsComponentTest, FormatCheckStart) {
   ASSERT_FALSE(check_res->is_error());
 
   fuchsia_fs_startup::wire::StartOptions start_options;
+  start_options.write_compression_algorithm =
+      fuchsia_fs_startup::wire::CompressionAlgorithm::kZstdChunked;
+  start_options.cache_eviction_policy_override =
+      fuchsia_fs_startup::wire::EvictionPolicyOverride::kNone;
   start_options.write_compression_level = -1;
   auto startup_res = startup_client()->Start(block_client(), std::move(start_options));
   ASSERT_EQ(startup_res.status(), ZX_OK);
@@ -135,6 +139,10 @@ TEST_F(F2fsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   ASSERT_FALSE(check_res->is_error());
 
   fuchsia_fs_startup::wire::StartOptions start_options;
+  start_options.write_compression_algorithm =
+      fuchsia_fs_startup::wire::CompressionAlgorithm::kZstdChunked;
+  start_options.cache_eviction_policy_override =
+      fuchsia_fs_startup::wire::EvictionPolicyOverride::kNone;
   start_options.write_compression_level = -1;
   auto startup_res = startup_client()->Start(block_client(), std::move(start_options));
   ASSERT_EQ(startup_res.status(), ZX_OK);

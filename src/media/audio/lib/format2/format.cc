@@ -4,6 +4,7 @@
 
 #include "src/media/audio/lib/format2/format.h"
 
+#include <fidl/fuchsia.audio/cpp/natural_ostream.h>
 #include <fidl/fuchsia.audio/cpp/natural_types.h>
 #include <fidl/fuchsia.audio/cpp/wire_types.h>
 #include <fidl/fuchsia.mediastreams/cpp/wire_types.h>
@@ -67,7 +68,8 @@ fpromise::result<Format, std::string> Format::Create(Args args) {
     case SampleType::kFloat64:
       break;
     default:
-      return fpromise::error("bad sample_type '" + std::to_string(args.sample_type) + "'");
+      return fpromise::error("bad sample_type '" +
+                             std::to_string(fidl::ToUnderlying(args.sample_type)) + "'");
   }
 
   // TODO(fxbug.dev/87651): validate channel and fps limits once those are defined
@@ -259,7 +261,7 @@ std::ostream& operator<<(std::ostream& out, const Format& format) {
       out << "f64";
       break;
     default:
-      FX_CHECK(false) << static_cast<int>(format.sample_type());
+      FX_CHECK(false) << format.sample_type();
   }
 
   return out;

@@ -4,6 +4,7 @@
 
 #include "src/media/audio/lib/format2/stream_converter.h"
 
+#include <fidl/fuchsia.audio/cpp/natural_ostream.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <type_traits>
@@ -106,7 +107,7 @@ std::unique_ptr<StreamConverter::CopyImpl> CreateCopyWithConvert(const Format& d
       return std::make_unique<CopyWithConvert<SourceSampleType, float>>(dest.channels());
 
     default:
-      FX_LOGS(FATAL) << static_cast<int>(dest.sample_type());
+      FX_LOGS(FATAL) << dest.sample_type();
       __builtin_unreachable();
   }
 }
@@ -132,7 +133,7 @@ std::unique_ptr<StreamConverter::CopyImpl> CreateCopyImpl(const Format& source,
     case SampleType::kFloat32:
       return CreateCopyWithConvert<float>(dest);
     default:
-      FX_LOGS(FATAL) << static_cast<int>(source.sample_type());
+      FX_LOGS(FATAL) << source.sample_type();
       __builtin_unreachable();
   }
 }

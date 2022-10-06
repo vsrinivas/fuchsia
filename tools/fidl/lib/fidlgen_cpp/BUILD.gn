@@ -15,6 +15,7 @@ go_library("fidlgen_cpp") {
     "dep_graph.go",
     "dep_graph_test.go",
     "enum.go",
+    "enum_test.go",
     "generator.go",
     "handles.go",
     "ir.go",

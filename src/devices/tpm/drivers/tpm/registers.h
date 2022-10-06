@@ -72,7 +72,7 @@ class TpmReg : public hwreg::RegisterBase<SelfType, BaseType, hwreg::EnablePrint
 // mostly compatible.
 
 // TPM_STS: 5.5.2.5, "Status Register" and 7.3.5.6, "TPM_STS".
-class StsReg : public TpmReg<StsReg, uint32_t, RegisterAddress::kTpmSts> {
+class StsReg : public TpmReg<StsReg, uint32_t, fidl::ToUnderlying(RegisterAddress::kTpmSts)> {
  public:
   DEF_ENUM_FIELD(TpmFamily, 27, 26, tpm_family);
   DEF_BIT(25, reset_establishment);
@@ -91,8 +91,8 @@ class StsReg : public TpmReg<StsReg, uint32_t, RegisterAddress::kTpmSts> {
 //
 // Note that the I2C version of the interface only defines bits 0, 1, 2, and 7.
 // Reads of other fields will always return zero.
-class IntfCapabilityReg
-    : public TpmReg<IntfCapabilityReg, uint32_t, RegisterAddress::kTpmIntCapability> {
+class IntfCapabilityReg : public TpmReg<IntfCapabilityReg, uint32_t,
+                                        fidl::ToUnderlying(RegisterAddress::kTpmIntCapability)> {
  public:
   DEF_FIELD(30, 28, interface_version);
   DEF_FIELD(10, 9, data_transfer_size_support);
@@ -108,14 +108,16 @@ class IntfCapabilityReg
 };
 
 // TPM_DID_VID: 5.4.1.1, "DID/VID Register".
-class DidVidReg : public TpmReg<DidVidReg, uint32_t, RegisterAddress::kTpmDidVid> {
+class DidVidReg
+    : public TpmReg<DidVidReg, uint32_t, fidl::ToUnderlying(RegisterAddress::kTpmDidVid)> {
  public:
   DEF_FIELD(31, 16, device_id);
   DEF_FIELD(15, 0, vendor_id);
 };
 
 // TPM_RID: 5.4.1.2, "RID Register".
-class RevisionReg : public TpmReg<RevisionReg, uint8_t, RegisterAddress::kTpmRid> {
+class RevisionReg
+    : public TpmReg<RevisionReg, uint8_t, fidl::ToUnderlying(RegisterAddress::kTpmRid)> {
  public:
   DEF_FIELD(7, 0, revision_id);
 };

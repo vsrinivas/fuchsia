@@ -27,6 +27,7 @@ source_set("format2") {
   public_deps = [
     ":fixed",
     "//sdk/fidl/fuchsia.audio:fuchsia.audio_cpp",
+    "//sdk/fidl/fuchsia.audio:fuchsia.audio_cpp_natural_ostream",
     "//sdk/fidl/fuchsia.audio:fuchsia.audio_cpp_wire",
     "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_cpp_wire",
     "//sdk/lib/fidl/cpp",

@@ -59,7 +59,7 @@ void QueryInfo(const TestFilesystem& fs, fio::wire::FilesystemInfo* info) {
 
   ASSERT_EQ(info->block_size, minfs::kMinfsBlockSize);
   ASSERT_EQ(info->max_filename_size, minfs::kMinfsMaxNameSize);
-  ASSERT_EQ(info->fs_type, fuchsia_fs::VfsType::kMinfs);
+  ASSERT_EQ(info->fs_type, fidl::ToUnderlying(fuchsia_fs::VfsType::kMinfs));
   ASSERT_NE(info->fs_id, 0ul);
   ASSERT_EQ(info->used_bytes % info->block_size, 0ul);
   ASSERT_EQ(info->total_bytes % info->block_size, 0ul);

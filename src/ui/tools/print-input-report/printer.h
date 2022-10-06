@@ -13,19 +13,20 @@
 
 namespace print_input_report {
 
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kNone) == 0);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kOther) == 1);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kMeters) == 2);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kGrams) == 3);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kDegrees) == 4);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kEnglishAngularVelocity) == 5);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kSiLinearVelocity) == 6);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kSiLinearAcceleration) == 7);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kWebers) == 8);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kCandelas) == 9);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kPascals) == 10);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kLux) == 11);
-static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kSeconds) == 12);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kNone) == 0);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kOther) == 1);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kMeters) == 2);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kGrams) == 3);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kDegrees) == 4);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kEnglishAngularVelocity) ==
+              5);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kSiLinearVelocity) == 6);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kSiLinearAcceleration) == 7);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kWebers) == 8);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kCandelas) == 9);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kPascals) == 10);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kLux) == 11);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::UnitType::kSeconds) == 12);
 
 // These strings must be ordered based on the enums in fuchsia.input.report/units.fidl.
 const char* const kUnitStrings[] = {
@@ -44,19 +45,19 @@ const char* const kUnitStrings[] = {
     "SECONDS",
 };
 
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kAccelerometerX) == 1);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kAccelerometerY) == 2);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kAccelerometerZ) == 3);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kMagnetometerX) == 4);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kMagnetometerY) == 5);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kMagnetometerZ) == 6);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kGyroscopeX) == 7);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kGyroscopeY) == 8);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kGyroscopeZ) == 9);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kLightIlluminance) == 10);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kLightRed) == 11);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kLightGreen) == 12);
-static_assert(static_cast<int>(fuchsia_input_report::wire::SensorType::kLightBlue) == 13);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kAccelerometerX) == 1);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kAccelerometerY) == 2);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kAccelerometerZ) == 3);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kMagnetometerX) == 4);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kMagnetometerY) == 5);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kMagnetometerZ) == 6);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kGyroscopeX) == 7);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kGyroscopeY) == 8);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kGyroscopeZ) == 9);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kLightIlluminance) == 10);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kLightRed) == 11);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kLightGreen) == 12);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::SensorType::kLightBlue) == 13);
 
 // These strings must be ordered based on the enums in fuchsia.input.report/sensor.fidl.
 const char* const kSensorTypeStrings[] = {
@@ -66,33 +67,34 @@ const char* const kSensorTypeStrings[] = {
     "LIGHT_GREEN",    "LIGHT_BLUE",
 };
 
-static_assert(static_cast<int>(fuchsia_input_report::wire::TouchType::kTouchscreen) == 1);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::TouchType::kTouchscreen) == 1);
 // These strings must be ordered based on the enums in fuchsia.input.report/touch.fidl.
 const char* const kTouchTypeStrings[] = {
     "ERROR",
     "TOUCHSCREEN",
 };
 
-static_assert(static_cast<int>(fuchsia_input_report::wire::LedType::kNumLock) == 1);
-static_assert(static_cast<int>(fuchsia_input_report::wire::LedType::kCapsLock) == 2);
-static_assert(static_cast<int>(fuchsia_input_report::wire::LedType::kScrollLock) == 3);
-static_assert(static_cast<int>(fuchsia_input_report::wire::LedType::kCompose) == 4);
-static_assert(static_cast<int>(fuchsia_input_report::wire::LedType::kKana) == 5);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::LedType::kNumLock) == 1);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::LedType::kCapsLock) == 2);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::LedType::kScrollLock) == 3);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::LedType::kCompose) == 4);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::LedType::kKana) == 5);
 // These strings must be ordered based on the enums in fuchsia.input.report/led.fidl.
 const char* const kLedTypeStrings[] = {
     "ERROR", "NUM_LOCK", "CAPS_LOCK", "SCROLL_LOCK", "COMPOSE", "KANA",
 };
 
-static_assert(static_cast<int>(fuchsia_input_report::wire::ConsumerControlButton::kVolumeUp) == 1);
-static_assert(static_cast<int>(fuchsia_input_report::wire::ConsumerControlButton::kVolumeDown) ==
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::ConsumerControlButton::kVolumeUp) ==
+              1);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::ConsumerControlButton::kVolumeDown) ==
               2);
-static_assert(static_cast<int>(fuchsia_input_report::wire::ConsumerControlButton::kPause) == 3);
-static_assert(static_cast<int>(fuchsia_input_report::wire::ConsumerControlButton::kFactoryReset) ==
-              4);
-static_assert(static_cast<int>(fuchsia_input_report::wire::ConsumerControlButton::kMicMute) == 5);
-static_assert(static_cast<int>(fuchsia_input_report::wire::ConsumerControlButton::kReboot) == 6);
-static_assert(static_cast<int>(fuchsia_input_report::wire::ConsumerControlButton::kCameraDisable) ==
-              7);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::ConsumerControlButton::kPause) == 3);
+static_assert(
+    fidl::ToUnderlying(fuchsia_input_report::wire::ConsumerControlButton::kFactoryReset) == 4);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::ConsumerControlButton::kMicMute) == 5);
+static_assert(fidl::ToUnderlying(fuchsia_input_report::wire::ConsumerControlButton::kReboot) == 6);
+static_assert(
+    fidl::ToUnderlying(fuchsia_input_report::wire::ConsumerControlButton::kCameraDisable) == 7);
 // These strings must be ordered based on the enums in fuchsia.input.report/consumer_control.fidl.
 const char* const kConsumerControlButtonStrings[] = {
     "ERROR",         "VOLUME_UP", "VOLUME_DOWN", "PAUSE",

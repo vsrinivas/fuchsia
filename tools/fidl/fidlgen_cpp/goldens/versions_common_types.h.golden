@@ -96,10 +96,21 @@ constexpr inline void Bits::operator^=(
 }
 
 class Enum final {
+ private:
+  enum class EnumForSwitching_ : uint32_t {
+
+    kA = 1u,
+
+    _do_not_handle_this__write_a_default_case_instead = 0xffffffff,
+  };
+
+  constexpr explicit Enum(EnumForSwitching_ value) : value_(static_cast<uint32_t>(value)) {}
+
  public:
-  constexpr Enum() : value_(Unknown()) {}
+  constexpr Enum() : value_(static_cast<uint32_t>(Unknown())) {}
   constexpr explicit Enum(uint32_t value) : value_(value) {}
-  constexpr operator uint32_t() const { return value_; }
+  constexpr operator EnumForSwitching_() const { return static_cast<EnumForSwitching_>(value_); }
+  constexpr explicit operator uint32_t() const { return value_; }
 
   constexpr bool IsUnknown() const {
     switch (value_) {
@@ -132,6 +143,10 @@ struct fidl::internal::DisplayError<::test_versions::Enum> {
 };
 
 namespace fidl {
+
+constexpr inline auto ToUnderlying(::test_versions::Enum value) -> uint32_t {
+  return static_cast<uint32_t>(value);
+}
 
 template <>
 struct IsFidlType<::test_versions::Bits> : public std::true_type {};

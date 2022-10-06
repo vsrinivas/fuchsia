@@ -207,7 +207,8 @@ void IntelI2cController::GetAcpiConfiguration(const char* name, uint16_t* scl_hc
 
   if (result.value().is_error()) {
     if (result.value().error_value() != fuchsia_hardware_acpi::wire::Status::kNotFound) {
-      zxlogf(WARNING, "EvaluateObject('%s') failed: %d", name, int(result.value().error_value()));
+      zxlogf(WARNING, "EvaluateObject('%s') failed: %d", name,
+             static_cast<uint32_t>(result.value().error_value()));
     }
     return;
   }

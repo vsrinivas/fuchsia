@@ -376,7 +376,7 @@ void Blobfs::InitializeInspectTree() {
                    << fs_info.status_string();
   } else {
     info.id = fs_info->fs_id;
-    info.type = fs_info->fs_type;
+    info.type = static_cast<uint32_t>(fs_info->fs_type);
     info.name = fs_info->name;
     info.block_size = fs_info->block_size;
     info.max_filename_length = fs_info->max_filename_size;

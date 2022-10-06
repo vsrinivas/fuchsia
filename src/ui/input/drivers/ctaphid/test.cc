@@ -462,7 +462,7 @@ TEST_F(CtapHidDevTest, ReceiveSinglePacketMessageTest) {
                                 static_cast<uint8_t>((test_channel >> 8) & 0xff),
                                 static_cast<uint8_t>(test_channel & 0xff),
                                 // command id with init packet bit set
-                                static_cast<uint8_t>(test_command | (1u << 7)),
+                                static_cast<uint8_t>(fidl::ToUnderlying(test_command) | (1u << 7)),
                                 // payload len
                                 0x00, 0x04,
                                 // payload
@@ -525,16 +525,16 @@ TEST_F(CtapHidDevTest, ReceiveMultiplePacketMessageTest) {
   // Send the packets from the key.
   {
     // Init Payload
-    std::vector<uint8_t> init_packet{// channel id
-                                     static_cast<uint8_t>((test_channel >> 24) & 0xff),
-                                     static_cast<uint8_t>((test_channel >> 16) & 0xff),
-                                     static_cast<uint8_t>((test_channel >> 8) & 0xff),
-                                     static_cast<uint8_t>(test_channel & 0xff),
-                                     // command id with init packet bit set
-                                     static_cast<uint8_t>(test_command | (1u << 7)),
-                                     // payload len
-                                     static_cast<uint8_t>((total_payload_len >> 8) & 0xff),
-                                     static_cast<uint8_t>(total_payload_len & 0xff)};
+    std::vector<uint8_t> init_packet{
+        // channel id
+        static_cast<uint8_t>((test_channel >> 24) & 0xff),
+        static_cast<uint8_t>((test_channel >> 16) & 0xff),
+        static_cast<uint8_t>((test_channel >> 8) & 0xff), static_cast<uint8_t>(test_channel & 0xff),
+        // command id with init packet bit set
+        static_cast<uint8_t>(fidl::ToUnderlying(test_command) | (1u << 7)),
+        // payload len
+        static_cast<uint8_t>((total_payload_len >> 8) & 0xff),
+        static_cast<uint8_t>(total_payload_len & 0xff)};
     init_packet.insert(init_packet.end(), test_init_payload.begin(), test_init_payload.end());
     fake_hid_device_.SendReport(init_packet);
     loop_.RunUntilIdle();
@@ -661,16 +661,16 @@ TEST_F(CtapHidDevTest, ReceivePacketMissingContTest) {
   // Send an init packet from the key.
   {
     // Init Payload
-    std::vector<uint8_t> init_packet{// channel id
-                                     static_cast<uint8_t>((test_channel >> 24) & 0xff),
-                                     static_cast<uint8_t>((test_channel >> 16) & 0xff),
-                                     static_cast<uint8_t>((test_channel >> 8) & 0xff),
-                                     static_cast<uint8_t>(test_channel & 0xff),
-                                     // command id with init packet bit set
-                                     static_cast<uint8_t>(test_command | (1u << 7)),
-                                     // payload len
-                                     static_cast<uint8_t>((total_payload_len >> 8) & 0xff),
-                                     static_cast<uint8_t>(total_payload_len & 0xff)};
+    std::vector<uint8_t> init_packet{
+        // channel id
+        static_cast<uint8_t>((test_channel >> 24) & 0xff),
+        static_cast<uint8_t>((test_channel >> 16) & 0xff),
+        static_cast<uint8_t>((test_channel >> 8) & 0xff), static_cast<uint8_t>(test_channel & 0xff),
+        // command id with init packet bit set
+        static_cast<uint8_t>(fidl::ToUnderlying(test_command) | (1u << 7)),
+        // payload len
+        static_cast<uint8_t>((total_payload_len >> 8) & 0xff),
+        static_cast<uint8_t>(total_payload_len & 0xff)};
     init_packet.insert(init_packet.end(), test_init_payload.begin(), test_init_payload.end());
     fake_hid_device_.SendReport(init_packet);
     loop_.RunUntilIdle();
@@ -729,17 +729,17 @@ TEST_F(CtapHidDevTest, GetMessageChannelTest) {
 
   // Set up a packet to be sent as a response.
   {
-    std::vector<uint8_t> packet{
-        // channel id
-        static_cast<uint8_t>((test_channel >> 24) & 0xff),
-        static_cast<uint8_t>((test_channel >> 16) & 0xff),
-        static_cast<uint8_t>((test_channel >> 8) & 0xff), static_cast<uint8_t>(test_channel & 0xff),
-        // command id with init packet bit set
-        static_cast<unsigned char>(static_cast<uint8_t>(test_command) | (1u << 7)),
-        // payload len
-        0x00, 0x01,
-        // payload
-        test_payload_byte};
+    std::vector<uint8_t> packet{// channel id
+                                static_cast<uint8_t>((test_channel >> 24) & 0xff),
+                                static_cast<uint8_t>((test_channel >> 16) & 0xff),
+                                static_cast<uint8_t>((test_channel >> 8) & 0xff),
+                                static_cast<uint8_t>(test_channel & 0xff),
+                                // command id with init packet bit set
+                                static_cast<uint8_t>(fidl::ToUnderlying(test_command) | (1u << 7)),
+                                // payload len
+                                0x00, 0x01,
+                                // payload
+                                test_payload_byte};
     fake_hid_device_.SendReport(packet);
     loop_.RunUntilIdle();
   }
@@ -801,7 +801,8 @@ TEST_F(CtapHidDevTest, GetMessageKeepAliveTest) {
         static_cast<uint8_t>((test_channel >> 16) & 0xff),
         static_cast<uint8_t>((test_channel >> 8) & 0xff), static_cast<uint8_t>(test_channel & 0xff),
         // command id with init packet bit set
-        static_cast<uint8_t>(fuchsia_fido_report::CtapHidCommand::kKeepalive) | (1u << 7),
+        static_cast<uint8_t>(fidl::ToUnderlying(fuchsia_fido_report::CtapHidCommand::kKeepalive)) |
+            (1u << 7),
         // payload len
         0x00, 0x01,
         // payload
@@ -828,7 +829,7 @@ TEST_F(CtapHidDevTest, GetMessageKeepAliveTest) {
                                 static_cast<uint8_t>((test_channel >> 8) & 0xff),
                                 static_cast<uint8_t>(test_channel & 0xff),
                                 // command id with init packet bit set
-                                static_cast<uint8_t>(test_command | (1u << 7)),
+                                static_cast<uint8_t>(fidl::ToUnderlying(test_command) | (1u << 7)),
                                 // payload len
                                 0x00, 0x01,
                                 // payload
@@ -886,7 +887,7 @@ TEST_F(CtapHidDevTest, HangingGetMessageTest) {
 
             ASSERT_TRUE(result->value()->channel_id());
             ASSERT_EQ(result->value()->channel_id(), test_channel);
-            ASSERT_TRUE(result->value()->command_id());
+            ASSERT_TRUE(fidl::ToUnderlying(result->value()->command_id()));
             ASSERT_EQ(result->value()->command_id(), test_command);
             ASSERT_TRUE(result->value()->payload_len());
             ASSERT_EQ(result->value()->payload_len(), 1);
@@ -904,7 +905,7 @@ TEST_F(CtapHidDevTest, HangingGetMessageTest) {
                                 static_cast<uint8_t>((test_channel >> 8) & 0xff),
                                 static_cast<uint8_t>(test_channel & 0xff),
                                 // command id with init packet bit set
-                                static_cast<uint8_t>(test_command | (1u << 7)),
+                                static_cast<uint8_t>(fidl::ToUnderlying(test_command) | (1u << 7)),
                                 // payload len
                                 0x00, 0x01,
                                 // payload

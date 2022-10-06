@@ -20,16 +20,15 @@
 
   #pragma once
 
-  #include <lib/fidl/cpp/wire/internal/transport_channel.h>
-  #include <lib/fidl/cpp/hlcpp_conversion.h>
-
   #include <{{ .Library | Filename "NaturalTypesHeader" }}>
   #include <{{ .Library | Filename "HLCPPHeader" }}>
 
+  #include <lib/fidl/cpp/wire/internal/transport_channel.h>
+  #include <lib/fidl/cpp/hlcpp_conversion.h>
+
   {{ range .Dependencies -}}
     #include <{{ . | Filename "HLCPPConversion" }}>
-  {{ end -}}
-
+  {{ end }}
 
   {{ EnsureNamespace "fidl::internal" }}
 

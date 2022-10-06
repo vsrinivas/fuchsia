@@ -35,6 +35,9 @@ MountOptions ParseMountOptions(fuchsia_fs_startup::wire::StartOptions start_opti
     case fuchsia_fs_startup::wire::CompressionAlgorithm::kUncompressed:
       options.compression_settings.compression_algorithm = CompressionAlgorithm::kUncompressed;
       break;
+    default:
+      ZX_PANIC("Unknown compression algorithm: %d",
+               static_cast<uint32_t>(start_options.write_compression_algorithm));
   }
 
   switch (start_options.cache_eviction_policy_override) {
@@ -47,6 +50,9 @@ MountOptions ParseMountOptions(fuchsia_fs_startup::wire::StartOptions start_opti
     case fuchsia_fs_startup::wire::EvictionPolicyOverride::kEvictImmediately:
       options.pager_backed_cache_policy = CachePolicy::EvictImmediately;
       break;
+    default:
+      ZX_PANIC("Unknown cache eviction policy override: %d",
+               static_cast<uint32_t>(start_options.cache_eviction_policy_override));
   }
 
   return options;

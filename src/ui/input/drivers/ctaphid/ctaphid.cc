@@ -119,7 +119,7 @@ void CtapHidDriver::SendMessage(SendMessageRequestView request,
     if (packet_seq == INIT_PACKET_SEQ) {
       // Write the Command ID with the initialization packet bit set.
       curr_hid_report[COMMAND_ID_OFFSET] =
-          static_cast<command_id_t>(request->command_id() | INIT_PACKET_BIT);
+          fidl::ToUnderlying(request->command_id()) | INIT_PACKET_BIT;
       // Write the Payload Length
       curr_hid_report[PAYLOAD_LEN_HI_OFFSET] = (request->payload_len() >> 8) & 0xFF;
       curr_hid_report[PAYLOAD_LEN_LO_OFFSET] = request->payload_len() & 0xFF;
@@ -200,7 +200,8 @@ void CtapHidDriver::ReplyToWaitingGetMessage() {
 
   // Remove the pending response if this is not a KEEPALIVE message, as KEEPALIVE
   // messages are not considered an actual response to any command sent to the keys.
-  if (pending_response_->command != fuchsia_fido_report::CtapHidCommand::kKeepalive) {
+  if (pending_response_->command !=
+      fidl::ToUnderlying(fuchsia_fido_report::CtapHidCommand::kKeepalive)) {
     pending_response_.reset();
   }
 }
@@ -221,10 +222,11 @@ void CtapHidDriver::HidReportListenerReceiveReport(const uint8_t* report, size_t
 
   if (report[COMMAND_ID_OFFSET] & INIT_PACKET_BIT) {
     if (pending_response_->next_packet_seq_expected != INIT_PACKET_SEQ &&
-        pending_response_->command != fuchsia_fido_report::CtapHidCommand::kKeepalive) {
+        pending_response_->command !=
+            fidl::ToUnderlying(fuchsia_fido_report::CtapHidCommand::kKeepalive)) {
       // Unexpected sequence. We must be out of sync.
       // Write an invalid sequence error response to the corresponding pending response.
-      pending_response_->command = fuchsia_fido_report::CtapHidCommand::kError;
+      pending_response_->command = fidl::ToUnderlying(fuchsia_fido_report::CtapHidCommand::kError);
       pending_response_->bytes_received = 1;
       pending_response_->payload_len = 1;
       pending_response_->data = std::vector<uint8_t>(CtaphidErr::InvalidSeq);
@@ -253,7 +255,7 @@ void CtapHidDriver::HidReportListenerReceiveReport(const uint8_t* report, size_t
     if (current_packet_sequence != pending_response_->next_packet_seq_expected) {
       // Unexpected sequence. We must be out of sync.
       // Write an invalid sequence error response to the corresponding pending response.
-      pending_response_->command = fuchsia_fido_report::CtapHidCommand::kError;
+      pending_response_->command = fidl::ToUnderlying(fuchsia_fido_report::CtapHidCommand::kError);
       pending_response_->bytes_received = 1;
       pending_response_->payload_len = 1;
       pending_response_->data = std::vector<uint8_t>(CtaphidErr::InvalidSeq);

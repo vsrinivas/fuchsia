@@ -606,8 +606,8 @@ void KernelPciFidl::GetInterruptModes(GetInterruptModesCompleter::Sync& complete
 
 void KernelPciFidl::SetInterruptMode(SetInterruptModeRequestView request,
                                      SetInterruptModeCompleter::Sync& completer) {
-  zx_status_t status =
-      zx_pci_set_irq_mode(device_.handle, request->mode, request->requested_irq_count);
+  zx_status_t status = zx_pci_set_irq_mode(device_.handle, fidl::ToUnderlying(request->mode),
+                                           request->requested_irq_count);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -703,7 +703,8 @@ void KernelPciFidl::GetCapabilities(GetCapabilitiesRequestView request,
   uint8_t offset = PCI_CONFIG_CAPABILITIES_PTR;
   uint8_t out_offset;
   while (true) {
-    zx_status_t status = pci_get_next_capability(&device_, request->id, offset, &out_offset);
+    zx_status_t status =
+        pci_get_next_capability(&device_, fidl::ToUnderlying(request->id), offset, &out_offset);
     if (status == ZX_ERR_NOT_FOUND) {
       break;
     } else if (status != ZX_OK) {
