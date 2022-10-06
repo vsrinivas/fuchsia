@@ -55,18 +55,10 @@ impl CurrentStateCache for ClientStateUpdate {
 
     fn merge_in_update(&mut self, update: Self) {
         self.state = update.state;
-        // Keep a cache of "active" networks
+        // Remove networks that are present in the update
         self.networks = self
             .networks
             .iter()
-            // Only keep "active" networks (i.e. connecting/connected)
-            .filter(|n| match n.state {
-                fidl_policy::ConnectionState::Failed => false,
-                fidl_policy::ConnectionState::Disconnected => false,
-                fidl_policy::ConnectionState::Connecting => true,
-                fidl_policy::ConnectionState::Connected => true,
-            })
-            // Remove networks present in the update, we'll use that data directly below
             .filter(|n| update.networks.iter().find(|u| u.id == n.id).is_none())
             .map(|n| n.clone())
             .collect();
@@ -74,6 +66,21 @@ impl CurrentStateCache for ClientStateUpdate {
         for network in update.networks.iter() {
             self.networks.push(network.clone());
         }
+    }
+
+    fn purge(&mut self) {
+        // Remove networks with disconnected/failed state from cache
+        self.networks = self
+            .networks
+            .iter()
+            .filter(|n| match n.state {
+                fidl_policy::ConnectionState::Failed => false,
+                fidl_policy::ConnectionState::Disconnected => false,
+                fidl_policy::ConnectionState::Connecting => true,
+                fidl_policy::ConnectionState::Connected => true,
+            })
+            .map(|n| n.clone())
+            .collect();
     }
 }
 impl Listener<fidl_policy::ClientStateSummary> for fidl_policy::ClientStateUpdatesProxy {
@@ -198,8 +205,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn merge_update_two_to_one_active() {
-        // Start with two active networks
+    fn purge_inactive_network_states() {
         let mut current_state_cache = ClientStateUpdate {
             state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![
@@ -216,82 +222,37 @@ mod tests {
                         ssid: Ssid::try_from("ssid 2").unwrap(),
                         security_type: client_types::SecurityType::Wpa2,
                     },
-                    state: fidl_policy::ConnectionState::Connecting,
+                    state: fidl_policy::ConnectionState::Disconnected,
                     status: None,
+                },
+                ClientNetworkState {
+                    id: client_types::NetworkIdentifier {
+                        ssid: Ssid::try_from("ssid 3").unwrap(),
+                        security_type: client_types::SecurityType::Wpa2,
+                    },
+                    state: fidl_policy::ConnectionState::Failed,
+                    status: Some(client_types::DisconnectStatus::ConnectionStopped),
                 },
             ],
         };
 
-        // Merge an update with one network becoming inactive.
-        let update = ClientStateUpdate {
-            state: fidl_policy::WlanClientState::ConnectionsEnabled,
-            networks: vec![ClientNetworkState {
-                id: client_types::NetworkIdentifier {
-                    ssid: Ssid::try_from("ssid 1").unwrap(),
-                    security_type: client_types::SecurityType::Wpa2,
-                },
-                state: fidl_policy::ConnectionState::Disconnected,
-                status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
-            }],
-        };
-        current_state_cache.merge_in_update(update);
+        // Should remove both inactive network states
+        current_state_cache.purge();
 
-        // The other active network should still be present, and we should see
-        // the first network becoming disconnected
-        assert_eq!(
-            current_state_cache,
-            ClientStateUpdate {
-                state: fidl_policy::WlanClientState::ConnectionsEnabled,
-                networks: vec![
-                    ClientNetworkState {
-                        id: client_types::NetworkIdentifier {
-                            ssid: Ssid::try_from("ssid 2").unwrap(),
-                            security_type: client_types::SecurityType::Wpa2,
-                        },
-                        state: fidl_policy::ConnectionState::Connecting,
-                        status: None,
-                    },
-                    ClientNetworkState {
-                        id: client_types::NetworkIdentifier {
-                            ssid: Ssid::try_from("ssid 1").unwrap(),
-                            security_type: client_types::SecurityType::Wpa2,
-                        },
-                        state: fidl_policy::ConnectionState::Disconnected,
-                        status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
-                    },
-                ],
-            }
-        );
-
-        // Send another update about the second still-active network
-        let update = ClientStateUpdate {
-            state: fidl_policy::WlanClientState::ConnectionsEnabled,
-            networks: vec![ClientNetworkState {
-                id: client_types::NetworkIdentifier {
-                    ssid: Ssid::try_from("ssid 2").unwrap(),
-                    security_type: client_types::SecurityType::Wpa2,
-                },
-                state: fidl_policy::ConnectionState::Connected,
-                status: None,
-            }],
-        };
-        current_state_cache.merge_in_update(update);
-
-        // The disconnected network should have dropped off
         assert_eq!(
             current_state_cache,
             ClientStateUpdate {
                 state: fidl_policy::WlanClientState::ConnectionsEnabled,
                 networks: vec![ClientNetworkState {
                     id: client_types::NetworkIdentifier {
-                        ssid: Ssid::try_from("ssid 2").unwrap(),
+                        ssid: Ssid::try_from("ssid 1").unwrap(),
                         security_type: client_types::SecurityType::Wpa2,
                     },
                     state: fidl_policy::ConnectionState::Connected,
                     status: None,
-                },],
+                }],
             }
-        );
+        )
     }
 
     #[fuchsia::test]

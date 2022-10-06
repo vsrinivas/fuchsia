@@ -81,6 +81,10 @@ impl CurrentStateCache for ApStatesUpdate {
     fn merge_in_update(&mut self, update: Self) {
         self.access_points = update.access_points;
     }
+
+    fn purge(&mut self) {
+        return;
+    }
 }
 
 impl Listener<Vec<fidl_policy::AccessPointState>> for fidl_policy::AccessPointStateUpdatesProxy {

@@ -712,12 +712,6 @@ fn save_and_connect(
         Poll::Pending
     );
 
-    // Check for a listener update triggered by the initial disconnect
-    let fidl_policy::ClientStateSummary { state, networks, .. } =
-        get_client_state_update(&mut exec, &mut client_listener_update_requests);
-    assert_eq!(state.unwrap(), fidl_policy::WlanClientState::ConnectionsEnabled);
-    assert_eq!(networks.unwrap().len(), 0);
-
     // State machine scans
     let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
         ssids: vec![TEST_SSID.clone().into()],
@@ -952,11 +946,19 @@ fn save_and_fail_to_connect(
         Poll::Pending
     );
 
-    // Check for a listener update triggered by the initial disconnect
+    // Check for a listener update saying we're connecting
     let fidl_policy::ClientStateSummary { state, networks, .. } =
         get_client_state_update(&mut exec, &mut client_listener_update_requests);
     assert_eq!(state.unwrap(), fidl_policy::WlanClientState::ConnectionsEnabled);
-    assert_eq!(networks.unwrap().len(), 0);
+    let mut networks = networks.unwrap();
+    assert_eq!(networks.len(), 1);
+    let network = networks.pop().unwrap();
+    assert_eq!(network.state.unwrap(), types::ConnectionState::Connecting);
+    assert_eq!(network.id.unwrap(), network_id.clone().into());
+    assert_variant!(
+        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
+        Poll::Pending
+    );
 
     // State machine scans
     let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -1023,20 +1025,6 @@ fn save_and_fail_to_connect(
         );
     }
 
-    // After the dust settles, we should have a couple listener updates
-    // Check for a listener update saying we're connecting
-    let fidl_policy::ClientStateSummary { state, networks, .. } =
-        get_client_state_update(&mut exec, &mut client_listener_update_requests);
-    assert_eq!(state.unwrap(), fidl_policy::WlanClientState::ConnectionsEnabled);
-    let mut networks = networks.unwrap();
-    assert_eq!(networks.len(), 1);
-    let network = networks.pop().unwrap();
-    assert_eq!(network.state.unwrap(), types::ConnectionState::Connecting);
-    assert_eq!(network.id.unwrap(), network_id.clone().into());
-    assert_variant!(
-        exec.run_until_stalled(&mut test_values.internal_objects.internal_futures),
-        Poll::Pending
-    );
     // Check for a listener update saying we failed to connect
     let fidl_policy::ClientStateSummary { state, networks, .. } =
         get_client_state_update(&mut exec, &mut client_listener_update_requests);

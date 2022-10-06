@@ -14,6 +14,8 @@ pub trait Listener<F> {
 
 pub trait CurrentStateCache {
     fn merge_in_update(&mut self, update: Self);
+    /// Removes states that should not be cached.
+    fn purge(&mut self);
     fn default() -> Self;
 }
 
@@ -36,7 +38,7 @@ struct PendingAckMetadata {
 pub async fn serve<P, F, U>(mut messages: mpsc::UnboundedReceiver<Message<P, U>>)
 where
     P: Listener<F>,
-    U: CurrentStateCache + Clone + Into<F>,
+    U: CurrentStateCache + Clone + Into<F> + std::cmp::PartialEq,
 {
     // A list of listeners which are ready to receive updates.
     let mut acked_listeners = Vec::new();
@@ -79,17 +81,21 @@ where
                 },
                 // Notify all listeners
                 Message::NotifyListeners(update) => {
-                    // Update our current state
+                    let prev_state = current_state.clone();
                     current_state.merge_in_update(update);
-                    // Mark all listeners that are pending an ack as having missed an update
-                    for pending_ack_fut in pending_acks.iter_mut() {
-                        pending_ack_fut.metadata.missed_a_message = true;
-                    };
-                    // Send an update to all listeners who are ready
-                    while !acked_listeners.is_empty() {
-                        // Listeners are dequeued and their pending acknowledgement is enqueued.
-                        let listener = acked_listeners.remove(0);
-                        pending_acks.push(send_current_state(listener, &current_state));
+                    if current_state != prev_state {
+                        // Mark all listeners that are pending an ack as having missed an update
+                        for pending_ack_fut in pending_acks.iter_mut() {
+                            pending_ack_fut.metadata.missed_a_message = true;
+                        };
+                        // Send an update to all listeners who are ready
+                        while !acked_listeners.is_empty() {
+                            // Listeners are dequeued and their pending acknowledgement is enqueued.
+                            let listener = acked_listeners.remove(0);
+                            pending_acks.push(send_current_state(listener, &current_state));
+                        }
+                        // Purge any parts of the current state that should not be sent again
+                        current_state.purge();
                     }
                 },
             },
@@ -300,7 +306,7 @@ mod tests {
 
         // Send an update to both listeners.
         let update = ClientStateUpdate {
-            state: fidl_policy::WlanClientState::ConnectionsDisabled,
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![],
         };
         test_utils::broadcast_update(
@@ -312,14 +318,12 @@ mod tests {
 
         // #1 listener acknowledges update.
         let _ = test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
-
         // #2 listener does not yet acknowledge update.
         let (_, l2_responder) = test_utils::try_next_status_update(&mut exec, &mut l2_stream)
             .expect("expected status update");
-
         // Send another update.
         let update = ClientStateUpdate {
-            state: fidl_policy::WlanClientState::ConnectionsEnabled,
+            state: fidl_policy::WlanClientState::ConnectionsDisabled,
             networks: vec![],
         };
         test_utils::broadcast_update(
@@ -333,7 +337,7 @@ mod tests {
         let summary =
             test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
         let expected_summary = fidl_policy::ClientStateSummary {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
+            state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
             networks: Some(vec![]),
             ..fidl_policy::ClientStateSummary::EMPTY
         };
@@ -348,16 +352,11 @@ mod tests {
         // #2 listener should have been sent a current state summary, since they missed an update.
         let summary =
             test_utils::ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
-        let expected_summary = fidl_policy::ClientStateSummary {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
-            networks: Some(vec![]),
-            ..fidl_policy::ClientStateSummary::EMPTY
-        };
         assert_eq!(summary, expected_summary);
 
         // Send another update.
         let update = ClientStateUpdate {
-            state: fidl_policy::WlanClientState::ConnectionsDisabled,
+            state: fidl_policy::WlanClientState::ConnectionsEnabled,
             networks: vec![],
         };
         test_utils::broadcast_update(
@@ -369,7 +368,7 @@ mod tests {
 
         // Verify #1 & #2 listeners received the update.
         let expected_summary = fidl_policy::ClientStateSummary {
-            state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
+            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: Some(vec![]),
             ..fidl_policy::ClientStateSummary::EMPTY
         };
