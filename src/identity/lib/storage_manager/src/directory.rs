@@ -74,7 +74,7 @@ pub struct InsecureKeyDirectoryStorageManager {
     managed_dir: fio::DirectoryProxy,
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl StorageManager for InsecureKeyDirectoryStorageManager {
     async fn provision(&self, key: &Key) -> Result<(), AccountManagerError> {
         let mut state_lock = self.state.lock().await;

@@ -53,7 +53,7 @@ where
 
 // A temporary extension trait for exposing functionality from
 // minfs::StorageManager to other callsites.
-#[async_trait(?Send)]
+#[async_trait]
 pub trait StorageManagerExtTrait<DM>
 where
     DM: DiskManager,
@@ -63,7 +63,7 @@ where
     async fn find_account_partition(&self) -> Option<DM::BlockDevice>;
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl<DM> StorageManagerExtTrait<DM> for StorageManager<DM>
 where
     DM: DiskManager,
@@ -82,7 +82,7 @@ where
 }
 
 // TODO(https://fxbug.dev/103134): This struct should implement StorageManager.
-#[async_trait(?Send)]
+#[async_trait]
 impl<DM> StorageManagerTrait for StorageManager<DM>
 where
     DM: DiskManager,

@@ -180,7 +180,7 @@ async fn wait_for_node(
 /// This trait exists as a way to abstract disk operations for easy mocking/testing.
 /// There is only one production implementation, [`DevDiskManager`].
 #[async_trait]
-pub trait DiskManager {
+pub trait DiskManager: Sync + Send {
     type BlockDevice;
     type Partition: Partition<BlockDevice = Self::BlockDevice>;
     type EncryptedBlockDevice: EncryptedBlockDevice<BlockDevice = Self::BlockDevice>;
@@ -209,7 +209,7 @@ pub trait DiskManager {
 /// The `Partition` trait provides a narrow interface for
 /// [`Partition`][fidl_fuchsia_hardware_block_partition::PartitionProxy] operations.
 #[async_trait]
-pub trait Partition {
+pub trait Partition: Sync + Send {
     type BlockDevice;
 
     /// Checks if the partition has the desired GUID.

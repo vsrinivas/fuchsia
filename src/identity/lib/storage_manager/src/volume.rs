@@ -12,7 +12,7 @@ use fidl_fuchsia_io as fio;
 /// FVM partition encrypted with zxcrypt.
 pub struct EncryptedVolumeStorageManager;
 
-#[async_trait(?Send)]
+#[async_trait]
 impl StorageManager for EncryptedVolumeStorageManager {
     async fn provision(&self, _key: &Key) -> Result<(), AccountManagerError> {
         Err(AccountManagerError::new(ApiError::UnsupportedOperation))

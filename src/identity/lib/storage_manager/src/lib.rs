@@ -45,8 +45,6 @@ impl TryFrom<&Key> for [u8; 32] {
 /// `StorageManager` is in the available state.  Similarly, handles to the
 /// directory provided by a `StorageManager` and any subdirectories should be
 /// closed prior to locking the `StorageManager`.
-/// Note: The ?Send is necessary to allow implementations to make FIDL calls as
-/// the FIDL bindings don't require threadsafe inputs.
 ///
 ///       unlock
 ///  ┌───────────────┐
@@ -69,7 +67,7 @@ impl TryFrom<&Key> for [u8; 32] {
 ///                  │                            │
 ///                  └────────────────────────────┘
 ///
-#[async_trait(?Send)]
+#[async_trait]
 pub trait StorageManager: Sized {
     /// Provisions a new storage instance.  The same `Key` must be supplied
     /// during a call to `unlock`. Moves the `StorageManager` from the
