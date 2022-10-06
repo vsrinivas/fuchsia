@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "third_party/gvisor_syscall_tests/expectations.h"
+#include "third_party/gvisor_syscall_tests/expects/expectations.h"
 
 namespace netstack_syscall_test {
 

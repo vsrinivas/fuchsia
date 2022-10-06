@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef THIRD_PARTY_GVISOR_SYSCALL_TESTS_EXPECTATIONS_H_
-#define THIRD_PARTY_GVISOR_SYSCALL_TESTS_EXPECTATIONS_H_
+#ifndef THIRD_PARTY_GVISOR_SYSCALL_TESTS_EXPECTS_EXPECTATIONS_H_
+#define THIRD_PARTY_GVISOR_SYSCALL_TESTS_EXPECTS_EXPECTATIONS_H_
 
 #include <ostream>
 #include <string>
@@ -13,7 +13,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
-#include "gvisor/test/util/test_util.h"
+#include "third_party/gvisor_syscall_tests/gvisor/test/util/test_util.h"
 
 namespace netstack_syscall_test {
 
@@ -116,4 +116,4 @@ std::optional<std::string> CreateNetstackTestFilters(const TestMap& expectations
 
 }  // namespace netstack_syscall_test
 
-#endif  // THIRD_PARTY_GVISOR_SYSCALL_TESTS_EXPECTATIONS_H_
+#endif  // THIRD_PARTY_GVISOR_SYSCALL_TESTS_EXPECTS_EXPECTATIONS_H_

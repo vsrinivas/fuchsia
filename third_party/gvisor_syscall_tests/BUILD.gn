@@ -7,8 +7,8 @@ import("//build/test.gni")
 
 source_set("expectations") {
   sources = [
-    "expectations.cc",
-    "expectations.h",
+    "expects/expectations.cc",
+    "expects/expectations.h",
   ]
   deps = [
     "//third_party/abseil-cpp/absl/container:flat_hash_set",
@@ -281,7 +281,7 @@ local_test_deps = []
 
 foreach(test, tests) {
   source_set("netstack3_${test.label}_expectations") {
-    sources = [ "netstack3/${test.label}_expectations.cc" ]
+    sources = [ "expects/netstack3/${test.label}_expectations.cc" ]
     deps = [
       ":expectations",
       ":gvisor_test_util",
@@ -291,7 +291,7 @@ foreach(test, tests) {
   }
 
   source_set("netstack2_${test.label}_expectations") {
-    sources = [ "netstack2/${test.label}_expectations.cc" ]
+    sources = [ "expects/netstack2/${test.label}_expectations.cc" ]
     deps = [
       ":expectations",
       ":gvisor_test_util",
@@ -308,19 +308,19 @@ foreach(test, tests) {
       component =
           "//src/connectivity/network/netstack:component-with-fast-udp-debug"
       expectations = ":netstack2_${test.label}_expectations"
-      manifest = "netstack2/meta/fastudp_${test.label}_syscall_tests.cml"
+      manifest = "meta/netstack2/fastudp/${test.label}_syscall_tests.cml"
     },
     {
       label = "netstack2_syncudp"
       component = "//src/connectivity/network/netstack:component-debug"
       expectations = ":netstack2_${test.label}_expectations"
-      manifest = "netstack2/meta/syncudp_${test.label}_syscall_tests.cml"
+      manifest = "meta/netstack2/syncudp/${test.label}_syscall_tests.cml"
     },
     {
       label = "netstack3"
       component = "//src/connectivity/network/netstack3:component"
       expectations = ":netstack3_${test.label}_expectations"
-      manifest = "netstack3/meta/${test.label}_syscall_tests.cml"
+      manifest = "meta/netstack3/${test.label}_syscall_tests.cml"
     },
   ]
 

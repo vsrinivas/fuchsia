@@ -13,7 +13,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/strings/str_split.h"
-#include "expectations.h"
+#include "expects/expectations.h"
 #include "gvisor/test/util/test_util.h"
 
 namespace netstack_syscall_test {

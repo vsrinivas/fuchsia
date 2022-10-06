@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//third_party/gvisor_syscall_tests/netstack3/meta/syscall_tests.shard.cml" ],
+    include: [ "//third_party/gvisor_syscall_tests/meta/netstack2/fastudp/syscall_tests.shard.cml" ],
     program: {
-        binary: "test/netstack3_tcp_socket_tests",
+        binary: "test/netstack2_fastudp_udp_unbound_socket_tests",
     },
 }
