@@ -11,7 +11,7 @@ template("write_ctf_file") {
   target_dir = rebase_path(get_label_info(":$name", "dir"), "//")
 
   generated_file(target_name) {
-    outputs = [ "${root_build_dir}/cts/${target_dir}/${name}.${ctf_extension}" ]
+    outputs = [ "${root_build_dir}/ctf/${target_dir}/${name}.${ctf_extension}" ]
     contents = true
   }
 }

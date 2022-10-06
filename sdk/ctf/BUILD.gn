@@ -10,15 +10,7 @@ import("//sdk/ctf/build/verify_sdk_compatibility.gni")
 build_api_module("ctf_artifacts") {
   testonly = true
   data_keys = [ "cts_artifacts" ]
-  deps = [
-    ":ctf",
-
-    # Build both json files. This allows the cts-artifacts builder to build
-    # this :ctf_artifacts target while still reading the old
-    # out/default/cts/cts_artifacts.json file.
-    # We'll soft-transition it to the new filename.
-    "//sdk/cts:cts_artifacts",
-  ]
+  deps = [ ":ctf" ]
 }
 
 group("ctf") {

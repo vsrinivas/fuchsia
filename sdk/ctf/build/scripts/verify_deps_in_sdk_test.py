@@ -90,18 +90,18 @@ class VerifyDepsInSDKTests(unittest.TestCase):
             dep = '//zircon/system/ulib/zxtest:zxtest'
             self.assertEqual(
                 root_build_dir +
-                '/cts/zircon/system/ulib/zxtest/zxtest.this_is_ctf',
+                '/ctf/zircon/system/ulib/zxtest/zxtest.this_is_ctf',
                 ctf_element.get_ctf_file_path(dep))
 
             dep = '//zircon/system/ulib/zxtest'
             self.assertEqual(
                 root_build_dir +
-                '/cts/zircon/system/ulib/zxtest/zxtest.this_is_ctf',
+                '/ctf/zircon/system/ulib/zxtest/zxtest.this_is_ctf',
                 ctf_element.get_ctf_file_path(dep))
 
             dep = '//sdk'
             self.assertEqual(
-                root_build_dir + '/cts/sdk/sdk.this_is_ctf',
+                root_build_dir + '/ctf/sdk/sdk.this_is_ctf',
                 ctf_element.get_ctf_file_path(dep))
 
     def test_verify_deps_in_sdk(self):
@@ -110,8 +110,7 @@ class VerifyDepsInSDKTests(unittest.TestCase):
         allowed_deps = ['//zircon/system/ulib/zxtest:zxtest']
         allowed_dirs = ['//third_party/dart-pkg/pub/*']
         deps = [
-            '//sdk/fidl/fuchsia.io',
-            '//sdk/lib/fdio:fdio',
+            '//sdk/fidl/fuchsia.io', '//sdk/lib/fdio:fdio',
             '//sdk/lib/private_atom:private_atom'
         ]
 
@@ -319,7 +318,7 @@ class VerifyDepsInSDKTests(unittest.TestCase):
                 self.assertListEqual(deps, lines)
 
         with TemporaryDirectory() as root_build_dir:
-            output_file = root_build_dir + '/cts/create_output_file.unused'
+            output_file = root_build_dir + '/ctf/create_output_file.unused'
             sdk_manifests = [
                 self.create_empty_sdk_manifest(root_build_dir, "core")
             ]

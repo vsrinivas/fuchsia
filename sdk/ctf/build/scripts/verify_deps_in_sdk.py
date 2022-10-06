@@ -26,8 +26,8 @@ class VerifyDepsInSDK:
       output_file (string): The path to (including) the file to be generated.
       invoker_label (string): The label of the invoker of verify_deps_in_sdk.
       deps_to_verify (list(string)): A list of fully qualified GN labels.
-      allowed_deps (list(string)): A list of allowed deps found in //sdk/cts/allowed_ctf_deps.gni"
-      allowed_dirs (list(string)): A list of allowed directories found in //sdk/cts/allowed_ctf_deps.gni"
+      allowed_deps (list(string)): A list of allowed deps found in //sdk/ctf/allowed_ctf_deps.gni"
+      allowed_dirs (list(string)): A list of allowed directories found in //sdk/ctf/allowed_ctf_deps.gni"
       sdk_manifests (list(string)): A list of absolute paths to SDK manifest files.
 
     Raises:
@@ -100,7 +100,7 @@ class VerifyDepsInSDK:
             # lib
             target_name = dep
 
-        return self.root_build_dir + '/cts/' + dep + '/' + target_name + CTF_EXTENSION
+        return self.root_build_dir + '/ctf/' + dep + '/' + target_name + CTF_EXTENSION
 
     def verify_deps(self):
         """Verifies the element's dependencies are released in a public SDK.
