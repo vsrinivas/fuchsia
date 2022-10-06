@@ -330,6 +330,7 @@ pub struct TestEnvBuilder<BlobfsAndSystemImageFut, MountsFn> {
     tuf_repo_config_boot_arg: Option<String>,
     local_mirror_repo: Option<(Arc<Repository>, RepositoryUrl)>,
     resolver_variant: ResolverVariant,
+    enable_subpackages: bool,
 }
 
 impl TestEnvBuilder<future::BoxFuture<'static, (BlobfsRamdisk, Option<Hash>)>, fn() -> Mounts> {
@@ -359,6 +360,7 @@ impl TestEnvBuilder<future::BoxFuture<'static, (BlobfsRamdisk, Option<Hash>)>, f
             tuf_repo_config_boot_arg: None,
             local_mirror_repo: None,
             resolver_variant: ResolverVariant::DefaultArgs,
+            enable_subpackages: false,
         }
     }
 }
@@ -384,6 +386,7 @@ where
             tuf_repo_config_boot_arg: self.tuf_repo_config_boot_arg,
             local_mirror_repo: self.local_mirror_repo,
             resolver_variant: self.resolver_variant,
+            enable_subpackages: self.enable_subpackages,
         }
     }
 
@@ -410,6 +413,7 @@ where
             tuf_repo_config_boot_arg: self.tuf_repo_config_boot_arg,
             local_mirror_repo: self.local_mirror_repo,
             resolver_variant: self.resolver_variant,
+            enable_subpackages: self.enable_subpackages,
         }
     }
 
@@ -423,6 +427,7 @@ where
             tuf_repo_config_boot_arg: self.tuf_repo_config_boot_arg,
             local_mirror_repo: self.local_mirror_repo,
             resolver_variant: self.resolver_variant,
+            enable_subpackages: self.enable_subpackages,
         }
     }
     pub fn tuf_repo_config_boot_arg(mut self, repo: String) -> Self {
@@ -438,6 +443,12 @@ where
 
     pub fn resolver_variant(mut self, variant: ResolverVariant) -> Self {
         self.resolver_variant = variant;
+        self
+    }
+
+    pub fn enable_subpackages(mut self) -> Self {
+        assert!(!self.enable_subpackages);
+        self.enable_subpackages = true;
         self
     }
 
@@ -517,13 +528,13 @@ where
 
         let builder = RealmBuilder::new().await.unwrap();
         let pkg_cache = builder
-            .add_child(
-                "pkg_cache",
-                "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cm",
-                ChildOptions::new(),
-            )
+            .add_child("pkg_cache", "#meta/pkg-cache.cm", ChildOptions::new())
             .await
             .unwrap();
+        if self.enable_subpackages {
+            builder.init_mutable_config_from_package(&pkg_cache).await.unwrap();
+            builder.set_config_value_bool(&pkg_cache, "enable_subpackages", true).await.unwrap();
+        }
         let system_update_committer = builder
             .add_child("system_update_committer", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/system-update-committer.cm", ChildOptions::new()).await.unwrap();
         let service_reflector = builder

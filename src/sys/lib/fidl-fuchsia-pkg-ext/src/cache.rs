@@ -251,7 +251,7 @@ impl Get {
     /// with reading the stream to guarantee stream termination.
     pub fn get_missing_blobs(
         &mut self,
-    ) -> impl Stream<Item = Result<Vec<BlobInfo>, ListMissingBlobsError>> {
+    ) -> impl Stream<Item = Result<Vec<BlobInfo>, ListMissingBlobsError>> + Unpin {
         match self.start_get_missing_blobs() {
             Ok(option_iter) => match option_iter {
                 Some(iterator) => crate::fidl_iterator_to_stream(iterator)

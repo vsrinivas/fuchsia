@@ -911,3 +911,42 @@ async fn resolve_local_mirror() {
 
     env.stop().await;
 }
+
+#[fuchsia::test]
+async fn superpackage() {
+    let env = TestEnvBuilder::new().enable_subpackages().build().await;
+    let startup_blobs = env.blobfs.list_blobs().unwrap();
+
+    let subpackage = PackageBuilder::new("subpackage")
+        .add_resource_at("subpackage-blob", "subpackage-blob-contents".as_bytes())
+        .build()
+        .await
+        .unwrap();
+    assert_eq!(startup_blobs.intersection(&subpackage.list_blobs().unwrap()).count(), 0);
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("my-subpackage", &subpackage)
+        .build()
+        .await
+        .unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&superpackage)
+            .add_package(&subpackage)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = Arc::clone(&repo).server().start().unwrap();
+    let repo_config = served_repository.make_repo_config("fuchsia-pkg://test".parse().unwrap());
+    let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
+
+    let (package, _resolved_context) = env
+        .resolve_package("fuchsia-pkg://test/superpackage")
+        .await
+        .expect("package to resolve without error");
+
+    superpackage.verify_contents(&package).await.unwrap();
+    assert!(env.blobfs.list_blobs().unwrap().is_superset(&subpackage.list_blobs().unwrap()));
+
+    env.stop().await;
+}

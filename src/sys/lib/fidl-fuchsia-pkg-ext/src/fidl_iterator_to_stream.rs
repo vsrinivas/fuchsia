@@ -22,7 +22,7 @@ use {
 /// `PayloadIteratorProxy`.
 pub fn fidl_iterator_to_stream<T: FidlIterator>(
     iterator: T,
-) -> impl Stream<Item = Result<Vec<T::Item>, fidl::Error>> {
+) -> impl Stream<Item = Result<Vec<T::Item>, fidl::Error>> + Unpin {
     futures::stream::try_unfold(iterator, |iterator| {
         iterator.next().map_ok(|v| if v.is_empty() { None } else { Some((v, iterator)) })
     })

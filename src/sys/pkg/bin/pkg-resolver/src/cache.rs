@@ -12,7 +12,6 @@ use {
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId, BlobInfo, MirrorConfig, RepositoryConfig},
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_pkg::PackageDirectory,
-    fuchsia_syslog::fx_log_info,
     fuchsia_trace as ftrace,
     fuchsia_url::AbsolutePackageUrl,
     fuchsia_zircon::Status,
@@ -154,30 +153,28 @@ pub async fn cache_package<'a>(
             .expect("processor exists")
             .map_err(|e| CacheError::FetchMetaFar(e, merkle))?;
 
-        // TODO(fxbug.dev/110674) Handle this concurrently with fetching the missing blobs.
-        let missing_blobs = get.get_missing_blobs().try_concat().await?;
+        let mut fetches = FuturesUnordered::new();
+        let mut missing_blobs = get.get_missing_blobs();
+        while let Some(chunk) = missing_blobs.try_next().await? {
+            let chunk = chunk
+                .into_iter()
+                .map(|need| {
+                    (
+                        need.blob_id,
+                        FetchBlobContext {
+                            opener: get.make_open_blob(need.blob_id),
+                            mirrors: Arc::clone(&mirrors),
+                            expected_len: None,
+                            use_local_mirror: config.use_local_mirror(),
+                            parent_trace_id: trace_id,
+                        },
+                    )
+                })
+                .collect::<Vec<_>>();
+            let () = fetches.extend(blob_fetcher.push_all(chunk.into_iter()));
+        }
 
-        // Fetch the missing content blobs with some amount of concurrency.
-        fx_log_info!(
-            "Fetching blobs for {}: {:#?}",
-            url,
-            DebugIter(missing_blobs.iter().map(|need| need.blob_id))
-        );
-        let fetches = blob_fetcher
-            .push_all(missing_blobs.into_iter().map(|need| {
-                (
-                    need.blob_id,
-                    FetchBlobContext {
-                        opener: get.make_open_blob(need.blob_id),
-                        mirrors: Arc::clone(&mirrors),
-                        expected_len: None,
-                        use_local_mirror: config.use_local_mirror(),
-                        parent_trace_id: trace_id,
-                    },
-                )
-            }))
-            .collect::<FuturesUnordered<_>>()
-            .map(|res| res.expect("processor exists"));
+        let fetches = fetches.map(|res| res.expect("processor exists"));
 
         // When a blob write fails and tears down the entire Get() operation, the other pending blob
         // writes will fail with an unexpected close of the NeededBlobs/blob write channel.
