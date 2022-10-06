@@ -10,7 +10,6 @@ use fidl_fuchsia_component::RealmMarker;
 use fidl_fuchsia_component_decl::ChildRef;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_io as fio;
-use fidl_fuchsia_sys2::EventSourceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 use fuchsia_component_test::RealmInstance;
@@ -33,10 +32,7 @@ async fn component_selectors_filter_logs() {
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
 
-    let event_source =
-        EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
 
     // Start a few components.
     let mut child_ref_a = ChildRef { name: "a".to_string(), collection: None };

@@ -16,7 +16,6 @@ use fidl_fuchsia_component::RealmMarker;
 use fidl_fuchsia_component_decl::ChildRef;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_io as fio;
-use fidl_fuchsia_sys2::EventSourceMarker;
 use fidl_fuchsia_sys_internal::{LogConnectorRequest, LogConnectorRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::{client, server::ServiceFs};
@@ -145,10 +144,7 @@ async fn test_logs_lifecycle() {
 
     let moniker = format!("realm_builder:{}/test/log_and_exit", instance.root.child_name());
 
-    let event_source =
-        EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
     let mut child_ref = ChildRef { name: LOG_AND_EXIT_COMPONENT.to_string(), collection: None };
     reader.retry_if_empty(true);
     for i in 1..50 {

@@ -17,17 +17,14 @@
             from: "framework",
         },
         {
-            protocol: [
-                "fuchsia.logger.Log",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fuchsia.logger.Log" ],
         },
         {
-            event: [
-                "started",
-                "stopped",
+            event_stream: [
+                "started_v2",
+                "stopped_v2",
             ],
-            from: "framework",
+            from: "parent",
         },
     ],
     offer: [
@@ -42,17 +39,6 @@
             to: [ "#realm_builder" ],
             rights: [ "r*" ],
             subdir: "archivist",
-        },
-        {
-            event: "capability_requested",
-            from: "framework",
-            to: "#realm_builder",
-            filter: { name: "fuchsia.logger.LogSink" },
-        },
-        {
-            event: "stopped",
-            from: "framework",
-            to: "#realm_builder",
         },
     ],
 }

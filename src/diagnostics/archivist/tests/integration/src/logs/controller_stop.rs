@@ -15,7 +15,6 @@ use fidl_fuchsia_diagnostics as fdiagnostics;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage};
-use fidl_fuchsia_sys2::EventSourceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 use fuchsia_component_test::RealmInstance;
@@ -46,10 +45,7 @@ async fn embedding_stop_api_for_log_listener() {
     })
     .detach();
 
-    let event_source =
-        EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
 
     run_logging_component(&instance, &mut event_stream).await;
 
@@ -93,10 +89,7 @@ async fn embedding_stop_api_works_for_batch_iterator() {
     let subscription =
         ArchiveReader::new().with_archive(accessor).snapshot_then_subscribe().expect("subscribed");
 
-    let event_source =
-        EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
 
     run_logging_component(&instance, &mut event_stream).await;
 

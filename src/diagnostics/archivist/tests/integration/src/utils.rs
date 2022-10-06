@@ -3,18 +3,13 @@
 // found in the LICENSE file.
 
 use component_events::{events::*, matcher::*};
-use fidl_fuchsia_sys2::EventSourceMarker;
-use fuchsia_component::client;
 
 pub async fn wait_for_component_stopped(
     instance_child_name: &str,
     component: &str,
     status_match: ExitStatusMatcher,
 ) {
-    let event_source =
-        EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
     wait_for_component_stopped_event(
         instance_child_name,
         component,

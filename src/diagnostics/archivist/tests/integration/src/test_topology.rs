@@ -37,6 +37,29 @@ pub async fn create(opts: Options) -> Result<(RealmBuilder, SubRealmBuilder), Er
         .capability(Capability::protocol_by_name("fuchsia.boot.WriteOnlyLog"))
         .capability(Capability::event(Event::Stopped))
         .capability(Capability::event(Event::capability_requested("fuchsia.logger.LogSink")));
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::event_stream("stopped_v2").with_scope(&test_realm))
+                .capability(Capability::event_stream("directory_ready_v2").with_scope(&test_realm))
+                .capability(Capability::event_stream("capability_requested_v2"))
+                .from(Ref::parent())
+                .to(&test_realm),
+        )
+        .await?;
+
+    test_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::event_stream("stopped_v2"))
+                .capability(Capability::event_stream("directory_ready_v2"))
+                .capability(Capability::event_stream("capability_requested_v2"))
+                .from(Ref::parent())
+                .to(&archivist),
+        )
+        .await?;
+
     builder.add_route(parent_to_archivist.clone().from(Ref::parent()).to(&test_realm)).await?;
     test_realm.add_route(parent_to_archivist.from(Ref::parent()).to(&archivist)).await?;
 

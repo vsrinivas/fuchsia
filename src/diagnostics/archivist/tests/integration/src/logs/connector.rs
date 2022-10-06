@@ -14,13 +14,12 @@ use fidl::{
 use fidl_fuchsia_diagnostics as fdiagnostics;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogSinkMarker};
-use fidl_fuchsia_sys2::EventSourceMarker;
 use fidl_fuchsia_sys_internal::{
     LogConnection, LogConnectionListenerMarker, LogConnectorMarker, LogConnectorRequest,
     LogConnectorRequestStream, SourceIdentity,
 };
 use fuchsia_async as fasync;
-use fuchsia_component::{client, server::ServiceFs};
+use fuchsia_component::server::ServiceFs;
 use fuchsia_component_test::{Capability, ChildOptions, LocalComponentHandles, Ref, Route};
 use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use fuchsia_zircon as zx;
@@ -78,10 +77,7 @@ async fn same_log_sink_simultaneously_via_connector() {
     })
     .detach();
 
-    let event_source =
-        EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+    let mut event_stream = EventStream::open().await.unwrap();
 
     let controller =
         instance.root.connect_to_protocol_at_exposed_dir::<ControllerMarker>().unwrap();
