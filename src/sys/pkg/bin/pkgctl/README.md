@@ -8,7 +8,7 @@ components.
 To resolve a package, run:
 
 ```
-% pkgctl resolve fuchsia-pkg://fuchsia.com/fonts
+% pkgctl resolve fuchsia-pkg://example.com/fonts
 ```
 
 To open a package (and display its contents) by merkle root, run:
@@ -54,15 +54,15 @@ View the configured rewrite rules:
 ```
 
 **Note**: The following set of rewrite rules will redirect the "/rolldice" package 
-from "fuchsia.com" to the repository with the hostname "devhost".
+from "example.com" to the repository with the hostname "devhost.example".
 
 ```json
 {
     "version": "1",
     "content": [
         {
-            "host_match": "fuchsia.com",
-            "host_replacement": "devhost",
+            "host_match": "example.com",
+            "host_replacement": "devhost.example",
             "path_prefix_match": "/rolldice",
             "path_prefix_replacement": "/rolldice"
         }
