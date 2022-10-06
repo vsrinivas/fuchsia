@@ -138,11 +138,10 @@ func TestRun(t *testing.T) {
 			// it could run cleanup().
 			if err := os.WriteFile(script, []byte(
 				`#!/bin/bash
-                                cleanup() {
+				cleanup() {
 					echo "finished"; exit 1
-                                }
-                                trap cleanup TERM INT
-                                echo "start"
+				}
+				trap cleanup TERM INT
 				sleep 10000`,
 			), os.ModePerm); err != nil {
 				t.Fatalf("Failed to write script: %s", err)
@@ -157,9 +156,16 @@ func TestRun(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			go func() {
-				buf := make([]byte, 20)
-				if _, err := stdoutReader.Read(buf); err != nil || !bytes.Contains(buf, []byte("start")) {
-					t.Errorf("Failed to read `start` from stdout: %s, got: %s", err, string(buf))
+				// Wait for the script to start sleeping before canceling the context.
+				for {
+					cmd := exec.Command("pgrep", "-f", "sleep 10000")
+					// pgrep returns an exit code of 1 if it fails to
+					// find anything, so ignore the error.
+					output, _ := cmd.CombinedOutput()
+					if len(output) != 0 {
+						t.Logf("pgrep: %s", output)
+						break
+					}
 				}
 				cancel()
 				// Wait for After() to be called before advancing the clock.
@@ -170,7 +176,7 @@ func TestRun(t *testing.T) {
 				// Read() because we don't expect the script to print anything more to
 				// stdout, so it should block until the deferred stdout.Close() gets
 				// executed.
-				buf = make([]byte, 20)
+				buf := make([]byte, 20)
 				stdoutReader.Read(buf)
 				if bytes.Contains(buf, []byte("finished")) {
 					t.Errorf("Expected script to be killed without doing cleanup")
