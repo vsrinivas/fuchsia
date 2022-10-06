@@ -15,9 +15,9 @@
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/curl.h"
 #include "src/developer/debug/zxdb/common/version.h"
-#include "src/developer/debug/zxdb/console/actions.h"
 #include "src/developer/debug/zxdb/console/analytics.h"
 #include "src/developer/debug/zxdb/console/command_line_options.h"
+#include "src/developer/debug/zxdb/console/command_sequence.h"
 #include "src/developer/debug/zxdb/console/console_impl.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
@@ -29,50 +29,32 @@ namespace zxdb {
 namespace {
 
 // Loads any actions specified on the command line into the vector.
-Err SetupActions(const CommandLineOptions& options, std::vector<Action>* actions) {
+Err SetupActions(const CommandLineOptions& options, std::vector<std::string>* actions) {
   if (options.core) {
     if (options.connect || options.run) {
       return Err("--core can't be used with commands to connect or run.");
     }
-
-    std::string cmd = VerbToString(Verb::kOpenDump) + " " + *options.core;
-    actions->push_back(Action("Open Dump", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
-    }));
+    actions->push_back(VerbToString(Verb::kOpenDump) + " " + *options.core);
   }
 
-  if (options.connect) {
-    std::string cmd = "connect " + *options.connect;
-    actions->push_back(Action("Connect", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
-    }));
-  }
+  if (options.connect)
+    actions->push_back(VerbToString(Verb::kConnect) + " " + *options.connect);
 
-  if (options.unix_connect) {
-    std::string cmd = "connect -u " + *options.unix_connect;
-    actions->push_back(Action("Connect", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
-    }));
-  }
+  if (options.unix_connect)
+    actions->push_back(VerbToString(Verb::kConnect) + " -u " + *options.unix_connect);
 
-  if (options.run) {
-    std::string cmd = "run " + *options.run;
-    actions->push_back(Action("Run", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
-    }));
-  }
+  if (options.run)
+    actions->push_back(VerbToString(Verb::kRun) + " " + *options.run);
 
   if (options.script_file) {
-    Err err = ScriptFileToActions(*options.script_file, actions);
-    if (err.has_error())
-      return err;
+    ErrOr<std::vector<std::string>> cmds_or = ReadCommandsFromFile(*options.script_file);
+    if (cmds_or.has_error())
+      return cmds_or.err();
+    actions->insert(actions->end(), cmds_or.value().begin(), cmds_or.value().end());
   }
 
   for (const auto& attach : options.attach) {
-    std::string cmd = "attach " + attach;
-    actions->push_back(Action("Attach", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
-    }));
+    actions->push_back(VerbToString(Verb::kAttach) + " " + attach);
   }
 
   return Err();
@@ -86,27 +68,6 @@ void InitConsole(zxdb::Console& console) {
   help.Append(Syntax::kWarning, "👉 ");
   help.Append(Syntax::kComment, "To get started, try \"status\" or \"help\".");
   console.Output(help);
-}
-
-void ScheduleActions(zxdb::Session& session, zxdb::Console& console,
-                     std::vector<zxdb::Action> actions) {
-  auto callback = [&](zxdb::Err err) {
-    std::string msg;
-    if (!err.has_error()) {
-      msg = "All actions were executed successfully.";
-    } else if (err.type() == zxdb::ErrType::kCanceled) {
-      msg = "Action processing was cancelled.";
-    } else {
-      msg = fxl::StringPrintf("Error executing actions: %s", err.msg().c_str());
-    }
-    // Go into interactive mode.
-    InitConsole(console);
-  };
-
-  // This will add the actions to the MessageLoop and oversee that all the actions run or the flow
-  // is interrupted if one of them fails. Actions run on a singleton ActionFlow instance.
-  zxdb::ActionFlow& flow = zxdb::ActionFlow::Singleton();
-  flow.ScheduleActions(std::move(actions), &session, &console, callback);
 }
 
 void SetupCommandLineOptions(const CommandLineOptions& options, Session* session) {
@@ -166,7 +127,7 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 0;
   }
 
-  std::vector<zxdb::Action> actions;
+  std::vector<std::string> actions;
   Err err = SetupActions(options, &actions);
   if (err.has_error()) {
     fprintf(stderr, "%s\n", err.msg().c_str());
@@ -213,7 +174,8 @@ int ConsoleMain(int argc, const char* argv[]) {
     SetupCommandLineOptions(options, &session);
 
     if (!actions.empty()) {
-      ScheduleActions(session, console, std::move(actions));
+      RunCommandSequence(&console, std::move(actions),
+                         [&console](const Err& err) { InitConsole(console); });
     } else {
       // Interactive mode is the default mode.
       InitConsole(console);

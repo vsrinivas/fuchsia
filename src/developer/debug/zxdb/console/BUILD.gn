@@ -4,8 +4,6 @@
 
 static_library("console") {
   sources = [
-    "actions.cc",
-    "actions.h",
     "analytics.cc",
     "analytics.h",
     "analyze_memory.cc",
@@ -21,6 +19,8 @@ static_library("console") {
     "command_line_options.h",
     "command_parser.cc",
     "command_parser.h",
+    "command_sequence.cc",
+    "command_sequence.h",
     "command_utils.cc",
     "command_utils.h",
     "commands/verb_aspace.cc",
@@ -222,13 +222,13 @@ static_library("console") {
 source_set("tests") {
   testonly = true
   sources = [
-    "actions_unittest.cc",
     "analyze_memory_unittest.cc",
     "async_output_buffer_test_util.cc",
     "async_output_buffer_test_util.h",
     "async_output_buffer_unittest.cc",
     "command_context_unittest.cc",
     "command_parser_unittest.cc",
+    "command_sequence_unittest.cc",
     "command_utils_unittest.cc",
     "commands/verb_attach_unittest.cc",
     "commands/verb_break_unittest.cc",
