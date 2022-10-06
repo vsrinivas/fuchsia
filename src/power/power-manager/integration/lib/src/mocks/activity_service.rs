@@ -69,7 +69,7 @@ impl MockActivityService {
                 let listener = listener.into_proxy().unwrap();
                 while let Some(state) = this.state_receiver.lock().await.next().await {
                     info!("MockActivityService: sending activity state: {:?}", state);
-                    listener.on_state_changed(state, 0).await.unwrap();
+                    let _ = listener.on_state_changed(state, 0).await;
                 }
                 info!("MockActivityService: closing connection")
             })
