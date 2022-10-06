@@ -144,7 +144,12 @@ Errno zxio::posix_ioctl(int request, va_list va) {
       return Errno(Errno::Ok);
     }
     default:
-      return Errno(ENOTTY);
+      int16_t out_code;
+      zx_status_t status = zxio_ioctl(&zxio_storage().io, request, &out_code, va);
+      if (status != ZX_OK) {
+        return Errno(ENOTTY);
+      }
+      return Errno(out_code);
   }
 }
 

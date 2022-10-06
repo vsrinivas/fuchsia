@@ -7,6 +7,7 @@
 
 #include <lib/zxio/types.h>
 #include <lib/zxio/zxio.h>
+#include <stdarg.h>
 #include <sys/socket.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -91,6 +92,7 @@ typedef struct zxio_ops {
                             int16_t* out_code);
   zx_status_t (*setsockopt)(zxio_t* io, int level, int optname, const void* optval,
                             socklen_t optlen, int16_t* out_code);
+  zx_status_t (*ioctl)(zxio_t* io, int request, int16_t* out_code, va_list va);
 } zxio_ops_t;
 
 // Initialize a |zxio_t| object with the given |ops| table.

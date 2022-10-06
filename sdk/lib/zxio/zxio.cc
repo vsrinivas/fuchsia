@@ -445,6 +445,15 @@ zx_status_t zxio_set_window_size(zxio_t* io, uint32_t width, uint32_t height) {
   return zio->ops->set_window_size(io, width, height);
 }
 
+zx_status_t zxio_ioctl(zxio_t* io, int request, int16_t* out_code, va_list va) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->ioctl(io, request, out_code, va);
+}
+
 zx_status_t zxio_watch_directory(zxio_t* directory, zxio_watch_directory_cb cb, zx_time_t deadline,
                                  void* context) {
   if (!zxio_is_valid(directory)) {

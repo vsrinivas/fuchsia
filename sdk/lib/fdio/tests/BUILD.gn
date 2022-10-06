@@ -88,6 +88,7 @@ test("fdio-test") {
       "fdio_get_vmo.cc",
       "fdio_handle_fd.cc",
       "fdio_io.cc",
+      "fdio_ioctl.cc",
       "fdio_memfd.cc",
       "fdio_namespace.cc",
       "fdio_null_namespace.cc",

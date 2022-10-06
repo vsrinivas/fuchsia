@@ -6,6 +6,7 @@
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_ZXIO_H_
 
 #include <lib/zxio/types.h>
+#include <stdarg.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
@@ -495,6 +496,9 @@ ZXIO_EXPORT zx_status_t zxio_get_window_size(zxio_t* io, uint32_t* width, uint32
 //
 // Returns ZX_ERR_NOT_SUPPORTED if |io| does not support setting the window size.
 ZXIO_EXPORT zx_status_t zxio_set_window_size(zxio_t* io, uint32_t width, uint32_t height);
+
+// Executes the given specific ioctl.
+ZXIO_EXPORT zx_status_t zxio_ioctl(zxio_t* io, int request, int16_t* out_code, va_list va);
 
 __END_CDECLS
 
