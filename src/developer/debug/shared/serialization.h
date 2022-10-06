@@ -17,10 +17,10 @@
 //
 // To add serialization support for a type, either
 //
-//   - For classes owned by us, provide a templated member function
-//     `void Serialize(Serializer& ser, uint32_t ver)` in the class.
-//   - For classes not owned by us / non-class types, provide a templated global function
-//     `SerializeWithSerializer(Serializer& ser, Type& object)`.
+//   - For classes owned by us, provide a function `void Serialize(Serializer& ser, uint32_t ver)`
+//     in the class.
+//   - For classes not owned by us / non-class types, provide a function
+//     `Serializer& Serializer::operator|(Type& object)`.
 //
 // These functions will be used by both serialization and deserialization, although the names only
 // contain "serialize". In another word, these functions could also write to the object.
@@ -31,10 +31,53 @@ namespace debug {
 class Serializer {
  public:
   template <typename T>
-  Serializer& operator|(T& val) {
-    SerializeWithSerializer(*this, val);
+  auto operator|(T& val)
+      -> std::enable_if_t<std::is_void_v<decltype(val.Serialize(*this, 0))>, Serializer&> {
+    val.Serialize(*this, GetVersion());
     return *this;
   }
+
+  template <typename Integer>
+  auto operator|(Integer& val) -> std::enable_if_t<std::is_integral_v<Integer>, Serializer&> {
+    SerializeBytes(&val, sizeof(val));
+    return *this;
+  }
+
+  template <typename Enum>
+  auto operator|(Enum& val) -> std::enable_if_t<std::is_enum_v<Enum>, Serializer&> {
+    uint32_t v = static_cast<uint32_t>(val);
+    *this | v;
+    val = static_cast<Enum>(v);
+    return *this;
+  }
+
+  template <typename T>
+  Serializer& operator|(std::optional<T>& val) {
+    uint32_t has_value = val.has_value();
+    *this | has_value;
+    if (has_value) {
+      if (!val.has_value()) {
+        val.emplace();
+      }
+      *this | val.value();
+    } else if (val.has_value()) {
+      val.reset();
+    }
+    return *this;
+  }
+
+  template <typename T>
+  Serializer& operator|(std::vector<T>& val) {
+    uint32_t size = static_cast<uint32_t>(val.size());
+    *this | size;
+    val.resize(size);
+    for (uint32_t i = 0; i < size; i++) {
+      *this | val[i];
+    }
+    return *this;
+  }
+
+  Serializer& operator|(std::string& val);
 
   // Returns the desired version for serialization.
   virtual uint32_t GetVersion() const = 0;
@@ -42,51 +85,6 @@ class Serializer {
   // Reads or writes bytes.
   virtual void SerializeBytes(void* data, uint32_t size) = 0;
 };
-
-template <typename T>
-auto SerializeWithSerializer(Serializer& ser, T& val) -> decltype(val.Serialize(ser, 0)) {
-  val.Serialize(ser, ser.GetVersion());
-}
-
-template <typename Integer>
-auto SerializeWithSerializer(Serializer& ser, Integer& val)
-    -> std::enable_if_t<std::is_integral_v<Integer>, void> {
-  ser.SerializeBytes(&val, sizeof(val));
-}
-
-template <typename Enum>
-auto SerializeWithSerializer(Serializer& ser, Enum& val)
-    -> std::enable_if_t<std::is_enum_v<Enum>, void> {
-  uint32_t v = static_cast<uint32_t>(val);
-  SerializeWithSerializer(ser, v);
-  val = static_cast<Enum>(v);
-}
-
-template <typename T>
-void SerializeWithSerializer(Serializer& ser, std::optional<T>& val) {
-  uint32_t has_value = val.has_value();
-  SerializeWithSerializer(ser, has_value);
-  if (has_value) {
-    if (!val.has_value()) {
-      val.emplace();
-    }
-    SerializeWithSerializer(ser, val.value());
-  } else if (val.has_value()) {
-    val.reset();
-  }
-}
-
-template <typename T>
-void SerializeWithSerializer(Serializer& ser, std::vector<T>& val) {
-  uint32_t size = static_cast<uint32_t>(val.size());
-  SerializeWithSerializer(ser, size);
-  val.resize(size);
-  for (uint32_t i = 0; i < size; i++) {
-    SerializeWithSerializer(ser, val[i]);
-  }
-}
-
-void SerializeWithSerializer(Serializer& ser, std::string& val);
 
 }  // namespace debug
 

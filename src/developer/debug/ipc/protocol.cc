@@ -8,24 +8,18 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t MsgHeader::kSerializedHeaderSize;
-
-constexpr uint64_t HelloReply::kStreamSignature;
-
 const char* MsgHeader::TypeToString(MsgHeader::Type type) {
   switch (type) {
-#define FN(type, ...)            \
-  case MsgHeader::Type::k##type: \
-    return #type;
-    FOR_EACH_REQUEST_TYPE(FN)
-    FOR_EACH_NOTIFICATION_TYPE(FN)
-#undef FN
-
     case Type::kNone:
       return "None";
-    case Type::kNumMessages:
-      return "NumMessages";
+#define FN(type)                 \
+  case MsgHeader::Type::k##type: \
+    return #type;
+      FOR_EACH_REQUEST_TYPE(FN)
+      FOR_EACH_NOTIFICATION_TYPE(FN)
+#undef FN
   }
+  return "<Unknown>";
 }
 
 const char* InferiorTypeToString(InferiorType type) {

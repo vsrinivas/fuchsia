@@ -24,6 +24,7 @@
 #include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
@@ -349,7 +350,7 @@ void DebuggedThread::SendExceptionNotification(debug_ipc::NotifyException* excep
 
   LogExceptionNotification(FROM_HERE, this, *exception);
   // Send notification.
-  debug_agent_->stream()->Write(debug_ipc::SerializeNotifyException(*exception));
+  debug_agent_->SendNotification(*exception);
 }
 
 void DebuggedThread::ClientResume(const debug_ipc::ResumeRequest& request) {
@@ -493,11 +494,11 @@ std::vector<debug::RegisterValue> DebuggedThread::WriteRegisters(
 
 void DebuggedThread::SendThreadNotification() const {
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Sending starting notification.";
-  debug_ipc::NotifyThread notify;
+  debug_ipc::NotifyThreadStarting notify;
   notify.record = GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal);
   notify.timestamp = GetNowTimestamp();
 
-  debug_agent_->stream()->Write(debug_ipc::SerializeNotifyThreadStarting(notify));
+  debug_agent_->SendNotification(notify);
 }
 
 void DebuggedThread::WillDeleteProcessBreakpoint(ProcessBreakpoint* bp) {

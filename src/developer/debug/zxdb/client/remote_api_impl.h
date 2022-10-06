@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REMOTE_API_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_REMOTE_API_IMPL_H_
 
+#include <cstdint>
+
 #include "src/developer/debug/zxdb/client/remote_api.h"
 
 namespace zxdb {
@@ -19,6 +21,8 @@ class RemoteAPIImpl : public RemoteAPI {
   explicit RemoteAPIImpl(Session* session) : session_(session) {}
 
   // RemoteAPI implementation.
+  void SetVersion(uint32_t version) override { version_ = version; }
+
 #define FN(msg_type)                                                 \
   virtual void msg_type(const debug_ipc::msg_type##Request& request, \
                         fit::callback<void(const Err&, debug_ipc::msg_type##Reply)> cb) override;
@@ -39,6 +43,8 @@ class RemoteAPIImpl : public RemoteAPI {
   void Send(const SendMsgType& send_msg, fit::callback<void(const Err&, RecvMsgType)> callback);
 
   Session* session_;
+
+  uint32_t version_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteAPIImpl);
 };

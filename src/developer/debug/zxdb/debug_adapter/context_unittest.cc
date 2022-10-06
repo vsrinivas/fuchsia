@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
@@ -92,7 +93,7 @@ TEST_F(DebugAdapterContextTest, ThreadStartExitEvent) {
   RunClient();
   EXPECT_TRUE(start_received);
 
-  debug_ipc::NotifyThread notify;
+  debug_ipc::NotifyThreadExiting notify;
   notify.record.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notify.record.state = debug_ipc::ThreadRecord::State::kDying;
   session().DispatchNotifyThreadExiting(notify);

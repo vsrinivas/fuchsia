@@ -26,18 +26,18 @@ using debug::RegisterID;
 template <typename Type>
 bool SerializeDeserialize(const Type& in, Type* out) {
   uint32_t in_transaction_id = 32;
-  std::vector<char> serialized = Serialize(in, in_transaction_id);
+  std::vector<char> serialized = Serialize(in, in_transaction_id, kCurrentProtocolVersion);
 
   uint32_t out_transaction_id = 0;
-  if (!Deserialize(std::move(serialized), out, &out_transaction_id))
+  if (!Deserialize(std::move(serialized), out, &out_transaction_id, kCurrentProtocolVersion))
     return false;
   EXPECT_EQ(in_transaction_id, out_transaction_id);
   return true;
 }
 
-#define FN(msg_name, msg_type)                                                              \
-  [[maybe_unused]] bool SerializeDeserialize##msg_name(const msg_type& in, msg_type* out) { \
-    return Deserialize##msg_name(Serialize##msg_name(in), out);                             \
+#define FN(msg_type)                                                                          \
+  [[maybe_unused]] bool SerializeDeserialize(const msg_type& in, msg_type* out) {             \
+    return Deserialize(Serialize(in, kCurrentProtocolVersion), out, kCurrentProtocolVersion); \
   }
 FOR_EACH_NOTIFICATION_TYPE(FN)
 #undef FN
@@ -916,16 +916,16 @@ TEST(Protocol, WriteRegistersReply) {
 
 // Notifications -----------------------------------------------------------------------------------
 
-TEST(Protocol, NotifyThread) {
-  NotifyThread initial;
+TEST(Protocol, NotifyThreadStarting) {
+  NotifyThreadStarting initial;
   initial.record.id = {.process = 9887, .thread = 1234};
   initial.record.name = "Wolfgang";
   initial.record.state = ThreadRecord::State::kDying;
   initial.record.stack_amount = ThreadRecord::StackAmount::kNone;
   initial.timestamp = kTestTimestampDefault;
 
-  NotifyThread second;
-  ASSERT_TRUE(SerializeDeserializeNotifyThreadStarting(initial, &second));
+  NotifyThreadStarting second;
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.record.id, second.record.id);
   EXPECT_EQ(initial.record.name, second.record.name);
@@ -973,7 +973,7 @@ TEST(Protocol, NotifyException) {
   initial.memory_blocks[1].size = 0;
 
   NotifyException second;
-  ASSERT_TRUE(SerializeDeserializeNotifyException(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.thread.id, second.thread.id);
   EXPECT_EQ(initial.thread.name, second.thread.name);
@@ -1029,7 +1029,7 @@ TEST(Protocol, NotifyModules) {
   initial.timestamp = kTestTimestampDefault;
 
   NotifyModules second;
-  ASSERT_TRUE(SerializeDeserializeNotifyModules(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   ASSERT_EQ(initial.modules.size(), second.modules.size());
@@ -1050,7 +1050,7 @@ TEST(Protocol, NotifyProcessStarting) {
   initial.component = ComponentInfo{.moniker = "moniker", .url = "url"};
 
   NotifyProcessStarting second;
-  ASSERT_TRUE(SerializeDeserializeNotifyProcessStarting(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(second.type, initial.type);
   EXPECT_EQ(initial.koid, second.koid);
@@ -1068,7 +1068,7 @@ TEST(Protocol, NotifyProcessExiting) {
   initial.timestamp = kTestTimestampDefault;
 
   NotifyProcessExiting second;
-  ASSERT_TRUE(SerializeDeserializeNotifyProcessExiting(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.return_code, second.return_code);
@@ -1084,7 +1084,7 @@ TEST(Protocol, NotifyIO) {
   initial.timestamp = kTestTimestampDefault;
 
   NotifyIO second;
-  ASSERT_TRUE(SerializeDeserializeNotifyIO(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.type, second.type);
@@ -1103,7 +1103,7 @@ TEST(Protocol, NotifyLog) {
   initial.log = "Log message";
 
   NotifyLog second;
-  ASSERT_TRUE(SerializeDeserializeNotifyLog(initial, &second));
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.severity, second.severity);
@@ -1113,18 +1113,25 @@ TEST(Protocol, NotifyLog) {
   EXPECT_EQ(initial.log, second.log);
 }
 
-TEST(Protocol, NotifyComponent) {
-  NotifyComponent initial;
+TEST(Protocol, NotifyComponentStarting) {
+  NotifyComponentStarting initial;
   initial.timestamp = kTestTimestampDefault;
   initial.component.moniker = "/moniker";
   initial.component.url = "fuchsia-pkg://url";
 
-  NotifyComponent second;
-  ASSERT_TRUE(SerializeDeserializeNotifyComponentStarting(initial, &second));
+  NotifyComponentStarting second;
+  ASSERT_TRUE(SerializeDeserialize(initial, &second));
 
   EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.component.moniker, second.component.moniker);
   EXPECT_EQ(initial.component.url, second.component.url);
+}
+
+TEST(Protocol, NotifyComponentExitingWithVersion) {
+  NotifyComponentExiting initial;
+
+  std::vector<char> serialized = Serialize(initial, 0);
+  EXPECT_TRUE(serialized.empty());
 }
 
 }  // namespace debug_ipc

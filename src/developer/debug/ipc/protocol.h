@@ -13,7 +13,34 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 51;
+// ABI Compatibility Guide
+//
+// Goal: within the same Fuchsia API level, different versions of zxdb and debug_agent should be
+// compatible with each other.
+//
+//   - If you want to rename something, don't bump the version number because ABI doesn't change.
+//   - If you want to add/remove a field to/from a message, bump the version number, and use e.g.
+//     `if (ver > ...) { ser | some_field; }` in the `Serialize` function.
+//   - If you want to add a new request/notification type, pick a new message id, bump the version,
+//     and define a static variable `uint32_t kSupportedSinceVersion` in the definition of the
+//     request/notification type. This will make the `Serialize` function return empty bytes when
+//     serializing so the message won't be sent.
+//   - You don't want to remove a message type. Just mark it as deprecated but still handle it
+//     when receiving it.
+//   - More complex logic could be implemented by checking the protocol version before sending.
+//   - kMinimumProtocolVersion can only be updated when FUCHSIA_API_LEVEL bumps, which means we
+//     should increase kMinimumProtocolVersion to the kCurrentProtocolVersion and the support for
+//     old versions can be dropped.
+
+constexpr uint32_t kCurrentProtocolVersion = 52;
+
+#if !defined(FUCHSIA_API_LEVEL)
+#error FUCHSIA_API_LEVEL must be defined
+#elif FUCHSIA_API_LEVEL == 9
+constexpr uint32_t kMinimumProtocolVersion = 52;
+#else
+constexpr uint32_t kMinimumProtocolVersion = kCurrentProtocolVersion;
+#endif
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -57,37 +84,64 @@ static_assert(static_cast<int>(debug::Arch::kArm64) == 2);
 
 // The "notify" messages are sent unrequested from the agent to the client.
 //
-// Enumerate over the (name, type) of all possible notification types since some notifications share
-// the same message type. The message id is MsgHeader::Type::k##name, and the type is type.
-#define FOR_EACH_NOTIFICATION_TYPE(FN)             \
-  FN(NotifyException, NotifyException)             \
-  FN(NotifyIO, NotifyIO)                           \
-  FN(NotifyModules, NotifyModules)                 \
-  FN(NotifyProcessExiting, NotifyProcessExiting)   \
-  FN(NotifyProcessStarting, NotifyProcessStarting) \
-  FN(NotifyThreadExiting, NotifyThread)            \
-  FN(NotifyThreadStarting, NotifyThread)           \
-  FN(NotifyLog, NotifyLog)                         \
-  FN(NotifyComponentExiting, NotifyComponent)      \
-  FN(NotifyComponentStarting, NotifyComponent)
+// Enumerate over the name of all possible notification types. The message id is
+// MsgHeader::Type::k##name, and the type is type.
+#define FOR_EACH_NOTIFICATION_TYPE(FN) \
+  FN(NotifyException)                  \
+  FN(NotifyIO)                         \
+  FN(NotifyModules)                    \
+  FN(NotifyProcessExiting)             \
+  FN(NotifyProcessStarting)            \
+  FN(NotifyThreadExiting)              \
+  FN(NotifyThreadStarting)             \
+  FN(NotifyLog)                        \
+  FN(NotifyComponentExiting)           \
+  FN(NotifyComponentStarting)
 
 // A message consists of a MsgHeader followed by a serialized version of
 // whatever struct is associated with that message type. Use the MessageWriter
 // class to build this up, which will reserve room for the header and allows
 // the structs to be appended, possibly dynamically.
 struct MsgHeader {
-  // clang-format off
   enum class Type : uint32_t {
     kNone = 0,
 
-#define FN(msg_name, ...) k##msg_name,
-    FOR_EACH_REQUEST_TYPE(FN)
-    FOR_EACH_NOTIFICATION_TYPE(FN)
-#undef FN
+    kHello = 1,
+    kAddOrChangeBreakpoint = 2,
+    kAddressSpace = 3,
+    kAttach = 4,
+    kDetach = 5,
+    kUpdateFilter = 6,
+    kKill = 7,
+    kLaunch = 8,
+    kModules = 9,
+    kPause = 10,
+    kProcessTree = 11,
+    kReadMemory = 12,
+    kReadRegisters = 13,
+    kWriteRegisters = 14,
+    kRemoveBreakpoint = 15,
+    kResume = 16,
+    kStatus = 17,
+    kSysInfo = 18,
+    kThreadStatus = 19,
+    kThreads = 20,
+    kWriteMemory = 21,
+    kLoadInfoHandleTable = 22,
+    kUpdateGlobalSettings = 23,
+    kSaveMinidump = 24,
 
-    kNumMessages,
+    kNotifyException = 101,
+    kNotifyIO = 102,
+    kNotifyModules = 103,
+    kNotifyProcessExiting = 104,
+    kNotifyProcessStarting = 105,
+    kNotifyThreadExiting = 106,
+    kNotifyThreadStarting = 107,
+    kNotifyLog = 108,
+    kNotifyComponentExiting = 109,
+    kNotifyComponentStarting = 110,
   };
-  // clang-format on
   static const char* TypeToString(Type);
 
   uint32_t size = 0;  // Size includes this header.
@@ -106,7 +160,9 @@ struct MsgHeader {
 };
 
 struct HelloRequest {
-  void Serialize(Serializer& ser, uint32_t ver) {}
+  uint32_t version = 0;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | version; }
 };
 struct HelloReply {
   // Stream signature to make sure we're talking to the right service.
@@ -114,7 +170,7 @@ struct HelloReply {
   static constexpr uint64_t kStreamSignature = 0x7a7864624950433e;
 
   uint64_t signature = kStreamSignature;
-  uint32_t version = kProtocolVersion;
+  uint32_t version = 0;
   debug::Arch arch = debug::Arch::kUnknown;
   uint64_t page_size = 0;
 
@@ -540,8 +596,16 @@ struct NotifyProcessExiting {
   void Serialize(Serializer& ser, uint32_t ver) { ser | timestamp | process_koid | return_code; }
 };
 
-// Data for thread created and destroyed messages.
-struct NotifyThread {
+// Data for thread created.
+struct NotifyThreadStarting {
+  uint64_t timestamp = kTimestampDefault;
+  ThreadRecord record;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | timestamp | record; }
+};
+
+// Data for thread destroyed.
+struct NotifyThreadExiting {
   uint64_t timestamp = kTimestampDefault;
   ThreadRecord record;
 
@@ -655,10 +719,21 @@ struct NotifyLog {
   void Serialize(Serializer& ser, uint32_t ver) { ser | timestamp | severity | location | log; }
 };
 
-// Notify that a component has started or exited.
-// Used by both |kNotifyComponentExiting| and |kNotifyComponentStarting|.
+// Notify that a component has started.
 // Only components of interest, i.e., those matching at least one of the filters, will be notified.
-struct NotifyComponent {
+struct NotifyComponentStarting {
+  uint64_t timestamp = kTimestampDefault;
+
+  ComponentInfo component;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | timestamp | component; }
+};
+
+// Notify that a component has exited.
+// Only components of interest, i.e., those matching at least one of the filters, will be notified.
+struct NotifyComponentExiting {
+  static constexpr uint32_t kSupportedSinceVersion = 52;
+
   uint64_t timestamp = kTimestampDefault;
 
   ComponentInfo component;

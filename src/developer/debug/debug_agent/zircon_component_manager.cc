@@ -168,7 +168,7 @@ void SendLogs(DebugAgent* debug_agent, std::vector<fuchsia::diagnostics::Formatt
     }
   }
 
-  debug_agent->stream()->Write(debug_ipc::SerializeNotifyIO(notify));
+  debug_agent->SendNotification(notify);
 }
 
 }  // namespace

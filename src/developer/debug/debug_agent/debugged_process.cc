@@ -269,7 +269,7 @@ void DebuggedProcess::SendModuleNotification() {
 
   DEBUG_LOG(Process) << LogPreamble(this) << "Sending modules.";
 
-  debug_agent_->stream()->Write(debug_ipc::SerializeNotifyModules(notify));
+  debug_agent_->SendNotification(notify);
 }
 
 SoftwareBreakpoint* DebuggedProcess::FindSoftwareBreakpoint(uint64_t address) const {
@@ -448,7 +448,7 @@ void DebuggedProcess::OnProcessTerminated() {
   notify.return_code = process_handle_->GetReturnCode();
   notify.timestamp = GetNowTimestamp();
 
-  debug_agent_->stream()->Write(debug_ipc::SerializeNotifyProcessExiting(notify));
+  debug_agent_->SendNotification(notify);
 
   debug_agent_->RemoveDebuggedProcess(koid());
   // "THIS" IS NOW DELETED.
@@ -496,12 +496,12 @@ void DebuggedProcess::OnThreadExiting(std::unique_ptr<ExceptionHandle> exception
   threads_.erase(thread_id);
 
   // Notify the client. Can't call GetThreadRecord since the thread doesn't exist any more.
-  debug_ipc::NotifyThread notify;
+  debug_ipc::NotifyThreadExiting notify;
   notify.record.id = {.process = koid(), .thread = thread_id};
   notify.record.state = debug_ipc::ThreadRecord::State::kDead;
   notify.timestamp = GetNowTimestamp();
 
-  debug_agent_->stream()->Write(debug_ipc::SerializeNotifyThreadExiting(notify));
+  debug_agent_->SendNotification(notify);
 }
 
 void DebuggedProcess::OnException(std::unique_ptr<ExceptionHandle> exception) {
@@ -666,7 +666,7 @@ void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type, const std::vector<c
     notify.data = std::move(msg);
     notify.timestamp = GetNowTimestamp();
 
-    debug_agent_->stream()->Write(debug_ipc::SerializeNotifyIO(notify));
+    debug_agent_->SendNotification(notify);
   }
 }
 

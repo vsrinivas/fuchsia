@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MINIDUMP_REMOTE_API_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MINIDUMP_REMOTE_API_H_
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <optional>

@@ -8,6 +8,7 @@
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -63,8 +64,8 @@ class BreakpointStreamBackend : public LocalStreamBackend {
   // Searches the loaded modules for specific one.
   void HandleNotifyModules(NotifyModules) override;
   void HandleNotifyProcessExiting(NotifyProcessExiting) override;
-  void HandleNotifyThreadStarting(NotifyThread) override;
-  void HandleNotifyThreadExiting(NotifyThread) override;
+  void HandleNotifyThreadStarting(NotifyThreadStarting) override;
+  void HandleNotifyThreadExiting(NotifyThreadExiting) override;
   void HandleNotifyException(NotifyException) override;
 
   // Getters -------------------------------------------------------------------
@@ -103,9 +104,9 @@ class BreakpointStreamBackend : public LocalStreamBackend {
 
   size_t thread_count_ = 0;
   std::vector<zx_koid_t> thread_koids_;
-  std::vector<NotifyThread> thread_starts_;
+  std::vector<NotifyThreadStarting> thread_starts_;
   std::vector<NotifyException> thread_excp_;
-  std::vector<NotifyThread> thread_exits_;
+  std::vector<NotifyThreadExiting> thread_exits_;
 
   bool initial_thread_check_passed_ = false;
   bool got_modules_check_passed_ = false;
@@ -281,7 +282,7 @@ void BreakpointStreamBackend::HandleNotifyProcessExiting(NotifyProcessExiting pr
   ShouldQuitLoop();
 }
 
-void BreakpointStreamBackend::HandleNotifyThreadStarting(NotifyThread thread) {
+void BreakpointStreamBackend::HandleNotifyThreadStarting(NotifyThreadStarting thread) {
   if (process_koid_ == 0) {
     process_koid_ = thread.record.id.process;
     DEBUG_LOG(Test) << "Process starting: " << process_koid_;
@@ -292,7 +293,7 @@ void BreakpointStreamBackend::HandleNotifyThreadStarting(NotifyThread thread) {
   ShouldQuitLoop();
 }
 
-void BreakpointStreamBackend::HandleNotifyThreadExiting(NotifyThread thread) {
+void BreakpointStreamBackend::HandleNotifyThreadExiting(NotifyThreadExiting thread) {
   DEBUG_LOG(Test) << "Thread exiting: " << thread.record.id.thread;
   thread_exits_.push_back(thread);
   ShouldQuitLoop();

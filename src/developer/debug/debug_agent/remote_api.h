@@ -13,6 +13,9 @@ namespace debug_agent {
 // client->agent IPC requests.
 class RemoteAPI {
  public:
+  // Get the IPC version that should be used to deserialize.
+  virtual uint32_t GetVersion() = 0;
+
 #define FN(type) \
   virtual void On##type(const debug_ipc::type##Request& request, debug_ipc::type##Reply* reply) = 0;
 

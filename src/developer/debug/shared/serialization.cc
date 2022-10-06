@@ -6,11 +6,12 @@
 
 namespace debug {
 
-void SerializeWithSerializer(Serializer& ser, std::string& val) {
+Serializer& Serializer::operator|(std::string& val) {
   uint32_t size = static_cast<uint32_t>(val.size());
-  SerializeWithSerializer(ser, size);
+  *this | size;
   val.resize(size);
-  ser.SerializeBytes(val.data(), size);
+  SerializeBytes(val.data(), size);
+  return *this;
 }
 
 }  // namespace debug

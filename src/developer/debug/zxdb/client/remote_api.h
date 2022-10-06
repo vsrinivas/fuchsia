@@ -24,6 +24,9 @@ class RemoteAPI {
  public:
   virtual ~RemoteAPI() = default;
 
+  // Set the IPC version used.
+  virtual void SetVersion(uint32_t) {}
+
 #define FN(msg_type)                                                                      \
   virtual void msg_type(const debug_ipc::msg_type##Request& request,                      \
                         fit::callback<void(const Err&, debug_ipc::msg_type##Reply)> cb) { \

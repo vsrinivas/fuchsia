@@ -208,7 +208,9 @@ void Session::PendingConnection::ConnectCompleteMainThread(fxl::RefPtr<PendingCo
 
   // Send "Hello" message. We can't use the Session::Send infrastructure since the connection hasn't
   // technically been established yet.
-  buffer_->stream().Write(debug_ipc::Serialize(debug_ipc::HelloRequest(), 1));
+  debug_ipc::HelloRequest request;
+  request.version = debug_ipc::kCurrentProtocolVersion;
+  buffer_->stream().Write(debug_ipc::Serialize(request, 1, 0));  // version not negotiated yet.
 }
 
 void Session::PendingConnection::DataAvailableMainThread(fxl::RefPtr<PendingConnection> owner) {
@@ -228,7 +230,7 @@ void Session::PendingConnection::DataAvailableMainThread(fxl::RefPtr<PendingConn
   uint32_t transaction_id = 0;
 
   Err err;
-  if (!debug_ipc::Deserialize(std::move(serialized), &reply, &transaction_id) ||
+  if (!debug_ipc::Deserialize(std::move(serialized), &reply, &transaction_id, 0) ||
       reply.signature != debug_ipc::HelloReply::kStreamSignature) {
     // Corrupt.
     err = Err("Corrupted reply, service is probably not the debug agent.");
@@ -312,7 +314,8 @@ void Session::OnStreamReadable() {
     serialized_header.resize(debug_ipc::MsgHeader::kSerializedHeaderSize);
     stream_->Peek(serialized_header.data(), debug_ipc::MsgHeader::kSerializedHeaderSize);
 
-    debug_ipc::MessageReader reader(std::move(serialized_header));
+    // header doesn't have a version.
+    debug_ipc::MessageReader reader(std::move(serialized_header), 0);
     debug_ipc::MsgHeader header;
     reader | header;
     // Since we already validated there is enough data for the header, the header read should not
@@ -511,7 +514,7 @@ bool Session::ClearConnectionData() {
   return true;
 }
 
-void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify) {
+void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThreadStarting& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.id.process);
   if (!process) {
     LOGS(Warn) << "Received thread starting notification for an "
@@ -523,7 +526,7 @@ void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify
   process->OnThreadStarting(notify.record);
 }
 
-void Session::DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify) {
+void Session::DispatchNotifyThreadExiting(const debug_ipc::NotifyThreadExiting& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.id.process);
   if (!process) {
     LOGS(Warn) << "Received thread exiting notification for an "
@@ -678,13 +681,13 @@ void Session::DispatchNotifyLog(const debug_ipc::NotifyLog& notify) {
       << notify.log;
 }
 
-void Session::DispatchNotifyComponentStarting(const debug_ipc::NotifyComponent& notify) {
+void Session::DispatchNotifyComponentStarting(const debug_ipc::NotifyComponentStarting& notify) {
   for (auto& observer : component_observers_) {
     observer.OnComponentStarted(notify.component.moniker, notify.component.url);
   }
 }
 
-void Session::DispatchNotifyComponentExiting(const debug_ipc::NotifyComponent& notify) {
+void Session::DispatchNotifyComponentExiting(const debug_ipc::NotifyComponentExiting& notify) {
   for (auto& observer : component_observers_) {
     observer.OnComponentExited(notify.component.moniker, notify.component.url);
   }
@@ -693,12 +696,12 @@ void Session::DispatchNotifyComponentExiting(const debug_ipc::NotifyComponent& n
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data) {
   DEBUG_LOG(Session) << "Got notification: " << debug_ipc::MsgHeader::TypeToString(header.type);
   switch (header.type) {
-#define FN(msg_name, msg_type)                                      \
-  case debug_ipc::MsgHeader::Type::k##msg_name: {                   \
-    debug_ipc::msg_type notify;                                     \
-    if (debug_ipc::Deserialize##msg_name(std::move(data), &notify)) \
-      Dispatch##msg_name(notify);                                   \
-    break;                                                          \
+#define FN(msg_type)                                                    \
+  case debug_ipc::MsgHeader::Type::k##msg_type: {                       \
+    debug_ipc::msg_type notify;                                         \
+    if (debug_ipc::Deserialize(std::move(data), &notify, ipc_version_)) \
+      Dispatch##msg_type(notify);                                       \
+    break;                                                              \
   }
     FOR_EACH_NOTIFICATION_TYPE(FN)
 #undef define
@@ -736,18 +739,20 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
   }
 
   // Version check.
-  if (reply.version != debug_ipc::kProtocolVersion) {
+  if (reply.version > debug_ipc::kCurrentProtocolVersion ||
+      reply.version < debug_ipc::kMinimumProtocolVersion) {
     last_connection_error_ =
-        Err("The IPC version of the debug_agent on the system (v%u) doesn't match\n"
-            "the zxdb frontend's IPC version (v%u).\n"
-            "Try to reload debug_agent by `ffx component stop /core/debug_agent`\n"
-            "if zxdb is recently updated.",
-            reply.version, debug_ipc::kProtocolVersion);
+        Err("The IPC version of the debug_agent on the system (v%u) is not in the supported\n"
+            "range of the zxdb frontend (v%u to v%u).",
+            reply.version, debug_ipc::kMinimumProtocolVersion, debug_ipc::kCurrentProtocolVersion);
     if (callback) {
       callback(last_connection_error_);
     }
     return;
   }
+
+  ipc_version_ = reply.version;
+  remote_api_->SetVersion(reply.version);
 
   // Initialize arch-specific stuff.
   Err arch_err = SetArch(reply.arch, reply.page_size);

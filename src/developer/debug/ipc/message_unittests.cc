@@ -13,7 +13,7 @@ TEST(Message, ReadWriteBytes) {
   constexpr uint32_t byte_count = 12;
   char bytes[byte_count] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 
-  MessageWriter writer;
+  MessageWriter writer(0, 0);
   writer.SerializeBytes(bytes, byte_count);
   writer.SerializeBytes(bytes, byte_count);
 
@@ -33,7 +33,7 @@ TEST(Message, ReadWriteBytes) {
     EXPECT_EQ(i % byte_count, static_cast<uint32_t>(output[i]));
   }
 
-  MessageReader reader(std::move(output));
+  MessageReader reader(std::move(output), 0);
   uint32_t read_size = 0;
   reader | read_size;
   ASSERT_FALSE(reader.has_error());
@@ -61,7 +61,7 @@ TEST(Message, ReadWriteBytes) {
 }
 
 TEST(Message, ReadWriteNumbers) {
-  MessageWriter writer;
+  MessageWriter writer(0, 0);
   uint32_t size = 0;  // Message size header.
   writer | size;
 
@@ -75,7 +75,7 @@ TEST(Message, ReadWriteNumbers) {
   constexpr uint32_t expected_message_size = 20;
   ASSERT_EQ(expected_message_size, message.size());
 
-  MessageReader reader(std::move(message));
+  MessageReader reader(std::move(message), 0);
 
   // Message size header.
   uint32_t read_message_size = 0;
@@ -100,7 +100,7 @@ TEST(Message, ReadWriteNumbers) {
 }
 
 TEST(Message, ReadWriteOptional) {
-  MessageWriter writer;
+  MessageWriter writer(0, 0);
   uint32_t size = 0;  // Message size header.
   writer | size;
 
@@ -114,7 +114,7 @@ TEST(Message, ReadWriteOptional) {
   constexpr uint32_t expected_message_size = 20;
   ASSERT_EQ(expected_message_size, message.size());
 
-  MessageReader reader(std::move(message));
+  MessageReader reader(std::move(message), 0);
 
   // Message size header.
   uint32_t read_message_size = 0;

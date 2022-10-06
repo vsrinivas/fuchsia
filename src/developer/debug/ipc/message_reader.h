@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -17,7 +18,8 @@ namespace debug_ipc {
 
 class MessageReader : public Serializer {
  public:
-  explicit MessageReader(std::vector<char> message) : message_(std::move(message)) {}
+  MessageReader(std::vector<char> message, uint32_t version)
+      : message_(std::move(message)), version_(version) {}
 
   bool has_error() const { return has_error_; }
 
@@ -26,12 +28,14 @@ class MessageReader : public Serializer {
   size_t message_size() const { return message_.size(); }
 
   // Implement |Serializer|.
-  uint32_t GetVersion() const override { return kProtocolVersion; }
+  uint32_t GetVersion() const override { return version_; }
   // Although it's called "SerializeBytes", it's actually "DeserializeBytes".
   void SerializeBytes(void* data, uint32_t len) override;
 
  private:
   const std::vector<char> message_;
+
+  uint32_t version_ = 0;
 
   size_t offset_ = 0;  // Current read offset.
 
@@ -39,14 +43,16 @@ class MessageReader : public Serializer {
 };
 
 // Helper functions to deserialize bytes into messages. Returns true if succeeds.
-#define FN(msg_type)                                                                              \
-  bool Deserialize(std::vector<char> data, msg_type##Request* request, uint32_t* transaction_id); \
-  bool Deserialize(std::vector<char> data, msg_type##Reply* reply, uint32_t* transaction_id);
+#define FN(msg_type)                                                                             \
+  bool Deserialize(std::vector<char> data, msg_type##Request* request, uint32_t* transaction_id, \
+                   uint32_t version);                                                            \
+  bool Deserialize(std::vector<char> data, msg_type##Reply* reply, uint32_t* transaction_id,     \
+                   uint32_t version);
 
 FOR_EACH_REQUEST_TYPE(FN)
 #undef FN
 
-#define FN(msg_name, msg_type) bool Deserialize##msg_name(std::vector<char> data, msg_type* notify);
+#define FN(msg_type) bool Deserialize(std::vector<char> data, msg_type* notify, uint32_t version);
 
 FOR_EACH_NOTIFICATION_TYPE(FN)
 #undef FN

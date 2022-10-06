@@ -8,6 +8,7 @@
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -37,7 +38,7 @@ class WatchpointStreamBackend : public LocalStreamBackend {
   void HandleNotifyModules(NotifyModules) override;
   void HandleNotifyException(NotifyException) override;
   void HandleNotifyProcessExiting(NotifyProcessExiting) override;
-  void HandleNotifyThreadStarting(NotifyThread) override;
+  void HandleNotifyThreadStarting(NotifyThreadStarting) override;
 
   // Getters -------------------------------------------------------------------
 
@@ -218,7 +219,7 @@ void WatchpointStreamBackend::HandleNotifyException(NotifyException exception) {
   ShouldQuitLoop();
 }
 
-void WatchpointStreamBackend::HandleNotifyThreadStarting(NotifyThread thread) {
+void WatchpointStreamBackend::HandleNotifyThreadStarting(NotifyThreadStarting thread) {
   process_koid_ = thread.record.id.process;
   thread_koid_ = thread.record.id.thread;
   ShouldQuitLoop();

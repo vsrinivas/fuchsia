@@ -7,6 +7,8 @@
 
 #include <zircon/types.h>
 
+#include <algorithm>
+#include <cstdint>
 #include <map>
 #include <memory>
 
@@ -16,6 +18,7 @@
 #include "src/developer/debug/debug_agent/filter.h"
 #include "src/developer/debug/debug_agent/limbo_provider.h"
 #include "src/developer/debug/debug_agent/remote_api.h"
+#include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/logging/logging.h"
@@ -48,8 +51,6 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate, public 
   void Connect(debug::StreamBuffer*);
   void Disconnect();
 
-  debug::StreamBuffer* stream();
-
   void RemoveDebuggedProcess(zx_koid_t process_koid);
 
   Breakpoint* GetBreakpoint(uint32_t breakpoint_id);
@@ -77,7 +78,16 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate, public 
   std::vector<debug_ipc::ProcessThreadId> ClientSuspendAll(
       zx_koid_t except_process = ZX_KOID_INVALID, zx_koid_t except_thread = ZX_KOID_INVALID);
 
+  // Send notification to the client.
+  template <typename NotifyType>
+  void SendNotification(const NotifyType& notify) {
+    std::vector<char> serialized = debug_ipc::Serialize(notify, ipc_version_);
+    if (!serialized.empty())
+      stream_->Write(std::move(serialized));
+  }
+
   // RemoteAPI implementation.
+  uint32_t GetVersion() override { return ipc_version_; }
   void OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) override;
   void OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) override;
   void OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) override;
@@ -158,6 +168,7 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate, public 
   std::unique_ptr<SystemInterface> system_interface_;
 
   debug::StreamBuffer* stream_ = nullptr;
+  uint32_t ipc_version_ = 0;
 
   std::unique_ptr<JobHandle> root_job_;
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;

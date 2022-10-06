@@ -83,7 +83,7 @@ Process* RemoteAPITest::InjectProcess(uint64_t process_koid) {
 }
 
 Thread* RemoteAPITest::InjectThread(uint64_t process_koid, uint64_t thread_koid) {
-  debug_ipc::NotifyThread notify;
+  debug_ipc::NotifyThreadStarting notify;
   notify.record.id = {.process = process_koid, .thread = thread_koid};
   notify.record.name = fxl::StringPrintf("test %" PRIu64, thread_koid);
   notify.record.state = debug_ipc::ThreadRecord::State::kRunning;

@@ -37,8 +37,8 @@ class LocalStreamBackend : public debug::StreamBuffer::Writer {
   virtual void HandleNotifyModules(debug_ipc::NotifyModules) {}
   virtual void HandleNotifyProcessExiting(debug_ipc::NotifyProcessExiting) {}
   virtual void HandleNotifyProcessStarting(debug_ipc::NotifyProcessStarting) {}
-  virtual void HandleNotifyThreadExiting(debug_ipc::NotifyThread) {}
-  virtual void HandleNotifyThreadStarting(debug_ipc::NotifyThread) {}
+  virtual void HandleNotifyThreadExiting(debug_ipc::NotifyThreadExiting) {}
+  virtual void HandleNotifyThreadStarting(debug_ipc::NotifyThreadStarting) {}
   virtual void HandleNotifyLog(debug_ipc::NotifyLog) {}
 
   // The stream will call this function to send the data to whatever backend it

@@ -160,16 +160,16 @@ class Session : public SettingStoreObserver {
   // set_metadata flag. This allows them to set up the thread's state manually before issuing an
   // exception. Production code should always set the set_metadata flag to populate the thread's
   // state from the data in the exception.
-  void DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify);
-  void DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify);
+  void DispatchNotifyThreadStarting(const debug_ipc::NotifyThreadStarting& notify);
+  void DispatchNotifyThreadExiting(const debug_ipc::NotifyThreadExiting& notify);
   void DispatchNotifyException(const debug_ipc::NotifyException& notify, bool set_metadata = true);
   void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
   void DispatchNotifyProcessStarting(const debug_ipc::NotifyProcessStarting& notify);
   void DispatchNotifyProcessExiting(const debug_ipc::NotifyProcessExiting& notify);
   void DispatchNotifyIO(const debug_ipc::NotifyIO& notify);
   void DispatchNotifyLog(const debug_ipc::NotifyLog& notify);
-  void DispatchNotifyComponentStarting(const debug_ipc::NotifyComponent& notify);
-  void DispatchNotifyComponentExiting(const debug_ipc::NotifyComponent& notify);
+  void DispatchNotifyComponentStarting(const debug_ipc::NotifyComponentStarting& notify);
+  void DispatchNotifyComponentExiting(const debug_ipc::NotifyComponentExiting& notify);
 
   // SettingStoreObserver
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
@@ -252,6 +252,7 @@ class Session : public SettingStoreObserver {
   debug::StreamBuffer* stream_ = nullptr;
 
   std::unique_ptr<RemoteAPI> remote_api_;
+  uint32_t ipc_version_ = 0;
 
   // When using non-persistent connections (no connection passed in via the constructor), this will
   // hold the underlying OS connection that is used to back stream_ as well as the

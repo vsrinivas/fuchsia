@@ -8,6 +8,7 @@
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -24,7 +25,7 @@ class DynamicLoaderStreamBackend : public LocalStreamBackend {
   void set_remote_api(RemoteAPI* remote_api) { remote_api_ = remote_api; }
 
   // LocalStreamBackend implementation:
-  void HandleNotifyThreadStarting(debug_ipc::NotifyThread thread) override;
+  void HandleNotifyThreadStarting(debug_ipc::NotifyThreadStarting thread) override;
   void HandleNotifyModules(debug_ipc::NotifyModules modules) override;
   void HandleNotifyProcessExiting(debug_ipc::NotifyProcessExiting) override;
 
@@ -51,7 +52,8 @@ class DynamicLoaderStreamBackend : public LocalStreamBackend {
   zx_koid_t thread_koid_ = 0;
 };
 
-void DynamicLoaderStreamBackend::HandleNotifyThreadStarting(debug_ipc::NotifyThread thread) {
+void DynamicLoaderStreamBackend::HandleNotifyThreadStarting(
+    debug_ipc::NotifyThreadStarting thread) {
   if (stage_ == Stage::kWaitingForThread) {
     process_koid_ = thread.record.id.process;
     thread_koid_ = thread.record.id.thread;

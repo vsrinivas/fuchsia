@@ -45,7 +45,7 @@ class DebugAgentMockProcess : public MockProcess {
 
   void SuspendAndSendModulesIfKnown() override {
     // Send the modules over to the ipc.
-    debug_agent()->stream()->Write(debug_ipc::SerializeNotifyModules(modules_to_send_));
+    debug_agent()->SendNotification(modules_to_send_);
   }
 
   void set_modules_to_send(debug_ipc::NotifyModules m) { modules_to_send_ = std::move(m); }

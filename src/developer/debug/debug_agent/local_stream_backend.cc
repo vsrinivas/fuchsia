@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
@@ -32,63 +33,70 @@ size_t LocalStreamBackend::ConsumeStreamBufferData(const char* data, size_t len)
     case debug_ipc::MsgHeader::Type::kAttach: {
       debug_ipc::AttachReply attach;
       uint32_t transaction = 0;
-      if (!debug_ipc::Deserialize(std::move(msg_buffer), &attach, &transaction))
+      if (!debug_ipc::Deserialize(std::move(msg_buffer), &attach, &transaction,
+                                  debug_ipc::kCurrentProtocolVersion))
         FX_NOTREACHED();
       HandleAttach(std::move(attach));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyException: {
       debug_ipc::NotifyException exception;
-      if (!debug_ipc::DeserializeNotifyException(std::move(msg_buffer), &exception))
+      if (!debug_ipc::Deserialize(std::move(msg_buffer), &exception,
+                                  debug_ipc::kCurrentProtocolVersion))
         FX_NOTREACHED();
       HandleNotifyException(std::move(exception));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyIO: {
       debug_ipc::NotifyIO io;
-      if (!debug_ipc::DeserializeNotifyIO(std::move(msg_buffer), &io))
+      if (!debug_ipc::Deserialize(std::move(msg_buffer), &io, debug_ipc::kCurrentProtocolVersion))
         FX_NOTREACHED();
       HandleNotifyIO(std::move(io));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyModules: {
       debug_ipc::NotifyModules modules;
-      if (!debug_ipc::DeserializeNotifyModules(std::move(msg_buffer), &modules))
+      if (!debug_ipc::Deserialize(std::move(msg_buffer), &modules,
+                                  debug_ipc::kCurrentProtocolVersion))
         FX_NOTREACHED();
       HandleNotifyModules(std::move(modules));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
       debug_ipc::NotifyProcessExiting process;
-      if (!debug_ipc::DeserializeNotifyProcessExiting(std::move(msg_buffer), &process))
+      if (!debug_ipc::Deserialize(std::move(msg_buffer), &process,
+                                  debug_ipc::kCurrentProtocolVersion))
         FX_NOTREACHED();
       HandleNotifyProcessExiting(std::move(process));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyProcessStarting: {
       debug_ipc::NotifyProcessStarting process;
-      if (!debug_ipc::DeserializeNotifyProcessStarting(std::move(msg_buffer), &process))
+      if (!debug_ipc::Deserialize(std::move(msg_buffer), &process,
+                                  debug_ipc::kCurrentProtocolVersion))
         FX_NOTREACHED();
       HandleNotifyProcessStarting(std::move(process));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
-      debug_ipc::NotifyThread thread;
-      if (!debug_ipc::DeserializeNotifyThreadExiting(std::move(msg_buffer), &thread))
+      debug_ipc::NotifyThreadExiting thread;
+      if (!debug_ipc::Deserialize(std::move(msg_buffer), &thread,
+                                  debug_ipc::kCurrentProtocolVersion))
         FX_NOTREACHED();
       HandleNotifyThreadExiting(std::move(thread));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting: {
-      debug_ipc::NotifyThread thread;
-      if (!debug_ipc::DeserializeNotifyThreadStarting(std::move(msg_buffer), &thread))
+      debug_ipc::NotifyThreadStarting thread;
+      if (!debug_ipc::Deserialize(std::move(msg_buffer), &thread,
+                                  debug_ipc::kCurrentProtocolVersion))
         FX_NOTREACHED();
       HandleNotifyThreadStarting(std::move(thread));
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyLog: {
       debug_ipc::NotifyLog log;
-      if (!debug_ipc::DeserializeNotifyLog(std::move(msg_buffer), &log))
+      if (!debug_ipc::Deserialize(std::move(msg_buffer), &log, debug_ipc::kCurrentProtocolVersion))
         FX_NOTREACHED();
       HandleNotifyLog(std::move(log));
       break;

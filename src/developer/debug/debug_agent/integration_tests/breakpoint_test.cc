@@ -12,6 +12,7 @@
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
 #include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -85,7 +86,7 @@ class BreakpointStreamBackend : public LocalStreamBackend {
     loop_->QuitNow();
   }
 
-  void HandleNotifyThreadStarting(debug_ipc::NotifyThread thread) override {
+  void HandleNotifyThreadStarting(debug_ipc::NotifyThreadStarting thread) override {
     ASSERT_FALSE(thread_started_);
     thread_started_ = true;
     loop_->QuitNow();
@@ -97,7 +98,7 @@ class BreakpointStreamBackend : public LocalStreamBackend {
     loop_->QuitNow();
   }
 
-  void HandleNotifyThreadExiting(debug_ipc::NotifyThread thread) override {
+  void HandleNotifyThreadExiting(debug_ipc::NotifyThreadExiting thread) override {
     ASSERT_FALSE(thread_exited_);
     thread_exited_ = true;
 

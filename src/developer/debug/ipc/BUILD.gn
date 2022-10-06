@@ -4,6 +4,9 @@
 
 # This library is shared between the client and agent code. You should depend
 # on it via one of those targets.
+
+import("//build/config/fuchsia/platform_version.gni")
+
 group("ipc") {
   testonly = true
   deps = [
@@ -35,6 +38,8 @@ static_library("shared") {
     "unwinder_support.h",
   ]
 
+  public_configs = [ ":fuchsia_api_level" ]
+
   deps = [
     "//src/developer/debug/shared",
     "//zircon/system/public",
@@ -43,6 +48,14 @@ static_library("shared") {
   public_deps = [
     "//src/developer/debug/unwinder",
     "//src/lib/fxl",
+  ]
+}
+
+config("fuchsia_api_level") {
+  defines = [
+    # This is defined as __Fuchsia_API_level__ by clang if the target is Fuchsia.
+    # However, we also need this for host tools.
+    "FUCHSIA_API_LEVEL=${platform_version.in_development_api_level}",
   ]
 }
 

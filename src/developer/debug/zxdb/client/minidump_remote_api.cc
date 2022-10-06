@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "src/developer/debug/ipc/decode_exception.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/unwinder_support.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -432,7 +433,7 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
   reply.status = debug::Status();
   attached_ = true;
 
-  std::vector<debug_ipc::NotifyThread> notifications;
+  std::vector<debug_ipc::NotifyThreadStarting> notifications;
 
   for (const auto& thread : minidump_->Threads()) {
     auto& notification = notifications.emplace_back();

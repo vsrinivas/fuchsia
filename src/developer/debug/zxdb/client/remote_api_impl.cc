@@ -41,10 +41,23 @@ void RemoteAPIImpl::Send(const SendMsgType& send_msg,
     }
     return;
   }
-  session_->stream_->Write(debug_ipc::Serialize(send_msg, transaction_id));
+  std::vector<char> serialized = debug_ipc::Serialize(send_msg, transaction_id, version_);
+  if (serialized.empty()) {
+    if (callback) {
+      debug::MessageLoop::Current()->PostTask(
+          FROM_HERE, [callback = std::move(callback)]() mutable {
+            callback(Err(ErrType::kNotSupported,
+                         "The request is not supported in the current IPC version."),
+                     RecvMsgType());
+          });
+    }
+    return;
+  }
+
+  session_->stream_->Write(std::move(serialized));
   // This is the reply callback that unpacks the data in a vector, converts it to the requested
   // RecvMsgType struct, and issues the callback.
-  Session::Callback dispatch_callback = [callback = std::move(callback)](
+  Session::Callback dispatch_callback = [callback = std::move(callback), version = version_](
                                             const Err& err, std::vector<char> data) mutable {
     RecvMsgType reply;
     if (err.has_error()) {
@@ -55,7 +68,7 @@ void RemoteAPIImpl::Send(const SendMsgType& send_msg,
     }
     uint32_t transaction_id = 0;
     Err deserialization_err;
-    if (!debug_ipc::Deserialize(std::move(data), &reply, &transaction_id)) {
+    if (!debug_ipc::Deserialize(std::move(data), &reply, &transaction_id, version)) {
       reply = RecvMsgType();  // Could be in a half-read state.
       deserialization_err =
           Err(ErrType::kCorruptMessage,

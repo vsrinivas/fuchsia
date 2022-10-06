@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <cstdint>
 #include <vector>
 
 #include "src/developer/debug/ipc/protocol.h"
@@ -22,8 +23,10 @@ namespace debug_ipc {
 // with a struct which contains space for this explicitly.
 class MessageWriter : public Serializer {
  public:
-  // The argument is a hint for the initial size of the message.
-  explicit MessageWriter(size_t initial_size = 32) { buffer_.reserve(initial_size); }
+  // |initial_size| is a hint for the initial size of the message.
+  MessageWriter(uint32_t version, size_t initial_size) : version_(version) {
+    buffer_.reserve(initial_size);
+  }
 
   size_t current_length() const { return buffer_.size(); }
 
@@ -32,23 +35,25 @@ class MessageWriter : public Serializer {
   std::vector<char> MessageComplete();
 
   // Implement |Serializer|.
-  uint32_t GetVersion() const override { return kProtocolVersion; }
+  uint32_t GetVersion() const override { return version_; }
   void SerializeBytes(void* data, uint32_t len) override;
 
  private:
+  uint32_t version_;
   std::vector<char> buffer_;
 };
 
 // Helper functions to serialize messages into bytes.
-#define FN(msg_type)                                                                      \
-  std::vector<char> Serialize(const msg_type##Request& request, uint32_t transaction_id); \
-  std::vector<char> Serialize(const msg_type##Reply& reply, uint32_t transaction_id);
+#define FN(msg_type)                                                                     \
+  std::vector<char> Serialize(const msg_type##Request& request, uint32_t transaction_id, \
+                              uint32_t version);                                         \
+  std::vector<char> Serialize(const msg_type##Reply& reply, uint32_t transaction_id,     \
+                              uint32_t version);
 
 FOR_EACH_REQUEST_TYPE(FN)
 #undef FN
 
-// Since multiple notification messages could share the same type, distinguish them by the name.
-#define FN(msg_name, msg_type) std::vector<char> Serialize##msg_name(const msg_type& notify);
+#define FN(msg_type) std::vector<char> Serialize(const msg_type& notify, uint32_t version);
 
 FOR_EACH_NOTIFICATION_TYPE(FN)
 #undef FN

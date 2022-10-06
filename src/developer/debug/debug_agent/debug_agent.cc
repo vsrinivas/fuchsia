@@ -107,11 +107,6 @@ void DebugAgent::Disconnect() {
   procs_.clear();
 }
 
-debug::StreamBuffer* DebugAgent::stream() {
-  FX_DCHECK(stream_);
-  return stream_;
-}
-
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
   auto found = procs_.find(process_koid);
   if (found == procs_.end())
@@ -132,7 +127,16 @@ void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
 }
 
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) {
-  // Version and signature are default-initialized to their current values.
+  if (request.version >= debug_ipc::kMinimumProtocolVersion &&
+      request.version <= debug_ipc::kCurrentProtocolVersion) {
+    // Downgrade only when the requested version is supported by us.
+    ipc_version_ = request.version;
+  } else {
+    ipc_version_ = debug_ipc::kCurrentProtocolVersion;
+  }
+
+  // Signature is default-initialized.
+  reply->version = ipc_version_;
   reply->arch = arch::GetCurrentArch();
   reply->page_size = zx_system_get_page_size();
 }
@@ -771,7 +775,7 @@ void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
     return;
   }
 
-  stream()->Write(debug_ipc::SerializeNotifyProcessStarting(notify));
+  SendNotification(notify);
 
   // In some edge-cases (see DebuggedProcess::RegisterDebugState() for more) the loader state is
   // known at startup. Send it if so.
@@ -781,24 +785,24 @@ void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
 void DebugAgent::OnComponentStarted(const std::string& moniker, const std::string& url) {
   if (std::any_of(filters_.begin(), filters_.end(),
                   [&](const Filter& f) { return f.MatchesComponent(moniker, url); })) {
-    debug_ipc::NotifyComponent notify;
+    debug_ipc::NotifyComponentStarting notify;
     notify.component.moniker = moniker;
     notify.component.url = url;
     notify.timestamp = GetNowTimestamp();
 
-    stream()->Write(SerializeNotifyComponentStarting(notify));
+    SendNotification(notify);
   }
 }
 
 void DebugAgent::OnComponentExited(const std::string& moniker, const std::string& url) {
   if (std::any_of(filters_.begin(), filters_.end(),
                   [&](const Filter& f) { return f.MatchesComponent(moniker, url); })) {
-    debug_ipc::NotifyComponent notify;
+    debug_ipc::NotifyComponentExiting notify;
     notify.component.moniker = moniker;
     notify.component.url = url;
     notify.timestamp = GetNowTimestamp();
 
-    stream()->Write(SerializeNotifyComponentExiting(notify));
+    SendNotification(notify);
   }
 }
 
@@ -825,7 +829,7 @@ void DebugAgent::OnProcessEnteredLimbo(const LimboProvider::Record& record) {
   process_starting.name = std::move(process_name);
   process_starting.timestamp = GetNowTimestamp();
 
-  stream()->Write(debug_ipc::SerializeNotifyProcessStarting(process_starting));
+  SendNotification(process_starting);
 }
 
 void DebugAgent::WriteLog(debug::LogSeverity severity, const debug::FileLineFunction& location,
@@ -846,7 +850,7 @@ void DebugAgent::WriteLog(debug::LogSeverity severity, const debug::FileLineFunc
   notify.location.line = location.line();
   notify.log = log;
 
-  stream()->Write(debug_ipc::SerializeNotifyLog(notify));
+  SendNotification(notify);
 }
 
 }  // namespace debug_agent

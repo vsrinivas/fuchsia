@@ -101,7 +101,7 @@ class JobStreamBackend : public LocalStreamBackend {
     message_loop_->QuitNow();
   }
 
-  void HandleNotifyThreadStarting(NotifyThread thread) override {
+  void HandleNotifyThreadStarting(NotifyThreadStarting thread) override {
     thread_start_events_.push_back(std::move(thread));
     message_loop_->QuitNow();
   }
@@ -136,7 +136,7 @@ class JobStreamBackend : public LocalStreamBackend {
   std::optional<AttachReply> attach_reply_;
   std::vector<NotifyProcessStarting> process_start_events_;
   std::vector<NotifyProcessExiting> process_exit_events_;
-  std::vector<NotifyThread> thread_start_events_;
+  std::vector<NotifyThreadStarting> thread_start_events_;
   std::vector<NotifyModules> module_events_;
   std::vector<NotifyException> exceptions_;
 
