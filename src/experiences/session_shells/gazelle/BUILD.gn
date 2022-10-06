@@ -6,6 +6,7 @@ import("//build/components.gni")
 
 group("gazelle") {
   public_deps = [
+    "element_router",
     "shell",
     "wm",
   ]

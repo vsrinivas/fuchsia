@@ -8,13 +8,22 @@
     ],
     children: [
         {
-            name: "wm",
-            url: "fuchsia-pkg://fuchsia.com/wm#meta/wm.cm",
-            startup: "eager",
+            name: "chrome",
+            url: "fuchsia-pkg://chromium.org/chrome#meta/chrome.cm",
+            environment: "#full-resolver-env",
         },
         {
             name: "element_manager",
             url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
+        },
+        {
+            name: "element_router",
+            url: "fuchsia-pkg://fuchsia.com/element_router#meta/element_router.cm",
+        },
+        {
+            name: "wm",
+            url: "fuchsia-pkg://fuchsia.com/wm#meta/wm.cm",
+            startup: "eager",
         },
     ],
     collections: [
@@ -25,10 +34,18 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.ui.composition.Flatland",
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#chrome",
+                "#element_manager",
+                "#element_router",
+                "#elements",
+                "#wm",
             ],
+        },
+        {
+            protocol: [ "fuchsia.ui.composition.Flatland" ],
             from: "parent",
             to: [ "#wm" ],
         },
@@ -41,6 +58,7 @@
             protocol: "fuchsia.element.GraphicalPresenter",
             from: "#wm",
             to: [
+                "#chrome",
                 "#element_manager",
                 "#elements",
             ],
@@ -52,19 +70,34 @@
         },
         {
             protocol: [
-                "fuchsia.logger.LogSink",
                 "fuchsia.sys.Launcher",
                 "fuchsia.ui.scenic.Scenic",
             ],
             from: "parent",
             to: "#element_manager",
         },
+
+        // Route all the implementations of `fuchsia.element.Manager` to the
+        // `element_router`.
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+            from: "#element_manager",
+            as: "fuchsia.element.Manager-default",
+            to: "#element_router",
+        },
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+            from: "#chrome",
+            as: "fuchsia.element.Manager-chrome",
+            to: "#element_router",
+        },
+
+        // Capabilities for all elements.
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.fonts.Provider",
                 "fuchsia.intl.PropertyProvider",
-                "fuchsia.logger.LogSink",
                 "fuchsia.media.Audio",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
@@ -80,6 +113,8 @@
             from: "parent",
             to: "#elements",
         },
+
+        // Capabilities for terminal.
         {
             // TODO(fxbug.dev/105828): These additional `protocol` offers to
             // `#elements` are only required by the `terminal` component.
@@ -140,6 +175,61 @@
             from: "parent",
             to: "#elements",
         },
+
+        // Capabilities for chrome.
+        {
+            protocol: [
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.camera3.DeviceWatcher",
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#chrome",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: [ "#chrome" ],
+        },
+        {
+            storage: "account_cache",
+            from: "parent",
+            as: "cache",
+            to: "#chrome",
+        },
+        {
+            storage: "account_tmp",
+            from: "parent",
+            as: "tmp",
+            to: "#chrome",
+        },
+        {
+            storage: "account",
+            from: "parent",
+            as: "data",
+            to: "#chrome",
+        },
     ],
     expose: [
         {
@@ -155,7 +245,20 @@
         },
         {
             protocol: [ "fuchsia.element.Manager" ],
-            from: "#element_manager",
+            from: "#element_router",
+        },
+    ],
+    environments: [
+        {
+            name: "full-resolver-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "parent",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
         },
     ],
 }

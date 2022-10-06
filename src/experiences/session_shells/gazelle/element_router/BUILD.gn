@@ -1,0 +1,61 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  output_name = "element_router"
+  version = "0.1.0"
+  edition = "2018"
+
+  source_root = "src/main.rs"
+  sources = [ "src/main.rs" ]
+
+  deps = [
+    ":config_lib",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/sys/lib/fidl-connector",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:url",
+  ]
+}
+
+fuchsia_component_manifest("manifest") {
+  component_name = "element_router"
+  manifest = "meta/element_router.cml"
+}
+
+fuchsia_structured_config_rust_lib("config_lib") {
+  cm_label = ":manifest"
+}
+
+fuchsia_component("component") {
+  cm_label = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("element_router") {
+  deps = [
+    ":component",
+    ":workstation_config",
+  ]
+}
+
+fuchsia_structured_config_values("workstation_config") {
+  cm_label = ":manifest"
+  values = {
+    url_to_backend = [ "fuchsia-pkg://chromium.org/chrome#meta/chrome.cm|fuchsia.element.Manager-chrome" ]
+    scheme_to_backend = [
+      "http|fuchsia.element.Manager-chrome",
+      "https|fuchsia.element.Manager-chrome",
+    ]
+    default_backend = "fuchsia.element.Manager-default"
+  }
+}
