@@ -449,7 +449,7 @@ mod test {
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorError, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
             RemoteControlRequest, RemoteDiagnosticsBridgeRequest,
-            RemoteDiagnosticsBridgeRequestStream,
+            RemoteDiagnosticsBridgeRequestStream, ServiceMatch,
         },
         fidl_fuchsia_diagnostics::DataType,
         fidl_fuchsia_overnet_protocol::NodeId,
@@ -649,7 +649,13 @@ mod test {
                     RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
                         setup_fake_archive_accessor(service_chan, responses.clone(), legacy_format)
                             .unwrap();
-                        responder.send(&mut Ok(())).unwrap();
+                        responder
+                            .send(&mut Ok(ServiceMatch {
+                                moniker: vec![],
+                                subdir: String::default(),
+                                service: String::default(),
+                            }))
+                            .unwrap();
                     }
                     RemoteControlRequest::IdentifyHost { responder } => {
                         responder

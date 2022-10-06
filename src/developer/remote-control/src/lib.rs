@@ -5,25 +5,23 @@
 use {
     crate::host_identifier::HostIdentifier,
     anyhow::{Context as _, Result},
-    fidl::endpoints::ServerEnd,
     fidl::prelude::*,
-    fidl_fuchsia_component as fcomp, fidl_fuchsia_developer_remotecontrol as rcs,
+    fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_diagnostics::Selector,
     fidl_fuchsia_io as io,
     fidl_fuchsia_net_ext::SocketAddress as SocketAddressExt,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol_at_path,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::join,
     futures::prelude::*,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     selector_maps::{MappingError, SelectorMappingList},
-    selectors::{StringSelector, TreeSelector},
     std::{cell::RefCell, net::SocketAddr, rc::Rc},
     tracing::*,
 };
 
 mod host_identifier;
+mod service_discovery;
+
+const HUB_ROOT: &str = "/discovery_root";
 
 pub struct RemoteControlService {
     ids: RefCell<Vec<u64>>,
@@ -95,6 +93,10 @@ impl RemoteControlService {
             rcs::RemoteControlRequest::Connect { selector, service_chan, responder } => {
                 responder
                     .send(&mut self.clone().connect_to_service(selector, service_chan).await)?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::Select { selector, responder } => {
+                responder.send(&mut self.clone().select(selector).await)?;
                 Ok(())
             }
             rcs::RemoteControlRequest::RootRealmExplorer { server, responder } => {
@@ -309,6 +311,37 @@ impl RemoteControlService {
         Ok(())
     }
 
+    async fn connect_with_matcher(
+        self: &Rc<Self>,
+        selector: &Selector,
+        service_chan: zx::Channel,
+        matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>>>,
+    ) -> Result<rcs::ServiceMatch, rcs::ConnectError> {
+        let paths = matcher_fut.await.map_err(|err| {
+            warn!(?selector, %err, "error looking for matching services for selector");
+            rcs::ConnectError::ServiceDiscoveryFailed
+        })?;
+        if paths.is_empty() {
+            return Err(rcs::ConnectError::NoMatchingServices);
+        } else if paths.len() > 1 {
+            // TODO(jwing): we should be able to communicate this to the FE somehow.
+            warn!(
+                ?paths,
+                "Selector must match exactly one service. Provided selector matched all of the following");
+            return Err(rcs::ConnectError::MultipleMatchingServices);
+        }
+        let svc_match = paths.get(0).unwrap();
+        let hub_path = svc_match.hub_path.to_str().unwrap();
+        info!(hub_path, "attempting to connect");
+        fuchsia_component::client::connect_channel_to_protocol_at_path(service_chan, hub_path)
+            .map_err(|err| {
+                error!(?selector, %err, "error connecting to selector");
+                rcs::ConnectError::ServiceConnectFailed
+            })?;
+
+        Ok(svc_match.into())
+    }
+
     pub(crate) fn map_selector(
         self: &Rc<Self>,
         selector: Selector,
@@ -325,8 +358,46 @@ impl RemoteControlService {
                     error!(?selector, %e, "got a cycle in mapping selector");
                 }
             }
-            rcs::ConnectError::BadSelector
+            rcs::ConnectError::ServiceRerouteFailed
         })
+    }
+
+    pub async fn connect_to_service(
+        self: &Rc<Self>,
+        selector: Selector,
+        service_chan: zx::Channel,
+    ) -> Result<rcs::ServiceMatch, rcs::ConnectError> {
+        let selector = self.map_selector(selector.clone())?;
+        self.connect_with_matcher(
+            &selector,
+            service_chan,
+            service_discovery::get_matching_paths(HUB_ROOT, &selector),
+        )
+        .await
+    }
+
+    async fn select_with_matcher(
+        self: &Rc<Self>,
+        selector: &Selector,
+        matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>>>,
+    ) -> Result<Vec<rcs::ServiceMatch>, rcs::SelectError> {
+        let paths = matcher_fut.await.map_err(|err| {
+            warn!(?selector, %err, "error looking for matching services for selector");
+            rcs::SelectError::ServiceDiscoveryFailed
+        })?;
+
+        Ok(paths.iter().map(|p| p.into()).collect::<Vec<rcs::ServiceMatch>>())
+    }
+
+    pub async fn select(
+        self: &Rc<Self>,
+        selector: Selector,
+    ) -> Result<Vec<rcs::ServiceMatch>, rcs::SelectError> {
+        self.select_with_matcher(
+            &selector,
+            service_discovery::get_matching_paths(HUB_ROOT, &selector),
+        )
+        .await
     }
 
     pub async fn identify_host(
@@ -352,166 +423,6 @@ impl RemoteControlService {
         responder.send(&mut target_identity).context("responding to client")?;
         Ok(())
     }
-
-    /// Connects to an exposed capability identified by the given selector.
-    async fn connect_to_service(
-        self: &Rc<Self>,
-        selector: Selector,
-        server_end: zx::Channel,
-    ) -> Result<(), rcs::ConnectError> {
-        // If applicable, get a remapped selector
-        let selector = self.map_selector(selector)?;
-
-        // Connect to the root LifecycleController protocol
-        let lifecycle = connect_to_protocol_at_path::<fsys::LifecycleControllerMarker>(
-            "/svc/fuchsia.sys2.LifecycleController.root",
-        )
-        .map_err(|err| {
-            error!(%err, "could not connect to lifecycle controller");
-            rcs::ConnectError::Internal
-        })?;
-
-        // Connect to the root RealmQuery protocol
-        let query = connect_to_protocol_at_path::<fsys::RealmQueryMarker>(
-            "/svc/fuchsia.sys2.RealmQuery.root",
-        )
-        .map_err(|err| {
-            error!(%err, "could not connect to realm query");
-            rcs::ConnectError::Internal
-        })?;
-
-        connect_to_exposed_protocol(selector, server_end, lifecycle, query).await
-    }
-}
-
-async fn connect_to_exposed_protocol(
-    selector: Selector,
-    server_end: zx::Channel,
-    lifecycle: fsys::LifecycleControllerProxy,
-    query: fsys::RealmQueryProxy,
-) -> Result<(), rcs::ConnectError> {
-    let (moniker, protocol_name) = extract_moniker_and_protocol_from_selector(selector)
-        .ok_or(rcs::ConnectError::BadSelector)?;
-
-    // CF APIs expect the moniker to be relative.
-    let moniker = moniker.to_string();
-    let moniker = format!(".{}", moniker);
-
-    // This is a no-op if already resolved.
-    resolve_component(&moniker, lifecycle).await?;
-
-    let exposed_dir = get_exposed_dir(&moniker, query).await?;
-
-    connect_to_protocol_in_exposed_dir(&exposed_dir, &protocol_name, server_end).await
-}
-
-fn extract_moniker_and_protocol_from_selector(
-    selector: Selector,
-) -> Option<(AbsoluteMoniker, String)> {
-    // Construct the moniker from the selector
-    let moniker_segments = selector.component_selector?.moniker_segments?;
-    let mut children = vec![];
-    for segment in moniker_segments {
-        let child = segment.exact_match()?.to_string();
-        children.push(child);
-    }
-    let moniker = format!("/{}", children.join("/"));
-
-    let tree_selector = selector.tree_selector?;
-
-    // Namespace must be `expose`. Nothing else is supported.
-    let namespace = tree_selector.node_path()?.get(0)?.exact_match()?;
-    if namespace != "expose" {
-        return None;
-    }
-
-    // Get the protocol name
-    let property_selector = tree_selector.property()?;
-    let protocol_name = property_selector.exact_match()?.to_string();
-
-    // Make sure the moniker is valid
-    let moniker = AbsoluteMoniker::parse_str(&moniker)
-        .map_err(|err| {
-            error!(%err, "moniker invalid");
-            err
-        })
-        .ok()?;
-
-    Some((moniker, protocol_name))
-}
-
-async fn resolve_component(
-    moniker: &str,
-    lifecycle: fsys::LifecycleControllerProxy,
-) -> Result<(), rcs::ConnectError> {
-    lifecycle
-        .resolve(moniker)
-        .await
-        .map_err(|err| {
-            error!(%err, "error using lifecycle controller");
-            rcs::ConnectError::Internal
-        })?
-        .map_err(|err| match err {
-            fcomp::Error::InstanceNotFound => rcs::ConnectError::InstanceNotFound,
-            fcomp::Error::InstanceCannotResolve => rcs::ConnectError::InstanceCannotResolve,
-            err => {
-                error!(?err, "error resolving component");
-                rcs::ConnectError::Internal
-            }
-        })
-}
-
-async fn get_exposed_dir(
-    moniker: &str,
-    query: fsys::RealmQueryProxy,
-) -> Result<io::DirectoryProxy, rcs::ConnectError> {
-    // Get all directories of the instance.
-    let resolved_dirs = query
-        .get_instance_directories(&moniker)
-        .await
-        .map_err(|err| {
-            error!(%err, "error using realm query");
-            rcs::ConnectError::Internal
-        })?
-        .map_err(|err| match err {
-            fsys::RealmQueryError::BadMoniker => rcs::ConnectError::BadSelector,
-            fsys::RealmQueryError::InstanceNotFound => rcs::ConnectError::InstanceNotFound,
-            err => {
-                error!(?err, "error getting resolved dirs of component");
-                rcs::ConnectError::Internal
-            }
-        })?
-        .ok_or(rcs::ConnectError::InstanceCannotResolve)?;
-
-    resolved_dirs.exposed_dir.into_proxy().map_err(|_| rcs::ConnectError::Internal)
-}
-
-async fn connect_to_protocol_in_exposed_dir(
-    exposed_dir: &io::DirectoryProxy,
-    protocol_name: &str,
-    server_end: zx::Channel,
-) -> Result<(), rcs::ConnectError> {
-    // Check if capability exists in exposed dir.
-    let entries = fuchsia_fs::directory::readdir(exposed_dir)
-        .await
-        .map_err(|_| rcs::ConnectError::Internal)?;
-    let is_protocol_exposed = entries.iter().any(|e| &e.name == &protocol_name);
-    if !is_protocol_exposed {
-        return Err(rcs::ConnectError::ProtocolNotExposed);
-    }
-
-    // Connect to the capability
-    exposed_dir
-        .open(
-            io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
-            0,
-            &protocol_name,
-            ServerEnd::new(server_end),
-        )
-        .map_err(|err| {
-            error!(%err, "error opening capability from exposed dir");
-            rcs::ConnectError::Internal
-        })
 }
 
 #[derive(Debug)]
@@ -621,18 +532,17 @@ async fn forward_traffic(
 
 #[cfg(test)]
 mod tests {
-    use fidl::endpoints::ClientEnd;
-
     use {
         super::*,
         assert_matches::assert_matches,
         fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
-        fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_net as fnet,
-        fidl_fuchsia_net_interfaces as fnet_interfaces,
-        fuchsia_component::server::ServiceFs,
+        fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_io as fio,
+        fidl_fuchsia_net as fnet, fidl_fuchsia_net_interfaces as fnet_interfaces,
         fuchsia_zircon as zx,
         selectors::{parse_selector, VerboseError},
+        service_discovery::PathEntry,
         std::net::Ipv4Addr,
+        std::path::PathBuf,
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";
@@ -816,106 +726,6 @@ mod tests {
         return rcs_proxy;
     }
 
-    fn setup_fake_lifecycle_controller() -> fsys::LifecycleControllerProxy {
-        fidl::endpoints::spawn_stream_handler(
-            move |request: fsys::LifecycleControllerRequest| async move {
-                match request {
-                    fsys::LifecycleControllerRequest::Resolve { moniker, responder } => {
-                        assert_eq!(moniker, "./core/my_component");
-                        responder.send(&mut Ok(())).unwrap()
-                    }
-                    _ => panic!("unexpected request"),
-                }
-            },
-        )
-        .unwrap()
-    }
-
-    fn setup_exposed_dir() -> ClientEnd<io::DirectoryMarker> {
-        let mut fs = ServiceFs::new();
-        fs.add_fidl_service(move |_: hwinfo::BoardRequestStream| {});
-
-        let (client, server) = fidl::endpoints::create_endpoints().unwrap();
-        fs.serve_connection(server).unwrap();
-
-        fasync::Task::spawn(fs.collect::<()>()).detach();
-
-        client
-    }
-
-    fn setup_fake_realm_query() -> fsys::RealmQueryProxy {
-        fidl::endpoints::spawn_stream_handler(move |request: fsys::RealmQueryRequest| async move {
-            match request {
-                fsys::RealmQueryRequest::GetInstanceDirectories { moniker, responder } => {
-                    assert_eq!(moniker, "./core/my_component");
-
-                    let exposed_dir = setup_exposed_dir();
-
-                    responder
-                        .send(&mut Ok(Some(Box::new(fsys::ResolvedDirectories {
-                            exposed_dir,
-                            ns_entries: vec![],
-                            pkg_dir: None,
-                            execution_dirs: None,
-                        }))))
-                        .unwrap()
-                }
-                _ => panic!("unexpected request"),
-            }
-        })
-        .unwrap()
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_extract_moniker_protocol() -> Result<()> {
-        let selector =
-            parse_selector::<VerboseError>("core/my_component:expose:fuchsia.foo.bar").unwrap();
-        let (moniker, protocol) = extract_moniker_and_protocol_from_selector(selector).unwrap();
-
-        assert_eq!(moniker, AbsoluteMoniker::parse_str("/core/my_component").unwrap());
-        assert_eq!(protocol, "fuchsia.foo.bar");
-
-        for selector in [
-            "*:*:*",
-            "core/my_component:expose",
-            "core/my_component:expose:*",
-            "*:expose:fuchsia.foo.bar",
-            "core/my_component:*:fuchsia.foo.bar",
-            "core/my_component:out:fuchsia.foo.bar",
-            "core/my_component:in:fuchsia.foo.bar",
-        ] {
-            let selector = parse_selector::<VerboseError>(selector).unwrap();
-            assert!(extract_moniker_and_protocol_from_selector(selector).is_none());
-        }
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_connect_to_exposed_protocol() -> Result<()> {
-        let selector =
-            parse_selector::<VerboseError>("core/my_component:expose:fuchsia.hwinfo.Board")
-                .unwrap();
-        let (_client, server) = zx::Channel::create().unwrap();
-        let lifecycle = setup_fake_lifecycle_controller();
-        let query = setup_fake_realm_query();
-        connect_to_exposed_protocol(selector, server, lifecycle, query).await.unwrap();
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_connect_to_protocol_not_exposed() -> Result<()> {
-        let selector =
-            parse_selector::<VerboseError>("core/my_component:expose:fuchsia.not.exposed").unwrap();
-        let (_client, server) = zx::Channel::create().unwrap();
-        let lifecycle = setup_fake_lifecycle_controller();
-        let query = setup_fake_realm_query();
-        let error =
-            connect_to_exposed_protocol(selector, server, lifecycle, query).await.unwrap_err();
-        assert_eq!(error, rcs::ConnectError::ProtocolNotExposed);
-        Ok(())
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn test_identify_host() -> Result<()> {
         let rcs_proxy = setup_rcs_proxy();
@@ -966,12 +776,94 @@ mod tests {
         Ok(())
     }
 
+    fn wildcard_selector() -> Selector {
+        parse_selector::<VerboseError>("*:*:*").unwrap()
+    }
+
     fn service_selector() -> Selector {
         parse_selector::<VerboseError>(FAKE_SERVICE_SELECTOR).unwrap()
     }
 
     fn mapped_service_selector() -> Selector {
         parse_selector::<VerboseError>(MAPPED_SERVICE_SELECTOR).unwrap()
+    }
+
+    async fn no_paths_matcher() -> Result<Vec<PathEntry>> {
+        Ok(vec![])
+    }
+
+    async fn two_paths_matcher() -> Result<Vec<PathEntry>> {
+        Ok(vec![
+            PathEntry {
+                hub_path: PathBuf::from("/"),
+                moniker: PathBuf::from("/a/b/c"),
+                component_subdir: "out".to_string(),
+                service: "myservice".to_string(),
+            },
+            PathEntry {
+                hub_path: PathBuf::from("/"),
+                moniker: PathBuf::from("/a/b/c"),
+                component_subdir: "out".to_string(),
+                service: "myservice2".to_string(),
+            },
+        ])
+    }
+
+    async fn single_path_matcher() -> Result<Vec<PathEntry>> {
+        Ok(vec![PathEntry {
+            hub_path: PathBuf::from("/tmp"),
+            moniker: PathBuf::from("/tmp"),
+            component_subdir: "out".to_string(),
+            service: "myservice".to_string(),
+        }])
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_connect_no_matches() -> Result<()> {
+        let service = make_rcs();
+        let (_, server_end) = zx::Channel::create().unwrap();
+
+        let result = service
+            .connect_with_matcher(&wildcard_selector(), server_end, no_paths_matcher())
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), rcs::ConnectError::NoMatchingServices);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_connect_multiple_matches() -> Result<()> {
+        let service = make_rcs();
+        let (_, server_end) = zx::Channel::create().unwrap();
+
+        let result = service
+            .connect_with_matcher(&wildcard_selector(), server_end, two_paths_matcher())
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), rcs::ConnectError::MultipleMatchingServices);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_connect_single_match() -> Result<()> {
+        let service = make_rcs();
+        let (client_end, server_end) =
+            fidl::endpoints::create_endpoints::<fio::NodeMarker>().unwrap();
+
+        service
+            .connect_with_matcher(
+                &wildcard_selector(),
+                server_end.into_channel(),
+                single_path_matcher(),
+            )
+            .await
+            .unwrap();
+
+        // Make a dummy call to verify that the channel did get hooked up.
+        assert!(client_end.into_proxy().unwrap().describe_deprecated().await.is_ok());
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -988,7 +880,7 @@ mod tests {
 
         assert_matches!(
             service.map_selector(service_selector()).unwrap_err(),
-            rcs::ConnectError::BadSelector
+            rcs::ConnectError::ServiceRerouteFailed
         );
         Ok(())
     }
@@ -1002,7 +894,7 @@ mod tests {
 
         assert_matches!(
             service.map_selector(service_selector()).unwrap_err(),
-            rcs::ConnectError::BadSelector
+            rcs::ConnectError::ServiceRerouteFailed
         );
         Ok(())
     }
@@ -1013,6 +905,29 @@ mod tests {
             make_rcs_with_maps(vec![("not/a/match:out:some.Service", MAPPED_SERVICE_SELECTOR)]);
 
         assert_eq!(service.map_selector(service_selector()).unwrap(), service_selector());
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_select_multiple_matches() -> Result<()> {
+        let service = make_rcs();
+
+        let result =
+            service.select_with_matcher(&wildcard_selector(), two_paths_matcher()).await.unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().any(|p| *p
+            == rcs::ServiceMatch {
+                moniker: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                subdir: "out".to_string(),
+                service: "myservice".to_string()
+            }));
+        assert!(result.iter().any(|p| *p
+            == rcs::ServiceMatch {
+                moniker: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+                subdir: "out".to_string(),
+                service: "myservice2".to_string()
+            }));
         Ok(())
     }
 

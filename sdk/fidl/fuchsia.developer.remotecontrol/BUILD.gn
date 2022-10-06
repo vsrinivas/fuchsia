@@ -10,6 +10,7 @@ fidl("fuchsia.developer.remotecontrol") {
     "diagnostics-bridge.fidl",
     "host-identification.fidl",
     "remote-control.fidl",
+    "service-discovery.fidl",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.boot",

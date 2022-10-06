@@ -237,7 +237,9 @@ mod tests {
             FastbootMarker, FastbootProxy, FastbootRequest, TargetMarker, TargetProxy,
             TargetRequest,
         },
-        fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlRequest},
+        fidl_fuchsia_developer_remotecontrol::{
+            RemoteControlMarker, RemoteControlRequest, ServiceMatch,
+        },
         fidl_fuchsia_hardware_power_statecontrol::{AdminRequest, AdminRequestStream},
         std::time::Instant,
     };
@@ -293,7 +295,13 @@ mod tests {
                 match req {
                     RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
                         setup_admin(service_chan).unwrap();
-                        responder.send(&mut Ok(())).unwrap();
+                        responder
+                            .send(&mut Ok(ServiceMatch {
+                                moniker: vec![],
+                                subdir: String::default(),
+                                service: String::default(),
+                            }))
+                            .unwrap();
                     }
                     _ => assert!(false),
                 }
