@@ -197,13 +197,13 @@ TEST_F(FocusTransferTest, TouchFocusWithValidTarget) {
     EXPECT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 4.5, 0.5));
 
-    // DOWN
-    EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 4.5, 0.5));
-
     // FOCUS
-    EXPECT_TRUE(events[2].is_focus());
-    EXPECT_TRUE(events[2].focus().focused);
+    EXPECT_TRUE(events[1].is_focus());
+    EXPECT_TRUE(events[1].focus().focused);
+
+    // DOWN
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 4.5, 0.5));
   }
 
   // Verify root session receives nothing.
@@ -324,13 +324,13 @@ TEST_F(FocusTransferTest, TouchFocusWithValidTargetAfterA11yRejects) {
     EXPECT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 4.5, 0.5));
 
-    // DOWN
-    EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 4.5, 0.5));
-
     // FOCUS
-    EXPECT_TRUE(events[2].is_focus());
-    EXPECT_TRUE(events[2].focus().focused);
+    EXPECT_TRUE(events[1].is_focus());
+    EXPECT_TRUE(events[1].focus().focused);
+
+    // DOWN
+    EXPECT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 4.5, 0.5));
 
     // MOVE
     EXPECT_TRUE(events[3].is_pointer());

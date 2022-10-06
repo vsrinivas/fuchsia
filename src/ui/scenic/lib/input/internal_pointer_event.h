@@ -18,7 +18,8 @@ namespace scenic_impl::input {
 using ColumnMajorMat3Array = std::array<float, 9>;
 
 // Possible states the pointer can be in.
-enum Phase { kInvalid, kAdd, kChange, kRemove, kCancel };
+// TODO(fxbug.dev/53316): Remove UP and DOWN phases when old input injection API is removed.
+enum Phase { kInvalid, kAdd, kDown, kChange, kUp, kRemove, kCancel };
 
 // Extents define an axis-aligned rectangle in 2D space.
 struct Extents {

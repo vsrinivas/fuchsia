@@ -158,6 +158,16 @@ void TouchSourceBase::UpdateStream(StreamId stream_id, const InternalTouchEvent&
   FX_DCHECK(stream.device_id == event.device_id);
   FX_DCHECK(stream.pointer_id == event.pointer_id);
 
+  // Filter legacy events.
+  // TODO(fxbug.dev/53316): Remove when we no longer need to filter events.
+  ++stream.num_pointer_events;
+  if (event.phase == Phase::kDown || event.phase == Phase::kUp) {
+    FX_DCHECK(!is_end_of_stream);
+    FX_DCHECK(stream.num_pointer_events > 1);
+    stream.filtered_events.emplace(stream.num_pointer_events);
+    return;
+  }
+
   {  // Build the event.
     AugmentedTouchEvent out_event;
     {
@@ -307,6 +317,16 @@ void TouchSourceBase::WatchBase(std::vector<fuchsia::ui::pointer::TouchResponse>
 
     auto& stream = ongoing_streams_[stream_id];
     stream.last_response = gd_response;
+
+    // TODO(fxbug.dev/53316): Remove when we no longer need to filter events.
+    // Duplicate the response for any subsequent filtered events.
+    ++stream.num_responses;
+    while (!stream.filtered_events.empty() &&
+           stream.num_responses == stream.filtered_events.front() - 1) {
+      ++stream.num_responses;
+      stream.filtered_events.pop();
+      responses_per_stream[stream_id].emplace_back(gd_response);
+    }
   }
 
   for (const auto& [stream_id, gd_responses] : responses_per_stream) {

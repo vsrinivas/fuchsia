@@ -282,9 +282,7 @@ class FlatlandTouchIntegrationTest : public zxtest::Test, public loop_fixture::R
     }
 
     RunLoopUntil([&view_events, num_points = points.size()] {
-      // Depending on contest results there may be a TouchInteractionResult appended to
-      // |view_events|.
-      return view_events.size() >= num_points;
+      return view_events.size() == num_points;
     });  // Succeeds or times out.
 
     const auto& viewport_to_view_transform =
@@ -954,7 +952,7 @@ TEST_F(FlatlandTouchIntegrationTest, PartialScreenOverlappingViews) {
   InjectionHelper(points, child_A_events, -A_x_min, -A_y_min);
 
   // Ensure parent also received events, but not the below sibling.
-  EXPECT_EQ(parent_events.size(), 6u);  // 5 events + TouchInteractionResult
+  EXPECT_EQ(parent_events.size(), 5u);
   EXPECT_EQ(child_B_events.size(), 0u);
 
   // Reset vectors for the next stream.
@@ -979,7 +977,7 @@ TEST_F(FlatlandTouchIntegrationTest, PartialScreenOverlappingViews) {
   InjectionHelper(points, child_B_events, -B_x_min, -B_y_min);
 
   // Ensure parent also received events, but not the above sibling.
-  EXPECT_EQ(parent_events.size(), 6u);  // 5 events + TouchInteractionResult
+  EXPECT_EQ(parent_events.size(), 5u);
   EXPECT_EQ(child_A_events.size(), 0u);
 
   // Reset vectors for the next stream.
@@ -1049,10 +1047,8 @@ TEST_F(FlatlandTouchIntegrationTest, PartialScreenOverlappingViews) {
     Inject(points[i][0] * 2, points[i][1] * 2, phase);
   }
 
-  RunLoopUntil([&child_A_events] {
-    // 4 events + TouchInteractionResult.
-    return child_A_events.size() == 5u;
-  });  // Succeeds or times out.
+  RunLoopUntil(
+      [&child_A_events] { return child_A_events.size() == 4u; });  // Succeeds or times out.
 
   // Offset |points| by A's top-left point.
   for (size_t i = 0; i < points.size(); ++i) {

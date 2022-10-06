@@ -74,6 +74,12 @@ class TouchSourceBase : public GestureContender {
     bool stream_has_ended = false;
     bool was_won = false;
     GestureResponse last_response = GestureResponse::kUndefined;
+
+    // TODO(fxbug.dev/53316): Remove when we no longer need to filter events. Keeps indexes into
+    // duplicate events for legacy injectors.
+    uint64_t num_pointer_events = 0;
+    uint64_t num_responses = 0;
+    std::queue<uint64_t> filtered_events;
   };
 
   // Used to track expected responses from the client for each sent event.

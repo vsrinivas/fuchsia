@@ -695,6 +695,64 @@ TEST_F(TouchSourceTest, NormalStream) {
   RunLoopUntilIdle();
 }
 
+// Sends a full legacy interaction (including UP and DOWN events) and observes that GestureResponses
+// are included for the extra events not seen by clients. Each filtered event should duplicate the
+// response of the previous event.
+TEST_F(TouchSourceTest, LegacyInteraction) {
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kAdd), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kDown), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kChange), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kChange), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kUp), kStreamOngoing,
+                              kEmptyBoundingBox);
+  touch_source_->UpdateStream(kStreamId, IPEventTemplate(Phase::kRemove), kStreamEnding,
+                              kEmptyBoundingBox);
+
+  EXPECT_TRUE(received_responses_.empty());
+
+  client_ptr_->Watch({}, [&](auto events) {
+    ASSERT_EQ(events.size(), 4u);
+    EXPECT_EQ(events[0].pointer_sample().phase(), fup_EventPhase::ADD);
+    EXPECT_EQ(events[1].pointer_sample().phase(), fup_EventPhase::CHANGE);
+    EXPECT_EQ(events[2].pointer_sample().phase(), fup_EventPhase::CHANGE);
+    EXPECT_EQ(events[3].pointer_sample().phase(), fup_EventPhase::REMOVE);
+
+    std::vector<fuchsia::ui::pointer::TouchResponse> responses;
+    responses.emplace_back(CreateResponse(TouchResponseType::MAYBE));
+    responses.emplace_back(CreateResponse(TouchResponseType::HOLD));
+    responses.emplace_back(CreateResponse(TouchResponseType::HOLD));
+    responses.emplace_back(CreateResponse(TouchResponseType::YES));
+    client_ptr_->Watch({std::move(responses)}, [](auto events) {
+      // These will be checked after EndContest() below.
+      EXPECT_EQ(events.size(), 1u);
+      EXPECT_FALSE(events.at(0).has_pointer_sample());
+      EXPECT_TRUE(events.at(0).has_timestamp());
+      ASSERT_TRUE(events.at(0).has_interaction_result());
+
+      const auto& interaction_result = events.at(0).interaction_result();
+      EXPECT_EQ(interaction_result.interaction.interaction_id, kStreamId);
+      EXPECT_EQ(interaction_result.interaction.device_id, kDeviceId);
+      EXPECT_EQ(interaction_result.interaction.pointer_id, kPointerId);
+      EXPECT_EQ(interaction_result.status, fuchsia::ui::pointer::TouchInteractionStatus::GRANTED);
+    });
+  });
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(received_responses_.size(), 1u);
+  EXPECT_THAT(
+      received_responses_.at(kStreamId),
+      testing::ElementsAre(GestureResponse::kMaybe, GestureResponse::kMaybe, GestureResponse::kHold,
+                           GestureResponse::kHold, GestureResponse::kHold, GestureResponse::kYes));
+
+  // Check losing conditions.
+  touch_source_->EndContest(kStreamId, /*awarded_win*/ true);
+  RunLoopUntilIdle();
+}
+
 TEST_F(TouchSourceTest, TouchDeviceInfo_ShouldBeSent_OncePerDevice) {
   const uint32_t kDeviceId1 = 11111, kDeviceId2 = 22222;
 

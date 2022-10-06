@@ -41,11 +41,17 @@ TouchInjector::TouchInjector(inspect::Node inspect_node, InjectorSettings settin
 
 void TouchInjector::ForwardEvent(const fuchsia::ui::pointerinjector::Event& event,
                                  StreamId stream_id) {
+  // Translate events to internal representation and inject.
+  std::vector<InternalTouchEvent> internal_events =
+      PointerInjectorEventToInternalTouchEvents(event);
+
   FX_DCHECK(stream_id != kInvalidStreamId);
-  inject_(PointerInjectorEventToInternalTouchEvent(event), stream_id);
+  for (auto& internal_event : internal_events) {
+    inject_(internal_event, stream_id);
+  }
 }
 
-InternalTouchEvent TouchInjector::PointerInjectorEventToInternalTouchEvent(
+std::vector<InternalTouchEvent> TouchInjector::PointerInjectorEventToInternalTouchEvents(
     const fuchsia::ui::pointerinjector::Event& event) const {
   const InjectorSettings& settings = Injector::settings();
   InternalTouchEvent internal_event;
@@ -60,21 +66,34 @@ InternalTouchEvent TouchInjector::PointerInjectorEventToInternalTouchEvent(
   internal_event.context = settings.context_koid;
   internal_event.target = settings.target_koid;
 
+  std::vector<InternalTouchEvent> events;
   switch (pointer_sample.phase()) {
     case InjectorEventPhase::ADD: {
-      internal_event.phase = Phase::kAdd;
+      // Insert extra event.
+      InternalTouchEvent add_clone = internal_event;
+      add_clone.phase = Phase::kAdd;
+      events.emplace_back(std::move(add_clone));
+      internal_event.phase = Phase::kDown;
+      events.emplace_back(std::move(internal_event));
       break;
     }
     case InjectorEventPhase::CHANGE: {
       internal_event.phase = Phase::kChange;
+      events.emplace_back(std::move(internal_event));
       break;
     }
     case InjectorEventPhase::REMOVE: {
+      // Insert extra event.
+      InternalTouchEvent up_clone = internal_event;
+      up_clone.phase = Phase::kUp;
+      events.emplace_back(std::move(up_clone));
       internal_event.phase = Phase::kRemove;
+      events.emplace_back(std::move(internal_event));
       break;
     }
     case InjectorEventPhase::CANCEL: {
       internal_event.phase = Phase::kCancel;
+      events.emplace_back(std::move(internal_event));
       break;
     }
     default: {
@@ -83,7 +102,7 @@ InternalTouchEvent TouchInjector::PointerInjectorEventToInternalTouchEvent(
     }
   }
 
-  return internal_event;
+  return events;
 }
 
 void TouchInjector::CancelStream(uint32_t pointer_id, StreamId stream_id) {

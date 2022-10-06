@@ -26,8 +26,12 @@ PointerEventPhase InternalPhaseToGfxPhase(Phase phase) {
   switch (phase) {
     case Phase::kAdd:
       return PointerEventPhase::ADD;
+    case Phase::kUp:
+      return PointerEventPhase::UP;
     case Phase::kChange:
       return PointerEventPhase::MOVE;
+    case Phase::kDown:
+      return PointerEventPhase::DOWN;
     case Phase::kRemove:
       return PointerEventPhase::REMOVE;
     case Phase::kCancel:
