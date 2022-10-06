@@ -140,7 +140,7 @@ void Sdhci::EnableInterrupts() {
       .FromValue(0)
       .EnableErrorInterrupts()
       .EnableNormalInterrupts()
-      .set_card_interrupt(interrupt_cb_.is_valid() ? 1 : 0)
+      .set_card_interrupt((interrupt_cb_.is_valid() && !card_interrupt_masked_) ? 1 : 0)
       .WriteTo(&regs_mmio_buffer_);
 }
 
@@ -151,7 +151,7 @@ void Sdhci::DisableInterrupts() {
       .WriteTo(&regs_mmio_buffer_);
   InterruptStatusEnable::Get()
       .FromValue(0)
-      .set_card_interrupt(interrupt_cb_.is_valid() ? 1 : 0)
+      .set_card_interrupt((interrupt_cb_.is_valid() && !card_interrupt_masked_) ? 1 : 0)
       .WriteTo(&regs_mmio_buffer_);
 }
 
@@ -362,19 +362,16 @@ int Sdhci::IrqThread() {
       SgHandleInterrupt(irq);
     }
 
-    if (irq.card_interrupt() && interrupt_cb_.is_valid()) {
-      // The only way to clear this interrupt at the controller is to disable the interrupt status.
-      // If the client driver(s) don't service the interrupt via the callback then it may be
-      // asserted again during the next card interrupt period, but this at least prevents a flood of
-      // interrupts during normal operation.
+    if (irq.card_interrupt()) {
+      // Disable the card interrupt and call the callback if there is one.
       InterruptStatusEnable::Get()
           .ReadFrom(&regs_mmio_buffer_)
           .set_card_interrupt(0)
-          .WriteTo(&regs_mmio_buffer_)
-          .set_card_interrupt(1)
           .WriteTo(&regs_mmio_buffer_);
-
-      interrupt_cb_.Callback();
+      card_interrupt_masked_ = true;
+      if (interrupt_cb_.is_valid()) {
+        interrupt_cb_.Callback();
+      }
     }
   }
   return thrd_success;
@@ -893,15 +890,34 @@ zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
 }
 
 zx_status_t Sdhci::SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb) {
-  interrupt_cb_ = ddk::InBandInterruptProtocolClient(interrupt_cb);
-
   fbl::AutoLock lock(&mtx_);
 
-  // Enable reporting of the card interrupt now that the client is going to use it. With the lock
-  // held we know there is no command in progress, so DisableInterrupts() is a no-op other than
-  // enabling the card interrupt.
-  DisableInterrupts();
+  interrupt_cb_ = ddk::InBandInterruptProtocolClient(interrupt_cb);
+
+  InterruptSignalEnable::Get()
+      .ReadFrom(&regs_mmio_buffer_)
+      .set_card_interrupt(1)
+      .WriteTo(&regs_mmio_buffer_);
+  InterruptStatusEnable::Get()
+      .ReadFrom(&regs_mmio_buffer_)
+      .set_card_interrupt(card_interrupt_masked_ ? 0 : 1)
+      .WriteTo(&regs_mmio_buffer_);
+
+  // Call the callback if an interrupt was raised before it was registered.
+  if (card_interrupt_masked_) {
+    interrupt_cb_.Callback();
+  }
+
   return ZX_OK;
+}
+
+void Sdhci::SdmmcAckInBandInterrupt() {
+  fbl::AutoLock lock(&mtx_);
+  InterruptStatusEnable::Get()
+      .ReadFrom(&regs_mmio_buffer_)
+      .set_card_interrupt(1)
+      .WriteTo(&regs_mmio_buffer_);
+  card_interrupt_masked_ = false;
 }
 
 void Sdhci::DdkUnbind(ddk::UnbindTxn txn) {
@@ -1062,7 +1078,10 @@ zx_status_t Sdhci::Init() {
   clock.ReadFrom(&regs_mmio_buffer_).set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
 
   // Disable all interrupts
-  DisableInterrupts();
+  {
+    fbl::AutoLock lock(&mtx_);
+    DisableInterrupts();
+  }
 
   if (thrd_create_with_name(
           &irq_thread_, [](void* arg) -> int { return reinterpret_cast<Sdhci*>(arg)->IrqThread(); },

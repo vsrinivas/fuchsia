@@ -813,6 +813,8 @@ TEST_F(SdhciTest, SdioInBandInterrupt) {
   };
   EXPECT_OK(dut_->SdmmcRequest(&request));
 
+  dut_->SdmmcAckInBandInterrupt();
+
   // Verify that the card interrupt remains enabled after other interrupts have been disabled, such
   // as after a commend.
   dut_->TriggerCardInterrupt();

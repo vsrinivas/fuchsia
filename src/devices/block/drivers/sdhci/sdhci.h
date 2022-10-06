@@ -86,7 +86,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   zx_status_t SdmmcRequest(sdmmc_req_t* req) TA_EXCL(mtx_);
   zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb)
       TA_EXCL(mtx_);
-  void SdmmcAckInBandInterrupt() {}
+  void SdmmcAckInBandInterrupt() TA_EXCL(mtx_);
   zx_status_t SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo, uint64_t offset,
                                uint64_t size, uint32_t vmo_rights);
   zx_status_t SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo);
@@ -216,8 +216,8 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
     return (info_.caps & SDMMC_HOST_CAP_DMA) && !(quirks_ & SDHCI_QUIRK_NO_DMA);
   }
 
-  void EnableInterrupts();
-  void DisableInterrupts();
+  void EnableInterrupts() TA_REQ(mtx_);
+  void DisableInterrupts() TA_REQ(mtx_);
 
   zx_status_t WaitForInhibit(const PresentState mask) const;
   zx_status_t WaitForInternalClockStable() const;
@@ -285,6 +285,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   uint32_t base_clock_ = 0;
 
   ddk::InBandInterruptProtocolClient interrupt_cb_;
+  bool card_interrupt_masked_ TA_GUARDED(mtx_) = false;
 
   // Keep one SdmmcVmoStore for each possible client ID (IDs are in [0, SDMMC_MAX_CLIENT_ID]).
   std::array<SdmmcVmoStore, SDMMC_MAX_CLIENT_ID + 1> registered_vmo_stores_;
