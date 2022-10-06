@@ -137,6 +137,12 @@ if (is_linux || is_mac) {
         }
         tags = [ "e2e-isolated" ]
       },
+      {
+        dimensions = {
+          device_type = "GCE"
+        }
+        tags = [ "e2e-isolated" ]
+      },
     ]
     timeout = "10m"
     cycle_count = "5"
@@ -165,6 +171,12 @@ if (is_linux || is_mac) {
       {
         dimensions = {
           device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+        tags = [ "e2e-isolated" ]
+      },
+      {
+        dimensions = {
+          device_type = "GCE"
         }
         tags = [ "e2e-isolated" ]
       },
