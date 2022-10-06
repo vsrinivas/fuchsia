@@ -2664,6 +2664,222 @@
             "metric_id": 6,
             "metric_type": "Integer",
             "selector": "core/setui_service:root/external_apis/fuchsia.ui.policy.DeviceListenerRegistry/event_counts:Created"
+        },
+        {
+            "event_codes": [
+                1,
+                1
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/agent_configuration.json:ParseFailure"
+        },
+        {
+            "event_codes": [
+                1,
+                2
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/agent_configuration.json:Success"
+        },
+        {
+            "event_codes": [
+                1,
+                3
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/agent_configuration.json:UsingDefaults"
+        },
+        {
+            "event_codes": [
+                2,
+                1
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_config_data.json:ParseFailure"
+        },
+        {
+            "event_codes": [
+                2,
+                2
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_config_data.json:Success"
+        },
+        {
+            "event_codes": [
+                2,
+                3
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_config_data.json:UsingDefaults"
+        },
+        {
+            "event_codes": [
+                3,
+                1
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_policy_configuration.json:ParseFailure"
+        },
+        {
+            "event_codes": [
+                3,
+                2
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_policy_configuration.json:Success"
+        },
+        {
+            "event_codes": [
+                3,
+                3
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_policy_configuration.json:UsingDefaults"
+        },
+        {
+            "event_codes": [
+                4,
+                1
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/display_configuration.json:ParseFailure"
+        },
+        {
+            "event_codes": [
+                4,
+                2
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/display_configuration.json:Success"
+        },
+        {
+            "event_codes": [
+                4,
+                3
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/display_configuration.json:UsingDefaults"
+        },
+        {
+            "event_codes": [
+                5,
+                1
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/input_device_config.json:ParseFailure"
+        },
+        {
+            "event_codes": [
+                5,
+                2
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/input_device_config.json:Success"
+        },
+        {
+            "event_codes": [
+                5,
+                3
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/input_device_config.json:UsingDefaults"
+        },
+        {
+            "event_codes": [
+                6,
+                1
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/interface_configuration.json:ParseFailure"
+        },
+        {
+            "event_codes": [
+                6,
+                2
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/interface_configuration.json:Success"
+        },
+        {
+            "event_codes": [
+                6,
+                3
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/interface_configuration.json:UsingDefaults"
+        },
+        {
+            "event_codes": [
+                7,
+                1
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/light_hardware_config.json:ParseFailure"
+        },
+        {
+            "event_codes": [
+                7,
+                2
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/light_hardware_config.json:Success"
+        },
+        {
+            "event_codes": [
+                7,
+                3
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/light_hardware_config.json:UsingDefaults"
+        },
+        {
+            "event_codes": [
+                8,
+                1
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json:ParseFailure"
+        },
+        {
+            "event_codes": [
+                8,
+                2
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json:Success"
+        },
+        {
+            "event_codes": [
+                8,
+                3
+            ],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json:UsingDefaults"
         }
     ],
     "poll_rate_sec": 3600,
