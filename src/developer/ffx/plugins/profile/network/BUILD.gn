@@ -4,9 +4,9 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_profile_gpu") {
+ffx_plugin("ffx_profile_network") {
   version = "0.1.0"
   edition = "2021"
-  plugin_deps = [ "usage:ffx_gpu_usage" ]
+  plugin_deps = [ "activity:ffx_network_activity" ]
   args_sources = [ "src/args.rs" ]
 }

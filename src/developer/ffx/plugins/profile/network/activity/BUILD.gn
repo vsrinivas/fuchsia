@@ -1,0 +1,28 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_network_activity") {
+  version = "0.1.0"
+  edition = "2021"
+
+  sources = [ "src/lib.rs" ]
+
+  deps = [
+    "//src/developer/ffx/lib/errors:lib",
+    "//src/testing/metrics-logger/fuchsia.metricslogger.test:fuchsia.metricslogger.test_rust",
+  ]
+
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures",
+  ]
+  with_unit_tests = true
+
+  args_sources = [ "src/args.rs" ]
+  args_deps = [ "//third_party/rust_crates:regex" ]
+  args_with_unit_tests = true
+}

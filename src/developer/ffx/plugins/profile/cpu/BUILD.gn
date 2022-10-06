@@ -4,7 +4,7 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_cpu") {
+ffx_plugin("ffx_profile_cpu") {
   version = "0.1.0"
   edition = "2021"
   plugin_deps = [ "load:ffx_cpu_load" ]
