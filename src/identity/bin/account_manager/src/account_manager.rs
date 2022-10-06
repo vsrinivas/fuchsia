@@ -264,7 +264,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
     ) -> Result<FidlAccountId, ApiError> {
         let account_metadata = metadata
             .take()
-            .ok_or({
+            .ok_or_else(|| {
                 warn!("No metadata found");
                 ApiError::InvalidRequest
             })?

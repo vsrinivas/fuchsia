@@ -192,7 +192,7 @@ impl AccountHandler {
         let account_id: AccountId = payload
             .id
             .take()
-            .ok_or({
+            .ok_or_else(|| {
                 warn!("No account id found");
                 ApiError::InvalidRequest
             })?

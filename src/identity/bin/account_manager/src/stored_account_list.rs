@@ -79,7 +79,7 @@ impl AccountMetadata {
 impl TryFrom<FidlAccountMetadata> for AccountMetadata {
     type Error = ApiError;
     fn try_from(mut account_metadata: FidlAccountMetadata) -> Result<Self, Self::Error> {
-        let name = account_metadata.name.take().ok_or({
+        let name = account_metadata.name.take().ok_or_else(|| {
             warn!("Unable to convert AccountMetadata without name");
             ApiError::InvalidRequest
         })?;
