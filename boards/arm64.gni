@@ -4,6 +4,8 @@
 
 import("emulation/emulation_arm64.gni")
 
+has_board = true
+
 target_cpu = "arm64"
 
 board_name = "qemu-arm64"

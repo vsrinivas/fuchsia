@@ -88,9 +88,9 @@ declare_args() {
   # an extension mechanism for SDK bits outside of the main repository.
   sdk_archive_labels = []
 
-  # This is a product build (vs. sdk).  If a product is set (fx set <product>.)
-  # this is true (should be set in bringup.gni)
-  product_build = false
+  # This is a build that imports a board (vs. sdk).  If a board is set
+  # (fx set <product>.<board>) this is true.
+  has_board = false
 }
 
 if (host_os == "mac") {
@@ -1270,7 +1270,7 @@ group("default") {
   ]
 
   # SDK-only builds must not attempt to build images.
-  if (product_build) {
+  if (has_board) {
     deps += [ "//build/images:default-images" ]
     deps += [ "//:drivers-check" ]
   }
