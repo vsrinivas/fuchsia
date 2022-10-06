@@ -31,7 +31,6 @@ group("drivers") {
     "hci/vendor/atheros:driver",
     "hci/vendor/broadcom:bt-hci-broadcom",
     "hci/vendor/intel:driver",
-    "hci/vendor/mediatek:bt-hci-mediatek",
   ]
 }
 
@@ -97,7 +96,6 @@ kernel_cmdline("driver-debug-logging") {
     "driver.bt_hci_broadcom.log=debug",
     "driver.bt_hci_emulator.log=debug",
     "driver.bt_hci_intel.log=debug",
-    "driver.bt_hci_mediatek.log=debug",
     "driver.bt_hci_passthrough.log=debug",
     "driver.bt_host.log=debug",
     "driver.bt_intel.log=debug",

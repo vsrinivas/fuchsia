@@ -16,7 +16,6 @@
 //src/connectivity/bluetooth/hci/vendor/atheros:fuchsia_driver
 //src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom-driver
 //src/connectivity/bluetooth/hci/vendor/intel:fuchsia_driver
-//src/connectivity/bluetooth/hci/vendor/mediatek:bt-hci-mediatek-driver
 //src/connectivity/ethernet/drivers/aml-ethernet-s912:aml-ethernet-s912-driver
 //src/connectivity/ethernet/drivers/asix-88179:asix-88179-driver
 //src/connectivity/ethernet/drivers/asix-88179:fake-asix-88179-driver

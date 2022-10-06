@@ -17,6 +17,5 @@ group("tests") {
     "atheros:tests",
     "broadcom:tests",
     "intel:tests",
-    "mediatek:tests",
   ]
 }

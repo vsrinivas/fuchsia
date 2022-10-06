@@ -314,3 +314,9 @@
   available_in_git: '618381f4f6fd880c72951ceb030d51427f5a7b80'
   areas: ['WLAN']
   path: '/src/connectivity/wlan/drivers/third_party/atheros/ath10k'
+- short_description: 'Mediatek Bluetooth HCI driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '735505'
+  available_in_git: 'e77f0783e89fcbfed969d5888eb7b3f34df5bdae'
+  areas: ['Bluetooth']
+  path: '/src/connectivity/bluetooth/hci/vendor/mediatek'

@@ -1,9 +1,0 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-using fuchsia.mediatek.sdio;
-
-fuchsia.BIND_SDIO_VID == fuchsia.mediatek.sdio.BIND_SDIO_VID.MEDIATEK;
-fuchsia.BIND_SDIO_PID == fuchsia.mediatek.sdio.BIND_SDIO_PID.MT7668;
-fuchsia.BIND_SDIO_FUNCTION == 2;
