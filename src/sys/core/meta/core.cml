@@ -159,11 +159,6 @@
             environment: "#core-env",
         },
         {
-            name: "temperature-logger",
-            url: "fuchsia-pkg://fuchsia.com/temperature-logger#meta/temperature-logger.cm",
-            environment: "#core-env",
-        },
-        {
             name: "metrics-logger",
             url: "fuchsia-pkg://fuchsia.com/metrics-logger#meta/metrics-logger.cm",
             environment: "#core-env",
@@ -421,7 +416,6 @@
                 "#sysmem_connector",
                 "#system-metrics-logger",
                 "#system-update-committer",
-                "#temperature-logger",
                 "#timekeeper",
                 "#vulkan_loader",
             ],
@@ -625,20 +619,6 @@
             directory: "dev",
             from: "parent",
             as: "dev-temperature",
-            to: "#temperature-logger",
-            subdir: "class/temperature",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-thermal",
-            to: "#temperature-logger",
-            subdir: "class/thermal",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-temperature",
             to: "#metrics-logger",
             subdir: "class/temperature",
         },
@@ -680,12 +660,6 @@
                 "#session-manager",
                 "#timekeeper",
             ],
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: "#temperature-logger",
-            subdir: "temperature-logger",
         },
         {
             directory: "config-data",
@@ -947,7 +921,6 @@
                 "#starnix_manager",
                 "#sysmem_connector",
                 "#system-metrics-logger",
-                "#temperature-logger",
             ],
 
             // Trace manager may be excluded from builds where tracing is not

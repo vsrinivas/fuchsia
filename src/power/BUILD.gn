@@ -9,7 +9,6 @@ group("power") {
     ":tests",
     "power-manager",
     "shutdown-shim",
-    "temperature-logger",
   ]
 
   if (target_cpu == "x64") {
@@ -33,7 +32,6 @@ group("tests") {
     "fidl/testing",
     "power-manager:tests",
     "shutdown-shim/tests",
-    "temperature-logger:tests",
     "testing:tests",
     "thermd:tests",
   ]

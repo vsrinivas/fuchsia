@@ -84,7 +84,6 @@ config_data_for_pkg_allowlist = [
   "system-update-checker-integration-tests",
   "system-update-committer",
   "tee_manager",
-  "temperature-logger",
   "text-input-test",
   "triage-detect",
   "tz_version_parrot",

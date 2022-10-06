@@ -132,10 +132,6 @@
             from: "#system-metrics-logger",
         },
         {
-            protocol: "fuchsia.thermal.test.TemperatureLogger",
-            from: "#temperature-logger",
-        },
-        {
             protocol: [
                 "fuchsia.pkg.PackageCache",
                 "fuchsia.space.Manager",
