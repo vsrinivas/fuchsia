@@ -341,7 +341,7 @@ type Result struct {
 	HasError          bool
 	ErrorDecl         nameVariants
 	Error             Type
-	HasTransportError bool
+	HasFrameworkError bool
 	valueTypeIsStruct bool
 }
 

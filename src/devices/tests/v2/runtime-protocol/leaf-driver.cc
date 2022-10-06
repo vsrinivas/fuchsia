@@ -75,9 +75,9 @@ class LeafDriver : public driver::DriverBase {
         .then([&](fpromise::result<void, fidl::AnyErrorIn<ft::Setter::Set>>& result)
                   -> fpromise::promise<void, zx_status_t> {
           if (result.is_error()) {
-            zx_status_t status = result.error().is_application_error()
-                                     ? result.error().application_error()
-                                     : result.error().transport_error().status();
+            zx_status_t status = result.error().is_domain_error()
+                                     ? result.error().domain_error()
+                                     : result.error().framework_error().status();
             return fpromise::make_error_promise(status);
           }
           return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
@@ -90,9 +90,9 @@ class LeafDriver : public driver::DriverBase {
             [&](fpromise::result<ft::GetterGetResponse, fidl::AnyErrorIn<ft::Getter::Get>>& result)
                 -> fpromise::promise<void, zx_status_t> {
               if (result.is_error()) {
-                zx_status_t status = result.error().is_application_error()
-                                         ? result.error().application_error()
-                                         : result.error().transport_error().status();
+                zx_status_t status = result.error().is_domain_error()
+                                         ? result.error().domain_error()
+                                         : result.error().framework_error().status();
                 return fpromise::make_error_promise(status);
               }
               if (result.value() != kMagic) {

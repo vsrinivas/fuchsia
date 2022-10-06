@@ -2962,7 +2962,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -3003,7 +3003,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -3044,7 +3044,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -3085,7 +3085,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -3278,7 +3278,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -3319,7 +3319,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -3360,7 +3360,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -3401,7 +3401,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -9999,7 +9999,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -10040,7 +10040,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -10081,7 +10081,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -10122,7 +10122,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -14456,7 +14456,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -14497,7 +14497,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -14538,7 +14538,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -14579,7 +14579,7 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
   
   
-  using ApplicationError = int32_t;
+  using DomainError = int32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<

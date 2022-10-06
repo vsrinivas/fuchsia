@@ -22,7 +22,7 @@ class {{ .WireBufferCompleterImpl }} : public ::fdf::internal::BufferCompleterIm
 
   void Reply({{ .WireReplyArgs }});
 
-  {{- if .HasApplicationError }}
+  {{- if .HasDomainError }}
   void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
@@ -58,12 +58,12 @@ class {{ .WireCompleterBase }} : public ::fidl::CompleterBase, public {{ .WireCo
 
 void
 {{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ .WireReplyArgs }}) {
-  {{- if .HasApplicationError }}
+  {{- if .HasDomainError }}
   if (result.is_ok()) {
     return MakeReply({{ .WireReplySuccess "result.value()" }});
   }
   return ReplyError(std::move(result.error_value()));
-  {{- else if .HasTransportError }}
+  {{- else if .HasFrameworkError }}
   {{ .Result.BuildPayload "_response" -}}
   return MakeReply({{ .WireReplySuccess "&_response" }});
   {{- else }}
@@ -85,7 +85,7 @@ void
           _arena().get()));
 }
 
-{{- if .HasApplicationError }}
+{{- if .HasDomainError }}
   void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplySuccess(
       {{- RenderParams .Result.ValueParameters }}) {

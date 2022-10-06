@@ -41,8 +41,8 @@ class ProtocolConnector : public fidl::contrib::ServiceHubConnector<ProtocolFact
           [resolver = std::move(resolver)](
               fidl::Result<test_protocol_connector::Protocol::DoAction>& status) mutable {
             resolver.resolve(status.is_error() &&
-                             (status.error_value().is_transport_error() ||
-                              status.error_value().application_error() == Error::kTransient));
+                             (status.error_value().is_framework_error() ||
+                              status.error_value().domain_error() == Error::kTransient));
           });
     });
   }

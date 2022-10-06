@@ -30,17 +30,16 @@ struct NaturalMethodTypes {
 template <typename FidlMethod>
 using NaturalCompleter = typename fidl::internal::NaturalMethodTypes<FidlMethod>::Completer;
 
-// Note: application error types used in the error syntax are limited to int32,
-// uint32, and enums thereof. Thus the same application error types are shared
+// Note: domain error types used in the error syntax are limited to int32,
+// uint32, and enums thereof. Thus the same domain error types are shared
 // between wire and natural domain objects.
 template <typename FidlMethod>
-using NaturalApplicationError =
-    typename fidl::internal::WireMethodTypes<FidlMethod>::ApplicationError;
+using NaturalDomainError = typename fidl::internal::WireMethodTypes<FidlMethod>::DomainError;
 
 // |NaturalMessageConverter| extends transactional message wrappers with the
 // ability to convert to and from domain object types. In particular, result
 // unions in methods using the error syntax will be converted to
-// |fit::result<ApplicationError, Payload>| when sending.
+// |fit::result<DomainError, Payload>| when sending.
 //
 // |Message| is either a |fidl::Request<Foo>|, |fidl::Response<Foo>|, or
 // |fidl::Event<Foo>|.

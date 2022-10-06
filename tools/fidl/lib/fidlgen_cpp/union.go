@@ -149,7 +149,7 @@ func (c *compiler) compileResult(p Payloader, m *fidlgen.Method) *Result {
 		ValueTypeDecl:     valueType.nameVariants,
 		Value:             valueType,
 		HasError:          m.HasError,
-		HasTransportError: m.HasTransportError(),
+		HasFrameworkError: m.HasTransportError(),
 		valueTypeIsStruct: false,
 	}
 	if m.HasError {

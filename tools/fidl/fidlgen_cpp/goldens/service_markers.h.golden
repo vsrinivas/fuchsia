@@ -25,8 +25,8 @@ class FirstProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 
@@ -48,8 +48,8 @@ class SecondProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 }  // namespace test_service

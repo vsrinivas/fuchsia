@@ -319,13 +319,13 @@ class EchoConnection final : public fidl::Server<Echo> {
           "", request.result_variant(),
           [completer = completer.ToAsync(),
            extend_lifetime = app](fidl::Result<Echo::EchoMinimalWithError>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok());
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }
@@ -378,13 +378,13 @@ class EchoConnection final : public fidl::Server<Echo> {
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
            extend_lifetime = app](fidl::Result<Echo::EchoStructWithError>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok(std::move(result.value())));
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }
@@ -439,13 +439,13 @@ class EchoConnection final : public fidl::Server<Echo> {
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
            extend_lifetime = app](fidl::Result<Echo::EchoNamedStructWithError>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok(std::move(result.value())));
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }
@@ -499,13 +499,13 @@ class EchoConnection final : public fidl::Server<Echo> {
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
            extend_lifetime = app](fidl::Result<Echo::EchoArraysWithError>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok(std::move(result.value())));
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }
@@ -540,13 +540,13 @@ class EchoConnection final : public fidl::Server<Echo> {
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
            extend_lifetime = app](fidl::Result<Echo::EchoVectorsWithError>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok(std::move(result.value())));
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }
@@ -581,13 +581,13 @@ class EchoConnection final : public fidl::Server<Echo> {
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
            extend_lifetime = app](fidl::Result<Echo::EchoTableWithError>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok(std::move(result.value())));
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }
@@ -622,13 +622,13 @@ class EchoConnection final : public fidl::Server<Echo> {
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
            extend_lifetime = app](fidl::Result<Echo::EchoXunionsWithError>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok(std::move(result.value())));
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }
@@ -672,13 +672,13 @@ class EchoConnection final : public fidl::Server<Echo> {
       app->EchoTablePayloadWithError(
           std::move(req), [completer = completer.ToAsync(), extend_lifetime = app](
                               fidl::Result<Echo::EchoTablePayloadWithError>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok(std::move(result.value())));
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }
@@ -791,13 +791,13 @@ class EchoConnection final : public fidl::Server<Echo> {
       app->EchoUnionPayloadWithError(
           std::move(*req), [completer = completer.ToAsync(), extend_lifetime = app](
                                fidl::Result<Echo::EchoUnionPayloadWithError>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok(std::move(result.value())));
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }
@@ -864,13 +864,13 @@ class EchoConnection final : public fidl::Server<Echo> {
           request.result_variant(),
           [completer = completer.ToAsync(), extend_lifetime = app](
               fidl::Result<Echo::EchoUnionResponseWithErrorComposed>& result) mutable {
-            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
+            ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_domain_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
             if (result.is_ok()) {
               completer.Reply(fit::ok(std::move(result.value())));
             } else {
-              completer.Reply(fit::error(result.error_value().application_error()));
+              completer.Reply(fit::error(result.error_value().domain_error()));
             }
           });
     }

@@ -27,10 +27,10 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
   using ResultType = typename FidlMethod::Protocol::Transport::template Result<FidlMethod>;
   using NaturalResponse = ::fidl::Response<FidlMethod>;
   constexpr bool IsAbsentBody = ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsAbsentBody;
-  constexpr bool HasApplicationError =
-      ::fidl::internal::NaturalMethodTypes<FidlMethod>::HasApplicationError;
-  constexpr bool HasTransportError =
-      ::fidl::internal::NaturalMethodTypes<FidlMethod>::HasTransportError;
+  constexpr bool kHasDomainError =
+      ::fidl::internal::NaturalMethodTypes<FidlMethod>::kHasDomainError;
+  constexpr bool kHasFrameworkError =
+      ::fidl::internal::NaturalMethodTypes<FidlMethod>::kHasFrameworkError;
 
   // Check error from the underlying transport.
   if (!incoming.ok()) {
@@ -65,13 +65,13 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
     return value;
   } else {
     auto& domain_object = decoded.value();
-    if constexpr (HasApplicationError) {
+    if constexpr (kHasDomainError) {
       if (domain_object.result().err().has_value()) {
         ResultType value = ::fit::error(std::move(domain_object.result().err().value()));
         return value;
       }
     }
-    if constexpr (HasTransportError) {
+    if constexpr (kHasFrameworkError) {
       if (domain_object.result().transport_err().has_value()) {
         ::fidl::internal::TransportErr transport_err =
             domain_object.result().transport_err().value();
@@ -83,7 +83,7 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
         }
       }
     }
-    if constexpr (HasApplicationError || HasTransportError) {
+    if constexpr (kHasDomainError || kHasFrameworkError) {
       constexpr bool IsEmptyStructPayload =
           ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload;
 

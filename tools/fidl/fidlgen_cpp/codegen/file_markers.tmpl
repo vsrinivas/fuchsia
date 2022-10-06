@@ -42,8 +42,8 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
           static constexpr bool kHasResponseBody = {{ .HasResponsePayload }};
 
           static constexpr bool kHasNonEmptyPayload = {{ .HasNonEmptyPayload }};
-          static constexpr bool kHasApplicationError = {{ .HasApplicationError }};
-          static constexpr bool kHasTransportError = {{ .HasTransportError }};
+          static constexpr bool kHasDomainError = {{ .HasDomainError }};
+          static constexpr bool kHasFrameworkError = {{ .HasFrameworkError }};
         };
       {{- end }}
     };

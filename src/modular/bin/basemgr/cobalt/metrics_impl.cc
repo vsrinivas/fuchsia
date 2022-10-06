@@ -23,8 +23,8 @@ void MetricsImpl::LogLifetimeEvent(
   Do([event](fidl::Client<MetricEventLogger>& logger, DoResolver resolver) {
     logger->LogOccurrence({cobalt_registry::kModularLifetimeEventsMigratedMetricId, 1, {event}})
         .Then([resolver = std::move(resolver)](MetricsResult result) mutable {
-          resolver.resolve(result.is_error() && (result.error_value().is_transport_error() ||
-                                                 result.error_value().application_error() ==
+          resolver.resolve(result.is_error() && (result.error_value().is_framework_error() ||
+                                                 result.error_value().domain_error() ==
                                                      fuchsia_metrics::Error::kBufferFull));
         });
   });
@@ -41,8 +41,8 @@ void MetricsImpl::LogStoryLaunchTime(
         ->LogInteger(
             {cobalt_registry::kStoryLaunchTimeMigratedMetricId, time.to_usecs(), {status_value}})
         .Then([resolver = std::move(resolver)](MetricsResult result) mutable {
-          resolver.resolve(result.is_error() && (result.error_value().is_transport_error() ||
-                                                 result.error_value().application_error() ==
+          resolver.resolve(result.is_error() && (result.error_value().is_framework_error() ||
+                                                 result.error_value().domain_error() ==
                                                      fuchsia_metrics::Error::kBufferFull));
         });
   });

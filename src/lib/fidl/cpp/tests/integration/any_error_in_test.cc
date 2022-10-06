@@ -28,46 +28,46 @@ using AnyErrorInMethod = fidl::AnyErrorIn<test_error_methods::ErrorMethods::Many
 
 TEST(AnyErrorInMethod, TransportError) {
   AnyErrorInMethod error(fidl::Status::UnknownOrdinal());
-  EXPECT_TRUE(error.is_transport_error());
-  EXPECT_FALSE(error.is_application_error());
-  EXPECT_EQ(fidl::Reason::kUnexpectedMessage, error.transport_error().reason());
+  EXPECT_TRUE(error.is_framework_error());
+  EXPECT_FALSE(error.is_domain_error());
+  EXPECT_EQ(fidl::Reason::kUnexpectedMessage, error.framework_error().reason());
   EXPECT_EQ(
       "FIDL operation failed due to unexpected message, status: "
       "ZX_ERR_NOT_SUPPORTED (-2), detail: unknown ordinal",
       error.FormatDescription());
 }
 
-TEST(AnyErrorInMethod, ApplicationError) {
+TEST(AnyErrorInMethod, DomainError) {
   AnyErrorInMethod error(MyError::kBadError);
-  EXPECT_FALSE(error.is_transport_error());
-  EXPECT_TRUE(error.is_application_error());
-  EXPECT_EQ(MyError::kBadError, error.application_error());
-  EXPECT_EQ("FIDL application error: test.error.methods/MyError.BAD_ERROR (value: 1)",
+  EXPECT_FALSE(error.is_framework_error());
+  EXPECT_TRUE(error.is_domain_error());
+  EXPECT_EQ(MyError::kBadError, error.domain_error());
+  EXPECT_EQ("FIDL method domain error: test.error.methods/MyError.BAD_ERROR (value: 1)",
             error.FormatDescription());
 }
 
-TEST(AnyErrorInMethod, UnknownApplicationError) {
+TEST(AnyErrorInMethod, UnknownDomainError) {
   AnyErrorInMethod error(static_cast<MyError>(42));
-  EXPECT_FALSE(error.is_transport_error());
-  EXPECT_TRUE(error.is_application_error());
-  EXPECT_EQ("FIDL application error: test.error.methods/MyError.[UNKNOWN] (value: 42)",
+  EXPECT_FALSE(error.is_framework_error());
+  EXPECT_TRUE(error.is_domain_error());
+  EXPECT_EQ("FIDL method domain error: test.error.methods/MyError.[UNKNOWN] (value: 42)",
             error.FormatDescription());
 }
 
-TEST(AnyErrorInMethod, SignedNumberedApplicationError) {
+TEST(AnyErrorInMethod, SignedNumberedDomainError) {
   fidl::internal::AnyErrorInImpl<int32_t> error(-3);
-  EXPECT_FALSE(error.is_transport_error());
-  EXPECT_TRUE(error.is_application_error());
-  EXPECT_EQ(-3, error.application_error());
-  EXPECT_EQ("FIDL application error: int32_t (value: -3)", error.FormatDescription());
+  EXPECT_FALSE(error.is_framework_error());
+  EXPECT_TRUE(error.is_domain_error());
+  EXPECT_EQ(-3, error.domain_error());
+  EXPECT_EQ("FIDL method domain error: int32_t (value: -3)", error.FormatDescription());
 }
 
-TEST(AnyErrorInMethod, UnsignedNumberedApplicationError) {
+TEST(AnyErrorInMethod, UnsignedNumberedDomainError) {
   fidl::internal::AnyErrorInImpl<uint32_t> error(3);
-  EXPECT_FALSE(error.is_transport_error());
-  EXPECT_TRUE(error.is_application_error());
-  EXPECT_EQ(3, error.application_error());
-  EXPECT_EQ("FIDL application error: uint32_t (value: 3)", error.FormatDescription());
+  EXPECT_FALSE(error.is_framework_error());
+  EXPECT_TRUE(error.is_domain_error());
+  EXPECT_EQ(3, error.domain_error());
+  EXPECT_EQ("FIDL method domain error: uint32_t (value: 3)", error.FormatDescription());
 }
 
 }  // namespace

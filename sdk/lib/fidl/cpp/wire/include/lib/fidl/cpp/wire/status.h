@@ -383,7 +383,7 @@ class UnbindInfo : private Status {
   // closed explicitly by the user. |status| is the status of writing
   // the epitaph to the channel. This is specific to the server bindings.
   //
-  // Internally in the bindings runtine, |status| is also used to indicate
+  // Internally in the bindings runtime, |status| is also used to indicate
   // which epitaph value should be sent. But this is not re-exposed to the user
   // since the user provided the epitaph in the first place.
   constexpr static UnbindInfo Close(zx_status_t status) {

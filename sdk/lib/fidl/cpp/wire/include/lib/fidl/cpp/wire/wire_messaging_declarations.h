@@ -263,7 +263,7 @@ class WireCompleterBase;
 
 // |WireMethodTypes| gives access to:
 // - the completer type associated with a particular method.
-// - if two-way and uses the error syntax: the application error type in the
+// - if two-way and uses the error syntax: the domain error type in the
 //   error syntax.
 // - if two-way: the thenable type associated with a particular method.
 template <typename FidlMethod>

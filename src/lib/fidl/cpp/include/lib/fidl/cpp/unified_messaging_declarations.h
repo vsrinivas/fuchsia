@@ -132,7 +132,7 @@ class NaturalClientImpl;
 // - if two-way:
 //     - |ResultCallback|: the client callback taking a |fidl::Result| type.
 //     - |IsAbsentBody|: whether the response has no body.
-//     - |HasApplicationError|: whether the method uses the error syntax.
+//     - |kHasDomainError|: whether the method uses the error syntax.
 //     - if using the error syntax:
 //         - |IsEmptyStructPayload|: whether the success payload is an empty struct.
 template <typename FidlMethod>

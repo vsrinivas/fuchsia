@@ -23,8 +23,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Super::Foo> {
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_inheritance::Super::Foo>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -216,8 +216,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Sub::Foo> {
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_inheritance::Sub::Foo>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };

@@ -172,7 +172,7 @@ struct ::fidl::internal::WireMethodTypes<::test_anonymous::SomeProtocol::SomeMet
 
   using Request = ::test_anonymous::wire::SomeProtocolSomeMethodRequest;
 
-  using ApplicationError = ::test_anonymous::wire::SomeProtocolSomeMethodError;
+  using DomainError = ::test_anonymous::wire::SomeProtocolSomeMethodError;
 
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_anonymous::SomeProtocol::SomeMethod,

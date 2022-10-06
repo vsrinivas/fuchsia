@@ -430,7 +430,7 @@ class {{ .ResponderType }} final {
     {{- else -}}
       nullptr;
     {{- end }}
-    {{- if .HasTransportError }}
+    {{- if .HasFrameworkError }}
     ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
     {{- end }}
     response_.Send(resp_type, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder

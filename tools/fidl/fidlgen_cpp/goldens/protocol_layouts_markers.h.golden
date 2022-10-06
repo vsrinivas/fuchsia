@@ -25,8 +25,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayAnonComposed final {
     TwoWayAnonComposed() = delete;
@@ -39,8 +39,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayAnonComposedWithError final {
     TwoWayAnonComposedWithError() = delete;
@@ -53,8 +53,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnAnonComposed final {
     OnAnonComposed() = delete;
@@ -67,8 +67,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnAnonComposedWithError final {
     OnAnonComposedWithError() = delete;
@@ -81,8 +81,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OneWayNamedComposed final {
     OneWayNamedComposed() = delete;
@@ -95,8 +95,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayNamedComposed final {
     TwoWayNamedComposed() = delete;
@@ -109,8 +109,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayNamedComposedWithError final {
     TwoWayNamedComposedWithError() = delete;
@@ -123,8 +123,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnNamedComposed final {
     OnNamedComposed() = delete;
@@ -137,8 +137,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnNamedComposedWithError final {
     OnNamedComposedWithError() = delete;
@@ -151,8 +151,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OneWayImport final {
     OneWayImport() = delete;
@@ -165,8 +165,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayImport final {
     TwoWayImport() = delete;
@@ -179,8 +179,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayImportWithError final {
     TwoWayImportWithError() = delete;
@@ -193,8 +193,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnImport final {
     OnImport() = delete;
@@ -207,8 +207,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnImportWithError final {
     OnImportWithError() = delete;
@@ -221,8 +221,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OneWayLocal final {
     OneWayLocal() = delete;
@@ -235,8 +235,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayLocal final {
     TwoWayLocal() = delete;
@@ -249,8 +249,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayLocalWithError final {
     TwoWayLocalWithError() = delete;
@@ -263,8 +263,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnLocal final {
     OnLocal() = delete;
@@ -277,8 +277,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnLocalWithError final {
     OnLocalWithError() = delete;
@@ -291,8 +291,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OneWayAnon final {
     OneWayAnon() = delete;
@@ -305,8 +305,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayAnon final {
     TwoWayAnon() = delete;
@@ -319,8 +319,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class TwoWayAnonWithError final {
     TwoWayAnonWithError() = delete;
@@ -333,8 +333,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnAnon final {
     OnAnon() = delete;
@@ -347,8 +347,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnAnonWithError final {
     OnAnonWithError() = delete;
@@ -361,8 +361,8 @@ class MainProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 }  // namespace test_protocollayouts

@@ -25,8 +25,8 @@ class Protocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class RequestFlexibleResponseStrict final {
     RequestFlexibleResponseStrict() = delete;
@@ -39,8 +39,8 @@ class Protocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 }  // namespace test_requestflexibleenvelope

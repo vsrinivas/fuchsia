@@ -23,8 +23,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequ
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = true;
 };
@@ -36,8 +36,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequ
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -49,8 +49,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequ
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = true;
 };
@@ -62,8 +62,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequ
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -524,8 +524,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::R
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = false;
 
@@ -539,8 +539,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::E
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = true;
 
@@ -554,8 +554,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::E
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = true;
 
@@ -569,8 +569,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::H
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = false;
 
@@ -1026,8 +1026,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::M
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::MethodB>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -1039,8 +1039,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::T
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = true;
 };
@@ -1052,8 +1052,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::M
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -1422,8 +1422,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::Requ
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::Transitional::Request>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -1919,8 +1919,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtoc
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -2168,8 +2168,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -2181,8 +2181,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -2194,8 +2194,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -2658,8 +2658,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::MethodWithUnion::U
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };

@@ -250,8 +250,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = false;
 
@@ -265,8 +265,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = false;
 
@@ -280,8 +280,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = false;
 
@@ -295,8 +295,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = false;
 
@@ -310,8 +310,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = false;
 

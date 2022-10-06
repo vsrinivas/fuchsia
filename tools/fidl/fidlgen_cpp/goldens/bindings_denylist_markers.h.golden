@@ -43,8 +43,8 @@ class DenyEachBinding final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnlyDenyGo final {
     OnlyDenyGo() = delete;
@@ -57,8 +57,8 @@ class DenyEachBinding final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnlyDenyLibfuzzer final {
     OnlyDenyLibfuzzer() = delete;
@@ -71,8 +71,8 @@ class DenyEachBinding final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnlyDenyRust final {
     OnlyDenyRust() = delete;
@@ -85,8 +85,8 @@ class DenyEachBinding final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class OnlyDenySyzkaller final {
     OnlyDenySyzkaller() = delete;
@@ -99,8 +99,8 @@ class DenyEachBinding final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 
@@ -131,8 +131,8 @@ class ImportsSameNameContext final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class AlwaysAppearsInImportingLibrary final {
     AlwaysAppearsInImportingLibrary() = delete;
@@ -145,8 +145,8 @@ class ImportsSameNameContext final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 }  // namespace test_bindingsdenylist

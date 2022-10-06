@@ -249,9 +249,9 @@ void LoadDriver(fuchsia_driver_framework::DriverStartArgs start_args,
         if (!result.is_ok()) {
           LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.c_str(),
                result.error_value().FormatDescription().c_str());
-          zx_status_t status = result.error_value().is_application_error()
-                                   ? result.error_value().application_error()
-                                   : result.error_value().transport_error().status();
+          zx_status_t status = result.error_value().is_domain_error()
+                                   ? result.error_value().domain_error()
+                                   : result.error_value().framework_error().status();
           callback(zx::error(status));
           return;
         }

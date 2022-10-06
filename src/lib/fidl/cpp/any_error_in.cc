@@ -24,7 +24,7 @@ size_t AnyErrorInBase::FormatImpl(const char* prelude, FormattingBuffer& buffer,
   return display_error(begin, len) + num_would_write;
 }
 
-const char* AnyErrorInBase::kTransportErrorPrelude = nullptr;
-const char* AnyErrorInBase::kApplicationErrorPrelude = "FIDL application error: ";
+const char* AnyErrorInBase::kFrameworkErrorPrelude = nullptr;
+const char* AnyErrorInBase::kDomainErrorPrelude = "FIDL method domain error: ";
 
 }  // namespace fidl::internal

@@ -121,8 +121,8 @@ TEST(Client, PromisifyApplicationErrorMethodCasePrimitiveError) {
       [&](fpromise::result<
           void, fidl::AnyErrorIn<test_error_methods::ErrorMethods::NoArgsPrimitiveError>>& result) {
         ASSERT_TRUE(result.is_error());
-        ASSERT_TRUE(result.error().is_application_error());
-        ASSERT_EQ(42, result.error().application_error());
+        ASSERT_TRUE(result.error().is_domain_error());
+        ASSERT_EQ(42, result.error().domain_error());
         loop.Quit();
       });
 
@@ -148,8 +148,8 @@ TEST(Client, PromisifyApplicationErrorMethodCaseCustomError) {
                            fidl::AnyErrorIn<test_error_methods::ErrorMethods::ManyArgsCustomError>>&
               result) {
         ASSERT_TRUE(result.is_error());
-        ASSERT_TRUE(result.error().is_application_error());
-        ASSERT_EQ(test_error_methods::MyError::kBadError, result.error().application_error());
+        ASSERT_TRUE(result.error().is_domain_error());
+        ASSERT_EQ(test_error_methods::MyError::kBadError, result.error().domain_error());
         loop.Quit();
       });
 

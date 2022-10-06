@@ -163,8 +163,8 @@ class {{ .NaturalResponseConverter }} {
   using DomainObject = {{ .ResponsePayload }};
 
  public:
-  {{ if not .Result.HasTransportError }}
-  {{/* FromDomainObject is not available if HasTransportError because transport
+  {{ if not .Result.HasFrameworkError }}
+  {{/* FromDomainObject is not available if HasFrameworkError because framework
   error variants cannot be converted to fidl::Response. */}}
   static {{ .NaturalResponse }} FromDomainObject(DomainObject o) {
     if (o.result().err().has_value()) {
@@ -214,7 +214,7 @@ class {{ .NaturalResponseConverter }} {
 
 {{- define "Method:Response:Traits:TypeConversionsHeader" }}
 {{- if .HasResponsePayload }}
-{{- if not .HasTransportError }}
+{{- if not .HasFrameworkError }}
 template <>
 struct WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}> {
   static {{ .NaturalResponse }} ToNatural({{ .WireResponse }} src);
@@ -235,7 +235,7 @@ struct WireTypeForNaturalType<{{ .NaturalResponse }}> {
 
 {{- define "Method:Response:Traits:TypeConversionsSource" }}
 {{- if .HasResponsePayload }}
-{{- if not .HasTransportError }}
+{{- if not .HasFrameworkError }}
 {{ .NaturalResponse }}  WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}>::ToNatural({{ .WireResponse }} src) {
   {{- if and .HasResponsePayload .ResponseMessageBase }}
   return {{ .NaturalResponse }}(

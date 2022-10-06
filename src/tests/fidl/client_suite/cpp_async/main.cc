@@ -98,12 +98,12 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
       if (result.is_ok()) {
         completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithSuccess(
             ::fidl_clientsuite::Empty()));
-      } else if (result.error_value().is_application_error()) {
+      } else if (result.error_value().is_domain_error()) {
         completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithApplicationError(
-            result.error_value().application_error()));
+            result.error_value().domain_error()));
       } else {
         completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithFidlError(
-            clienttest_util::ClassifyError(result.error_value().transport_error())));
+            clienttest_util::ClassifyError(result.error_value().framework_error())));
       }
     });
   }
@@ -148,12 +148,12 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
       if (result.is_ok()) {
         completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithSuccess(
             ::fidl_clientsuite::Empty()));
-      } else if (result.error_value().is_application_error()) {
+      } else if (result.error_value().is_domain_error()) {
         completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithApplicationError(
-            result.error_value().application_error()));
+            result.error_value().domain_error()));
       } else {
         completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithFidlError(
-            clienttest_util::ClassifyError(result.error_value().transport_error())));
+            clienttest_util::ClassifyError(result.error_value().framework_error())));
       }
     });
   }
@@ -168,13 +168,13 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
         completer.Reply(
             fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::WithSuccess(
                 result.value()));
-      } else if (result.error_value().is_application_error()) {
+      } else if (result.error_value().is_domain_error()) {
         completer.Reply(fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::
-                            WithApplicationError(result.error_value().application_error()));
+                            WithApplicationError(result.error_value().domain_error()));
       } else {
         completer.Reply(
             fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::WithFidlError(
-                clienttest_util::ClassifyError(result.error_value().transport_error())));
+                clienttest_util::ClassifyError(result.error_value().framework_error())));
       }
     });
   }

@@ -71,12 +71,12 @@ zx::status<fidl::ServerEnd<fuchsia_io::Directory>> ExportDevfsEntry(
       exporter->Export({std::move(endpoints->client), service_path, devfs_path, protocol_id});
   if (result.is_error()) {
     const auto& error = result.error_value();
-    if (error.is_transport_error()) {
+    if (error.is_framework_error()) {
       // Error occurred in the FIDL transport
-      return zx::error(error.transport_error().status());
+      return zx::error(error.framework_error().status());
     } else {
       // Error response returned by the exporter service
-      return zx::error(error.application_error());
+      return zx::error(error.domain_error());
     }
   }
   return zx::ok(std::move(endpoints->server));

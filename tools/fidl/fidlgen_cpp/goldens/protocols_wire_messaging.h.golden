@@ -2460,7 +2460,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Resp
 
   
   
-  using ApplicationError = uint32_t;
+  using DomainError = uint32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -2501,7 +2501,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Erro
 
   
   
-  using ApplicationError = uint32_t;
+  using DomainError = uint32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -2542,7 +2542,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Erro
 
   
   
-  using ApplicationError = ::test_protocols::wire::ErrorEnum;
+  using DomainError = ::test_protocols::wire::ErrorEnum;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -2583,7 +2583,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Hand
 
   
   
-  using ApplicationError = uint32_t;
+  using DomainError = uint32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<

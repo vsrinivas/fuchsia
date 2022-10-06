@@ -24,8 +24,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_errorsyntax::ExampleUseOfErro
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = false;
 
@@ -39,8 +39,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_errorsyntax::ExampleUseOfErro
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&)>;
 
-  static constexpr bool HasApplicationError = true;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = true;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsEmptyStructPayload = false;
 

@@ -25,8 +25,8 @@ class Example final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 }  // namespace test_error

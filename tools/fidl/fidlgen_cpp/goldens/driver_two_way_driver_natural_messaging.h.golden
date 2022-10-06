@@ -18,8 +18,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_drivertwoway::TwoWay::Add> {
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_drivertwoway::TwoWay::Add>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };

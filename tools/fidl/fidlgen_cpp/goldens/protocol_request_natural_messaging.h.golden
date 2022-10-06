@@ -137,8 +137,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetC
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::GetChild>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };
@@ -150,8 +150,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetC
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::GetChildRequest>&)>;
 
-  static constexpr bool HasApplicationError = false;
-  static constexpr bool HasTransportError = false;
+  static constexpr bool kHasDomainError = false;
+  static constexpr bool kHasFrameworkError = false;
 
   static constexpr bool IsAbsentBody = false;
 };

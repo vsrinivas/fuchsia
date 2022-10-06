@@ -735,14 +735,14 @@ func (m Method) NaturalResponseArg(argName string) string {
 
 // Returns true if the method has a result payload and the payload has the `err`
 // variant used for application errors.
-func (m Method) HasApplicationError() bool {
+func (m Method) HasDomainError() bool {
 	return m.Result != nil && m.Result.HasError
 }
 
 // Returns true if the method has a result payload and the payload has the
 // `transport_err` variant used for transport errors.
-func (m Method) HasTransportError() bool {
-	return m.Result != nil && m.Result.HasTransportError
+func (m Method) HasFrameworkError() bool {
+	return m.Result != nil && m.Result.HasFrameworkError
 }
 
 // Returns true if the payload (user-specified return type) of the method is

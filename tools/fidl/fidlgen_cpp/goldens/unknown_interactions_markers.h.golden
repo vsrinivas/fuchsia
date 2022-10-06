@@ -25,8 +25,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleOneWay final {
     FlexibleOneWay() = delete;
@@ -39,8 +39,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWay final {
     StrictTwoWay() = delete;
@@ -53,8 +53,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFields final {
     StrictTwoWayFields() = delete;
@@ -67,8 +67,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnion final {
     StrictTwoWayUnion() = delete;
@@ -81,8 +81,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTable final {
     StrictTwoWayTable() = delete;
@@ -95,8 +95,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
@@ -109,8 +109,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFieldsErr final {
     StrictTwoWayFieldsErr() = delete;
@@ -123,8 +123,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnionErr final {
     StrictTwoWayUnionErr() = delete;
@@ -137,8 +137,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTableErr final {
     StrictTwoWayTableErr() = delete;
@@ -151,8 +151,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleTwoWay final {
     FlexibleTwoWay() = delete;
@@ -165,8 +165,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayFields final {
     FlexibleTwoWayFields() = delete;
@@ -179,8 +179,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayUnion final {
     FlexibleTwoWayUnion() = delete;
@@ -193,8 +193,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayTable final {
     FlexibleTwoWayTable() = delete;
@@ -207,8 +207,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayErr final {
     FlexibleTwoWayErr() = delete;
@@ -221,8 +221,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayFieldsErr final {
     FlexibleTwoWayFieldsErr() = delete;
@@ -235,8 +235,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayUnionErr final {
     FlexibleTwoWayUnionErr() = delete;
@@ -249,8 +249,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayTableErr final {
     FlexibleTwoWayTableErr() = delete;
@@ -263,8 +263,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
   };
   class StrictEvent final {
     StrictEvent() = delete;
@@ -277,8 +277,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventFields final {
     StrictEventFields() = delete;
@@ -291,8 +291,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventUnion final {
     StrictEventUnion() = delete;
@@ -305,8 +305,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventTable final {
     StrictEventTable() = delete;
@@ -319,8 +319,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventErr final {
     StrictEventErr() = delete;
@@ -333,8 +333,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventFieldsErr final {
     StrictEventFieldsErr() = delete;
@@ -347,8 +347,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventUnionErr final {
     StrictEventUnionErr() = delete;
@@ -361,8 +361,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventTableErr final {
     StrictEventTableErr() = delete;
@@ -375,8 +375,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEvent final {
     FlexibleEvent() = delete;
@@ -389,8 +389,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventFields final {
     FlexibleEventFields() = delete;
@@ -403,8 +403,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventUnion final {
     FlexibleEventUnion() = delete;
@@ -417,8 +417,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventTable final {
     FlexibleEventTable() = delete;
@@ -431,8 +431,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventErr final {
     FlexibleEventErr() = delete;
@@ -445,8 +445,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventFieldsErr final {
     FlexibleEventFieldsErr() = delete;
@@ -459,8 +459,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventUnionErr final {
     FlexibleEventUnionErr() = delete;
@@ -473,8 +473,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventTableErr final {
     FlexibleEventTableErr() = delete;
@@ -487,8 +487,8 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 
@@ -510,8 +510,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleOneWay final {
     FlexibleOneWay() = delete;
@@ -524,8 +524,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWay final {
     StrictTwoWay() = delete;
@@ -538,8 +538,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFields final {
     StrictTwoWayFields() = delete;
@@ -552,8 +552,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnion final {
     StrictTwoWayUnion() = delete;
@@ -566,8 +566,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTable final {
     StrictTwoWayTable() = delete;
@@ -580,8 +580,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
@@ -594,8 +594,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFieldsErr final {
     StrictTwoWayFieldsErr() = delete;
@@ -608,8 +608,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnionErr final {
     StrictTwoWayUnionErr() = delete;
@@ -622,8 +622,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTableErr final {
     StrictTwoWayTableErr() = delete;
@@ -636,8 +636,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEvent final {
     StrictEvent() = delete;
@@ -650,8 +650,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventFields final {
     StrictEventFields() = delete;
@@ -664,8 +664,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventUnion final {
     StrictEventUnion() = delete;
@@ -678,8 +678,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventTable final {
     StrictEventTable() = delete;
@@ -692,8 +692,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventErr final {
     StrictEventErr() = delete;
@@ -706,8 +706,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventFieldsErr final {
     StrictEventFieldsErr() = delete;
@@ -720,8 +720,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventUnionErr final {
     StrictEventUnionErr() = delete;
@@ -734,8 +734,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventTableErr final {
     StrictEventTableErr() = delete;
@@ -748,8 +748,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEvent final {
     FlexibleEvent() = delete;
@@ -762,8 +762,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventFields final {
     FlexibleEventFields() = delete;
@@ -776,8 +776,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventUnion final {
     FlexibleEventUnion() = delete;
@@ -790,8 +790,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventTable final {
     FlexibleEventTable() = delete;
@@ -804,8 +804,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventErr final {
     FlexibleEventErr() = delete;
@@ -818,8 +818,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventFieldsErr final {
     FlexibleEventFieldsErr() = delete;
@@ -832,8 +832,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventUnionErr final {
     FlexibleEventUnionErr() = delete;
@@ -846,8 +846,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleEventTableErr final {
     FlexibleEventTableErr() = delete;
@@ -860,8 +860,8 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 
@@ -883,8 +883,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWay final {
     StrictTwoWay() = delete;
@@ -897,8 +897,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFields final {
     StrictTwoWayFields() = delete;
@@ -911,8 +911,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnion final {
     StrictTwoWayUnion() = delete;
@@ -925,8 +925,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTable final {
     StrictTwoWayTable() = delete;
@@ -939,8 +939,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
@@ -953,8 +953,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFieldsErr final {
     StrictTwoWayFieldsErr() = delete;
@@ -967,8 +967,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnionErr final {
     StrictTwoWayUnionErr() = delete;
@@ -981,8 +981,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTableErr final {
     StrictTwoWayTableErr() = delete;
@@ -995,8 +995,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEvent final {
     StrictEvent() = delete;
@@ -1009,8 +1009,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventFields final {
     StrictEventFields() = delete;
@@ -1023,8 +1023,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventUnion final {
     StrictEventUnion() = delete;
@@ -1037,8 +1037,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventTable final {
     StrictEventTable() = delete;
@@ -1051,8 +1051,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventErr final {
     StrictEventErr() = delete;
@@ -1065,8 +1065,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventFieldsErr final {
     StrictEventFieldsErr() = delete;
@@ -1079,8 +1079,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventUnionErr final {
     StrictEventUnionErr() = delete;
@@ -1093,8 +1093,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictEventTableErr final {
     StrictEventTableErr() = delete;
@@ -1107,8 +1107,8 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 
@@ -1130,8 +1130,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleOneWay final {
     FlexibleOneWay() = delete;
@@ -1144,8 +1144,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWay final {
     StrictTwoWay() = delete;
@@ -1158,8 +1158,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFields final {
     StrictTwoWayFields() = delete;
@@ -1172,8 +1172,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnion final {
     StrictTwoWayUnion() = delete;
@@ -1186,8 +1186,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTable final {
     StrictTwoWayTable() = delete;
@@ -1200,8 +1200,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
@@ -1214,8 +1214,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFieldsErr final {
     StrictTwoWayFieldsErr() = delete;
@@ -1228,8 +1228,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnionErr final {
     StrictTwoWayUnionErr() = delete;
@@ -1242,8 +1242,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTableErr final {
     StrictTwoWayTableErr() = delete;
@@ -1256,8 +1256,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleTwoWay final {
     FlexibleTwoWay() = delete;
@@ -1270,8 +1270,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayFields final {
     FlexibleTwoWayFields() = delete;
@@ -1284,8 +1284,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayUnion final {
     FlexibleTwoWayUnion() = delete;
@@ -1298,8 +1298,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayTable final {
     FlexibleTwoWayTable() = delete;
@@ -1312,8 +1312,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayErr final {
     FlexibleTwoWayErr() = delete;
@@ -1326,8 +1326,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayFieldsErr final {
     FlexibleTwoWayFieldsErr() = delete;
@@ -1340,8 +1340,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayUnionErr final {
     FlexibleTwoWayUnionErr() = delete;
@@ -1354,8 +1354,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
   };
   class FlexibleTwoWayTableErr final {
     FlexibleTwoWayTableErr() = delete;
@@ -1368,8 +1368,8 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
   };
 };
 
@@ -1391,8 +1391,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class FlexibleOneWay final {
     FlexibleOneWay() = delete;
@@ -1405,8 +1405,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWay final {
     StrictTwoWay() = delete;
@@ -1419,8 +1419,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFields final {
     StrictTwoWayFields() = delete;
@@ -1433,8 +1433,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnion final {
     StrictTwoWayUnion() = delete;
@@ -1447,8 +1447,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTable final {
     StrictTwoWayTable() = delete;
@@ -1461,8 +1461,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
@@ -1475,8 +1475,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFieldsErr final {
     StrictTwoWayFieldsErr() = delete;
@@ -1489,8 +1489,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnionErr final {
     StrictTwoWayUnionErr() = delete;
@@ -1503,8 +1503,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTableErr final {
     StrictTwoWayTableErr() = delete;
@@ -1517,8 +1517,8 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 
@@ -1540,8 +1540,8 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWay final {
     StrictTwoWay() = delete;
@@ -1554,8 +1554,8 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFields final {
     StrictTwoWayFields() = delete;
@@ -1568,8 +1568,8 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnion final {
     StrictTwoWayUnion() = delete;
@@ -1582,8 +1582,8 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTable final {
     StrictTwoWayTable() = delete;
@@ -1596,8 +1596,8 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = false;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
@@ -1610,8 +1610,8 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = false;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayFieldsErr final {
     StrictTwoWayFieldsErr() = delete;
@@ -1624,8 +1624,8 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayUnionErr final {
     StrictTwoWayUnionErr() = delete;
@@ -1638,8 +1638,8 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
   class StrictTwoWayTableErr final {
     StrictTwoWayTableErr() = delete;
@@ -1652,8 +1652,8 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
-    static constexpr bool kHasApplicationError = true;
-    static constexpr bool kHasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
   };
 };
 }  // namespace test_unknowninteractions

@@ -609,9 +609,9 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendUnknownResponse) {
 
   client->FlexibleTwoWayErr().Then([](auto& response) {
     ASSERT_TRUE(response.is_error());
-    ASSERT_TRUE(response.error_value().is_transport_error());
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
-    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().transport_error().reason());
+    ASSERT_TRUE(response.error_value().is_framework_error());
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().framework_error().status());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().framework_error().reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -635,9 +635,9 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendOtherTransportError) {
 
   client->FlexibleTwoWayErr().Then([](auto& response) {
     ASSERT_TRUE(response.is_error());
-    ASSERT_TRUE(response.error_value().is_transport_error());
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, response.error_value().transport_error().status());
-    EXPECT_EQ(fidl::Reason::kDecodeError, response.error_value().transport_error().reason());
+    ASSERT_TRUE(response.error_value().is_framework_error());
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, response.error_value().framework_error().status());
+    EXPECT_EQ(fidl::Reason::kDecodeError, response.error_value().framework_error().reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -661,8 +661,8 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendErrorVariant) {
 
   client->FlexibleTwoWayErr().Then([](auto& response) {
     ASSERT_TRUE(response.is_error());
-    ASSERT_TRUE(response.error_value().is_application_error());
-    EXPECT_EQ(0x100, response.error_value().application_error());
+    ASSERT_TRUE(response.error_value().is_domain_error());
+    EXPECT_EQ(0x100, response.error_value().domain_error());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -709,9 +709,9 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendUnknownResponse) {
 
   client->FlexibleTwoWayFieldsErr().Then([](auto& response) {
     ASSERT_TRUE(response.is_error());
-    ASSERT_TRUE(response.error_value().is_transport_error());
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
-    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().transport_error().reason());
+    ASSERT_TRUE(response.error_value().is_framework_error());
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().framework_error().status());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().framework_error().reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -736,8 +736,8 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendErrorVariant) {
 
   client->FlexibleTwoWayFieldsErr().Then([](auto& response) {
     ASSERT_TRUE(response.is_error());
-    ASSERT_TRUE(response.error_value().is_application_error());
-    EXPECT_EQ(0x100, response.error_value().application_error());
+    ASSERT_TRUE(response.error_value().is_domain_error());
+    EXPECT_EQ(0x100, response.error_value().domain_error());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -1285,9 +1285,9 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendUnknownResponse) {
 
   auto response = response_fut.get();
   ASSERT_TRUE(response.is_error());
-  ASSERT_TRUE(response.error_value().is_transport_error());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().transport_error().reason());
+  ASSERT_TRUE(response.error_value().is_framework_error());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().framework_error().status());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().framework_error().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendOtherTransportError) {
@@ -1310,9 +1310,9 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendOtherTransportError) {
 
   auto response = response_fut.get();
   ASSERT_TRUE(response.is_error());
-  ASSERT_TRUE(response.error_value().is_transport_error());
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, response.error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kDecodeError, response.error_value().transport_error().reason());
+  ASSERT_TRUE(response.error_value().is_framework_error());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, response.error_value().framework_error().status());
+  EXPECT_EQ(fidl::Reason::kDecodeError, response.error_value().framework_error().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendErrorVariant) {
@@ -1334,8 +1334,8 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendErrorVariant) {
 
   auto response = response_fut.get();
   ASSERT_TRUE(response.is_error());
-  ASSERT_TRUE(response.error_value().is_application_error());
-  EXPECT_EQ(0x100, response.error_value().application_error());
+  ASSERT_TRUE(response.error_value().is_domain_error());
+  EXPECT_EQ(0x100, response.error_value().domain_error());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSend) {
@@ -1382,9 +1382,9 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendUnknownResponse) {
 
   auto response = response_fut.get();
   ASSERT_TRUE(response.is_error());
-  ASSERT_TRUE(response.error_value().is_transport_error());
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().transport_error().reason());
+  ASSERT_TRUE(response.error_value().is_framework_error());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().framework_error().status());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().framework_error().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendErrorVariant) {
@@ -1407,8 +1407,8 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendErrorVariant) {
 
   auto response = response_fut.get();
   ASSERT_TRUE(response.is_error());
-  ASSERT_TRUE(response.error_value().is_application_error());
-  EXPECT_EQ(0x100, response.error_value().application_error());
+  ASSERT_TRUE(response.error_value().is_domain_error());
+  EXPECT_EQ(0x100, response.error_value().domain_error());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

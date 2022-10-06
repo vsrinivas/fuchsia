@@ -18,7 +18,7 @@ namespace fidl {
 // is flexible or uses error syntax).
 template <typename FidlMethod>
 constexpr bool MethodHasResultUnion() {
-  return FidlMethod::kHasApplicationError || FidlMethod::kHasTransportError;
+  return FidlMethod::kHasDomainError || FidlMethod::kHasFrameworkError;
 }
 
 // Returns true if the method requires an |Unwrap| and related accessors for the
@@ -26,7 +26,7 @@ constexpr bool MethodHasResultUnion() {
 // and related methods.
 template <typename FidlMethod>
 constexpr bool MethodHasUnwrapAccessors() {
-  return FidlMethod::kHasNonEmptyPayload || FidlMethod::kHasApplicationError;
+  return FidlMethod::kHasNonEmptyPayload || FidlMethod::kHasDomainError;
 }
 
 namespace internal {
@@ -34,7 +34,7 @@ namespace internal {
 // |BaseWireResult| will access the decoded value from a two-way method call.
 //
 // This is only needed for two-way methods which have a non-empty payload or an
-// application error. For one-way methods and two-way methods with an empty
+// domain error. For one-way methods and two-way methods with an empty
 // payload and no use of error syntax, |BaseWireResult| doesn't store anything.
 template <typename FidlMethod, typename Enable = void>
 struct BaseWireResultStorage;
@@ -45,20 +45,19 @@ struct BaseWireResultStorage;
 // method, this is a pointer to the success payload of the result union, if the
 // method succeeded.
 template <typename FidlMethod>
-struct BaseWireResultStorage<FidlMethod,
-                             std::enable_if_t<!FidlMethod::kHasApplicationError, void>> {
+struct BaseWireResultStorage<FidlMethod, std::enable_if_t<!FidlMethod::kHasDomainError, void>> {
   BaseWireResultStorage() = delete;
 
   using Type = WireResultUnwrapType<FidlMethod>*;
 };
 
 // Defines the storage for a method which uses error syntax. For these methods
-// if the result union is the success or application error variants, the result
-// is stored in a |fit::result| which has the application error type as its
+// if the result union is the success or domain error variants, the result
+// is stored in a |fit::result| which has the domain error type as its
 // error variant, and as its success variant either a pointer to the payload or
 // nothing if the payload is empty.
 template <typename FidlMethod>
-struct BaseWireResultStorage<FidlMethod, std::enable_if_t<FidlMethod::kHasApplicationError, void>> {
+struct BaseWireResultStorage<FidlMethod, std::enable_if_t<FidlMethod::kHasDomainError, void>> {
   BaseWireResultStorage() = delete;
 
   using Type = std::optional<WireResultUnwrapType<FidlMethod>>;
@@ -115,13 +114,13 @@ class BaseWireResult<FidlMethod,
   // the method uses a Result union, this method will handle unpacking the
   // result.
   //
-  // For this template, which is only for methods with no application error and
+  // For this template, which is only for methods with no domain error and
   // an empty payload, this method just checks if transport_err is used (if the
   // method is flexible) and changes the status to
   // |Status::UnknownMethod()| if necessary.
   void ExtractValueFromDecoded(::fidl::WireResponse<FidlMethod>* raw_response) {
     static_assert(!FidlMethod::kHasNonEmptyPayload);
-    static_assert(FidlMethod::kHasTransportError);
+    static_assert(FidlMethod::kHasFrameworkError);
     // For a flexible method, we need to check whether the result is success
     // or transport_err.
     if (raw_response->result.is_transport_err()) {
@@ -150,7 +149,7 @@ class BaseWireResult<
   // method with error syntax, this is a |fit::result| of the error type and a
   // pointer to the return type (if the return type is not empty).
   WireResultUnwrapType<FidlMethod>* Unwrap() {
-    if constexpr (FidlMethod::kHasApplicationError) {
+    if constexpr (FidlMethod::kHasDomainError) {
       return &result_.value();
     } else {
       static_assert(FidlMethod::kHasNonEmptyPayload);
@@ -163,7 +162,7 @@ class BaseWireResult<
   // method with error syntax, this is a |fit::result| of the error type and a
   // pointer to the return type (if the return type is not empty).
   const WireResultUnwrapType<FidlMethod>* Unwrap() const {
-    if constexpr (FidlMethod::kHasApplicationError) {
+    if constexpr (FidlMethod::kHasDomainError) {
       return &result_.value();
     } else {
       static_assert(FidlMethod::kHasNonEmptyPayload);
@@ -206,12 +205,12 @@ class BaseWireResult<
   // result.
   //
   // For this template, which covers any method which has a non-empty payload
-  // or an application error, this method handles both checking the transport
+  // or an domain error, this method handles both checking the transport
   // error (if the method is flexible) and the error (if the method uses error
   // syntax) and putting a reference to the content into the |result_| as needed
   // for the |Unwrap| accessors.
   void ExtractValueFromDecoded(::fidl::WireResponse<FidlMethod>* raw_response) {
-    if constexpr (FidlMethod::kHasApplicationError && FidlMethod::kHasTransportError) {
+    if constexpr (FidlMethod::kHasDomainError && FidlMethod::kHasFrameworkError) {
       if (raw_response->result.is_transport_err()) {
         SetStatus(::fidl::Status::UnknownMethod());
       } else if (raw_response->result.is_err()) {
@@ -224,18 +223,18 @@ class BaseWireResult<
           result_ = fit::ok();
         }
       }
-    } else if constexpr (FidlMethod::kHasTransportError) {
+    } else if constexpr (FidlMethod::kHasFrameworkError) {
       if (raw_response->result.is_transport_err()) {
         SetStatus(::fidl::Status::UnknownMethod());
       } else {
-        // Result must be non-empty, because if there is no application error
+        // Result must be non-empty, because if there is no domain error
         // and the result is empty, we would use the template without the Unwrap
         // accessors.
         static_assert(FidlMethod::kHasNonEmptyPayload);
         ZX_ASSERT_MSG(raw_response->result.is_response(), "Unknown FIDL result union variant");
         result_ = &(raw_response->result.response());
       }
-    } else if constexpr (FidlMethod::kHasApplicationError) {
+    } else if constexpr (FidlMethod::kHasDomainError) {
       if (raw_response->result.is_err()) {
         result_ = fit::error(raw_response->result.err());
       } else {

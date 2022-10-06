@@ -24,8 +24,8 @@ void MetricsImpl::LogMetricEvents(std::vector<fuchsia_metrics::MetricEvent> even
         [resolver = std::move(resolver)](MetricsResult result) mutable {
           // Should retry if the result returns an error and the error is either a transport error
           // of the request message or logger's local buffer is temporarily full.
-          resolver.resolve(result.is_error() && (result.error_value().is_transport_error() ||
-                                                 result.error_value().application_error() ==
+          resolver.resolve(result.is_error() && (result.error_value().is_framework_error() ||
+                                                 result.error_value().domain_error() ==
                                                      fuchsia_metrics::Error::kBufferFull));
         });
   });

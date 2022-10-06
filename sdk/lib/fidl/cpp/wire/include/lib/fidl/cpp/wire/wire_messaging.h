@@ -42,7 +42,7 @@ template <typename FidlMethod>
 using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Completer;
 
 template <typename FidlMethod>
-using WireApplicationError = typename fidl::internal::WireMethodTypes<FidlMethod>::ApplicationError;
+using WireDomainError = typename fidl::internal::WireMethodTypes<FidlMethod>::DomainError;
 
 template <typename FidlMethod>
 using WireThenable = typename fidl::internal::WireMethodTypes<FidlMethod>::Thenable;

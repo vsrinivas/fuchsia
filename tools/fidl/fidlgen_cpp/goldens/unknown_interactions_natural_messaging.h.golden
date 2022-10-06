@@ -32,8 +32,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -51,8 +51,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -70,8 +70,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -89,8 +89,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -108,8 +108,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = true;
     
@@ -130,8 +130,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -152,8 +152,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -174,8 +174,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -196,8 +196,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
     
       static constexpr bool IsEmptyStructPayload = true;
     
@@ -218,8 +218,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -240,8 +240,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -262,8 +262,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = true;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = true;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -284,8 +284,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
     
       static constexpr bool IsEmptyStructPayload = true;
     
@@ -306,8 +306,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -328,8 +328,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -350,8 +350,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = true;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = true;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -2497,8 +2497,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -2516,8 +2516,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -2535,8 +2535,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -2554,8 +2554,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -2573,8 +2573,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = true;
     
@@ -2595,8 +2595,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -2617,8 +2617,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -2639,8 +2639,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -4124,8 +4124,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -4143,8 +4143,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -4162,8 +4162,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -4181,8 +4181,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>&)>;
 
   
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   
 
   
@@ -4200,8 +4200,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = true;
     
@@ -4222,8 +4222,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -4244,8 +4244,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = false;
     
@@ -4266,8 +4266,8 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>&)>;
 
   
-    static constexpr bool HasApplicationError = true;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = true;
+    static constexpr bool kHasFrameworkError = false;
     
       static constexpr bool IsEmptyStructPayload = false;
     

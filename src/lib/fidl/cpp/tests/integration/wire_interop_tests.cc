@@ -305,8 +305,8 @@ TEST_F(UnifiedClientToWireServer, TryRoundTrip) {
               ASSERT_TRUE(result.is_error());
               fidl::AnyErrorIn<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> error =
                   result.error_value();
-              ASSERT_TRUE(error.is_application_error());
-              EXPECT_STATUS(ZX_ERR_INVALID_ARGS, error.application_error());
+              ASSERT_TRUE(error.is_domain_error());
+              EXPECT_STATUS(ZX_ERR_INVALID_ARGS, error.domain_error());
               got_response = true;
             });
     ASSERT_OK(loop().RunUntilIdle());
@@ -842,8 +842,8 @@ TEST_F(UnifiedSyncClientToWireServer, TryRoundTrip) {
     ASSERT_TRUE(result.is_error());
     fidl::AnyErrorIn<fidl_cpp_wire_interop_test::Interop::TryRoundTrip> error =
         result.error_value();
-    ASSERT_TRUE(error.is_application_error());
-    EXPECT_STATUS(ZX_ERR_INVALID_ARGS, error.application_error());
+    ASSERT_TRUE(error.is_domain_error());
+    EXPECT_STATUS(ZX_ERR_INVALID_ARGS, error.domain_error());
     EXPECT_EQ(3, server.num_calls);
   }
 

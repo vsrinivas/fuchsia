@@ -2268,7 +2268,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   
   
-  using ApplicationError = uint32_t;
+  using DomainError = uint32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -2347,7 +2347,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   
   
-  using ApplicationError = uint32_t;
+  using DomainError = uint32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -2426,7 +2426,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   
   
-  using ApplicationError = uint32_t;
+  using DomainError = uint32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -2505,7 +2505,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   
   
-  using ApplicationError = uint32_t;
+  using DomainError = uint32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -2584,7 +2584,7 @@ struct ::fidl::internal::WireMethodTypes<::test_protocollayouts::MainProtocol::T
 
   
   
-  using ApplicationError = uint32_t;
+  using DomainError = uint32_t;
   
 
   using Thenable = ::fidl::internal::WireThenableImpl<

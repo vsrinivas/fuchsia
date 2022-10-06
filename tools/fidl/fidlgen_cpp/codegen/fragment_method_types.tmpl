@@ -24,9 +24,9 @@ struct {{ .WireMethodTypes }} {
     using Request = void;
   {{ end }}
 
-  {{ if .HasApplicationError }}
+  {{ if .HasDomainError }}
   {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}
-  using ApplicationError = {{ .Result.ErrorDecl }};
+  using DomainError = {{ .Result.ErrorDecl }};
   {{ end }}
 
   using Thenable = ::fidl::internal::WireThenableImpl<
@@ -60,16 +60,16 @@ struct {{ .NaturalMethodTypes }} {
       ::fit::callback<void ({{ .NaturalResult }}&)>;
 
   {{ if .Result }}
-    static constexpr bool HasApplicationError = {{ .Result.HasError }};
-    static constexpr bool HasTransportError = {{ .Result.HasTransportError }};
+    static constexpr bool kHasDomainError = {{ .Result.HasError }};
+    static constexpr bool kHasFrameworkError = {{ .Result.HasFrameworkError }};
     {{ if .Result.ValueParameters }}
       static constexpr bool IsEmptyStructPayload = false;
     {{ else }}
       static constexpr bool IsEmptyStructPayload = true;
     {{ end }}
   {{ else }}
-    static constexpr bool HasApplicationError = false;
-    static constexpr bool HasTransportError = false;
+    static constexpr bool kHasDomainError = false;
+    static constexpr bool kHasFrameworkError = false;
   {{ end }}
 
   {{ if .ResponseArgs }}

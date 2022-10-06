@@ -279,11 +279,11 @@ object to determine whether the call succeeded at all layers of abstractions:
 // - Application errors in the |Method| error syntax
 class fidl::AnyErrorIn<fuchsia_example::Speak::TryGreet> {
  public:
-  bool is_transport_error();
-  fidl::Error transport_error();
+  bool is_framework_error();
+  fidl::Error framework_error();
 
-  bool is_application_error();
-  fuchsia_example::GreetError application_error();
+  bool is_domain_error();
+  fuchsia_example::GreetError domain_error();
 
   // Prints a description of the error.
   std::string FormatDescription();
@@ -343,9 +343,9 @@ client->TryGreet({std::string("hi")}).Then(
       if (!result.is_ok()) {
         FX_LOGS(ERROR) << "TryGreet failed: " << result.error_value();
         // Digging deeper, if desired.
-        if (result.error_value().is_application_error()) {
+        if (result.error_value().is_domain_error()) {
           FX_LOGS(ERROR) << "TryGreet failed with application error: "
-                         << result.error_value().application_error();
+                         << result.error_value().domain_error();
         }
         return;
       }
@@ -631,13 +631,13 @@ unknown:
 
 ```c++
 class fidl::AnyErrorIn<ErrorSyntaxFlexible> {
-  bool is_transport_error();
-  fidl::Error transport_error();
+  bool is_framework_error();
+  fidl::Error framework_error();
   // Potential API:
-  // transport_error().is_unknown_interaction();
+  // framework_error().is_unknown_interaction();
 
-  bool is_application_error();
-  fuchsia_example::GreetError application_error();
+  bool is_domain_error();
+  fuchsia_example::GreetError domain_error();
 
   std::string FormatDescription();
 };
