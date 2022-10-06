@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -71,6 +72,13 @@ func getDependencies() ([]string, error) {
 			gnFilterFile, Config.Target); err != nil {
 			return nil, err
 		} else {
+			buf := bytes.NewBufferString("")
+			for _, s := range content {
+				if _, err := buf.WriteString(s + "\n"); err != nil {
+					return nil, fmt.Errorf("Failed to write 'gn desc' buffer string: %v", err)
+				}
+			}
+			plusFile("GnDescUnpacked.txt", buf.Bytes())
 			return content, nil
 		}
 	}
@@ -79,6 +87,13 @@ func getDependencies() ([]string, error) {
 	if content, err := gn.Gen(context.Background(), gnFilterFile); err != nil {
 		return nil, err
 	} else {
+		buf := bytes.NewBufferString("")
+		for _, s := range content {
+			if _, err := buf.WriteString(s + "\n"); err != nil {
+				return nil, fmt.Errorf("Failed to write `gn gen` buffer string: %v", err)
+			}
+		}
+		plusFile("GnGenUnpacked.txt", buf.Bytes())
 		return content, nil
 	}
 }
