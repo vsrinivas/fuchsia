@@ -59,7 +59,7 @@ async fn package_resolution() {
 
     let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
-    let (package, _resolved_context) = env
+    let (package, resolved_context) = env
         .resolve_package(format!("fuchsia-pkg://test/{}", s).as_str())
         .await
         .expect("package to resolve without error");
@@ -73,6 +73,8 @@ async fn package_resolution() {
 
     // All blobs in the repository should now be present in blobfs.
     assert_eq!(env.blobfs.list_blobs().unwrap(), repo_blobs);
+
+    assert_eq!(resolved_context.bytes, pkg.meta_far_merkle_root().as_bytes());
 
     env.stop().await;
 }

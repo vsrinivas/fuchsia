@@ -94,31 +94,45 @@ pub trait Resolver: std::fmt::Debug + Sync + Sized {
 }
 
 // How the package directory was resolved.
-enum PackageWithSource {
-    Base(PackageDirectory),
-    Eager(PackageDirectory),
-    Tuf(PackageDirectory),
-    Cache(PackageDirectory),
+struct PackageWithSourceAndBlobId {
+    package: PackageDirectory,
+    source: PackageSource,
+    blob_id: BlobId,
 }
 
-impl PackageWithSource {
-    fn source(&self) -> &'static str {
-        use PackageWithSource::*;
-        match self {
-            Base(_) => "base pinned",
-            Eager(_) => "eager package manager",
-            Tuf(_) => "tuf ephemeral resolution",
-            Cache(_) => "cache fallback",
-        }
+impl PackageWithSourceAndBlobId {
+    fn base(package: PackageDirectory, blob_id: BlobId) -> Self {
+        Self { package, source: PackageSource::Base, blob_id }
     }
 
-    fn into_package(self) -> PackageDirectory {
-        use PackageWithSource::*;
+    fn eager(package: PackageDirectory, blob_id: BlobId) -> Self {
+        Self { package, source: PackageSource::Eager, blob_id }
+    }
+
+    fn tuf(package: PackageDirectory, blob_id: BlobId) -> Self {
+        Self { package, source: PackageSource::Tuf, blob_id }
+    }
+
+    fn cache(package: PackageDirectory, blob_id: BlobId) -> Self {
+        Self { package, source: PackageSource::Cache, blob_id }
+    }
+}
+
+enum PackageSource {
+    Base,
+    Eager,
+    Tuf,
+    Cache,
+}
+
+impl PackageSource {
+    fn str_for_trace(&self) -> &'static str {
+        use PackageSource::*;
         match self {
-            Base(pkg) => pkg,
-            Eager(pkg) => pkg,
-            Tuf(pkg) => pkg,
-            Cache(pkg) => pkg,
+            Base => "base pinned",
+            Eager => "eager package manager",
+            Tuf => "tuf ephemeral resolution",
+            Cache => "cache fallback",
         }
     }
 }
@@ -155,13 +169,16 @@ impl Resolver for QueuedResolver {
             ftrace::ArgValue::of(
                 "source",
                 match resolve_res {
-                    Ok(ref package_with_source) => package_with_source.source(),
+                    Ok(ref package_with_source) => package_with_source.source.str_for_trace(),
                     Err(_) => "no source because resolve failed",
                 },
             ),
         ]);
         resolve_res.map(|pkg_with_source| {
-            (pkg_with_source.into_package(), pkg::ResolutionContext::new(vec![]))
+            (
+                pkg_with_source.package,
+                pkg::ResolutionContext::new(pkg_with_source.blob_id.as_bytes().to_vec()),
+            )
         })
     }
 }
@@ -209,7 +226,7 @@ impl QueuedResolver {
         pkg_url: AbsolutePackageUrl,
         eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<Self>>>,
         trace_id: ftrace::Id,
-    ) -> Result<PackageWithSource, pkg::ResolveError> {
+    ) -> Result<PackageWithSourceAndBlobId, pkg::ResolveError> {
         // Base pin.
         let package_inspect = self.inspect.resolve(&pkg_url);
         if let Some(blob) = self.base_package_index.is_unpinned_base_package(&pkg_url) {
@@ -219,7 +236,7 @@ impl QueuedResolver {
                 error
             })?;
             fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
-            return Ok(PackageWithSource::Base(dir));
+            return Ok(PackageWithSourceAndBlobId::base(dir, blob.into()));
         }
 
         // Rewrite the url.
@@ -229,7 +246,7 @@ impl QueuedResolver {
 
         // Attempt to use EagerPackageManager to resolve the package.
         if let Some(eager_package_manager) = eager_package_manager {
-            if let Some(dir) =
+            if let Some((dir, hash)) =
                 eager_package_manager.read().await.get_package_dir(&rewritten_url).map_err(|e| {
                     fx_log_err!(
                         "failed to resolve eager package at {} as {}: {:#}",
@@ -245,7 +262,7 @@ impl QueuedResolver {
                     pkg_url,
                     rewritten_url,
                 );
-                return Ok(PackageWithSource::Eager(dir));
+                return Ok(PackageWithSourceAndBlobId::eager(dir, hash.into()));
             }
         }
 
@@ -255,7 +272,7 @@ impl QueuedResolver {
         match queued_fetch.await.expect("expected queue to be open") {
             Ok((hash, dir)) => {
                 fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, hash);
-                Ok(PackageWithSource::Tuf(dir))
+                Ok(PackageWithSourceAndBlobId::tuf(dir, hash))
             }
             Err(tuf_err) => {
                 match self.handle_cache_fallbacks(&*tuf_err, &pkg_url, &rewritten_url).await {
@@ -267,7 +284,7 @@ impl QueuedResolver {
                             hash,
                             anyhow!(tuf_err)
                         );
-                        Ok(PackageWithSource::Cache(pkg))
+                        Ok(PackageWithSourceAndBlobId::cache(pkg, hash))
                     }
                     Ok(None) => {
                         let fidl_err = tuf_err.to_resolve_error();
@@ -564,7 +581,7 @@ async fn hash_from_base_or_repo_or_cache(
 
     // Attempt to use EagerPackageManager to resolve the package.
     if let Some(eager_package_manager) = eager_package_manager {
-        if let Some(dir) =
+        if let Some((_, hash)) =
             eager_package_manager.read().await.get_package_dir(&rewritten_url).map_err(|err| {
                 fx_log_err!(
                     "retrieval error eager package url {} as {}: {:#}",
@@ -575,22 +592,13 @@ async fn hash_from_base_or_repo_or_cache(
                 Status::NOT_FOUND
             })?
         {
-            let hash = dir.merkle_root().await.map(Into::into).map_err(|err| {
-                fx_log_err!(
-                    "package hash error eager package url {} as {}: {:#}",
-                    pkg_url,
-                    rewritten_url,
-                    anyhow!(err)
-                );
-                Status::INTERNAL
-            })?;
             fx_log_info!(
                 "get_hash for {} as {} to {} with eager package manager",
                 pkg_url,
                 rewritten_url,
                 hash
             );
-            return Ok(hash);
+            return Ok(hash.into());
         }
     }
 

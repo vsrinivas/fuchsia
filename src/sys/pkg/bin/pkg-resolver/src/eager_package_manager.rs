@@ -41,7 +41,7 @@ const EAGER_PACKAGE_PERSISTENT_FIDL_NAME: &str = "eager_packages.pf";
 struct EagerPackage {
     #[allow(dead_code)]
     executable: bool,
-    package_directory: Option<PackageDirectory>,
+    package_directory_and_hash: Option<(PackageDirectory, Hash)>,
     cup: Option<CupData>,
     public_keys: PublicKeys,
     minimum_required_version: Version,
@@ -99,7 +99,7 @@ impl EagerPackage {
             .get_already_cached(BlobInfo { blob_id: pinned_url.hash().into(), length: 0 })
             .await
             .map_err(LoadError::GetAlreadyCached)?;
-        self.package_directory = Some(pkg_dir);
+        self.package_directory_and_hash = Some((pkg_dir, pinned_url.hash()));
         Ok(package_source)
     }
 }
@@ -221,7 +221,7 @@ impl<T: Resolver> EagerPackageManager<T> {
         {
             let mut package = EagerPackage {
                 executable,
-                package_directory: None,
+                package_directory_and_hash: None,
                 cup: None,
                 public_keys,
                 minimum_required_version,
@@ -307,14 +307,14 @@ impl<T: Resolver> EagerPackageManager<T> {
     pub fn get_package_dir(
         &self,
         url: &AbsolutePackageUrl,
-    ) -> Result<Option<PackageDirectory>, Error> {
+    ) -> Result<Option<(PackageDirectory, Hash)>, Error> {
         let url = match url {
             AbsolutePackageUrl::Unpinned(unpinned) => unpinned,
             AbsolutePackageUrl::Pinned(_) => return Ok(None),
         };
         if let Some(eager_package) = self.packages.get(url) {
-            if eager_package.package_directory.is_some() {
-                Ok(eager_package.package_directory.clone())
+            if eager_package.package_directory_and_hash.is_some() {
+                Ok(eager_package.package_directory_and_hash.clone())
             } else {
                 Err(anyhow!("eager package dir not found for {}", url))
             }
@@ -401,9 +401,10 @@ impl<T: Resolver> EagerPackageManager<T> {
             return Err(CupWriteError::RequestedVersionTooLow);
         }
 
+        let hash = pinned_url.hash();
         let (pkg_dir, _resolution_context) =
             Self::resolve_pinned(&self.package_resolver, pinned_url).await?;
-        package.package_directory = Some(pkg_dir);
+        package.package_directory_and_hash = Some((pkg_dir, hash));
 
         let cup_handler = StandardCupv2Handler::new(&package.public_keys);
         verify_cup_signature(&cup_handler, &cup_data)?;
@@ -437,7 +438,7 @@ impl<T: Resolver> EagerPackageManager<T> {
                 )
             }
             None => {
-                if package.package_directory.is_none() {
+                if package.package_directory_and_hash.is_none() {
                     return Err(CupGetInfoError::CupDataNotAvailable);
                 }
                 // If we're using the fallback version of a package (i.e. did not
@@ -1094,10 +1095,10 @@ mod tests {
                 .get_package_dir(&"fuchsia-pkg://example.com/non-eager-package".parse().unwrap()),
             Ok(None)
         );
-        assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.packages[&url].package_directory_and_hash.is_some());
         assert!(manager.get_package_dir(&url.clone().into()).unwrap().is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup1));
-        assert!(manager.packages[&url2].package_directory.is_none());
+        assert!(manager.packages[&url2].package_directory_and_hash.is_none());
         assert_matches!(manager.get_package_dir(&url2.clone().into()), Err(_));
         // cup is still loaded even if resolve fails
         assert_eq!(manager.packages[&url2].cup, Some(cup2));
@@ -1130,7 +1131,7 @@ mod tests {
             handle_pkg_cache(pkg_cache_stream),
         )
         .await;
-        assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.packages[&url].package_directory_and_hash.is_some());
         assert!(manager.get_package_dir(&url.clone().into()).unwrap().is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup));
         // `get_package_dir` still only accept non-rewritten url.
@@ -1192,7 +1193,7 @@ mod tests {
             (metrics::LoadPersistentEagerPackageMetricDimensionResult::Verification, 0),
         );
         assert!(manager.get_package_dir(&url.clone().into()).is_err());
-        assert!(manager.packages[&url].package_directory.is_none());
+        assert!(manager.packages[&url].package_directory_and_hash.is_none());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1216,7 +1217,7 @@ mod tests {
             metrics::LOAD_PERSISTENT_EAGER_PACKAGE_METRIC_ID,
             (metrics::LoadPersistentEagerPackageMetricDimensionResult::NotAvailable, 0),
         );
-        assert!(manager.packages[&url].package_directory.is_none());
+        assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert_eq!(manager.packages[&url].cup, None);
     }
 
@@ -1232,7 +1233,7 @@ mod tests {
             metrics::LOAD_PERSISTENT_EAGER_PACKAGE_METRIC_ID,
             (metrics::LoadPersistentEagerPackageMetricDimensionResult::Storage, 0),
         );
-        assert!(manager.packages[&url].package_directory.is_none());
+        assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert_eq!(manager.packages[&url].cup, None);
     }
 
@@ -1256,7 +1257,7 @@ mod tests {
             metrics::LOAD_PERSISTENT_EAGER_PACKAGE_METRIC_ID,
             (metrics::LoadPersistentEagerPackageMetricDimensionResult::SuccessFallback, 0),
         );
-        assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.packages[&url].package_directory_and_hash.is_some());
         assert!(manager.get_package_dir(&url.clone().into()).unwrap().is_some());
         assert_eq!(manager.packages[&url].cup, None);
     }
@@ -1290,7 +1291,7 @@ mod tests {
             metrics::LOAD_PERSISTENT_EAGER_PACKAGE_METRIC_ID,
             (metrics::LoadPersistentEagerPackageMetricDimensionResult::SuccessFallback, 0),
         );
-        assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.packages[&url].package_directory_and_hash.is_some());
         assert!(manager.get_package_dir(&url.clone().into()).unwrap().is_some());
         assert_eq!(manager.packages[&url].cup, None);
     }
@@ -1318,7 +1319,7 @@ mod tests {
             .cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.clone().into())
             .await
             .unwrap();
-        assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.packages[&url].package_directory_and_hash.is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup.clone()));
 
         // create a new manager which should load the persisted cup data.
@@ -1331,7 +1332,7 @@ mod tests {
             handle_pkg_cache(pkg_cache_stream),
         )
         .await;
-        assert!(manager2.packages[&url].package_directory.is_some());
+        assert!(manager2.packages[&url].package_directory_and_hash.is_some());
         assert_eq!(manager2.packages[&url].cup, Some(cup));
     }
 
@@ -1349,7 +1350,7 @@ mod tests {
             manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.into()).await,
             Err(CupWriteError::Persist(_))
         );
-        assert!(manager.packages[&url].package_directory.is_none());
+        assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert_eq!(manager.packages[&url].cup, None);
     }
 
@@ -1369,7 +1370,7 @@ mod tests {
                 .await,
             Err(CupWriteError::CupResponseURLNotFound)
         );
-        assert!(manager.packages[&url].package_directory.is_none());
+        assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert!(manager.packages[&url].cup.is_none());
     }
 
@@ -1405,7 +1406,7 @@ mod tests {
             )
             .await
             .unwrap();
-        assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.packages[&url].package_directory_and_hash.is_some());
         assert_eq!(manager.packages[&url].cup, Some(cup));
     }
 
@@ -1426,7 +1427,7 @@ mod tests {
             manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.into()).await,
             Err(CupWriteError::UnknownURL(_))
         );
-        assert!(manager.packages[&url].package_directory.is_none());
+        assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert!(manager.packages[&url].cup.is_none());
     }
 
@@ -1446,7 +1447,7 @@ mod tests {
                 .await,
             Err(CupWriteError::RequestedVersionTooLow)
         );
-        assert!(manager.packages[&url].package_directory.is_none());
+        assert!(manager.packages[&url].package_directory_and_hash.is_none());
         assert_eq!(manager.packages[&url].cup, None);
     }
 
@@ -1568,7 +1569,7 @@ mod tests {
 
         let mut ep = EagerPackage {
             executable: true,
-            package_directory: None,
+            package_directory_and_hash: None,
             cup: None,
             public_keys: make_default_public_keys_for_test(),
             minimum_required_version: [1, 2, 3, 4].into(),
