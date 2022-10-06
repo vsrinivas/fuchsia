@@ -14,8 +14,8 @@ func WriteToc(settings WriteSettings, index *Index, f io.Writer) {
 
 	fmt.Fprintf(f, "toc:\n")
 	fmt.Fprintf(f, "- title: \"Overview\"\n")
-	fmt.Fprintf(f, "  path: index.md\n")
-	fmt.Fprintf(f, "- heading: \"%s header files\"\n", settings.LibName)
+	fmt.Fprintf(f, "  path: %s%s\n", settings.TocPath, "index.md")
+	fmt.Fprintf(f, "- heading: \"%s headers\"\n", settings.LibName)
 
 	for _, h := range index.Headers {
 		title := h.CustomTitle()
