@@ -9,12 +9,12 @@ import("//src/ui/scenic/lib/gfx/build_args.gni")
 group("integration_input_tests") {
   testonly = true
 
-  # TODO(fxbug.dev/111219): re-enable "text-input:tests"
   deps = [
     "activity:tests",
     "factory-reset-handler:tests",
     "focus:tests",
     "media-buttons:tests",
+    "text-input:tests",
     "touch:tests",
     "virtual-keyboard:tests",
   ]
