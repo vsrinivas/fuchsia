@@ -53,6 +53,15 @@ struct SdioBusInfo {
   mlan_device mlan_dev;
 };
 
+// Create our own MockSdio class that override AckInBandIntr to make it a noop.
+class MockSdio : public ddk::MockSdio {
+ public:
+  void SdioAckInBandIntr() override {
+    // Do nothing, this method gets called every IRQ thread loop and can be called multiple times.
+    // Adding an expectation for each call becomes tedious and counter-productive.
+  }
+};
+
 class SdioBusTest : public zxtest::Test {
  public:
   void SetUp() override {
@@ -87,7 +96,7 @@ class SdioBusTest : public zxtest::Test {
   }
 
  protected:
-  ddk::MockSdio sdio_;
+  MockSdio sdio_;
   std::shared_ptr<MockDevice> parent_;
   zx::interrupt interrupt_;
 

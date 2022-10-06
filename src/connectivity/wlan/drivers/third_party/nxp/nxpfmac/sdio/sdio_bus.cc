@@ -277,6 +277,13 @@ void SdioBus::IrqThread() {
   NXPF_INFO("IRQ thread started");
 
   while (running_.load(std::memory_order_relaxed)) {
+    {
+      // Since we're using in-band interrupts we need to ack it before we wait to make sure it's
+      // unmasked and can trigger again. Do this as close as possible to the actual waiting to
+      // prevent unnecessary interrupts while we're not waiting.
+      const std::lock_guard lock(func1_mutex_);
+      func1_.AckInBandIntr();
+    }
     const zx_status_t status = interrupt_.wait(nullptr);
     if (status == ZX_ERR_CANCELED) {
       NXPF_INFO("Received request to stop IRQ thread");
