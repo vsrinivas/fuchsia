@@ -95,6 +95,8 @@ async fn test_audio() {
     // Verify that a separate client receives the changed settings on a Watch call.
     let settings = watch_client.watch().await.expect("watch completed");
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
+
+    audio_test.clean_up().await;
 }
 
 // Verifies that the correct value is returned after two successive watch calls.
@@ -138,6 +140,8 @@ async fn test_consecutive_volume_changes() {
     // Verify that a separate client receives the changed settings on a Watch call.
     let settings = watch_client.watch().await.expect("watch completed");
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
+
+    audio_test.clean_up().await;
 }
 
 // Verifies that clients aren't notified for duplicate audio changes.
@@ -163,6 +167,8 @@ async fn test_deduped_volume_changes() {
         let settings = fut.await.expect("watch completed");
         verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
     }
+
+    audio_test.clean_up().await;
 }
 
 // Verifies that changing one stream's volume does not affect the volume of other streams.
@@ -200,6 +206,8 @@ async fn test_volume_not_overwritten() {
     // Changing the background volume should not affect media volume.
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
     verify_audio_stream(&settings, CHANGED_BACKGROUND_STREAM_SETTINGS);
+
+    audio_test.clean_up().await;
 }
 
 // Tests that the volume level gets rounded to two decimal places.
@@ -236,6 +244,8 @@ async fn test_volume_rounding() {
         ])
         .await
         .expect("changed audio requests received");
+
+    audio_test.clean_up().await;
 }
 
 // Verifies that invalid inputs return an error for Set calls.
@@ -300,6 +310,8 @@ async fn invalid_missing_input_tests(setting: AudioStreamSettings) {
         ])
         .await
         .expect("changed audio requests received");
+
+    audio_test.clean_up().await;
 }
 
 // Verifies that the input to Set calls can be missing certain parts and still be valid.
@@ -347,4 +359,5 @@ async fn valid_missing_input_tests(
         .expect("changed audio requests received");
 
     assert_eq!(result, Ok(()));
+    audio_test.clean_up().await;
 }

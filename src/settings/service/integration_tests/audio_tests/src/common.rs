@@ -247,4 +247,9 @@ impl AudioTest {
             .collect();
         self.verify_audio_requests(&expected_requests).await
     }
+
+    /// Destroy realm instance after each test to avoid unexpected behavior.
+    pub(crate) async fn clean_up(self) {
+        let _ = self.realm.destroy().await;
+    }
 }
