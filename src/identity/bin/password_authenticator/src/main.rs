@@ -39,7 +39,7 @@ enum Services {
     StorageUnlockMechanism(StorageUnlockMechanismRequestStream),
 }
 
-#[fuchsia::main(logging_tags = ["auth"])]
+#[fuchsia::main(logging_tags = ["identity", "password_authenticator"])]
 async fn main() -> Result<(), Error> {
     info!("Starting password authenticator");
 

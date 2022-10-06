@@ -23,7 +23,7 @@ const MODE_OPTION: &str = "mode";
 const MODE_ARG_ALWAYS_SUCCEED: &str = "ALWAYS_SUCCEED";
 const MODE_ARG_ALWAYS_FAIL_AUTHENTICATION: &str = "ALWAYS_FAIL_AUTHENTICATION";
 
-#[fuchsia::main(logging_tags = ["auth"])]
+#[fuchsia::main(logging_tags = ["identity", "dev_authenticator"])]
 async fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
     opts.reqopt("", MODE_OPTION, "set the mode of operation", "MODE");

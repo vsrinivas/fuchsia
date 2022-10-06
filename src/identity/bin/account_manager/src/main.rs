@@ -34,7 +34,7 @@ use {
 /// Default data directory for the AccountManager.
 const DATA_DIR: &str = "/data";
 
-#[fuchsia::main(logging_tags = ["auth"])]
+#[fuchsia::main(logging_tags = ["identity", "account_manager"])]
 async fn main() -> Result<(), Error> {
     info!("Starting account manager");
 

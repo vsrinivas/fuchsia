@@ -57,7 +57,7 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
 
-    diagnostics_log::init!(&["auth", &format!("id<{}>", &account_id.to_canonical_string())]);
+    diagnostics_log::init!(&["identity", &format!("id<{}>", &account_id.to_canonical_string())]);
     info!("Starting account handler");
 
     let inspector = Inspector::new();

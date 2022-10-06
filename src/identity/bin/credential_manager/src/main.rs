@@ -37,7 +37,7 @@ enum Services {
     Resetter(ResetterRequestStream),
 }
 
-#[fuchsia::main(logging_tags = ["auth"])]
+#[fuchsia::main(logging_tags = ["identity", "credential_manager"])]
 async fn main() -> Result<(), Error> {
     info!("Starting credential manager");
 
