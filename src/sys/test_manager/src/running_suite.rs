@@ -503,74 +503,71 @@ async fn get_realm(
         )
         .await?;
 
-    // If this realm is inside the hermetic tests collections, set up the
-    // hermetic resolver local component.
-    let mut test_root_child_opts = ChildOptions::new().eager();
-    let mut hermetic_test_package_name = None;
-    if collection.eq(HERMETIC_TESTS_COLLECTION) {
-        hermetic_test_package_name = Some(Arc::new(test_package.to_owned()));
-        let hermetic_test_package_name = hermetic_test_package_name.clone();
-        wrapper_realm
-            .add_local_child(
-                HERMETIC_RESOLVER_REALM_NAME,
-                move |handles| {
-                    Box::pin(resolver::serve_hermetic_resolver(
-                        handles,
-                        hermetic_test_package_name.clone().unwrap(),
-                        resolver.clone(),
-                    ))
-                },
-                ChildOptions::new(),
-            )
-            .await?;
+    let hermetic_test_package_name = Arc::new(test_package.to_owned());
+    let other_allowed_packages = match collection {
+        HERMETIC_TESTS_COLLECTION => resolver::AllowedPackages::zero_allowed_pkgs(),
+        _ => resolver::AllowedPackages::All,
+    };
 
-        // Provide and expose the resolver capability from the resolver to test_wrapper.
-        let mut hermetic_resolver_decl =
-            wrapper_realm.get_component_decl(HERMETIC_RESOLVER_REALM_NAME).await?;
-        hermetic_resolver_decl.exposes.push(cm_rust::ExposeDecl::Resolver(
-            cm_rust::ExposeResolverDecl {
-                source: cm_rust::ExposeSource::Self_,
-                source_name: cm_rust::CapabilityName(String::from(
-                    HERMETIC_RESOLVER_CAPABILITY_NAME,
-                )),
-                target: cm_rust::ExposeTarget::Parent,
-                target_name: cm_rust::CapabilityName(String::from(
-                    HERMETIC_RESOLVER_CAPABILITY_NAME,
-                )),
+    let hermetic_test_package_name_clone = hermetic_test_package_name.clone();
+    let other_allowed_packages_clone = other_allowed_packages.clone();
+    wrapper_realm
+        .add_local_child(
+            HERMETIC_RESOLVER_REALM_NAME,
+            move |handles| {
+                Box::pin(resolver::serve_hermetic_resolver(
+                    handles,
+                    hermetic_test_package_name_clone.clone(),
+                    other_allowed_packages_clone.clone(),
+                    resolver.clone(),
+                ))
             },
-        ));
-        hermetic_resolver_decl.capabilities.push(cm_rust::CapabilityDecl::Resolver(
-            cm_rust::ResolverDecl {
-                name: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
-                source_path: Some(cm_rust::CapabilityPath {
-                    dirname: String::from("/svc"),
-                    basename: String::from("fuchsia.component.resolution.Resolver"),
-                }),
-            },
-        ));
-        wrapper_realm
-            .replace_component_decl(HERMETIC_RESOLVER_REALM_NAME, hermetic_resolver_decl)
-            .await?;
+            ChildOptions::new(),
+        )
+        .await?;
 
-        // Create the hermetic environment in the test_wrapper.
-        let mut test_wrapper_decl = wrapper_realm.get_realm_decl().await?;
-        test_wrapper_decl.environments.push(cm_rust::EnvironmentDecl {
-            name: String::from(HERMETIC_ENVIRONMENT_NAME),
-            extends: fdecl::EnvironmentExtends::Realm,
-            resolvers: vec![cm_rust::ResolverRegistration {
-                resolver: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
-                source: cm_rust::RegistrationSource::Child(String::from(
-                    HERMETIC_RESOLVER_CAPABILITY_NAME,
-                )),
-                scheme: String::from("fuchsia-pkg"),
-            }],
-            runners: vec![],
-            debug_capabilities: vec![],
-            stop_timeout_ms: None,
-        });
-        wrapper_realm.replace_realm_decl(test_wrapper_decl).await?;
-        test_root_child_opts = ChildOptions::new().environment(HERMETIC_ENVIRONMENT_NAME).eager();
-    }
+    // Provide and expose the resolver capability from the resolver to test_wrapper.
+    let mut hermetic_resolver_decl =
+        wrapper_realm.get_component_decl(HERMETIC_RESOLVER_REALM_NAME).await?;
+    hermetic_resolver_decl.exposes.push(cm_rust::ExposeDecl::Resolver(
+        cm_rust::ExposeResolverDecl {
+            source: cm_rust::ExposeSource::Self_,
+            source_name: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
+            target: cm_rust::ExposeTarget::Parent,
+            target_name: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
+        },
+    ));
+    hermetic_resolver_decl.capabilities.push(cm_rust::CapabilityDecl::Resolver(
+        cm_rust::ResolverDecl {
+            name: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
+            source_path: Some(cm_rust::CapabilityPath {
+                dirname: String::from("/svc"),
+                basename: String::from("fuchsia.component.resolution.Resolver"),
+            }),
+        },
+    ));
+    wrapper_realm
+        .replace_component_decl(HERMETIC_RESOLVER_REALM_NAME, hermetic_resolver_decl)
+        .await?;
+
+    // Create the hermetic environment in the test_wrapper.
+    let mut test_wrapper_decl = wrapper_realm.get_realm_decl().await?;
+    test_wrapper_decl.environments.push(cm_rust::EnvironmentDecl {
+        name: String::from(HERMETIC_ENVIRONMENT_NAME),
+        extends: fdecl::EnvironmentExtends::Realm,
+        resolvers: vec![cm_rust::ResolverRegistration {
+            resolver: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
+            source: cm_rust::RegistrationSource::Child(String::from(
+                HERMETIC_RESOLVER_CAPABILITY_NAME,
+            )),
+            scheme: String::from("fuchsia-pkg"),
+        }],
+        runners: vec![],
+        debug_capabilities: vec![],
+        stop_timeout_ms: None,
+    });
+    wrapper_realm.replace_realm_decl(test_wrapper_decl).await?;
+    let test_root_child_opts = ChildOptions::new().environment(HERMETIC_ENVIRONMENT_NAME).eager();
 
     let test_root =
         wrapper_realm.add_child(TEST_ROOT_REALM_NAME, test_url, test_root_child_opts).await?;
@@ -673,6 +670,7 @@ async fn get_realm(
                 Box::pin(enclosing_env::gen_enclosing_env(
                     handles,
                     hermetic_test_package_name.clone(),
+                    other_allowed_packages.clone(),
                 ))
             },
             ChildOptions::new(),

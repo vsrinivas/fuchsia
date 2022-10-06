@@ -8,7 +8,7 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fv1sys,
     fuchsia_async as fasync,
-    fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol},
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::LocalComponentHandles,
     fuchsia_zircon as zx,
@@ -55,7 +55,8 @@ impl Drop for EnclosingEnvironment {
 impl EnclosingEnvironment {
     fn new(
         incoming_svc: fio::DirectoryProxy,
-        hermetic_test_package_name: Option<Arc<String>>,
+        hermetic_test_package_name: Arc<String>,
+        other_allowed_packages: resolver::AllowedPackages,
     ) -> Result<Arc<Self>, Error> {
         let sys_env = connect_to_protocol::<fv1sys::EnvironmentMarker>()?;
         let (additional_svc_client, additional_svc_server) = fidl::endpoints::create_endpoints()?;
@@ -64,33 +65,22 @@ impl EnclosingEnvironment {
         let mut fs = ServiceFs::new();
         let mut loader_tasks = vec![];
         let loader_service = connect_to_protocol::<fv1sys::LoaderMarker>()?;
-        match hermetic_test_package_name {
-            Some(hermetic_test_package_name) => {
-                fs.add_fidl_service(move |stream: fv1sys::LoaderRequestStream| {
-                    let hermetic_test_package_name = hermetic_test_package_name.clone();
-                    let loader_service = loader_service.clone();
-                    loader_tasks.push(fasync::Task::spawn(async move {
-                        resolver::serve_hermetic_loader(
-                            stream,
-                            hermetic_test_package_name,
-                            loader_service.clone(),
-                        )
-                        .await;
-                    }));
-                });
-            }
-            None => {
-                fs.add_service_at(
-                    fv1sys::LoaderMarker::PROTOCOL_NAME,
-                    move |chan: fuchsia_zircon::Channel| {
-                        if let Err(e) = connect_channel_to_protocol::<fv1sys::LoaderMarker>(chan) {
-                            warn!("Cannot connect to loader: {}", e);
-                        }
-                        None
-                    },
-                );
-            }
-        }
+
+        fs.add_fidl_service(move |stream: fv1sys::LoaderRequestStream| {
+            let hermetic_test_package_name = hermetic_test_package_name.clone();
+            let other_allowed_packages = other_allowed_packages.clone();
+            let loader_service = loader_service.clone();
+            loader_tasks.push(fasync::Task::spawn(async move {
+                resolver::serve_hermetic_loader(
+                    stream,
+                    hermetic_test_package_name,
+                    other_allowed_packages,
+                    loader_service.clone(),
+                )
+                .await;
+            }));
+        });
+
         fs.add_service_at(
             fdebugdata::PublisherMarker::PROTOCOL_NAME,
             move |chan: fuchsia_zircon::Channel| {
@@ -237,13 +227,15 @@ impl EnclosingEnvironment {
 /// no matter how many times it connects to Environment service.
 pub async fn gen_enclosing_env(
     handles: LocalComponentHandles,
-    hermetic_test_package_name: Option<Arc<String>>,
+    hermetic_test_package_name: Arc<String>,
+    other_allowed_packages: resolver::AllowedPackages,
 ) -> Result<(), Error> {
     // This function should only be called when test tries to connect to Environment or Launcher.
     let mut fs = ServiceFs::new();
     let incoming_svc = handles.clone_from_namespace("svc")?;
-    let enclosing_env = EnclosingEnvironment::new(incoming_svc, hermetic_test_package_name)
-        .context("Cannot create enclosing env")?;
+    let enclosing_env =
+        EnclosingEnvironment::new(incoming_svc, hermetic_test_package_name, other_allowed_packages)
+            .context("Cannot create enclosing env")?;
     let enclosing_env_clone = enclosing_env.clone();
     let enclosing_env_clone2 = enclosing_env.clone();
 
