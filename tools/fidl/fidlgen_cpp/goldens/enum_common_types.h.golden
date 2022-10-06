@@ -28,7 +28,7 @@ namespace test_enum {
 
 class MyFlexibleEnum final {
  public:
-  constexpr MyFlexibleEnum() : value_(0) {}
+  constexpr MyFlexibleEnum() : value_(Unknown()) {}
   constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
@@ -43,6 +43,8 @@ class MyFlexibleEnum final {
     return true;
   }
 
+  // Returns an enum corresponding to the member designated as @unknown in the
+  // FIDL schema if exists, or a compiler-reserved unknown value otherwise.
   constexpr static MyFlexibleEnum Unknown() {
     return MyFlexibleEnum(0xffffffff);
   }
@@ -70,7 +72,7 @@ namespace test_enum {
 
 class MyFlexibleEnumWithCustomUnknown final {
  public:
-  constexpr MyFlexibleEnumWithCustomUnknown() : value_(0) {}
+  constexpr MyFlexibleEnumWithCustomUnknown() : value_(Unknown()) {}
   constexpr explicit MyFlexibleEnumWithCustomUnknown(uint32_t value) : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
@@ -85,6 +87,8 @@ class MyFlexibleEnumWithCustomUnknown final {
     return true;
   }
 
+  // Returns an enum corresponding to the member designated as @unknown in the
+  // FIDL schema if exists, or a compiler-reserved unknown value otherwise.
   constexpr static MyFlexibleEnumWithCustomUnknown Unknown() {
     return MyFlexibleEnumWithCustomUnknown(0x3);
   }
@@ -116,7 +120,7 @@ namespace test_enum {
 
 class MyEmptyFlexibleEnum final {
  public:
-  constexpr MyEmptyFlexibleEnum() : value_(0) {}
+  constexpr MyEmptyFlexibleEnum() : value_(Unknown()) {}
   constexpr explicit MyEmptyFlexibleEnum(uint32_t value) : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
@@ -124,6 +128,8 @@ class MyEmptyFlexibleEnum final {
     return true;
   }
 
+  // Returns an enum corresponding to the member designated as @unknown in the
+  // FIDL schema if exists, or a compiler-reserved unknown value otherwise.
   constexpr static MyEmptyFlexibleEnum Unknown() {
     return MyEmptyFlexibleEnum(0xffffffff);
   }

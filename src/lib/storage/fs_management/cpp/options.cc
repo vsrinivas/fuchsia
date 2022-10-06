@@ -61,6 +61,9 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
     } else {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
+  } else {
+    options.write_compression_algorithm =
+        fuchsia_fs_startup::wire::CompressionAlgorithm::kZstdChunked;
   }
 
   if (cache_eviction_policy) {
@@ -76,9 +79,12 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
     } else {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
+  } else {
+    options.cache_eviction_policy_override =
+        fuchsia_fs_startup::wire::EvictionPolicyOverride::kNone;
   }
 
-  return zx::ok(std::move(options));
+  return zx::ok(options);
 }
 
 std::vector<std::string> MkfsOptions::as_argv(const char *binary) const {

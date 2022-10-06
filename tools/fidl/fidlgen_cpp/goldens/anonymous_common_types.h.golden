@@ -185,7 +185,7 @@ constexpr inline void BitsMember::operator^=(
 
 class Op final {
  public:
-  constexpr Op() : value_(0) {}
+  constexpr Op() : value_(Unknown()) {}
   constexpr explicit Op(uint32_t value) : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
@@ -202,6 +202,8 @@ class Op final {
     return true;
   }
 
+  // Returns an enum corresponding to the member designated as @unknown in the
+  // FIDL schema if exists, or a compiler-reserved unknown value otherwise.
   constexpr static Op Unknown() {
     return Op(0xffffffff);
   }
@@ -233,7 +235,7 @@ namespace test_anonymous {
 
 class SomeProtocolSomeMethodError final {
  public:
-  constexpr SomeProtocolSomeMethodError() : value_(0) {}
+  constexpr SomeProtocolSomeMethodError() : value_(Unknown()) {}
   constexpr explicit SomeProtocolSomeMethodError(uint32_t value) : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
@@ -248,6 +250,8 @@ class SomeProtocolSomeMethodError final {
     return true;
   }
 
+  // Returns an enum corresponding to the member designated as @unknown in the
+  // FIDL schema if exists, or a compiler-reserved unknown value otherwise.
   constexpr static SomeProtocolSomeMethodError Unknown() {
     return SomeProtocolSomeMethodError(0xffffffff);
   }

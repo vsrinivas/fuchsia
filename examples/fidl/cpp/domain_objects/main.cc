@@ -107,6 +107,15 @@ TEST(NaturalTypes, Enums) {
   // A flexible enum also supports asking if the current enum value was
   // not known in the FIDL schema.
   ASSERT_FALSE(flexible_location.IsUnknown());
+
+  // Strict enums may be uninitialized. Their value will be undefined.
+  fuchsia_examples::LocationType strict_location;
+  (void)strict_location;
+
+  // Flexible enums may be default initialized. They will have a deterministic
+  // but unknown value that's guaranteed to not match any known enumeration.
+  fuchsia_examples::FlexibleLocationType default_flexible_location;
+  ASSERT_TRUE(default_flexible_location.IsUnknown());
 }
 // [END natural-enums]
 

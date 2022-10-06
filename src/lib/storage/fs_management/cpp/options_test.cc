@@ -36,6 +36,7 @@ TEST(MountOptionsTest, DefaultOptions) {
       // This is the default, but we explicitly enumerate it here to be clear that it's the default.
       .write_compression_algorithm = fuchsia_fs_startup::wire::CompressionAlgorithm::kZstdChunked,
       .write_compression_level = -1,
+      .cache_eviction_policy_override = fuchsia_fs_startup::wire::EvictionPolicyOverride::kNone,
   };
 
   ASSERT_EQ(options.as_argv(kTestBinary.c_str()), expected_argv);

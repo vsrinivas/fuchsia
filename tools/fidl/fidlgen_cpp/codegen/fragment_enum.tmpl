@@ -18,7 +18,7 @@ enum class {{ .Name }} : {{ .Type }} {
 {{ .Docs }}
 class {{ .Name }} final {
 public:
-  constexpr {{ .Name }}() : value_(0) {}
+  constexpr {{ .Name }}() : value_(Unknown()) {}
   constexpr explicit {{ .Name }}({{ .Type }} value) : value_(value) {}
   constexpr operator {{ .Type }}() const { return value_; }
 
@@ -36,6 +36,8 @@ public:
     return true;
   }
 
+  // Returns an enum corresponding to the member designated as @unknown in the
+  // FIDL schema if exists, or a compiler-reserved unknown value otherwise.
   constexpr static {{ .Name }} Unknown() {
     return {{ .Name }}({{ .UnknownValueForTmpl | printf "%#x" }});
   }

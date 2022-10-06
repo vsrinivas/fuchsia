@@ -18,7 +18,8 @@ TEST(Enum, Defaults) {
   FlexibleType flexible_enum_default = {};
 
   EXPECT_EQ(0u, static_cast<uint32_t>(strict_enum_default));
-  EXPECT_EQ(0u, static_cast<uint32_t>(flexible_enum_default));
+  EXPECT_EQ(56u, static_cast<uint32_t>(flexible_enum_default));
+  EXPECT_TRUE(flexible_enum_default.IsUnknown());
 }
 
 TEST(FlexibleEnum, IsUnknown) {

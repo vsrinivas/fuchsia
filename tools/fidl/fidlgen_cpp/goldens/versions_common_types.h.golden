@@ -97,7 +97,7 @@ constexpr inline void Bits::operator^=(
 
 class Enum final {
  public:
-  constexpr Enum() : value_(0) {}
+  constexpr Enum() : value_(Unknown()) {}
   constexpr explicit Enum(uint32_t value) : value_(value) {}
   constexpr operator uint32_t() const { return value_; }
 
@@ -110,6 +110,8 @@ class Enum final {
     return true;
   }
 
+  // Returns an enum corresponding to the member designated as @unknown in the
+  // FIDL schema if exists, or a compiler-reserved unknown value otherwise.
   constexpr static Enum Unknown() {
     return Enum(0xffffffff);
   }
