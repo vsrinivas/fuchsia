@@ -21,7 +21,6 @@ pub fn create_flash_manifest(args: CreateFlashManifestArgs) -> Result<()> {
 
     // Create a product bundle from the arguments.
     let product_bundle = ProductBundle::V2(ProductBundleV2 {
-        name: "unused_name".into(),
         partitions: partitions_config,
         system_a: args.system_a.as_ref().map(manifest_from_file).transpose()?,
         system_b: args.system_b.as_ref().map(manifest_from_file).transpose()?,

@@ -46,7 +46,6 @@ fn pb_create(cmd: CreateCommand) -> Result<()> {
     std::fs::create_dir_all(&cmd.out_dir).context("Creating the out_dir")?;
 
     let product_bundle = ProductBundleV2 {
-        name: "product.board".into(),
         partitions: load_partitions_config(&cmd.partitions, &cmd.out_dir.join("partitions"))?,
         system_a: load_assembly_manifest(&cmd.system_a, &cmd.out_dir.join("system_a"))?,
         system_b: load_assembly_manifest(&cmd.system_b, &cmd.out_dir.join("system_b"))?,
@@ -279,7 +278,6 @@ mod test {
         assert_eq!(
             pb,
             ProductBundle::V2(ProductBundleV2 {
-                name: "product.board".into(),
                 partitions: PartitionsConfig::default(),
                 system_a: None,
                 system_b: None,
@@ -315,7 +313,6 @@ mod test {
         assert_eq!(
             pb,
             ProductBundle::V2(ProductBundleV2 {
-                name: "product.board".into(),
                 partitions: PartitionsConfig::default(),
                 system_a: Some(AssemblyManifest::default()),
                 system_b: None,
@@ -340,7 +337,6 @@ mod test {
         let zbi_path = create_test_file("zbi");
 
         let pb = ProductBundleV2 {
-            name: "product.board".into(),
             partitions: PartitionsConfig {
                 bootstrap_partitions: vec![BootstrapPartition {
                     name: "bootstrap".into(),

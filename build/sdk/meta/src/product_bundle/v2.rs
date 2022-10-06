@@ -28,9 +28,6 @@ use std::path::Path;
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProductBundleV2 {
-    /// A unique name identifying this product.
-    pub name: String,
-
     /// The physical partitions of the target to place images into.
     pub partitions: PartitionsConfig,
 
@@ -138,7 +135,6 @@ mod tests {
     #[test]
     fn test_canonicalize_no_paths() {
         let mut pb = ProductBundleV2 {
-            name: "name".into(),
             partitions: PartitionsConfig {
                 bootstrap_partitions: vec![],
                 bootloader_partitions: vec![],
@@ -172,7 +168,6 @@ mod tests {
         create_temp_file("unlock_credentials");
 
         let mut pb = ProductBundleV2 {
-            name: "name".into(),
             partitions: PartitionsConfig {
                 bootstrap_partitions: vec![BootstrapPartition {
                     name: "bootstrap".into(),
@@ -209,7 +204,6 @@ mod tests {
     #[test]
     fn test_relativize_no_paths() {
         let mut pb = ProductBundleV2 {
-            name: "name".into(),
             partitions: PartitionsConfig {
                 bootstrap_partitions: vec![],
                 bootloader_partitions: vec![],
@@ -243,7 +237,6 @@ mod tests {
         create_temp_file("unlock_credentials");
 
         let mut pb = ProductBundleV2 {
-            name: "name".into(),
             partitions: PartitionsConfig {
                 bootstrap_partitions: vec![BootstrapPartition {
                     name: "bootstrap".into(),

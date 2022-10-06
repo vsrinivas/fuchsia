@@ -84,7 +84,7 @@ impl ProductBundle {
     pub fn name(&self) -> &str {
         match self {
             Self::V1(data) => &data.name.as_str(),
-            Self::V2(data) => &data.name.as_str(),
+            Self::V2(_) => panic!("no product name"),
         }
     }
 
@@ -145,7 +145,6 @@ mod tests {
             &pb_file,
             &json!({
                 "version": "2",
-                "name": "generic-x64",
                 "partitions": {
                     "hardware_revision": "board",
                     "bootstrap_partitions": [],
