@@ -75,34 +75,23 @@ void MockConsole::ModalGetOption(const line_input::ModalPromptOptions& options,
   Output(message);
 }
 
-void MockConsole::ProcessInputLine(const std::string& line, CommandCallback callback,
+void MockConsole::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandContext> cmd_context,
                                    bool add_to_history) {
+  if (!cmd_context)
+    cmd_context = fxl::MakeRefCounted<ConsoleCommandContext>(this);
+
   FX_DCHECK(!line.empty());
 
   Command cmd;
-  auto err = ParseCommand(line, &cmd);
-
-  if (err.has_error()) {
-    Console::Output(err);
-    return;
-  }
-
-  err = context_.FillOutCommand(&cmd);
-
-  if (err.has_error()) {
-    Console::Output(err);
-    return;
-  }
-
-  err = DispatchCommand(&context_, cmd, std::move(callback));
+  if (Err err = ParseCommand(line, &cmd); err.has_error())
+    return cmd_context->ReportError(err);
+  if (Err err = context_.FillOutCommand(&cmd); err.has_error())
+    return cmd_context->ReportError(err);
+  DispatchCommand(cmd, cmd_context);
 
   if (cmd.thread() && cmd.verb() != Verb::kNone) {
     // Show the right source/disassembly for the next listing.
     context_.SetSourceAffinityForThread(cmd.thread(), GetVerbRecord(cmd.verb())->source_affinity);
-  }
-
-  if (err.has_error()) {
-    Console::Output(err);
   }
 }
 

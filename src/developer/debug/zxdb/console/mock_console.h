@@ -69,8 +69,8 @@ class MockConsole : public Console {
   void ModalGetOption(const line_input::ModalPromptOptions& options, OutputBuffer message,
                       const std::string& prompt,
                       line_input::ModalLineInput::ModalCompletionCallback cb) override;
-  void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr,
-                        bool add_to_history = false) override;
+  void ProcessInputLine(const std::string& line, fxl::RefPtr<CommandContext> cmd_context = nullptr,
+                        bool add_to_history = true) override;
 
  private:
   Session* session_;

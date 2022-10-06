@@ -18,7 +18,7 @@ class Console;
 // Executes the given list of string commands on the console. It stops until all commands complete
 // or there is an error. The callback will be called on either form of completion.
 void RunCommandSequence(Console* console, std::vector<std::string> commands,
-                        fit::callback<void(Err)> cb);
+                        fxl::RefPtr<CommandContext> cmd_context);
 
 // Reads each line from a file and returns it in the given vector. This is used to read script files
 // into a sequence of commands.

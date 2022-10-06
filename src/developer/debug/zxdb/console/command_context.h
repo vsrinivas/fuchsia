@@ -51,12 +51,18 @@ class CommandContext : public fxl::RefCountedThreadSafe<CommandContext> {
   Console* console() { return weak_console_.get(); }
   ConsoleContext* GetConsoleContext() const;
 
+  // Returns true if this command context has encountered any error.
+  bool has_error() const { return has_error_; }
+
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CommandContext);
 
   // Console may be null.
   explicit CommandContext(Console* console);
   virtual ~CommandContext();
+
+  // Used by derived classes to set the error flag.
+  void set_has_error() { has_error_ = true; }
 
  private:
   fxl::WeakPtr<Console> weak_console_;
@@ -68,6 +74,8 @@ class CommandContext : public fxl::RefCountedThreadSafe<CommandContext> {
   // pointers to the roots of every AsyncOutputBuffer we've installed ourselves as a completion
   // callback for to keep them in scope until they're completed.
   std::map<AsyncOutputBuffer*, fxl::RefPtr<AsyncOutputBuffer>> async_output_;
+
+  bool has_error_ = false;
 };
 
 // This is the normal implementation that just outputs everything to the console.
@@ -103,8 +111,7 @@ class OfflineCommandContext : public CommandContext {
  public:
   // A completion callback is issued when this object goes out of scope. It is passed all output
   // buffers and errors that have been generated.
-  using CompletionCallback =
-      fit::callback<void(std::vector<OutputBuffer> outputs, std::vector<Err> errors)>;
+  using CompletionCallback = fit::callback<void(OutputBuffer output, std::vector<Err> errors)>;
 
   using CommandContext::Output;
   void Output(const OutputBuffer& output) override;
@@ -120,8 +127,34 @@ class OfflineCommandContext : public CommandContext {
 
   CompletionCallback done_;  // Possibly null.
 
-  std::vector<OutputBuffer> outputs_;
+  OutputBuffer output_;
   std::vector<Err> errors_;
+};
+
+// This command context forwards everything to an underlying command context. It allows multiple
+// commands to be sequenced (since each NestedCommandContext represents one step) while gathering
+// the output into one place.
+class NestedCommandContext : public CommandContext {
+ public:
+  // This completion callback represents just the error from this step.
+  using CompletionCallback = fit::callback<void(const Err& first_error)>;
+
+  using CommandContext::Output;
+  void Output(const OutputBuffer& output) override;
+  void ReportError(const Err& err) override;
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(NestedCommandContext);
+  FRIEND_MAKE_REF_COUNTED(NestedCommandContext);
+
+  explicit NestedCommandContext(fxl::RefPtr<CommandContext> parent,
+                                CompletionCallback cb = CompletionCallback());
+  ~NestedCommandContext() override;
+
+  fxl::RefPtr<CommandContext> parent_;
+  CompletionCallback done_;  // Possibly null.
+
+  Err first_error_;
 };
 
 }  // namespace zxdb

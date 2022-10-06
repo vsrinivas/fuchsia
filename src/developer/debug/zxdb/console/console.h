@@ -62,7 +62,8 @@ class Console : debug::LogBackend {
   //
   // When posting programmatic commands, set add_to_history = false or the command will confusingly
   // appear as the "last command" (when they hit enter again) and in the "up" history.
-  virtual void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr,
+  virtual void ProcessInputLine(const std::string& line,
+                                fxl::RefPtr<CommandContext> cmd_context = nullptr,
                                 bool add_to_history = true) = 0;
 
   // Implements |LogBackend|.

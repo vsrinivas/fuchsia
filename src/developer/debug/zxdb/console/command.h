@@ -120,8 +120,7 @@ class Command {
 using CommandCallback = fit::callback<void(Err)>;
 
 // Runs the given command.
-Err DispatchCommand(ConsoleContext* context, const Command& cmd,
-                    CommandCallback callback = nullptr);
+void DispatchCommand(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context);
 
 }  // namespace zxdb
 

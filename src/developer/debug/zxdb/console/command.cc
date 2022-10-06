@@ -56,41 +56,21 @@ std::string Command::GetSwitchValue(int id) const {
 
 void Command::SetSwitch(int id, std::string str) { switches_[id] = std::move(str); }
 
-Err DispatchCommand(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
+void DispatchCommand(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (cmd.verb() == Verb::kNone) {
-    auto cmd_context = fxl::MakeRefCounted<ConsoleCommandContext>(Console::get());
     ExecuteNoun(cmd, cmd_context);
-    return Err();
+    return;
   }
 
   const auto& verbs = GetVerbs();
   const auto& found = verbs.find(cmd.verb());
   if (found == verbs.end()) {
-    return Err(ErrType::kInput, "Invalid verb \"" + VerbToString(cmd.verb()) + "\".");
+    cmd_context->ReportError(
+        Err(ErrType::kInput, "Invalid verb \"" + VerbToString(cmd.verb()) + "\"."));
+    return;
   }
 
-  auto& verb_record = found->second;
-  if (verb_record.exec_cb) {
-    return verb_record.exec_cb(context, cmd, std::move(callback));
-  } else if (verb_record.exec_context) {
-    auto cmd_context =
-        fxl::MakeRefCounted<ConsoleCommandContext>(Console::get(), std::move(callback));
-    verb_record.exec_context(cmd, std::move(cmd_context));
-    return Err();
-  } else {
-    Err original_err = verb_record.exec(context, cmd);
-    if (callback) {
-      // We need to call the callback to let the caller know they ran a command
-      // that doesn't receive callbacks.
-      Err callback_err = original_err.has_error()
-                             ? original_err
-                             : Err("Command was processed but it doesn't receive "
-                                   "callbacks. Going to interactive mode.");
-      // Commands without callbacks never quit by callback.
-      callback(callback_err);
-    }
-    return original_err;
-  }
+  found->second.exec(cmd, cmd_context);
 }
 
 }  // namespace zxdb

@@ -13,49 +13,46 @@ namespace zxdb {
 
 namespace {
 
-struct SequenceInfo {
-  fxl::WeakPtr<Console> weak_console;
-  std::vector<std::string> commands;
-  size_t next_index = 0;
-  fit::callback<void(Err)> cb;
-};
+// Returns a child CommandContext of the given one. Upon completion, this child will run the
+// next command in the sequence.
+fxl::RefPtr<CommandContext> MakeSequencedCommandContext(std::vector<std::string> commands,
+                                                        size_t next_index,
+                                                        fxl::RefPtr<CommandContext> cmd_context) {
+  return fxl::MakeRefCounted<NestedCommandContext>(
+      cmd_context,
+      [commands = std::move(commands), next_index, cmd_context](const Err& err) mutable {
+        if (err.has_error())
+          return;  // Can't continue.
 
-fit::callback<void(const Err&)> MakeSequencedCommandCallback(SequenceInfo info) {
-  return [info = std::move(info)](const Err& err) mutable {
-    if (err.has_error())
-      return info.cb(err);
+        if (next_index >= commands.size())
+          return;  // Success.
 
-    if (info.next_index >= info.commands.size())
-      return info.cb(Err());  // Done executing.
+        debug::MessageLoop::Current()->PostTask(
+            FROM_HERE, [commands = std::move(commands), next_index, cmd_context]() {
+              if (!cmd_context->console())
+                return;
 
-    debug::MessageLoop::Current()->PostTask(FROM_HERE, [info = std::move(info)]() mutable {
-      if (!info.weak_console)
-        return info.cb(Err("Console gone."));
-
-      std::string cur_line = info.commands[info.next_index];
-      info.next_index++;
-      info.weak_console->ProcessInputLine(cur_line, MakeSequencedCommandCallback(std::move(info)),
-                                          false);
-    });
-  };
+              std::string cur_line = commands[next_index];
+              cmd_context->console()->ProcessInputLine(
+                  cur_line,
+                  MakeSequencedCommandContext(std::move(commands), next_index + 1,
+                                              std::move(cmd_context)),
+                  false);
+            });
+      });
 }
 
 }  // namespace
 
 void RunCommandSequence(Console* console, std::vector<std::string> commands,
-                        fit::callback<void(Err)> cb) {
+                        fxl::RefPtr<CommandContext> cmd_context) {
   if (commands.empty())
-    return cb(Err());
+    return;
 
   auto weak_console = console->GetWeakPtr();
   std::string cur_line = commands[0];
   console->ProcessInputLine(
-      cur_line,
-      MakeSequencedCommandCallback(SequenceInfo{.weak_console = console->GetWeakPtr(),
-                                                .commands = std::move(commands),
-                                                .next_index = 1,
-                                                .cb = std::move(cb)}),
-      false);
+      cur_line, MakeSequencedCommandContext(std::move(commands), 1, std::move(cmd_context)), false);
 }
 
 ErrOr<std::vector<std::string>> ReadCommandsFromFile(const std::string& path) {

@@ -12,9 +12,9 @@ TEST(CommandContext, Empty) {
   bool called = false;
   {
     auto my_context = fxl::MakeRefCounted<OfflineCommandContext>(
-        nullptr, [&called](std::vector<OutputBuffer> outputs, std::vector<Err> errors) {
+        nullptr, [&called](OutputBuffer output, std::vector<Err> errors) {
           called = true;
-          EXPECT_TRUE(outputs.empty());
+          EXPECT_TRUE(output.AsString().empty());
           EXPECT_TRUE(errors.empty());
         });
   }
@@ -30,19 +30,17 @@ TEST(CommandContext, AsyncOutputAndErrors) {
   bool called = false;
   {
     auto my_context = fxl::MakeRefCounted<OfflineCommandContext>(
-        nullptr, [&called](std::vector<OutputBuffer> outputs, std::vector<Err> errors) {
+        nullptr, [&called](OutputBuffer output, std::vector<Err> errors) {
           called = true;
 
-          EXPECT_EQ(2u, outputs.size());
-          EXPECT_EQ("Some output", outputs[0].AsString());
-          EXPECT_EQ("Async output", outputs[1].AsString());
+          EXPECT_EQ("Some output\nAsync output\n", output.AsString());
 
           EXPECT_EQ(1u, errors.size());
           EXPECT_EQ("Some error", errors[0].msg());
         });
 
     my_context->ReportError(Err("Some error"));
-    my_context->Output("Some output");
+    my_context->Output("Some output\n");
 
     auto outer_async_output = fxl::MakeRefCounted<AsyncOutputBuffer>();
     outer_async_output->Append(inner_async_output);
@@ -52,7 +50,7 @@ TEST(CommandContext, AsyncOutputAndErrors) {
   // Even though our reference went out-of-scope, the async output is still active.
   EXPECT_FALSE(called);
 
-  inner_async_output->Append("Async output");
+  inner_async_output->Append("Async output\n");
   inner_async_output->Complete();
 
   // Marking the async output complete should have marked the context done.

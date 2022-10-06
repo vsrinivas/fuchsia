@@ -12,67 +12,73 @@ namespace zxdb {
 
 namespace {
 
-class CommandSequence : public ConsoleTest {};
+class CommandSequence : public ConsoleTest {
+ public:
+  // Returns a command context that writes its outputs and error into the given pointers on
+  // success. The called boolean is set to true on completion. The pointers must remain valid longer
+  // than the context.
+  fxl::RefPtr<CommandContext> MakeTestContext(bool* called, std::string* output, Err* first_error) {
+    return fxl::MakeRefCounted<OfflineCommandContext>(
+        &console(),
+        [called, output, first_error](OutputBuffer in_output, std::vector<Err> in_errors) {
+          *called = true;
+          *output = in_output.AsString();
+
+          // Save the first error.
+          if (!in_errors.empty()) {
+            *first_error = in_errors[0];
+          } else {
+            *first_error = Err();
+          }
+        });
+  }
+};
 
 }  // namespace
 
 TEST_F(CommandSequence, Empty) {
   bool called = false;
-  RunCommandSequence(&console(), {}, [&called](const Err& err) {
-    called = true;
-    EXPECT_TRUE(err.ok());
-  });
+  std::string output;
+  Err error;
+  RunCommandSequence(&console(), {}, MakeTestContext(&called, &output, &error));
   EXPECT_TRUE(called);
+  EXPECT_TRUE(output.empty());
+  EXPECT_TRUE(error.ok());
 }
 
 TEST_F(CommandSequence, Success) {
   // These commands were picked because they don't require a connection.
   bool called = false;
-  RunCommandSequence(&console(), {"break main", "get show-stdout"}, [&called](const Err& err) {
-    called = true;
-    // TODO(brettw) This currently reports an internal error because the command doesn't report
-    // callbacks. This "ok" check should be re-enabled when we switch to the command context system.
-    // EXPECT_TRUE(err.ok()) << err.msg();
-  });
+  std::string output;
+  Err error;
+  RunCommandSequence(&console(), {"break main", "get show-stdout"},
+                     MakeTestContext(&called, &output, &error));
 
   loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
 
   // This just searches for some keywords we know are in the output, so we don't depend on the
   // exact wording of the messages.
-  auto event = console().GetOutputEvent();
-  EXPECT_NE(std::string::npos, event.output.AsString().find("Created Breakpoint"))
-      << "Got: " << event.output.AsString();
-  event = console().GetOutputEvent();
-
-  EXPECT_NE(std::string::npos, event.output.AsString().find("show-stdout"))
-      << "Got: " << event.output.AsString();
+  EXPECT_NE(std::string::npos, output.find("Created Breakpoint")) << "Got: " << output;
+  EXPECT_NE(std::string::npos, output.find("show-stdout")) << "Got: " << output;
 }
 
 TEST_F(CommandSequence, Error) {
   // These commands were picked because they don't require a connection.
   bool called = false;
-  RunCommandSequence(&console(), {"floofbunny", "break main"}, [&called](const Err& err) {
-    called = true;
-    EXPECT_TRUE(err.has_error()) << err.msg();
-  });
+  std::string output;
+  Err error;
+  RunCommandSequence(&console(), {"floofbunny", "break main"},
+                     MakeTestContext(&called, &output, &error));
 
   loop().RunUntilNoTasks();
 
-  // TODO(brettw) currently the callback gets lost in the error case. This check should be
-  // uncommented when we finish switching to the ConsoleContext system where the callbacks should be
-  // more consistent.
-  // EXPECT_TRUE(called);
+  EXPECT_TRUE(called);
 
-  auto event = console().GetOutputEvent();
-  EXPECT_EQ("The string \"floofbunny\" is not a valid verb.", event.output.AsString())
-      << "Got: " << event.output.AsString();
+  // There should be no real output (the valid "break" command should never have run).
+  EXPECT_TRUE(output.empty()) << output;
 
-  // The breakpoint should not have set (search for "reak" in case the error capitalization
-  // changes).
-  EXPECT_FALSE(console().HasOutputEvent());
-  EXPECT_EQ(std::string::npos, event.output.AsString().find("reak"))
-      << "Got: " << event.output.AsString();
+  ASSERT_EQ("The string \"floofbunny\" is not a valid verb.", error.msg());
 }
 
 }  // namespace zxdb

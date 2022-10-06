@@ -230,38 +230,34 @@ void ConsoleImpl::Clear() {
   line_input_.Show();
 }
 
-void ConsoleImpl::ProcessInputLine(const std::string& line, CommandCallback callback,
+void ConsoleImpl::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandContext> cmd_context,
                                    bool add_to_history) {
+  if (!cmd_context)
+    cmd_context = fxl::MakeRefCounted<ConsoleCommandContext>(this);
+
   Command cmd;
-  Err err;
   if (line.empty()) {
     // Repeat the previous command, don't add to history.
-    err = ParseCommand(previous_line_, &cmd);
+    if (Err err = ParseCommand(previous_line_, &cmd); err.has_error())
+      return cmd_context->ReportError(err);
   } else {
-    err = ParseCommand(line, &cmd);
+    Err err = ParseCommand(line, &cmd);
     if (add_to_history) {
+      // Add to history even in the error case so the user can press "up" and fix it.
       line_input_.AddToHistory(line);
       previous_line_ = line;
     }
+    if (err.has_error())
+      return cmd_context->ReportError(err);
   }
 
-  if (err.ok()) {
-    err = context_.FillOutCommand(&cmd);
-    if (!err.has_error()) {
-      err = DispatchCommand(&context_, cmd, std::move(callback));
+  if (Err err = context_.FillOutCommand(&cmd); err.has_error())
+    return cmd_context->ReportError(err);
+  DispatchCommand(cmd, cmd_context);
 
-      if (cmd.thread() && cmd.verb() != Verb::kNone) {
-        // Show the right source/disassembly for the next listing.
-        context_.SetSourceAffinityForThread(cmd.thread(),
-                                            GetVerbRecord(cmd.verb())->source_affinity);
-      }
-    }
-  }
-
-  if (err.has_error()) {
-    OutputBuffer out;
-    out.Append(err);
-    Output(out);
+  if (cmd.thread() && cmd.verb() != Verb::kNone) {
+    // Show the right source/disassembly for the next listing.
+    context_.SetSourceAffinityForThread(cmd.thread(), GetVerbRecord(cmd.verb())->source_affinity);
   }
 }
 

@@ -49,19 +49,20 @@ Examples
   run-component fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cm
 )";
 
-Err Exec(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
+void RunVerbRunComponent(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // No nouns should be provided.
   if (Err err = cmd.ValidateNouns({}); err.has_error()) {
-    return err;
+    return cmd_context->ReportError(err);
   }
 
   if (cmd.args().empty()) {
-    return Err("No component to run. Try \"run-component <url>\".");
+    return cmd_context->ReportError(Err("No component to run. Try \"run-component <url>\"."));
   }
 
   if (cmd.args()[0].find("://") == std::string::npos ||
       (!StringEndsWith(cmd.args()[0], ".cm") && !StringEndsWith(cmd.args()[0], ".cmx"))) {
-    return Err("The first argument must be a component URL. Try \"help run-component\".");
+    return cmd_context->ReportError(
+        Err("The first argument must be a component URL. Try \"help run-component\"."));
   }
 
   if (StringEndsWith(cmd.args()[0], ".cm")) {
@@ -69,7 +70,7 @@ Err Exec(ConsoleContext* context, const Command& cmd, CommandCallback callback) 
     OutputBuffer warning(Syntax::kWarning, GetExclamation());
     warning.Append(
         " run-component won't work for many v2 components. See \"help run-component\".\n");
-    Console::get()->Output(warning);
+    cmd_context->Output(warning);
   }
 
   // Launch the component.
@@ -78,25 +79,21 @@ Err Exec(ConsoleContext* context, const Command& cmd, CommandCallback callback) 
   request.argv = cmd.args();
 
   cmd.target()->session()->remote_api()->Launch(
-      request, [cb = std::move(callback)](Err err, debug_ipc::LaunchReply reply) mutable {
+      request, [cmd_context](Err err, debug_ipc::LaunchReply reply) mutable {
         if (!err.has_error() && reply.status.has_error()) {
-          err = Err("Failed to launch component: %s", reply.status.message().c_str());
+          return cmd_context->ReportError(
+              Err("Failed to launch component: %s", reply.status.message().c_str()));
         }
         if (err.has_error()) {
-          Console::get()->Output(err);
-        }
-        if (cb) {
-          cb(err);
+          cmd_context->ReportError(err);
         }
       });
-
-  return Err();
 }
 
 }  // namespace
 
 VerbRecord GetRunComponentVerbRecord() {
-  return {&Exec, {"run-component"}, kShortHelp, kHelp, CommandGroup::kProcess};
+  return {&RunVerbRunComponent, {"run-component"}, kShortHelp, kHelp, CommandGroup::kProcess};
 }
 
 }  // namespace zxdb

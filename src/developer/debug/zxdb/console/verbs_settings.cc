@@ -276,18 +276,20 @@ Err CompleteSettingsToOutput(const Command& cmd, ConsoleContext* context, Output
   return Err();
 }
 
-Err DoGet(ConsoleContext* console_context, const Command& cmd) {
+void DoGet(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+
   std::string input_name;
   if (!cmd.args().empty()) {
     if (cmd.args().size() > 1)
-      return Err("Expected only one setting name");
+      return cmd_context->ReportError(Err("Expected only one setting name"));
     input_name = cmd.args()[0];
   }
 
   Err err;
   SettingContext setting_context;
   if (err = GetSettingContext(console_context, cmd, input_name, &setting_context); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
   // Use setting_context.name from here on down instead of input_name because it's canonicalized.
 
   OutputBuffer out;
@@ -319,9 +321,8 @@ Err DoGet(ConsoleContext* console_context, const Command& cmd) {
   }
 
   if (err.has_error())
-    return err;
-  Console::get()->Output(out);
-  return Err();
+    return cmd_context->ReportError(err);
+  cmd_context->Output(out);
 }
 
 // set ---------------------------------------------------------------------------------------------
@@ -569,30 +570,32 @@ OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
   return out;
 }
 
-Err DoSet(ConsoleContext* console_context, const Command& cmd) {
+void DoSet(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+
   // The command parser will provide everything as one argument.
   if (cmd.args().size() != 1) {
-    return Err(
-        "Expected a setting and a new value.\n"
-        " • Type \"help set\" for usage.\n"
-        " • Type \"get\" to list all settings and their current values.\n"
-        " • Type \"get <setting-name>\" for documentation on a setting.");
+    return cmd_context->ReportError(
+        Err("Expected a setting and a new value.\n"
+            " • Type \"help set\" for usage.\n"
+            " • Type \"get\" to list all settings and their current values.\n"
+            " • Type \"get <setting-name>\" for documentation on a setting."));
   }
 
   ErrOr<ParsedSetCommand> parsed = ParseSetCommand(cmd.args()[0]);
   if (parsed.has_error())
-    return parsed.err();
+    return cmd_context->ReportError(parsed.err());
 
   // See where this setting would be stored.
   SettingContext setting_context;
   Err err = GetSettingContext(console_context, cmd, parsed.value().name, &setting_context);
   if (err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
   setting_context.op = parsed.value().op;
 
   // Validate that the operations makes sense.
   if (parsed.value().op != ParsedSetCommand::kAssign && !setting_context.value.is_list())
-    return Err("List modification (+=, -=) used on a non-list option.");
+    return cmd_context->ReportError(Err("List modification (+=, -=) used on a non-list option."));
 
   if (parsed.value().values.size() > 1u && !setting_context.value.is_list()) {
     // When the value is a non-list, assume input with spaces is a single literal. This allows
@@ -610,12 +613,11 @@ Err DoSet(ConsoleContext* console_context, const Command& cmd) {
   err = SetSetting(console_context, cmd.frame(), setting_context, parsed.value().values,
                    setting_context.store, &out_value);
   if (!err.ok())
-    return err;
+    return cmd_context->ReportError(err);
 
   // Be sure to use the canonicalized name in the setting_context for the output.
-  Console::get()->Output(
+  cmd_context->Output(
       FormatSetFeedback(console_context, setting_context, setting_context.name, cmd, out_value));
-  return Err();
 }
 
 // Equivalend to isalpha with no C local complexity.

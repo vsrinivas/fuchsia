@@ -53,6 +53,7 @@ void ConsoleCommandContext::Output(const OutputBuffer& output) {
 }
 
 void ConsoleCommandContext::ReportError(const Err& err) {
+  set_has_error();
   if (!first_error_.has_error())
     first_error_ = err;
 
@@ -68,11 +69,34 @@ OfflineCommandContext::OfflineCommandContext(Console* console, CompletionCallbac
 
 OfflineCommandContext::~OfflineCommandContext() {
   if (done_)
-    done_(std::move(outputs_), std::move(errors_));
+    done_(std::move(output_), std::move(errors_));
 }
 
-void OfflineCommandContext::Output(const OutputBuffer& output) { outputs_.push_back(output); }
+void OfflineCommandContext::Output(const OutputBuffer& output) { output_.Append(output); }
 
-void OfflineCommandContext::ReportError(const Err& err) { errors_.push_back(err); }
+void OfflineCommandContext::ReportError(const Err& err) {
+  set_has_error();
+  errors_.push_back(err);
+}
+
+// NestedCommandContext ----------------------------------------------------------------------------
+
+NestedCommandContext::NestedCommandContext(fxl::RefPtr<CommandContext> parent,
+                                           CompletionCallback cb)
+    : CommandContext(parent->console()), parent_(std::move(parent)), done_(std::move(cb)) {}
+
+NestedCommandContext::~NestedCommandContext() {
+  if (done_)
+    done_(first_error_);
+}
+
+void NestedCommandContext::Output(const OutputBuffer& output) { parent_->Output(output); }
+
+void NestedCommandContext::ReportError(const Err& err) {
+  set_has_error();
+  if (!first_error_.has_error())
+    first_error_ = err;
+  parent_->ReportError(err);
+}
 
 }  // namespace zxdb

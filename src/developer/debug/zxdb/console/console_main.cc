@@ -174,8 +174,10 @@ int ConsoleMain(int argc, const char* argv[]) {
     SetupCommandLineOptions(options, &session);
 
     if (!actions.empty()) {
-      RunCommandSequence(&console, std::move(actions),
-                         [&console](const Err& err) { InitConsole(console); });
+      // Run the actions and then initialize the console to enter interactive mode.
+      auto action_cmd_context = fxl::MakeRefCounted<ConsoleCommandContext>(
+          &console, [&console](const Err&) { InitConsole(console); });
+      RunCommandSequence(&console, std::move(actions), std::move(action_cmd_context));
     } else {
       // Interactive mode is the default mode.
       InitConsole(console);
