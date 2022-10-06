@@ -4,13 +4,10 @@
 
 #include "src/media/audio/drivers/test/admin_test.h"
 
-#include <lib/fzl/vmo-mapper.h>
 #include <lib/media/cpp/timeline_rate.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
-#include <zircon/errors.h>
 
 #include <algorithm>
 #include <cstring>
@@ -92,7 +89,8 @@ void AdminTest::RequestRingBufferProperties() {
 }
 
 // Request the ring buffer's VMO handle, at the current format (relies on the ring buffer channel).
-void AdminTest::RequestBuffer(uint32_t min_ring_buffer_frames, uint32_t notifications_per_ring) {
+void AdminTest::RequestBuffer(uint32_t min_ring_buffer_frames,
+                              uint32_t notifications_per_ring = 0) {
   min_ring_buffer_frames_ = min_ring_buffer_frames;
   notifications_per_ring_ = notifications_per_ring;
   zx::vmo ring_buffer_vmo;
@@ -177,6 +175,14 @@ void AdminTest::RequestStop() {
   ExpectCallbacks();
 }
 
+// Request that the driver start the ring buffer engine, but expect disconnect rather than response.
+// We would expect this if calling Stop before GetVmo, for example.
+void AdminTest::RequestStopAndExpectDisconnect(zx_status_t expected_error) {
+  ring_buffer_->Stop(AddUnexpectedCallback("Stop - expected disconnect instead"));
+
+  ExpectError(ring_buffer(), expected_error);
+}
+
 // After Stop is called, no position notification should be received.
 // To validate this without any race windows: from within the next position notification itself,
 // we call Stop and flag that subsequent position notifications should FAIL.
@@ -186,115 +192,14 @@ void AdminTest::RequestStopAndExpectNoPositionNotifications() {
   ExpectCallbacks();
 }
 
-// Request that the driver start the ring buffer engine, but expect disconnect rather than response.
-// We would expect this if calling Stop before GetVmo, for example.
-void AdminTest::RequestStopAndExpectDisconnect(zx_status_t expected_error) {
-  ring_buffer_->Stop(AddUnexpectedCallback("Stop - expected disconnect instead"));
-
-  ExpectError(ring_buffer(), expected_error);
-}
-
-// Start recording position/timestamps, set notifications to request another, and request the first
-void AdminTest::EnablePositionNotifications() {
-  record_position_info_ = true;
-  request_next_position_notification_ = true;
-  RequestPositionNotification();
-}
-
-void AdminTest::RequestPositionNotification() {
-  ring_buffer_->WatchClockRecoveryPositionInfo(
-      [this](fuchsia::hardware::audio::RingBufferPositionInfo position_info) {
-        PositionNotificationCallback(position_info);
-      });
-}
-
 void AdminTest::PositionNotificationCallback(
     fuchsia::hardware::audio::RingBufferPositionInfo position_info) {
   // If this is an unexpected callback, fail and exit.
   if (fail_on_position_notification_) {
     FAIL() << "Unexpected position notification";
   }
-
-  EXPECT_GT(notifications_per_ring_, 0u) << "notifs_per_ring is 0";
-
-  auto now = zx::clock::get_monotonic();
-  auto position_time = zx::time(position_info.timestamp);
-  EXPECT_LT(start_time_, now);
-  EXPECT_LT(position_time, now);
-
-  if (position_notification_count_) {
-    EXPECT_GT(position_time, start_time_);
-    EXPECT_GT(position_time, zx::time(saved_position_.timestamp));
-  } else {
-    EXPECT_GE(position_time, start_time_);
-  }
-  EXPECT_LT(position_info.position, ring_buffer_frames_ * frame_size_);
-
-  // If we want to continue to chain of position notifications, request the next one.
-  if (request_next_position_notification_) {
-    RequestPositionNotification();
-  }
-
-  // If we don't need to update our running stats on position, exit now.
-  if (!record_position_info_) {
-    return;
-  }
-
-  ++position_notification_count_;
-
-  running_position_ += position_info.position;
-  running_position_ -= saved_position_.position;
-  if (position_info.position <= saved_position_.position) {
-    running_position_ += (ring_buffer_frames_ * frame_size_);
-  }
-
-  saved_position_.timestamp = position_info.timestamp;
-  saved_position_.position = position_info.position;
-}
-
-// Wait for the specified number of position notifications, then stop recording timestamp data.
-// ...but don't DisablePositionNotifications, in case later notifications surface other issues.
-void AdminTest::ExpectPositionNotifyCount(uint32_t count) {
-  RunLoopUntil([this, count]() { return position_notification_count_ >= count || HasFailure(); });
-
-  record_position_info_ = false;
-}
-
-// What timestamp do we expect, for the final notification received? We know how many
-// notifications we've received; we'll multiply this by the per-notification time duration.
-void AdminTest::ValidatePositionInfo() {
-  zx::duration notification_timestamp = zx::time(saved_position_.timestamp) - start_time_;
-  zx::duration observed_timestamp = zx::clock::get_monotonic() - start_time_;
-
-  ASSERT_GT(position_notification_count_, 0u) << "No position notifications received";
-  ASSERT_GT(notifications_per_ring_, 0u) << "notifications_per_ring_ cannot be zero";
-
-  ASSERT_NE(pcm_format_.frame_rate * notifications_per_ring_, 0u);
-
-  // ns/notification = nsec/sec * sec/frames * frames/ring * ring/notification
-  auto ns_per_notification = TimelineRate::NsPerSecond / TimelineRate(pcm_format_.frame_rate) *
-                             TimelineRate(ring_buffer_frames_) /
-                             TimelineRate(notifications_per_ring_);
-
-  // Upon enabling notifications, our first notification might arrive immediately. Thus, the average
-  // number of notification periods elapsed is (position_notification_count_ - 0.5).
-  auto expected_timestamp = zx::duration(ns_per_notification.Scale(position_notification_count_) -
-                                         ns_per_notification.Scale(1) / 2);
-
-  // Delivery-time requirements for pos notifications are loose; include a tolerance of +/-2 notifs.
-  auto timestamp_tolerance = zx::duration(ns_per_notification.Scale(2));
-  auto min_allowed_timestamp = expected_timestamp - timestamp_tolerance;
-  auto max_allowed_timestamp = expected_timestamp + timestamp_tolerance;
-
-  EXPECT_GE(notification_timestamp, min_allowed_timestamp)
-      << notification_timestamp.to_nsecs() << " less than min " << min_allowed_timestamp.to_nsecs()
-      << ". Notification rate too high. Device clock rate too fast?";
-  EXPECT_LE(notification_timestamp, max_allowed_timestamp)
-      << notification_timestamp.to_nsecs() << " exceeds max " << max_allowed_timestamp.to_nsecs()
-      << ". Notification rate too low. Device clock rate too slow?";
-
-  // Also validate when the notification was actually received (not just the timestamp).
-  EXPECT_GT(observed_timestamp, min_allowed_timestamp);
+  ASSERT_GT(notifications_per_ring(), 0u)
+      << "Position notification received: notifications_per_ring() cannot be zero";
 }
 
 #define DEFINE_ADMIN_TEST_CLASS(CLASS_NAME, CODE)                               \
@@ -323,7 +228,7 @@ DEFINE_ADMIN_TEST_CLASS(GetBuffer, {
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMinFormat());
 
-  RequestBuffer(100, 1);
+  RequestBuffer(100);
   WaitForError();
 });
 
@@ -333,7 +238,7 @@ DEFINE_ADMIN_TEST_CLASS(SetActiveChannels, {
   ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
   ASSERT_NO_FAILURE_OR_SKIP(ActivateChannels(0));
 
-  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(8000, 32));
+  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(8000));
   ASSERT_NO_FAILURE_OR_SKIP(RequestStart());
 
   auto all_channels = (1 << pcm_format().number_of_channels) - 1;
@@ -345,7 +250,7 @@ DEFINE_ADMIN_TEST_CLASS(SetActiveChannels, {
 DEFINE_ADMIN_TEST_CLASS(Start, {
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMinFormat());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(32000, 4));
+  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(32000));
 
   RequestStart();
   WaitForError();
@@ -363,7 +268,7 @@ DEFINE_ADMIN_TEST_CLASS(StartBeforeGetVmoShouldDisconnect, {
 DEFINE_ADMIN_TEST_CLASS(StartWhileStartedShouldDisconnect, {
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(8000, 32));
+  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(8000));
   ASSERT_NO_FAILURE_OR_SKIP(RequestStart());
 
   RequestStartAndExpectDisconnect(ZX_ERR_BAD_STATE);
@@ -373,7 +278,7 @@ DEFINE_ADMIN_TEST_CLASS(StartWhileStartedShouldDisconnect, {
 DEFINE_ADMIN_TEST_CLASS(Stop, {
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(100, 3));
+  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(100));
   ASSERT_NO_FAILURE_OR_SKIP(RequestStart());
 
   RequestStop();
@@ -391,73 +296,10 @@ DEFINE_ADMIN_TEST_CLASS(StopBeforeGetVmoShouldDisconnect, {
 DEFINE_ADMIN_TEST_CLASS(StopWhileStoppedIsPermitted, {
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMinFormat());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(100, 1));
+  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(100));
   ASSERT_NO_FAILURE_OR_SKIP(RequestStop());
 
   RequestStop();
-  WaitForError();
-});
-
-// Verify position notifications at fast (64/sec) rate.
-DEFINE_ADMIN_TEST_CLASS(PositionNotifyFast, {
-  // Request a 0.5-second ring-buffer
-  ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(pcm_format().frame_rate / 2, 32));
-  ASSERT_NO_FAILURE_OR_SKIP(EnablePositionNotifications());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestStart());
-
-  // After an arbitrary number of notifications, stop updating the position info but allow
-  // notifications to continue. Analyze whether the position advance meets expectations.
-  ExpectPositionNotifyCount(16u);
-  ValidatePositionInfo();
-
-  WaitForError();
-});
-
-// Verify position notifications at slow (1/sec) rate.
-DEFINE_ADMIN_TEST_CLASS(PositionNotifySlow, {
-  // Request a 2-second ring-buffer
-  constexpr auto kNotifsPerRingBuffer = 2u;
-  ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestMinFormat());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(pcm_format().frame_rate * 2, kNotifsPerRingBuffer));
-  ASSERT_NO_FAILURE_OR_SKIP(EnablePositionNotifications());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestStart());
-
-  // After an arbitrary number of notifications, stop updating the position info but allow
-  // notifications to continue. Analyze whether the position advance meets expectations.
-  ExpectPositionNotifyCount(3u);
-  ValidatePositionInfo();
-
-  // Wait longer than the default (100 ms), as notifications are less frequent than that.
-  zx::duration time_per_notif =
-      zx::sec(1) * ring_buffer_frames() / pcm_format().frame_rate / kNotifsPerRingBuffer;
-  WaitForError(time_per_notif);
-});
-
-// Verify no position notifications arrive after stop.
-DEFINE_ADMIN_TEST_CLASS(NoPositionNotifyAfterStop, {
-  ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(8000, 32));
-  ASSERT_NO_FAILURE_OR_SKIP(EnablePositionNotifications());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestStart());
-  ASSERT_NO_FAILURE_OR_SKIP(ExpectPositionNotifyCount(3u));
-
-  RequestStopAndExpectNoPositionNotifications();
-  WaitForError();
-});
-
-// Verify no position notifications arrive if notifications_per_ring is 0.
-DEFINE_ADMIN_TEST_CLASS(PositionNotifyNone, {
-  ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
-  ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(8000, 0));
-  ASSERT_NO_FAILURE_OR_SKIP(FailOnPositionNotifications());
-  ASSERT_NO_FAILURE_OR_SKIP(EnablePositionNotifications());
-
-  RequestStart();
   WaitForError();
 });
 
@@ -493,12 +335,6 @@ void RegisterAdminTestsForDevice(const DeviceEntry& device_entry,
 
     REGISTER_ADMIN_TEST(StopBeforeGetVmoShouldDisconnect, device_entry);
     REGISTER_ADMIN_TEST(StopWhileStoppedIsPermitted, device_entry);
-
-    // TODO(fxbug.dev/65608): Re-enable position tests where realtime response is guaranteed.
-    REGISTER_DISABLED_ADMIN_TEST(PositionNotifyFast, device_entry);
-    REGISTER_DISABLED_ADMIN_TEST(PositionNotifySlow, device_entry);
-    REGISTER_DISABLED_ADMIN_TEST(NoPositionNotifyAfterStop, device_entry);
-    REGISTER_DISABLED_ADMIN_TEST(PositionNotifyNone, device_entry);
   }
 }
 

@@ -43,6 +43,8 @@ executable("audio_driver_tests_bin") {
     "basic_test.cc",
     "basic_test.h",
     "main.cc",
+    "position_test.cc",
+    "position_test.h",
     "test_base.cc",
     "test_base.h",
   ]

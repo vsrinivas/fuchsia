@@ -36,28 +36,23 @@ class AdminTest : public TestBase {
   void RequestStopAndExpectNoPositionNotifications();
   void RequestStopAndExpectDisconnect(zx_status_t expected_error);
 
-  // Request a position notification that will record timestamp/position and register for another.
-  void EnablePositionNotifications();
-  // Clear flag so that any pending position notification will not request yet another.
-  void DisablePositionNotifications() { request_next_position_notification_ = false; }
   // Set flag so position notifications (even already-enqueued ones!) cause failures.
   void FailOnPositionNotifications() { fail_on_position_notification_ = true; }
   // Clear flag so position notifications (even already-enqueued ones) do not cause failures.
   void AllowPositionNotifications() { fail_on_position_notification_ = false; }
-
-  void RequestPositionNotification();
   void PositionNotificationCallback(fuchsia::hardware::audio::RingBufferPositionInfo position_info);
-  void ExpectPositionNotifyCount(uint32_t count);
-  void ValidatePositionInfo();
 
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer>& ring_buffer() { return ring_buffer_; }
   uint32_t ring_buffer_frames() const { return ring_buffer_frames_; }
   fuchsia::hardware::audio::PcmFormat pcm_format() const { return pcm_format_; }
 
+  uint32_t notifications_per_ring() const { return notifications_per_ring_; }
+  const zx::time& start_time() const { return start_time_; }
+  uint16_t frame_size() const { return frame_size_; }
+
  private:
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_;
   fuchsia::hardware::audio::RingBufferProperties ring_buffer_props_;
-  fuchsia::hardware::audio::RingBufferPositionInfo saved_position_ = {};
 
   uint32_t min_ring_buffer_frames_ = 0;
   uint32_t notifications_per_ring_ = 0;
@@ -69,11 +64,7 @@ class AdminTest : public TestBase {
   uint16_t frame_size_ = 0;
 
   // Position notifications are hanging-gets. On receipt, should we register the next one? Or fail?
-  bool request_next_position_notification_ = false;
-  bool record_position_info_ = false;
   bool fail_on_position_notification_ = false;
-  uint32_t position_notification_count_ = 0;
-  uint64_t running_position_ = 0;
 };
 
 }  // namespace media::audio::drivers::test
