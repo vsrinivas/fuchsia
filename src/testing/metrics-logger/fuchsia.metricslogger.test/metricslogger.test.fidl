@@ -36,6 +36,7 @@ type Metric = strict union {
     2: cpu_load CpuLoad;
     3: power Power;
     4: gpu_usage GpuUsage;
+    5: network_activity NetworkActivity;
 };
 
 type StatisticsArgs = struct {
@@ -71,6 +72,15 @@ type CpuLoad = struct {
 
 /// GPU Usage metric details.
 type GpuUsage = struct {
+    /// Length of the polling interval in milliseconds.
+    /// Must be smaller than `duration_ms` of the logging request.
+    /// Must not be smaller than 500ms if `output_samples_to_syslog` is enabled
+    /// in the logging request.
+    interval_ms uint32;
+};
+
+/// Network Activity metric details.
+type NetworkActivity = struct {
     /// Length of the polling interval in milliseconds.
     /// Must be smaller than `duration_ms` of the logging request.
     /// Must not be smaller than 500ms if `output_samples_to_syslog` is enabled

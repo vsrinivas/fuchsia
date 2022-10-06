@@ -40,6 +40,11 @@
             path: "/dev/class/gpu",
         },
         {
+            directory: "dev-class-network",
+            rights: [ "r*" ],
+            path: "/dev/class/network",
+        },
+        {
             protocol: [
                 "fuchsia.boot.Items",
                 "fuchsia.kernel.Stats",

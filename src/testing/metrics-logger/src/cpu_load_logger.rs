@@ -115,6 +115,7 @@ fn calculate_cpu_usage(
     let num_cpus = cpu_indexes.len() as f64;
     let mut cpu_percentage_sum: f64 = 0.0;
     for cpu_index in cpu_indexes {
+        // TODO (fxbug.dev/110111): Return `MetricsLoggerError::INTERNAL` instead of unwrap.
         let current_per_cpu_stats =
             &current_sample.cpu_stats.per_cpu_stats.as_ref().unwrap()[cpu_index as usize];
         let last_per_cpu_stats =

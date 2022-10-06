@@ -49,6 +49,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_rust",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
     "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_rust",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_rust",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_rust",
@@ -82,6 +83,7 @@ rustc_binary("bin") {
     "src/driver_utils.rs",
     "src/gpu_usage_logger.rs",
     "src/main.rs",
+    "src/network_activity_logger.rs",
     "src/sensor_logger.rs",
   ]
 }

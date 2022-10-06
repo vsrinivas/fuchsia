@@ -5,17 +5,20 @@
 mod cpu_load_logger;
 mod driver_utils;
 mod gpu_usage_logger;
+mod network_activity_logger;
 mod sensor_logger;
 
 use {
     crate::cpu_load_logger::{generate_cpu_stats_driver, CpuLoadLogger, CpuStatsDriver},
     crate::driver_utils::Config,
     crate::gpu_usage_logger::{generate_gpu_drivers, GpuDriver, GpuUsageLogger},
+    crate::network_activity_logger::{generate_network_devices, NetworkActivityLogger},
     crate::sensor_logger::{
         generate_power_drivers, generate_temperature_drivers, PowerDriver, PowerLogger,
         TemperatureDriver, TemperatureLogger,
     },
     anyhow::{Error, Result},
+    fidl_fuchsia_hardware_network as fhwnet,
     fidl_fuchsia_metricslogger_test::{self as fmetrics, MetricsLoggerRequest},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -136,6 +139,9 @@ impl<'a> ServerBuilder<'a> {
             Some(drivers) => RefCell::new(Some(Rc::new(drivers))),
         };
 
+        // TODO (didis): Add unit test for logging network activity.
+        let network_devices = RefCell::new(None);
+
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
@@ -143,6 +149,7 @@ impl<'a> ServerBuilder<'a> {
             temperature_drivers,
             power_drivers,
             gpu_drivers,
+            network_devices,
             cpu_stats_driver,
             self.config,
             inspect_root.create_child("MetricsLogger"),
@@ -159,6 +166,9 @@ struct MetricsLoggerServer {
 
     /// List of gpu drivers for polling GPU stats.
     gpu_drivers: RefCell<Option<Rc<Vec<GpuDriver>>>>,
+
+    /// List of network devices for querying network activities.
+    network_devices: RefCell<Option<Rc<Vec<fhwnet::DeviceProxy>>>>,
 
     /// Proxy for polling CPU stats.
     cpu_stats_driver: RefCell<Option<Rc<CpuStatsDriver>>>,
@@ -179,6 +189,7 @@ impl MetricsLoggerServer {
         temperature_drivers: RefCell<Option<Rc<Vec<TemperatureDriver>>>>,
         power_drivers: RefCell<Option<Rc<Vec<PowerDriver>>>>,
         gpu_drivers: RefCell<Option<Rc<Vec<GpuDriver>>>>,
+        network_devices: RefCell<Option<Rc<Vec<fhwnet::DeviceProxy>>>>,
         cpu_stats_driver: RefCell<Option<Rc<CpuStatsDriver>>>,
         config: Option<Config>,
         inspect_root: inspect::Node,
@@ -187,6 +198,7 @@ impl MetricsLoggerServer {
             temperature_drivers,
             power_drivers,
             gpu_drivers,
+            network_devices,
             cpu_stats_driver,
             inspect_root,
             config,
@@ -314,6 +326,19 @@ impl MetricsLoggerServer {
                     )
                     .await?;
                     futures.push(Box::new(gpu_usage_logger.log_gpu_usages()));
+                }
+                fmetrics::Metric::NetworkActivity(fmetrics::NetworkActivity { interval_ms }) => {
+                    let devices = self.get_network_devices().await?;
+                    let network_activity_logger = NetworkActivityLogger::new(
+                        devices,
+                        interval_ms,
+                        duration_ms,
+                        &client_inspect,
+                        String::from(&client_id.to_string()),
+                        output_samples_to_syslog,
+                    )
+                    .await?;
+                    futures.push(Box::new(network_activity_logger.log_network_activities()));
                 }
                 fmetrics::Metric::Temperature(fmetrics::Temperature {
                     sampling_interval_ms,
@@ -455,6 +480,22 @@ impl MetricsLoggerServer {
         })?);
         self.cpu_stats_driver.replace(Some(driver.clone()));
         Ok(driver)
+    }
+
+    async fn get_network_devices(
+        &self,
+    ) -> Result<Rc<Vec<fhwnet::DeviceProxy>>, fmetrics::MetricsLoggerError> {
+        match &*self.network_devices.borrow() {
+            Some(device) => return Ok(device.clone()),
+            _ => (),
+        }
+
+        let device = Rc::new(generate_network_devices().await.map_err(|err| {
+            error!(%err, "Request failed with internal error");
+            fmetrics::MetricsLoggerError::Internal
+        })?);
+        self.network_devices.replace(Some(device.clone()));
+        Ok(device)
     }
 }
 

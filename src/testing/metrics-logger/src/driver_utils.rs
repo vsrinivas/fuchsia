@@ -61,7 +61,7 @@ async fn get_driver_topological_path(path: &str) -> Result<String> {
         .map_err(|raw| format_err!("zx error: {}", zx::Status::from_raw(raw)))
 }
 
-async fn list_drivers(path: &str) -> Vec<String> {
+pub async fn list_drivers(path: &str) -> Vec<String> {
     let dir = match fuchsia_fs::directory::open_in_namespace(
         path,
         fuchsia_fs::OpenFlags::RIGHT_READABLE,

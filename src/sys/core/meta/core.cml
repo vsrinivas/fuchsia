@@ -310,7 +310,10 @@
             directory: "dev",
             from: "parent",
             as: "dev-class-network",
-            to: [ "#network" ],
+            to: [
+                "#metrics-logger",
+                "#network",
+            ],
             subdir: "class/network",
         },
         {
