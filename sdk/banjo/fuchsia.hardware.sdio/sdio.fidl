@@ -120,10 +120,16 @@ protocol Sdio {
         s zx.status;
         read_byte uint8;
     });
+    /// Returns a virtual interrupt that will be triggered by the SDIO driver when the card signals
+    /// an interrupt corresponding to this function. No additional interrupts will be triggered
+    /// until `AckInBandIntr()` is called.
     GetInBandIntr() -> (resource struct {
         s zx.status;
         irq zx.handle:INTERRUPT;
     });
+    /// See above. Clients should call `AckInBandIntr()` after starting to wait on the interrupt
+    /// object just in case there is already an in-band interrupt pending for this function.
+    AckInBandIntr();
     /// The following functions access the card common control registers (CCCR) on function 0.
     /// Aborts an I/O operation occurring on the specified function.
     IoAbort() -> (struct {
