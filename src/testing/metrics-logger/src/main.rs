@@ -12,7 +12,7 @@ use {
     crate::cpu_load_logger::{generate_cpu_stats_driver, CpuLoadLogger, CpuStatsDriver},
     crate::driver_utils::Config,
     crate::gpu_usage_logger::{generate_gpu_drivers, GpuDriver, GpuUsageLogger},
-    crate::network_activity_logger::{generate_network_devices, NetworkActivityLogger},
+    crate::network_activity_logger::{generate_network_devices, NetworkActivityLoggerBuilder},
     crate::sensor_logger::{
         generate_power_drivers, generate_temperature_drivers, PowerDriver, PowerLogger,
         TemperatureDriver, TemperatureLogger,
@@ -63,6 +63,9 @@ pub struct ServerBuilder<'a> {
     /// Optional proxy for test usage.
     cpu_stats_driver: Option<CpuStatsDriver>,
 
+    /// Optional proxies for test usage.
+    network_devices: Option<Vec<fhwnet::DeviceProxy>>,
+
     /// Optional inspect root for test usage.
     inspect_root: Option<&'a inspect::Node>,
 
@@ -80,6 +83,7 @@ impl<'a> ServerBuilder<'a> {
             power_drivers: None,
             gpu_drivers: None,
             cpu_stats_driver: None,
+            network_devices: None,
             inspect_root: None,
             config,
         }
@@ -107,6 +111,12 @@ impl<'a> ServerBuilder<'a> {
     #[cfg(test)]
     fn with_cpu_stats_driver(mut self, cpu_stats_driver: CpuStatsDriver) -> Self {
         self.cpu_stats_driver = Some(cpu_stats_driver);
+        self
+    }
+
+    #[cfg(test)]
+    fn with_network_devices(mut self, network_devices: Vec<fhwnet::DeviceProxy>) -> Self {
+        self.network_devices = Some(network_devices);
         self
     }
 
@@ -139,8 +149,10 @@ impl<'a> ServerBuilder<'a> {
             Some(drivers) => RefCell::new(Some(Rc::new(drivers))),
         };
 
-        // TODO (didis): Add unit test for logging network activity.
-        let network_devices = RefCell::new(None);
+        let network_devices = match self.network_devices {
+            None => RefCell::new(None),
+            Some(devices) => RefCell::new(Some(Rc::new(devices))),
+        };
 
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
@@ -329,7 +341,7 @@ impl MetricsLoggerServer {
                 }
                 fmetrics::Metric::NetworkActivity(fmetrics::NetworkActivity { interval_ms }) => {
                     let devices = self.get_network_devices().await?;
-                    let network_activity_logger = NetworkActivityLogger::new(
+                    let network_activity_logger = NetworkActivityLoggerBuilder::new(
                         devices,
                         interval_ms,
                         duration_ms,
@@ -337,6 +349,7 @@ impl MetricsLoggerServer {
                         String::from(&client_id.to_string()),
                         output_samples_to_syslog,
                     )
+                    .build()
                     .await?;
                     futures.push(Box::new(network_activity_logger.log_network_activities()));
                 }
@@ -546,7 +559,9 @@ mod tests {
         crate::gpu_usage_logger::tests::create_gpu_drivers,
         crate::sensor_logger::tests::{create_power_drivers, create_temperature_drivers},
         assert_matches::assert_matches,
-        fmetrics::{CpuLoad, GpuUsage, Metric, Power, StatisticsArgs, Temperature},
+        fmetrics::{
+            CpuLoad, GpuUsage, Metric, NetworkActivity, Power, StatisticsArgs, Temperature,
+        },
         futures::{task::Poll, FutureExt},
         inspect::assert_data_tree,
     };
@@ -559,6 +574,7 @@ mod tests {
         power_drivers: Option<Vec<PowerDriver>>,
         gpu_drivers: Option<Vec<GpuDriver>>,
         cpu_stats_driver: Option<CpuStatsDriver>,
+        network_drivers: Option<Vec<fhwnet::DeviceProxy>>,
     }
 
     impl RunnerBuilder {
@@ -573,6 +589,7 @@ mod tests {
                 power_drivers: None,
                 gpu_drivers: None,
                 cpu_stats_driver: None,
+                network_drivers: None,
             }
         }
 
@@ -596,6 +613,11 @@ mod tests {
             self
         }
 
+        fn with_network_drivers(mut self, network_drivers: Vec<fhwnet::DeviceProxy>) -> Self {
+            self.network_drivers = Some(network_drivers);
+            self
+        }
+
         /// Builds a Runner.
         fn build(self) -> Runner {
             Runner::new(
@@ -604,6 +626,7 @@ mod tests {
                 self.power_drivers,
                 self.gpu_drivers,
                 self.cpu_stats_driver,
+                self.network_drivers,
             )
         }
     }
@@ -630,6 +653,7 @@ mod tests {
             power_drivers: Option<Vec<PowerDriver>>,
             gpu_drivers: Option<Vec<GpuDriver>>,
             cpu_stats_driver: Option<CpuStatsDriver>,
+            network_drivers: Option<Vec<fhwnet::DeviceProxy>>,
         ) -> Self {
             let inspector = inspect::Inspector::new();
 
@@ -654,6 +678,11 @@ mod tests {
 
             builder = match cpu_stats_driver {
                 Some(driver) => builder.with_cpu_stats_driver(driver),
+                None => builder,
+            };
+
+            builder = match network_drivers {
+                Some(devices) => builder.with_network_devices(devices),
                 None => builder,
             };
 
@@ -1747,6 +1776,91 @@ mod tests {
                 statistics_args: None,
             })]
             .into_iter(),
+            1_000,
+            false,
+            false,
+        );
+        // Check the request is dispatched without error.
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+    }
+
+    #[test]
+    fn test_logging_network_activity_request_errors() {
+        let runner_builder = RunnerBuilder::new();
+
+        let mut runner = runner_builder.build();
+
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::NetworkActivity(NetworkActivity { interval_ms: 0 })].into_iter(),
+            200,
+            false,
+            false,
+        );
+        // Check `InvalidSamplingInterval` is returned when interval_ms is 0.
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval)))
+        );
+
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::NetworkActivity(NetworkActivity { interval_ms: 200 })]
+                .into_iter(),
+            1_000,
+            true,
+            false,
+        );
+        // Check `InvalidSamplingInterval` is returned when logging samples to syslog at an interval
+        // smaller than MIN_INTERVAL_FOR_SYSLOG_MS.
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval)))
+        );
+
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::NetworkActivity(NetworkActivity { interval_ms: 200 })]
+                .into_iter(),
+            100,
+            false,
+            false,
+        );
+        // Check `InvalidSamplingInterval` is returned when logging samples to syslog at an interval
+        // larger than `duration_ms`.
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval)))
+        );
+
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::NetworkActivity(NetworkActivity { interval_ms: 200 })]
+                .into_iter(),
+            1_000,
+            false,
+            false,
+        );
+        // Check `NoDrivers` is returned when other logging request parameters are correct.
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::NoDrivers)))
+        );
+    }
+
+    #[test]
+    fn test_logging_network_activity_request_dispatch() {
+        let runner_builder = RunnerBuilder::new();
+
+        let (proxy, _) =
+            fidl::endpoints::create_proxy_and_stream::<fhwnet::DeviceMarker>().unwrap();
+        let network_drivers = vec![proxy];
+
+        let mut runner = runner_builder.with_network_drivers(network_drivers).build();
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::NetworkActivity(NetworkActivity { interval_ms: 200 })]
+                .into_iter(),
             1_000,
             false,
             false,

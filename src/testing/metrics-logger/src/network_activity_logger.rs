@@ -171,6 +171,88 @@ async fn query_network_activity(
     Ok(Some((rx_bytes_sum, tx_bytes_sum, rx_frames_sum, tx_frames_sum)))
 }
 
+struct NetworkActivitySample {
+    time_stamp: fasync::Time,
+    rx_bytes: u64,
+    tx_bytes: u64,
+    rx_frames: u64,
+    tx_frames: u64,
+}
+
+pub struct NetworkActivityLoggerBuilder<'a> {
+    ports: Option<Rc<RefCell<HashMap<u8, fhwnet::PortProxy>>>>,
+    client_inspect: &'a inspect::Node,
+    client_id: String,
+    devices: Rc<Vec<fhwnet::DeviceProxy>>,
+    interval_ms: u32,
+    duration_ms: Option<u32>,
+    output_samples_to_syslog: bool,
+}
+
+impl<'a> NetworkActivityLoggerBuilder<'a> {
+    pub fn new(
+        devices: Rc<Vec<fhwnet::DeviceProxy>>,
+        interval_ms: u32,
+        duration_ms: Option<u32>,
+        client_inspect: &'a inspect::Node,
+        client_id: String,
+        output_samples_to_syslog: bool,
+    ) -> Self {
+        NetworkActivityLoggerBuilder {
+            ports: None,
+            client_inspect,
+            client_id,
+            devices,
+            interval_ms,
+            duration_ms,
+            output_samples_to_syslog,
+        }
+    }
+
+    /// For testing purposes, port proxies may be provided directly to the builder.
+    #[cfg(test)]
+    fn with_network_ports(mut self, ports: Rc<RefCell<HashMap<u8, fhwnet::PortProxy>>>) -> Self {
+        self.ports = Some(ports);
+        self
+    }
+
+    pub async fn build(self) -> Result<NetworkActivityLogger, fmetrics::MetricsLoggerError> {
+        if self.interval_ms == 0
+            || self.output_samples_to_syslog && self.interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+            || self.duration_ms.map_or(false, |d| d <= self.interval_ms)
+        {
+            return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
+        }
+
+        let ports = match self.ports {
+            None => {
+                if self.devices.len() == 0 {
+                    return Err(fmetrics::MetricsLoggerError::NoDrivers);
+                }
+                let network_ports = Rc::new(RefCell::new(HashMap::new()));
+                // Keep a task running in the background to listen to the port events to keep
+                // `ports` updated.
+                fasync::Task::local(keep_ports_updated(
+                    self.devices.clone(),
+                    network_ports.clone(),
+                ))
+                .detach();
+                network_ports
+            }
+            Some(network_ports) => network_ports,
+        };
+
+        Ok(NetworkActivityLogger::new(
+            ports,
+            self.interval_ms,
+            self.duration_ms,
+            self.client_inspect,
+            self.client_id,
+            self.output_samples_to_syslog,
+        ))
+    }
+}
+
 pub struct NetworkActivityLogger {
     /// Map from the port ID (u8) to the port proxy. The ID identifies a port instance in hardware,
     /// which doesn't change on different instantiation of the identified port.
@@ -191,38 +273,15 @@ pub struct NetworkActivityLogger {
     end_time: fasync::Time,
 }
 
-struct NetworkActivitySample {
-    time_stamp: fasync::Time,
-    rx_bytes: u64,
-    tx_bytes: u64,
-    rx_frames: u64,
-    tx_frames: u64,
-}
-
 impl NetworkActivityLogger {
-    pub async fn new(
-        devices: Rc<Vec<fhwnet::DeviceProxy>>,
+    fn new(
+        ports: Rc<RefCell<HashMap<u8, fhwnet::PortProxy>>>,
         interval_ms: u32,
         duration_ms: Option<u32>,
         client_inspect: &inspect::Node,
         client_id: String,
         output_samples_to_syslog: bool,
-    ) -> Result<Self, fmetrics::MetricsLoggerError> {
-        if interval_ms == 0
-            || output_samples_to_syslog && interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
-            || duration_ms.map_or(false, |d| d <= interval_ms)
-        {
-            return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
-        }
-        if devices.len() == 0 {
-            return Err(fmetrics::MetricsLoggerError::NoDrivers);
-        }
-
-        // Keep a task running in the background to listen to the port events to keep `ports`
-        // updated.
-        let ports = Rc::new(RefCell::new(HashMap::new()));
-        fasync::Task::local(keep_ports_updated(devices.clone(), ports.clone())).detach();
-
+    ) -> Self {
         let start_time = fasync::Time::now();
         let end_time = duration_ms.map_or(fasync::Time::INFINITE, |ms| {
             fasync::Time::now() + zx::Duration::from_millis(ms as i64)
@@ -230,7 +289,7 @@ impl NetworkActivityLogger {
 
         let inspect = InspectData::new(client_inspect);
 
-        Ok(NetworkActivityLogger {
+        NetworkActivityLogger {
             ports,
             last_sample: None,
             interval: zx::Duration::from_millis(interval_ms as i64),
@@ -239,7 +298,7 @@ impl NetworkActivityLogger {
             output_samples_to_syslog,
             start_time,
             end_time,
-        })
+        }
     }
 
     pub async fn log_network_activities(mut self) {
@@ -366,5 +425,189 @@ impl InspectData {
         self.tx_bytes_per_sec.as_ref().map(|r| r.set(tx_bytes_per_sec));
         self.rx_frames_per_sec.as_ref().map(|r| r.set(rx_frames_per_sec));
         self.tx_frames_per_sec.as_ref().map(|r| r.set(tx_frames_per_sec));
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        super::*,
+        assert_matches::assert_matches,
+        futures::{task::Poll, FutureExt, TryStreamExt},
+        inspect::assert_data_tree,
+        std::{cell::Cell, pin::Pin},
+    };
+
+    fn setup_fake_network_port(
+        mut get_counter: impl FnMut() -> fhwnet::PortGetCountersResponse + 'static,
+    ) -> (fhwnet::PortProxy, fasync::Task<()>) {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fhwnet::PortMarker>().unwrap();
+        let task = fasync::Task::local(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(fhwnet::PortRequest::GetCounters { responder }) => {
+                        let _ = responder.send(get_counter());
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+
+        (proxy, task)
+    }
+
+    struct Runner {
+        inspector: inspect::Inspector,
+        inspect_root: inspect::Node,
+
+        _tasks: Vec<fasync::Task<()>>,
+
+        network_counters: Rc<Cell<[u64; 4]>>,
+
+        ports: Rc<RefCell<HashMap<u8, fhwnet::PortProxy>>>,
+
+        // Fields are dropped in declaration order. Always drop executor last because we hold other
+        // zircon objects tied to the executor in this struct, and those can't outlive the executor.
+        //
+        // See
+        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.TestExecutor.html
+        // - https://doc.rust-lang.org/reference/destructors.html.
+        executor: fasync::TestExecutor,
+    }
+
+    impl Runner {
+        fn new() -> Self {
+            let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
+            executor.set_fake_time(fasync::Time::from_nanos(0));
+
+            let inspector = inspect::Inspector::new();
+            let inspect_root = inspector.root().create_child("MetricsLogger");
+
+            let mut tasks = Vec::new();
+            let network_counters = Rc::new(Cell::new([0, 0, 0, 0]));
+            let network_counters_clone = network_counters.clone();
+            let (proxy, task) = setup_fake_network_port(move || fhwnet::PortGetCountersResponse {
+                rx_bytes: Some(network_counters_clone.get()[0]),
+                tx_bytes: Some(network_counters_clone.get()[1]),
+                rx_frames: Some(network_counters_clone.get()[2]),
+                tx_frames: Some(network_counters_clone.get()[3]),
+                unknown_data: None,
+                ..fhwnet::PortGetCountersResponse::EMPTY
+            });
+            tasks.push(task);
+
+            let ports = Rc::new(RefCell::new(HashMap::from([(0, proxy)])));
+
+            Self { executor, inspector, inspect_root, network_counters, ports, _tasks: tasks }
+        }
+
+        fn iterate_task(&mut self, task: &mut Pin<Box<dyn futures::Future<Output = ()>>>) -> bool {
+            let wakeup_time = match self.executor.wake_next_timer() {
+                Some(t) => t,
+                None => return false,
+            };
+            self.executor.set_fake_time(wakeup_time);
+            let _ = self.executor.run_until_stalled(task);
+            true
+        }
+    }
+
+    #[test]
+    fn test_logging_network_activiy_to_inspect() {
+        let mut runner = Runner::new();
+
+        let client_id = "test".to_string();
+        let client_inspect = runner.inspect_root.create_child(&client_id);
+        let poll = runner.executor.run_until_stalled(
+            &mut NetworkActivityLoggerBuilder::new(
+                Rc::new(vec![]),
+                100,
+                Some(1_000),
+                &client_inspect,
+                client_id,
+                false,
+            )
+            .with_network_ports(runner.ports.clone())
+            .build()
+            .boxed_local(),
+        );
+
+        let network_activity_logger = match poll {
+            Poll::Ready(Ok(network_activity_logger)) => network_activity_logger,
+            _ => panic!("Failed to create NetworkActivityLogger"),
+        };
+
+        // Starting logging for 1 second at 100ms intervals. When the query stalls, the logging task
+        // will be waiting on its timer.
+        let mut task = network_activity_logger.log_network_activities().boxed_local();
+        assert_matches!(runner.executor.run_until_stalled(&mut task), Poll::Pending);
+
+        // Check NetworkActivityLogger added before first poll.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        NetworkActivityLogger: {
+                        }
+                    }
+                }
+            }
+        );
+
+        // For the first 9 steps, network activity is logged to Insepct.
+        for i in 0..5 {
+            runner.network_counters.set([i + 1, (i + 1) * 2, (i + 1) * 3, (i + 1) * 4]);
+            runner.iterate_task(&mut task);
+            assert_data_tree!(
+                runner.inspector,
+                root: {
+                    MetricsLogger: {
+                        test: {
+                            NetworkActivityLogger: {
+                                "elapsed time (ms)": 100 * (1 + i as i64),
+                                "rx_bytes_per_sec": 10.0,
+                                "tx_bytes_per_sec": 20.0,
+                                "rx_frames_per_sec": 30.0,
+                                "tx_frames_per_sec": 40.0,
+                            }
+                        }
+                    }
+                }
+            );
+        }
+        for i in 5..9 {
+            runner.network_counters.set([5, 10, 15, 20]);
+            runner.iterate_task(&mut task);
+            assert_data_tree!(
+                runner.inspector,
+                root: {
+                    MetricsLogger: {
+                        test: {
+                            NetworkActivityLogger: {
+                                "elapsed time (ms)": 100 * (1 + i as i64),
+                                "rx_bytes_per_sec": 0.0,
+                                "tx_bytes_per_sec": 0.0,
+                                "rx_frames_per_sec": 0.0,
+                                "tx_frames_per_sec": 0.0,
+                            }
+                        }
+                    }
+                }
+            );
+        }
+
+        // With one more time step, the end time has been reached.
+        runner.iterate_task(&mut task);
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                    }
+                }
+            }
+        );
     }
 }
