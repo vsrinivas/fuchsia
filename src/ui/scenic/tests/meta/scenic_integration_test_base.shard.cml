@@ -13,6 +13,7 @@
         {
             protocol: [
                 "fuchsia.logger.LogSink",
+                "fuchsia.media.ProfileProvider",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",

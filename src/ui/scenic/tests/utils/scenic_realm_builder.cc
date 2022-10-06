@@ -5,6 +5,7 @@
 #include "src/ui/scenic/tests/utils/scenic_realm_builder.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
@@ -45,6 +46,7 @@ ScenicRealmBuilder& ScenicRealmBuilder::Init(RealmBuilderArgs args) {
   // Route the protocols required by the scenic subrealm from the test_manager.
   realm_builder_.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                             Protocol{fuchsia::media::ProfileProvider::Name_},
                              Protocol{fuchsia::scheduler::ProfileProvider::Name_},
                              Protocol{fuchsia::sysmem::Allocator::Name_},
                              Protocol{fuchsia::tracing::provider::Registry::Name_},
