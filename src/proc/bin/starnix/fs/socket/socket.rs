@@ -18,7 +18,7 @@ use crate::types::*;
 
 use std::sync::Arc;
 
-pub const DEFAULT_LISTEN_BAKCKLOG: usize = 1024;
+pub const DEFAULT_LISTEN_BACKLOG: usize = 1024;
 
 pub trait SocketOps: Send + Sync + AsAny {
     /// Connect the `socket` to the listening `peer`. On success
@@ -26,7 +26,7 @@ pub trait SocketOps: Send + Sync + AsAny {
     fn connect(
         &self,
         socket: &SocketHandle,
-        peer: &SocketHandle,
+        peer: SocketPeer,
         credentials: ucred,
     ) -> Result<(), Errno>;
 
@@ -163,7 +163,13 @@ pub trait SocketOps: Send + Sync + AsAny {
     }
 
     /// Retrieves socket-specific options.
-    fn getsockopt(&self, _socket: &Socket, _level: u32, _optname: u32) -> Result<Vec<u8>, Errno> {
+    fn getsockopt(
+        &self,
+        _socket: &Socket,
+        _level: u32,
+        _optname: u32,
+        _optlen: u32,
+    ) -> Result<Vec<u8>, Errno> {
         error!(ENOPROTOOPT)
     }
 
@@ -203,6 +209,11 @@ struct SocketState {
 
 pub type SocketHandle = Arc<Socket>;
 
+pub enum SocketPeer {
+    Handle(SocketHandle),
+    Address(SocketAddress),
+}
+
 fn create_socket_ops(
     domain: SocketDomain,
     socket_type: SocketType,
@@ -230,6 +241,14 @@ impl Socket {
     ) -> Result<SocketHandle, Errno> {
         let ops = create_socket_ops(domain, socket_type, protocol)?;
         Ok(Arc::new(Socket { ops, domain, socket_type, state: Mutex::default() }))
+    }
+
+    pub fn new_with_ops(
+        domain: SocketDomain,
+        socket_type: SocketType,
+        ops: Box<dyn SocketOps>,
+    ) -> SocketHandle {
+        Arc::new(Socket { ops, domain, socket_type, state: Mutex::default() })
     }
 
     /// Creates a `FileHandle` where the associated `FsNode` contains a socket.
@@ -291,7 +310,7 @@ impl Socket {
         Ok(())
     }
 
-    pub fn getsockopt(&self, level: u32, optname: u32) -> Result<Vec<u8>, Errno> {
+    pub fn getsockopt(&self, level: u32, optname: u32, optlen: u32) -> Result<Vec<u8>, Errno> {
         let value = match level {
             SOL_SOCKET => match optname {
                 SO_TYPE => self.socket_type.as_raw().to_ne_bytes().to_vec(),
@@ -305,9 +324,9 @@ impl Socket {
                     let duration = self.send_timeout().unwrap_or_default();
                     timeval_from_duration(duration).as_bytes().to_owned()
                 }
-                _ => self.ops.getsockopt(self, level, optname)?,
+                _ => self.ops.getsockopt(self, level, optname, optlen)?,
             },
-            _ => self.ops.getsockopt(self, level, optname)?,
+            _ => self.ops.getsockopt(self, level, optname, optlen)?,
         };
         Ok(value)
     }
@@ -333,11 +352,7 @@ impl Socket {
         self.ops.bind(self, socket_address)
     }
 
-    pub fn connect(
-        self: &SocketHandle,
-        peer: &SocketHandle,
-        credentials: ucred,
-    ) -> Result<(), Errno> {
+    pub fn connect(self: &SocketHandle, peer: SocketPeer, credentials: ucred) -> Result<(), Errno> {
         self.ops.connect(self, peer, credentials)
     }
 
@@ -464,7 +479,7 @@ mod tests {
             Socket::new(SocketDomain::Unix, SocketType::Stream, SocketProtocol::default())
                 .expect("Failed to create socket.");
         connecting_socket
-            .connect(&socket, current_task.as_ucred())
+            .connect(SocketPeer::Handle(socket.clone()), current_task.as_ucred())
             .expect("Failed to connect socket.");
         assert_eq!(FdEvents::POLLIN, socket.query_events(&current_task));
         let server_socket = socket.accept().unwrap();
@@ -518,7 +533,7 @@ mod tests {
         let mut source_iter = UserBufferIterator::new(&source_buf);
         let task_pid = current_task.get_pid();
         let credentials = ucred { pid: task_pid, uid: 0, gid: 0 };
-        send.connect(&rec_dgram, credentials.clone()).unwrap();
+        send.connect(SocketPeer::Handle(rec_dgram.clone()), credentials.clone()).unwrap();
         let no_write = send.write(&current_task, &mut source_iter, &mut None, &mut vec![]).unwrap();
         assert_eq!(no_write, xfer_bytes.len());
         // Previously, this would cause the test to fail,

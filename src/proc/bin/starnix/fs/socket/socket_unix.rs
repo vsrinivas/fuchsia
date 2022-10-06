@@ -401,15 +401,19 @@ impl SocketOps for UnixSocket {
     fn connect(
         &self,
         socket: &SocketHandle,
-        peer: &SocketHandle,
+        peer: SocketPeer,
         credentials: ucred,
     ) -> Result<(), Errno> {
+        let peer = match peer {
+            SocketPeer::Handle(handle) => handle,
+            SocketPeer::Address(_) => return error!(EINVAL),
+        };
         match socket.socket_type {
             SocketType::Stream | SocketType::SeqPacket => {
-                self.connect_stream(socket, peer, credentials)
+                self.connect_stream(socket, &peer, credentials)
             }
             SocketType::Datagram | SocketType::Raw => {
-                self.connect_datagram(socket, peer, credentials)
+                self.connect_datagram(socket, &peer, credentials)
             }
         }
     }
@@ -422,7 +426,7 @@ impl SocketOps for UnixSocket {
         let mut inner = self.lock();
         inner.credentials = Some(credentials);
         let is_bound = inner.address.is_some();
-        let backlog = if backlog < 0 { DEFAULT_LISTEN_BAKCKLOG } else { backlog as usize };
+        let backlog = if backlog < 0 { DEFAULT_LISTEN_BACKLOG } else { backlog as usize };
         match &mut inner.state {
             UnixSocketState::Disconnected if is_bound => {
                 inner.state = UnixSocketState::Listening(AcceptQueue::new(backlog));
@@ -699,7 +703,13 @@ impl SocketOps for UnixSocket {
         Ok(())
     }
 
-    fn getsockopt(&self, socket: &Socket, level: u32, optname: u32) -> Result<Vec<u8>, Errno> {
+    fn getsockopt(
+        &self,
+        socket: &Socket,
+        level: u32,
+        optname: u32,
+        _optlen: u32,
+    ) -> Result<Vec<u8>, Errno> {
         let opt_value = match level {
             SOL_SOCKET => match optname {
                 SO_PEERCRED => self
@@ -950,7 +960,7 @@ mod tests {
             Socket::new(SocketDomain::Unix, SocketType::Stream, SocketProtocol::default())
                 .expect("Failed to connect socket.");
         connecting_socket
-            .connect(&socket, current_task.as_ucred())
+            .connect(SocketPeer::Handle(socket.clone()), current_task.as_ucred())
             .expect("Failed to connect socket.");
         assert_eq!(FdEvents::POLLIN, socket.query_events(&current_task));
         let server_socket = socket.accept().unwrap();
@@ -962,7 +972,7 @@ mod tests {
         let user_buffer = UserBuffer { address: user_address, length: opt_size as usize };
         server_socket.setsockopt(&current_task, SOL_SOCKET, SO_SNDBUF, user_buffer).unwrap();
 
-        let opt_bytes = server_socket.getsockopt(SOL_SOCKET, SO_SNDBUF).unwrap();
+        let opt_bytes = server_socket.getsockopt(SOL_SOCKET, SO_SNDBUF, 0).unwrap();
         let retrieved_capacity = socklen_t::from_ne_bytes(opt_bytes.try_into().unwrap());
         // Setting SO_SNDBUF actually sets it to double the size
         assert_eq!(2 * send_capacity, retrieved_capacity);

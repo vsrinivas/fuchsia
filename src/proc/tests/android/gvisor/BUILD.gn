@@ -203,8 +203,9 @@ gvisor_tests = [
   # "socket_ip_udp_loopback_non_blocking_test",
   # "socket_ip_udp_loopback_test",
   # "socket_ip_unbound_netlink_test",
-  # "socket_ip_unbound_test",
-  # "socket_ipv4_datagram_based_socket_unbound_loopback_test",
+  "socket_ip_unbound_test",
+  "socket_ipv4_datagram_based_socket_unbound_loopback_test",
+
   # "socket_ipv4_udp_unbound_external_networking_test",
   # "socket_ipv4_udp_unbound_loopback_netlink_test",
   # "socket_ipv4_udp_unbound_loopback_nogotsan_test",
@@ -212,7 +213,8 @@ gvisor_tests = [
   # "socket_ipv6_udp_unbound_external_networking_test",
   # "socket_ipv6_udp_unbound_loopback_netlink_test",
   # "socket_ipv6_udp_unbound_loopback_test",
-  # "socket_ipv6_unbound_test",
+  "socket_ipv6_unbound_test",
+
   # "socket_netdevice_test",
   # "socket_netlink_route_test",
   # "socket_netlink_test",

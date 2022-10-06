@@ -274,38 +274,46 @@ pub fn sys_connect(
     let client_file = current_task.files.get(fd)?;
     let client_socket = client_file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address = parse_socket_address(current_task, user_socket_address, address_length)?;
-    let listening_socket = match address {
+    let peer = match address {
         SocketAddress::Unspecified => return error!(ECONNREFUSED),
-        SocketAddress::Unix(name) => {
+        SocketAddress::Unix(ref name) => {
             strace!(
                 &current_task,
                 "connect to unix socket named {:?}",
-                String::from_utf8_lossy(&name)
+                String::from_utf8_lossy(name)
             );
             if name.is_empty() {
                 return error!(ECONNREFUSED);
             }
             if name[0] == b'\0' {
-                current_task.abstract_socket_namespace.lookup(&name)?
+                SocketPeer::Handle(current_task.abstract_socket_namespace.lookup(name)?)
             } else {
-                let (parent, basename) =
-                    current_task.lookup_parent_at(FdNumber::AT_FDCWD, &name)?;
+                let (parent, basename) = current_task.lookup_parent_at(FdNumber::AT_FDCWD, name)?;
                 let name = parent
                     .lookup_child(current_task, &mut LookupContext::default(), basename)
                     .map_err(translate_fs_error)?;
-                name.entry.node.socket().ok_or_else(|| errno!(ECONNREFUSED))?.clone()
+                SocketPeer::Handle(
+                    name.entry.node.socket().ok_or_else(|| errno!(ECONNREFUSED))?.clone(),
+                )
             }
         }
         // Connect not available for AF_VSOCK
         SocketAddress::Vsock(_) => return error!(ENOSYS),
-        SocketAddress::Inet(_) | SocketAddress::Inet6(_) => return error!(ENOSYS),
+        SocketAddress::Inet(ref addr) | SocketAddress::Inet6(ref addr) => {
+            strace!(
+                &current_task,
+                "connect to inet socket named {:?}",
+                String::from_utf8_lossy(addr)
+            );
+            SocketPeer::Address(address)
+        }
         SocketAddress::Netlink(_) => return error!(ENOSYS),
     };
 
     // TODO(tbodt): Support blocking when the UNIX domain socket queue fills up. This one's weird
     // because as far as I can tell, removing a socket from the queue does not actually trigger
     // FdEvents on anything.
-    client_socket.connect(&listening_socket, current_task.as_ucred())?;
+    client_socket.connect(peer, current_task.as_ucred())?;
     Ok(())
 }
 
@@ -710,9 +718,9 @@ pub fn sys_getsockopt(
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
 
-    let opt_value = socket.getsockopt(level, optname)?;
-
     let optlen = current_task.mm.read_object(user_optlen)?;
+    let opt_value = socket.getsockopt(level, optname, optlen)?;
+
     let actual_optlen = opt_value.len() as socklen_t;
     if optlen < actual_optlen {
         return error!(EINVAL);

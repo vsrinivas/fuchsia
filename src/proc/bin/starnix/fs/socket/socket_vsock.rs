@@ -73,7 +73,7 @@ impl SocketOps for VsockSocket {
     fn connect(
         &self,
         _socket: &SocketHandle,
-        _peer: &SocketHandle,
+        _peer: SocketPeer,
         _credentials: ucred,
     ) -> Result<(), Errno> {
         error!(EPROTOTYPE)
@@ -82,7 +82,7 @@ impl SocketOps for VsockSocket {
     fn listen(&self, _socket: &Socket, backlog: i32, _credentials: ucred) -> Result<(), Errno> {
         let mut inner = self.lock();
         let is_bound = inner.address.is_some();
-        let backlog = if backlog < 0 { DEFAULT_LISTEN_BAKCKLOG } else { backlog as usize };
+        let backlog = if backlog < 0 { DEFAULT_LISTEN_BACKLOG } else { backlog as usize };
         match &mut inner.state {
             VsockSocketState::Disconnected if is_bound => {
                 inner.state = VsockSocketState::Listening(AcceptQueue::new(backlog));

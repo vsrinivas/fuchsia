@@ -127,6 +127,11 @@ impl ZxioDirent {
 }
 
 pub struct ZxioErrorCode(i16);
+impl ZxioErrorCode {
+    pub fn raw(&self) -> i16 {
+        self.0
+    }
+}
 
 #[derive(Default)]
 pub struct Zxio {
@@ -287,7 +292,7 @@ impl Zxio {
         Ok(iterator)
     }
 
-    pub fn connect(&self, addr: &[u8]) -> Result<ZxioErrorCode, zx::Status> {
+    pub fn connect(&self, addr: &[u8]) -> Result<Result<(), ZxioErrorCode>, zx::Status> {
         let mut out_code = 0;
         let status = unsafe {
             zxio::zxio_connect(
@@ -298,10 +303,13 @@ impl Zxio {
             )
         };
         zx::ok(status)?;
-        Ok(ZxioErrorCode(out_code))
+        match out_code {
+            0 => Ok(Ok(())),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
     }
 
-    pub fn bind(&self, addr: &[u8]) -> Result<ZxioErrorCode, zx::Status> {
+    pub fn bind(&self, addr: &[u8]) -> Result<Result<(), ZxioErrorCode>, zx::Status> {
         let mut out_code = 0;
         let status = unsafe {
             zxio::zxio_bind(
@@ -312,19 +320,25 @@ impl Zxio {
             )
         };
         zx::ok(status)?;
-        Ok(ZxioErrorCode(out_code))
+        match out_code {
+            0 => Ok(Ok(())),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
     }
 
-    pub fn listen(&self, backlog: i32) -> Result<ZxioErrorCode, zx::Status> {
+    pub fn listen(&self, backlog: i32) -> Result<Result<(), ZxioErrorCode>, zx::Status> {
         let mut out_code = 0;
         let status = unsafe {
             zxio::zxio_listen(self.as_ptr(), backlog as std::os::raw::c_int, &mut out_code)
         };
         zx::ok(status)?;
-        Ok(ZxioErrorCode(out_code))
+        match out_code {
+            0 => Ok(Ok(())),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
     }
 
-    pub fn accept(&self) -> Result<(Zxio, ZxioErrorCode), zx::Status> {
+    pub fn accept(&self) -> Result<Result<Zxio, ZxioErrorCode>, zx::Status> {
         let mut addrlen = std::mem::size_of::<sockaddr_storage>() as socklen_t;
         let mut addr = vec![0u8; addrlen as usize];
         let zxio = Zxio::default();
@@ -339,10 +353,13 @@ impl Zxio {
             )
         };
         zx::ok(status)?;
-        Ok((zxio, ZxioErrorCode(out_code)))
+        match out_code {
+            0 => Ok(Ok(zxio)),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
     }
 
-    pub fn getsockname(&self) -> Result<(Vec<u8>, ZxioErrorCode), zx::Status> {
+    pub fn getsockname(&self) -> Result<Result<Vec<u8>, ZxioErrorCode>, zx::Status> {
         let mut addrlen = std::mem::size_of::<sockaddr_storage>() as socklen_t;
         let mut addr = vec![0u8; addrlen as usize];
         let mut out_code = 0;
@@ -355,10 +372,13 @@ impl Zxio {
             )
         };
         zx::ok(status)?;
-        Ok((addr[..addrlen as usize].to_vec(), ZxioErrorCode(out_code)))
+        match out_code {
+            0 => Ok(Ok(addr[..addrlen as usize].to_vec())),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
     }
 
-    pub fn getpeername(&self) -> Result<(Vec<u8>, ZxioErrorCode), zx::Status> {
+    pub fn getpeername(&self) -> Result<Result<Vec<u8>, ZxioErrorCode>, zx::Status> {
         let mut addrlen = std::mem::size_of::<sockaddr_storage>() as socklen_t;
         let mut addr = vec![0u8; addrlen as usize];
         let mut out_code = 0;
@@ -371,7 +391,10 @@ impl Zxio {
             )
         };
         zx::ok(status)?;
-        Ok((addr[..addrlen as usize].to_vec(), ZxioErrorCode(out_code)))
+        match out_code {
+            0 => Ok(Ok(addr[..addrlen as usize].to_vec())),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
     }
 
     pub fn getsockopt(
@@ -379,7 +402,7 @@ impl Zxio {
         level: u32,
         optname: u32,
         mut optlen: socklen_t,
-    ) -> Result<(Vec<u8>, ZxioErrorCode), zx::Status> {
+    ) -> Result<Result<Vec<u8>, ZxioErrorCode>, zx::Status> {
         let mut optval = vec![0u8; optlen as usize];
         let mut out_code = 0;
         let status = unsafe {
@@ -393,7 +416,10 @@ impl Zxio {
             )
         };
         zx::ok(status)?;
-        Ok((optval[..optlen as usize].to_vec(), ZxioErrorCode(out_code)))
+        match out_code {
+            0 => Ok(Ok(optval[..optlen as usize].to_vec())),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
     }
 
     pub fn setsockopt(
@@ -401,7 +427,7 @@ impl Zxio {
         level: i32,
         optname: i32,
         optval: &[u8],
-    ) -> Result<ZxioErrorCode, zx::Status> {
+    ) -> Result<Result<(), ZxioErrorCode>, zx::Status> {
         let mut out_code = 0;
         let status = unsafe {
             zxio::zxio_setsockopt(
@@ -414,14 +440,23 @@ impl Zxio {
             )
         };
         zx::ok(status)?;
-        Ok(ZxioErrorCode(out_code))
+        match out_code {
+            0 => Ok(Ok(())),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
     }
 
-    pub fn shutdown(&self, flags: ZxioShutdownFlags) -> Result<ZxioErrorCode, zx::Status> {
+    pub fn shutdown(
+        &self,
+        flags: ZxioShutdownFlags,
+    ) -> Result<Result<(), ZxioErrorCode>, zx::Status> {
         let mut out_code = 0;
         let status = unsafe { zxio::zxio_shutdown(self.as_ptr(), flags.bits(), &mut out_code) };
         zx::ok(status)?;
-        Ok(ZxioErrorCode(out_code))
+        match out_code {
+            0 => Ok(Ok(())),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
     }
 }
 

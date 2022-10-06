@@ -23,7 +23,7 @@ impl SocketOps for NetlinkSocket {
     fn connect(
         &self,
         _socket: &SocketHandle,
-        _peer: &SocketHandle,
+        _peer: SocketPeer,
         _credentials: ucred,
     ) -> Result<(), Errno> {
         error!(ENOSYS)

@@ -64,8 +64,8 @@ unsafe extern "C" fn storage_allocator(
     ZX_ERR_NO_MEMORY
 }
 
-#[allow(dead_code)]
 pub struct InetSocket {
+    /// The underlying Zircon I/O object.
     zxio: Arc<syncio::Zxio>,
 }
 
@@ -92,7 +92,7 @@ impl InetSocket {
         }
 
         if out_code != 0 {
-            return error_from_code!(out_code);
+            return Err(errno_from_code!(out_code));
         }
 
         Ok(InetSocket { zxio: Arc::new(zxio) })
@@ -103,20 +103,39 @@ impl SocketOps for InetSocket {
     fn connect(
         &self,
         _socket: &SocketHandle,
-        _peer: &SocketHandle,
+        peer: SocketPeer,
         _credentials: ucred,
     ) -> Result<(), Errno> {
-        error!(ENOSYS)
+        match peer {
+            SocketPeer::Address(SocketAddress::Inet(addr))
+            | SocketPeer::Address(SocketAddress::Inet6(addr)) => self
+                .zxio
+                .connect(&addr)
+                .map_err(|status| from_status_like_fdio!(status))?
+                .map_err(|out_code| errno_from_zxio_code!(out_code)),
+            _ => error!(EINVAL),
+        }
     }
 
-    fn listen(&self, _socket: &Socket, _backlog: i32, _credentials: ucred) -> Result<(), Errno> {
-        not_implemented!("?", "InetSocket::listen is stubbed");
-        Ok(())
+    fn listen(&self, _socket: &Socket, backlog: i32, _credentials: ucred) -> Result<(), Errno> {
+        self.zxio
+            .listen(backlog)
+            .map_err(|status| from_status_like_fdio!(status))?
+            .map_err(|out_code| errno_from_zxio_code!(out_code))
     }
 
-    fn accept(&self, _socket: &Socket) -> Result<SocketHandle, Errno> {
-        not_implemented!("?", "InetSocket::accept is stubbed");
-        error!(EAGAIN)
+    fn accept(&self, socket: &Socket) -> Result<SocketHandle, Errno> {
+        let zxio = self
+            .zxio
+            .accept()
+            .map_err(|status| from_status_like_fdio!(status))?
+            .map_err(|out_code| errno_from_zxio_code!(out_code))?;
+
+        Ok(Socket::new_with_ops(
+            socket.domain,
+            socket.socket_type,
+            Box::new(InetSocket { zxio: Arc::new(zxio) }),
+        ))
     }
 
     fn remote_connection(&self, _socket: &Socket, _file: FileHandle) -> Result<(), Errno> {
@@ -124,9 +143,15 @@ impl SocketOps for InetSocket {
         Ok(())
     }
 
-    fn bind(&self, _socket: &Socket, _socket_address: SocketAddress) -> Result<(), Errno> {
-        not_implemented!("?", "InetSocket::bind is stubbed");
-        Ok(())
+    fn bind(&self, _socket: &Socket, socket_address: SocketAddress) -> Result<(), Errno> {
+        match socket_address {
+            SocketAddress::Inet(addr) | SocketAddress::Inet6(addr) => self
+                .zxio
+                .bind(&addr)
+                .map_err(|status| from_status_like_fdio!(status))?
+                .map_err(|out_code| errno_from_zxio_code!(out_code)),
+            _ => error!(EINVAL),
+        }
     }
 
     fn read(
@@ -177,18 +202,56 @@ impl SocketOps for InetSocket {
         FdEvents::empty()
     }
 
-    fn shutdown(&self, _socket: &Socket, _how: SocketShutdownFlags) -> Result<(), Errno> {
-        Ok(())
+    fn shutdown(&self, _socket: &Socket, how: SocketShutdownFlags) -> Result<(), Errno> {
+        self.zxio
+            .shutdown(how)
+            .map_err(|status| from_status_like_fdio!(status))?
+            .map_err(|out_code| errno_from_zxio_code!(out_code))
     }
 
     fn close(&self, _socket: &Socket) {}
 
-    fn getsockname(&self, _socket: &Socket) -> Vec<u8> {
-        vec![]
+    fn getsockname(&self, socket: &Socket) -> Vec<u8> {
+        match self.zxio.getsockname() {
+            Err(_) | Ok(Err(_)) => SocketAddress::default_for_domain(socket.domain).to_bytes(),
+            Ok(Ok(addr)) => addr,
+        }
     }
 
     fn getpeername(&self, _socket: &Socket) -> Result<Vec<u8>, Errno> {
-        error!(ENOTCONN)
+        self.zxio
+            .getpeername()
+            .map_err(|status| from_status_like_fdio!(status))?
+            .map_err(|out_code| errno_from_zxio_code!(out_code))
+    }
+
+    fn setsockopt(
+        &self,
+        _socket: &Socket,
+        task: &Task,
+        level: u32,
+        optname: u32,
+        user_opt: UserBuffer,
+    ) -> Result<(), Errno> {
+        let optval = task.mm.read_buffer(&user_opt)?;
+
+        self.zxio
+            .setsockopt(level as i32, optname as i32, &optval)
+            .map_err(|status| from_status_like_fdio!(status))?
+            .map_err(|out_code| errno_from_zxio_code!(out_code))
+    }
+
+    fn getsockopt(
+        &self,
+        _socket: &Socket,
+        level: u32,
+        optname: u32,
+        optlen: u32,
+    ) -> Result<Vec<u8>, Errno> {
+        self.zxio
+            .getsockopt(level, optname, optlen)
+            .map_err(|status| from_status_like_fdio!(status))?
+            .map_err(|out_code| errno_from_zxio_code!(out_code))
     }
 }
 

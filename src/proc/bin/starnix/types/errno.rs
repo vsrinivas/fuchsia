@@ -316,17 +316,26 @@ macro_rules! error {
     ($($args:tt)*) => { Err(errno!($($args)*)) };
 }
 
-/// `error_from_code` returns a `Err` containing an `Errno` struct with the given error code and is
+/// `errno_from_code` returns a `Err` containing an `Errno` struct with the given error code and is
 /// tagged with the current file name and line number.
-macro_rules! error_from_code {
+macro_rules! errno_from_code {
     ($err:expr) => {{
         let errno = ErrnoCode::from_error_code($err);
-        Err(Errno::new(
+        Errno::new(
             errno,
             stringify!($err),
             None,
             crate::types::errno::ErrnoSource { file: file!().to_string(), line: line!() },
-        ))
+        )
+    }};
+}
+
+/// `errno_from_zxio_code` returns an `Errno` struct with the given error code and is
+/// tagged with the current file name and line number.
+macro_rules! errno_from_zxio_code {
+    ($err:expr) => {{
+        let code = $err.raw();
+        errno_from_code!(code)
     }};
 }
 
@@ -509,6 +518,7 @@ const_assert_eq!(syncio::zxio::EHWPOISON, uapi::EHWPOISON);
 
 // Public re-export of macros allows them to be used like regular rust items.
 pub(crate) use errno;
+pub(crate) use errno_from_code;
+pub(crate) use errno_from_zxio_code;
 pub(crate) use error;
-pub(crate) use error_from_code;
 pub(crate) use from_status_like_fdio;
