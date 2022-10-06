@@ -81,11 +81,12 @@ type Properties = table {
         /// which implies that it has no meaning outside of the host on which it
         /// was generated and no meaning across host restarts.
         ///
-        /// Required.
+        /// Optional; may be omitted due to disinterest.
         2: valid_until zx.time;
+        // TODO(https://fxbug.dev/107618): Send this field to clients.
         /// Preferred lifetime information.
         ///
-        /// Required.
+        /// Optional; may be omitted due to disinterest.
         @available(added=9)
         3: preferred_lifetime_info PreferredLifetimeInfo;
     }>:MAX;
@@ -121,10 +122,23 @@ protocol State {
     ///     to enqueue an event.
     GetWatcher(resource struct {
         /// Options for configuring the interface state watcher.
-        // This type is currently empty, but may grow to allow behavior tuning
-        // of the watcher, e.g. allow subscribing to a subset of the available
-        // events.
-        options @generated_name("WatcherOptions") table {};
+        options @generated_name("WatcherOptions") table {
+            // TODO(https://fxbug.dev/110587): Implement disinterest in address
+            // properties in NS3.
+            // TODO(https://fxbug.dev/110587): Add netemul integration tests
+            // once fuchsia.net.interfaces.admin/Control.AddAddress supports
+            // address lifetimes.
+            /// Bitfield for registering interest in address properties.
+            ///
+            /// Optional; interpreted as all bits set to 0 if not present.
+            @available(added=HEAD)
+            1: address_properties_interest flexible bits : uint64 {
+                VALID_UNTIL = 0x01;
+                PREFERRED_LIFETIME_INFO = 0x02;
+            };
+            // TODO(https://fxbug.dev/110084): Add bitfield for registering
+            // interest in the other interface property fields.
+        };
         watcher server_end:Watcher;
     });
 };
@@ -150,26 +164,23 @@ protocol Watcher {
     /// assume that the order in which they observe the interface changes is the
     /// order in which the changes occurred.
     ///
-    /// - response `event` the interface change event. Properties of an added or
-    ///     existing interface will have all fields present. Property change
-    ///     events will always have the interface ID field present (the ID never
-    ///     changes); while other fields will only be present with the new value
-    ///     if the property has changed.
+    /// - response `event` the interface change event.
     Watch() -> (struct {
         event strict union {
             /// Properties of an interface that existed when watching started.
             ///
-            /// All fields are set.
+            /// All interested fields and [`Properties.id`] are set.
             1: existing Properties;
             /// Properties of an interface that was added while watching.
             ///
-            /// All fields are set.
+            /// All interested fields and [`Properties.id`] are set.
             2: added Properties;
             /// ID of an interface that was removed while watching.
             3: removed fuchsia.net.InterfaceId;
             /// Properties of an interface that changed while watching.
             ///
-            /// Only [`Properties.id`] and changed fields are set.
+            /// Only [`Properties.id`] and interested fields which have changed
+            /// are set with the new values.
             4: changed Properties;
             /// Sentinel value indicating no more [`existing`] events will be
             /// sent.

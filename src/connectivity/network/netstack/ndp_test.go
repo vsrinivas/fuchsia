@@ -97,7 +97,7 @@ func TestInterfacesChangeEvent(t *testing.T) {
 	defer cancel()
 
 	eventChan := make(chan interfaceEvent)
-	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
+	watcherChan := make(chan interfaceWatcherRequest)
 	go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
 	si := &interfaceStateImpl{watcherChan: watcherChan}
 

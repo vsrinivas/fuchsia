@@ -136,6 +136,10 @@ impl EventLoop {
         let if_watcher_stream = {
             let interface_state = connect_to_protocol::<fnet_interfaces::StateMarker>()
                 .context("network_manager failed to connect to interface state")?;
+            // TODO(https://fxbug.dev/110445): Either not register interest in
+            // valid-until or don't calculate reachability upon valid lifetime
+            // changes. Note that the event stream returned by the extension
+            // crate is created from a watcher with interest in all fields.
             fnet_interfaces_ext::event_stream_from_state(&interface_state)
                 .context("get interface event stream")?
                 .fuse()

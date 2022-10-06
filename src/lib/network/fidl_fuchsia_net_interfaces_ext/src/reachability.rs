@@ -63,6 +63,9 @@ pub fn is_globally_routable(
 /// iff there exists an interface with properties that satisfy [`is_globally_routable`]) whenever
 /// it changes. The first item the returned stream yields is the reachability status of the first
 /// interface discovered through an `Added` or `Existing` event on `event_stream`.
+///
+/// Note that `event_stream` must be created from a watcher with interest in all
+/// fields, such as one created from [`crate::event_stream_from_state`].
 pub fn to_reachability_stream(
     event_stream: impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
 ) -> impl Stream<Item = Result<bool, WatcherOperationError<HashMap<u64, Properties>>>> {

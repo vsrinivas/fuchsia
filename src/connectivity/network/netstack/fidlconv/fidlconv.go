@@ -157,7 +157,7 @@ func ToNetSocketAddressWithProto(protocol tcpip.NetworkProtocolNumber, addr tcpi
 	}
 }
 
-func toTCPIPAddressWithPrefix(sn net.Subnet) tcpip.AddressWithPrefix {
+func ToTCPIPAddressWithPrefix(sn net.Subnet) tcpip.AddressWithPrefix {
 	return tcpip.AddressWithPrefix{
 		Address:   ToTCPIPAddress(sn.Addr),
 		PrefixLen: int(sn.PrefixLen),
@@ -165,12 +165,12 @@ func toTCPIPAddressWithPrefix(sn net.Subnet) tcpip.AddressWithPrefix {
 }
 
 func ToTCPIPSubnet(sn net.Subnet) tcpip.Subnet {
-	return toTCPIPAddressWithPrefix(sn).Subnet()
+	return ToTCPIPAddressWithPrefix(sn).Subnet()
 }
 
 func ToTCPIPProtocolAddress(sn net.Subnet) tcpip.ProtocolAddress {
 	protocolAddr := tcpip.ProtocolAddress{
-		AddressWithPrefix: toTCPIPAddressWithPrefix(sn),
+		AddressWithPrefix: ToTCPIPAddressWithPrefix(sn),
 	}
 
 	switch typ := sn.Addr.Which(); typ {

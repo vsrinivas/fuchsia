@@ -54,9 +54,10 @@ func initialProperties(ifs *ifState, name string) interfaces.Properties {
 var _ interfaces.WatcherWithCtx = (*interfaceWatcherImpl)(nil)
 
 type interfaceWatcherImpl struct {
-	cancelServe context.CancelFunc
-	ready       chan struct{}
-	mu          struct {
+	cancelServe  context.CancelFunc
+	ready        chan struct{}
+	addrInterest interfaces.AddressPropertiesInterest
+	mu           struct {
 		sync.Mutex
 		isHanging bool
 		queue     []interfaces.Event
@@ -83,6 +84,42 @@ func (wi *interfaceWatcherImpl) onEvent(e interfaces.Event) {
 		default:
 		}
 	}
+}
+
+// filterAddressProperties returns a list of addresses with disinterested
+// properties cleared.
+//
+// Does not modify addresses and returns a new slice.
+func (wi *interfaceWatcherImpl) filterAddressProperties(addresses []interfaces.Address) []interfaces.Address {
+	rtn := append([]interfaces.Address(nil), addresses...)
+	clearValidUntil := !wi.addrInterest.HasBits(interfaces.AddressPropertiesInterestValidUntil)
+	clearPreferredLifetimeInfo := !wi.addrInterest.HasBits(interfaces.AddressPropertiesInterestPreferredLifetimeInfo)
+	if !clearValidUntil && !clearPreferredLifetimeInfo {
+		return rtn
+	}
+	for i := range rtn {
+		addr := &rtn[i]
+		if clearValidUntil {
+			addr.ClearValidUntil()
+		}
+		if clearPreferredLifetimeInfo {
+			addr.ClearPreferredLifetimeInfo()
+		}
+	}
+	return rtn
+}
+
+// onAddressesChanged handles an address for this watcher client.
+//
+// Does not modify addresses.
+func (wi *interfaceWatcherImpl) onAddressesChanged(nicid tcpip.NICID, addresses []interfaces.Address, removedOrAdded bool, propertiesChanged interfaces.AddressPropertiesInterest) {
+	if !removedOrAdded && (propertiesChanged&wi.addrInterest == 0) {
+		return
+	}
+	var changed interfaces.Properties
+	changed.SetId(uint64(nicid))
+	changed.SetAddresses(wi.filterAddressProperties(addresses))
+	wi.onEvent(interfaces.EventWithChanged(changed))
 }
 
 func cmpSubnet(ifAddr1 net.Subnet, ifAddr2 net.Subnet) int {
@@ -151,14 +188,22 @@ func (wi *interfaceWatcherImpl) Watch(ctx fidl.Context) (interfaces.Event, error
 	}
 }
 
+type interfaceWatcherRequest struct {
+	req     interfaces.WatcherWithCtxInterfaceRequest
+	options interfaces.WatcherOptions
+}
+
 var _ interfaces.StateWithCtx = (*interfaceStateImpl)(nil)
 
 type interfaceStateImpl struct {
-	watcherChan chan<- interfaces.WatcherWithCtxInterfaceRequest
+	watcherChan chan<- interfaceWatcherRequest
 }
 
-func (si *interfaceStateImpl) GetWatcher(_ fidl.Context, _ interfaces.WatcherOptions, watcher interfaces.WatcherWithCtxInterfaceRequest) error {
-	si.watcherChan <- watcher
+func (si *interfaceStateImpl) GetWatcher(_ fidl.Context, options interfaces.WatcherOptions, watcher interfaces.WatcherWithCtxInterfaceRequest) error {
+	si.watcherChan <- interfaceWatcherRequest{
+		req:     watcher,
+		options: options,
+	}
 	return nil
 }
 
@@ -243,7 +288,7 @@ type fidlInterfaceWatcherStats struct {
 
 func interfaceWatcherEventLoop(
 	eventChan <-chan interfaceEvent,
-	watcherChan <-chan interfaces.WatcherWithCtxInterfaceRequest,
+	watcherChan <-chan interfaceWatcherRequest,
 	fidlInterfaceWatcherStats *fidlInterfaceWatcherStats,
 ) {
 	watchers := make(map[*interfaceWatcherImpl]struct{})
@@ -264,11 +309,13 @@ func interfaceWatcherEventLoop(
 					panic(fmt.Sprintf("interface %#v already exists but duplicate added event received: %#v", properties, event))
 				}
 				propertiesMap[nicid] = added
-				// Must make a deep copy of the addresses so that updates to the slice
-				// don't accidentally change the event added to the queue.
-				added.SetAddresses(append([]interfaces.Address(nil), added.GetAddresses()...))
 				for w := range watchers {
-					w.onEvent(interfaces.EventWithAdded(added))
+					properties := added
+					// Filtering address properties returns a deep copy of
+					// the addresses so that updates to the current interface
+					// state don't accidentally change enqueued events.
+					properties.SetAddresses(w.filterAddressProperties(properties.GetAddresses()))
+					w.onEvent(interfaces.EventWithAdded(properties))
 				}
 			case interfaceRemoved:
 				removed := tcpip.NICID(event)
@@ -362,11 +409,8 @@ func interfaceWatcherEventLoop(
 				properties.SetAddresses(addresses)
 				propertiesMap[event.nicid] = properties
 
-				var changes interfaces.Properties
-				changes.SetId(uint64(event.nicid))
-				changes.SetAddresses(append([]interfaces.Address(nil), addresses...))
 				for w := range watchers {
-					w.onEvent(interfaces.EventWithChanged(changes))
+					w.onAddressesChanged(event.nicid, addresses, true /* addedOrRemoved */, 0)
 				}
 			case addressRemoved:
 				properties, ok := propertiesMap[event.nicid]
@@ -391,11 +435,8 @@ func interfaceWatcherEventLoop(
 				properties.SetAddresses(addresses)
 				propertiesMap[event.nicid] = properties
 
-				var changes interfaces.Properties
-				changes.SetId(uint64(event.nicid))
-				changes.SetAddresses(append([]interfaces.Address(nil), addresses...))
 				for w := range watchers {
-					w.onEvent(interfaces.EventWithChanged(changes))
+					w.onAddressesChanged(event.nicid, addresses, true /* addedOrRemoved */, 0)
 				}
 			case validUntilChanged:
 				properties, ok := propertiesMap[event.nicid]
@@ -420,27 +461,26 @@ func interfaceWatcherEventLoop(
 				if time.Monotonic(addresses[i].GetValidUntil()) != event.validUntil {
 					addresses[i].SetValidUntil(event.validUntil.MonotonicNano())
 
-					var changes interfaces.Properties
-					changes.SetId(uint64(event.nicid))
-					changes.SetAddresses(append([]interfaces.Address(nil), addresses...))
 					for w := range watchers {
-						w.onEvent(interfaces.EventWithChanged(changes))
+						w.onAddressesChanged(event.nicid, addresses, false /* addedOrRemoved */, interfaces.AddressPropertiesInterestValidUntil)
 					}
 				}
 			}
 		case watcher := <-watcherChan:
 			ctx, cancel := context.WithCancel(context.Background())
 			impl := interfaceWatcherImpl{
-				ready:       make(chan struct{}, 1),
-				cancelServe: cancel,
+				ready:        make(chan struct{}, 1),
+				cancelServe:  cancel,
+				addrInterest: watcher.options.GetAddressPropertiesInterestWithDefault(0),
 			}
 			impl.mu.queue = make([]interfaces.Event, 0, maxInterfaceWatcherQueueLen)
 
 			for _, properties := range propertiesMap {
-				// Must make a deep copy of the addresses so that updates to the slice
-				// don't accidentally change the event added to the queue.
-				properties.SetAddresses(append([]interfaces.Address(nil), properties.GetAddresses()...))
-				impl.mu.queue = append(impl.mu.queue, interfaces.EventWithExisting(properties))
+				// Filtering address properties returns a deep copy of the
+				// addresses so that updates to the current interface state
+				// don't accidentally change enqueued events.
+				properties.SetAddresses(impl.filterAddressProperties(properties.GetAddresses()))
+				impl.onEvent(interfaces.EventWithExisting(properties))
 			}
 			impl.mu.queue = append(impl.mu.queue, interfaces.EventWithIdle(interfaces.Empty{}))
 
@@ -449,7 +489,7 @@ func interfaceWatcherEventLoop(
 
 			go func() {
 				defer cancel()
-				component.Serve(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, component.ServeOptions{
+				component.Serve(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.req.Channel, component.ServeOptions{
 					Concurrent: true,
 					OnError: func(err error) {
 						_ = syslog.WarnTf(watcherProtocolName, "%s", err)

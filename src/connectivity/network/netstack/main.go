@@ -403,7 +403,7 @@ func Main() {
 	f := filter.New(stk)
 
 	interfaceEventChan := make(chan interfaceEvent)
-	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
+	watcherChan := make(chan interfaceWatcherRequest)
 	fidlInterfaceWatcherStats := &fidlInterfaceWatcherStats{}
 	go interfaceWatcherEventLoop(interfaceEventChan, watcherChan, fidlInterfaceWatcherStats)
 	ns := &Netstack{

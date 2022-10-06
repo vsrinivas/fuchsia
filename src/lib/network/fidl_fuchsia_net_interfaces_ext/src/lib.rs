@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(https://fxbug.dev/110854): Provide facilities that work with a watcher
+// disinterested in all address properties.
 //! Extensions for the fuchsia.net.interfaces FIDL library.
 
 #![deny(missing_docs)]
@@ -19,7 +21,7 @@ use std::collections::hash_map::{self, HashMap};
 use std::convert::TryFrom as _;
 use thiserror::Error;
 
-// TODO(fxbug.dev/66175) Prevent this type from becoming stale.
+// TODO(https://fxbug.dev/66175): Prevent this type from becoming stale.
 /// Properties of a network interface.
 #[derive(Clone, Debug, Eq, PartialEq, ValidFidlTable)]
 #[fidl_table_src(fnet_interfaces::Properties)]
@@ -41,7 +43,7 @@ pub struct Properties {
     pub has_default_ipv6_route: bool,
 }
 
-// TODO(fxbug.dev/66175) Prevent this type from becoming stale.
+// TODO(https://fxbug.dev/66175): Prevent this type from becoming stale.
 /// An address and its properties.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, ValidFidlTable)]
 #[fidl_table_src(fnet_interfaces::Address)]
@@ -357,6 +359,9 @@ pub enum WatcherCreationError {
 
 /// Wait for a condition on interface state to be satisfied.
 ///
+/// Note that `stream` must be created from a watcher with interest in all
+/// fields, such as one created from [`event_stream_from_state`].
+///
 /// With the initial state in `init`, take events from `stream` and update the state, calling
 /// `predicate` whenever the state changes. When `predicate` returns `Some(T)`, yield `Ok(T)`.
 ///
@@ -413,6 +418,9 @@ pub enum InterfaceState {
 
 /// Wait for a condition on a specific interface to be satisfied.
 ///
+/// Note that `stream` must be created from a watcher with interest in all
+/// fields, such as one created from [`event_stream_from_state`].
+///
 /// With the initial state in `init`, take events from `stream` and update the state, calling
 /// `predicate` whenever the state changes. When `predicate` returns `Some(T)`, yield `Ok(T)`.
 ///
@@ -441,6 +449,9 @@ where
 
 /// Read Existing interface events from `stream`, updating `init` until the Idle event is detected,
 /// returning the resulting state.
+///
+/// Note that `stream` must be created from a watcher with interest in all
+/// fields, such as one created from [`event_stream_from_state`].
 pub async fn existing<S, B>(stream: S, init: B) -> Result<B, WatcherOperationError<B>>
 where
     S: futures::Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
@@ -471,14 +482,27 @@ where
     .map_err(|acc| WatcherOperationError::UnexpectedEnd { final_state: acc })
 }
 
-/// Initialize a watcher and return its events as a stream.
+/// Initialize a watcher with interest in all fields and return its events as a
+/// stream.
 pub fn event_stream_from_state(
     interface_state: &fnet_interfaces::StateProxy,
 ) -> Result<impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>, WatcherCreationError> {
     let (watcher, server) = ::fidl::endpoints::create_proxy::<fnet_interfaces::WatcherMarker>()
         .map_err(WatcherCreationError::CreateProxy)?;
     let () = interface_state
-        .get_watcher(fnet_interfaces::WatcherOptions::EMPTY, server)
+        .get_watcher(
+            // Register interest in all fields so that the strong validation
+            // witness type can be used and the stream returned is compatible
+            // with other methods in this crate.
+            fnet_interfaces::WatcherOptions {
+                address_properties_interest: Some(
+                    fnet_interfaces::AddressPropertiesInterest::VALID_UNTIL
+                        | fnet_interfaces::AddressPropertiesInterest::PREFERRED_LIFETIME_INFO,
+                ),
+                ..fnet_interfaces::WatcherOptions::EMPTY
+            },
+            server,
+        )
         .map_err(WatcherCreationError::GetWatcher)?;
     Ok(futures::stream::try_unfold(watcher, |watcher| async {
         Ok(Some((watcher.watch().await?, watcher)))
