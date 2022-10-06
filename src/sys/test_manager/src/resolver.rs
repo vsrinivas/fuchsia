@@ -95,7 +95,7 @@ pub async fn serve_hermetic_resolver(
                     }
                     fresolution::ResolverRequest::ResolveWithContext {
                         component_url,
-                        context,
+                        mut context,
                         responder,
                     } => {
                         let mut result = if let Err(err) = validate_hermetic_package(
@@ -106,7 +106,7 @@ pub async fn serve_hermetic_resolver(
                             Err(err)
                         } else {
                             full_resolver
-                                .resolve_with_context(&component_url, &context)
+                                .resolve_with_context(&component_url, &mut context)
                                 .await
                                 .unwrap_or_else(|err| {
                                     error!(

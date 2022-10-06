@@ -58,18 +58,24 @@ type Component = resource table {
 // fuchsia.pkg implements subpackages, assuming fuchsia.pkg implements the
 // package context value as a much smaller lookup key (such as a package hash to
 // the package containing the subpackage map).
-//
-// ALSO, change the constant name's suffix from LENGTH to SIZE per FIDL style
-// guidelines.
 
 // Note the context length, in bytes, must be at least the size of
-// fuchsia.pkg.MAX_RESOLUTION_CONTEXT_LENGTH, plus the size required to
+// fuchsia.pkg.MAX_RESOLUTION_CONTEXT_SIZE, plus the size required to
 // accommodate additional component context information, if any.
 
 /// The maximum number of bytes for a `Context`.
+@available(added=9)
+const MAX_RESOLUTION_CONTEXT_SIZE uint32 = 8192;
+@available(removed=9)
 const MAX_RESOLUTION_CONTEXT_LENGTH uint32 = 8192;
 
-/// A byte array that persists a value used by the target `Resolver` to locate
-/// and resolve a component by relative path (for example, by a subpackage
-/// name).
+/// A component resolution context, used when resolving component URLs relative
+/// to another component. The context is stored in a byte array that persists a
+/// value used by the target `Resolver` to locate and resolve a component by
+/// relative path (for example, by a subpackage name).
+@available(added=9)
+type Context = struct {
+    bytes vector<uint8>:MAX_RESOLUTION_CONTEXT_SIZE;
+};
+@available(removed=9)
 alias Context = vector<uint8>:MAX_RESOLUTION_CONTEXT_LENGTH;

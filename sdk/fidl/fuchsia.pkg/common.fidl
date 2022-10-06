@@ -44,14 +44,13 @@ type ResolutionContext = struct {
 // fuchsia.pkg implements subpackages, assuming fuchsia.pkg implements the
 // package context value as a much smaller lookup key (such as a package hash to
 // the package containing the subpackage map). Make a related change to
-// the component's MAX_RESOLUTION_CONTEXT_LENGTH (to be
-// renamed MAX_RESOLUTION_CONTEXT_SIZE) in
-// //sdk/fidl/fuchsia.component.resolution/resolver.fidl
+// the component's MAX_RESOLUTION_CONTEXT_SIZE in
+// //sdk/fidl/fuchsia.component.resolution/component.fidl
 
 /// The maximum number of bytes for a `ResolutionContext`.
 ///
 /// Note that this value must be less than or equal to
-/// `fuchsia.component.resolution::MAX_RESOLUTION_CONTEXT_LENGTH`, since the
+/// `fuchsia.component.resolution::MAX_RESOLUTION_CONTEXT_SIZE`, since the
 /// component resolver is expected to copy or contain the context provided by
 /// the package resolver.
 const MAX_RESOLUTION_CONTEXT_SIZE uint32 = 8192;

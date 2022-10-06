@@ -7,7 +7,7 @@ use {
     fidl::endpoints::{create_proxy, ClientEnd, Proxy},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
+    fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy, ResolutionContext},
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_pkg::{
         transitional::{context_bytes_from_subpackages_map, subpackages_map_from_context_bytes},
@@ -122,7 +122,7 @@ async fn resolve_component_without_context(
 
 async fn resolve_component_with_context(
     component_url: &str,
-    context: &Vec<u8>,
+    context: &fresolution::Context,
     package_resolver: &PackageResolverProxy,
 ) -> Result<fresolution::Component, ResolverError> {
     resolve_component(component_url, Some(context), package_resolver).await
@@ -130,13 +130,18 @@ async fn resolve_component_with_context(
 
 async fn resolve_component(
     component_url_str: &str,
-    some_incoming_context: Option<&Vec<u8>>,
+    some_incoming_context: Option<&fresolution::Context>,
     package_resolver: &PackageResolverProxy,
 ) -> Result<fresolution::Component, ResolverError> {
     let component_url = ComponentUrl::parse(component_url_str)?;
-    let package =
-        resolve_package_async(component_url.package_url(), some_incoming_context, package_resolver)
-            .await?;
+    let package = resolve_package_async(
+        component_url.package_url(),
+        some_incoming_context
+            .map(|component_context| ResolutionContext { bytes: component_context.bytes.clone() })
+            .as_ref(),
+        package_resolver,
+    )
+    .await?;
 
     // Read the component manifest (.cm file) from the package directory.
     let data = mem_util::open_file_data(&package.dir, component_url.resource())
@@ -168,7 +173,7 @@ async fn resolve_component(
     );
     Ok(fresolution::Component {
         url: Some(component_url_str.to_string()),
-        resolution_context: Some(package.context),
+        resolution_context: Some(fresolution::Context { bytes: package.context.bytes }),
         decl: Some(data),
         package: Some(fresolution::Package {
             url: Some(component_url.package_url().to_string()),
@@ -183,12 +188,12 @@ async fn resolve_component(
 #[derive(Debug)]
 struct ResolvedPackage {
     dir: fio::DirectoryProxy,
-    context: Vec<u8>,
+    context: ResolutionContext,
 }
 
 async fn resolve_package_async(
     package_url: &PackageUrl,
-    some_incoming_context: Option<&Vec<u8>>,
+    some_incoming_context: Option<&ResolutionContext>,
     package_resolver: &PackageResolverProxy,
 ) -> Result<ResolvedPackage, ResolverError> {
     let (proxy, server_end) =
@@ -239,7 +244,7 @@ mod transitional {
         package_dir: &PackageDirectory,
         package_url: &AbsolutePackageUrl,
         dir_server_end: ServerEnd<fio::DirectoryMarker>,
-    ) -> Result<Result<Vec<u8>, fidl_fuchsia_pkg::ResolveError>, fidl::Error> {
+    ) -> Result<Result<ResolutionContext, fidl_fuchsia_pkg::ResolveError>, fidl::Error> {
         let result = package_resolver.resolve(&package_url.to_string(), dir_server_end).await?;
         if let Err(err) = result {
             // The proxy call returned (outer result Ok), but it returned an Err (inner result)
@@ -261,9 +266,9 @@ mod transitional {
         package_resolver: &PackageResolverProxy,
         package_dir: &PackageDirectory,
         package_url: &RelativePackageUrl,
-        context: &Vec<u8>,
+        context: &ResolutionContext,
         dir_server_end: ServerEnd<fio::DirectoryMarker>,
-    ) -> Result<Result<Vec<u8>, fidl_fuchsia_pkg::ResolveError>, fidl::Error> {
+    ) -> Result<Result<ResolutionContext, fidl_fuchsia_pkg::ResolveError>, fidl::Error> {
         let (repo, hash) = match get_subpackage_repo_and_hash(package_url, context) {
             Ok(v) => v,
             Err(err) => {
@@ -303,7 +308,7 @@ mod transitional {
 
     fn get_subpackage_repo_and_hash(
         subpackage: &RelativePackageUrl,
-        context: &Vec<u8>,
+        context: &ResolutionContext,
     ) -> anyhow::Result<(RepositoryUrl, Hash)> {
         let info = PackageResolutionInfo::from_package_context(context)?;
         Ok((
@@ -318,7 +323,7 @@ mod transitional {
     async fn fabricate_package_context(
         repo: &RepositoryUrl,
         package_dir: &PackageDirectory,
-    ) -> anyhow::Result<Vec<u8>> {
+    ) -> anyhow::Result<ResolutionContext> {
         let meta = package_dir.meta_subpackages().await?;
         PackageResolutionInfo::new(repo.clone(), meta.into_subpackages()).into_package_context()
     }
@@ -335,8 +340,8 @@ impl PackageResolutionInfo {
         Self { repo, subpackage_hashes }
     }
 
-    pub fn from_package_context(context: &Vec<u8>) -> Result<Self, anyhow::Error> {
-        let mut parts = context.split(|&b| b == b'\0');
+    pub fn from_package_context(context: &ResolutionContext) -> Result<Self, anyhow::Error> {
+        let mut parts = context.bytes.split(|&b| b == b'\0');
         let repo = RepositoryUrl::parse_host(
             String::from_utf8(
                 parts
@@ -367,14 +372,14 @@ impl PackageResolutionInfo {
         Ok(Self { repo, subpackage_hashes })
     }
 
-    pub fn into_package_context(self) -> anyhow::Result<Vec<u8>> {
+    pub fn into_package_context(self) -> anyhow::Result<ResolutionContext> {
         let Self { repo, subpackage_hashes } = self;
-        let mut resolution_context = repo.host().as_bytes().to_vec();
+        let mut bytes = repo.host().as_bytes().to_vec();
         if let Some(mut context_bytes) = context_bytes_from_subpackages_map(&subpackage_hashes)? {
-            resolution_context.push(b'\0');
-            resolution_context.append(&mut context_bytes);
+            bytes.push(b'\0');
+            bytes.append(&mut context_bytes);
         }
-        Ok(resolution_context)
+        Ok(ResolutionContext { bytes })
     }
 }
 
@@ -861,12 +866,12 @@ mod tests {
                 .await
                 .expect("failed to resolve parent_component");
             let resolution_context_repr =
-                parent_component.resolution_context.clone().map(|context_bytes| {
-                    let mut parts = context_bytes.split(|b| *b == b'\0');
+                parent_component.resolution_context.as_ref().map(|context| {
+                    let mut parts = context.bytes.split(|b| *b == b'\0');
                     let host = String::from_utf8(parts.next().unwrap_or(&[]).to_vec())
-                        .unwrap_or_else(|e| format!("{:?}({:?})", e, context_bytes));
+                        .unwrap_or_else(|e| format!("{:?}({:?})", e, context.bytes));
                     let subpackages = String::from_utf8(parts.next().unwrap_or(&[]).to_vec())
-                        .unwrap_or_else(|e| format!("{:?}({:?})", e, context_bytes));
+                        .unwrap_or_else(|e| format!("{:?}({:?})", e, context.bytes));
                     format!("host: {}, subpackages: {}", host, subpackages)
                 });
             assert_matches!(parent_component.resolution_context, Some(..));

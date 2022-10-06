@@ -21,7 +21,7 @@
         "kind": "table/member",
         "name": "fuchsia.component.resolution/Component.resolution_context",
         "ordinal": "5",
-        "type": "vector<uint8>:8192"
+        "type": "fuchsia.component.resolution/Context"
     },
     {
         "kind": "table/member",
@@ -35,6 +35,16 @@
         "resourceness": "resource"
     },
     {
+        "kind": "struct/member",
+        "name": "fuchsia.component.resolution/Context.bytes",
+        "ordinal": "1",
+        "type": "vector<uint8>:8192"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.resolution/Context"
+    },
+    {
         "kind": "const",
         "name": "fuchsia.component.resolution/MAX_COMPONENT_URL_LENGTH",
         "type": "uint32",
@@ -42,7 +52,7 @@
     },
     {
         "kind": "const",
-        "name": "fuchsia.component.resolution/MAX_RESOLUTION_CONTEXT_LENGTH",
+        "name": "fuchsia.component.resolution/MAX_RESOLUTION_CONTEXT_SIZE",
         "type": "uint32",
         "value": "8192"
     },
@@ -73,7 +83,7 @@
         "kind": "protocol/member",
         "name": "fuchsia.component.resolution/Resolver.ResolveWithContext",
         "ordinal": "5576776708309151933",
-        "type": "(string:2083 component_url,vector<uint8>:8192 context) -> (fuchsia.component.resolution/Resolver_ResolveWithContext_Result result)"
+        "type": "(string:2083 component_url,fuchsia.component.resolution/Context context) -> (fuchsia.component.resolution/Resolver_ResolveWithContext_Result result)"
     },
     {
         "kind": "protocol",

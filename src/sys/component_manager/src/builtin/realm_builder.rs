@@ -56,11 +56,11 @@ impl RealmBuilderResolver {
     async fn resolve_async(
         &self,
         component_url: &str,
-        some_incoming_context: Option<&Vec<u8>>,
+        some_incoming_context: Option<&fresolution::Context>,
     ) -> Result<fresolution::Component, fresolution::ResolverError> {
         let res = if let Some(context) = some_incoming_context {
             self.resolver_proxy
-                .resolve_with_context(component_url, context)
+                .resolve_with_context(component_url, &mut context.clone())
                 .await
                 .expect("resolve_with_context failed in realm builder resolver")
         } else {

@@ -128,7 +128,7 @@ async fn resolve_component(
 
 async fn resolve_component_with_context(
     component_url: &str,
-    context: &Vec<u8>,
+    context: &fresolution::Context,
     packages_dir: &fio::DirectoryProxy,
     base_package_index: &BasePackageIndex,
 ) -> Result<fresolution::Component, crate::ResolverError> {
@@ -138,7 +138,7 @@ async fn resolve_component_with_context(
 
 async fn resolve_component_async(
     component_url_str: &str,
-    some_incoming_context: Option<&Vec<u8>>,
+    some_incoming_context: Option<&fresolution::Context>,
     packages_dir: &fio::DirectoryProxy,
     some_base_package_index: Option<&BasePackageIndex>,
 ) -> Result<fresolution::Component, crate::ResolverError> {
@@ -195,12 +195,12 @@ async fn resolve_component_async(
 #[derive(Debug)]
 struct ResolvedPackage {
     dir: fio::DirectoryProxy,
-    context: Vec<u8>,
+    context: fresolution::Context,
 }
 
 async fn resolve_package_async(
     package_url: &PackageUrl,
-    some_incoming_context: Option<&Vec<u8>>,
+    some_incoming_context: Option<&fresolution::Context>,
     packages_dir: &fio::DirectoryProxy,
     some_base_package_index: Option<&BasePackageIndex>,
 ) -> Result<ResolvedPackage, crate::ResolverError> {
@@ -215,7 +215,7 @@ async fn resolve_package_async(
             // access to pkgfs-packages or to the package index (from PackageCache).
             let base_package_index =
                 some_base_package_index.ok_or_else(|| crate::ResolverError::Internal)?;
-            let subpackage_hashes = subpackages_map_from_context_bytes(context)
+            let subpackage_hashes = subpackages_map_from_context_bytes(&context.bytes)
                 .map_err(|err| crate::ResolverError::ReadingContext(err))?;
             let hash = subpackage_hashes.get(relative).ok_or_else(|| {
                 crate::ResolverError::SubpackageNotFound(anyhow::format_err!(
@@ -258,9 +258,13 @@ async fn resolve_package_async(
     Ok(ResolvedPackage { dir: package_dir.into_proxy(), context })
 }
 
-async fn fabricate_package_context(package_dir: &PackageDirectory) -> anyhow::Result<Vec<u8>> {
+async fn fabricate_package_context(
+    package_dir: &PackageDirectory,
+) -> anyhow::Result<fresolution::Context> {
     let meta = package_dir.meta_subpackages().await?;
-    Ok(context_bytes_from_subpackages_map(&meta.into_subpackages())?.unwrap_or(vec![]))
+    Ok(fresolution::Context {
+        bytes: context_bytes_from_subpackages_map(&meta.into_subpackages())?.unwrap_or(vec![]),
+    })
 }
 
 #[cfg(test)]

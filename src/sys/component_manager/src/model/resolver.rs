@@ -127,7 +127,7 @@ impl Resolver for RemoteResolver {
                 ResolverError::RelativeUrlMissingContext(component_url.to_string())
             })?;
             proxy
-                .resolve_with_context(component_url, context.into())
+                .resolve_with_context(component_url, &mut context.into())
                 .await
                 .map_err(ResolverError::fidl_error)??
         } else {
@@ -591,12 +591,12 @@ mod tests {
             ResolveState::new(
                 "fuchsia-pkg://fuchsia.com/package#meta/comp.cm",
                 None,
-                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("package_context".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "subpackage#meta/subcomp.cm",
-                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("subpackage_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("subpackage_context".as_bytes().to_vec())),
             ),
         ];
         let mut resolver = ResolverRegistry::new();
@@ -638,7 +638,7 @@ mod tests {
         assert_eq!(relpath.resource(), Some("meta/subcomp.cm"));
         assert_eq!(
             relpath.context(),
-            &ComponentResolutionContext("package_context".as_bytes().to_vec())
+            &ComponentResolutionContext::new("package_context".as_bytes().to_vec())
         );
         Ok(())
     }
@@ -649,12 +649,12 @@ mod tests {
             ResolveState::new(
                 "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
                 None,
-                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("package_context".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "fuchsia-pkg://fuchsia.com/my-package#meta/my-child.cm",
                 None,
-                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("package_context".as_bytes().to_vec())),
             ),
         ];
         let mut resolver = ResolverRegistry::new();
@@ -708,17 +708,17 @@ mod tests {
             ResolveState::new(
                 "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
                 None,
-                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("package_context".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "fuchsia-pkg://fuchsia.com/my-package#meta/my-child.cm",
                 None,
-                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("package_context".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "fuchsia-pkg://fuchsia.com/my-package#meta/my-child2.cm",
                 None,
-                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("package_context".as_bytes().to_vec())),
             ),
         ];
         let mut resolver = ResolverRegistry::new();
@@ -787,12 +787,12 @@ mod tests {
             ResolveState::new(
                 "fuchsia-boot:///#meta/my-root.cm",
                 None,
-                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("package_context".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "fuchsia-boot:///#meta/my-child.cm",
                 None,
-                Some(ComponentResolutionContext("package_context".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("package_context".as_bytes().to_vec())),
             ),
         ];
         let mut resolver = ResolverRegistry::new();
@@ -881,17 +881,17 @@ mod tests {
             ResolveState::new(
                 "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
                 None,
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "my-subpackage#meta/my-child.cm",
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage...".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "my-subpackage#meta/my-child2.cm",
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage...".as_bytes().to_vec())),
             ),
         ];
         let mut resolver = ResolverRegistry::new();
@@ -960,22 +960,22 @@ mod tests {
             ResolveState::new(
                 "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
                 None,
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "my-subpackage#meta/my-child.cm",
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage...".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "my-subpackage#meta/my-child2.cm",
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage...".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "my-subpackage#meta/my-child3.cm",
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("my-subpackage...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage...".as_bytes().to_vec())),
             ),
         ];
         let mut resolver = ResolverRegistry::new();
@@ -1057,27 +1057,27 @@ mod tests {
             ResolveState::new(
                 "fuchsia-pkg://fuchsia.com/my-package#meta/my-root.cm",
                 None,
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "my-subpackage1#meta/sub1.cm",
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("my-subpackage1...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage1...".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "my-subpackage1#meta/sub1-child.cm",
-                Some(ComponentResolutionContext("fuchsia.com...".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("my-subpackage1...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("fuchsia.com...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage1...".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "my-subpackage2#meta/sub2.cm",
-                Some(ComponentResolutionContext("my-subpackage1...".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("my-subpackage2...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage1...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage2...".as_bytes().to_vec())),
             ),
             ResolveState::new(
                 "my-subpackage2#meta/sub2-child.cm",
-                Some(ComponentResolutionContext("my-subpackage1...".as_bytes().to_vec())),
-                Some(ComponentResolutionContext("my-subpackage2...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage1...".as_bytes().to_vec())),
+                Some(ComponentResolutionContext::new("my-subpackage2...".as_bytes().to_vec())),
             ),
         ];
         let mut resolver = ResolverRegistry::new();
