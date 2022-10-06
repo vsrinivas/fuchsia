@@ -224,7 +224,6 @@ where
     tracing::debug!("pb_get {:?}", cmd.product_bundle_name);
     let product_url = determine_pbm_url(cmd, ui).await?;
     let output_dir = pbms::get_product_dir(&product_url).await?;
-    get_product_data(&product_url, &output_dir, ui).await?;
 
     let repo_name = if let Some(repo_name) = &cmd.repository {
         repo_name.clone()
@@ -253,6 +252,19 @@ where
     if let Err(err) = RepositoryUrl::parse_host(repo_name.clone()) {
         bail!("invalid repository name {}: {}", repo_name, err);
     }
+
+    // If a repo with the selected name already exists, that's an error.
+    let repo_list = get_repos(&repos).await?;
+    if repo_list.iter().any(|r| r.name == repo_name) {
+        bail!(
+            "A package repository already exists with the name '{}'. \
+            Specify an alternative name using the --repository flag.",
+            repo_name
+        );
+    }
+
+    // Go ahead and download the product images.
+    get_product_data(&product_url, &output_dir, ui).await?;
 
     // Register a repository with the daemon if we downloaded any packaging artifacts.
     if let Ok(repo_path) = pbms::get_packages_dir(&product_url).await {
