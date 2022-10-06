@@ -202,12 +202,17 @@ protocol Sdmmc {
     }) -> (struct {
         s zx.status;
     });
+    /// Register the given callback to be called when an in-band interrupt is received from the
+    /// card. Before calling the callback the protocol implementation will disable the in-band
+    /// interrupt in the controller. In-band interrupts can be re-enabled by calling
+    /// `AckInBandInterrupt()` once the previous interrupt has been handled by the client.
     RegisterInBandInterrupt(resource struct {
         @in_out
         interrupt_cb client_end:InBandInterrupt;
     }) -> (struct {
         s zx.status;
     });
+    AckInBandInterrupt();
 
     /// In the methods below, vmo_id is used to uniquely identify a VMO that will be passed to
     /// Request in an SdmmcBufferRegion. VMO IDs are chosen by the caller, and may be any uint32
