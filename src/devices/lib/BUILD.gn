@@ -22,6 +22,7 @@ group("tests") {
     "driver:tests",
     "driver-conformance:tests",
     "fidl-metadata:tests",
+    "fragment-irq:tests",
     "goldfish/pipe_io:tests",
     "mmio:tests",
     "synchronous-executor:tests",
