@@ -157,6 +157,7 @@ build_api_module("api") {
     ":platforms",
     ":prebuilt_binaries",
     ":prebuilt_package_flavors",
+    ":product_bundles",
     ":product_size_checker_output",
     ":rbe_config",
     ":sdk_archives",
@@ -1251,6 +1252,25 @@ build_api_module("product_size_checker_output") {
   testonly = true
   data_keys = [ "product_size_checker_output" ]
   deps = [ "//build/images:default-images" ]
+}
+
+# Contains information about 0 or 1 product bundles produced by the build.
+#
+# Type: list(scope)
+#   path
+#     Required: Path to the product bundle directory.
+#   update_manifest_path
+#     Required: Path to the product bundle update manifest.
+#   label
+#     Required: Label (with toolchain) that generated this product bundle.
+build_api_module("product_bundles") {
+  testonly = true
+  data_keys = [ "product_bundles" ]
+
+  # Product bundles are not built in SDK-only builds.
+  if (has_board) {
+    deps = [ "//build/images:default-images" ]
+  }
 }
 
 ###

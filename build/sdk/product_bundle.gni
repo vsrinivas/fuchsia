@@ -174,5 +174,16 @@ template("product_bundle") {
       ]
       inputs += [ invoker.system_r ]
     }
+
+    metadata = {
+      product_bundles = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          path = rebase_path(files.outdir, root_build_dir)
+          upload_manifest_path =
+              rebase_path("${files.outdir}/upload.json", root_build_dir)
+        },
+      ]
+    }
   }
 }
