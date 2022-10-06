@@ -374,7 +374,7 @@ static_library("tss2-esys") {
     "src/src/tss2-esys/api/Esys_ZGen_2Phase.c",
     "src/src/tss2-esys/esys_context.c",
     "src/src/tss2-esys/esys_crypto.c",
-    "src/src/tss2-esys/esys_crypto_ossl.c",
+    "src/src/tss2-esys/esys_crypto_bssl.c",
     "src/src/tss2-esys/esys_free.c",
     "src/src/tss2-esys/esys_iutil.c",
     "src/src/tss2-esys/esys_mu.c",
@@ -384,6 +384,7 @@ static_library("tss2-esys") {
   configs += [
     "//build/config:Wno-conversion",
     "//build/config:Wno-extra-semi",
+    "//build/config:Wno-strict-prototypes",
   ]
   deps = [
     ":tss2-mu",
@@ -392,7 +393,7 @@ static_library("tss2-esys") {
   ]
 }
 
-group("tpm-tss2") {
+group("tpm2-tss") {
   deps = [
     ":tss2-esys",
     ":tss2-mu",
