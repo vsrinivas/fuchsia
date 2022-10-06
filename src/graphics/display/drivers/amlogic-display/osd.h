@@ -24,7 +24,7 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 
-#include "common.h"
+#include "src/graphics/display/drivers/amlogic-display/common.h"
 
 namespace amlogic_display {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mipi-phy.h"
+#include "src/graphics/display/drivers/amlogic-display/mipi-phy.h"
 
 #include <lib/ddk/debug.h>
 

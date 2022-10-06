@@ -1,7 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "amlogic-display.h"
+
+#include "src/graphics/display/drivers/amlogic-display/amlogic-display.h"
 
 #include <fidl/fuchsia.sysmem/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -9,7 +10,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/inspect/cpp/inspect.h>
 
-#include "osd.h"
+#include "src/graphics/display/drivers/amlogic-display/osd.h"
 #include "zxtest/zxtest.h"
 
 namespace sysmem = fuchsia_sysmem;

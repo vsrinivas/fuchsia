@@ -31,10 +31,10 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
-#include "common.h"
-#include "osd.h"
-#include "vout.h"
-#include "vpu.h"
+#include "src/graphics/display/drivers/amlogic-display/common.h"
+#include "src/graphics/display/drivers/amlogic-display/osd.h"
+#include "src/graphics/display/drivers/amlogic-display/vout.h"
+#include "src/graphics/display/drivers/amlogic-display/vpu.h"
 #include "zircon/errors.h"
 
 namespace amlogic_display {

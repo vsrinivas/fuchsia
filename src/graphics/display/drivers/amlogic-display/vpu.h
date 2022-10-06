@@ -15,8 +15,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
-#include "common.h"
-#include "vpu-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/common.h"
+#include "src/graphics/display/drivers/amlogic-display/vpu-regs.h"
 
 namespace amlogic_display {
 

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "amlogic-display.h"
-#include "hdmi-host.h"
-#include "hhi-regs.h"
-#include "vpu-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/amlogic-display.h"
+#include "src/graphics/display/drivers/amlogic-display/hdmi-host.h"
+#include "src/graphics/display/drivers/amlogic-display/hhi-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/vpu-regs.h"
 
 #define VID_PLL_DIV_1 0
 #define VID_PLL_DIV_2 1

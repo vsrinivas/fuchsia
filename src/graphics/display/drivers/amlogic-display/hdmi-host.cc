@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "hdmi-host.h"
+#include "src/graphics/display/drivers/amlogic-display/hdmi-host.h"
 
 #include <lib/ddk/debug.h>
 
-#include "cbus-regs.h"
-#include "hhi-regs.h"
-#include "vpu-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/cbus-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/hhi-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/vpu-regs.h"
 
 namespace amlogic_display {
 

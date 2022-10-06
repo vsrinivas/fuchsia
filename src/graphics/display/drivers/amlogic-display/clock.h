@@ -18,10 +18,10 @@
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 
-#include "common.h"
-#include "dsi.h"
-#include "hhi-regs.h"
-#include "vpu-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/common.h"
+#include "src/graphics/display/drivers/amlogic-display/dsi.h"
+#include "src/graphics/display/drivers/amlogic-display/hhi-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/vpu-regs.h"
 
 namespace amlogic_display {
 

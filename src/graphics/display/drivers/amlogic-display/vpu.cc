@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vpu.h"
+#include "src/graphics/display/drivers/amlogic-display/vpu.h"
 
 #include <lib/ddk/debug.h>
 
 #include <ddktl/device.h>
 
-#include "common.h"
-#include "hhi-regs.h"
-#include "vpp-regs.h"
-#include "vpu-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/common.h"
+#include "src/graphics/display/drivers/amlogic-display/hhi-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/vpp-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/vpu-regs.h"
 #include "zircon/errors.h"
 
 namespace amlogic_display {

@@ -12,7 +12,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 
-#include "common.h"
+#include "src/graphics/display/drivers/amlogic-display/common.h"
 
 namespace amlogic_display {
 

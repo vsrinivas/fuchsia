@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "osd.h"
+#include "src/graphics/display/drivers/amlogic-display/osd.h"
 
 #include <float.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
@@ -30,12 +30,12 @@
 
 #include "lib/zx/pmt.h"
 #include "lib/zx/vmar.h"
-#include "rdma-regs.h"
 #include "src/graphics/display/drivers/amlogic-display/amlogic-display.h"
 #include "src/graphics/display/drivers/amlogic-display/common.h"
 #include "src/graphics/display/drivers/amlogic-display/hhi-regs.h"
-#include "vpp-regs.h"
-#include "vpu-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/rdma-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/vpp-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/vpu-regs.h"
 
 namespace amlogic_display {
 

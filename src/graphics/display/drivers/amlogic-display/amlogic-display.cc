@@ -1,7 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "amlogic-display.h"
+
+#include "src/graphics/display/drivers/amlogic-display/amlogic-display.h"
 
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
@@ -34,9 +35,9 @@
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 
-#include "common.h"
 #include "src/graphics/display/drivers/amlogic-display/amlogic-display-bind.h"
-#include "vpp-regs.h"
+#include "src/graphics/display/drivers/amlogic-display/common.h"
+#include "src/graphics/display/drivers/amlogic-display/vpp-regs.h"
 
 namespace sysmem = fuchsia_sysmem;
 
