@@ -22,6 +22,7 @@ import (
 
 	"fidl/fuchsia/hardware/network"
 	"fidl/fuchsia/net"
+	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/interfaces/admin"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -160,10 +161,10 @@ func (pi *adminAddressStateProviderImpl) UpdateAddressProperties(_ fidl.Context,
 	// so the zero value for Deprecated is left untouched.
 	if properties.HasPreferredLifetimeInfo() {
 		switch preferred := properties.GetPreferredLifetimeInfo(); preferred.Which() {
-		case admin.PreferredLifetimeInfoPreferredLifetimeEnd:
+		case interfaces.PreferredLifetimeInfoPreferredUntil:
 			// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
 			panic(fmt.Sprintf("UpdateAddressProperties on addr %s with preferred lifetime %d not supported", pi.protocolAddr.AddressWithPrefix.Address, preferred))
-		case admin.PreferredLifetimeInfoDeprecated:
+		case interfaces.PreferredLifetimeInfoDeprecated:
 			lifetimes.Deprecated = true
 		default:
 			panic(fmt.Sprintf("unexpected preferred lifetime info tag: %+v", preferred))
@@ -337,9 +338,9 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Subnet,
 			// so the zero value for Deprecated is left untouched.
 			if initProperties.HasPreferredLifetimeInfo() {
 				switch preferred := initProperties.GetPreferredLifetimeInfo(); preferred.Which() {
-				case admin.PreferredLifetimeInfoDeprecated:
+				case interfaces.PreferredLifetimeInfoDeprecated:
 					properties.Lifetimes.Deprecated = true
-				case admin.PreferredLifetimeInfoPreferredLifetimeEnd:
+				case interfaces.PreferredLifetimeInfoPreferredUntil:
 					// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
 					panic(fmt.Sprintf("adding address %s with preferred lifetime %d is not supported", addr, preferred))
 				default:

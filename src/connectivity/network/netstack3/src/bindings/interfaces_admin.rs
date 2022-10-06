@@ -38,6 +38,7 @@ use assert_matches::assert_matches;
 use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -753,19 +754,18 @@ async fn add_address(
             valid_lifetime_end
         );
     }
-    match initial_properties.preferred_lifetime_info.unwrap_or(
-        fnet_interfaces_admin::PreferredLifetimeInfo::PreferredLifetimeEnd(INFINITE_NANOS),
-    ) {
-        fnet_interfaces_admin::PreferredLifetimeInfo::Deprecated(_) => {
+    match initial_properties
+        .preferred_lifetime_info
+        .unwrap_or(fnet_interfaces::PreferredLifetimeInfo::PreferredUntil(INFINITE_NANOS))
+    {
+        fnet_interfaces::PreferredLifetimeInfo::Deprecated(_) => {
             todo!("https://fxbug.dev/105630: support adding deprecated addresses")
         }
-        fnet_interfaces_admin::PreferredLifetimeInfo::PreferredLifetimeEnd(
-            preferred_lifetime_end,
-        ) => {
-            if preferred_lifetime_end != INFINITE_NANOS {
+        fnet_interfaces::PreferredLifetimeInfo::PreferredUntil(preferred_until) => {
+            if preferred_until != INFINITE_NANOS {
                 log::warn!(
-                    "TODO(https://fxbug.dev/105630): ignoring preferred_lifetime_end: {:?}",
-                    preferred_lifetime_end
+                    "TODO(https://fxbug.dev/105630): ignoring preferred_until: {:?}",
+                    preferred_until
                 );
             }
         }

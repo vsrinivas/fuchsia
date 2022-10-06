@@ -50,8 +50,8 @@ async fn address_deprecation<E: netemul::Endpoint>(name: &str) {
     const DEPRECATED_PROPERTIES: fidl_fuchsia_net_interfaces_admin::AddressProperties =
         fidl_fuchsia_net_interfaces_admin::AddressProperties {
             preferred_lifetime_info: Some(
-                fidl_fuchsia_net_interfaces_admin::PreferredLifetimeInfo::Deprecated(
-                    fidl_fuchsia_net_interfaces_admin::Empty,
+                fidl_fuchsia_net_interfaces::PreferredLifetimeInfo::Deprecated(
+                    fidl_fuchsia_net_interfaces::Empty,
                 ),
             ),
             ..fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY
