@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 """!/usr/bin/env python3.8"""
 
+from collections import namedtuple
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -44,6 +46,86 @@ def make_package_manifest(package_name, blobs, source_dir):
     return manifest_path
 
 
+TestSetupArgs = namedtuple(
+    "TestSetupArgs",
+    "shell_commands_file, image_assembly, driver_manifest_path, driver_component_file"
+)
+SOURCE_DIR = "source"
+OUTDIR = "outdir"
+
+@contextmanager
+def setup_temp_dir(*args, **kwargs):
+    temp_dir = tempfile.TemporaryDirectory()
+    try:
+        os.chdir(temp_dir.name)
+        os.mkdir(SOURCE_DIR)
+        # Create an ImageAssembly configuration
+        image_assembly = ImageAssemblyConfig()
+
+        # Write out package manifests which are part of the package.
+        for package_set in ["base", "cache", "system"]:
+            for suffix in ["a", "b"]:
+                package_name = f"{package_set}_{suffix}"
+                blob_suffixes = ["1", "2", "3"]
+                blob_names = [
+                    f"internal/path/file_{suffix}_{blob_suffix}"
+                    for blob_suffix in blob_suffixes
+                ]
+
+                manifest_path = make_package_manifest(
+                    package_name, blob_names, SOURCE_DIR)
+
+                # Add to the ImageAssembly in the correct package set.
+                getattr(image_assembly, package_set).add(manifest_path)
+
+        # Write out a driver package
+        package_name = "base_driver"
+        blob_names = ["meta/driver.cm"]
+        driver_manifest_path = make_package_manifest(
+            package_name, blob_names, SOURCE_DIR)
+
+        # Write out the driver component files list
+        distribution_manifest_path = os.path.join(
+            SOURCE_DIR, "base_driver_distribution_manifest.json")
+        driver_component_file = {
+            "package_name": "base_driver",
+            "distribution_manifest": distribution_manifest_path
+        }
+        shell_commands_file = {
+            'accountctl': ['accountctl'],
+            'activity-ctl': ['activity_ctl'],
+            'audio_listener': ['audio_listener'],
+        }
+        # Write out the driver component distribution manifest
+        with open(distribution_manifest_path,
+                  'w') as distribution_manifest_file:
+            # We only care about the destination field
+            driver_distribution_manifest = [{"destination": "meta/driver.cm"}]
+            json.dump(
+                driver_distribution_manifest,
+                distribution_manifest_file,
+                indent=2)
+
+        # Add the rest of the fields we expect to see in an image_assembly
+        # config.
+        image_assembly.boot_args.update(["boot-arg-1", "boot-arg-2"])
+        image_assembly.kernel.path = os.path.join(SOURCE_DIR, "kernel.bin")
+        image_assembly.kernel.args.update(["arg1", "arg2"])
+        image_assembly.kernel.clock_backstop = 123456
+        image_assembly.bootfs_files.update(
+            [
+                FileEntry(os.path.join(SOURCE_DIR, "some/file"), "some/file"),
+                FileEntry(
+                    os.path.join(SOURCE_DIR, "another/file"), "another/file"),
+            ])
+
+        yield TestSetupArgs(
+            shell_commands_file, image_assembly, driver_manifest_path,
+            driver_component_file)
+    finally:
+        temp_dir.cleanup()
+
+
 class MakeLegacyConfig(unittest.TestCase):
 
     def test_make_legacy_config(self):
@@ -53,85 +135,13 @@ class MakeLegacyConfig(unittest.TestCase):
         fast_copy_mock_fn, copies = mock_fast_copy_in(
             assembly.assembly_input_bundle)
 
-        with tempfile.TemporaryDirectory() as temp_dir_path:
-            os.chdir(temp_dir_path)
-
-            source_dir = "source"
-            os.mkdir(source_dir)
-
-            # Create an ImageAssembly configuration
-            image_assembly = ImageAssemblyConfig()
-
-            # Write out package manifests which are part of the package.
-            for package_set in ["base", "cache", "system"]:
-                for suffix in ["a", "b"]:
-                    package_name = f"{package_set}_{suffix}"
-                    blob_suffixes = ["1", "2", "3"]
-                    blob_names = [
-                        f"internal/path/file_{suffix}_{blob_suffix}"
-                        for blob_suffix in blob_suffixes
-                    ]
-
-                    manifest_path = make_package_manifest(
-                        package_name, blob_names, source_dir)
-
-                    # Add to the ImageAssembly in the correct package set.
-                    getattr(image_assembly, package_set).add(manifest_path)
-
-            # Write out a driver package
-            package_name = "base_driver"
-            blob_names = ["meta/driver.cm"]
-            driver_manifest_path = make_package_manifest(
-                package_name, blob_names, source_dir)
-
-            # Write out the driver component files list
-            distribution_manifest_path = os.path.join(
-                source_dir, "base_driver_distribution_manifest.json")
-            driver_component_file = {
-                "package_name": "base_driver",
-                "distribution_manifest": distribution_manifest_path
-            }
-            shell_commands_file = {
-                'accountctl': ['accountctl'],
-                'activity-ctl': ['activity_ctl'],
-                'audio_listener': ['audio_listener'],
-            }
-            # Write out the driver component distribution manifest
-            with open(distribution_manifest_path,
-                      'w') as distribution_manifest_file:
-                # We only care about the destination field
-                driver_distribution_manifest = [
-                    {
-                        "destination": "meta/driver.cm"
-                    }
-                ]
-                json.dump(
-                    driver_distribution_manifest,
-                    distribution_manifest_file,
-                    indent=2)
-
-            # Add the rest of the fields we expect to see in an image_assembly
-            # config.
-            image_assembly.boot_args.update(["boot-arg-1", "boot-arg-2"])
-            image_assembly.kernel.path = os.path.join(source_dir, "kernel.bin")
-            image_assembly.kernel.args.update(["arg1", "arg2"])
-            image_assembly.kernel.clock_backstop = 123456
-            image_assembly.bootfs_files.update(
-                [
-                    FileEntry(
-                        os.path.join(source_dir, "some/file"), "some/file"),
-                    FileEntry(
-                        os.path.join(source_dir, "another/file"),
-                        "another/file"),
-                ])
-
+        with setup_temp_dir() as setup_args:
+            shell_commands_file, image_assembly, driver_manifest_path, driver_component_file = setup_args
             # Create the outdir path, and perform the "copying" into the
             # AssemblyInputBundle.
-            outdir = "outdir"
-            aib, assembly_config, deps = make_legacy_config.copy_to_assembly_input_bundle(
-                image_assembly, [], outdir, [driver_manifest_path],
+            aib, _, deps = make_legacy_config.copy_to_assembly_input_bundle(
+                image_assembly, [], OUTDIR, [driver_manifest_path],
                 [driver_component_file], shell_commands_file)
-
             # Validate the contents of the AssemblyInputBundle itself
             self.assertEqual(
                 aib.base, set(["packages/base/base_a", "packages/base/base_b"]))
@@ -368,3 +378,8 @@ class MakeLegacyConfig(unittest.TestCase):
                             source='source/another/file',
                             destination='outdir/bootfs/another/file'),
                     ]))
+
+    @unittest.skip("This test doesn't assert anything yet")
+    def test_make_legacy_config_fails_duplicates(self):
+        with setup_temp_dir() as setup_args:
+            aib, deps, shell_commands_file, image_assembly = setup_args
