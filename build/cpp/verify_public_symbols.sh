@@ -57,7 +57,7 @@ if [[ $LIBRARY_NAME != "libc" ]]; then
   fi
 fi
 
-if ! diff -U0 $CURRENT $REFERENCE; then
+if ! diff -U0 $REFERENCE $CURRENT; then
   echo
   echo "Error: ABI has changed! In library $LIBRARY_NAME"
   echo

@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config/zircon/standard.gni")
+import("//build/cpp/verify_public_symbols.gni")
 import("//build/test.gni")
 import("//build/toolchain/ifs_shared_library.gni")
 import("//build/zircon/migrated_targets.gni")
