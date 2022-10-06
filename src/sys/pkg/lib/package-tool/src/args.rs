@@ -83,6 +83,9 @@ pub struct RepoPublishCommand {
     )]
     pub time_versioning: bool,
 
+    #[argh(switch, description = "clean the repository so only new publications remain")]
+    pub clean: bool,
+
     #[argh(option, description = "produce a depfile file")]
     pub depfile: Option<Utf8PathBuf>,
 

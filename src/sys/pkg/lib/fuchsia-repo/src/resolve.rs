@@ -413,7 +413,7 @@ mod tests {
 
         // Download the package.
         let meta_far_hash =
-            resolve_package(&repo, "package1", &result_dir, DOWNLOAD_CONCURRENCY).await.unwrap();
+            resolve_package(&repo, "package1/0", &result_dir, DOWNLOAD_CONCURRENCY).await.unwrap();
 
         // Make sure we downloaded the right hash.
         assert_eq!(meta_far_hash.to_string(), PKG1_HASH);

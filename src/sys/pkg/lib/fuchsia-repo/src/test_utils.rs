@@ -107,10 +107,9 @@ pub fn make_repo_keys() -> RepoKeys {
     repo_keys
 }
 
-pub fn make_repo_dir(root: &Utf8Path) -> Result<()> {
-    let src = PathBuf::from(EMPTY_REPO_PATH).canonicalize()?;
-    copy_dir(&src, root.as_std_path())?;
-    Ok(())
+pub fn make_empty_pm_repo_dir(root: &Utf8Path) {
+    let src = PathBuf::from(EMPTY_REPO_PATH).canonicalize().unwrap();
+    copy_dir(&src, root.as_std_path()).unwrap();
 }
 
 pub async fn make_readonly_empty_repository() -> Result<RepoClient<Box<dyn RepoProvider>>> {
@@ -125,7 +124,7 @@ pub async fn make_readonly_empty_repository() -> Result<RepoClient<Box<dyn RepoP
 pub async fn make_writable_empty_repository(
     root: Utf8PathBuf,
 ) -> Result<RepoClient<Box<dyn RepoProvider>>> {
-    make_repo_dir(&root)?;
+    make_empty_pm_repo_dir(&root);
     let backend = PmRepository::new(root);
     let mut client = RepoClient::from_trusted_remote(Box::new(backend) as Box<_>).await?;
     client.update().await?;
@@ -173,7 +172,17 @@ pub fn make_package_manifest(name: &str, build_path: &Path) -> (PathBuf, Package
     (meta_far_path, manifest)
 }
 
-pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
+pub async fn make_pm_repo_dir(repo_dir: &Path) {
+    let keys_dir = repo_dir.join("keys");
+    create_dir_all(&keys_dir).unwrap();
+    copy_dir(Utf8PathBuf::from(EMPTY_REPO_PATH).join("keys").as_std_path(), &keys_dir).unwrap();
+
+    let metadata_dir = repo_dir.join("repository");
+    let blobs_dir = metadata_dir.join("blobs");
+    make_repo_dir(&metadata_dir, &blobs_dir).await;
+}
+
+pub async fn make_repo_dir(metadata_dir: &Path, blobs_dir: &Path) {
     create_dir_all(&metadata_dir).unwrap();
     create_dir_all(&blobs_dir).unwrap();
 
@@ -223,7 +232,7 @@ pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
     for (name, meta_far_path, meta_far_merkle) in packages {
         builder = builder
             .add_target_with_custom(
-                TargetPath::new(name).unwrap(),
+                TargetPath::new(format!("{}/0", name)).unwrap(),
                 AllowStdIo::new(File::open(meta_far_path).unwrap()),
                 hashmap! { "merkle".into() => meta_far_merkle.into() },
             )
@@ -269,7 +278,7 @@ pub async fn make_pm_repository(dir: impl Into<Utf8PathBuf>) -> PmRepository {
     let dir = dir.into();
     let metadata_dir = dir.join("repository");
     let blobs_dir = metadata_dir.join("blobs");
-    make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
+    make_repo_dir(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
 
     let keys_dir = dir.join("keys");
     create_dir(&keys_dir).unwrap();
@@ -286,7 +295,7 @@ pub async fn make_file_system_repository(
 ) -> RepoClient<Box<dyn RepoProvider>> {
     let metadata_dir = metadata_dir.into();
     let blobs_dir = blobs_dir.into();
-    make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
+    make_repo_dir(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
 
     let backend = FileSystemRepository::new(metadata_dir, blobs_dir);
     let mut client = RepoClient::from_trusted_remote(Box::new(backend) as Box<_>).await.unwrap();

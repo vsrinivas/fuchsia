@@ -36,6 +36,7 @@ pub struct RepoBuilder<'a, R: RepoStorageProvider> {
     time_versioning: bool,
     refresh_metadata: bool,
     refresh_non_root_metadata: bool,
+    inherit_from_trusted_targets: bool,
     packages: Vec<PackageManifest>,
 }
 
@@ -80,6 +81,7 @@ where
             time_versioning: false,
             refresh_metadata: false,
             refresh_non_root_metadata: false,
+            inherit_from_trusted_targets: true,
             packages: vec![],
         }
     }
@@ -104,6 +106,15 @@ where
     /// Generate a new targets, snapshot, and timestamp metadata, even if unchanged and not expired.
     pub fn refresh_non_root_metadata(mut self, refresh_non_root_metadata: bool) -> Self {
         self.refresh_non_root_metadata = refresh_non_root_metadata;
+        self
+    }
+
+    /// Whether or not the new targets metadata inherits targets and delegations from the trusted
+    /// targets metadata.
+    ///
+    /// Default is `true`.
+    pub fn inherit_from_trusted_targets(mut self, inherit_from_trusted_targets: bool) -> Self {
+        self.inherit_from_trusted_targets = inherit_from_trusted_targets;
         self
     }
 
@@ -157,6 +168,8 @@ where
         } else {
             repo_builder.stage_root_if_necessary()?
         };
+
+        repo_builder = repo_builder.inherit_from_trusted_targets(self.inherit_from_trusted_targets);
 
         // Gather up all package blobs, and separate out the the meta.far blobs.
         let mut staged_blobs = HashMap::new();
@@ -498,5 +511,54 @@ mod tests {
         assert_eq!(targets1, targets2);
         assert_eq!(snapshot1, snapshot2);
         assert_eq!(timestamp1, timestamp2);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_inherit_from_trusted_targets() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(tmp.path()).unwrap();
+        let repo_dir = root.join("repo");
+
+        // Load the repo, which already contains package1 and package2.
+        let repo = test_utils::make_pm_repository(repo_dir).await;
+        let mut repo_client = RepoClient::from_trusted_remote(&repo).await.unwrap();
+        repo_client.update().await.unwrap();
+
+        // Publish package3 to the repository.
+        let (_, pkg3_manifest) =
+            test_utils::make_package_manifest("package3", root.join("pkg3").as_std_path());
+
+        let repo_keys = test_utils::make_repo_keys();
+        RepoBuilder::from_database(repo_client.remote_repo(), &repo_keys, repo_client.database())
+            .add_package(pkg3_manifest)
+            .commit()
+            .await
+            .unwrap();
+
+        // Make sure we have metadata for package1, package2, and package3.
+        assert_matches!(repo_client.update().await, Ok(true));
+        let trusted_targets = repo_client.database().trusted_targets().unwrap();
+        assert!(trusted_targets.targets().get("package1/0").is_some());
+        assert!(trusted_targets.targets().get("package2/0").is_some());
+        assert!(trusted_targets.targets().get("package3/0").is_some());
+
+        // Now do another commit, but this time not inheriting the old packages.
+        let (_, pkg4_manifest) =
+            test_utils::make_package_manifest("package4", root.join("pkg4").as_std_path());
+
+        RepoBuilder::from_database(repo_client.remote_repo(), &repo_keys, repo_client.database())
+            .inherit_from_trusted_targets(false)
+            .add_package(pkg4_manifest)
+            .commit()
+            .await
+            .unwrap();
+
+        // We should only have metadata for package4.
+        assert_matches!(repo_client.update().await, Ok(true));
+        let trusted_targets = repo_client.database().trusted_targets().unwrap();
+        assert!(trusted_targets.targets().get("package1/0").is_none());
+        assert!(trusted_targets.targets().get("package2/0").is_none());
+        assert!(trusted_targets.targets().get("package3/0").is_none());
+        assert!(trusted_targets.targets().get("package4/0").is_some());
     }
 }

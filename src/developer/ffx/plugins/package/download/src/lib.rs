@@ -92,7 +92,7 @@ mod tests {
         cmd_download(DownloadCommand {
             tuf_url: server.local_url() + "/tuf",
             blob_url: server.local_url() + "/tuf/blobs",
-            target_path: "package1".into(),
+            target_path: "package1/0".into(),
             output_path: output_path.as_std_path().to_path_buf(),
         })
         .await

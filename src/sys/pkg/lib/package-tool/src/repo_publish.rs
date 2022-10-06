@@ -55,7 +55,8 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     // Publish all the packages.
     let mut repo_builder = RepoBuilder::from_client(&client, &repo_keys)
         .refresh_non_root_metadata(true)
-        .time_versioning(cmd.time_versioning);
+        .time_versioning(cmd.time_versioning)
+        .inherit_from_trusted_targets(!cmd.clean);
 
     for package in packages {
         repo_builder = repo_builder.add_package(package);
@@ -101,6 +102,7 @@ mod tests {
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
+            clean: false,
             depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
@@ -113,7 +115,7 @@ mod tests {
         let tempdir = tempfile::tempdir().unwrap();
         let repo_path = Utf8Path::from_path(tempdir.path()).unwrap();
 
-        test_utils::make_repo_dir(repo_path).unwrap();
+        test_utils::make_empty_pm_repo_dir(repo_path);
 
         // Connect to the repo before we run the command to make sure we generate new metadata.
         let repo = PmRepository::new(repo_path.to_path_buf());
@@ -130,6 +132,7 @@ mod tests {
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
+            clean: false,
             depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
@@ -151,7 +154,7 @@ mod tests {
         let repo_path = root.join("repository");
         let keys_path = root.join("keys");
 
-        test_utils::make_repo_dir(&repo_path).unwrap();
+        test_utils::make_empty_pm_repo_dir(&repo_path);
 
         // Move the keys directory out of the repository. We should error out since we can't find
         // the keys.
@@ -162,6 +165,7 @@ mod tests {
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
+            clean: false,
             depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
@@ -174,6 +178,7 @@ mod tests {
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
+            clean: false,
             depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
@@ -190,13 +195,14 @@ mod tests {
         // and we'll assert that the metadata version is >= to this number.
         let now = Utc::now().timestamp().try_into().unwrap();
 
-        test_utils::make_repo_dir(repo_path).unwrap();
+        test_utils::make_empty_pm_repo_dir(repo_path);
 
         let cmd = RepoPublishCommand {
             keys: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: true,
+            clean: false,
             depfile: None,
             repo_path: repo_path.to_path_buf(),
         };
@@ -220,7 +226,7 @@ mod tests {
         let root = Utf8Path::from_path(tempdir.path()).unwrap();
 
         let repo_path = root.join("repo");
-        test_utils::make_repo_dir(&repo_path).unwrap();
+        test_utils::make_empty_pm_repo_dir(&repo_path);
 
         // Build some packages to publish.
         let mut manifests = vec![];
@@ -261,10 +267,10 @@ mod tests {
                 pkg_list2_manifest_path.clone(),
             ],
             time_versioning: false,
+            clean: false,
             depfile: Some(depfile_path.clone()),
             repo_path: repo_path.to_path_buf(),
         };
-
         assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
 
         let repo = PmRepository::new(repo_path.to_path_buf());
@@ -301,5 +307,68 @@ mod tests {
                 pkg_list2_manifest_path
             )
         );
+    }
+
+    #[fuchsia::test]
+    async fn test_publish_packages_should_support_cleaning() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
+
+        // Create a repository that contains packages package1 and package2.
+        let repo_path = root.join("repo");
+        test_utils::make_pm_repo_dir(repo_path.as_std_path()).await;
+
+        // Publish package3 without cleaning enabled. This should preserve the old packages.
+        let pkg3_manifest_path = root.join("package3.json");
+        let (_, pkg3_manifest) =
+            test_utils::make_package_manifest("package3", root.join("pkg3").as_std_path());
+        serde_json::to_writer(File::create(&pkg3_manifest_path).unwrap(), &pkg3_manifest).unwrap();
+
+        let cmd = RepoPublishCommand {
+            keys: None,
+            package_manifests: vec![pkg3_manifest_path],
+            package_list_manifests: vec![],
+            time_versioning: false,
+            clean: false,
+            depfile: None,
+            repo_path: repo_path.to_path_buf(),
+        };
+        assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
+
+        let repo = PmRepository::new(repo_path.to_path_buf());
+        let mut repo_client = RepoClient::from_trusted_remote(repo).await.unwrap();
+
+        assert_matches!(repo_client.update().await, Ok(true));
+        let trusted_targets = repo_client.database().trusted_targets().unwrap();
+        assert!(trusted_targets.targets().get("package1/0").is_some());
+        assert!(trusted_targets.targets().get("package2/0").is_some());
+        assert!(trusted_targets.targets().get("package3/0").is_some());
+
+        // Publish package4 with cleaning should clean out the old packages.
+        let pkg4_manifest_path = root.join("package4.json");
+        let (_, pkg4_manifest) =
+            test_utils::make_package_manifest("package4", root.join("pkg4").as_std_path());
+        serde_json::to_writer(File::create(&pkg4_manifest_path).unwrap(), &pkg4_manifest).unwrap();
+
+        let cmd = RepoPublishCommand {
+            keys: None,
+            package_manifests: vec![pkg4_manifest_path],
+            package_list_manifests: vec![],
+            time_versioning: false,
+            clean: true,
+            depfile: None,
+            repo_path: repo_path.to_path_buf(),
+        };
+        assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
+
+        let repo = PmRepository::new(repo_path.to_path_buf());
+        let mut repo_client = RepoClient::from_trusted_remote(repo).await.unwrap();
+
+        assert_matches!(repo_client.update().await, Ok(true));
+        let trusted_targets = repo_client.database().trusted_targets().unwrap();
+        assert!(trusted_targets.targets().get("package1/0").is_none());
+        assert!(trusted_targets.targets().get("package2/0").is_none());
+        assert!(trusted_targets.targets().get("package3/0").is_none());
+        assert!(trusted_targets.targets().get("package4/0").is_some());
     }
 }
