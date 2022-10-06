@@ -2349,6 +2349,321 @@
             "metric_id": 3,
             "metric_type": "Integer",
             "selector": "core/setui_service:root/active_listeners/LightSensor:count"
+        },
+        {
+            "event_codes": [
+                1,
+                1
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/(anonymous)\\ InputReportsReader/event_counts:ApiCall"
+        },
+        {
+            "event_codes": [
+                1,
+                2
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/(anonymous)\\ InputReportsReader/event_counts:ApiError"
+        },
+        {
+            "event_codes": [
+                1,
+                3
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/(anonymous)\\ InputReportsReader/event_counts:ApiResponse"
+        },
+        {
+            "event_codes": [
+                1,
+                4
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/(anonymous)\\ InputReportsReader/event_counts:Closed"
+        },
+        {
+            "event_codes": [
+                1,
+                5
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/(anonymous)\\ InputReportsReader/event_counts:Created"
+        },
+        {
+            "event_codes": [
+                2,
+                1
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.hardware.light.Light/event_counts:ApiCall"
+        },
+        {
+            "event_codes": [
+                2,
+                2
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.hardware.light.Light/event_counts:ApiError"
+        },
+        {
+            "event_codes": [
+                2,
+                3
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.hardware.light.Light/event_counts:ApiResponse"
+        },
+        {
+            "event_codes": [
+                2,
+                4
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.hardware.light.Light/event_counts:Closed"
+        },
+        {
+            "event_codes": [
+                2,
+                5
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.hardware.light.Light/event_counts:Created"
+        },
+        {
+            "event_codes": [
+                3,
+                1
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.input.report.InputDevice/event_counts:ApiCall"
+        },
+        {
+            "event_codes": [
+                3,
+                2
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.input.report.InputDevice/event_counts:ApiError"
+        },
+        {
+            "event_codes": [
+                3,
+                3
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.input.report.InputDevice/event_counts:ApiResponse"
+        },
+        {
+            "event_codes": [
+                3,
+                4
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.input.report.InputDevice/event_counts:Closed"
+        },
+        {
+            "event_codes": [
+                3,
+                5
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.input.report.InputDevice/event_counts:Created"
+        },
+        {
+            "event_codes": [
+                4,
+                1
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.AudioCore/event_counts:ApiCall"
+        },
+        {
+            "event_codes": [
+                4,
+                2
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.AudioCore/event_counts:ApiError"
+        },
+        {
+            "event_codes": [
+                4,
+                3
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.AudioCore/event_counts:ApiResponse"
+        },
+        {
+            "event_codes": [
+                4,
+                4
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.AudioCore/event_counts:Closed"
+        },
+        {
+            "event_codes": [
+                4,
+                5
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.AudioCore/event_counts:Created"
+        },
+        {
+            "event_codes": [
+                5,
+                1
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.sessions2.Discovery/event_counts:ApiCall"
+        },
+        {
+            "event_codes": [
+                5,
+                2
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.sessions2.Discovery/event_counts:ApiError"
+        },
+        {
+            "event_codes": [
+                5,
+                3
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.sessions2.Discovery/event_counts:ApiResponse"
+        },
+        {
+            "event_codes": [
+                5,
+                4
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.sessions2.Discovery/event_counts:Closed"
+        },
+        {
+            "event_codes": [
+                5,
+                5
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.media.sessions2.Discovery/event_counts:Created"
+        },
+        {
+            "event_codes": [
+                6,
+                1
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.recovery.policy.Device/event_counts:ApiCall"
+        },
+        {
+            "event_codes": [
+                6,
+                2
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.recovery.policy.Device/event_counts:ApiError"
+        },
+        {
+            "event_codes": [
+                6,
+                3
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.recovery.policy.Device/event_counts:ApiResponse"
+        },
+        {
+            "event_codes": [
+                6,
+                4
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.recovery.policy.Device/event_counts:Closed"
+        },
+        {
+            "event_codes": [
+                6,
+                5
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.recovery.policy.Device/event_counts:Created"
+        },
+        {
+            "event_codes": [
+                7,
+                1
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.ui.policy.DeviceListenerRegistry/event_counts:ApiCall"
+        },
+        {
+            "event_codes": [
+                7,
+                2
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.ui.policy.DeviceListenerRegistry/event_counts:ApiError"
+        },
+        {
+            "event_codes": [
+                7,
+                3
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.ui.policy.DeviceListenerRegistry/event_counts:ApiResponse"
+        },
+        {
+            "event_codes": [
+                7,
+                4
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.ui.policy.DeviceListenerRegistry/event_counts:Closed"
+        },
+        {
+            "event_codes": [
+                7,
+                5
+            ],
+            "metric_id": 6,
+            "metric_type": "Integer",
+            "selector": "core/setui_service:root/external_apis/fuchsia.ui.policy.DeviceListenerRegistry/event_counts:Created"
         }
     ],
     "poll_rate_sec": 3600,
