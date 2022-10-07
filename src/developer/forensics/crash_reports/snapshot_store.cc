@@ -164,7 +164,8 @@ void SnapshotStore::AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Att
   insertion_order_.push_back(uuid);
 
   while (!insertion_order_.empty() && SizeLimitsExceeded()) {
-    FX_CHECK(SnapshotExists(insertion_order_.front()));
+    FX_CHECK(SnapshotExists(insertion_order_.front()))
+        << "Snapshot for uuid " << insertion_order_.front() << " doesn't exist";
 
     EnforceSizeLimits(insertion_order_.front());
     insertion_order_.pop_front();
