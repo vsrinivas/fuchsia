@@ -39,6 +39,8 @@ WarningsAsErrors: false
 AnalyzeTemporaryDtors: false
 FormatStyle:     file
 CheckOptions:
+  - key:             bugprone-signed-char-misuse.CharTypdefsToIgnore
+    value:           'int8_t'
   - key:             bugprone-assert-side-effect.AssertMacros
     value:           'FXL_DCHECK'
   - key:             google-readability-braces-around-statements.ShortStatementLines
