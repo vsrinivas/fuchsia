@@ -53,6 +53,11 @@ pub fn hoist() -> &'static Hoist {
 /// On non-fuchsia OS', call this at the start of the program to enable the global hoist.
 pub fn init_hoist() -> Result<&'static Hoist, Error> {
     let hoist = Hoist::new()?;
+    init_hoist_with(hoist)
+}
+
+/// On non-fuchsia OS', call this at the start of the program to make the provided hoist global
+pub fn init_hoist_with(hoist: Hoist) -> Result<&'static Hoist, Error> {
     HOIST
         .set(hoist.clone())
         .map_err(|_| anyhow::anyhow!("Tried to set global hoist more than once"))?;

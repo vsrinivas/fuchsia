@@ -23,7 +23,7 @@ pub fn test_security_context() -> Box<dyn SecurityContext> {
                 "../../../../../../third_party/rust_crates/mirrors/quiche/quiche/examples/rootca.crt"
             ),
         }
-        .into_security_context()
+        .into_security_context(&std::env::temp_dir())
         .unwrap(),
     );
 }

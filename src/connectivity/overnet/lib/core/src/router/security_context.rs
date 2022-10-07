@@ -92,40 +92,49 @@ pub struct MemoryBuffers {
 #[cfg(not(target_os = "fuchsia"))]
 impl MemoryBuffers {
     /// Turn these buffers into a SecurityContext
-    pub fn into_security_context(self) -> Result<impl SecurityContext, Error> {
+    pub fn into_security_context(
+        self,
+        cache_path: &std::path::Path,
+    ) -> Result<impl SecurityContext, Error> {
         use std::io::Write;
+        use std::path::PathBuf;
 
         #[derive(Debug)]
         struct SecCtx {
-            node_cert: tempfile::NamedTempFile,
-            node_private_key: tempfile::NamedTempFile,
-            root_cert: tempfile::NamedTempFile,
+            _cache_dir: tempfile::TempDir,
+            node_cert: PathBuf,
+            node_private_key: PathBuf,
+            root_cert: PathBuf,
         }
 
         impl SecurityContext for SecCtx {
             fn node_cert(&self) -> &str {
-                self.node_cert.path().to_str().unwrap()
+                self.node_cert.to_str().unwrap()
             }
 
             fn node_private_key(&self) -> &str {
-                self.node_private_key.path().to_str().unwrap()
+                self.node_private_key.to_str().unwrap()
             }
 
             fn root_cert(&self) -> &str {
-                self.root_cert.path().to_str().unwrap()
+                self.root_cert.to_str().unwrap()
             }
         }
 
-        let load = |contents| -> Result<_, Error> {
-            let mut f = tempfile::NamedTempFile::new()?;
+        let _cache_dir = tempfile::tempdir_in(cache_path)?;
+        let cache_path = _cache_dir.path().to_owned();
+        let load = |name, contents| -> Result<_, Error> {
+            let path = cache_path.join(name);
+            let mut f = std::fs::File::create(&path)?;
             f.write_all(contents)?;
-            Ok(f)
+            Ok(path)
         };
 
         Ok(SecCtx {
-            node_cert: load(self.node_cert)?,
-            node_private_key: load(self.node_private_key)?,
-            root_cert: load(self.root_cert)?,
+            _cache_dir,
+            node_cert: load("cert", self.node_cert)?,
+            node_private_key: load("priv.key", self.node_private_key)?,
+            root_cert: load("root", self.root_cert)?,
         })
     }
 }

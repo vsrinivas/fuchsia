@@ -10,6 +10,7 @@ use ffx_daemon_proxy::Injection;
 use ffx_lib_args::{forces_stdout_log, from_env, is_schema, redact_arg_values, Ffx};
 use ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc};
 use fuchsia_async::TimeoutExt;
+use hoist::Hoist;
 use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
@@ -50,12 +51,6 @@ pub async fn report_user_error(err: &anyhow::Error) -> anyhow::Result<()> {
 pub async fn run(buildid: &str) -> Result<()> {
     let app: Ffx = from_env();
 
-    // todo(fxb/108692) we should get this in the environment context instead and leave the global
-    // hoist() unset for ffx but I'm leaving the last couple uses of it in place for the sake of
-    // avoiding complicated merge conflicts with isolation. Once we're ready for that, this should be
-    // `let Hoist = hoist::Hoist::new()...`
-    let hoist = hoist::init_hoist().context("initializing hoist")?;
-
     let context = app.load_context(buildid)?;
 
     ffx_config::init(&context).await?;
@@ -68,6 +63,16 @@ pub async fn run(buildid: &str) -> Result<()> {
             return Ok(());
         }
     };
+
+    // todo(fxb/108692) we should get this in the environment context instead and leave the global
+    // hoist() unset for ffx but I'm leaving the last couple uses of it in place for the sake of
+    // avoiding complicated merge conflicts with isolation. Once we're ready for that, this should be
+    // `let Hoist = hoist::Hoist::new()...`
+    let cache_path = context.get_cache_path()?;
+    std::fs::create_dir_all(&cache_path)?;
+    let hoist_cache_dir = tempfile::tempdir_in(&cache_path)?;
+    let hoist = hoist::init_hoist_with(Hoist::with_cache_dir(hoist_cache_dir.path())?)
+        .context("initializing hoist")?;
 
     let log_to_stdio = forces_stdout_log(&app.subcommand);
     ffx_config::logging::init(log_to_stdio || app.verbose, !log_to_stdio).await?;

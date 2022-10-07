@@ -78,18 +78,22 @@ pub struct Hoist {
 }
 
 impl Hoist {
-    pub fn new() -> Result<Self, Error> {
+    pub fn with_cache_dir(cache_path: &Path) -> Result<Self, Error> {
         let node_id = overnet_core::generate_node_id();
         tracing::trace!(hoist_node_id = node_id.0);
         let node = Router::new(
             RouterOptions::new()
                 .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate)
                 .set_node_id(node_id),
-            Box::new(hard_coded_security_context()),
+            Box::new(hard_coded_security_context(cache_path)),
         )?;
         let host_overnet = Arc::new(HostOvernet::new(node.clone())?);
 
         Ok(Self { host_overnet, node })
+    }
+
+    pub fn new() -> Result<Self, Error> {
+        Self::with_cache_dir(&std::env::temp_dir())
     }
 
     pub fn node(&self) -> Arc<Router> {
@@ -364,7 +368,7 @@ async fn run_overnet(node: Arc<Router>, rx: HostOvernetRequestStream) -> Result<
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Hacks to hardcode a resource file without resources
 
-pub fn hard_coded_security_context() -> impl SecurityContext {
+pub fn hard_coded_security_context(cache_path: &Path) -> impl SecurityContext {
     return overnet_core::MemoryBuffers {
         node_cert: include_bytes!(
             "../../../../../../third_party/rust_crates/mirrors/quiche/quiche/examples/cert.crt"
@@ -376,7 +380,7 @@ pub fn hard_coded_security_context() -> impl SecurityContext {
             "../../../../../../third_party/rust_crates/mirrors/quiche/quiche/examples/rootca.crt"
         ),
     }
-    .into_security_context()
+    .into_security_context(cache_path)
     .unwrap();
 }
 

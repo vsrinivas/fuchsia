@@ -23,6 +23,7 @@ rustc_library("lib") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:simplelog",
+    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:tracing",
   ]
 
