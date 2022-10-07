@@ -13,6 +13,7 @@ group("tests") {
 
 host_test_data("bad_cases") {
   sources = [
+    "fidl/bad/attribute_typo.test.fidl",
     "fidl/bad/bits_non_power_of_two.test.fidl",
     "fidl/bad/cannot_start_at_zero.test.fidl",
     "fidl/bad/conflicting_modifiers.test.fidl",
@@ -53,6 +54,7 @@ host_test_data("good_cases") {
     "fidl/good/simple_uint_const.test.fidl",
     "fidl/good/strict_union.test.fidl",
     "fidl/good/unbounded_vector_bound_twice.test.fidl",
+    "fidl/good/unofficial_attribute.test.fidl",
   ]
   outputs = [ "$root_out_dir/fidlc-tests/good/{{source_file_part}}" ]
 }

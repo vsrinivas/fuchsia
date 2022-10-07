@@ -383,19 +383,26 @@ library fidl.test.dupattributes;
 }
 
 // Test that a close attribute is caught.
-TEST(AttributesTests, WarnOnCloseAttribute) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
+TEST(AttributesTests, WarnOnCloseToOfficialAttribute) {
+  TestLibrary library;
+  library.AddFile("bad/attribute_typo.test.fidl");
 
-@duc("should be doc")
-protocol A {
-    MethodA();
-};
-
-)FIDL");
   ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnAttributeTypo);
   EXPECT_SUBSTR(library.warnings()[0]->msg.c_str(), "duc");
   EXPECT_SUBSTR(library.warnings()[0]->msg.c_str(), "doc");
+}
+
+TEST(AttributesTests, GoodNotTooCloseUnofficialAttribute) {
+  TestLibrary library;
+  library.AddFile("good/unofficial_attribute.test.fidl");
+
+  ASSERT_COMPILED(library);
+  auto example_protocol = library.LookupProtocol("Example");
+  ASSERT_NOT_NULL(example_protocol);
+  EXPECT_TRUE(example_protocol->attributes->Get("duck"));
+  auto& struct_str_value1 = static_cast<const fidl::flat::StringConstantValue&>(
+      example_protocol->attributes->Get("duck")->GetArg("value")->value->Value());
+  EXPECT_STREQ(struct_str_value1.MakeContents(), "quack");
 }
 
 // Ensures we detect typos early enough that we still report them, even if there
