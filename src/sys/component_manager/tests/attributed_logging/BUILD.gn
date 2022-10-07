@@ -7,25 +7,6 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_test("test-bin") {
-  edition = "2021"
-  source_root = "integration-test.rs"
-  name = "attributed-logging-test"
-  deps = [
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component-test",
-    "//src/sys/lib/component-events",
-  ]
-  sources = [ "integration-test.rs" ]
-}
-
-fuchsia_component("integration-test") {
-  testonly = true
-  manifest = "meta/integration-test.cml"
-  deps = [ ":test-bin" ]
-}
-
 rustc_test("e2e-bin") {
   edition = "2021"
   source_root = "e2e-test.rs"
@@ -52,10 +33,7 @@ fuchsia_component("e2e-root-component") {
 }
 
 fuchsia_test_package("attributed-logging-test") {
-  test_components = [
-    ":integration-test",
-    ":e2e-test",
-  ]
+  test_components = [ ":e2e-test" ]
   deps = [
     ":e2e-root-component",
     "components:all-components",

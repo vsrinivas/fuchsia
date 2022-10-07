@@ -576,26 +576,6 @@ create_event!(
     }
 );
 create_event!(
-    event_type: CapabilityRouted,
-    event_name: capability_routed,
-    payload: {
-        data: {
-            {
-                name: name,
-                ty: String,
-            }
-        },
-        client_protocols: {},
-        server_protocols: {},
-    },
-    error_payload: {
-        {
-            name: name,
-            ty: String,
-        }
-    }
-);
-create_event!(
     event_type: DebugStarted,
     event_name: debug_started,
     payload: {

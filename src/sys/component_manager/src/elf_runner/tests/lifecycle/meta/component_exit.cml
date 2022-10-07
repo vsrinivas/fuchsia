@@ -16,9 +16,6 @@
             durability: "transient",
         },
     ],
-    capabilities: [
-        { protocol: "fidl.test.components.Trigger" },
-    ],
     use: [
         {
             event: [
@@ -30,28 +27,11 @@
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
         },
-        {
-            event: "capability_requested",
-            from: "framework",
-            as: "components_trigger_requested",
-            filter: { name: "fidl.test.components.Trigger" },
-        },
-        {
-            event_stream_deprecated: "EventStream",
-            subscriptions: [
-                { event: "components_trigger_requested" },
-            ],
-        },
     ],
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: "#test-collection",
-        },
-        {
-            protocol: "fidl.test.components.Trigger",
-            from: "self",
             to: "#test-collection",
         },
     ],

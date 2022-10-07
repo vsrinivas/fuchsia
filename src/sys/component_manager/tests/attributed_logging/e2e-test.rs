@@ -70,53 +70,7 @@ async fn verify_routing_failure_messages() {
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
                     .moniker("./root/reader")
-                    .stop(Some(ExitStatusMatcher::Clean)),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.diagnostics.ArchiveAccessor")
-                    .moniker("./root/reader"),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./root/reader"),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./root/reader"),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./root/routing-tests/child"),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.logger.LogSink")
-                    .moniker(
-                        "./root/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
-                    ),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.logger.LogSink")
-                    .moniker(
-                        "./root/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
-                    ),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.logger.LogSink")
-                    .moniker(
-                        "./root/routing-tests/offers-to-children-unavailable/child-open-unrequested",
-                    ),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./root/archivist"),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.logger.LogSink")
-                    .moniker("./root/archivist"),
-                EventMatcher::ok()
-                    .r#type(events::CapabilityRouted::TYPE)
-                    .capability_name("fuchsia.sys2.EventSource")
-                    .moniker("./root/archivist"),
+                    .stop(Some(ExitStatusMatcher::Clean))
             ],
             sequence::Ordering::Unordered,
         )

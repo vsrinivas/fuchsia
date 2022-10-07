@@ -52,6 +52,7 @@ rustc_binary("rendezvous_exit") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components_rust",
+    "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:tracing",
   ]
 
@@ -65,13 +66,9 @@ rustc_test("component_exit") {
 
   deps = [
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
     "//src/sys/component_manager/tests/fidl:components_rust",
     "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures-util",
-    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "component_exit.rs" ]

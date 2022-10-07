@@ -7,15 +7,17 @@
         runner: "elf",
         binary: "bin/rendezvous_exit",
     },
-    use: [
-        {
-            protocol: [ "fidl.test.components.Trigger" ],
-        },
+    capabilities: [
+        { protocol: "fidl.test.components.Trigger" },
     ],
     expose: [
         {
             protocol: "fuchsia.component.Binder",
             from: "framework",
+        },
+        {
+            protocol: "fidl.test.components.Trigger",
+            from: "self",
         },
     ],
 }
