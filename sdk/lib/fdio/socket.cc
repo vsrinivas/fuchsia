@@ -5,32 +5,24 @@
 #include "sdk/lib/fdio/socket.h"
 
 #include <lib/fit/result.h>
-#include <lib/stdcompat/span.h>
-#include <lib/zx/socket.h>
 #include <lib/zxio/bsdsocket.h>
-#include <lib/zxio/cpp/cmsg.h>
 #include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/cpp/dgram_cache.h>
 #include <lib/zxio/cpp/inception.h>
-#include <lib/zxio/cpp/socket_address.h>
-#include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
 #include <net/if.h>
-#include <netinet/icmp6.h>
-#include <netinet/if_ether.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
 #include <poll.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <bitset>
-#include <optional>
+#include <mutex>
 #include <type_traits>
-#include <unordered_map>
-#include <vector>
+#include <utility>
 
+#include <fbl/ref_ptr.h>
 #include <netpacket/packet.h>
 
 #include "fdio_unistd.h"
@@ -59,61 +51,60 @@ namespace fnet = fuchsia_net;
  *  Stateful class hierarchy for wrapping zircon primitives, enabled for
  *  relevant FIDL wrappers:
  *
- *                                                +-----------------+ +-----------------+
- *          +---------------+                     |  stream_socket  | | datagram_socket |
- *          | packet_socket |                     |                 | |                 |
- *          |               |                     |    Enabled:     | |    Enabled:     |
- *          |   Enabled:    |                     |   StreamSocket  | | DatagramSocket  |
- *          |  PacketSocket |                     |                 | |                 |
- *          |               |                     |    Implements:  | |    Implements:  |
- *          |  Implements:  |                     |  Overrides for  | |  Overrides for  |
- *          | Overrides for |                     |   SOCK_STREAM   | |   SOCK_DGRAM    |
- *          |    packet     |                     |  sockets using  | |  sockets using  |
- *          |    sockets    |                     |  a zx::socket   | |  a zx::socket   |
- *          |  (AF_PACKET)  |                     |   data plane    | |   data plane    |
- *          +---------------+                     +-----------------+ +-----------------+
- *                   ^                                      ^                   ^
- *                   |                                      |                   |
- *                   |                                      |                   |
- *                   |                                      +---------+---------+
- *                   |                                                |
- *                   |                                                |
- *       +-----------+-----------+                       +------------+-------------+
- *       |   socket_with_event   |                       |   socket_with_zx_socket  |
- *       |                       |                       |                          |
- *       |       Enabled:        |                       |         Enabled:         |
- *       |     PacketSocket      |                       |       DatagramSocket     |
- *       |       RawSocket       |                       |        StreamSocket      |
- *       |    SyncDgramSocket    |                       |                          |
- *       |                       |                       |   Implements: Overrides  |
- *       | Implements: Overrides |                       |    for sockets using a   |
- *       |   for sockets using   |                       |   zx::socket data plane  |
- *       |   FIDL over channel   |                       |                          |
- *       |    as a data plane    |                       |                          |
- *       +-----------------------+                       +--------------------------+
- *                    ^                                               ^
- *                    |                                               |
- *                    |                                               |
- *                    +----------------------+------------------------+
- *                                           |
- *                                           |
- *                                +----------+---------+
- *                                |     base_socket    |
- *                                |                    |
- *                                |    Enabled: All    |
- *                                |                    |
- *                                |    Implements:     |
- *                                | Overrides for all  |
- *                                |    socket types    |
- *                                +--------------------+
- *                                           |
- *                                +----------+-----------+
- *                                |         zxio         |
- *                                |                      |
- *                                |  Implements: POSIX   |
- *                                | interface + behavior |
- *                                |    for generic fds   |
- *                                +----------------------+
+ *          +---------------+
+ *          | packet_socket |
+ *          |               |
+ *          |   Enabled:    |
+ *          |  PacketSocket |
+ *          |               |
+ *          |  Implements:  |
+ *          | Overrides for |
+ *          |    packet     |
+ *          |    sockets    |
+ *          |  (AF_PACKET)  |
+ *          +---------------+
+ *                   ^
+ *                   |
+ *                   |
+ *                   |
+ *                   |
+ *                   |
+ *       +-----------+-----------+      +-----------------+      +-----------------+
+ *       |   socket_with_event   |      |  stream_socket  |      | datagram_socket |
+ *       |                       |      |                 |      |                 |
+ *       |       Enabled:        |      |    Enabled:     |      |    Enabled:     |
+ *       |     PacketSocket      |      |   StreamSocket  |      | DatagramSocket  |
+ *       |       RawSocket       |      |                 |      |                 |
+ *       |    SyncDgramSocket    |      |    Implements:  |      |    Implements:  |
+ *       |                       |      |  Overrides for  |      |  Overrides for  |
+ *       | Implements: Overrides |      |   SOCK_STREAM   |      |   SOCK_DGRAM    |
+ *       |   for sockets using   |      |  sockets using  |      |  sockets using  |
+ *       |   FIDL over channel   |      |  a zx::socket   |      |  a zx::socket   |
+ *       |    as a data plane    |      |   data plane    |      |   data plane    |
+ *       +-----------------------+      +-----------------+      +-----------------+
+ *                    ^                          ^                        ^
+ *                    |                          |                        |
+ *                    |                          |                        |
+ *                    +--------------------------+------------------------+
+ *                                               |
+ *                                               |
+ *                                    +----------+---------+
+ *                                    |     base_socket    |
+ *                                    |                    |
+ *                                    |    Enabled: All    |
+ *                                    |                    |
+ *                                    |    Implements:     |
+ *                                    | Overrides for all  |
+ *                                    |    socket types    |
+ *                                    +--------------------+
+ *                                               |
+ *                                    +----------+-----------+
+ *                                    |         zxio         |
+ *                                    |                      |
+ *                                    |  Implements: POSIX   |
+ *                                    | interface + behavior |
+ *                                    |    for generic fds   |
+ *                                    +----------------------+
  */
 
 namespace {
@@ -345,6 +336,16 @@ struct base_socket : public remote {
     }
   }
 
+  zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
+                      int16_t* out_code) override {
+    return zxio_recvmsg(&zxio_storage().io, msg, flags, out_actual, out_code);
+  }
+
+  zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
+                      int16_t* out_code) override {
+    return zxio_sendmsg(&zxio_storage().io, msg, flags, out_actual, out_code);
+  }
+
  protected:
   virtual fidl::WireSyncClient<typename T::FidlProtocol>& GetClient() = 0;
 };
@@ -416,16 +417,6 @@ struct socket_with_event : virtual public base_socket<T> {
     *out_events = events;
   }
 
-  zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
-                      int16_t* out_code) override {
-    return zxio_recvmsg(&zxio_socket_with_event().io, msg, flags, out_actual, out_code);
-  }
-
-  zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
-                      int16_t* out_code) override {
-    return zxio_sendmsg(&zxio_socket_with_event().io, msg, flags, out_actual, out_code);
-  }
-
  protected:
   friend class fbl::internal::MakeRefCountedHelper<socket_with_event<T>>;
   friend class fbl::RefPtr<socket_with_event<T>>;
@@ -459,60 +450,7 @@ static zxio_datagram_socket_t& zxio_datagram_socket(zxio_t* io) {
 
 namespace fdio_internal {
 
-using ErrOrOutCode = zx::status<int16_t>;
-
-template <typename T, typename = std::enable_if_t<std::is_same_v<T, DatagramSocket> ||
-                                                  std::is_same_v<T, StreamSocket>>>
-struct socket_with_zx_socket : public base_socket<T> {
- protected:
-  virtual ErrOrOutCode GetError() = 0;
-
-  std::optional<ErrOrOutCode> GetZxSocketWriteError(zx_status_t status) {
-    switch (status) {
-      case ZX_OK:
-        return std::nullopt;
-      case ZX_ERR_INVALID_ARGS:
-        return zx::ok(static_cast<int16_t>(EFAULT));
-      case ZX_ERR_BAD_STATE:
-        __FALLTHROUGH;
-      case ZX_ERR_PEER_CLOSED: {
-        zx::status err = GetError();
-        if (err.is_error()) {
-          return zx::error(err.status_value());
-        }
-        if (int value = err.value(); value != 0) {
-          return zx::ok(static_cast<int16_t>(value));
-        }
-        // Error was consumed.
-        return zx::ok(static_cast<int16_t>(EPIPE));
-      }
-      default:
-        return zx::error(status);
-    }
-  }
-
-  virtual std::optional<ErrOrOutCode> GetZxSocketReadError(zx_status_t status) {
-    switch (status) {
-      case ZX_OK:
-        return std::nullopt;
-      case ZX_ERR_INVALID_ARGS:
-        return zx::ok(static_cast<int16_t>(EFAULT));
-      case ZX_ERR_BAD_STATE:
-        __FALLTHROUGH;
-      case ZX_ERR_PEER_CLOSED: {
-        zx::status err = GetError();
-        if (err.is_error()) {
-          return zx::error(err.status_value());
-        }
-        return zx::ok(static_cast<int16_t>(err.value()));
-      }
-      default:
-        return zx::error(status);
-    }
-  }
-};
-
-struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
+struct datagram_socket : public base_socket<DatagramSocket> {
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) override {
     zxio_signals_t signals = ZXIO_SIGNAL_PEER_CLOSED;
     wait_begin_inner(events, signals, handle, out_signals);
@@ -530,16 +468,6 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
     *out_events = events;
   }
 
-  zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
-                      int16_t* out_code) override {
-    return zxio_recvmsg(&zxio_storage().io, msg, flags, out_actual, out_code);
-  }
-
-  zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
-                      int16_t* out_code) override {
-    return zxio_sendmsg(&zxio_storage().io, msg, flags, out_actual, out_code);
-  }
-
  protected:
   friend class fbl::internal::MakeRefCountedHelper<datagram_socket>;
   friend class fbl::RefPtr<datagram_socket>;
@@ -549,14 +477,6 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
  private:
   fidl::WireSyncClient<fsocket::DatagramSocket>& GetClient() override {
     return zxio_datagram_socket(&zxio_storage().io).client;
-  }
-
-  ErrOrOutCode GetError() override {
-    std::optional err = GetErrorWithClient(GetClient());
-    if (!err.has_value()) {
-      return zx::ok(static_cast<int16_t>(0));
-    }
-    return err.value();
   }
 };
 
@@ -572,7 +492,7 @@ static zxio_stream_socket_t& zxio_stream_socket(zxio_t* io) {
 
 namespace fdio_internal {
 
-struct stream_socket : public socket_with_zx_socket<StreamSocket> {
+struct stream_socket : public base_socket<StreamSocket> {
   static constexpr zx_signals_t kSignalIncoming = ZX_USER_SIGNAL_0;
   static constexpr zx_signals_t kSignalConnected = ZX_USER_SIGNAL_3;
 
@@ -665,118 +585,10 @@ struct stream_socket : public socket_with_zx_socket<StreamSocket> {
     *out_events = events;
   }
 
-  zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
-                      int16_t* out_code) override {
-    std::optional preflight = Preflight(ENOTCONN);
-    if (preflight.has_value()) {
-      ErrOrOutCode err = preflight.value();
-      if (err.is_error()) {
-        return err.status_value();
-      }
-      *out_code = err.value();
-      return ZX_OK;
-    }
-
-    std::optional read_error = GetZxSocketReadError(recvmsg_inner(msg, flags, out_actual));
-    if (read_error.has_value()) {
-      zx::status err = read_error.value();
-      if (!err.is_error()) {
-        *out_code = err.value();
-        if (err.value() == 0) {
-          *out_actual = 0;
-        }
-      }
-      return err.status_value();
-    }
-    *out_code = 0;
-    return ZX_OK;
-  }
-
-  zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
-                      int16_t* out_code) override {
-    std::optional preflight = Preflight(EPIPE);
-    if (preflight.has_value()) {
-      ErrOrOutCode err = preflight.value();
-      if (err.is_error()) {
-        return err.status_value();
-      }
-      *out_code = err.value();
-      return ZX_OK;
-    }
-
-    // Fuchsia does not support control messages on stream sockets. But we still parse the buffer
-    // to check that it is valid.
-    // TODO(https://fxbug.dev/110570) Add tests with msg as nullptr.
-    if (msg == nullptr) {
-      *out_code = EFAULT;
-      return ZX_OK;
-    }
-    const msghdr& msghdr_ref = *msg;
-    fidl::Arena allocator;
-    fit::result cmsg_result =
-        ParseControlMessages<fsocket::wire::SocketSendControlData>(allocator, msghdr_ref);
-    if (cmsg_result.is_error()) {
-      *out_code = cmsg_result.error_value();
-      return ZX_OK;
-    }
-
-    std::optional write_error = GetZxSocketWriteError(sendmsg_inner(msg, flags, out_actual));
-    if (write_error.has_value()) {
-      zx::status err = write_error.value();
-      if (!err.is_error()) {
-        *out_code = err.value();
-      }
-      return err.status_value();
-    }
-    *out_code = 0;
-    return ZX_OK;
-  }
-
  private:
   zxio_stream_socket_t& zxio_stream_socket() { return ::zxio_stream_socket(&zxio_storage().io); }
   zxio_stream_socket_state_t& zxio_stream_socket_state() { return zxio_stream_socket().state; }
   std::mutex& zxio_stream_socket_state_lock() { return zxio_stream_socket().state_lock; }
-
-  std::optional<ErrOrOutCode> Preflight(int fallback) {
-    auto [state, has_error] = GetState();
-    if (has_error) {
-      zx::status err = GetError();
-      if (err.is_error()) {
-        return err.take_error();
-      }
-      if (int16_t value = err.value(); value != 0) {
-        return zx::ok(value);
-      }
-      // Error was consumed.
-    }
-
-    switch (state) {
-      case zxio_stream_socket_state_t::UNCONNECTED:
-        __FALLTHROUGH;
-      case zxio_stream_socket_state_t::LISTENING:
-        return zx::ok(static_cast<int16_t>(fallback));
-      case zxio_stream_socket_state_t::CONNECTING:
-        if (!has_error) {
-          return zx::ok(static_cast<int16_t>(EAGAIN));
-        }
-        // There's an error on the socket, we will discover it when we perform our I/O.
-        __FALLTHROUGH;
-      case zxio_stream_socket_state_t::CONNECTED:
-        return std::nullopt;
-    }
-  }
-
-  ErrOrOutCode GetError() override {
-    fidl::WireResult response = GetClient()->GetError();
-    if (!response.ok()) {
-      return zx::error(response.status());
-    }
-    const auto& result = response.value();
-    if (result.is_error()) {
-      return zx::ok(static_cast<int16_t>(result.error_value()));
-    }
-    return zx::ok(static_cast<int16_t>(0));
-  }
 
   fidl::WireSyncClient<fsocket::StreamSocket>& GetClient() override {
     return zxio_stream_socket().client;

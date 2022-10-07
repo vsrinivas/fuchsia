@@ -52,8 +52,6 @@ struct zxio : public fdio_t {
   void wait_begin_inner(uint32_t events, zx_signals_t signals, zx_handle_t* out_handle,
                         zx_signals_t* out_signals);
   void wait_end_inner(zx_signals_t signals, uint32_t* out_events, zx_signals_t* out_signals);
-  zx_status_t recvmsg_inner(struct msghdr* msg, int flags, size_t* out_actual);
-  zx_status_t sendmsg_inner(const struct msghdr* msg, int flags, size_t* out_actual);
 };
 
 struct pipe : public zxio {

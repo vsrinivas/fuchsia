@@ -9,6 +9,7 @@
 #include <lib/fdio/io.h>
 #include <lib/zxio/bsdsocket.h>
 #include <lib/zxio/cpp/create_with_type.h>
+#include <lib/zxio/cpp/transitional.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/watcher.h>
 #include <lib/zxio/zxio.h>
@@ -204,66 +205,15 @@ zx_status_t zxio::set_flags(fio::wire::OpenFlags flags) {
   return zxio_flags_set(&zxio_storage().io, static_cast<uint32_t>(flags));
 }
 
-zx_status_t zxio::recvmsg_inner(struct msghdr* msg, int flags, size_t* out_actual) {
-  zxio_flags_t zxio_flags = 0;
-  if (flags & MSG_PEEK) {
-    zxio_flags |= ZXIO_PEEK;
-    flags &= ~MSG_PEEK;
-  }
-  if (flags) {
-    // TODO(https://fxbug.dev/67925): support MSG_OOB
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  // Variable length arrays have to have nonzero sizes, so we can't allocate a zx_iov for an empty
-  // io vector. Instead, we can ask to read zero entries with a null vector.
-  if (msg->msg_iovlen == 0) {
-    return zxio_readv(&zxio_storage().io, nullptr, 0, zxio_flags, out_actual);
-  }
-
-  zx_iovec_t zx_iov[msg->msg_iovlen];
-  for (int i = 0; i < msg->msg_iovlen; ++i) {
-    iovec const& iov = msg->msg_iov[i];
-    zx_iov[i] = {
-        .buffer = iov.iov_base,
-        .capacity = iov.iov_len,
-    };
-  }
-
-  return zxio_readv(&zxio_storage().io, zx_iov, msg->msg_iovlen, zxio_flags, out_actual);
-}
-
-zx_status_t zxio::sendmsg_inner(const struct msghdr* msg, int flags, size_t* out_actual) {
-  if (flags) {
-    // TODO(https://fxbug.dev/67925): support MSG_OOB
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  // Variable length arrays have to have nonzero sizes, so we can't allocate a zx_iov for an empty
-  // io vector. Instead, we can ask to write zero entries with a null vector.
-  if (msg->msg_iovlen == 0) {
-    return zxio_writev(&zxio_storage().io, nullptr, 0, 0, out_actual);
-  }
-
-  zx_iovec_t zx_iov[msg->msg_iovlen];
-  for (int i = 0; i < msg->msg_iovlen; ++i) {
-    zx_iov[i] = {
-        .buffer = msg->msg_iov[i].iov_base,
-        .capacity = msg->msg_iov[i].iov_len,
-    };
-  }
-  return zxio_writev(&zxio_storage().io, zx_iov, msg->msg_iovlen, 0, out_actual);
-}
-
 zx_status_t zxio::recvmsg(struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
   *out_code = 0;
-  return recvmsg_inner(msg, flags, out_actual);
+  return zxio_recvmsg_inner(&zxio_storage().io, msg, flags, out_actual);
 }
 
 zx_status_t zxio::sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
                           int16_t* out_code) {
   *out_code = 0;
-  return sendmsg_inner(msg, flags, out_actual);
+  return zxio_sendmsg_inner(&zxio_storage().io, msg, flags, out_actual);
 }
 
 zx::status<fdio_ptr> pipe::create(zx::socket socket) {
@@ -302,7 +252,7 @@ zx::status<std::pair<fdio_ptr, fdio_ptr>> pipe::create_pair(uint32_t options) {
 
 zx_status_t pipe::recvmsg(struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
   *out_code = 0;
-  zx_status_t status = recvmsg_inner(msg, flags, out_actual);
+  zx_status_t status = zxio_recvmsg_inner(&zxio_storage().io, msg, flags, out_actual);
 
   // We've reached end-of-file, which is signaled by successfully reading zero
   // bytes.

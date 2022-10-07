@@ -118,7 +118,6 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//sdk/fidl/fuchsia.process:fuchsia.process_cpp_wire",
       "//sdk/lib/fidl",
       "//sdk/lib/fit",
-      "//sdk/lib/stdcompat",
       "//sdk/lib/zxio",
       "//sdk/lib/zxio:inception",
       "//zircon/system/ulib/fbl",
