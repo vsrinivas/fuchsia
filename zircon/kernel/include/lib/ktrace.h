@@ -19,6 +19,7 @@
 
 namespace ktrace_thunks {
 
+bool tag_enabled(uint32_t tag);
 template <typename... Args>
 void write_record(uint32_t effective_tag, uint64_t explicit_ts, Args... args);
 void write_record_tiny(uint32_t tag, uint32_t arg);
@@ -29,6 +30,22 @@ template <fxt::RefType name_type, fxt::ArgumentType... arg_types, fxt::RefType..
 void fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid, zx_obj_type_t obj_type,
                        const fxt::StringRef<name_type>& name_arg,
                        const fxt::Argument<arg_types, ref_types>&... args);
+
+template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
+          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
+void fxt_duration_begin(uint32_t tag, uint64_t timestamp,
+                        const fxt::ThreadRef<thread_type>& thread_ref,
+                        const fxt::StringRef<category_type>& category_ref,
+                        const fxt::StringRef<name_type>& name_ref,
+                        const fxt::Argument<arg_types, ref_types>&... args);
+
+template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
+          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
+void fxt_duration_end(uint32_t tag, uint64_t timestamp,
+                      const fxt::ThreadRef<thread_type>& thread_ref,
+                      const fxt::StringRef<category_type>& category_ref,
+                      const fxt::StringRef<name_type>& name_ref,
+                      const fxt::Argument<arg_types, ref_types>&... args);
 
 void fxt_string_record(uint16_t index, const char* string, size_t string_length);
 
@@ -74,6 +91,9 @@ inline constexpr uint64_t kRecordCurrentTimestamp = 0xffffffff'ffffffff;
 //
 #define KTRACE_STRING_REF_CAT(a, b) a##b
 #define KTRACE_STRING_REF(string) KTRACE_STRING_REF_CAT(string, _stringref)
+
+// Check if tracing is enabled for the given tag.
+inline bool ktrace_tag_enabled(uint32_t tag) { return ktrace_thunks::tag_enabled(tag); }
 
 // Emits a tiny trace record.
 inline void ktrace_tiny(uint32_t tag, uint32_t arg) { ktrace_thunks::write_record_tiny(tag, arg); }
@@ -275,6 +295,26 @@ inline void fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid, zx_obj_
 
 inline void fxt_string_record(uint16_t index, const char* string, size_t string_length) {
   ktrace_thunks::fxt_string_record(index, string, string_length);
+}
+
+template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
+          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
+inline void fxt_duration_begin(uint32_t tag, uint64_t timestamp,
+                               const fxt::ThreadRef<thread_type>& thread_ref,
+                               const fxt::StringRef<category_type>& category_ref,
+                               const fxt::StringRef<name_type>& name_ref,
+                               const fxt::Argument<arg_types, ref_types>&... args) {
+  ktrace_thunks::fxt_duration_begin(tag, timestamp, thread_ref, category_ref, name_ref, args...);
+}
+
+template <fxt::RefType thread_type, fxt::RefType category_type, fxt::RefType name_type,
+          fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
+inline void fxt_duration_end(uint32_t tag, uint64_t timestamp,
+                             const fxt::ThreadRef<thread_type>& thread_ref,
+                             const fxt::StringRef<category_type>& category_ref,
+                             const fxt::StringRef<name_type>& name_ref,
+                             const fxt::Argument<arg_types, ref_types>&... args) {
+  ktrace_thunks::fxt_duration_end(tag, timestamp, thread_ref, category_ref, name_ref, args...);
 }
 
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);

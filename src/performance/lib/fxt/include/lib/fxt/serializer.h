@@ -587,6 +587,8 @@ inline WordSize EventContentWords(EventType eventType) {
     case EventType::kFlowStep:
     case EventType::kFlowEnd:
       return WordSize(1);
+    default:
+      __builtin_abort();
   }
 }
 

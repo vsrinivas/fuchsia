@@ -52,7 +52,6 @@ class Importer {
 
   bool HandleThreadName(zx_koid_t thread, zx_koid_t process, std::string_view name);
   bool HandleProcessName(zx_koid_t process, std::string_view name);
-  bool HandleSyscallName(uint32_t syscall, std::string_view name);
   bool HandleIRQName(uint32_t irq, std::string_view name);
   bool HandleProbeName(uint32_t probe, std::string_view name);
   bool HandleVcpuMeta(uint32_t meta, std::string_view name);
@@ -231,16 +230,8 @@ class Importer {
   };
   std::unordered_map<zx_koid_t, VcpuDuration> vcpu_durations_;
 
-  struct SyscallDuration {
-    trace_ticks_t begin;
-    uint32_t syscall;
-    bool valid = false;
-  };
-  std::unordered_map<zx_koid_t, SyscallDuration> syscall_durations_;
-
   std::unordered_map<uint32_t, trace_string_ref_t> irq_names_;
   std::unordered_map<uint32_t, trace_string_ref_t> probe_names_;
-  std::unordered_map<uint32_t, trace_string_ref_t> syscall_names_;
   std::unordered_map<uint32_t, trace_string_ref_t> vcpu_meta_;
   std::unordered_map<uint32_t, trace_string_ref_t> vcpu_exit_meta_;
 

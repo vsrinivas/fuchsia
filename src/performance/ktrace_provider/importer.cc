@@ -412,8 +412,6 @@ bool Importer::ImportNameRecord(const ktrace_rec_name_t* record, const TagInfo& 
       return HandleThreadName(record->id, record->arg, name);
     case KTRACE_EVENT(TAG_PROC_NAME):
       return HandleProcessName(record->id, name);
-    case KTRACE_EVENT(TAG_SYSCALL_NAME):
-      return HandleSyscallName(record->id, name);
     case KTRACE_EVENT(TAG_IRQ_NAME):
       return HandleIRQName(record->id, name);
     case KTRACE_EVENT(TAG_PROBE_NAME):
@@ -608,12 +606,6 @@ bool Importer::HandleProcessName(zx_koid_t process, std::string_view name) {
   return false;
 }
 
-bool Importer::HandleSyscallName(uint32_t syscall, std::string_view name) {
-  syscall_names_.emplace(
-      syscall, trace_context_make_registered_string_copy(context_, name.data(), name.length()));
-  return true;
-}
-
 bool Importer::HandleIRQName(uint32_t irq, std::string_view name) {
   irq_names_.emplace(
       irq, trace_context_make_registered_string_copy(context_, name.data(), name.length()));
@@ -662,39 +654,14 @@ bool Importer::HandleIRQExit(trace_ticks_t event_time, trace_cpu_number_t cpu_nu
 
 bool Importer::HandleSyscallEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                                   uint32_t syscall) {
-  zx_koid_t thread = GetCpuCurrentThread(cpu_number);
-  if (thread != ZX_KOID_INVALID) {
-    auto& duration = syscall_durations_[thread];
-    if (duration.valid) {
-      FX_LOGS(WARNING) << "Syscall duration for thread " << thread << " already exists";
-    }
-    duration = SyscallDuration{.begin = event_time, .syscall = syscall, .valid = true};
-  }
-  return true;
+  FX_LOGS(WARNING) << "Found syscall enter event that is expected to be migrated to FXT.";
+  return false;
 }
 
 bool Importer::HandleSyscallExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                                  uint32_t syscall) {
-  zx_koid_t thread = GetCpuCurrentThread(cpu_number);
-  if (thread != ZX_KOID_INVALID) {
-    auto& duration = syscall_durations_[thread];
-    if (!duration.valid) {
-      // This is common as syscalls that start before tracing starts will not
-      // have a corresponding SyscallEnter call and should be ignored.
-      return false;
-    }
-    if (duration.syscall != syscall) {
-      FX_LOGS(WARNING) << "Syscall end type on thread " << thread
-                       << " does not match the begin type";
-      return false;
-    }
-    trace_thread_ref_t thread_ref = GetThreadRef(thread);
-    trace_string_ref_t name_ref = GetNameRef(syscall_names_, "syscall", syscall);
-    trace_context_write_duration_event_record(context_, duration.begin, event_time, &thread_ref,
-                                              &syscall_category_ref_, &name_ref, nullptr, 0u);
-    duration.valid = false;
-  }
-  return true;
+  FX_LOGS(WARNING) << "Found syscall exit event that is expected to be migrated to FXT.";
+  return false;
 }
 
 bool Importer::HandlePageFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,

@@ -34,38 +34,6 @@ internal::KTraceState KTRACE_STATE;
 
 namespace {
 
-// One of these macros is invoked by kernel.inc for each syscall.
-
-// These don't have kernel entry points.
-#define VDSO_SYSCALL(...)
-
-// These are the direct kernel entry points.
-#define KERNEL_SYSCALL(name, type, attrs, nargs, arglist, prototype) [ZX_SYS_##name] = #name,
-#define INTERNAL_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
-#define BLOCKING_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
-
-#if defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wc99-designator"
-#endif
-constexpr const char* kSyscallNames[] = {
-#include <lib/syscalls/kernel.inc>
-};
-#if defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-
-#undef VDSO_SYSCALL
-#undef KERNEL_SYSCALL
-#undef INTERNAL_SYSCALL
-#undef BLOCKING_SYSCALL
-
-void ktrace_report_syscalls() {
-  for (uint32_t i = 0; i < ktl::size(kSyscallNames); ++i) {
-    ktrace_name_etc(TAG_SYSCALL_NAME, i, 0, kSyscallNames[i], true);
-  }
-}
-
 zx_ticks_t ktrace_ticks_per_ms() { return ticks_per_second() / 1000; }
 
 StringRef* ktrace_find_probe(const char* name) {
@@ -513,7 +481,6 @@ void KTraceState::WriteNameEtc(uint32_t tag, uint32_t id, uint32_t arg, const ch
 }
 
 void KTraceState::ReportStaticNames() {
-  ktrace_report_syscalls();
   ktrace_report_probes();
   ktrace_report_vcpu_meta();
 }

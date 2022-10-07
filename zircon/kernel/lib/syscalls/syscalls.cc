@@ -34,6 +34,23 @@
 
 namespace {
 
+#define VDSO_SYSCALL(...)
+#define KERNEL_SYSCALL(name, type, attrs, nargs, arglist, prototype) \
+  [ZX_SYS_##name] = #name##_stringref,
+#define INTERNAL_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
+#define BLOCKING_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
+
+#if defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-designator"
+#endif
+StringRef* const kSyscallNames[] = {
+#include <lib/syscalls/kernel.inc>
+};
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
 __NO_INLINE int sys_invalid_syscall(uint64_t num, uint64_t pc, uintptr_t vdso_code_address) {
   LTRACEF("invalid syscall %lu from PC %#lx vDSO code %#lx\n", num, pc, vdso_code_address);
   Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
@@ -46,6 +63,14 @@ struct syscall_pre_out {
   ProcessDispatcher* current_process;
 };
 
+fxt::StringRef<fxt::RefType::kId> syscall_name_ref(uint64_t syscall_num) {
+  if (syscall_num < ktl::size(kSyscallNames) && kSyscallNames[syscall_num] != nullptr) {
+    return fxt::StringRef(kSyscallNames[syscall_num]->GetFxtId());
+  } else {
+    return fxt::StringRef("Unknown Syscall"_stringref->GetFxtId());
+  }
+}
+
 // N.B. Interrupts must be disabled on entry and they will be disabled on exit.
 // The reason is the two calls two arch_curr_cpu_num in the ktrace calls: we
 // don't want the cpu changing during the call.
@@ -53,12 +78,18 @@ struct syscall_pre_out {
 // Try to do as much as possible in the shared preamble code to maximize code reuse
 // between syscalls.
 __NO_INLINE syscall_pre_out do_syscall_pre(uint64_t syscall_num, uint64_t pc) {
-  ktrace_tiny(TAG_SYSCALL_ENTER, (static_cast<uint32_t>(syscall_num) << 8) | arch_curr_cpu_num());
+  if (unlikely(ktrace_tag_enabled(TAG_SYSCALL_ENTER))) {
+    Thread* current_thread = Thread::Current::Get();
+    fxt_duration_begin(TAG_SYSCALL_ENTER, current_ticks(),
+                       fxt::ThreadRef(current_thread->pid(), current_thread->tid()),
+                       fxt::StringRef("kernel:syscall"_stringref->GetFxtId()),
+                       syscall_name_ref(syscall_num));
+  }
 
   CPU_STATS_INC(syscalls);
 
   /* re-enable interrupts to maintain kernel preemptiveness
-     This must be done after the above ktrace_tiny call, and after the
+     This must be done after the above fxt_duration_begin call, and after the
      above CPU_STATS_INC call as it also calls arch_curr_cpu_num. */
   arch_enable_ints();
 
@@ -75,10 +106,16 @@ __NO_INLINE syscall_result do_syscall_post(uint64_t ret, uint64_t syscall_num) {
   LTRACEF_LEVEL(2, "t %p ret %#" PRIx64 "\n", Thread::Current::Get(), ret);
 
   /* re-disable interrupts on the way out
-     This must be done before the below ktrace_tiny call. */
+     This must be done before the below fxt_duration_end call. */
   arch_disable_ints();
 
-  ktrace_tiny(TAG_SYSCALL_EXIT, (static_cast<uint32_t>(syscall_num << 8)) | arch_curr_cpu_num());
+  if (unlikely(ktrace_tag_enabled(TAG_SYSCALL_EXIT))) {
+    Thread* current_thread = Thread::Current::Get();
+    fxt_duration_end(TAG_SYSCALL_EXIT, current_ticks(),
+                     fxt::ThreadRef(current_thread->pid(), current_thread->tid()),
+                     fxt::StringRef("kernel:syscall"_stringref->GetFxtId()),
+                     syscall_name_ref(syscall_num));
+  }
 
   // The assembler caller will re-disable interrupts at the appropriate time.
   return {ret, Thread::Current::Get()->IsSignaled()};

@@ -33,7 +33,7 @@ struct StringRef {
   // TEMPORARY(fxbug.dev/98176): Returns the numeric id for this string ref for
   // use in FXT records. Since ktrace_provider also allocates string records,
   // use the high half of the index space to try to avoid collisions.
-  int GetFxtId() { return GetId() | 0x4000; }
+  uint16_t GetFxtId() { return static_cast<uint16_t>(GetId() | 0x4000); }
 
   // Returns the head of the global string ref linked list.
   static StringRef* head() { return head_.load(ktl::memory_order_acquire); }

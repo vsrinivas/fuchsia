@@ -14,7 +14,6 @@ KTRACE_DEF(0x001, 32B, TICKS_PER_MS, META)  // lo32, hi32
 KTRACE_DEF(0x020, NAME, KTHREAD_NAME, META)    // ktid, 0, name[]
 KTRACE_DEF(0x021, NAME, THREAD_NAME, META)     // tid, pid, name[]
 KTRACE_DEF(0x022, NAME, PROC_NAME, META)       // pid, 0, name[]
-KTRACE_DEF(0x023, NAME, SYSCALL_NAME, META)    // num, 0, name[]
 KTRACE_DEF(0x024, NAME, IRQ_NAME, META)        // num, 0, name[]
 KTRACE_DEF(0x025, NAME, PROBE_NAME, META)      // num, 0, name[]
 KTRACE_DEF(0x026, NAME, VCPU_META, META)       // meta, 0, name[]
