@@ -447,7 +447,11 @@ impl<'a> DefaultLogFormatter<'a> {
         };
 
         let tags_str = if options.show_tags {
-            format!("[{}]", data.tags().map(|t| t.join(",")).unwrap_or(String::default()))
+            match data.tags() {
+                Some(tags) if tags.len() == 0 => String::default(),
+                Some(tags) => format!("[{}]", tags.join(",")),
+                None => String::default(),
+            }
         } else {
             String::default()
         };
@@ -2057,7 +2061,7 @@ mod test {
                         /* symbolized_msg */ None,
                         /*color_override */ None
                     ),
-                    "[1615535969.000][moniker][][W] <missing message>"
+                    "[1615535969.000][moniker][W] <missing message>"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
@@ -2086,7 +2090,7 @@ mod test {
                         /* symbolized_msg */ None,
                         /*color_override */ None
                     ),
-                    "[1615535969.000][moniker][][W] multi\nline\nmessage"
+                    "[1615535969.000][moniker][W] multi\nline\nmessage"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
