@@ -22,7 +22,7 @@ use {
         channel::{mpsc, oneshot},
         future::FutureExt,
         select,
-        stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
+        stream::{self, Fuse, FuturesUnordered, StreamExt, TryStreamExt},
     },
     log::info,
     parking_lot::Mutex,
@@ -48,7 +48,7 @@ const AP_START_RETRY_INTERVAL: i64 = 2;
 const AP_START_MAX_RETRIES: u16 = 6;
 
 type State = state_machine::State<ExitReason>;
-type NextReqFut = stream::StreamFuture<mpsc::Receiver<ManualRequest>>;
+type ReqStream = stream::Fuse<mpsc::Receiver<ManualRequest>>;
 
 pub trait AccessPointApi {
     fn start(
@@ -206,18 +206,29 @@ impl ApStateTracker {
     }
 }
 
+struct CommonStateDependencies {
+    proxy: fidl_sme::ApSmeProxy,
+    req_stream: ReqStream,
+    state_tracker: Arc<ApStateTracker>,
+    telemetry_sender: TelemetrySender,
+}
+
 pub async fn serve(
     iface_id: u16,
     proxy: fidl_sme::ApSmeProxy,
     sme_event_stream: fidl_sme::ApSmeEventStream,
-    req_stream: mpsc::Receiver<ManualRequest>,
+    req_stream: Fuse<mpsc::Receiver<ManualRequest>>,
     message_sender: ApListenerMessageSender,
     telemetry_sender: TelemetrySender,
 ) {
     let state_tracker = Arc::new(ApStateTracker::new(message_sender));
-    let state_machine =
-        stopped_state(proxy, req_stream.into_future(), state_tracker.clone(), telemetry_sender)
-            .into_state_machine();
+    let deps = CommonStateDependencies {
+        proxy,
+        req_stream,
+        state_tracker: state_tracker.clone(),
+        telemetry_sender,
+    };
+    let state_machine = stopped_state(deps).into_state_machine();
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
         state_machine = state_machine.fuse() => {
@@ -241,31 +252,14 @@ pub async fn serve(
 }
 
 fn perform_manual_request(
-    proxy: fidl_sme::ApSmeProxy,
+    deps: CommonStateDependencies,
     req: Option<ManualRequest>,
-    req_stream: mpsc::Receiver<ManualRequest>,
-    state_tracker: Arc<ApStateTracker>,
-    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
     match req {
-        Some(ManualRequest::Start((req, responder))) => Ok(starting_state(
-            proxy,
-            req_stream.into_future(),
-            req,
-            AP_START_MAX_RETRIES,
-            Some(responder),
-            state_tracker,
-            telemetry_sender,
-        )
-        .into_state()),
-        Some(ManualRequest::Stop(responder)) => Ok(stopping_state(
-            responder,
-            proxy,
-            req_stream.into_future(),
-            state_tracker,
-            telemetry_sender,
-        )
-        .into_state()),
+        Some(ManualRequest::Start((req, responder))) => {
+            Ok(starting_state(deps, req, AP_START_MAX_RETRIES, Some(responder)).into_state())
+        }
+        Some(ManualRequest::Stop(responder)) => Ok(stopping_state(deps, responder).into_state()),
         Some(ManualRequest::Exit(responder)) => {
             responder.send(()).unwrap_or_else(|_| ());
             Err(ExitReason(Ok(())))
@@ -274,7 +268,7 @@ fn perform_manual_request(
             // It is possible that the state machine will be cleaned up before it has the
             // opportunity to realize that the SME is no longer functional.  In this scenario,
             // listeners need to be notified of the failure.
-            state_tracker
+            deps.state_tracker
                 .update_operating_state(types::OperatingState::Failed)
                 .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
@@ -287,24 +281,12 @@ fn perform_manual_request(
 
 // This intermediate state supresses a compiler warning on detection of a cycle.
 fn transition_to_starting(
-    proxy: fidl_sme::ApSmeProxy,
-    next_req: NextReqFut,
+    deps: CommonStateDependencies,
     req: ApConfig,
     remaining_retries: u16,
     responder: Option<oneshot::Sender<()>>,
-    state_tracker: Arc<ApStateTracker>,
-    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
-    Ok(starting_state(
-        proxy,
-        next_req,
-        req,
-        remaining_retries,
-        responder,
-        state_tracker,
-        telemetry_sender,
-    )
-    .into_state())
+    Ok(starting_state(deps, req, remaining_retries, responder).into_state())
 }
 
 /// In the starting state, a request to ApSmeProxy::Start is made.  If the start request fails,
@@ -328,16 +310,13 @@ fn transition_to_starting(
 ///    exit the state machine with an error.
 /// 4. When the start request finishes, transition into the started state.
 async fn starting_state(
-    proxy: fidl_sme::ApSmeProxy,
-    mut next_req: NextReqFut,
+    mut deps: CommonStateDependencies,
     req: ApConfig,
     remaining_retries: u16,
     responder: Option<oneshot::Sender<()>>,
-    state_tracker: Arc<ApStateTracker>,
-    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
     // Send a stop request to ensure that the AP begins in an unstarting state.
-    let stop_result = match proxy.stop().await {
+    let stop_result = match deps.proxy.stop().await {
         Ok(fidl_sme::StopApResultCode::Success) => Ok(()),
         Ok(code) => Err(format_err!("Unexpected StopApResultCode: {:?}", code)),
         Err(e) => Err(format_err!("Failed to send a stop command to wlanstack: {}", e)),
@@ -345,7 +324,7 @@ async fn starting_state(
 
     // If the stop operation failed, send a failure update and exit the state machine.
     if stop_result.is_err() {
-        state_tracker
+        deps.state_tracker
             .reset_state(ApStateUpdate::new(
                 req.id.clone(),
                 types::OperatingState::Failed,
@@ -358,11 +337,11 @@ async fn starting_state(
     }
 
     // If the stop operation was successful, update all listeners that the AP is stopped.
-    state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+    deps.state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
     // Update all listeners that a new AP is starting if this is the first attempt to start the AP.
     if remaining_retries == AP_START_MAX_RETRIES {
-        state_tracker
+        deps.state_tracker
             .reset_state(ApStateUpdate::new(
                 req.id.clone(),
                 types::OperatingState::Starting,
@@ -373,11 +352,11 @@ async fn starting_state(
     }
 
     let mut ap_config = fidl_sme::ApConfig::from(req.clone());
-    let start_result = match proxy.start(&mut ap_config).await {
+    let start_result = match deps.proxy.start(&mut ap_config).await {
         Ok(fidl_sme::StartApResultCode::Success) => Ok(()),
         Ok(code) => {
             // Log a metric indicating that starting the AP failed.
-            telemetry_sender.send(TelemetryEvent::ApStartFailure);
+            deps.telemetry_sender.send(TelemetryEvent::ApStartFailure);
 
             // For any non-Success response, attempt to retry the start operation.  A successful
             // stop operation followed by an unsuccessful start operation likely indicates that the
@@ -391,26 +370,20 @@ async fn starting_state(
                 select! {
                     () = retry_timer.fuse() => {
                         return transition_to_starting(
-                            proxy,
-                            next_req,
+                            deps,
                             req,
                             remaining_retries - 1,
                             responder,
-                            state_tracker,
-                            telemetry_sender,
                         );
                     },
-                    (req, req_stream) = next_req => {
+                    req = deps.req_stream.next() => {
                         // If a new request comes in, clear out the current AP state.
-                        state_tracker
+                        deps.state_tracker
                             .set_stopped_state()
                             .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
                         return perform_manual_request(
-                            proxy,
+                            deps,
                             req,
-                            req_stream,
-                            state_tracker,
-                            telemetry_sender,
                         );
                     }
                 }
@@ -428,7 +401,7 @@ async fn starting_state(
 
     start_result.map_err(|e| {
         // Send a failure notification.
-        if let Err(e) = state_tracker.reset_state(ApStateUpdate::new(
+        if let Err(e) = deps.state_tracker.reset_state(ApStateUpdate::new(
             req.id.clone(),
             types::OperatingState::Failed,
             req.mode,
@@ -444,10 +417,10 @@ async fn starting_state(
         None => {}
     }
 
-    state_tracker
+    deps.state_tracker
         .update_operating_state(types::OperatingState::Active)
         .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
-    return Ok(started_state(proxy, next_req, req, state_tracker, telemetry_sender).into_state());
+    return Ok(started_state(deps, req).into_state());
 }
 
 /// In the stopping state, an ApSmeProxy::Stop is requested.  Once the stop request has been
@@ -462,13 +435,10 @@ async fn starting_state(
 ///    state.
 /// 2. If an SME interaction fails, exits the state machine with an error.
 async fn stopping_state(
+    deps: CommonStateDependencies,
     responder: oneshot::Sender<()>,
-    proxy: fidl_sme::ApSmeProxy,
-    next_req: NextReqFut,
-    state_tracker: Arc<ApStateTracker>,
-    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
-    let result = match proxy.stop().await {
+    let result = match deps.proxy.stop().await {
         Ok(fidl_sme::StopApResultCode::Success) => Ok(()),
         Ok(code) => Err(format_err!("Unexpected StopApResultCode: {:?}", code)),
         Err(e) => Err(format_err!("Failed to send a stop command to wlanstack: {}", e)),
@@ -477,54 +447,37 @@ async fn stopping_state(
     // If the stop command fails, the SME is probably unusable.  If the state is not updated before
     // evaluating the stop result code, the AP state updates may end up with a lingering reference
     // to a started or starting AP.
-    state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+    deps.state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
     result.map_err(|e| ExitReason(Err(e)))?;
 
     // Ack the request to stop the AP.
     responder.send(()).unwrap_or_else(|_| ());
 
-    Ok(stopped_state(proxy, next_req, state_tracker, telemetry_sender).into_state())
+    Ok(stopped_state(deps).into_state())
 }
 
-async fn stopped_state(
-    proxy: fidl_sme::ApSmeProxy,
-    mut next_req: NextReqFut,
-    state_tracker: Arc<ApStateTracker>,
-    telemetry_sender: TelemetrySender,
-) -> Result<State, ExitReason> {
+async fn stopped_state(mut deps: CommonStateDependencies) -> Result<State, ExitReason> {
     // Wait for the next request from the caller
     loop {
-        let (req, req_stream) = next_req.await;
-        next_req = match req {
+        let req = deps.req_stream.next().await;
+        match req {
             // Immediately reply to stop requests indicating that the AP is already stopped
             Some(ManualRequest::Stop(responder)) => {
                 responder.send(()).unwrap_or_else(|_| ());
-                req_stream.into_future()
             }
             // All other requests are handled manually
-            other => {
-                return perform_manual_request(
-                    proxy.clone(),
-                    other,
-                    req_stream,
-                    state_tracker,
-                    telemetry_sender,
-                )
-            }
+            other => return perform_manual_request(deps, other),
         }
     }
 }
 
 async fn started_state(
-    proxy: fidl_sme::ApSmeProxy,
-    mut next_req: NextReqFut,
+    mut deps: CommonStateDependencies,
     req: ApConfig,
-    state_tracker: Arc<ApStateTracker>,
-    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
     // Holds a pending status request.  Request status immediately upon entering the started state.
     let mut pending_status_req = FuturesUnordered::new();
-    pending_status_req.push(proxy.status());
+    pending_status_req.push(deps.proxy.status());
 
     let mut status_timer =
         fasync::Interval::new(zx::Duration::from_seconds(AP_STATUS_INTERVAL_SEC));
@@ -540,7 +493,7 @@ async fn started_state(
                     Err(e) => {
                         // If querying AP status fails, notify listeners and exit the state
                         // machine.
-                        state_tracker.update_operating_state(types::OperatingState::Failed)
+                        deps.state_tracker.update_operating_state(types::OperatingState::Failed)
                             .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
 
                         return Err(ExitReason(Err(anyhow::Error::from(e))));
@@ -549,37 +502,31 @@ async fn started_state(
 
                 match status_response.running_ap {
                     Some(sme_state) => {
-                        state_tracker.consume_sme_status_update(cbw, *sme_state)
+                        deps.state_tracker.consume_sme_status_update(cbw, *sme_state)
                             .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
                     }
                     None => {
-                        state_tracker.update_operating_state(types::OperatingState::Failed)
+                        deps.state_tracker.update_operating_state(types::OperatingState::Failed)
                             .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
 
                         return transition_to_starting(
-                            proxy,
-                            next_req,
+                            deps,
                             req,
                             AP_START_MAX_RETRIES,
                             None,
-                            state_tracker,
-                            telemetry_sender
                         );
                     }
                 }
             },
             _ = status_timer.select_next_some() => {
                 if pending_status_req.is_empty() {
-                    pending_status_req.push(proxy.clone().status());
+                    pending_status_req.push(deps.proxy.clone().status());
                 }
             },
-            (req, req_stream) = next_req => {
+            req = deps.req_stream.next() => {
                 return perform_manual_request(
-                    proxy,
+                    deps,
                     req,
-                    req_stream,
-                    state_tracker,
-                    telemetry_sender
                 );
             },
             complete => {
@@ -603,13 +550,10 @@ mod tests {
     };
 
     struct TestValues {
-        sme_proxy: fidl_sme::ApSmeProxy,
+        deps: CommonStateDependencies,
         sme_req_stream: fidl_sme::ApSmeRequestStream,
         ap_req_sender: mpsc::Sender<ManualRequest>,
-        ap_req_stream: mpsc::Receiver<ManualRequest>,
-        update_sender: Arc<ApStateTracker>,
         update_receiver: mpsc::UnboundedReceiver<listener::ApMessage>,
-        telemetry_sender: TelemetrySender,
         telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
@@ -622,16 +566,14 @@ mod tests {
         let (telemetry_sender, telemetry_receiver) = mpsc::channel(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
 
-        TestValues {
-            sme_proxy,
-            sme_req_stream,
-            ap_req_sender,
-            ap_req_stream,
-            update_sender: Arc::new(ApStateTracker::new(update_sender)),
-            update_receiver,
+        let deps = CommonStateDependencies {
+            proxy: sme_proxy,
+            req_stream: ap_req_stream.fuse(),
+            state_tracker: Arc::new(ApStateTracker::new(update_sender)),
             telemetry_sender,
-            telemetry_receiver,
-        }
+        };
+
+        TestValues { deps, sme_req_stream, ap_req_sender, update_receiver, telemetry_receiver }
     }
 
     fn create_network_id() -> types::NetworkIdentifier {
@@ -681,17 +623,11 @@ mod tests {
                 types::ConnectivityMode::Unrestricted,
                 types::OperatingBand::Any,
             );
-            test_values.update_sender.inner.lock().state = Some(state);
+            test_values.deps.state_tracker.inner.lock().state = Some(state);
         }
 
         // Run the started state and ignore the status request
-        let fut = started_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = started_state(test_values.deps, req);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -750,17 +686,11 @@ mod tests {
                 types::ConnectivityMode::Unrestricted,
                 types::OperatingBand::Any,
             );
-            test_values.update_sender.inner.lock().state = Some(state);
+            test_values.deps.state_tracker.inner.lock().state = Some(state);
         }
 
         // Run the started state and ignore the status request
-        let fut = started_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = started_state(test_values.deps, req);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -810,17 +740,11 @@ mod tests {
                 types::ConnectivityMode::Unrestricted,
                 types::OperatingBand::Any,
             );
-            test_values.update_sender.inner.lock().state = Some(state);
+            test_values.deps.state_tracker.inner.lock().state = Some(state);
         }
 
         // Run the started state and ignore the status request
-        let fut = started_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = started_state(test_values.deps, req);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -899,17 +823,11 @@ mod tests {
             );
             state.frequency = Some(2437);
             state.clients = Some(ConnectedClientInformation { count: 0 });
-            test_values.update_sender.inner.lock().state = Some(state);
+            test_values.deps.state_tracker.inner.lock().state = Some(state);
         }
 
         // Run the started state and send back an identical status.
-        let fut = started_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = started_state(test_values.deps, req);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -959,17 +877,11 @@ mod tests {
             );
             state.frequency = Some(0);
             state.clients = Some(ConnectedClientInformation { count: 0 });
-            test_values.update_sender.inner.lock().state = Some(state);
+            test_values.deps.state_tracker.inner.lock().state = Some(state);
         }
 
         // Run the started state and send back an identical status.
-        let fut = started_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = started_state(test_values.deps, req);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1023,17 +935,11 @@ mod tests {
             );
             state.frequency = Some(0);
             state.clients = Some(ConnectedClientInformation { count: 0 });
-            test_values.update_sender.inner.lock().state = Some(state);
+            test_values.deps.state_tracker.inner.lock().state = Some(state);
         }
 
         // Run the started state and send back an identical status.
-        let fut = started_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = started_state(test_values.deps, req);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1055,12 +961,7 @@ mod tests {
         let test_values = test_setup();
 
         // Run the stopped state.
-        let fut = stopped_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = stopped_state(test_values.deps);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1082,12 +983,7 @@ mod tests {
         let test_values = test_setup();
 
         // Run the stopped state.
-        let fut = stopped_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = stopped_state(test_values.deps);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1107,12 +1003,7 @@ mod tests {
         let mut test_values = test_setup();
 
         // Run the stopped state.
-        let fut = stopped_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = stopped_state(test_values.deps);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1188,13 +1079,7 @@ mod tests {
 
         // Run the stopping state.
         let (stop_sender, mut stop_receiver) = oneshot::channel();
-        let fut = stopping_state(
-            stop_sender,
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = stopping_state(test_values.deps, stop_sender);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1229,13 +1114,7 @@ mod tests {
 
         // Run the stopping state.
         let (stop_sender, mut stop_receiver) = oneshot::channel();
-        let fut = stopping_state(
-            stop_sender,
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = stopping_state(test_values.deps, stop_sender);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1279,13 +1158,7 @@ mod tests {
 
         // Run the stopping state.
         let (stop_sender, mut stop_receiver) = oneshot::channel();
-        let fut = stopping_state(
-            stop_sender,
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = stopping_state(test_values.deps, stop_sender);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1358,13 +1231,7 @@ mod tests {
 
         // Run the stopping state.
         let (stop_sender, mut stop_receiver) = oneshot::channel();
-        let fut = stopping_state(
-            stop_sender,
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = stopping_state(test_values.deps, stop_sender);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1387,13 +1254,7 @@ mod tests {
 
         // Run the stopping state.
         let (stop_sender, mut stop_receiver) = oneshot::channel();
-        let fut = stopping_state(
-            stop_sender,
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = stopping_state(test_values.deps, stop_sender);
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1440,15 +1301,7 @@ mod tests {
         };
 
         // Start off in the starting state
-        let fut = starting_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            0,
-            Some(start_sender),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = starting_state(test_values.deps, req, 0, Some(start_sender));
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1529,15 +1382,7 @@ mod tests {
         };
 
         // Start off in the starting state
-        let fut = starting_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            0,
-            Some(start_sender),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = starting_state(test_values.deps, req, 0, Some(start_sender));
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1649,15 +1494,7 @@ mod tests {
         };
 
         // Start off in the starting state
-        let fut = starting_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            0,
-            Some(start_sender),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = starting_state(test_values.deps, req, 0, Some(start_sender));
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1726,15 +1563,7 @@ mod tests {
         };
 
         // Start off in the starting state
-        let fut = starting_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            0,
-            Some(start_sender),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = starting_state(test_values.deps, req, 0, Some(start_sender));
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1761,15 +1590,7 @@ mod tests {
         };
 
         // Start off in the starting state
-        let fut = starting_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            0,
-            Some(start_sender),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = starting_state(test_values.deps, req, 0, Some(start_sender));
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1820,15 +1641,7 @@ mod tests {
         };
 
         // Start off in the starting state with AP_START_MAX_RETRIES retry attempts.
-        let fut = starting_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            AP_START_MAX_RETRIES,
-            Some(start_sender),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = starting_state(test_values.deps, req, AP_START_MAX_RETRIES, Some(start_sender));
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -1934,15 +1747,7 @@ mod tests {
             .expect("failed to request AP stop");
 
         // Start off in the starting state with AP_START_MAX_RETRIES retry attempts.
-        let fut = starting_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            AP_START_MAX_RETRIES,
-            Some(start_sender),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = starting_state(test_values.deps, req, AP_START_MAX_RETRIES, Some(start_sender));
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -2059,15 +1864,7 @@ mod tests {
             .expect("failed to request AP stop");
 
         // Start off in the starting state with AP_START_MAX_RETRIES retry attempts.
-        let fut = starting_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            AP_START_MAX_RETRIES,
-            Some(start_sender),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = starting_state(test_values.deps, req, AP_START_MAX_RETRIES, Some(start_sender));
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -2169,15 +1966,7 @@ mod tests {
             .expect("failed to request AP stop");
 
         // Start off in the starting state with AP_START_MAX_RETRIES retry attempts.
-        let fut = starting_state(
-            test_values.sme_proxy,
-            test_values.ap_req_stream.into_future(),
-            req,
-            AP_START_MAX_RETRIES,
-            Some(start_sender),
-            test_values.update_sender,
-            test_values.telemetry_sender,
-        );
+        let fut = starting_state(test_values.deps, req, AP_START_MAX_RETRIES, Some(start_sender));
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
@@ -2252,18 +2041,7 @@ mod tests {
         let (start_response_sender, _) = oneshot::channel();
         let manual_request = ManualRequest::Start((requested_config, start_response_sender));
 
-        let sme_proxy = test_values.sme_proxy.clone();
-        let ap_req_stream = test_values.ap_req_stream;
-        let update_sender = test_values.update_sender;
-        let fut = async move {
-            perform_manual_request(
-                sme_proxy,
-                Some(manual_request),
-                ap_req_stream,
-                update_sender,
-                test_values.telemetry_sender,
-            )
-        };
+        let fut = async move { perform_manual_request(test_values.deps, Some(manual_request)) };
         let fut = run_state_machine(fut);
         pin_mut!(fut);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -2302,19 +2080,19 @@ mod tests {
     fn test_serve_does_not_terminate_right_away() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let sme_event_stream = test_values.sme_proxy.take_event_stream();
+        let sme_event_stream = test_values.deps.proxy.take_event_stream();
         let sme_fut = test_values.sme_req_stream.into_future();
         pin_mut!(sme_fut);
 
-        let update_sender = test_values.update_sender.inner.lock().sender.clone();
+        let update_sender = test_values.deps.state_tracker.inner.lock().sender.clone();
 
         let fut = serve(
             0,
-            test_values.sme_proxy,
+            test_values.deps.proxy,
             sme_event_stream,
-            test_values.ap_req_stream,
+            test_values.deps.req_stream,
             update_sender,
-            test_values.telemetry_sender,
+            test_values.deps.telemetry_sender,
         );
         pin_mut!(fut);
 
@@ -2327,16 +2105,16 @@ mod tests {
     fn test_no_notification_when_sme_fails_while_stopped() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let sme_event_stream = test_values.sme_proxy.take_event_stream();
-        let update_sender = test_values.update_sender.inner.lock().sender.clone();
+        let sme_event_stream = test_values.deps.proxy.take_event_stream();
+        let update_sender = test_values.deps.state_tracker.inner.lock().sender.clone();
 
         let fut = serve(
             0,
-            test_values.sme_proxy,
+            test_values.deps.proxy,
             sme_event_stream,
-            test_values.ap_req_stream,
+            test_values.deps.req_stream,
             update_sender,
-            test_values.telemetry_sender,
+            test_values.deps.telemetry_sender,
         );
         pin_mut!(fut);
 
@@ -2357,17 +2135,17 @@ mod tests {
     fn test_failure_notification_when_configured() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let sme_event_stream = test_values.sme_proxy.take_event_stream();
+        let sme_event_stream = test_values.deps.proxy.take_event_stream();
         let mut sme_fut = Box::pin(test_values.sme_req_stream.into_future());
 
-        let update_sender = test_values.update_sender.inner.lock().sender.clone();
+        let update_sender = test_values.deps.state_tracker.inner.lock().sender.clone();
         let fut = serve(
             0,
-            test_values.sme_proxy,
+            test_values.deps.proxy,
             sme_event_stream,
-            test_values.ap_req_stream,
+            test_values.deps.req_stream,
             update_sender,
-            test_values.telemetry_sender,
+            test_values.deps.telemetry_sender,
         );
         pin_mut!(fut);
 

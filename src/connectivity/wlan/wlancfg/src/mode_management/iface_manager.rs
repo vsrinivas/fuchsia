@@ -323,7 +323,7 @@ impl IfaceManagerService {
             iface_id,
             sme_proxy,
             event_stream,
-            receiver,
+            receiver.fuse(),
             self.ap_update_sender.clone(),
             self.telemetry_sender.clone(),
         )
