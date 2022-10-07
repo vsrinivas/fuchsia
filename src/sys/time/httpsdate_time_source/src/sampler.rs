@@ -364,6 +364,7 @@ mod test {
             https_timeout: zx::Duration::from_seconds(10),
             standard_deviation_bound_percentage: 30,
             first_rtt_time_factor: 5,
+            use_pull_api: false,
         }
     }
 

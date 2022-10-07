@@ -10,4 +10,7 @@
     // This value is based on a best guess how many times longer than a subsequent poll the first
     // poll will take.
     first_rtt_time_factor: 5,
+
+    // By default, `fuchsia.time.external.PushSource` is provided.
+    use_pull_api: false,
 }

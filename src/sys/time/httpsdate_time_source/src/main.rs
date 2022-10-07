@@ -35,10 +35,13 @@ const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
 const REQUEST_URI: &str = "https://clients3.google.com/generate_204";
 
 /// HttpsDate config, populated from build-time generated structured config.
+/// TODO(fxb/105777): Remove next line when PullSource support is implemented.
+#[allow(dead_code)]
 pub struct Config {
     https_timeout: zx::Duration,
     standard_deviation_bound_percentage: u8,
     first_rtt_time_factor: u16,
+    use_pull_api: bool,
 }
 
 impl From<httpsdate_config::Config> for Config {
@@ -47,6 +50,7 @@ impl From<httpsdate_config::Config> for Config {
             https_timeout: zx::Duration::from_seconds(source.https_timeout_sec.into()),
             standard_deviation_bound_percentage: source.standard_deviation_bound_percentage,
             first_rtt_time_factor: source.first_rtt_time_factor,
+            use_pull_api: source.use_pull_api,
         }
     }
 }

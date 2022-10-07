@@ -45,5 +45,9 @@
         // the additional time required during the first HTTPS request to setup a TLS connection and
         // is used to make a best guess for how long the second call will take.
         first_rtt_time_factor: { type: "uint16" },
+
+        // If enabled, `fuchsia.time.external.PullSource` is provided instead of
+        // `fuchsia.time.external.PushSource`.
+        use_pull_api: { type: "bool" },
     },
 }
