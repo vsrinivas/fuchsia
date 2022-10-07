@@ -93,11 +93,6 @@ import("//build/rust/fidl_rust.gni")
 #     Indicates if any of the FIDL files contain the driver transport or
 #     references to the driver transport.
 #
-#   vendor_use_new_api_summary (optional, boolean, default false)
-#     The new API summary format is enabled everywhere by default except in
-#     //vendor/*, which must use this argument to enable it.
-#     TODO(fxbug.dev/109904): Remove this once the soft transition is done.
-#
 #   public_deps
 #   testonly
 #   visibility
@@ -107,6 +102,9 @@ template("fidl") {
   assert(!defined(invoker.deps),
          "All FIDL dependencies are inherently " +
              "public, use 'public_deps' instead of 'deps'.")
+
+  #  TODO(fxbug.dev/109904): Remove.
+  not_needed(invoker, [ "vendor_use_new_api_summary" ])
 
   extra_parameters = {
     library_name = target_name
@@ -138,7 +136,6 @@ template("fidl") {
     "non_fidl_deps",
     "should_lint",
     "sources",
-    "vendor_use_new_api_summary",
   ]
   if (current_toolchain == fidl_toolchain) {
     fidl_library(target_name) {

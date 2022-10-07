@@ -25,31 +25,12 @@ func (s summary) IsEmptyLibrary() bool {
 }
 
 // WriteJSON writes out the summary as JSON.
-func (s summary) WriteJSON(w io.Writer, renameDeclarationToType, includeOrdinals bool) error {
+func (s summary) WriteJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	// 4-level indent is chosen to match `fx format-code`.
 	e.SetIndent("", "    ")
 	e.SetEscapeHTML(false)
-	serialized := serialize([]element(s))
-
-	// TODO(fxbug.dev/109721): Remove.
-	if !renameDeclarationToType {
-		// The code is already changed to use Type, so undo it here.
-		for i := range serialized {
-			serialized[i].Decl = serialized[i].Type
-			serialized[i].Type = ""
-		}
-	}
-
-	// TODO(102427): Remove.
-	if !includeOrdinals {
-		// The code is already changed to include ordinals, so undo it here.
-		for i := range serialized {
-			serialized[i].Ordinal = ""
-		}
-	}
-
-	return e.Encode(serialized)
+	return e.Encode(serialize([]element(s)))
 }
 
 // element describes a single platform surface element.

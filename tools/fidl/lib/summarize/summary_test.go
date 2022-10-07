@@ -1515,14 +1515,7 @@ func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase) {
 			r := c.Single(test.fidl)
 			s := Summarize(r)
 			var b strings.Builder
-
-			// TODO(fxbug.dev/109721): Remove.
-			renameDeclarationToType := true
-
-			// TODO(fxbug.dev/102427): Remove.
-			includeOrdinals := true
-
-			if err := s.WriteJSON(&b, renameDeclarationToType, includeOrdinals); err != nil {
+			if err := s.WriteJSON(&b); err != nil {
 				t.Fatalf("while writing JOSN: %v", err)
 			}
 			actual := strings.Split(b.String(), "\n")

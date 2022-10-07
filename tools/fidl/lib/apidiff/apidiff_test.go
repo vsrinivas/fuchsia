@@ -2123,14 +2123,7 @@ func summarizeOne(t *testing.T, r fidlgen.Root) string {
 	t.Helper()
 	s := summarize.Summarize(r)
 	var buf strings.Builder
-
-	// TODO(fxbug.dev/109721): Remove.
-	renameDeclarationToType := true
-
-	// TODO(fxbug.dev/102427): Remove.
-	includeOrdinals := true
-
-	if err := s.WriteJSON(&buf, renameDeclarationToType, includeOrdinals); err != nil {
+	if err := s.WriteJSON(&buf); err != nil {
 		t.Fatalf("error while summarizing: %v", err)
 	}
 	return buf.String()

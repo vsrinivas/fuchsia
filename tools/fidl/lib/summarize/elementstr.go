@@ -91,9 +91,6 @@ func fidlConstToValue(fc *fidlgen.Constant) Value {
 // Keep the fields sorted by name, otherwise JSON marshaling will not match the
 // fx format-code style.
 type ElementStr struct {
-	// TODO(fxbug.dev/109721): Remove.
-	Decl Type `json:"declaration,omitempty"`
-
 	Kind         `json:"kind"`
 	Name         `json:"name"`
 	Resourceness `json:"resourceness,omitempty"`

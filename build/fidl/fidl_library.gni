@@ -123,13 +123,7 @@ template("fidl_library") {
   plasa_fragment_file = summary_file_json
   plasa_fragment_target_name = "${target_name}_plasa"
   plasa_fragment_fidl(plasa_fragment_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-
-                             # TODO(fxbug.dev/109904): Remove.
-                             "vendor_use_new_api_summary",
-                           ])
+    forward_variables_from(invoker, [ "testonly" ])
     visibility = [
       ":*",
       "//sdk/fidl:plasa",

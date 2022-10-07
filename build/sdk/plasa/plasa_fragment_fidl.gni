@@ -50,9 +50,6 @@ template("plasa_fragment_fidl") {
                              "deps",
                              "testonly",
                              "visibility",
-
-                             # TODO(fxbug.dev/109904): Remove.
-                             "vendor_use_new_api_summary",
                            ])
     inputs = [ invoker.fidl_ir ]
     outputs = [ fragment_file ]
