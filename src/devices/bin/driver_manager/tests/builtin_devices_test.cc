@@ -13,6 +13,8 @@
 #include <zxtest/zxtest.h>
 
 #include "lib/async-loop/loop.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace {
 
@@ -21,35 +23,45 @@ namespace fio = fuchsia_io;
 class BuiltinDevicesTest : public zxtest::Test {
  public:
   void SetUp() override {
+    zx::status server = fidl::CreateEndpoints(&client_);
+    ASSERT_OK(server.status_value());
+    ASSERT_OK(dir_->AddEntry(kNullDevName, fbl::MakeRefCounted<BuiltinDevVnode>(true)));
+    ASSERT_OK(dir_->AddEntry(kZeroDevName, fbl::MakeRefCounted<BuiltinDevVnode>(false)));
+    ASSERT_OK(vfs_.ServeDirectory(dir_, std::move(server.value())));
     ASSERT_OK(loop_.StartThread("builtin-devices"));
-    builtin_ = BuiltinDevices::Get(loop_.dispatcher());
   }
 
-  void TearDown() override {
-    loop_.Shutdown();
-    BuiltinDevices::Reset();
+  zx::status<fidl::ClientEnd<fio::Node>> HandleOpen(fio::wire::OpenFlags flags,
+                                                    std::string_view path) {
+    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    auto& [client, server] = endpoints.value();
+    if (const fidl::WireResult result = fidl::WireCall(client_)->Open(
+            flags, 0, fidl::StringView::FromExternal(path), std::move(server));
+        !result.ok()) {
+      return zx::error(result.status());
+    }
+    return zx::ok(std::move(client));
   }
 
- protected:
+  void TearDown() override { loop_.Shutdown(); }
+
+ private:
   async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
-  BuiltinDevices* builtin_;
+  fs::ManagedVfs vfs_{loop_.dispatcher()};
+  fbl::RefPtr<fs::PseudoDir> dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+  fidl::ClientEnd<fio::Directory> client_;
 };
 
-TEST_F(BuiltinDevicesTest, OpenDevice) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
-  ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(builtin_->HandleOpen(fio::OpenFlags(), std::move(endpoints->server), kNullDevName));
-}
-
 TEST_F(BuiltinDevicesTest, ReadZero) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
-  ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(builtin_->HandleOpen(
-      fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightReadable,
-      std::move(endpoints->server), kZeroDevName));
+  zx::status client = HandleOpen(
+      fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightReadable, kZeroDevName);
+  ASSERT_OK(client.status_value());
 
   fbl::unique_fd fd;
-  ASSERT_OK(fdio_fd_create(endpoints->client.TakeChannel().release(), fd.reset_and_get_address()));
+  ASSERT_OK(fdio_fd_create(client.value().TakeChannel().release(), fd.reset_and_get_address()));
 
   std::array<uint8_t, 100> buffer;
   buffer.fill(0x1);
@@ -58,14 +70,12 @@ TEST_F(BuiltinDevicesTest, ReadZero) {
 }
 
 TEST_F(BuiltinDevicesTest, WriteZero) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
-  ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(builtin_->HandleOpen(
-      fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightReadable,
-      std::move(endpoints->server), kZeroDevName));
+  zx::status client = HandleOpen(
+      fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightReadable, kZeroDevName);
+  ASSERT_OK(client.status_value());
 
   fbl::unique_fd fd;
-  ASSERT_OK(fdio_fd_create(endpoints->client.TakeChannel().release(), fd.reset_and_get_address()));
+  ASSERT_OK(fdio_fd_create(client.value().TakeChannel().release(), fd.reset_and_get_address()));
 
   std::array<uint8_t, 100> buffer;
   buffer.fill(0x1);
@@ -74,14 +84,11 @@ TEST_F(BuiltinDevicesTest, WriteZero) {
 }
 
 TEST_F(BuiltinDevicesTest, ReadNull) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
-  ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(builtin_->HandleOpen(
-      fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightReadable,
-      std::move(endpoints->server), kNullDevName));
+  zx::status client = HandleOpen(
+      fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightReadable, kNullDevName);
 
   fbl::unique_fd fd;
-  ASSERT_OK(fdio_fd_create(endpoints->client.TakeChannel().release(), fd.reset_and_get_address()));
+  ASSERT_OK(fdio_fd_create(client.value().TakeChannel().release(), fd.reset_and_get_address()));
 
   std::array<uint8_t, 100> buffer;
   buffer.fill(0x1);
@@ -92,14 +99,11 @@ TEST_F(BuiltinDevicesTest, ReadNull) {
 }
 
 TEST_F(BuiltinDevicesTest, WriteNull) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
-  ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(builtin_->HandleOpen(
-      fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightWritable,
-      std::move(endpoints->server), kNullDevName));
+  zx::status client = HandleOpen(
+      fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightWritable, kNullDevName);
 
   fbl::unique_fd fd;
-  ASSERT_OK(fdio_fd_create(endpoints->client.TakeChannel().release(), fd.reset_and_get_address()));
+  ASSERT_OK(fdio_fd_create(client.value().TakeChannel().release(), fd.reset_and_get_address()));
 
   std::array<uint8_t, 100> buffer;
   buffer.fill(0x1);

@@ -6,11 +6,17 @@
         // Device tree
         {
             directory: "dev-topological",
+
+            // TODO(https://fxbug.dev/110563): make this read-only when clients
+            // have been updated.
             rights: [ "rw*" ],
             path: "/dev",
         },
         {
             directory: "dev-class",
+
+            // TODO(https://fxbug.dev/110563): make this read-only when clients
+            // have been updated.
             rights: [ "rw*" ],
             path: "/dev/class",
         },

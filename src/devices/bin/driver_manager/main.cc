@@ -45,11 +45,7 @@
 #include "src/devices/bin/driver_manager/device_watcher.h"
 #include "src/devices/bin/driver_manager/v2/driver_development_service.h"
 #include "src/devices/lib/log/log.h"
-#include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/remote_dir.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vmo_file.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "system_instance.h"
 #include "v2/driver_runner.h"
@@ -82,7 +78,7 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
   auto crash_policy = DriverHostCrashPolicy::kRestartDriverHost;
   auto response = client->GetString("driver-manager.driver-host-crash-policy");
   if (response.ok() && !response.value().value.is_null() && !response.value().value.empty()) {
-    std::string crash_policy_str(response.value().value.get());
+    std::string const crash_policy_str(response.value().value.get());
     if (crash_policy_str == "reboot-system") {
       crash_policy = DriverHostCrashPolicy::kRebootSystem;
     } else if (crash_policy_str == "restart-driver-host") {
@@ -95,7 +91,7 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
     }
   }
 
-  std::string root_driver = "";
+  std::string root_driver;
   {
     auto response = client->GetString("driver_manager.root-driver");
     if (response.ok() && !response.value().value.is_null() && !response.value().value.empty()) {
@@ -122,7 +118,7 @@ static const std::string kMexecResourcePath =
 // Get the root job from the root job service.
 zx_status_t get_root_job(zx::job* root_job) {
   fuchsia::kernel::RootJobSyncPtr root_job_ptr;
-  zx_status_t status =
+  zx_status_t const status =
       fdio_service_connect(kRootJobPath.c_str(), root_job_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return status;
@@ -135,8 +131,8 @@ zx_status_t get_root_job(zx::job* root_job) {
 // be present.
 zx_status_t get_root_resource(zx::resource* root_resource) {
   fuchsia::boot::RootResourceSyncPtr root_resource_ptr;
-  zx_status_t status = fdio_service_connect(kRootResourcePath.c_str(),
-                                            root_resource_ptr.NewRequest().TakeChannel().release());
+  zx_status_t const status = fdio_service_connect(
+      kRootResourcePath.c_str(), root_resource_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return status;
   }
@@ -330,6 +326,8 @@ int main(int argc, char** argv) {
          "continuing");
   }
 
+  fs::SynchronousVfs vfs(coordinator.dispatcher());
+
   // Install devfs into our own namespace. Why? Unclear.
   {
     fdio_ns_t* ns;
@@ -338,7 +336,7 @@ int main(int argc, char** argv) {
     ZX_ASSERT_MSG(status == ZX_OK, "driver_manager: cannot get namespace: %s",
                   zx_status_get_string(status));
 
-    zx::status devfs_client = coordinator.devfs().Connect(coordinator.dispatcher());
+    zx::status devfs_client = coordinator.devfs().Connect(vfs);
     ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
 
     status = fdio_ns_bind(ns, "/dev", devfs_client.value().TakeChannel().release());
@@ -346,7 +344,7 @@ int main(int argc, char** argv) {
                   zx_status_get_string(status));
   }
   {
-    zx::status devfs_client = coordinator.devfs().Connect(coordinator.dispatcher());
+    zx::status devfs_client = coordinator.devfs().Connect(vfs);
     ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
     system_instance.ServiceStarter(&coordinator, std::move(devfs_client.value()));
   }
@@ -395,7 +393,7 @@ int main(int argc, char** argv) {
   zx::status diagnostics_client = coordinator.inspect_manager().Connect();
   ZX_ASSERT_MSG(diagnostics_client.is_ok(), "%s", diagnostics_client.status_string());
 
-  zx::status devfs_client = coordinator.devfs().Connect(coordinator.dispatcher());
+  zx::status devfs_client = coordinator.devfs().Connect(vfs);
   ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
 
   result = outgoing.AddDirectory(std::move(devfs_client.value()), "dev");

@@ -2145,7 +2145,7 @@ mod tests {
                 fnetemul_network::EndpointBacking::Ethertap => "ethernet",
                 fnetemul_network::EndpointBacking::NetworkDevice => "network",
             };
-            let name = format!("class/{}/test{}", class, i);
+            let name = format!("{}_test_{}", class, i);
             let endpoint = create_endpoint(
                 &sandbox,
                 &name,

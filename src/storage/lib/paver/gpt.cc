@@ -458,7 +458,7 @@ zx::status<GptDevicePartitioner::FindPartitionResult> GptDevicePartitioner::Find
       LOG("Found partition in GPT, partition %u\n", i);
       auto status = OpenBlockPartition(devfs_root_, Uuid((*p)->guid), Uuid((*p)->type), ZX_SEC(5));
       if (status.is_error()) {
-        ERROR("Couldn't open partition\n");
+        ERROR("Couldn't open partition: %s\n", status.status_string());
         return status.take_error();
       }
       auto part = std::make_unique<BlockPartitionClient>(std::move(status.value()));

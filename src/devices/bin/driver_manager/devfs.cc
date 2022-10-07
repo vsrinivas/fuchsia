@@ -12,7 +12,6 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/txn_header.h>
-#include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,13 +26,11 @@
 #include "src/devices/bin/driver_manager/builtin_devices.h"
 #include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/lib/log/log.h"
-#include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
-
-namespace fio = fuchsia_io;
-
-constexpr std::string_view kDiagnosticsDirName = "diagnostics";
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace {
 
@@ -49,186 +46,9 @@ overloaded(Ts...) -> overloaded<Ts...>;
 
 }  // namespace
 
-struct Watcher : fbl::DoublyLinkedListable<std::unique_ptr<Watcher>,
-                                           fbl::NodeOptions::AllowRemoveFromContainer> {
-  Watcher(Devnode* dn, fidl::ServerEnd<fio::DirectoryWatcher> server_end, fio::wire::WatchMask mask)
-      : devnode(dn), server_end(std::move(server_end)), mask(mask) {}
+namespace fio = fuchsia_io;
 
-  Watcher(const Watcher&) = delete;
-  Watcher& operator=(const Watcher&) = delete;
-
-  Watcher(Watcher&&) = delete;
-  Watcher& operator=(Watcher&&) = delete;
-
-  void HandleChannelClose(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
-
-  Devnode* devnode = nullptr;
-  fidl::ServerEnd<fio::DirectoryWatcher> server_end;
-  fio::wire::WatchMask mask;
-  async::WaitMethod<Watcher, &Watcher::HandleChannelClose> channel_close_wait{this};
-};
-
-void Watcher::HandleChannelClose(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                 zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status == ZX_OK) {
-    if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-      RemoveFromContainer();
-    }
-  }
-}
-
-class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
-                  public fidl::WireServer<fio::Directory> {
- public:
-  explicit DcIostate(Devnode& dn, async_dispatcher_t* dispatcher);
-  ~DcIostate() override;
-
-  static void Bind(std::unique_ptr<DcIostate> ios, fidl::ServerEnd<fio::Directory> request);
-  // Remove this DcIostate from its devnode
-  void DetachFromDevnode();
-
-  void AdvisoryLock(AdvisoryLockRequestView request,
-                    AdvisoryLockCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
-  void Close(CloseCompleter::Sync& completer) override;
-  void Query(QueryCompleter::Sync& completer) override;
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override;
-  void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override;
-  void Sync(SyncCompleter::Sync& completer) override { completer.ReplyError(ZX_ERR_NOT_SUPPORTED); }
-  void GetAttr(GetAttrCompleter::Sync& completer) override;
-  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override;
-  void AddInotifyFilter(AddInotifyFilterRequestView request,
-                        AddInotifyFilterCompleter::Sync& completer) override {}
-  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
-  void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override;
-  void Rewind(RewindCompleter::Sync& completer) override;
-  void GetToken(GetTokenCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::handle());
-  }
-  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
-  void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
-  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
-  void GetFlags(GetFlagsCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
-  }
-  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
-  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override;
-
- private:
-  // pointer to our devnode, nullptr if it has been removed
-  Devnode* devnode_;
-
-  std::optional<fidl::ServerBindingRef<fio::Directory>> binding_;
-
-  async_dispatcher_t* dispatcher_;
-
-  uint64_t readdir_ino_ = 0;
-};
-
-bool Devnode::is_dir() const {
-  if (!children.published.is_empty()) {
-    return true;
-  }
-  if (!children.unpublished.is_empty()) {
-    return true;
-  }
-  return std::visit(
-      overloaded{[](const NoRemote&) { return true; }, [](const Service& service) { return false; },
-                 [](const Device& device) {
-                   return !(device.device_controller().is_valid() &&
-                            device.coordinator_binding().has_value());
-                 }},
-      target_);
-}
-
-namespace {
-
-// Notify a single watcher about the given operation and path.  On failure,
-// frees the watcher.  This can only be called on a watcher that has not yet
-// been added to a Devnode's watchers list.
-void devfs_notify_single(std::unique_ptr<Watcher>* watcher, std::string_view name,
-                         fio::wire::WatchEvent op) {
-  const size_t len = name.length();
-  if (!*watcher || len > fio::wire::kMaxFilename) {
-    return;
-  }
-
-  ZX_ASSERT(!(*watcher)->InContainer());
-
-  uint8_t msg[fio::wire::kMaxFilename + 2];
-  const uint32_t msg_len = static_cast<uint32_t>(len + 2);
-  msg[0] = static_cast<uint8_t>(op);
-  msg[1] = static_cast<uint8_t>(len);
-  memcpy(msg + 2, name.data(), len);
-
-  // convert to mask
-  const fio::wire::WatchMask mask =
-      static_cast<fio::wire::WatchMask>(1u << static_cast<uint8_t>(op));
-
-  if (!((*watcher)->mask & mask)) {
-    return;
-  }
-
-  if ((*watcher)->server_end.channel().write(0, msg, msg_len, nullptr, 0) != ZX_OK) {
-    watcher->reset();
-  }
-}
-
-}  // namespace
-
-void Devnode::notify(std::string_view name, fio::wire::WatchEvent op) {
-  if (watchers.is_empty()) {
-    return;
-  }
-
-  const size_t len = name.length();
-  if (len > fio::wire::kMaxFilename) {
-    return;
-  }
-
-  uint8_t msg[fio::wire::kMaxFilename + 2];
-  const uint32_t msg_len = static_cast<uint32_t>(len + 2);
-  msg[0] = static_cast<uint8_t>(op);
-  msg[1] = static_cast<uint8_t>(len);
-  memcpy(msg + 2, name.data(), len);
-
-  // convert to mask
-  const fio::wire::WatchMask mask =
-      static_cast<fio::wire::WatchMask>(1u << static_cast<uint8_t>(op));
-
-  for (auto itr = watchers.begin(); itr != watchers.end();) {
-    auto& cur = *itr;
-    // Advance the iterator now instead of at the end of the loop because we
-    // may erase the current element from the list.
-    ++itr;
-
-    if (!(cur.mask & mask)) {
-      continue;
-    }
-
-    if (cur.server_end.channel().write(0, msg, msg_len, nullptr, 0) != ZX_OK) {
-      watchers.erase(cur);
-      // The Watcher is free'd here
-    }
-  }
-}
-
-Devnode* Devfs::proto_node(uint32_t protocol_id) {
+ProtoNode* Devfs::proto_node(uint32_t protocol_id) {
   auto it = proto_info_nodes.find(protocol_id);
   if (it == proto_info_nodes.end()) {
     return nullptr;
@@ -237,47 +57,12 @@ Devnode* Devfs::proto_node(uint32_t protocol_id) {
   return &value;
 }
 
-zx_status_t Devnode::watch(async_dispatcher_t* dispatcher,
-                           fidl::ServerEnd<fio::DirectoryWatcher> server_end,
-                           fio::wire::WatchMask mask) {
-  auto watcher = std::make_unique<Watcher>(this, std::move(server_end), mask);
-  if (watcher == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  // If the watcher has asked for all existing entries, send it all of them
-  // followed by the end-of-existing marker (IDLE).
-  if (mask & fio::wire::WatchMask::kExisting) {
-    for (const auto& child : children.published) {
-      // TODO: send multiple per write
-      devfs_notify_single(&watcher, child.name(), fio::wire::WatchEvent::kExisting);
-    }
-    devfs_notify_single(&watcher, {}, fio::wire::WatchEvent::kIdle);
-  }
-
-  // Watcher may have been freed by devfs_notify_single, so check before
-  // adding.
-  if (watcher) {
-    watchers.push_front(std::move(watcher));
-
-    Watcher& watcher_ref = watchers.front();
-    watcher_ref.channel_close_wait.set_object(watcher_ref.server_end.channel().get());
-    watcher_ref.channel_close_wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
-    watcher_ref.channel_close_wait.Begin(dispatcher);
-  }
-  return ZX_OK;
-}
-
-bool Devnode::has_watchers() const { return !watchers.is_empty(); }
-
 const Device* Devnode::device() const {
   return std::visit(overloaded{[](const NoRemote&) -> const Device* { return nullptr; },
                                [](const Service&) -> const Device* { return nullptr; },
                                [](const Device& device) { return &device; }},
-                    target_);
+                    target());
 }
-
-Devnode* Devnode::parent() const { return parent_; }
 
 std::string_view Devnode::name() const {
   if (name_.has_value()) {
@@ -290,105 +75,14 @@ Devnode::ExportOptions Devnode::export_options() const {
   return std::visit(overloaded{[](const NoRemote& no_remote) { return no_remote.export_options; },
                                [](const Service& service) { return service.export_options; },
                                [](const Device&) { return ExportOptions{}; }},
-                    target_);
+                    target());
 }
 
 Devnode::ExportOptions* Devnode::export_options() {
   return std::visit(overloaded{[](const NoRemote& no_remote) { return &no_remote.export_options; },
                                [](const Service& service) { return &service.export_options; },
                                [](const Device&) -> ExportOptions* { return nullptr; }},
-                    target_);
-}
-
-Devnode* Devnode::lookup(std::string_view name) {
-  for (auto& list :
-       {std::reference_wrapper(children.published), std::reference_wrapper(children.unpublished)}) {
-    for (Devnode& child : list.get()) {
-      if (child.name() == name) {
-        return &child;
-      }
-    }
-  }
-  return nullptr;
-}
-
-const Devnode* Devnode::lookup(std::string_view name) const {
-  for (const auto& list :
-       {std::reference_wrapper(children.published), std::reference_wrapper(children.unpublished)}) {
-    for (const Devnode& child : list.get()) {
-      if (child.name() == name) {
-        return &child;
-      }
-    }
-  }
-  return nullptr;
-}
-
-namespace {
-
-zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino, std::string_view name,
-                        uint8_t type) {
-  const size_t len = name.length();
-  const size_t sz = sizeof(vdirent_t) + len;
-
-  if (sz > delen || len > NAME_MAX) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  de->ino = ino;
-  de->size = static_cast<uint8_t>(len);
-  de->type = type;
-  memcpy(de->name, name.data(), len);
-  return static_cast<zx_status_t>(sz);
-}
-
-}  // namespace
-
-zx_status_t Devnode::readdir(uint64_t* ino_inout, void* data, size_t len) {
-  char* ptr = static_cast<char*>(data);
-  uint64_t ino = *ino_inout;
-
-  for (const auto& child : children.published) {
-    if (child.ino_ <= ino) {
-      continue;
-    }
-    const bool show = std::visit(
-        overloaded{[&child](const NoRemote&) {
-                     // "pure" directories (like /dev/class/$NAME) do
-                     // not show up if they have no children, to
-                     // avoid clutter and confusion.  They remain
-                     // openable, so they can be watched.
-                     //
-                     // An exception being /dev/diagnostics which is
-                     // served by different VFS and should be listed
-                     // even though it has no devnode children.
-                     if (child.ino_ == child.devfs_.diagnostics_devnode.ino_) {
-                       return true;
-                     }
-                     if (child.ino_ == child.devfs_.null_devnode.ino_) {
-                       return true;
-                     }
-                     if (child.ino_ == child.devfs_.zero_devnode.ino_) {
-                       return true;
-                     }
-                     return !child.children.published.is_empty();
-                   },
-                   [](const Service&) { return true; }, [](const Device&) { return true; }},
-        child.target_);
-    if (!show) {
-      continue;
-    }
-    ino = child.ino_;
-    auto vdirent = reinterpret_cast<vdirent_t*>(ptr);
-    const zx_status_t r = fill_dirent(vdirent, len, ino, child.name(), VTYPE_TO_DTYPE(V_TYPE_DIR));
-    if (r < 0) {
-      break;
-    }
-    ptr += r;
-    len -= r;
-  }
-
-  *ino_inout = ino;
-  return static_cast<zx_status_t>(ptr - static_cast<char*>(data));
+                    target());
 }
 
 zx::status<Devnode*> Devnode::walk(std::string_view path) {
@@ -406,118 +100,160 @@ zx::status<Devnode*> Devnode::walk(std::string_view path) {
     } else {
       path = {};
     }
-    fbl::DoublyLinkedList<Devnode*>& list = dn->children.published;
-    const fbl::DoublyLinkedList<Devnode*>::iterator it =
-        list.find_if([name](const Devnode& child) { return child.name() == name; });
-    if (it == list.end()) {
-      // The path only partially matched.
-      return zx::error(ZX_ERR_NOT_FOUND);
+    fbl::RefPtr<fs::Vnode> out;
+    if (const zx_status_t status = dn->children().Lookup(name, &out); status != ZX_OK) {
+      return zx::error(status);
     }
-    dn = &*it;
+    dn = &fbl::RefPtr<Devnode::VnodeImpl>::Downcast(out)->holder_;
   }
   return zx::ok(dn);
 }
 
-void Devnode::open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ipc,
-                   std::string_view path, fio::OpenFlags flags) {
-  // Filter requests for diagnostics path and pass it on to diagnostics vfs server.
-  if (cpp20::starts_with(path, kDiagnosticsDirName)) {
-    std::string_view dir_path = path.substr(kDiagnosticsDirName.size());
-    if (cpp20::starts_with(dir_path, '/') || dir_path.empty()) {
-      if (cpp20::starts_with(dir_path, '/')) {
-        dir_path = dir_path.substr(1);
-      }
-      if (dir_path.empty()) {
-        dir_path = ".";
-      }
-      __UNUSED const fidl::WireResult result =
-          fidl::WireCall(devfs_.diagnostics_.value())
-              ->Open(flags, 0, fidl::StringView::FromExternal(dir_path), std::move(ipc));
-      return;
-    }
-  }
+Devnode::VnodeImpl::VnodeImpl(Devnode& holder, Target target)
+    : holder_(holder), target_(std::move(target)) {}
 
-  if (path == kNullDevName || path == kZeroDevName) {
-    BuiltinDevices::Get(dispatcher)->HandleOpen(flags, std::move(ipc), path);
-    return;
-  }
-
-  if (path == ".") {
-    path = {};
-  }
-
-  auto describe = [&ipc, describe = flags & fio::wire::OpenFlags::kDescribe](
-                      zx::status<fio::wire::NodeInfoDeprecated> node_info) {
-    if (describe) {
-      __UNUSED auto result = fidl::WireSendEvent(ipc)->OnOpen(
-          node_info.status_value(),
-          node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfoDeprecated());
-    }
-  };
-
-  zx::status dn_result = walk(path);
-  if (dn_result.is_error()) {
-    describe(zx::error(dn_result.status_value()));
-    return;
-  }
-  Devnode& dn = *dn_result.value();
-
-  auto open_as_directory = [&]() {
-    if (flags & fio::wire::OpenFlags::kNotDirectory) {
-      describe(zx::error(ZX_ERR_NOT_FILE));
-      return;
-    }
-    auto ios = std::make_unique<DcIostate>(dn, dispatcher);
-    if (ios == nullptr) {
-      describe(zx::error(ZX_ERR_NO_MEMORY));
-      return;
-    }
-    describe(zx::ok(fio::wire::NodeInfoDeprecated::WithDirectory({})));
-    DcIostate::Bind(std::move(ios), fidl::ServerEnd<fio::Directory>{ipc.TakeChannel()});
-  };
-
-  if (flags & fio::wire::OpenFlags::kDirectory) {
-    open_as_directory();
-    return;
-  }
-
+bool Devnode::VnodeImpl::IsDirectory() const {
   return std::visit(
-      overloaded{[&](const NoRemote&) { open_as_directory(); },
-                 [&](const Service& service) {
-                   __UNUSED const fidl::WireResult result =
-                       fidl::WireCall(service.remote)
-                           ->Open(flags, 0, fidl::StringView::FromExternal(service.path),
-                                  std::move(ipc));
-                 },
-                 [&](const Device& device) {
-                   if (device.device_controller().is_valid()) {
-                     __UNUSED const fidl::Status result =
-                         device.device_controller()->Open(flags, 0, ".", std::move(ipc));
-                   } else {
-                     open_as_directory();
-                   }
-                 }},
-      dn.target_);
+      overloaded{[&](const NoRemote&) { return true; }, [&](const Service&) { return false; },
+                 [&](const Device& device) { return !device.device_controller().is_valid(); }},
+      target_);
 }
+
+fs::VnodeProtocolSet Devnode::VnodeImpl::GetProtocols() const {
+  fs::VnodeProtocolSet protocols = fs::VnodeProtocol::kDirectory;
+  if (!IsDirectory()) {
+    protocols = protocols | fs::VnodeProtocol::kConnector;
+  }
+  return protocols;
+}
+
+zx_status_t Devnode::VnodeImpl::GetNodeInfoForProtocol(fs::VnodeProtocol protocol,
+                                                       fs::Rights rights,
+                                                       fs::VnodeRepresentation* info) {
+  switch (protocol) {
+    case fs::VnodeProtocol::kConnector:
+      if (IsDirectory()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      *info = fs::VnodeRepresentation::Connector{};
+      return ZX_OK;
+    case fs::VnodeProtocol::kFile:
+    case fs::VnodeProtocol::kTty:
+      return ZX_ERR_NOT_SUPPORTED;
+    case fs::VnodeProtocol::kDirectory:
+      *info = fs::VnodeRepresentation::Directory{};
+      return ZX_OK;
+  }
+}
+
+zx_status_t Devnode::VnodeImpl::OpenNode(ValidatedOptions options,
+                                         fbl::RefPtr<Vnode>* out_redirect) {
+  if (options->flags.directory) {
+    return ZX_OK;
+  }
+  if (IsDirectory()) {
+    return ZX_OK;
+  }
+  *out_redirect = remote_;
+  return ZX_OK;
+}
+
+fs::VnodeProtocolSet Devnode::VnodeImpl::RemoteNode::GetProtocols() const {
+  return parent_.GetProtocols();
+}
+
+zx_status_t Devnode::VnodeImpl::RemoteNode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol,
+                                                                   fs::Rights rights,
+                                                                   fs::VnodeRepresentation* info) {
+  return parent_.GetNodeInfoForProtocol(protocol, rights, info);
+}
+
+bool Devnode::VnodeImpl::RemoteNode::IsRemote() const { return true; }
+
+zx_status_t Devnode::VnodeImpl::RemoteNode::OpenRemote(fio::OpenFlags flags, uint32_t mode,
+                                                       fidl::StringView path,
+                                                       fidl::ServerEnd<fio::Node> object) const {
+  ZX_ASSERT_MSG(path.get() == ".", "unexpected path to remote '%.*s'",
+                static_cast<int>(path.size()), path.data());
+  return std::visit(
+      overloaded{
+          [&](const NoRemote&) { return ZX_ERR_NOT_SUPPORTED; },
+          [&](const Service& service) {
+            return fidl::WireCall(service.remote)
+                ->Open(flags, mode, fidl::StringView::FromExternal(service.path), std::move(object))
+                .status();
+          },
+          [&](const Device& device) {
+            return device.device_controller()->Open(flags, mode, path, std::move(object)).status();
+          }},
+      parent_.target_);
+}
+
+zx_status_t Devnode::VnodeImpl::GetAttributes(fs::VnodeAttributes* a) {
+  return children().GetAttributes(a);
+}
+
+zx_status_t Devnode::VnodeImpl::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
+  return children().Lookup(name, out);
+}
+
+zx_status_t Devnode::VnodeImpl::WatchDir(fs::Vfs* vfs, fio::wire::WatchMask mask, uint32_t options,
+                                         fidl::ServerEnd<fio::DirectoryWatcher> watcher) {
+  return children().WatchDir(vfs, mask, options, std::move(watcher));
+}
+
+zx_status_t Devnode::VnodeImpl::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len,
+                                        size_t* out_actual) {
+  return children().Readdir(cookie, dirents, len, out_actual);
+}
+
+namespace {
+
+void MustAddEntry(PseudoDir& parent, const std::string_view name,
+                  const fbl::RefPtr<fs::Vnode>& dn) {
+  const zx_status_t status = parent.AddEntry(name, dn);
+  ZX_ASSERT_MSG(status == ZX_OK, "AddEntry(%.*s): %s", static_cast<int>(name.size()), name.data(),
+                zx_status_get_string(status));
+}
+
+}  // namespace
 
 Devnode::Devnode(Devfs& devfs, Device* device)
     : devfs_(devfs),
       parent_(nullptr),
-      target_([device]() -> Target {
+      node_(fbl::MakeRefCounted<VnodeImpl>(*this, [device]() -> Target {
         if (device != nullptr) {
           return *device;
         }
         return NoRemote{};
-      }()),
-      ino_(devfs.next_ino++) {}
+      }())) {}
 
-Devnode::Devnode(Devfs& devfs, Devnode& parent, Target target, fbl::String name)
+Devnode::Devnode(Devfs& devfs, PseudoDir& parent, Target target, fbl::String name)
     : devfs_(devfs),
       parent_(&parent),
-      target_(std::move(target)),
-      name_(std::move(name)),
-      ino_(devfs.next_ino++) {
-  if (Devnode* other = parent.lookup(this->name()); other != nullptr) {
+      node_(fbl::MakeRefCounted<VnodeImpl>(*this, std::move(target))),
+      name_(std::move(name)) {
+  std::optional<std::reference_wrapper<fs::Vnode>> other =
+      [&parent, name = this->name()]() -> std::optional<std::reference_wrapper<fs::Vnode>> {
+    {
+      fbl::RefPtr<fs::Vnode> out;
+      switch (const zx_status_t status = parent.Lookup(name, &out); status) {
+        case ZX_OK:
+          return *out;
+        case ZX_ERR_NOT_FOUND:
+          break;
+        default:
+          ZX_PANIC("%s", zx_status_get_string(status));
+      }
+    }
+    for (auto& child : parent.unpublished) {
+      if (child.name() == name) {
+        return child.node();
+      }
+    }
+    return {};
+  }();
+  if (other.has_value()) {
     // As of this writing, composite devices all attach at the root node in devfs, including
     // duplicates. Because this is load-bearing, we cannot easily change it.
     //
@@ -538,102 +274,40 @@ Devnode::Devnode(Devfs& devfs, Devnode& parent, Target target, fbl::String name)
     //
     // TODO(https://fxbug.dev/110922): Remove this logic when composite devices no longer surface
     // this way in devfs.
-    std::vector<std::string_view> segments;
-    for (Devnode* node = this; node != nullptr; node = node->parent_) {
-      segments.emplace_back(node->name());
-    }
-    // Normally we'd assert here that the root node is unnamed, but because we might've unhooked our
-    // parent node from its parent, we may not end on the real root node.
-    if (segments.back().empty()) {
-      segments.pop_back();
-    }
-    std::reverse(segments.begin(), segments.end());
     parent_ = nullptr;
-    LOGF(WARNING, "skipping duplicate devfs path '%s': this=%p other=%p",
-         fxl::JoinStrings(segments, "/").c_str(), this, other);
+    const std::string_view name = this->name();
+    LOGF(WARNING, "skipping duplicate devfs element '%.*s': this=%p other=%p",
+         static_cast<int>(name.size()), name.data(), this, &other.value());
     return;
   }
-  parent.children.unpublished.push_back(this);
+  parent.unpublished.push_back(this);
 }
 
 Devnode::~Devnode() {
-  bool was_visible = false;
+  for (Devnode& child : children().unpublished) {
+    child.parent_ = nullptr;
+  }
+  children().unpublished.clear();
+
+  children().RemoveAllEntries();
+
+  if (parent_ == nullptr) {
+    return;
+  }
+  PseudoDir& parent = *parent_;
   if (InContainer()) {
-    ZX_ASSERT_MSG(parent_ != nullptr, "'%.*s' is in container but does not have a parent",
-                  static_cast<int>(name().size()), name().data());
-    Devnode& parent = *parent_;
-    for (Devnode& dn : parent.children.published) {
-      if (&dn == this) {
-        was_visible = true;
-        break;
-      }
-    }
     RemoveFromContainer();
-  }
-
-  // detach all connected iostates
-  while (!iostate.is_empty()) {
-    iostate.front().DetachFromDevnode();
-  }
-
-  // notify own file watcher
-  if (was_visible) {
-    notify({}, fio::wire::WatchEvent::kDeleted);
-  }
-
-  // disconnect from device and notify parent/link directory watchers
-  if (was_visible) {
-    std::visit(overloaded{[](const NoRemote&) {}, [](const Service&) {},
-                          [this](Device& device) {
-                            if (device.parent() == nullptr) {
-                              return;
-                            }
-                            Device& parent = *device.parent();
-                            std::optional<Devnode>& parent_node = parent.self;
-                            if (parent_node.has_value()) {
-                              parent_node.value().notify(name(), fio::wire::WatchEvent::kRemoved);
-                            }
-                            Devnode* dir = devfs_.proto_node(device.protocol_id());
-                            if (dir != nullptr) {
-                              dir->notify(name(), fio::wire::WatchEvent::kRemoved);
-                            }
-                          }},
-               target_);
-  };
-
-  // destroy all watchers
-  watchers.clear();
-
-  // detach children
-  for (auto& list :
-       {std::reference_wrapper(children.published), std::reference_wrapper(children.unpublished)}) {
-    for (Devnode& child : list.get()) {
-      child.parent_ = nullptr;
+  } else {
+    const std::string_view name = this->name();
+    switch (const zx_status_t status = parent.RemoveEntry(name, node_.get()); status) {
+      case ZX_OK:
+      case ZX_ERR_NOT_FOUND:
+        // Our parent may have been removed before us.
+        break;
+      default:
+        ZX_PANIC("RemoveEntry(%.*s): %s", static_cast<int>(name.size()), name.data(),
+                 zx_status_get_string(status));
     }
-    list.get().clear();
-  }
-}
-
-DcIostate::DcIostate(Devnode& dn, async_dispatcher_t* dispatcher)
-    : devnode_(&dn), dispatcher_(dispatcher) {
-  dn.iostate.push_back(this);
-}
-
-DcIostate::~DcIostate() { DetachFromDevnode(); }
-
-void DcIostate::Bind(std::unique_ptr<DcIostate> ios, fidl::ServerEnd<fio::Directory> request) {
-  // Grab a reference before we move the container.
-  auto& binding = ios->binding_;
-  binding = fidl::BindServer(ios->dispatcher_, std::move(request), std::move(ios));
-}
-
-void DcIostate::DetachFromDevnode() {
-  if (devnode_ != nullptr) {
-    devnode_->iostate.erase(*this);
-    devnode_ = nullptr;
-  }
-  if (std::optional binding = std::exchange(binding_, std::nullopt); binding.has_value()) {
-    binding.value().Unbind();
   }
 }
 
@@ -646,21 +320,17 @@ void Devnode::publish() {
   if (parent_ == nullptr) {
     return;
   }
-  Devnode& parent = *parent_;
+  PseudoDir& parent = *parent_;
+
   // NB: We can't blindly erase from the unpublished list because it is an error to erase a
   // `fbl::DoublyLinkedListable` from a `fbl::DoublyLinkedList` which it is not an entry in.
-  [this, &parent]() {
-    for (Devnode& dn : parent.children.unpublished) {
-      if (&dn == this) {
-        return;
-      }
-    }
-    ZX_PANIC("'%.*s' not in parent's unpublished list", static_cast<int>(name().size()),
-             name().data());
-  }();
+  if (std::none_of(parent.unpublished.begin(), parent.unpublished.end(),
+                   [this](Devnode& child) { return &child == this; })) {
+    const std::string_view name = this->name();
+    ZX_PANIC("'%.*s' not in parent's unpublished list", static_cast<int>(name.size()), name.data());
+  }
   RemoveFromContainer();
-  parent.children.published.push_back(this);
-  parent.notify(name(), fio::wire::WatchEvent::kAdded);
+  MustAddEntry(parent, name(), node_);
 }
 
 void Devfs::publish(Device& device) {
@@ -683,23 +353,38 @@ void Devfs::advertise_modified(Device& device) {
       // TODO(https://fxbug.dev/110922): Remove this condition when composite devices no longer
       // surface this way in devfs.
       if (dn.parent_ != nullptr) {
-        Devnode& parent = *dn.parent_;
+        PseudoDir& parent = *dn.parent_;
         for (const auto event : {fio::wire::WatchEvent::kRemoved, fio::wire::WatchEvent::kAdded}) {
-          parent.notify(dn.name(), event);
+          parent.Notify(dn.name(), event);
         }
       }
     }
   }
 }
 
-zx::status<fbl::String> Devnode::seq_name() {
+ProtoNode::ProtoNode(fbl::String name) : name_(std::move(name)) {}
+
+zx::status<fbl::String> ProtoNode::seq_name() {
   std::string dest;
   for (uint32_t i = 0; i < 1000; ++i) {
     dest.clear();
     fxl::StringAppendf(&dest, "%03u", (seqcount_++) % 1000);
-    if (lookup(dest) == nullptr) {
-      return zx::ok(dest);
+    {
+      fbl::RefPtr<fs::Vnode> out;
+      switch (const zx_status_t status = children().Lookup(dest, &out); status) {
+        case ZX_OK:
+          continue;
+        case ZX_ERR_NOT_FOUND:
+          break;
+        default:
+          return zx::error(status);
+      }
     }
+    if (std::any_of(children().unpublished.begin(), children().unpublished.end(),
+                    [&dest](Devnode& child) { return child.name() == dest; })) {
+      continue;
+    };
+    return zx::ok(dest);
   }
   return zx::error(ZX_ERR_ALREADY_EXISTS);
 }
@@ -709,7 +394,7 @@ zx_status_t Devfs::initialize(Device& parent, Device& device) {
     return ZX_ERR_INTERNAL;
   }
 
-  device.self.emplace(*this, parent.self.value(), device, device.name());
+  device.self.emplace(*this, parent.self.value().node().children(), device, device.name());
 
   switch (const uint32_t id = device.protocol_id(); id) {
     case ZX_PROTOCOL_TEST_PARENT:
@@ -720,8 +405,8 @@ zx_status_t Devfs::initialize(Device& parent, Device& device) {
       break;
     default: {
       // Create link in /dev/class/... if this id has a published class
-      if (Devnode* dir_ptr = proto_node(id); dir_ptr != nullptr) {
-        Devnode& dir = *dir_ptr;
+      if (ProtoNode* dir_ptr = proto_node(id); dir_ptr != nullptr) {
+        ProtoNode& dir = *dir_ptr;
         fbl::String name = device.name();
         if (id != ZX_PROTOCOL_CONSOLE) {
           zx::status seq_name = dir.seq_name();
@@ -731,7 +416,7 @@ zx_status_t Devfs::initialize(Device& parent, Device& device) {
           name = seq_name.value();
         }
 
-        device.link.emplace(*this, dir, device, name);
+        device.link.emplace(*this, dir.children(), device, name);
       }
     }
   }
@@ -742,126 +427,37 @@ zx_status_t Devfs::initialize(Device& parent, Device& device) {
   return ZX_OK;
 }
 
-void DcIostate::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
-  devnode_->open(dispatcher_, std::move(request->object), request->path.get(), request->flags);
-}
-
-void DcIostate::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
-  if (request->flags & fio::wire::OpenFlags::kCloneSameRights) {
-    request->flags |= fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable;
-  }
-  devnode_->open(dispatcher_, std::move(request->object), ".",
-                 request->flags | fio::wire::OpenFlags::kDirectory);
-}
-
-void DcIostate::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
-  fio::wire::FilesystemInfo info;
-  strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs", fio::wire::kMaxFsNameBuffer);
-  completer.Reply(ZX_OK, fidl::ObjectView<fio::wire::FilesystemInfo>::FromExternal(&info));
-}
-
-void DcIostate::Watch(WatchRequestView request, WatchCompleter::Sync& completer) {
-  zx_status_t status;
-  if (!request->mask || request->options != 0) {
-    status = ZX_ERR_INVALID_ARGS;
-  } else {
-    status = devnode_->watch(dispatcher_, std::move(request->watcher), request->mask);
-  }
-  completer.Reply(status);
-}
-
-void DcIostate::Rewind(RewindCompleter::Sync& completer) {
-  readdir_ino_ = 0;
-  completer.Reply(ZX_OK);
-}
-
-void DcIostate::ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) {
-  if (request->max_bytes > fio::wire::kMaxBuf) {
-    completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
-    return;
-  }
-
-  uint8_t data[fio::wire::kMaxBuf];
-  size_t actual = 0;
-  zx_status_t status = devnode_->readdir(&readdir_ino_, data, request->max_bytes);
-  if (status >= 0) {
-    actual = status;
-    status = ZX_OK;
-  }
-  completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
-}
-
-void DcIostate::GetAttr(GetAttrCompleter::Sync& completer) {
-  uint32_t mode;
-  if (devnode_->is_dir()) {
-    mode = V_TYPE_DIR | V_IRUSR | V_IWUSR;
-  } else {
-    mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
-  }
-
-  fio::wire::NodeAttributes attributes;
-  attributes.mode = mode;
-  attributes.content_size = 0;
-  attributes.link_count = 1;
-  attributes.id = devnode_->ino_;
-  completer.Reply(ZX_OK, attributes);
-}
-
-void DcIostate::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
-  completer.Reply(fio::wire::NodeInfoDeprecated::WithDirectory({}));
-}
-
-void DcIostate::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
-  completer.Reply({});
-}
-
-void DcIostate::Close(CloseCompleter::Sync& completer) {
-  completer.ReplySuccess();
-  completer.Close(ZX_OK);
-}
-
-void DcIostate::Query(QueryCompleter::Sync& completer) {
-  const std::string_view kProtocol = fio::wire::kDirectoryProtocolName;
-  uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
-  completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
-}
-
-zx::status<fidl::ClientEnd<fio::Directory>> Devfs::Connect(async_dispatcher_t* dispatcher) {
-  if (root_devnode_ == nullptr) {
-    return zx::error(ZX_ERR_PEER_CLOSED);
-  }
-  Devnode& root_devnode = *root_devnode_;
+zx::status<fidl::ClientEnd<fio::Directory>> Devfs::Connect(fs::FuchsiaVfs& vfs) {
   zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
   auto& [client, server] = endpoints.value();
-  std::unique_ptr ios = std::make_unique<DcIostate>(root_devnode, dispatcher);
-  DcIostate::Bind(std::move(ios), std::move(endpoints->server));
-  return zx::ok(std::move(client));
+  // NB: Serve the `PseudoDir` rather than the root `Devnode` because
+  // otherwise we'd end up in the connector code path. Clients that want to open
+  // the root node as a device can do so using `"."` and appropriate flags.
+  return zx::make_status(vfs.ServeDirectory(root_.node_, std::move(server)), std::move(client));
 }
 
 Devfs::Devfs(std::optional<Devnode>& root, Device* device,
-             std::optional<fidl::ClientEnd<fuchsia_io::Directory>> diagnostics)
-    : root_devnode_(&root.emplace(*this, device)),
-      class_devnode(*this, *root_devnode_, Devnode::NoRemote{}, "class"),
-      diagnostics_devnode(*this, *root_devnode_, Devnode::NoRemote{}, kDiagnosticsDirName),
-      null_devnode(*this, *root_devnode_, Devnode::NoRemote{}, "null"),
-      zero_devnode(*this, *root_devnode_, Devnode::NoRemote{}, "zero"),
-      diagnostics_(std::move(diagnostics)) {
-  class_devnode.publish();
-  diagnostics_devnode.publish();
-  null_devnode.publish();
-  zero_devnode.publish();
+             std::optional<fidl::ClientEnd<fio::Directory>> diagnostics)
+    : root_(root.emplace(*this, device)) {
+  PseudoDir& pd = root_.children();
+  if (diagnostics.has_value()) {
+    MustAddEntry(pd, "diagnostics",
+                 fbl::MakeRefCounted<fs::RemoteDir>(std::move(diagnostics.value())));
+  }
+  MustAddEntry(pd, "class", class_);
+  MustAddEntry(pd, kNullDevName, fbl::MakeRefCounted<BuiltinDevVnode>(true));
+  MustAddEntry(pd, kZeroDevName, fbl::MakeRefCounted<BuiltinDevVnode>(false));
 
   // Pre-populate the class directories.
   for (const auto& info : proto_infos) {
     if (!(info.flags & PF_NOPUB)) {
-      const auto [it, inserted] = proto_info_nodes.try_emplace(info.id, *this, class_devnode,
-                                                               Devnode::NoRemote{}, info.name);
-      auto& [key, value] = *it;
+      const auto [it, inserted] = proto_info_nodes.try_emplace(info.id, info.name);
+      const auto& [key, value] = *it;
       ZX_ASSERT_MSG(inserted, "duplicate protocol with id %d", key);
-      value.publish();
+      MustAddEntry(*class_, info.name, value.children_);
     }
   }
 }
@@ -891,15 +487,35 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
   Devnode* dn = this;
   for (size_t i = 0; i < segments.size(); ++i) {
     const std::string_view name = segments.at(i);
-    Devnode* child = dn->lookup(name);
+    zx::status child = [name, &children = dn->children()]() -> zx::status<Devnode*> {
+      fbl::RefPtr<fs::Vnode> out;
+      switch (const zx_status_t status = children.Lookup(name, &out); status) {
+        case ZX_OK:
+          return zx::ok(&fbl::RefPtr<Devnode::VnodeImpl>::Downcast(out)->holder_);
+        case ZX_ERR_NOT_FOUND:
+          break;
+        default:
+          return zx::error(status);
+      }
+      for (auto& child : children.unpublished) {
+        if (child.name() == name) {
+          return zx::ok(&child);
+        }
+      }
+      return zx::ok(nullptr);
+    }();
+    if (child.is_error()) {
+      return child.status_value();
+    }
     if (i != segments.size() - 1) {
       // This is not the final path segment. Use the existing node or create one
       // if it doesn't exist.
-      if (child != nullptr) {
-        dn = child;
+      if (child.value() != nullptr) {
+        dn = child.value();
         continue;
       }
-      Devnode& child = *out.emplace_back(std::make_unique<Devnode>(devfs_, *dn,
+      PseudoDir& parent = dn->node().children();
+      Devnode& child = *out.emplace_back(std::make_unique<Devnode>(devfs_, parent,
                                                                    NoRemote{
                                                                        .export_options = options,
                                                                    },
@@ -919,8 +535,8 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
 
     // If a protocol directory exists for `protocol_id`, then create a Devnode
     // under the protocol directory too.
-    if (Devnode* dir_ptr = devfs_.proto_node(protocol_id); dir_ptr != nullptr) {
-      Devnode& dn = *dir_ptr;
+    if (ProtoNode* dir_ptr = devfs_.proto_node(protocol_id); dir_ptr != nullptr) {
+      ProtoNode& dn = *dir_ptr;
       zx::status seq_name = dn.seq_name();
       if (seq_name.is_error()) {
         return seq_name.status_value();
@@ -941,7 +557,7 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
       }
 
       Devnode& child =
-          *out.emplace_back(std::make_unique<Devnode>(devfs_, dn,
+          *out.emplace_back(std::make_unique<Devnode>(devfs_, dn.children(),
                                                       Service{
                                                           .remote = std::move(client),
                                                           .path = std::string(service_path),
@@ -955,7 +571,7 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
 
     {
       Devnode& child =
-          *out.emplace_back(std::make_unique<Devnode>(devfs_, *dn,
+          *out.emplace_back(std::make_unique<Devnode>(devfs_, dn->node().children(),
                                                       Service{
                                                           .remote = std::move(service_dir),
                                                           .path = std::string(service_path),

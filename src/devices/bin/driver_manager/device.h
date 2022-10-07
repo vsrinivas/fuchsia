@@ -41,7 +41,6 @@ namespace fio = fuchsia_io;
 
 class Coordinator;
 class DriverHost;
-struct Devnode;
 
 // clang-format off
 
@@ -315,6 +314,8 @@ class Device final
   uint32_t retries = 4;
 
   std::optional<Devnode> self;
+  // TODO(https://fxbug.dev/111253): These link nodes are currently always empty directories. Change
+  // this to a pure `RemoteNode` that doesn't expose a directory.
   std::optional<Devnode> link;
 
   const fbl::String& link_name() const { return link_name_; }

@@ -9,67 +9,90 @@
 #include <lib/ddk/driver.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
+#include <functional>
+
 #include <zxtest/zxtest.h>
 
-#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/bin/driver_manager/devfs_exporter.h"
 
 namespace fio = fuchsia_io;
 
+std::optional<std::reference_wrapper<const Devnode>> lookup(const Devnode& parent,
+                                                            std::string_view name) {
+  {
+    fbl::RefPtr<fs::Vnode> out;
+    switch (const zx_status_t status = parent.children().Lookup(name, &out); status) {
+      case ZX_OK:
+        return std::reference_wrapper(fbl::RefPtr<Devnode::VnodeImpl>::Downcast(out)->holder_);
+      case ZX_ERR_NOT_FOUND:
+        break;
+      default:
+        ADD_FAILURE("%s", zx_status_get_string(status));
+        return {};
+    }
+  }
+  for (auto& child : parent.children().unpublished) {
+    if (child.name() == name) {
+      return std::reference_wrapper(child);
+    }
+  }
+  return {};
+}
+
 TEST(Devfs, Export) {
   std::optional<Devnode> root_slot;
-  Devfs devfs(root_slot, nullptr);
+  const Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 
-  const Devnode* node_one = root_node.lookup("one");
-  ASSERT_NE(node_one, nullptr);
-  EXPECT_EQ("one", node_one->name());
-  const Devnode* node_two = node_one->lookup("two");
-  ASSERT_NE(node_two, nullptr);
-  EXPECT_EQ("two", node_two->name());
+  std::optional node_one = lookup(root_node, "one");
+  ASSERT_TRUE(node_one.has_value());
+  EXPECT_EQ("one", node_one->get().name());
+  std::optional node_two = lookup(node_one->get(), "two");
+  ASSERT_TRUE(node_two.has_value());
+  EXPECT_EQ("two", node_two->get().name());
 }
 
 TEST(Devfs, Export_ExcessSeparators) {
   std::optional<Devnode> root_slot;
-  Devfs devfs(root_slot, nullptr);
+  const Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_STATUS(root_node.export_dir({}, "svc", "one////two", 0, {}, out), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(root_node.lookup("one"), nullptr);
-  ASSERT_EQ(root_node.lookup("two"), nullptr);
+  ASSERT_FALSE(lookup(root_node, "one").has_value());
+  ASSERT_FALSE(lookup(root_node, "two").has_value());
 }
 
 TEST(Devfs, Export_OneByOne) {
   std::optional<Devnode> root_slot;
-  Devfs devfs(root_slot, nullptr);
+  const Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one", 0, {}, out));
 
-  const Devnode* node_one = root_node.lookup("one");
-  ASSERT_NE(node_one, nullptr);
-  EXPECT_EQ("one", node_one->name());
+  std::optional node_one = lookup(root_node, "one");
+  ASSERT_TRUE(node_one.has_value());
+  EXPECT_EQ("one", node_one->get().name());
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 
-  const Devnode* node_two = node_one->lookup("two");
-  ASSERT_NE(node_two, nullptr);
-  EXPECT_EQ("two", node_two->name());
+  std::optional node_two = lookup(node_one->get(), "two");
+  ASSERT_TRUE(node_two.has_value());
+  EXPECT_EQ("two", node_two->get().name());
 }
 
 TEST(Devfs, Export_InvalidPath) {
   std::optional<Devnode> root_slot;
-  Devfs devfs(root_slot, nullptr);
+  const Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, root_node.export_dir({}, "", "one", 0, {}, out));
@@ -89,12 +112,16 @@ TEST(Devfs, Export_WithProtocol) {
   std::optional<Devnode> root_slot;
   Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
 
-  const Devnode* proto_node = devfs.proto_node(ZX_PROTOCOL_BLOCK);
+  const ProtoNode* proto_node = devfs.proto_node(ZX_PROTOCOL_BLOCK);
   ASSERT_NE(proto_node, nullptr);
   EXPECT_EQ("block", proto_node->name());
-  EXPECT_EQ(proto_node->lookup("000"), nullptr);
+  {
+    fbl::RefPtr<fs::Vnode> node_000;
+    EXPECT_STATUS(proto_node->children().Lookup("000", &node_000), ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(node_000, nullptr);
+  }
 
   std::vector<std::unique_ptr<Devnode>> out;
   auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
@@ -105,24 +132,24 @@ TEST(Devfs, Export_WithProtocol) {
   ASSERT_OK(root_node.export_dir(std::move(endpoints->client), "svc", "one/two", ZX_PROTOCOL_BLOCK,
                                  {}, out));
 
-  const Devnode* node_one = root_node.lookup("one");
-  ASSERT_NE(node_one, nullptr);
-  EXPECT_EQ("one", node_one->name());
+  std::optional node_one = lookup(root_node, "one");
+  ASSERT_TRUE(node_one.has_value());
+  EXPECT_EQ("one", node_one->get().name());
 
-  const Devnode* node_two = node_one->lookup("two");
-  ASSERT_NE(node_two, nullptr);
-  EXPECT_EQ("two", node_two->name());
+  std::optional node_two = lookup(node_one->get(), "two");
+  ASSERT_TRUE(node_two.has_value());
+  EXPECT_EQ("two", node_two->get().name());
 
-  const Devnode* node_000 = proto_node->lookup("000");
+  fbl::RefPtr<fs::Vnode> node_000;
+  EXPECT_OK(proto_node->children().Lookup("000", &node_000));
   ASSERT_NE(node_000, nullptr);
-  EXPECT_EQ("000", node_000->name());
 }
 
 TEST(Devfs, Export_AlreadyExists) {
   std::optional<Devnode> root_slot;
-  Devfs devfs(root_slot, nullptr);
+  const Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
@@ -131,9 +158,9 @@ TEST(Devfs, Export_AlreadyExists) {
 
 TEST(Devfs, Export_FailedToClone) {
   std::optional<Devnode> root_slot;
-  Devfs devfs(root_slot, nullptr);
+  const Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_EQ(ZX_ERR_BAD_HANDLE,
@@ -142,26 +169,26 @@ TEST(Devfs, Export_FailedToClone) {
 
 TEST(Devfs, Export_DropDevfs) {
   std::optional<Devnode> root_slot;
-  Devfs devfs(root_slot, nullptr);
+  const Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
   std::vector<std::unique_ptr<Devnode>> out;
 
   ASSERT_OK(root_node.export_dir({}, "svc", "one/two", 0, {}, out));
 
   {
-    const Devnode* node_one = root_node.lookup("one");
-    ASSERT_NE(node_one, nullptr);
-    EXPECT_EQ("one", node_one->name());
+    std::optional node_one = lookup(root_node, "one");
+    ASSERT_TRUE(node_one.has_value());
+    EXPECT_EQ("one", node_one->get().name());
 
-    const Devnode* node_two = node_one->lookup("two");
-    ASSERT_NE(node_two, nullptr);
-    EXPECT_EQ("two", node_two->name());
+    std::optional node_two = lookup(node_one->get(), "two");
+    ASSERT_TRUE(node_two.has_value());
+    EXPECT_EQ("two", node_two->get().name());
   }
 
   out.clear();
 
-  ASSERT_EQ(root_node.lookup("one"), nullptr);
+  ASSERT_FALSE(lookup(root_node, "one").has_value());
 }
 
 TEST(Devfs, ExportWatcher_Export) {
@@ -170,7 +197,7 @@ TEST(Devfs, ExportWatcher_Export) {
   std::optional<Devnode> root_slot;
   Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
 
   // Create a fake service at svc/test.
   auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
@@ -200,13 +227,13 @@ TEST(Devfs, ExportWatcher_Export) {
 
   // Make sure the directories were set up correctly.
   {
-    const Devnode* node_one = root_node.lookup("one");
-    ASSERT_NE(node_one, nullptr);
-    EXPECT_EQ("one", node_one->name());
+    std::optional node_one = lookup(root_node, "one");
+    ASSERT_TRUE(node_one.has_value());
+    EXPECT_EQ("one", node_one->get().name());
 
-    const Devnode* node_two = node_one->lookup("two");
-    ASSERT_NE(node_two, nullptr);
-    EXPECT_EQ("two", node_two->name());
+    std::optional node_two = lookup(node_one->get(), "two");
+    ASSERT_TRUE(node_two.has_value());
+    EXPECT_EQ("two", node_two->get().name());
   }
 
   // Run the loop and make sure ExportWatcher connected to our service.
@@ -214,17 +241,17 @@ TEST(Devfs, ExportWatcher_Export) {
   loop.ResetQuit();
   ASSERT_NE(service_channel.get(), ZX_HANDLE_INVALID);
   ASSERT_FALSE(did_close);
-  ASSERT_NE(root_node.lookup("one"), nullptr);
+  ASSERT_TRUE(lookup(root_node, "one").has_value());
 
   // Close the server end and check that ExportWatcher noticed.
   service_channel.reset();
   loop.Run();
   ASSERT_TRUE(did_close);
-  ASSERT_NE(root_node.lookup("one"), nullptr);
+  ASSERT_TRUE(lookup(root_node, "one").has_value());
 
   // Drop ExportWatcher and make sure the devfs nodes disappeared.
   result.value().reset();
-  ASSERT_EQ(root_node.lookup("one"), nullptr);
+  ASSERT_FALSE(lookup(root_node, "one").has_value());
 }
 
 TEST(Devfs, ExportWatcher_Export_Invisible) {
@@ -233,7 +260,7 @@ TEST(Devfs, ExportWatcher_Export_Invisible) {
   std::optional<Devnode> root_slot;
   Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
 
   // Create the export server and client.
   auto exporter = driver_manager::DevfsExporter(devfs, &root_node, loop.dispatcher());
@@ -264,15 +291,15 @@ TEST(Devfs, ExportWatcher_Export_Invisible) {
 
   // Make sure the directories were set up correctly.
   {
-    const Devnode* node_one = root_node.lookup("one");
-    ASSERT_NE(node_one, nullptr);
-    EXPECT_EQ("one", node_one->name());
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_one->export_options());
+    std::optional node_one = lookup(root_node, "one");
+    ASSERT_TRUE(node_one.has_value());
+    EXPECT_EQ("one", node_one->get().name());
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_one->get().export_options());
 
-    const Devnode* node_two = node_one->lookup("two");
-    ASSERT_NE(node_two, nullptr);
-    EXPECT_EQ("two", node_two->name());
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_two->export_options());
+    std::optional node_two = lookup(node_one.value(), "two");
+    ASSERT_TRUE(node_two.has_value());
+    EXPECT_EQ("two", node_two->get().name());
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions::kInvisible, node_two->get().export_options());
   }
 
   // Try and make a subdir visible, this will fail because the devfs path has to match exactly with
@@ -293,15 +320,15 @@ TEST(Devfs, ExportWatcher_Export_Invisible) {
 
   // Make sure the directories were set up correctly.
   {
-    const Devnode* node_one = root_node.lookup("one");
-    ASSERT_NE(node_one, nullptr);
-    EXPECT_EQ("one", node_one->name());
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_one->export_options());
+    std::optional node_one = lookup(root_node, "one");
+    ASSERT_TRUE(node_one.has_value());
+    EXPECT_EQ("one", node_one->get().name());
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_one->get().export_options());
 
-    const Devnode* node_two = node_one->lookup("two");
-    ASSERT_NE(node_two, nullptr);
-    EXPECT_EQ("two", node_two->name());
-    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_two->export_options());
+    std::optional node_two = lookup(node_one->get(), "two");
+    ASSERT_TRUE(node_two.has_value());
+    EXPECT_EQ("two", node_two->get().name());
+    EXPECT_EQ(fuchsia_device_fs::wire::ExportOptions(), node_two->get().export_options());
   }
 
   // Try and make visible again, this will cause an error.
@@ -320,7 +347,7 @@ TEST(Devfs, ExportWatcherCreateFails) {
   std::optional<Devnode> root_slot;
   Devfs devfs(root_slot, nullptr);
   ASSERT_TRUE(root_slot.has_value());
-  Devnode root_node(devfs, nullptr);
+  Devnode& root_node = root_slot.value();
 
   // Create a fake service at svc/test.
   // Export the svc/test.

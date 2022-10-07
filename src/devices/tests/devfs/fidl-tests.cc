@@ -78,7 +78,7 @@ TEST(FidlTestCase, OpenDev) {
   FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",
                     zx::error(ZX_ERR_NOT_FOUND));
   FidlOpenValidator(endpoints->client, "zero/this-path-better-not-actually-exist",
-                    zx::error(ZX_ERR_NOT_FOUND));
+                    zx::error(ZX_ERR_NOT_SUPPORTED));
 }
 
 TEST(FidlTestCase, OpenPkg) {

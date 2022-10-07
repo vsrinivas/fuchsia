@@ -96,7 +96,8 @@ DirectoryConnection::DirectoryConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vn
                  FidlProtocol::Create<fuchsia_io::Directory>(this)) {}
 
 void DirectoryConnection::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
-  Connection::NodeClone(request->flags, std::move(request->object));
+  // TODO(https://fxbug.dev/111302): test this.
+  Connection::NodeClone(request->flags | fio::OpenFlags::kDirectory, std::move(request->object));
 }
 
 void DirectoryConnection::Close(CloseCompleter::Sync& completer) {
@@ -241,10 +242,12 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
   }
 
   // Check for directory rights inheritance
-  zx_status_t status = EnforceHierarchicalRights(options().rights, open_options, &open_options);
-  if (status != ZX_OK) {
-    FS_PRETTY_TRACE_DEBUG("Rights violation during DirectoryOpen");
-    return write_error(std::move(request->object), status);
+  if (!vnode()->IsSkipRightsEnforcementDevfsOnlyDoNotUse()) {
+    zx_status_t status = EnforceHierarchicalRights(options().rights, open_options, &open_options);
+    if (status != ZX_OK) {
+      FS_PRETTY_TRACE_DEBUG("Rights violation during DirectoryOpen");
+      return write_error(std::move(request->object), status);
+    }
   }
   OpenAt(vfs(), vnode(), std::move(request->object), path, open_options, options().rights, mode);
 }

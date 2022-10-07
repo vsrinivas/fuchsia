@@ -12,7 +12,7 @@
 
 #include "src/devices/bin/driver_manager/component_lifecycle.h"
 #include "src/devices/bin/driver_manager/tests/coordinator_test_mock_power_manager.h"
-#include "src/devices/lib/log/log.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {
   size_t parent_index;
@@ -483,26 +483,6 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
   mock_power_manager.wait_until_register_called();
 }
 
-TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
-  std::optional<Devnode>& root_node_opt = coordinator().root_device()->self;
-  ASSERT_TRUE(root_node_opt.has_value());
-  Devnode& root_node = root_node_opt.value();
-
-  ASSERT_FALSE(root_node.has_watchers());
-
-  // Create the watcher and make sure it's been registered.
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>();
-  ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(root_node.watch(coordinator_loop()->dispatcher(), std::move(endpoints->server),
-                            fuchsia_io::wire::WatchMask::kAdded));
-  ASSERT_TRUE(root_node.has_watchers());
-
-  // Free our channel and make sure it gets de-registered.
-  endpoints->client.reset();
-  coordinator_loop()->RunUntilIdle();
-  ASSERT_FALSE(root_node.has_watchers());
-}
-
 // This functor accepts a |fidl::WireUnownedResult<FidlMethod>&| and checks that
 // the call completed with an application error |s| of |ZX_ERR_NOT_SUPPORTED|.
 class UnsupportedEpitaphMatcher {
@@ -510,7 +490,7 @@ class UnsupportedEpitaphMatcher {
   template <typename FidlMethod>
   void operator()(fidl::WireUnownedResult<FidlMethod>& result) {
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().s, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_STATUS(result.value().s, ZX_ERR_NOT_SUPPORTED);
   }
 };
 
@@ -525,27 +505,27 @@ class UnsupportedErrorMatcher {
 };
 
 TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
-  zx::status devfs_client = coordinator().devfs().Connect(coordinator_loop()->dispatcher());
+  fs::SynchronousVfs vfs(coordinator_loop()->dispatcher());
+  zx::status devfs_client = coordinator().devfs().Connect(vfs);
   ASSERT_OK(devfs_client.status_value());
   fidl::WireClient client(std::move(devfs_client.value()), coordinator_loop()->dispatcher());
 
-  {
-    zx::channel s, c;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
-    client->Link("", std::move(s), "").ThenExactlyOnce(UnsupportedEpitaphMatcher());
-  }
-  {
-    zx::event e;
-    fuchsia_io::wire::Directory2RenameResult x;
-    ASSERT_EQ(ZX_OK, zx::event::create(0, &e));
-    client->Rename("", std::move(e), "")
-        .ThenExactlyOnce([](fidl::WireUnownedResult<fuchsia_io::Directory::Rename>& ret) {
-          ASSERT_OK(ret.status());
-          ASSERT_TRUE(ret->is_error());
-          ASSERT_EQ(ret->error_value(), ZX_ERR_NOT_SUPPORTED);
-        });
-  }
-  client->GetToken().ThenExactlyOnce(UnsupportedEpitaphMatcher());
+  client->GetToken().ThenExactlyOnce(
+      [&client](fidl::WireUnownedResult<fio::Directory::GetToken>& result) {
+        ASSERT_OK(result.status());
+        fidl::WireResponse<fio::Directory::GetToken>& response = result.value();
+        ASSERT_OK(response.s);
+        client->Link("class", std::move(response.token), "link2class")
+            .ThenExactlyOnce(UnsupportedEpitaphMatcher());
+      });
+  client->GetToken().ThenExactlyOnce(
+      [&client](fidl::WireUnownedResult<fio::Directory::GetToken>& result) {
+        ASSERT_OK(result.status());
+        fidl::WireResponse<fio::Directory::GetToken>& response = result.value();
+        ASSERT_OK(response.s);
+        client->Rename("class", zx::event(std::move(response.token)), "classier")
+            .ThenExactlyOnce(UnsupportedErrorMatcher());
+      });
   client->SetAttr({}, {}).ThenExactlyOnce(UnsupportedEpitaphMatcher());
   client->Sync().ThenExactlyOnce(UnsupportedErrorMatcher());
 

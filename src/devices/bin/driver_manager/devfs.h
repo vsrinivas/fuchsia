@@ -8,8 +8,6 @@
 #include <fidl/fuchsia.device.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/dispatcher.h>
-#include <lib/zx/channel.h>
-#include <zircon/types.h>
 
 #include <variant>
 
@@ -17,13 +15,16 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
+
 class Devfs;
 class Device;
-class DcIostate;
-struct Watcher;
+class PseudoDir;
 
-struct Devnode
+class Devnode
     : public fbl::DoublyLinkedListable<Devnode*, fbl::NodeOptions::AllowRemoveFromContainer> {
+ public:
   using ExportOptions = fuchsia_device_fs::wire::ExportOptions;
   struct NoRemote {
     mutable ExportOptions export_options;
@@ -40,7 +41,7 @@ struct Devnode
   Devnode(Devfs& devfs, Device* device);
 
   // `parent` must outlive `this`.
-  Devnode(Devfs& devfs, Devnode& parent, Target target, fbl::String name);
+  Devnode(Devfs& devfs, PseudoDir& parent, Target target, fbl::String name);
 
   ~Devnode();
 
@@ -49,11 +50,6 @@ struct Devnode
 
   Devnode(Devnode&&) = delete;
   Devnode& operator=(Devnode&&) = delete;
-
-  // Watches the devfs directory `dn`, and sends events to `server_end`.
-  zx_status_t watch(async_dispatcher_t* dispatcher,
-                    fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end,
-                    fuchsia_io::wire::WatchMask mask);
 
   zx::status<Devnode*> walk(std::string_view path);
 
@@ -68,64 +64,123 @@ struct Devnode
                          uint32_t protocol_id, ExportOptions options,
                          std::vector<std::unique_ptr<Devnode>>& out);
 
-  void notify(std::string_view name, fuchsia_io::wire::WatchEvent op);
-
-  // This method is exposed for testing.
-  bool has_watchers() const;
-
-  // This method is exposed for testing.
-  Devnode* lookup(std::string_view name);
-  const Devnode* lookup(std::string_view name) const;
-
   const Device* device() const;
-  Devnode* parent() const;
   std::string_view name() const;
+  PseudoDir& children() const { return node().children(); }
   ExportOptions export_options() const;
   ExportOptions* export_options();
 
   // Publishes the node to devfs. Asserts if called more than once.
   void publish();
 
+  // The actual vnode implementation. This is distinct from the outer class
+  // because `fs::Vnode` imposes reference-counted semantics, and we want to
+  // preserve owned semantics on the outer class.
+  //
+  // This is exposed for use in tests.
+  class VnodeImpl : public fs::Vnode {
+   public:
+    fs::VnodeProtocolSet GetProtocols() const final;
+    zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
+    zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) final;
+    zx_status_t WatchDir(fs::Vfs* vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                         fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) final;
+    zx_status_t Readdir(fs::VdirCookie* cookie, void* dirents, size_t len,
+                        size_t* out_actual) final;
+    zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
+                                       fs::VnodeRepresentation* info) final;
+    zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
+
+    bool IsSkipRightsEnforcementDevfsOnlyDoNotUse() const final { return true; }
+
+    PseudoDir& children() const { return *children_; }
+
+    Devnode& holder_;
+    const Target target_;
+
+   private:
+    friend fbl::internal::MakeRefCountedHelper<VnodeImpl>;
+
+    VnodeImpl(Devnode& holder, Target target);
+
+    bool IsDirectory() const;
+
+    class RemoteNode : public fs::Vnode {
+     private:
+      friend fbl::internal::MakeRefCountedHelper<RemoteNode>;
+
+      explicit RemoteNode(VnodeImpl& parent) : parent_(parent) {}
+
+      fs::VnodeProtocolSet GetProtocols() const final;
+      zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
+                                         fs::VnodeRepresentation* info) final;
+
+      bool IsRemote() const final;
+      zx_status_t OpenRemote(fuchsia_io::OpenFlags, uint32_t, fidl::StringView,
+                             fidl::ServerEnd<fuchsia_io::Node>) const final;
+
+      VnodeImpl& parent_;
+    };
+
+    fbl::RefPtr<PseudoDir> children_ = fbl::MakeRefCounted<PseudoDir>();
+    fbl::RefPtr<RemoteNode> remote_ = fbl::MakeRefCounted<RemoteNode>(*this);
+  };
+
  private:
-  friend class DcIostate;
+  VnodeImpl& node() const { return *node_; }
+  const Target& target() const { return node_->target_; }
+
   friend class Devfs;
-
-  // A devnode is a directory (from stat's perspective) if it has children, or
-  // if it doesn't have a device, or if its device has no rpc handle.
-  bool is_dir() const;
-
-  void open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_io::Node> ipc,
-            std::string_view path, fuchsia_io::OpenFlags flags);
-
-  zx_status_t readdir(uint64_t* ino_inout, void* data, size_t len);
-
-  zx::status<fbl::String> seq_name();
+  friend class PseudoDir;
 
   Devfs& devfs_;
 
-  // Pointer to our parent, for removing ourselves from its list of
-  // children. Our parent must outlive us.
-  Devnode* parent_;
+  fbl::RefPtr<PseudoDir> parent_;
 
-  const Target target_;
+  const fbl::RefPtr<VnodeImpl> node_;
 
   const std::optional<fbl::String> name_;
-  const uint64_t ino_;
+};
 
-  // used to assign unique small device numbers
-  // for class device links
+class PseudoDir : public fs::PseudoDir {
+ public:
+  fbl::DoublyLinkedList<Devnode*> unpublished;
+
+ private:
+  PseudoDir() : fs::PseudoDir(nullptr, false) {}
+  bool IsSkipRightsEnforcementDevfsOnlyDoNotUse() const final { return true; }
+
+  friend fbl::internal::MakeRefCountedHelper<PseudoDir>;
+};
+
+// Represents an entry in the /dev/class directory. A thin wrapper around
+// `PseudoDir` that can be owned and keeps track of numbered entries
+// contained within it.
+class ProtoNode {
+ public:
+  explicit ProtoNode(fbl::String name);
+
+  ProtoNode(const ProtoNode&) = delete;
+  ProtoNode& operator=(const ProtoNode&) = delete;
+
+  ProtoNode(ProtoNode&&) = delete;
+  ProtoNode& operator=(ProtoNode&&) = delete;
+
+  // This is used in tests only.
+  std::string_view name() const { return name_; }
+  PseudoDir& children() const { return *children_; }
+
+ private:
+  friend class Devfs;
+  friend class Devnode;
+
+  zx::status<fbl::String> seq_name();
+
+  const fbl::String name_;
+
   uint32_t seqcount_ = 0;
 
-  fbl::DoublyLinkedList<std::unique_ptr<Watcher>> watchers;
-
-  // list of our child devnodes
-  struct {
-    fbl::DoublyLinkedList<Devnode*> unpublished;
-    fbl::DoublyLinkedList<Devnode*> published;
-  } children;
-
-  // list of attached iostates
-  fbl::DoublyLinkedList<DcIostate*> iostate;
+  fbl::RefPtr<PseudoDir> children_ = fbl::MakeRefCounted<PseudoDir>();
 };
 
 class Devfs {
@@ -134,35 +189,21 @@ class Devfs {
   Devfs(std::optional<Devnode>& root, Device* device,
         std::optional<fidl::ClientEnd<fuchsia_io::Directory>> diagnostics = {});
 
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Connect(async_dispatcher_t* dispatcher);
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Connect(fs::FuchsiaVfs& vfs);
 
   zx_status_t initialize(Device& parent, Device& device);
   void publish(Device& device);
   void advertise_modified(Device& dev);
 
-  // For testing only.
-  Devnode* proto_node(uint32_t protocol_id);
+  // This method is exposed for testing.
+  ProtoNode* proto_node(uint32_t protocol_id);
 
  private:
-  friend struct Devnode;
+  friend class Devnode;
 
-  uint64_t next_ino = 1;
+  Devnode& root_;
 
-  Devnode* root_devnode_;
-
-  Devnode class_devnode;
-
-  // Dummy node to represent dev/diagnostics directory.
-  Devnode diagnostics_devnode;
-
-  // Dummy node to represent dev/null directory.
-  Devnode null_devnode;
-
-  // Dummy node to represent dev/zero directory.
-  Devnode zero_devnode;
-
-  // Connection to diagnostics VFS server.
-  const std::optional<fidl::ClientEnd<fuchsia_io::Directory>> diagnostics_;
+  fbl::RefPtr<PseudoDir> class_ = fbl::MakeRefCounted<PseudoDir>();
 
   struct ProtocolInfo {
     std::string_view name;
@@ -175,7 +216,7 @@ class Devfs {
 #include <lib/ddk/protodefs.h>
   };
 
-  std::unordered_map<uint32_t, Devnode> proto_info_nodes;
+  std::unordered_map<uint32_t, ProtoNode> proto_info_nodes;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_H_

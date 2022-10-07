@@ -13,6 +13,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/devices/bin/driver_manager/tests/multiple_device_test.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace fio = fuchsia_io;
 
@@ -832,12 +833,15 @@ TEST_F(CompositeTestCase, ResumeOrder) {
 
 // Make sure we receive devfs notifications when composite devices appear
 TEST_F(CompositeTestCase, DevfsNotifications) {
+  fs::SynchronousVfs vfs(coordinator().dispatcher());
   fidl::ClientEnd<fuchsia_io::DirectoryWatcher> client_end;
   {
     zx::status server = fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>(&client_end);
     ASSERT_OK(server.status_value());
-    ASSERT_OK(coordinator().root_device()->self->watch(
-        coordinator().dispatcher(), std::move(server.value()), fio::wire::WatchMask::kAdded));
+    std::optional<Devnode>& dn = coordinator().root_device()->self;
+    ASSERT_TRUE(dn.has_value());
+    ASSERT_OK(dn.value().children().WatchDir(&vfs, fio::wire::WatchMask::kAdded, 0,
+                                             std::move(server.value())));
   }
 
   size_t device_indexes[2];

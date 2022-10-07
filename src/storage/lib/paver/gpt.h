@@ -115,7 +115,7 @@ class GptDevicePartitioner {
   zx::status<uuid::Uuid> CreateGptPartition(const char* name, const uuid::Uuid& type,
                                             uint64_t offset, uint64_t blocks) const;
 
-  fbl::unique_fd devfs_root_;
+  const fbl::unique_fd devfs_root_;
   fidl::ClientEnd<fuchsia_io::Directory> svc_root_;
   fdio_cpp::FdioCaller caller_;
   mutable std::unique_ptr<GptDevice> gpt_;

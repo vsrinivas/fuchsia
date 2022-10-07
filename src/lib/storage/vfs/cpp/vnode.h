@@ -178,6 +178,13 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   zx_status_t OpenValidating(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect)
       __TA_EXCLUDES(mutex_);
 
+  // TODO(https://fxbug.dev/101092): Remove this when either:
+  //
+  // - Connecting to services no longer requires rw rights.
+  //
+  // - All devfs clients request rw rights.
+  virtual bool IsSkipRightsEnforcementDevfsOnlyDoNotUse() const { return false; }
+
   // METHODS FOR OPENED NODES
   //
   // The following operations will not be invoked unless the Vnode has been "Open()"-ed

@@ -281,9 +281,11 @@ void Connection::NodeClone(fio::wire::OpenFlags flags, fidl::ServerEnd<fio::Node
   if (clone_options.flags.clone_same_rights) {
     clone_options.rights = options().rights;
   }
-  if (!clone_options.rights.StricterOrSameAs(options().rights)) {
-    FS_PRETTY_TRACE_DEBUG("Rights violation during NodeClone");
-    return write_error(std::move(server_end), ZX_ERR_ACCESS_DENIED);
+  if (!vnode()->IsSkipRightsEnforcementDevfsOnlyDoNotUse()) {
+    if (!clone_options.rights.StricterOrSameAs(options().rights)) {
+      FS_PRETTY_TRACE_DEBUG("Rights violation during NodeClone");
+      return write_error(std::move(server_end), ZX_ERR_ACCESS_DENIED);
+    }
   }
 
   fbl::RefPtr<Vnode> vn(vnode_);

@@ -118,11 +118,20 @@ class PseudoDir : public Vnode {
       fbl::TaggedWAVLTree<uint64_t, std::unique_ptr<Entry>, IdTreeTag, KeyByIdTraits>;
   using EntryByNameMap = fbl::TaggedWAVLTree<fbl::String, Entry*, NameTreeTag, KeyByNameTraits>;
 
+  // TODO(https://fxbug.dev/101092, https://fxbug.dev/110485): Privatize these
+  // when Vnode::IsSkipRightsEnforcementDevfsOnlyDoNotUse has been removed and
+  // devfs watchers can handle "." appearing in /dev/class/*/.
+ protected:
   // Creates a directory which is initially empty.
-  explicit PseudoDir(PlatformVfs* vfs = nullptr);
+  explicit PseudoDir(PlatformVfs* vfs = nullptr, bool has_dot_entry = true);
 
   // Destroys the directory and releases the nodes it contains.
   ~PseudoDir() override;
+
+ private:
+  // TODO(https://fxbug.dev/110485): Remove this when devfs watchers can handle
+  // "." appearing in /dev/class/*/.
+  const bool has_dot_entry_;
 
   uint64_t next_node_id_ __TA_GUARDED(mutex_) = kDotId + 1;
   EntryByIdMap entries_by_id_ __TA_GUARDED(mutex_);
