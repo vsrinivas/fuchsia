@@ -42,30 +42,6 @@ class TestStreamSinkServerAndClient {
     return static_cast<char*>(payload_buffer_->start()) + offset;
   }
 
-  // Calls AddProducerQueue on the underlying server and blocks until that call completes.
-  // Should be called with ASSERT_NO_FATAL_FAILURE(..).
-  void AddProducerQueue(std::shared_ptr<StreamSinkServer::CommandQueue> q) {
-    libsync::Completion done;
-    thread_->PostTask([this, q, &done]() {
-      ScopedThreadChecker checker(server().thread().checker());
-      server().AddProducerQueue(q);
-      done.Signal();
-    });
-    ASSERT_EQ(done.Wait(zx::sec(5)), ZX_OK);
-  }
-
-  // Calls RemoveProducerQueue on the underlying server and blocks until that call completes.
-  // Should be called with ASSERT_NO_FATAL_FAILURE(..).
-  void RemoveProducerQueue(std::shared_ptr<StreamSinkServer::CommandQueue> q) {
-    libsync::Completion done;
-    thread_->PostTask([this, q, &done]() {
-      ScopedThreadChecker checker(server().thread().checker());
-      server().RemoveProducerQueue(q);
-      done.Signal();
-    });
-    ASSERT_EQ(done.Wait(zx::sec(5)), ZX_OK);
-  }
-
   // Calls `client()->PutPacket` and wants for that call to complete.
   // Should be called with ASSERT_NO_FATAL_FAILURE(..).
   void PutPacket(fuchsia_media2::wire::PayloadRange payload,
@@ -91,14 +67,6 @@ class TestStreamSinkServerAndClient {
         return true;
       }
       return false;
-    });
-  }
-
-  // Blocks until the server has the given number of outgoing command queues.
-  bool WaitUntilNumQueuesIs(size_t expected, zx::duration timeout = zx::sec(5)) {
-    return PollServerUntil(zx::deadline_after(timeout), [this, expected]() {
-      ScopedThreadChecker checker(server().thread().checker());
-      return server().queues_.size() == expected;
     });
   }
 

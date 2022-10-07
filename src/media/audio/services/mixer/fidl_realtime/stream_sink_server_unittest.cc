@@ -80,8 +80,7 @@ class StreamSinkServerTest : public ::testing::Test {
 };
 
 TEST_F(StreamSinkServerTest, ExplicitTimestamp) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   // This timestamp is equivalent to 1s, since there is 1 media tick per 10ms reference time.
   // See kMediaTicksPerNs.
@@ -143,8 +142,7 @@ TEST_F(StreamSinkServerTest, ExplicitTimestamp) {
 }
 
 TEST_F(StreamSinkServerTest, ContinuousTimestamps) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   TestFence packet0_fence;
   TestFence packet1_fence;
@@ -202,8 +200,7 @@ TEST_F(StreamSinkServerTest, ContinuousTimestamps) {
 }
 
 TEST_F(StreamSinkServerTest, PayloadZeroOffset) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   TestFence fence;
   {
@@ -226,8 +223,7 @@ TEST_F(StreamSinkServerTest, PayloadZeroOffset) {
 }
 
 TEST_F(StreamSinkServerTest, PayloadNonzeroOffset) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   // Send a packet with a non-zero offset.
   const uint32_t kOffset = 42;
@@ -251,75 +247,8 @@ TEST_F(StreamSinkServerTest, PayloadNonzeroOffset) {
             stream_sink().PayloadBufferOffset(kOffset));
 }
 
-TEST_F(StreamSinkServerTest, MultipleQueues) {
-  auto queue0 = std::make_shared<CommandQueue>();
-  auto queue1 = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue0));
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue1));
-
-  TestFence packet0_fence;
-  TestFence packet1_fence;
-
-  {
-    SCOPED_TRACE("send first continuous packet");
-    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
-        {
-            .buffer_id = kBufferId,
-            .offset = 0,
-            .size = static_cast<uint64_t>(kFormat.bytes_per_frame()),
-        },
-        fuchsia_media2::wire::PacketTimestamp::WithUnspecifiedContinuous({}),
-        packet0_fence.Take()));
-  }
-
-  // The command should appear in both queues.
-  auto cmd0 = queue0->pop();
-  ASSERT_TRUE(cmd0);
-  ASSERT_TRUE(std::holds_alternative<PushPacketCommand>(*cmd0));
-  ASSERT_EQ(std::get<PushPacketCommand>(*cmd0).packet.start(), Fixed(0));
-
-  auto cmd1 = queue1->pop();
-  ASSERT_TRUE(cmd1);
-  ASSERT_TRUE(std::holds_alternative<PushPacketCommand>(*cmd1));
-  ASSERT_EQ(std::get<PushPacketCommand>(*cmd1).packet.start(), Fixed(0));
-
-  // The fence should not be released until both commands are dropped.
-  cmd0 = std::nullopt;
-  ASSERT_FALSE(packet0_fence.Done());
-  cmd1 = std::nullopt;
-  ASSERT_TRUE(packet0_fence.Wait(zx::sec(5)));
-
-  // Now remove queue0.
-  ASSERT_NO_FATAL_FAILURE(stream_sink().RemoveProducerQueue(queue0));
-
-  {
-    SCOPED_TRACE("send second continuous packet");
-    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
-        {
-            .buffer_id = kBufferId,
-            .offset = 0,
-            .size = static_cast<uint64_t>(kFormat.bytes_per_frame()),
-        },
-        fuchsia_media2::wire::PacketTimestamp::WithUnspecifiedContinuous({}),
-        packet1_fence.Take()));
-  }
-
-  // The command should appear in queue1 only.
-  cmd0 = queue0->pop();
-  ASSERT_FALSE(cmd0);
-
-  cmd1 = queue1->pop();
-  ASSERT_TRUE(cmd1);
-  ASSERT_TRUE(std::holds_alternative<PushPacketCommand>(*cmd1));
-  ASSERT_EQ(std::get<PushPacketCommand>(*cmd1).packet.start(), Fixed(1));
-
-  cmd1 = std::nullopt;
-  ASSERT_TRUE(packet1_fence.Wait(zx::sec(5)));
-}
-
 TEST_F(StreamSinkServerTest, Clear) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   TestFence fence;
 
@@ -340,8 +269,7 @@ TEST_F(StreamSinkServerTest, Clear) {
 }
 
 TEST_F(StreamSinkServerTest, InvalidInputNoPayloadBuffer) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   TestFence fence;
 
@@ -358,8 +286,7 @@ TEST_F(StreamSinkServerTest, InvalidInputNoPayloadBuffer) {
 }
 
 TEST_F(StreamSinkServerTest, InvalidInputUnknownPayloadBufferId) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   TestFence fence;
   ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
@@ -374,8 +301,7 @@ TEST_F(StreamSinkServerTest, InvalidInputUnknownPayloadBufferId) {
 }
 
 TEST_F(StreamSinkServerTest, InvalidInputPayloadBelowRange) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   TestFence fence;
   ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
@@ -390,8 +316,7 @@ TEST_F(StreamSinkServerTest, InvalidInputPayloadBelowRange) {
 }
 
 TEST_F(StreamSinkServerTest, InvalidInputPayloadAboveRange) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   TestFence fence;
   ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
@@ -406,8 +331,7 @@ TEST_F(StreamSinkServerTest, InvalidInputPayloadAboveRange) {
 }
 
 TEST_F(StreamSinkServerTest, InvalidInputPayloadNonIntegralFrames) {
-  auto queue = std::make_shared<CommandQueue>();
-  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
+  auto queue = stream_sink().server().command_queue();
 
   TestFence fence;
   ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(

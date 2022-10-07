@@ -8,36 +8,38 @@
 #include <lib/zx/time.h>
 #include <zircon/types.h>
 
+#include <memory>
+#include <variant>
+
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
+#include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/producer_stage.h"
+#include "src/media/audio/services/mixer/mix/ring_buffer.h"
 
 namespace media_audio {
-
-class MetaProducerNode;
 
 // This is an ordinary node that wraps a ProducerStage.
 class ProducerNode : public Node {
  public:
+  using DataSource = std::variant<std::shared_ptr<StreamSinkServer>, std::shared_ptr<RingBuffer>>;
+
   struct Args {
     // Name of this node.
     std::string_view name;
 
-    // Reference clock used by this consumer.
-    std::shared_ptr<Clock> reference_clock;
-
     // Whether this node participates in an input pipeline or an output pipeline.
     PipelineDirection pipeline_direction;
 
-    // Parent meta node. Optional.
-    NodePtr parent;
+    // Format of data produced by this node.
+    Format format;
 
-    // Command queue for the ProducerStage.
-    std::shared_ptr<ProducerStage::CommandQueue> start_stop_command_queue;
+    // Reference clock of this nodes's destination streams.
+    std::shared_ptr<Clock> reference_clock;
 
-    // Internal source for the ProducerStage.
-    PipelineStagePtr internal_source;
+    // Object from which to produce data.
+    DataSource data_source;
 
     // On creation, the node is initially assigned to this detached thread.
     GraphDetachedThreadPtr detached_thread;
@@ -45,15 +47,21 @@ class ProducerNode : public Node {
 
   static std::shared_ptr<ProducerNode> Create(Args args);
 
+  // Starts this producer. The command is forwarded to the underlying ProducerStage.
+  void Start(ProducerStage::StartCommand cmd) const;
+
+  // Stops this producer. The command is forwarded to the underlying ProducerStage.
+  void Stop(ProducerStage::StopCommand cmd) const;
+
   // Implements `Node`.
   zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
  private:
+  using StartStopCommandQueue = ProducerStage::CommandQueue;
+
   ProducerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage,
-               NodePtr parent)
-      : Node(Type::kProducer, name, std::move(reference_clock), pipeline_direction,
-             std::move(pipeline_stage), std::move(parent)) {}
+               std::shared_ptr<StartStopCommandQueue> start_stop_command_queue);
 
   NodePtr CreateNewChildSource() final {
     UNREACHABLE << "CreateNewChildSource should not be called on ordinary nodes";
@@ -64,6 +72,8 @@ class ProducerNode : public Node {
   bool CanAcceptSourceFormat(const Format& format) const final;
   std::optional<size_t> MaxSources() const final;
   bool AllowsDest() const final;
+
+  const std::shared_ptr<StartStopCommandQueue> start_stop_command_queue_;
 };
 
 }  // namespace media_audio

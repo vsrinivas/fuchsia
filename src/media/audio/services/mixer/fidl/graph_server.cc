@@ -16,8 +16,8 @@
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/fidl/consumer_node.h"
 #include "src/media/audio/services/mixer/fidl/custom_node.h"
-#include "src/media/audio/services/mixer/fidl/meta_producer_node.h"
 #include "src/media/audio/services/mixer/fidl/mixer_node.h"
+#include "src/media/audio/services/mixer/fidl/producer_node.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_client.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
@@ -241,7 +241,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
   }
 
   const auto name = NameOrEmpty(*request);
-  std::optional<MetaProducerNode::DataSource> source;
+  std::optional<ProducerNode::DataSource> source;
   std::optional<Format> format;
   std::shared_ptr<Clock> reference_clock;
 
@@ -289,7 +289,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
   }
 
   const auto id = NextNodeId();
-  nodes_[id] = MetaProducerNode::Create({
+  nodes_[id] = ProducerNode::Create({
       .name = name,
       .pipeline_direction = request->direction(),
       .format = *format,

@@ -163,7 +163,7 @@ protocol Graph {
     /// Producer nodes generate audio which can be consumed by other nodes. For
     /// example, a Producer node might encapsulate audio coming from an
     /// application or from a microphone. Producer nodes cannot have any
-    /// incoming edges but may have one or more outgoing edges.
+    /// incoming edges and may have at most one outgoing edge.
     CreateProducer(resource table {
         /// Name of this node, used for diagnostics only. See "IDs and names" in the
         /// comments for [`Graph`].

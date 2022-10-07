@@ -42,12 +42,8 @@ class StreamSinkServer
   // Returns the format of packets received by this StreamSink.
   const Format& format() const { return format_; }
 
-  // Adds an outgoing producer queue. Incoming FIDL commands are forwarded to each queue.
-  void AddProducerQueue(std::shared_ptr<CommandQueue> q) TA_REQ(thread().checker());
-
-  // Removes an outgoing producer queue that was previously added. After this returns, `q`
-  // will no longer receive forwarded FIDL commands.
-  void RemoveProducerQueue(std::shared_ptr<CommandQueue> q) TA_REQ(thread().checker());
+  // Returns the queue used to communicate with the producer.
+  std::shared_ptr<CommandQueue> command_queue() const { return command_queue_; }
 
   // Implementation of fidl::WireServer<fuchsia_media2::StreamSink>.
   void PutPacket(PutPacketRequestView request, PutPacketCompleter::Sync& completer) override;
@@ -62,17 +58,10 @@ class StreamSinkServer
 
   explicit StreamSinkServer(Args args);
 
-  // For each queue, call `fn` and pass a duplicate of `fence`.
-  void ForEachQueueWithDuplicateFence(zx::eventpair fence,
-                                      std::function<void(CommandQueue&, zx::eventpair)> fn)
-      TA_REQ(thread().checker());
-
   const Format format_;
   const TimelineRate frac_frames_per_media_ticks_;
   const std::unordered_map<uint32_t, std::shared_ptr<MemoryMappedBuffer>> payload_buffers_;
-
-  TA_GUARDED(thread().checker())
-  std::unordered_map<CommandQueue*, std::shared_ptr<CommandQueue>> queues_;
+  const std::shared_ptr<CommandQueue> command_queue_;
 
   // The frame timestamp for the first frame in the next continuous packet.
   // Defaults to 0 for the first packet.

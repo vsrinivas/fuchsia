@@ -23,15 +23,8 @@ StreamSinkServer::StreamSinkServer(Args args)
     : format_(args.format),
       frac_frames_per_media_ticks_(
           TimelineRate::Product(format_.frac_frames_per_ns(), args.media_ticks_per_ns.Inverse())),
-      payload_buffers_(std::move(args.payload_buffers)) {}
-
-void StreamSinkServer::AddProducerQueue(std::shared_ptr<CommandQueue> q) {
-  queues_.emplace(q.get(), q);
-}
-
-void StreamSinkServer::RemoveProducerQueue(std::shared_ptr<CommandQueue> q) {
-  queues_.erase(q.get());
-}
+      payload_buffers_(std::move(args.payload_buffers)),
+      command_queue_(std::make_shared<CommandQueue>()) {}
 
 void StreamSinkServer::PutPacket(PutPacketRequestView request,
                                  PutPacketCompleter::Sync& completer) {
@@ -112,11 +105,9 @@ void StreamSinkServer::PutPacket(PutPacketRequestView request,
   });
 
   next_continuous_frame_ = packet.end();
-
-  // Drop the fence after all queues are done with the packet.
-  ForEachQueueWithDuplicateFence(std::move(request->release_fence), [packet](auto& q, auto fence) {
-    q.push(SimplePacketQueueProducerStage::PushPacketCommand{.packet = packet,
-                                                             .fence = std::move(fence)});
+  command_queue_->push(SimplePacketQueueProducerStage::PushPacketCommand{
+      .packet = packet,
+      .fence = std::move(request->release_fence),
   });
 }
 
@@ -136,32 +127,9 @@ void StreamSinkServer::Clear(ClearRequestView request, ClearCompleter::Sync& com
     ++fidl_calls_completed_;
   });
 
-  // Drop the fence after all queues have been cleared.
-  ForEachQueueWithDuplicateFence(std::move(request->completion_fence), [](auto& q, auto fence) {
-    q.push(SimplePacketQueueProducerStage::ClearCommand{.fence = std::move(fence)});
+  command_queue_->push(SimplePacketQueueProducerStage::ClearCommand{
+      .fence = std::move(request->completion_fence),
   });
-}
-
-void StreamSinkServer::ForEachQueueWithDuplicateFence(
-    zx::eventpair fence, std::function<void(CommandQueue&, zx::eventpair)> fn) {
-  auto num_left = queues_.size();
-  bool warned = false;
-
-  for (auto& [key, q] : queues_) {
-    zx::eventpair dup;
-
-    num_left--;
-    if (num_left == 0) {
-      dup = std::move(fence);
-    } else if (fence.is_valid()) {
-      if (auto status = fence.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK && !warned) {
-        FX_PLOGS(WARNING, status) << "unable to duplicate fence";
-        warned = true;
-      }
-    }
-
-    fn(*q, std::move(dup));
-  }
 }
 
 }  // namespace media_audio
