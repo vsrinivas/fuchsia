@@ -12,6 +12,7 @@ if (is_host) {
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:libc",
       "//third_party/rust_crates:prost-build",
     ]
 

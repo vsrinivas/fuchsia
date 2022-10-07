@@ -6,6 +6,8 @@ use anyhow::{bail, Context, Result};
 use argh::FromArgs;
 use prost_build;
 use std::collections::HashSet;
+use std::fs::File;
+use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 
 #[derive(FromArgs, Debug)]
@@ -57,6 +59,13 @@ fn main() -> Result<()> {
     }
 
     let includes: Vec<PathBuf> = include_set.into_iter().collect();
+
+    // The prost_build library prints to stdout which is undesirable.
+    // Replace the stdout fd with /dev/null so as to be less disruptive.
+    let dev_null = File::open("/dev/null")?;
+    unsafe {
+        libc::dup2(dev_null.as_raw_fd(), std::io::stdout().as_raw_fd());
+    }
 
     let mut config = prost_build::Config::new();
     config.out_dir(&options.out_dir);
