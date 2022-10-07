@@ -20,6 +20,17 @@ source_set("dfv1") {
   deps = [ "//zircon/system/ulib/fbl" ]
 }
 
+source_set("dfv2") {
+  sources = [
+    "dfv2/fragment-irq.cc",
+    "dfv2/fragment-irq.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.interrupt:fuchsia.hardware.interrupt_cpp_wire",
+    "//sdk/lib/driver2:cpp",
+  ]
+}
+
 test("dfv1-test") {
   output_name = "fragment-irq-dfv1-test"
 
@@ -39,8 +50,30 @@ fuchsia_unittest_component("fragment-irq-dfv1-test") {
   deps = [ ":dfv1-test" ]
 }
 
+test("dfv2-test") {
+  output_name = "fragment-irq-dfv2-test"
+
+  deps = [
+    ":dfv2",
+    "//sdk/fidl/fuchsia.hardware.interrupt:fuchsia.hardware.interrupt_cpp",
+    "//sdk/lib/sys/component/cpp",
+    "//src/devices/testing/mock-ddk",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
+    "//third_party/googletest:gtest",
+  ]
+  sources = [ "test-dfv2.cc" ]
+}
+
+fuchsia_unittest_component("fragment-irq-dfv2-test") {
+  deps = [ ":dfv2-test" ]
+}
+
 fuchsia_test_package("fragment-irq-tests") {
-  test_components = [ ":fragment-irq-dfv1-test" ]
+  test_components = [
+    ":fragment-irq-dfv1-test",
+    ":fragment-irq-dfv2-test",
+  ]
 }
 
 group("tests") {
