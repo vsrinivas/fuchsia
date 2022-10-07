@@ -284,7 +284,7 @@ TEST_F(GestureDisambiguationTest, Contest_ShouldNotIncludeContext) {
   EXPECT_EQ(received_events2.size(), 1u);
 }
 
-TEST_F(GestureDisambiguationTest, ContestResolution) {
+TEST_F(GestureDisambiguationTest, EveryoneRespondsYesPrioritize_ShouldResolveToHighestPriority) {
   std::vector<fup_TouchEvent> received_events1;
   client1_ptr_->Watch({}, [&received_events1](auto events) {
     std::move(events.begin(), events.end(), std::back_inserter(received_events1));
@@ -356,6 +356,63 @@ TEST_F(GestureDisambiguationTest, ContestResolution) {
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 3u);
   ASSERT_EQ(received_events2.size(), 2u);
+}
+
+TEST_F(GestureDisambiguationTest, EveryonRespondsMaybe_ShouldResolveAtStreamEnd) {
+  OnNewViewTreeSnapshot(NewSnapshot(
+      /*hits*/ {kClient2Koid}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+
+  // Inject one event for each phase:
+  {
+    auto event = PointerEventTemplate(kClient1Koid);
+    event.phase = Phase::kAdd;
+    touch_system_.InjectTouchEventHitTested(event, kStream1Id);
+    event.phase = Phase::kChange;
+    touch_system_.InjectTouchEventHitTested(event, kStream1Id);
+    event.phase = Phase::kRemove;
+    touch_system_.InjectTouchEventHitTested(event, kStream1Id);
+  }
+
+  std::vector<fup_TouchEvent> received_events1;
+  client1_ptr_->Watch({}, [&received_events1](auto events) {
+    std::move(events.begin(), events.end(), std::back_inserter(received_events1));
+  });
+  std::vector<fup_TouchEvent> received_events2;
+  client2_ptr_->Watch({}, [&received_events2](auto events) {
+    std::move(events.begin(), events.end(), std::back_inserter(received_events2));
+  });
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(received_events1.size(), 3u);
+  EXPECT_EQ(received_events2.size(), 3u);
+
+  // Both respond MAYBE for the entire stream. Client2 has lower priority and should win at stream
+  // end.
+  {
+    std::vector<fup_TouchResponse> responses(received_events1.size());
+    std::generate(responses.begin(), responses.end(),
+                  [] { return MakeTouchResponse(fup_TouchResponseType::MAYBE); });
+    client1_ptr_->Watch(std::move(responses), [&received_events1](auto events) {
+      std::move(events.begin(), events.end(), std::back_inserter(received_events1));
+    });
+  }
+  {
+    std::vector<fup_TouchResponse> responses(received_events2.size());
+    std::generate(responses.begin(), responses.end(),
+                  [] { return MakeTouchResponse(fup_TouchResponseType::MAYBE); });
+    client2_ptr_->Watch(std::move(responses), [&received_events2](auto events) {
+      std::move(events.begin(), events.end(), std::back_inserter(received_events2));
+    });
+  }
+
+  // Both should have received an event with a TouchInteractionStatus.
+  RunLoopUntilIdle();
+  ASSERT_TRUE(received_events1.back().has_interaction_result());
+  EXPECT_EQ(received_events1.back().interaction_result().status,
+            fup_TouchInteractionStatus::DENIED);
+  ASSERT_TRUE(received_events2.back().has_interaction_result());
+  EXPECT_EQ(received_events2.back().interaction_result().status,
+            fup_TouchInteractionStatus::GRANTED);
 }
 
 TEST_F(GestureDisambiguationTest, MidStreamChannelClose_ShouldGrantStreamToCompetitor) {

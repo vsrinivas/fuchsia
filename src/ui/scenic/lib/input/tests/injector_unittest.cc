@@ -99,9 +99,7 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
     EXPECT_TRUE(injection_callback_fired);
   }
 
-  // 2 injections, since an injected ADD becomes "ADD; DOWN"
-  // in fuchsia.ui.input.PointerEvent's state machine.
-  EXPECT_EQ(num_injections, 2u);
+  EXPECT_EQ(num_injections, 1u);
 
   {  // Inject CHANGE event.
     bool injection_callback_fired = false;
@@ -114,7 +112,7 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
     test_loop.RunUntilIdle();
     EXPECT_TRUE(injection_callback_fired);
 
-    EXPECT_EQ(num_injections, 3u);
+    EXPECT_EQ(num_injections, 2u);
   }
 
   {  // Inject remove event.
@@ -129,9 +127,7 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
     EXPECT_TRUE(injection_callback_fired);
   }
 
-  // 5 injections, since an injected REMOVE becomes "UP; REMOVE"
-  // in fuchsia.ui.input.PointerEvent's state machine.
-  EXPECT_EQ(num_injections, 5u);
+  EXPECT_EQ(num_injections, 3u);
   EXPECT_FALSE(error_callback_fired);
 }
 
@@ -956,9 +952,7 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
     RunLoopUntilIdle();
     EXPECT_TRUE(injection_callback_fired);
 
-    // 2 injections, since an injected ADD becomes "ADD; DOWN"
-    // in fuchsia.ui.input.PointerEvent's state machine.
-    EXPECT_EQ(num_injections_, 2u);
+    EXPECT_EQ(num_injections_, 1u);
     EXPECT_FALSE(error_callback_fired);
   }
 
@@ -973,7 +967,7 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
     RunLoopUntilIdle();
     EXPECT_TRUE(injection_callback_fired);
 
-    EXPECT_EQ(num_injections_, 3u);
+    EXPECT_EQ(num_injections_, 2u);
     EXPECT_FALSE(error_callback_fired);
   }
 
@@ -988,9 +982,7 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
     RunLoopUntilIdle();
     EXPECT_TRUE(injection_callback_fired);
 
-    // 5 injections, since an injected REMOVE becomes "UP; REMOVE" in
-    // fuchsia.ui.input.PointerEvent's state machine.
-    EXPECT_EQ(num_injections_, 5u);
+    EXPECT_EQ(num_injections_, 3u);
     EXPECT_FALSE(error_callback_fired);
   }
 
@@ -1014,8 +1006,8 @@ TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {
     RunLoopUntilIdle();
     EXPECT_TRUE(injection_callback_fired);
 
-    // Still 5 injections; the callback is not invoked for viewport changes.
-    EXPECT_EQ(num_injections_, 5u);
+    // Still 3 injections; the callback is not invoked for viewport changes.
+    EXPECT_EQ(num_injections_, 3u);
     EXPECT_FALSE(error_callback_fired);
   }
 

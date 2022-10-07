@@ -104,9 +104,22 @@ TouchSystem::TouchSystem(sys::ComponentContext* context,
             },
             /*deliver_to_client*/
             [this](const InternalTouchEvent& event) {
-              auto a11y_event = CreateAccessibilityEvent(event);
-              ChattyA11yLog(a11y_event);
-              accessibility_pointer_event_listener()->OnEvent(std::move(a11y_event));
+              std::vector<fuchsia::ui::input::accessibility::PointerEvent> a11y_events;
+              a11y_events.push_back(CreateAccessibilityEvent(event));
+              // Add in legacy UP and DOWN phases for ADD and REMOVE events respectively.
+              const auto& original_event = a11y_events.front();
+              if (original_event.phase() == fuchsia::ui::input::PointerEventPhase::ADD) {
+                auto it = a11y_events.insert(a11y_events.end(), fidl::Clone(original_event));
+                it->set_phase(fuchsia::ui::input::PointerEventPhase::DOWN);
+              } else if (original_event.phase() == fuchsia::ui::input::PointerEventPhase::REMOVE) {
+                auto it = a11y_events.insert(a11y_events.begin(), fidl::Clone(original_event));
+                it->set_phase(fuchsia::ui::input::PointerEventPhase::UP);
+              }
+
+              for (auto& a11y_event : a11y_events) {
+                ChattyA11yLog(a11y_event);
+                accessibility_pointer_event_listener()->OnEvent(std::move(a11y_event));
+              }
             },
             contender_inspector_);
         accessibility_pointer_event_listener().events().OnStreamHandled =
@@ -622,15 +635,31 @@ void TouchSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& ev
 
   const uint64_t trace_id = TRACE_NONCE();
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
-  InputEvent input_event;
-  input_event.set_pointer(InternalTouchEventToGfxPointerEvent(
+
+  std::vector<fuchsia::ui::input::PointerEvent> gfx_pointer_events;
+  gfx_pointer_events.push_back(InternalTouchEventToGfxPointerEvent(
       EventWithReceiverFromViewportTransform(event, /*destination=*/view_ref_koid,
                                              *view_tree_snapshot_),
       type, trace_id));
-  FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
-  ChattyGfxLog(input_event);
-  contender_inspector_.OnInjectedEvents(view_ref_koid, 1);
-  event_reporter->EnqueueEvent(std::move(input_event));
+
+  // Add in legacy UP and DOWN phases for ADD and REMOVE events respectively.
+  const auto& original_event = gfx_pointer_events.front();
+  if (original_event.phase == fuchsia::ui::input::PointerEventPhase::ADD) {
+    auto it = gfx_pointer_events.insert(gfx_pointer_events.end(), fidl::Clone(original_event));
+    it->phase = fuchsia::ui::input::PointerEventPhase::DOWN;
+  } else if (original_event.phase == fuchsia::ui::input::PointerEventPhase::REMOVE) {
+    auto it = gfx_pointer_events.insert(gfx_pointer_events.begin(), fidl::Clone(original_event));
+    it->phase = fuchsia::ui::input::PointerEventPhase::UP;
+  }
+
+  for (auto& event : gfx_pointer_events) {
+    InputEvent input_event;
+    input_event.set_pointer(std::move(event));
+    FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
+    ChattyGfxLog(input_event);
+    contender_inspector_.OnInjectedEvents(view_ref_koid, 1);
+    event_reporter->EnqueueEvent(std::move(input_event));
+  }
 }
 
 }  // namespace scenic_impl::input
