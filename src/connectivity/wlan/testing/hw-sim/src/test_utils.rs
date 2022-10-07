@@ -310,9 +310,9 @@ pub async fn scan_for_networks(
         return scan_results;
     };
     pin_mut!(fut);
-    // Run the scan routine for up to 60s.
+    // Run the scan routine for up to 70s; WLAN policy should have a timeout before this.
     let scanned_networks = helper
-        .run_until_complete_or_timeout(60.seconds(), "receive a scan response", scan_event, fut)
+        .run_until_complete_or_timeout(70.seconds(), "receive a scan response", scan_event, fut)
         .await;
 
     let mut scan_results: Vec<ScanResult> = Vec::new();

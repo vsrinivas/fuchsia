@@ -46,7 +46,7 @@ async fn run_without_regulatory_manager() {
     };
     pin_mut!(fut);
     helper
-        .run_until_complete_or_timeout(60.seconds(), "receive a scan response", scan_event, fut)
+        .run_until_complete_or_timeout(70.seconds(), "receive a scan response", scan_event, fut)
         .await;
 
     helper.stop().await;

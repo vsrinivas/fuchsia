@@ -34,6 +34,9 @@ const FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE: usize = 56;
 const SCAN_RETRY_DELAY_MS: i64 = 100;
 // Max time allowed for consumers of scan results to retrieve results
 const SCAN_CONSUMER_MAX_SECONDS_ALLOWED: i64 = 5;
+// A long amount of time that a scan should be able to finish within. If a scan takes longer than
+// this is indicates something is wrong.
+const SCAN_TIMEOUT: zx::Duration = zx::Duration::from_seconds(60);
 
 // Inidication of the scan caller, for use in logging caller specific metrics
 pub enum ScanReason {
@@ -146,7 +149,14 @@ pub(crate) async fn perform_scan(
                 return Err(types::ScanError::GeneralError);
             }
         };
-        match sme_scan(&sme_proxy, scan_request.clone(), telemetry_sender.clone()).await {
+        // TODO(fxbug.dev/111468) Log metrics when this times out so we are aware of the issue.
+        let scan_results = sme_scan(&sme_proxy, scan_request.clone(), telemetry_sender.clone())
+            .on_timeout(SCAN_TIMEOUT, || {
+                error!("Timed out waiting on scan response from SME");
+                Err(fidl_policy::ScanErrorCode::GeneralError)
+            })
+            .await;
+        match scan_results {
             Ok(results) => {
                 record_undirected_scan_results(&results, saved_networks_manager.clone()).await;
                 insert_bss_to_network_bss_map(&mut bss_by_network, results, true);
@@ -2443,6 +2453,37 @@ mod tests {
             let results = result.expect("Failed to get next scan results").unwrap();
             assert_eq!(results, fidl_scan_results);
         });
+    }
+
+    #[fuchsia::test]
+    fn scan_returns_error_on_timeout() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (client, _sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
+        let (telemetry_sender, _telemetry_receiver) = create_telemetry_sender_and_receiver();
+
+        // Issue request to scan.
+        let scan_fut = perform_scan(
+            client,
+            saved_networks_manager,
+            location_sensor,
+            ScanReason::NetworkSelection,
+            Some(telemetry_sender),
+        );
+        pin_mut!(scan_fut);
+
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Wake up the next timer, which should be the timeour on the scan request.
+        assert!(exec.wake_next_timer().is_some());
+
+        // Check that an error is returned for the scan and there are no location sensor results.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(results) => {
+            assert_eq!(results, Err(types::ScanError::GeneralError));
+        });
+        assert_eq!(*exec.run_singlethreaded(location_sensor_results.lock()), None);
     }
 
     #[fuchsia::test]
