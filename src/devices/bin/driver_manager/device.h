@@ -434,9 +434,10 @@ class Device final
 
   async::TaskClosure publish_task_;
 
-  // List of all child devices of this device, except for composite devices.
-  // Composite devices are excluded because their multiple-parent nature
-  // precludes using the same intrusive nodes as single-parent devices.
+  // List of all child devices of this device.
+  //
+  // Does not include composite devices except when `this` is root; all composite devices are
+  // children of the root device.
   fbl::TaggedDoublyLinkedList<Device*, ChildListTag> children_;
 
   // Metadata entries associated to this device.

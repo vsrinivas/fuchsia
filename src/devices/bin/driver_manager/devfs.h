@@ -191,7 +191,7 @@ class Devfs {
 
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Connect(fs::FuchsiaVfs& vfs);
 
-  zx_status_t initialize(Device& parent, Device& device);
+  zx_status_t initialize(Device& device);
   void publish(Device& device);
   void advertise_modified(Device& dev);
 

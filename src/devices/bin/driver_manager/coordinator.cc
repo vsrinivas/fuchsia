@@ -318,7 +318,7 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
     bind_driver_manager_->BindAllDevicesDriverIndex(config);
   });
 
-  devfs_.initialize(*root_device_, *sys_device_);
+  devfs_.initialize(*sys_device_);
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   LOGF(INFO, "V1 drivers loaded and published");
@@ -433,7 +433,6 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
                                             size_t max) {
   // TODO: Remove VLA.
   char tmp[max];
-  char name_buf[fio::wire::kMaxFilename + strlen("dev/")];
   char* path = tmp + max - 1;
   *path = 0;
   size_t total = 1;
@@ -445,13 +444,8 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
     }
 
     const char* name;
-    if (itr->name().compare("root") == 0 && itr->parent() == nullptr) {
+    if (itr == itr->coordinator->root_device()) {
       name = "dev";
-    } else if (itr->composite() != nullptr) {
-      strcpy(name_buf, "dev/");
-      strncpy(name_buf + strlen("dev/"), itr->name().data(), fio::wire::kMaxFilename);
-      name_buf[sizeof(name_buf) - 1] = 0;
-      name = name_buf;
     } else {
       name = itr->name().data();
     }
@@ -571,9 +565,8 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
 zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                      size_t buflen, size_t* size) {
   // search dev and its parent devices for a match
-  fbl::RefPtr<Device> test = dev;
-  while (true) {
-    for (const auto& md : test->metadata()) {
+  for (fbl::RefPtr<Device> current = dev; current != nullptr; current = current->parent()) {
+    for (const auto& md : current->metadata()) {
       if (md.type == type) {
         if (buffer != nullptr) {
           if (md.length > buflen) {
@@ -585,19 +578,14 @@ zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
         return ZX_OK;
       }
     }
-    if (test->parent() == nullptr) {
-      break;
-    }
-    test = test->parent();
-  }
-
-  // search fragments of composite devices
-  if (test->composite()) {
-    for (auto& fragment : test->composite()->bound_fragments()) {
-      auto dev = fragment.bound_device();
-      if (dev != nullptr) {
-        if (GetMetadata(dev, type, buffer, buflen, size) == ZX_OK) {
-          return ZX_OK;
+    // search fragments of composite devices
+    if (current->is_composite()) {
+      for (auto& fragment : current->composite()->bound_fragments()) {
+        auto dev = fragment.bound_device();
+        if (dev != nullptr) {
+          if (GetMetadata(dev, type, buffer, buflen, size) == ZX_OK) {
+            return ZX_OK;
+          }
         }
       }
     }

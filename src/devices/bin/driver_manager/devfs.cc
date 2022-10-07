@@ -389,7 +389,10 @@ zx::status<fbl::String> ProtoNode::seq_name() {
   return zx::error(ZX_ERR_ALREADY_EXISTS);
 }
 
-zx_status_t Devfs::initialize(Device& parent, Device& device) {
+zx_status_t Devfs::initialize(Device& device) {
+  ZX_ASSERT(device.parent() != nullptr);
+  Device& parent = *device.parent();
+
   if (!parent.self.has_value() || device.self.has_value() || device.link.has_value()) {
     return ZX_ERR_INTERNAL;
   }

@@ -936,6 +936,11 @@ class CompositeMetadataTestCase : public CompositeTestCase {
     ASSERT_BYTES_EQ(data, kMetadataStr, len);
   }
 
+  void TearDown() override {
+    coordinator().device_manager()->RemoveDevice(composite_device, /* forced */ false);
+    CompositeTestCase::TearDown();
+  }
+
   fbl::RefPtr<Device> composite_device;
 
   // Hold reference to remote channels so that they do not close

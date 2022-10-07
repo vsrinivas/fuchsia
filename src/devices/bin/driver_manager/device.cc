@@ -189,7 +189,7 @@ zx_status_t Device::Create(
     dev->flags |= DEV_CTX_INVISIBLE;
   }
 
-  status = coordinator->devfs().initialize(*real_parent, *dev);
+  status = coordinator->devfs().initialize(*dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -225,8 +225,12 @@ zx_status_t Device::CreateComposite(
     str_props[i] = composite_str_props[i];
   }
 
+  // TODO(teisenbe): Figure out how to manifest in devfs?  For now just hang it off of the root
+  // device?
+  const fbl::RefPtr<Device>& parent = coordinator->root_device();
+
   auto dev = fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(),
-                                         fbl::String(), nullptr, 0, zx::vmo(), zx::channel(),
+                                         fbl::String(), parent, 0, zx::vmo(), zx::channel(),
                                          fidl::ClientEnd<fio::Directory>());
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
@@ -251,16 +255,14 @@ zx_status_t Device::CreateComposite(
   // We exist within our parent's device host
   dev->set_host(std::move(driver_host));
 
-  // TODO: Record composite membership
-
-  // TODO(teisenbe): Figure out how to manifest in devfs?  For now just hang it off of
-  // the root device?
-  status = coordinator->devfs().initialize(*coordinator->root_device(), *dev);
+  status = coordinator->devfs().initialize(*dev);
   if (status != ZX_OK) {
     return status;
   }
 
-  VLOGF(1, "Created composite device %p '%s'", dev.get(), dev->name().c_str());
+  parent->children_.push_back(dev.get());
+  VLOGF(1, "Created composite device %p '%s' (child of %p '%s')", dev.get(), dev->name().c_str(),
+        parent.get(), parent->name().c_str());
 
   dev->InitializeInspectValues();
   *device = std::move(dev);

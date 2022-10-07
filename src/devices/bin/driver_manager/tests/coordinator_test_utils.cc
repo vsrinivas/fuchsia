@@ -41,7 +41,6 @@ void InitializeCoordinator(Coordinator* coordinator) {
               fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
 
   // Initialize devfs.
-  ASSERT_OK(
-      coordinator->devfs().initialize(*coordinator->root_device(), *coordinator->sys_device()));
+  ASSERT_OK(coordinator->devfs().initialize(*coordinator->sys_device()));
   coordinator->set_running(true);
 }
