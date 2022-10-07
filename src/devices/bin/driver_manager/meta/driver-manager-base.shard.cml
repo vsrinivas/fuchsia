@@ -47,11 +47,6 @@
             path: "/boot",
         },
         {
-            directory: "system",
-            rights: [ "rx*" ],
-            path: "/system",
-        },
-        {
             directory: "pkgfs",
             rights: [ "rx*" ],
             path: "/pkgfs",

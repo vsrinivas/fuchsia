@@ -145,56 +145,6 @@ bool ShouldUseUniversalResolver(fdi::wire::DriverPackageType package_type) {
 
 }  // namespace
 
-DriverLoader::~DriverLoader() {
-  if (system_loading_thread_) {
-    system_loading_thread_->join();
-  }
-}
-
-void DriverLoader::StartSystemLoadingThread(Coordinator* coordinator) {
-  if (system_loading_thread_) {
-    LOGF(ERROR, "DriverLoader: StartLoadingThread cannot be called twice!\n");
-    return;
-  }
-
-  system_loading_thread_ = std::thread([coordinator]() {
-    fbl::unique_fd fd(open("/system", O_RDONLY));
-    if (fd.get() < 0) {
-      LOGF(WARNING, "Unable to open '/system', system drivers are disabled");
-      return;
-    }
-
-    fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers;
-
-    auto driver_added = [&drivers](Driver* drv, const char* version) {
-      std::unique_ptr<Driver> driver(drv);
-      LOGF(INFO, "Adding driver '%s' '%s'", driver->name.data(), driver->libname.data());
-      if (load_vmo(driver->libname.data(), &driver->dso_vmo)) {
-        LOGF(ERROR, "Driver '%s' '%s' could not cache DSO", driver->name.data(),
-             driver->libname.data());
-      }
-      // De-prioritize drivers that are "fallback".
-      if (driver->fallback) {
-        drivers.push_back(std::move(driver));
-      } else {
-        drivers.push_front(std::move(driver));
-      }
-    };
-
-    find_loadable_drivers(coordinator->boot_args(), "/system/driver", driver_added);
-
-    async::PostTask(coordinator->dispatcher(),
-                    [coordinator = coordinator, drivers = std::move(drivers)]() mutable {
-                      coordinator->AddAndBindDrivers(std::move(drivers));
-                      coordinator->BindFallbackDrivers();
-                    });
-  });
-
-  constexpr char name[] = "driver-loader-thread";
-  zx_object_set_property(native_thread_get_zx_handle(system_loading_thread_->native_handle()),
-                         ZX_PROP_NAME, name, sizeof(name));
-}
-
 const Driver* DriverLoader::LibnameToDriver(std::string_view libname) const {
   for (const auto& drv : driver_index_drivers_) {
     if (libname.compare(drv.libname) == 0) {

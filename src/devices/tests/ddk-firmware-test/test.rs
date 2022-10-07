@@ -91,14 +91,12 @@ where
 }
 
 async fn serve_fake_filesystem(
-    system: Directory,
     pkgfs: Directory,
     handles: LocalComponentHandles,
 ) -> Result<(), anyhow::Error> {
     let fs_scope = vfs::execution_scope::ExecutionScope::new();
     let root: Directory = vfs::pseudo_directory! {
         "pkgfs" => pkgfs,
-        "system" => system,
         "boot" => vfs::pseudo_directory! {
             "meta" => vfs::pseudo_directory! {},
         },
@@ -114,18 +112,13 @@ async fn serve_fake_filesystem(
     Ok::<(), anyhow::Error>(())
 }
 
-async fn create_realm(
-    system: Directory,
-    pkgfs: Directory,
-) -> Result<fuchsia_component_test::RealmInstance, Error> {
+async fn create_realm(pkgfs: Directory) -> Result<fuchsia_component_test::RealmInstance, Error> {
     let builder = RealmBuilder::new().await?;
 
     let fake_filesystem = builder
         .add_local_child(
             "fake_filesystem",
-            move |h: LocalComponentHandles| {
-                serve_fake_filesystem(system.clone(), pkgfs.clone(), h).boxed()
-            },
+            move |h: LocalComponentHandles| serve_fake_filesystem(pkgfs.clone(), h).boxed(),
             ChildOptions::new().eager(),
         )
         .await
@@ -147,9 +140,6 @@ async fn create_realm(
                     Capability::directory("pkgfs-packages")
                         .path("/pkgfs/packages")
                         .rights(fio::R_STAR_DIR),
-                )
-                .capability(
-                    Capability::directory("system").path("/system").rights(fio::RX_STAR_DIR),
                 )
                 .capability(Capability::directory("boot").path("/boot").rights(fio::R_STAR_DIR))
                 .from(&fake_filesystem)
@@ -184,14 +174,6 @@ async fn create_realm(
 #[fuchsia::test]
 async fn load_package_firmware_test() -> Result<(), Error> {
     let firmware_file = vfs::file::vmo::asynchronous::read_only_static(b"this is some firmware\n");
-    let system: Directory = vfs::pseudo_directory! {
-        "driver" => vfs::pseudo_directory! {},
-        "lib" => vfs::pseudo_directory! {
-            "firmware" => vfs::pseudo_directory! {
-                "system-firmware" => firmware_file.clone(),
-            },
-        },
-    };
     let driver_dir = vfs::remote::remote_dir(fuchsia_fs::directory::open_in_namespace(
         "/pkg/driver",
         fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
@@ -239,7 +221,7 @@ async fn load_package_firmware_test() -> Result<(), Error> {
         },
     };
 
-    let instance = create_realm(system, pkgfs).await?;
+    let instance = create_realm(pkgfs).await?;
 
     // This is unused but connecting to it causes DriverManager to start.
     let _admin = instance
@@ -259,16 +241,6 @@ async fn load_package_firmware_test() -> Result<(), Error> {
     // Check that we can load firmware out of /boot.
     driver_proxy.load_firmware("test-firmware").await?.unwrap();
     driver_proxy.load_firmware_async("test-firmware").await?.unwrap();
-
-    // Check that we can't load system-firmware.
-    assert!(
-        driver_proxy.load_firmware("system-firmware").await?
-            == Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
-    );
-    assert!(
-        driver_proxy.load_firmware_async("system-firmware").await?
-            == Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
-    );
 
     // Check that we can load firmware from our package.
     driver_proxy.load_firmware("package-firmware").await?.unwrap();
@@ -321,80 +293,6 @@ async fn load_package_firmware_test_dfv2() -> Result<(), Error> {
     assert_eq!(
         driver_proxy.load_firmware_async("test-bad").await?,
         Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
-    );
-    Ok(())
-}
-
-#[fuchsia::test]
-async fn load_system_firmware_test() -> Result<(), Error> {
-    let firmware_file = vfs::file::vmo::asynchronous::read_only_static(b"this is some firmware\n");
-    let driver_dir = vfs::remote::remote_dir(fuchsia_fs::directory::open_in_namespace(
-        "/pkg/driver",
-        fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
-    )?);
-    let system: Directory = vfs::pseudo_directory! {
-        "driver" => driver_dir,
-        "lib" => vfs::pseudo_directory! {
-            "firmware" => vfs::pseudo_directory! {
-                "system-firmware" => firmware_file.clone(),
-            },
-        },
-    };
-    let base_manifest = vfs::file::vmo::asynchronous::read_only_static(r#"[]"#);
-    let pkgfs = vfs::pseudo_directory! {
-        "packages" => vfs::pseudo_directory! {
-            "driver-manager-base-config" => vfs::pseudo_directory! {
-                "0" => vfs::pseudo_directory! {
-                    "config" => vfs::pseudo_directory! {
-                        "base-driver-manifest.json" => base_manifest,
-                    },
-                },
-            },
-        },
-    };
-
-    let instance = create_realm(system, pkgfs).await?;
-
-    // This is unused but connecting to it causes DriverManager to start.
-    let _admin = instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_device_manager::AdministratorMarker>()?;
-
-    let out_dir = instance.root.get_exposed_dir();
-    let driver_service = device_watcher::recursive_wait_and_open_node(
-        &out_dir,
-        "dev/sys/test/ddk-firmware-test-device-0",
-    )
-    .await?;
-    let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
-        driver_service.into_channel().unwrap(),
-    );
-
-    // Check that we can load firmware out of /boot.
-    driver_proxy.load_firmware("test-firmware").await?.unwrap();
-    driver_proxy.load_firmware_async("test-firmware").await?.unwrap();
-
-    // Check that the system driver can load system-firmware.
-    driver_proxy.load_firmware("system-firmware").await?.unwrap();
-    driver_proxy.load_firmware_async("system-firmware").await?.unwrap();
-
-    // Check that the system driver can't load package-firmware.
-    assert!(
-        driver_proxy.load_firmware("package-firmware").await?
-            == Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
-    );
-    assert!(
-        driver_proxy.load_firmware_async("package-firmware").await?
-            == Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
-    );
-
-    // Check that loading unknown name fails.
-    assert!(
-        driver_proxy.load_firmware("test-bad").await? == Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
-    );
-    assert!(
-        driver_proxy.load_firmware_async("test-bad").await?
-            == Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
     );
     Ok(())
 }

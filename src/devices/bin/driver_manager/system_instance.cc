@@ -79,8 +79,6 @@ void SystemInstance::ServiceStarter(Coordinator* coordinator,
       LOGF(WARNING, "Unable to RegisterWithPowerManager: %d", status);
     }
   });
-
-  coordinator->StartLoadingNonBootDrivers();
 }
 
 fidl::ClientEnd<fuchsia_io::Directory> SystemInstance::CloneFs(const char* path) {

@@ -634,12 +634,6 @@
             to: [ "#console-launcher" ],
             dependency: "weak_for_migration",
         },
-        {
-            directory: "system",
-            from: "#pkg-cache",
-            to: "#driver_manager",
-            dependency: "weak_for_migration",
-        },
 
         // Offer the log services to the console
         {

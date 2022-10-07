@@ -572,10 +572,6 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
   }
 
   zx_status_t InitializeDirectories() {
-    auto system = fbl::MakeRefCounted<fs::PseudoDir>();
-    system->AddEntry("drivers", fbl::MakeRefCounted<fs::PseudoDir>());
-    outgoing_->root_dir()->AddEntry("system", std::move(system));
-
     auto pkgfs = fbl::MakeRefCounted<fs::PseudoDir>();
     // Add the necessary empty base driver manifest.
     // It's added to /pkgfs/packages/driver-manager-base-config/0/config/base-driver-manifest.json

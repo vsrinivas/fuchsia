@@ -38,14 +38,6 @@ class DriverLoader {
         include_fallback_drivers_(!require_system),
         universe_resolver_(universe_resolver) {}
 
-  ~DriverLoader();
-
-  // Start a Thread to service loading drivers.
-  // DriverLoader will join this thread when it destructs.
-  // `coordinator_` is not thread safe, so any calls to it must be made on the
-  // `coordinator_->dispatcher()` thread.
-  void StartSystemLoadingThread(Coordinator* coordinator);
-
   // This will schedule a task on the async_dispatcher that will return
   // when DriverIndex has loaded the base drivers. When the task completes,
   // `callback` will be called.
@@ -85,7 +77,6 @@ class DriverLoader {
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> driver_index_drivers_;
 
   internal::PackageResolverInterface* base_resolver_;
-  std::optional<std::thread> system_loading_thread_;
   fidl::WireSharedClient<fdi::DriverIndex> driver_index_;
 
   // When this is true we will return DriverIndex fallback drivers.

@@ -33,11 +33,6 @@
             path: "/pkgfs/packages",
         },
         {
-            directory: "system",
-            rights: [ "rx*" ],
-            path: "/system",
-        },
-        {
             directory: "boot",
             rights: [ "rx*" ],
             path: "/boot",
@@ -66,10 +61,6 @@
         },
         {
             directory: "pkgfs-packages",
-            from: "self",
-        },
-        {
-            directory: "system",
             from: "self",
         },
         {

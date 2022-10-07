@@ -128,11 +128,6 @@
             to: [ "#driver_manager" ],
         },
         {
-            directory: "system",
-            from: "#driver-manager-support",
-            to: [ "#driver_manager" ],
-        },
-        {
             directory: "pkgfs-packages",
             from: "#driver-manager-support",
             to: [ "#driver-index" ],

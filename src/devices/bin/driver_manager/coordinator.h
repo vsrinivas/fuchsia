@@ -143,10 +143,6 @@ class Coordinator : public CompositeManagerBridge,
   void InitCoreDevices(std::string_view sys_device_driver);
   void DriverAddedInit(Driver* drv, const char* version);
 
-  // Start searching the system for non-boot drivers.
-  // This will start a new thread to load non-boot drivers asynchronously.
-  void StartLoadingNonBootDrivers();
-
   void BindFallbackDrivers();
   void AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers);
   zx_status_t BindDriverToDeviceGroup(const MatchedDriver& driver, const fbl::RefPtr<Device>& dev);

@@ -938,8 +938,6 @@ void Coordinator::AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver
   }
 }
 
-void Coordinator::StartLoadingNonBootDrivers() { driver_loader_.StartSystemLoadingThread(this); }
-
 void Coordinator::BindFallbackDrivers() {
   for (auto& driver : fallback_drivers_) {
     LOGF(INFO, "Fallback driver '%s' is available", driver.name.data());
