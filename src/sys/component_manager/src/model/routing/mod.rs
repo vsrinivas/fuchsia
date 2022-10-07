@@ -278,22 +278,27 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
     let OpenRequest { flags, open_mode, relative_path, source, target, server_chan } = open_request;
 
     let capability_provider =
-        Arc::new(Mutex::new(get_default_provider(target.as_weak(), &source).await?));
+        if let Some(provider) = get_default_provider(target.as_weak(), &source).await? {
+            Some(provider)
+        } else {
+            // Dispatch a CapabilityRouted event to get a capability provider
+            let mutexed_provider = Arc::new(Mutex::new(None));
 
-    let event = Event::new(
-        &target,
-        Ok(EventPayload::CapabilityRouted {
-            source: source.clone(),
-            capability_provider: capability_provider.clone(),
-        }),
-    );
+            let event = Event::new(
+                &target,
+                Ok(EventPayload::CapabilityRouted {
+                    source: source.clone(),
+                    capability_provider: mutexed_provider.clone(),
+                }),
+            );
 
-    // Get a capability provider from the tree
-    target.hooks.dispatch(&event).await?;
+            // Get a capability provider from the tree
+            target.hooks.dispatch(&event).await?;
 
-    let capability_provider = capability_provider.lock().await.take();
+            let provider = mutexed_provider.lock().await.take();
+            provider
+        };
 
-    // If a hook in the component tree gave a capability provider, then use it.
     if let Some(capability_provider) = capability_provider {
         let source_instance = source.source_instance().upgrade()?;
         let task_scope = match source_instance {
