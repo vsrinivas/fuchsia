@@ -1,0 +1,48 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+
+resource("test_one_component_client") {
+  sources = [ "test_one_component_client.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_two_component_client") {
+  sources = [ "test_two_component_client.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_two_component_server") {
+  sources = [ "test_two_component_server.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_three_component_client") {
+  sources = [ "test_three_component_client.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_three_component_proxy") {
+  sources = [ "test_three_component_proxy.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_three_component_server") {
+  sources = [ "test_three_component_server.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+# These are files that are meant to be included with our test component. Each file represents a
+# golden from a single process for a single test.
+group("resources") {
+  deps = [
+    ":test_one_component_client",
+    ":test_three_component_client",
+    ":test_three_component_proxy",
+    ":test_three_component_server",
+    ":test_two_component_client",
+    ":test_two_component_server",
+  ]
+}

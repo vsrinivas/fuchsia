@@ -34,7 +34,10 @@ fuchsia_package("examples_fidl_keyvaluestore_baseline_rust") {
 fuchsia_component("test") {
   testonly = true
   manifest = "//examples/fidl/new/key-value-store/baseline/test/meta/runner.cml"
-  deps = [ "//examples/fidl/new/key-value-store/baseline/test:runner_bin" ]
+  deps = [
+    "//examples/fidl/new/key-value-store/baseline/test:runner_bin",
+    "//examples/fidl/new/key-value-store/baseline/test/goldens:resources",
+  ]
 }
 fuchsia_test_package("examples_fidl_keyvaluestore_baseline_rust_tests") {
   deps = [

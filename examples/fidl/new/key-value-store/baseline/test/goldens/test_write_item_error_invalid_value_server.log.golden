@@ -1,0 +1,5 @@
+Started
+Listening for incoming connections
+WriteItem request received
+Write error: INVALID_VALUE, For key: error_invalid_value
+WriteItem response sent

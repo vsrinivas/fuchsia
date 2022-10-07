@@ -5,7 +5,9 @@
 use {
     anyhow::Error,
     diagnostics_data::{Data, Logs},
-    example_tester::{logs_to_str, run_test, Client, Proxy, Server, TestKind},
+    example_tester::{
+        assert_logs_eq_to_golden, logs_to_str, run_test, Client, Proxy, Server, TestKind,
+    },
     fidl::prelude::*,
     fuchsia_async as fasync,
     fuchsia_component_test::{ChildRef, RealmBuilder},
@@ -14,7 +16,7 @@ use {
 // Tests the framework for a single component running locally. This is useful for testing things
 // like local logging and persistent FIDL.
 #[fasync::run_singlethreaded(test)]
-async fn test_one_component() -> Result<(), Error> {
+async fn test_one_component_log_by_log() -> Result<(), Error> {
     let client = Client::new("test_one_component", "#meta/example_tester_example_client.cm");
 
     run_test(
@@ -38,14 +40,36 @@ async fn test_one_component() -> Result<(), Error> {
     .await
 }
 
+// Same as above, but does the test using a log golden, rather than asserting against specific logs.
+#[fasync::run_singlethreaded(test)]
+async fn test_one_component() -> Result<(), Error> {
+    let client = Client::new("test_one_component", "#meta/example_tester_example_client.cm");
+
+    run_test(
+        fidl_test_exampletester::SimpleMarker::PROTOCOL_NAME,
+        TestKind::StandaloneComponent { client: &client },
+        |builder: RealmBuilder, client: ChildRef| async move {
+            builder.init_mutable_config_to_empty(&client).await?;
+            builder.set_config_value_bool(&client, "do_in_process", true).await?;
+            builder.set_config_value_uint8(&client, "augend", 10).await?;
+            builder.set_config_value_uint8(&client, "addend", 30).await?;
+            Ok::<(RealmBuilder, ChildRef), Error>((builder, client))
+        },
+        |raw_logs: Vec<Data<Logs>>| {
+            assert_logs_eq_to_golden(&raw_logs, &client);
+        },
+    )
+    .await
+}
+
 // Tests the standard FIDL IPC scenario, with a client talking to a server.
 #[fasync::run_singlethreaded(test)]
-async fn test_two_component() -> Result<(), Error> {
+async fn test_two_component_log_by_log() -> Result<(), Error> {
     let augend = 1;
     let addend = 2;
     let want_response = 3;
     let test_name = "test_two_component";
-    let client = Client::new(test_name.clone(), "#meta/example_tester_example_client.cm");
+    let client = Client::new(test_name, "#meta/example_tester_example_client.cm");
     let server = Server::new(test_name, "#meta/example_tester_example_server.cm");
 
     run_test(
@@ -80,15 +104,40 @@ async fn test_two_component() -> Result<(), Error> {
     .await
 }
 
+// Same as above, but does the test using log goldens, rather than asserting against specific logs.
+#[fasync::run_singlethreaded(test)]
+async fn test_two_component() -> Result<(), Error> {
+    let test_name = "test_two_component";
+    let client = Client::new(test_name, "#meta/example_tester_example_client.cm");
+    let server = Server::new(test_name, "#meta/example_tester_example_server.cm");
+
+    run_test(
+        fidl_test_exampletester::SimpleMarker::PROTOCOL_NAME,
+        TestKind::ClientAndServer { client: &client, server: &server },
+        |builder: RealmBuilder, client: ChildRef| async move {
+            builder.init_mutable_config_to_empty(&client).await?;
+            builder.set_config_value_bool(&client, "do_in_process", false).await?;
+            builder.set_config_value_uint8(&client, "augend", 10).await?;
+            builder.set_config_value_uint8(&client, "addend", 20).await?;
+            Ok::<(RealmBuilder, ChildRef), Error>((builder, client))
+        },
+        |raw_logs: Vec<Data<Logs>>| {
+            assert_logs_eq_to_golden(&raw_logs, &client);
+            assert_logs_eq_to_golden(&raw_logs, &server);
+        },
+    )
+    .await
+}
+
 // Tests a client-server IPC interaction mediated by a proxy in the middle.
 #[fasync::run_singlethreaded(test)]
-async fn test_three_component() -> Result<(), Error> {
+async fn test_three_component_log_by_log() -> Result<(), Error> {
     let augend = 4;
     let addend = 5;
     let want_response = 9;
     let test_name = "test_three_component";
-    let client = Client::new(test_name.clone(), "#meta/example_tester_example_client.cm");
-    let proxy = Proxy::new(test_name.clone(), "#meta/example_tester_example_proxy.cm");
+    let client = Client::new(test_name, "#meta/example_tester_example_client.cm");
+    let proxy = Proxy::new(test_name, "#meta/example_tester_example_proxy.cm");
     let server = Server::new(test_name, "#meta/example_tester_example_server.cm");
 
     run_test(
@@ -118,6 +167,33 @@ async fn test_three_component() -> Result<(), Error> {
                 client_logs.last().expect("no response"),
                 format!("Response: {}", want_response)
             );
+        },
+    )
+    .await
+}
+
+// Same as above, but does the test using log goldens, rather than asserting against specific logs.
+#[fasync::run_singlethreaded(test)]
+async fn test_three_component() -> Result<(), Error> {
+    let test_name = "test_three_component";
+    let client = Client::new(test_name, "#meta/example_tester_example_client.cm");
+    let proxy = Proxy::new(test_name, "#meta/example_tester_example_proxy.cm");
+    let server = Server::new(test_name, "#meta/example_tester_example_server.cm");
+
+    run_test(
+        fidl_test_exampletester::SimpleMarker::PROTOCOL_NAME,
+        TestKind::ClientProxyAndServer { client: &client, proxy: &proxy, server: &server },
+        |builder: RealmBuilder, client: ChildRef| async move {
+            builder.init_mutable_config_to_empty(&client).await?;
+            builder.set_config_value_bool(&client, "do_in_process", false).await?;
+            builder.set_config_value_uint8(&client, "augend", 40).await?;
+            builder.set_config_value_uint8(&client, "addend", 50).await?;
+            Ok::<(RealmBuilder, ChildRef), Error>((builder, client))
+        },
+        |raw_logs: Vec<Data<Logs>>| {
+            assert_logs_eq_to_golden(&raw_logs, &client);
+            assert_logs_eq_to_golden(&raw_logs, &proxy);
+            assert_logs_eq_to_golden(&raw_logs, &server);
         },
     )
     .await

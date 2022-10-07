@@ -42,6 +42,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "example-tester:tests",
     "fidl_api_diff:tests",
     "fidl_api_summarize:tests",
     "fidlc:tests",

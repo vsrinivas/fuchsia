@@ -1,0 +1,8 @@
+Started
+Listening for incoming connections
+WriteItem request received
+Wrote value at key: verse_1
+WriteItem response sent
+WriteItem request received
+Write error: ALREADY_EXISTS, For key: verse_1
+WriteItem response sent

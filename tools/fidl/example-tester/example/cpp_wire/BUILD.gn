@@ -25,7 +25,10 @@ fuchsia_component("server") {
 fuchsia_component("test") {
   testonly = true
   manifest = "//tools/fidl/example-tester/example/test/meta/runner.cml"
-  deps = [ "//tools/fidl/example-tester/example/test:runner_bin" ]
+  deps = [
+    "//tools/fidl/example-tester/example/test:runner_bin",
+    "//tools/fidl/example-tester/example/test/goldens:resources",
+  ]
 }
 
 fuchsia_test_package("fidl_example_tester_cpp_wire_tests") {

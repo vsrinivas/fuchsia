@@ -1,0 +1,17 @@
+Started
+Listening for incoming connections
+WriteItem request received
+Wrote value at key: verse_1
+WriteItem response sent
+WriteItem request received
+Wrote value at key: verse_2
+WriteItem response sent
+WriteItem request received
+Wrote value at key: verse_3
+WriteItem response sent
+WriteItem request received
+Wrote value at key: verse_4
+WriteItem response sent
+ReadItem request received
+Read error: NOT_FOUND, For key: verse_1000
+ReadItem response sent

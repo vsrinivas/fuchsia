@@ -36,6 +36,7 @@ fuchsia_component("test") {
   manifest = "//examples/fidl/new/key-value-store/baseline/test/meta/runner.cml"
   deps = [
     "//examples/fidl/new/key-value-store/add_read_item/test:runner_bin",
+    "//examples/fidl/new/key-value-store/add_read_item/test/goldens:resources",
     "//examples/fidl/new/key-value-store/data:resources",
   ]
 }

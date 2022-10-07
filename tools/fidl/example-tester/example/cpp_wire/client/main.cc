@@ -30,6 +30,7 @@ int main(int argc, const char** argv) {
 
     // Create a synchronous client using the newly-established connection.
     fidl::WireSyncClient client(std::move(*client_end));
+    FX_LOGS(INFO) << "Outgoing connection enabled";
 
     // Make the FIDL call.
     fidl::WireResult result = client->Add(conf.augend(), conf.addend());

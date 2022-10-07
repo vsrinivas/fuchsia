@@ -338,3 +338,43 @@ pub fn logs_to_str<'a>(
                 .expect("message is not string")
         })
 }
+
+/// Takes the logs for a single component and compares them to the appropriate golden file. The path
+/// of the file is expected to match the template `/pkg/data/goldens/{COMPONENT_NAME}.log.golden`.
+/// The {COMPONENT_NAME} is itself generally a template of the form `{TEST_NAME}_{COMPONENT_ROLE}`.
+/// Thus, for the three-component `test_foo_bar`, we expect the following golden logs to exist:
+///
+///   /pkg/data/goldens/test_foo_bar_client.log.golden
+///   /pkg/data/goldens/test_foo_bar_proxy.log.golden
+///   /pkg/data/goldens/test_foo_bar_server.log.golden
+///
+pub fn assert_logs_eq_to_golden<'a>(raw_logs: &'a Vec<Data<Logs>>, comp: &'a dyn Component) {
+    // Extract the golden log data.
+    let golden_path = format!("/pkg/data/goldens/{}.log.golden", comp.get_name());
+    let golden_file = std::fs::read_to_string(golden_path.clone())
+        .with_context(|| format!("Failed to load {golden_path}"))
+        .unwrap();
+    let golden_logs = golden_file.as_str().trim();
+
+    // Compare it to the actual components actual logs, asserting if there is a mismatch.
+    let logs = logs_to_str(&raw_logs, Some(vec![comp])).collect::<Vec<&str>>().join("\n");
+    if logs != golden_logs.trim() {
+        print!(
+            "
+
+Logs golden mismatch in '{}' ({})
+Please copy the output between the '===' bounds into the golden file at {} in the fuchsia.git tree
+====================================================================================================
+{}
+====================================================================================================
+
+
+",
+            comp.get_name(),
+            comp.get_path(),
+            golden_path,
+            logs
+        );
+    }
+    assert_eq!(logs, golden_logs)
+}
