@@ -34,6 +34,7 @@ core_realm_shards += [ "//src/ui:ui_core_shard" ]
 legacy_cache_package_labels += [
   "//src/fonts/collections:small-open-fonts-collection",
   "//src/ui:ui_packages",
+  "//src/ui/bin/input-pipeline:default-config-pkg",
   "//src/ui/bin/terminal",
   "//src/ui/tools/tiles",
 

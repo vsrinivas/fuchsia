@@ -30,6 +30,7 @@ _developer_packages = [
   "//src/power:battery",
   "//src/ui:ui_packages",
   "//src/ui/bin/brightness_manager",
+  "//src/ui/bin/input-pipeline:default-config-pkg",
   "//src/ui/bin/screensaver",
   "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/session_shells/ermine",

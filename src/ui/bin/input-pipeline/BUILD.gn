@@ -77,3 +77,21 @@ fuchsia_structured_config_values("default_config") {
     idle_threshold_minutes = 15
   }
 }
+
+resource("default-input-pipeline-config") {
+  outputs = [ "data/config/empty.json" ]
+  sources = [ "empty.json" ]
+}
+
+fuchsia_component("component") {
+  component_name = "input-pipeline-product-config"
+  manifest = "meta/input-pipeline-product-config.cml"
+}
+
+fuchsia_package("default-config-pkg") {
+  package_name = "input-pipeline-product-config"
+  deps = [
+    ":component",
+    ":default-input-pipeline-config",
+  ]
+}
