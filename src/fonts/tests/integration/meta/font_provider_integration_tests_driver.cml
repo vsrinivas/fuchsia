@@ -26,6 +26,7 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.pkg.FontResolver",
+                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: "#coll",

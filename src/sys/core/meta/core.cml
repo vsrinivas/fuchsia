@@ -909,6 +909,7 @@
             to: [
                 "#agis",
                 "#cobalt_system_metrics",
+                "#font_provider",
                 "#metrics-logger",
                 "#session-manager",
                 "#starnix_manager",
