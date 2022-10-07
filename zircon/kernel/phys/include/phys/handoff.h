@@ -129,6 +129,10 @@ struct PhysHandoff {
   // ZBI_TYPE_EFI_MEMORY_ATTRIBUTES_TABLE payload.
   // EFI memory attributes table.
   PhysHandoffTemporarySpan<const std::byte> efi_memory_attributes;
+
+  // ZBI_TYPE_EFI_SYSTEM_TABLE payload.
+  // Physical address of the EFI system table.
+  ktl::optional<uint64_t> efi_system_table;
 };
 
 static_assert(ktl::is_default_constructible_v<PhysHandoff>);

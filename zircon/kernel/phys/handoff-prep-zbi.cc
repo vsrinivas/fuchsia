@@ -170,6 +170,11 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
         handoff()->smbios_phys = *reinterpret_cast<const uint64_t*>(payload.data());
         SaveForMexec(*header, payload);
         break;
+      case ZBI_TYPE_EFI_SYSTEM_TABLE:
+        ZX_ASSERT(payload.size() >= sizeof(uint64_t));
+        handoff()->efi_system_table = *reinterpret_cast<const uint64_t*>(payload.data());
+        SaveForMexec(*header, payload);
+        break;
 
       case ZBI_TYPE_EFI_MEMORY_ATTRIBUTES_TABLE: {
         ktl::span handoff_table = New(handoff()->efi_memory_attributes, ac, payload.size());

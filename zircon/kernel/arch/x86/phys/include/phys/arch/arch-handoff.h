@@ -14,10 +14,6 @@
 // This holds (or points to) all x86-specific data that is handed off from
 // physboot to the kernel proper at boot time.
 struct ArchPhysHandoff {
-  // ZBI_TYPE_EFI_SYSTEM_TABLE payload.
-  // Physical address of the EFI system table.
-  ktl::optional<uint64_t> efi_system_table;
-
   // ZBI_TYPE_FRAMEBUFFER payload.
   // Framebuffer parameters.
   ktl::optional<zbi_swfb_t> framebuffer;

@@ -22,11 +22,6 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
   ArchPhysHandoff& arch_handoff = handoff_->arch_handoff;
 
   switch (header.type) {
-    case ZBI_TYPE_EFI_SYSTEM_TABLE:
-      ZX_ASSERT(payload.size() >= sizeof(uint64_t));
-      arch_handoff.efi_system_table = *reinterpret_cast<const uint64_t*>(payload.data());
-      SaveForMexec(header, payload);
-      break;
     case ZBI_TYPE_FRAMEBUFFER:
       ZX_ASSERT(payload.size() >= sizeof(zbi_swfb_t));
       arch_handoff.framebuffer = *reinterpret_cast<const zbi_swfb_t*>(payload.data());

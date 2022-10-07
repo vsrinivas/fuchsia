@@ -193,8 +193,8 @@ static void platform_init_crashlog(void) {
   }
 
   // Attempt to initialize EFI.
-  if (gPhysHandoff->arch_handoff.efi_system_table) {
-    zx_status_t status = InitEfiServices(gPhysHandoff->arch_handoff.efi_system_table.value());
+  if (gPhysHandoff->efi_system_table) {
+    zx_status_t status = InitEfiServices(gPhysHandoff->efi_system_table.value());
     if (status != ZX_OK) {
       dprintf(INFO, "Unable to initialize EFI services: %d\n", status);
       return;
