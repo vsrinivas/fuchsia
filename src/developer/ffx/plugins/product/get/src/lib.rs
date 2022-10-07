@@ -14,13 +14,14 @@ use {
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
     fuchsia_url::RepositoryUrl,
-    pbms::{fetch_data_for_product_bundle_v1, structured_ui, update_metadata_from},
+    pbms::{fetch_data_for_product_bundle_v1, update_metadata_from},
     sdk_metadata,
     std::{
         convert::TryInto,
         io::{stderr, stdin, stdout},
         path::Path,
     },
+    structured_ui,
 };
 
 /// `ffx product get` sub-command.

@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_developer_ffx_ext::{RepositoryConfig, RepositoryError, RepositorySpec},
     fuchsia_url::RepositoryUrl,
     pbms::{
-        get_product_data, is_pb_ready, product_bundle_urls, select_product_bundle, structured_ui,
+        get_product_data, is_pb_ready, product_bundle_urls, select_product_bundle,
         update_metadata_all, ListingMode,
     },
     std::{
@@ -25,6 +25,7 @@ use {
         fs::remove_dir_all,
         io::{stderr, stdin, stdout, BufRead, Read, Write},
     },
+    structured_ui,
     url::Url,
 };
 

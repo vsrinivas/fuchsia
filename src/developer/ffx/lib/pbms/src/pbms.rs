@@ -11,7 +11,6 @@ use {
             get_gcs_client_without_auth,
         },
         repo_info::RepoInfo,
-        structured_ui,
     },
     ::gcs::client::{
         DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, ProgressState, Throttle,
@@ -32,6 +31,7 @@ use {
     sdk_metadata::{Metadata, PackageBundle},
     serde_json::Value,
     std::path::{Path, PathBuf},
+    structured_ui,
     url::Url,
 };
 

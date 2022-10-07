@@ -19,6 +19,7 @@ if (is_host) {
       "//src/developer/ffx/lib/fms",
       "//src/lib/fuchsia-hyper",
       "//src/lib/gcs",
+      "//src/lib/structured_ui",
       "//src/sys/pkg/lib/fuchsia-repo",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-fs",
@@ -47,7 +48,6 @@ if (is_host) {
       "src/lib.rs",
       "src/pbms.rs",
       "src/repo_info.rs",
-      "src/structured_ui.rs",
     ]
   }
 
