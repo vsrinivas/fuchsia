@@ -131,12 +131,13 @@ group("system_tests") {
 if (is_linux || is_mac) {
   system_test_reboot_suite("workstation-release-reboot") {
     environments = [
-      {
-        dimensions = {
-          device_type = "Intel NUC Kit NUC7i5DNHE"
-        }
-        tags = [ "e2e-isolated" ]
-      },
+      # These are disabled on NUCs to preserve hardware capacity.
+      #{
+      #  dimensions = {
+      #    device_type = "Intel NUC Kit NUC7i5DNHE"
+      #  }
+      #  tags = [ "e2e-isolated" ]
+      #},
       {
         dimensions = {
           device_type = "GCE"
@@ -168,12 +169,13 @@ if (is_linux || is_mac) {
         "fuchsia/global.ci/workstation_eng.x64-release-e2e-isolated"
 
     environments = [
-      {
-        dimensions = {
-          device_type = "Intel NUC Kit NUC7i5DNHE"
-        }
-        tags = [ "e2e-isolated" ]
-      },
+      # These are disabled on NUCs to preserve hardware capacity.
+      #{
+      #  dimensions = {
+      #    device_type = "Intel NUC Kit NUC7i5DNHE"
+      #  }
+      #  tags = [ "e2e-isolated" ]
+      #},
       {
         dimensions = {
           device_type = "GCE"
@@ -232,9 +234,11 @@ group("tests") {
     "//tools/make-fuchsia-vol($host_toolchain)",
 
     # TODO(fxbug.dev/104273) Re-enable these tests when they can be made blocking.
-    #":workstation-release-reboot($host_toolchain)",
+    ":workstation-release-reboot($host_toolchain)",
+
     #":workstation-release-reboot-longevity($host_toolchain)",
-    #":workstation-release-upgrade($host_toolchain)",
+    ":workstation-release-upgrade($host_toolchain)",
+
     #":workstation-release-upgrade-longevity($host_toolchain)",
     #":workstation-release-upgrade-omaha($host_toolchain)",
   ]
