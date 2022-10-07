@@ -585,14 +585,8 @@ type Empty = struct {};
 }
 
 TEST(ParsingTests, BadDocCommentNotAllowedOnParams) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Example {
-  Method(/// Doc comment
-         struct { b bool; });
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/doc_comment_on_parameter_list.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters);
 }

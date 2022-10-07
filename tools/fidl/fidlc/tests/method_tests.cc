@@ -585,14 +585,11 @@ protocol HasMethod {
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
 // off when unknown interactions are always-on.
 TEST(MethodTests, GoodValidNormalMethodWithoutUnknownInteractions) {
-  TestLibrary library(R"FIDL(library example;
-protocol HasMethod {
-    MyMethod();
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("good/simple_one_way_method.test.fidl");
   ASSERT_COMPILED(library);
 
-  auto protocol = library.LookupProtocol("HasMethod");
+  auto protocol = library.LookupProtocol("Example");
   ASSERT_NOT_NULL(protocol);
   ASSERT_EQ(protocol->methods.size(), 1);
   EXPECT_EQ(protocol->methods[0].strictness, fidl::types::Strictness::kStrict);
