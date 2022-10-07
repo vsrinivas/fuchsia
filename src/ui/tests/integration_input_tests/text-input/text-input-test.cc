@@ -461,7 +461,6 @@ class ChromiumInputBase : public gtest::RealLoopFixture {
     fuchsia::ui::test::input::TouchScreenSimulateTapRequest request;
     request.set_tap_location(location);
 
-    FX_LOGS(INFO) << "XXX(fmil): SimulateTap";
     fake_touch_screen_->SimulateTap(std::move(request), [this] {
       ++injection_count_;
       FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
