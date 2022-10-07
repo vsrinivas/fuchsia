@@ -394,6 +394,7 @@ impl<PassiveOpen> Listener<PassiveOpen> {
 
 /// Represents either a bound socket or a listener socket.
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 enum MaybeListener<PassiveOpen> {
     Bound,
     Listener(Listener<PassiveOpen>),
@@ -499,6 +500,8 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
 
     fn shutdown_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError>;
     fn close_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError>;
+    fn remove_unbound(&mut self, id: UnboundId);
+    fn remove_bound(&mut self, id: BoundId);
 
     fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<Self::DeviceId>;
     fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr, Self::DeviceId>;
@@ -720,6 +723,18 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
             }
             Ok(do_send_inner(id, conn, addr, ip_transport_ctx, ctx))
         })
+    }
+
+    fn remove_unbound(&mut self, id: UnboundId) {
+        self.with_tcp_sockets_mut(|TcpSockets { socketmap: _, inactive, port_alloc: _ }| {
+            assert_matches!(inactive.remove(id.into()), Some(_));
+        });
+    }
+
+    fn remove_bound(&mut self, id: BoundId) {
+        self.with_tcp_sockets_mut(|TcpSockets { socketmap, inactive: _, port_alloc: _ }| {
+            assert_matches!(socketmap.listeners_mut().remove(&id.into()), Some(_));
+        });
     }
 
     fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<SC::DeviceId> {
@@ -1052,6 +1067,24 @@ where
     C: NonSyncContext,
 {
     with_ip_version!(Ip, I, shutdown_conn(&mut sync_ctx, ctx, id))
+}
+
+/// Removes an unbound socket.
+pub fn remove_unbound<I, C>(mut sync_ctx: &SyncCtx<C>, id: UnboundId)
+where
+    I: IpExt,
+    C: NonSyncContext,
+{
+    with_ip_version!(Ip, I, remove_unbound(&mut sync_ctx, id))
+}
+
+/// Removes a bound socket.
+pub fn remove_bound<I, C>(mut sync_ctx: &SyncCtx<C>, id: BoundId)
+where
+    I: IpExt,
+    C: NonSyncContext,
+{
+    with_ip_version!(Ip, I, remove_bound(&mut sync_ctx, id))
 }
 
 /// Information about an unbound socket.
@@ -2060,5 +2093,54 @@ mod tests {
                 })
             });
         }
+    }
+
+    #[ip_test]
+    fn remove_unbound<I: Ip + TcpTestIpExt>()
+    where
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
+    {
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
+            TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
+                I::DUMMY_CONFIG.local_ip,
+                I::DUMMY_CONFIG.remote_ip,
+                I::DUMMY_CONFIG.subnet.prefix(),
+            ));
+        let unbound = TcpSocketHandler::create_socket(&mut sync_ctx, &mut non_sync_ctx);
+        TcpSocketHandler::remove_unbound(&mut sync_ctx, unbound);
+
+        sync_ctx.with_tcp_sockets(|TcpSockets { socketmap: _, inactive, port_alloc: _ }| {
+            assert_eq!(inactive.get(unbound.into()), None);
+        })
+    }
+
+    #[ip_test]
+    fn remove_bound<I: Ip + TcpTestIpExt>()
+    where
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
+    {
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
+            TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
+                I::DUMMY_CONFIG.local_ip,
+                I::DUMMY_CONFIG.remote_ip,
+                I::DUMMY_CONFIG.subnet.prefix(),
+            ));
+        let unbound = TcpSocketHandler::create_socket(&mut sync_ctx, &mut non_sync_ctx);
+        let bound = TcpSocketHandler::bind(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            *I::DUMMY_CONFIG.local_ip,
+            None,
+        )
+        .expect("bind should succeed");
+        TcpSocketHandler::remove_bound(&mut sync_ctx, bound);
+
+        sync_ctx.with_tcp_sockets(|TcpSockets { socketmap, inactive, port_alloc: _ }| {
+            assert_eq!(inactive.get(unbound.into()), None);
+            assert_eq!(socketmap.listeners().get_by_id(&bound.into()), None);
+        })
     }
 }
