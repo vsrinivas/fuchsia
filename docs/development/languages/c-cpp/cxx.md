@@ -38,7 +38,7 @@ the C++ standard library features is very circumspect.
 
 **TODO:** pointer to style guide(s)?
 
-## C++ Standard Edition (17 vs 14)
+## C++ Standard Edition
 
 Zircon code is built with `-std=c++17` and in general can use C++ 17 language
 and library features freely (subject to style/feature constraints described
@@ -46,15 +46,6 @@ and library features freely (subject to style/feature constraints described
 [below](#standard-library)).  There is no *general* concern with staying
 compatible with C++ 14 or earlier versions.  When a standard C++ 17 feature is
 the cleanest way to do something, do it that way.
-
-**However** any library that is **published to the IDK** must be compatible
-with IDK users building in **both** C++ 14 and C++ 17 modes.  So, any
-libraries exported to the IDK must have public header files that are
-*compatible with both `-std=c++14` and `-std=c++17`*.  If a library is
-exported to the IDK as source code rather than as a binary, then its *source
-code must also be completely compatible with both `-std=c++14` and
-`-std=c++17`* (and not require other special options). **TODO(mcgrathr):**
-_pointer to build-system docs about maintaining code to be exported to IDK_
 
 All pure C code (`.c` source files and headers used by them) is C 11.  Some
 special exceptions are made for code meant to be reused by out-of-tree boot
