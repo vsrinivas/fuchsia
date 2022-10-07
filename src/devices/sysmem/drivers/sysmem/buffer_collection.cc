@@ -310,6 +310,15 @@ void BufferCollection::SetVerboseLogging(SetVerboseLoggingCompleter::Sync& compl
   SetVerboseLoggingImplV1(completer);
 }
 
+void BufferCollection::GetNodeRef(GetNodeRefCompleter::Sync& completer) {
+  GetNodeRefImplV1(completer);
+}
+
+void BufferCollection::IsAlternateFor(IsAlternateForRequestView request,
+                                      IsAlternateForCompleter::Sync& completer) {
+  IsAlternateForImplV1(request, completer);
+}
+
 void BufferCollection::Close(CloseCompleter::Sync& completer) { CloseImplV1(completer); }
 
 void BufferCollection::DeprecatedClose(DeprecatedCloseCompleter::Sync& completer) {

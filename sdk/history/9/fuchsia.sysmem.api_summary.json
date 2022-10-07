@@ -89,6 +89,18 @@
     },
     {
         "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollection.GetNodeRef",
+        "ordinal": "5078789850020985732",
+        "type": "() -> (zx/handle:EVENT node_ref)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollection.IsAlternateFor",
+        "ordinal": "3720720616290479111",
+        "type": "(zx/handle:EVENT node_ref) -> (fuchsia.sysmem/Node_IsAlternateFor_Result result)"
+    },
+    {
+        "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.SetConstraints",
         "ordinal": "5592402040917795451",
         "type": "(bool has_constraints,fuchsia.sysmem/BufferCollectionConstraints constraints)"
@@ -328,6 +340,18 @@
     },
     {
         "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.GetNodeRef",
+        "ordinal": "5078789850020985732",
+        "type": "() -> (zx/handle:EVENT node_ref)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.IsAlternateFor",
+        "ordinal": "3720720616290479111",
+        "type": "(zx/handle:EVENT node_ref) -> (fuchsia.sysmem/Node_IsAlternateFor_Result result)"
+    },
+    {
+        "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.SetDebugClientInfo",
         "ordinal": "8247627555829145314",
         "type": "(string:64 name,uint64 id)"
@@ -389,6 +413,18 @@
         "name": "fuchsia.sysmem/BufferCollectionTokenGroup.CreateChildrenSync",
         "ordinal": "6241359931670852917",
         "type": "(vector<zx/rights>:64 rights_attenuation_masks) -> (vector<client_end:fuchsia.sysmem/BufferCollectionToken>:64 tokens)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionTokenGroup.GetNodeRef",
+        "ordinal": "5078789850020985732",
+        "type": "() -> (zx/handle:EVENT node_ref)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionTokenGroup.IsAlternateFor",
+        "ordinal": "3720720616290479111",
+        "type": "(zx/handle:EVENT node_ref) -> (fuchsia.sysmem/Node_IsAlternateFor_Result result)"
     },
     {
         "kind": "protocol/member",
@@ -1334,6 +1370,18 @@
     },
     {
         "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.GetNodeRef",
+        "ordinal": "5078789850020985732",
+        "type": "() -> (zx/handle:EVENT node_ref)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.IsAlternateFor",
+        "ordinal": "3720720616290479111",
+        "type": "(zx/handle:EVENT node_ref) -> (fuchsia.sysmem/Node_IsAlternateFor_Result result)"
+    },
+    {
+        "kind": "protocol/member",
         "name": "fuchsia.sysmem/Node.SetDebugClientInfo",
         "ordinal": "8247627555829145314",
         "type": "(string:64 name,uint64 id)"
@@ -1365,6 +1413,33 @@
     {
         "kind": "protocol",
         "name": "fuchsia.sysmem/Node"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.sysmem/Node_IsAlternateFor_Response.is_alternate",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.sysmem/Node_IsAlternateFor_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.sysmem/Node_IsAlternateFor_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.sysmem/Node_IsAlternateFor_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.sysmem/Node_IsAlternateFor_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.sysmem/Node_IsAlternateFor_Result",
+        "strictness": "strict"
     },
     {
         "kind": "struct/member",

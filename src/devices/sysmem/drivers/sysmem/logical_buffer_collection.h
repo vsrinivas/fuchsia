@@ -119,6 +119,23 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   TableSet& table_set() { return table_set_; }
 
+  // Track/untrack the node by the koid of the client end of its FIDL channel.
+  //
+  // While tracked, a node can be found with FindNodeByClientChannelKoid().
+  //
+  // Only is_currently_connected() true Node(s) are tracked.
+  //
+  // Aside from this tracking, LogicalBufferCollection only cares about NodeProperties, not Nodes,
+  // but since we need to track by client_koid which is a Node-specific thing, this tracking allows
+  // for that.
+  //
+  // This tracking exists for the benefit of IsAlternateFor(), which is essentially called on one
+  // node and refers to another node by client endpoint koid, which must be owned by the same
+  // process as the calling node.
+  void TrackNodeProperties(NodeProperties* node_properties);
+  void UntrackNodeProperties(NodeProperties* node_properties);
+  std::optional<NodeProperties*> FindNodePropertiesByNodeRefKoid(zx_koid_t node_ref_keep_koid);
+
   std::optional<std::string> name() const {
     return name_ ? std::make_optional(name_->name) : std::optional<std::string>();
   }
@@ -668,6 +685,11 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
       creation_timer_{this};
 
   bool is_verbose_logging_ = false;
+
+  // Only tracked while Node::is_currently_connected() true, to allow for Node sub-classes that may
+  // stick around for a short duration after their channel is closed, depending on FIDL C++
+  // generated code requirements on how close / disconnect works.
+  std::unordered_map<zx_koid_t, NodeProperties*> node_properties_by_node_ref_keep_koid_;
 
   bool done_with_group_child_selection_ = false;
 };

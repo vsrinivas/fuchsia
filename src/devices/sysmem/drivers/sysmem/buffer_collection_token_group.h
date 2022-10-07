@@ -30,6 +30,9 @@ class BufferCollectionTokenGroup
   // BufferCollectionTokenGroup)
   void Sync(SyncCompleter::Sync& completer) override;
   void Close(CloseCompleter::Sync& completer) override;
+  void GetNodeRef(GetNodeRefCompleter::Sync& completer) override;
+  void IsAlternateFor(IsAlternateForRequestView request,
+                      IsAlternateForCompleter::Sync& completer) override;
   void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
   void SetDebugClientInfo(SetDebugClientInfoRequestView request,
                           SetDebugClientInfoCompleter::Sync& completer) override;

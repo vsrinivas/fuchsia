@@ -3579,6 +3579,24 @@ std::vector<const BufferCollection*> LogicalBufferCollection::collection_views()
   return result;
 }
 
+void LogicalBufferCollection::TrackNodeProperties(NodeProperties* node_properties) {
+  node_properties_by_node_ref_keep_koid_.insert(
+      std::make_pair(node_properties->node_ref_koid(), node_properties));
+}
+
+void LogicalBufferCollection::UntrackNodeProperties(NodeProperties* node_properties) {
+  node_properties_by_node_ref_keep_koid_.erase(node_properties->node_ref_koid());
+}
+
+std::optional<NodeProperties*> LogicalBufferCollection::FindNodePropertiesByNodeRefKoid(
+    zx_koid_t node_ref_keep_koid) {
+  auto iter = node_properties_by_node_ref_keep_koid_.find(node_ref_keep_koid);
+  if (iter == node_properties_by_node_ref_keep_koid_.end()) {
+    return std::nullopt;
+  }
+  return iter->second;
+}
+
 #define LOG_UINT32_FIELD(location, prefix, field_name)                                \
   do {                                                                                \
     if (!(prefix).has_##field_name()) {                                               \

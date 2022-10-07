@@ -189,6 +189,110 @@ protocol Node {
     /// logging.
     @available(added=9)
     SetVerboseLogging();
+
+    // GetNodeRef()
+    //
+    /// This gets an event handle that can be used as a parameter to
+    /// IsAlternateFor() called on any Node.  The client will not be granted the
+    /// right to signal this event, as this handle should only be used as proof
+    /// that the client obtained this handle from this Node.
+    ///
+    /// Because this is a get not a set, no Sync() is needed between the
+    /// GetNodeRef() and the call to IsAlternateFor(), despite the two calls
+    /// potentially being on different channels.
+    ///
+    /// See also IsAlternateFor().
+    @available(added=9)
+    GetNodeRef() -> (resource struct {
+        node_ref zx.handle:EVENT;
+    });
+
+    // IsAlternateFor()
+    //
+    /// This checks whether the calling node is in a subtree rooted at a
+    /// different child token of a common parent BufferCollectionTokenGroup, in
+    /// relation to the passed-in node_ref.
+    ///
+    /// This call is for assisting with admission control de-duplication, and
+    /// with debugging.
+    ///
+    /// The node_ref must be obtained using GetNodeRef() of a
+    /// BufferCollectionToken, BufferCollection, or BufferCollectionTokenGroup.
+    ///
+    /// The node_ref can be a duplicated handle; it's not necessary to call
+    /// GetNodeRef() for every call to IsAlternateFor().
+    ///
+    /// If a calling token may not actually be a valid token at all due to
+    /// a potentially hostile/untrusted provider of the token, call
+    /// ValidateBufferCollectionToken() first instead of potentially getting
+    /// stuck indefinitely if IsAlternateFor() never responds due to a calling
+    /// token not being a real token (not really talking to sysmem).  Another
+    /// option is to call BindSharedCollection with this token first which also
+    /// validates the token along with converting it to a BufferCollection, then
+    /// call BufferCollection IsAlternateFor().
+    ///
+    /// error values:
+    ///
+    /// ZX_ERR_NOT_FOUND means the node_ref wasn't found within the same logical
+    /// buffer collection as the calling Node.  Before logical allocation and
+    /// within the same logical allocation sub-tree, this essentially means that
+    /// the node_ref was never part of this logical buffer collection, since
+    /// before logical allocation all node_refs that come into existence remain
+    /// in existence at least until logical allocation (including Node(s) that
+    /// have done a Close() and closed their channel), and for ZX_ERR_NOT_FOUND
+    /// to be returned, this Node's channel needs to still be connected server
+    /// side, which won't be the case if the whole logical allocation has
+    /// failed.  After logical allocation or in a different logical allocation
+    /// sub-tree there are additional potential reasons for this error.  For
+    /// example a different logical allocation (separated from this Node(s)
+    /// logical allocation by an AttachToken() or SetDispensable()) can fail its
+    /// sub-tree deleting those Node(s), or a BufferCollectionTokenGroup may
+    /// exist and may select a different child sub-tree than the sub-tree the
+    /// node_ref is in causing deletion of the node_ref Node.  The only time
+    /// sysmem keeps a Node around after that Node has no corresponding channel
+    /// is when Close() is used and the Node's sub-tree has not yet failed.
+    /// Another reason for this error is if the node_ref is an eventpair handle
+    /// with sufficient rights, but isn't actually a real node_ref obtained from
+    /// GetNodeRef().
+    ///
+    /// ZX_ERR_INVALID_ARGS means the caller passed a node_ref that isn't an
+    /// eventpair handle, or doesn't have the needed rights expected on a real
+    /// node_ref.
+    ///
+    /// No other failing status codes are returned by this call.  However,
+    /// sysmem may add additional codes in future, so the client should have
+    /// sensible default handling for any failing status code.
+    ///
+    /// On success, is_alternate has the following meaning:
+    ///   * true - The first parent node in common between the calling node and
+    ///     the node_ref Node is a BufferCollectionTokenGroup.  This means that
+    ///     the calling Node and the node_ref Node will _not_ have both their
+    ///     constraints apply - rather sysmem will choose one or the other of
+    ///     the constraints - never both.  This is because only one child of
+    ///     a BufferCollectionTokenGroup is selected during logical allocation,
+    ///     with only that one child's sub-tree contributing to constraints
+    ///     aggregation.
+    ///   * false - The first parent node in common between the calling Node and
+    ///     the node_ref Node is not a BufferCollectionTokenGroup.  Currently,
+    ///     this means the first parent node in common is a
+    ///     BufferCollectionToken or BufferCollection (regardless of not
+    ///     Close()ed or Close()ed).  This means that the calling Node and the
+    ///     node_ref Node _may_ have both their constraints apply during
+    ///     constraints aggregation of the logical allocation, if both Node(s)
+    ///     are selected by any parent BufferCollectionTokenGroup(s) involved.
+    ///     In this case, there is no BufferCollectionTokenGroup that will
+    ///     directly prevent the two Node(s) from both being selected and their
+    ///     constraints both aggregated, but even when false, one or both
+    ///     Node(s) may still be eliminated from consideration if one or both
+    ///     Node(s) has a direct or indirect parent BufferCollectionTokenGroup
+    ///     which selects a child sub-tree other than the sub-tree containing
+    ///     the calling Node or node_ref Node.
+    @available(added=9)
+    IsAlternateFor(resource struct {
+        node_ref zx.handle:EVENT;
+    }) -> (struct {
+        is_alternate bool;
+    }) error zx.status;
 };
 
 /// A BufferCollectionToken is not a BufferCollection, but rather a way to

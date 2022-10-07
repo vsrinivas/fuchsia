@@ -4550,6 +4550,109 @@ TEST(Sysmem, SetDispensable) {
   }
 }
 
+TEST(Sysmem, IsAlternateFor_False) {
+  auto root_token = create_initial_token();
+  auto token_a = create_token_under_token(root_token);
+  auto token_b = create_token_under_token(root_token);
+  auto maybe_response = token_b->GetNodeRef();
+  ASSERT_TRUE(maybe_response.ok());
+  auto token_b_node_ref = std::move(maybe_response->node_ref);
+  auto result = token_a->IsAlternateFor(std::move(token_b_node_ref));
+  ASSERT_TRUE(result.ok());
+  EXPECT_FALSE(result->value()->is_alternate);
+}
+
+TEST(Sysmem, IsAlternateFor_True) {
+  auto root_token = create_initial_token();
+  auto group = create_group_under_token(root_token);
+  auto token_a = create_token_under_group(group);
+  auto token_b = create_token_under_group(group);
+  auto maybe_response = token_b->GetNodeRef();
+  ASSERT_TRUE(maybe_response.ok());
+  auto token_b_node_ref = std::move(maybe_response->node_ref);
+  auto result = token_a->IsAlternateFor(std::move(token_b_node_ref));
+  ASSERT_TRUE(result.ok());
+  EXPECT_TRUE(result->value()->is_alternate);
+}
+
+TEST(Sysmem, IsAlternateFor_MiniStress) {
+  std::random_device random_device;
+  std::uint_fast64_t seed{random_device()};
+  std::mt19937_64 prng{seed};
+  std::uniform_int_distribution<uint32_t> uint32_distribution(0,
+                                                              std::numeric_limits<uint32_t>::max());
+
+  // We use shared_ptr<> in this test to make it easier to share code between
+  // cases below.
+  std::vector<std::shared_ptr<Token>> tokens;
+  std::vector<std::shared_ptr<Group>> groups;
+
+  auto create_extra_group = [&](std::shared_ptr<Token> token) {
+    auto group = std::make_shared<Group>(create_group_under_token(*token));
+    groups.emplace_back(group);
+
+    auto child_0 = std::make_shared<Token>(create_token_under_group(*group));
+    tokens.emplace_back(child_0);
+
+    auto child_1 = std::make_shared<Token>(create_token_under_group(*group));
+    tokens.emplace_back(token);
+    token = child_1;
+
+    return token;
+  };
+
+  auto create_child_chain = [&](std::shared_ptr<Token> token, uint32_t additional_tokens) {
+    for (uint32_t i = 0; i < additional_tokens; ++i) {
+      if (i == additional_tokens / 2 && uint32_distribution(prng) % 2 == 0) {
+        token = create_extra_group(token);
+      } else {
+        auto child_token = std::make_shared<Token>(create_token_under_token(*token));
+        check_token_alive(*child_token);
+        tokens.emplace_back(token);
+        token = child_token;
+      }
+    }
+    return token;
+  };
+
+  constexpr uint32_t kIterations = 50;
+  for (uint32_t i = 0; i < kIterations; ++i) {
+    if ((i + 1) % 100 == 0) {
+      printf("iteration cardinal: %u\n", i + 1);
+    }
+
+    tokens.clear();
+    groups.clear();
+    auto root_token = std::make_shared<Token>(create_initial_token());
+    tokens.emplace_back(root_token);
+    auto branch_token = create_child_chain(root_token, uint32_distribution(prng) % 5);
+    std::shared_ptr<Token> child_a;
+    std::shared_ptr<Token> child_b;
+    bool is_alternate_for = !!(uint32_distribution(prng) % 2);
+    if (is_alternate_for) {
+      auto group = std::make_shared<Group>(create_group_under_token(*branch_token));
+      groups.emplace_back(group);
+      check_group_alive(*group);
+      // Both can remain direct children of group, or can become indirect children of group.
+      child_a = std::make_shared<Token>(create_token_under_group(*group));
+      child_b = std::make_shared<Token>(create_token_under_group(*group));
+    } else {
+      // Both can remain branch_token, either can be parent of the other, or both can be children
+      // (direct or indirect) of branch_token.
+      child_a = branch_token;
+      child_b = branch_token;
+    }
+    child_a = create_child_chain(child_a, uint32_distribution(prng) % 5);
+    child_b = create_child_chain(child_b, uint32_distribution(prng) % 5);
+    auto maybe_node_ref_b = (*child_b)->GetNodeRef();
+    ASSERT_TRUE(maybe_node_ref_b.ok());
+    auto node_ref_b = std::move(maybe_node_ref_b->node_ref);
+    auto result = (*child_a)->IsAlternateFor(std::move(node_ref_b));
+    ASSERT_TRUE(result.ok());
+    EXPECT_EQ(is_alternate_for, result->value()->is_alternate);
+  }
+}
+
 TEST(Sysmem, GroupPrefersFirstChild) {
   const uint32_t kFirstChildSize = zx_system_get_page_size() * 16;
   const uint32_t kSecondChildSize = zx_system_get_page_size() * 32;

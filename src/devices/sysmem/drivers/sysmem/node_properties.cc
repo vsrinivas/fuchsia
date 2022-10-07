@@ -24,6 +24,7 @@ NodeProperties::~NodeProperties() {
     logical_buffer_collection_->RemoveCountsForNode(*node_);
     node_->EnsureDetachedFromNodeProperties();
   }
+  logical_buffer_collection_->UntrackNodeProperties(this);
 }
 
 // static
@@ -255,7 +256,20 @@ bool NodeProperties::visible() const {
 
 NodeProperties::NodeProperties(LogicalBufferCollection* logical_buffer_collection)
     : logical_buffer_collection_(logical_buffer_collection) {
+  zx_status_t status = zx::event::create(0, &node_ref_);
+  if (status != ZX_OK) {
+    // Sysmem treats this much like a code page-in that fails due to out of memory.  Both will only
+    // happen if we're so low on memory that we've already committed to OOMing (or at least, that's
+    // the stated intent IIUC).
+    ZX_PANIC("zx::eventpair::create() failed - status: %d\n", status);
+  }
+  zx_koid_t not_used;
+  status = get_handle_koids(node_ref_, &node_ref_koid_, &not_used, ZX_OBJ_TYPE_EVENT);
+  if (status != ZX_OK) {
+    ZX_PANIC("get_handle_koids(node_ref_) failed - status: %d\n", status);
+  }
   ZX_DEBUG_ASSERT(logical_buffer_collection_);
+  logical_buffer_collection_->TrackNodeProperties(this);
 }
 
 uint32_t NodeProperties::node_count() const { return node_count_; }

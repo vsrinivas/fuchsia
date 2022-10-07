@@ -74,6 +74,16 @@
         "name": "fuchsia.sysmem/BufferCollection.GetAuxBuffers"
     },
     {
+        "declaration": "() -> (zx/handle:EVENTPAIR node_ref)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollection.GetNodeRef"
+    },
+    {
+        "declaration": "(zx/handle:EVENTPAIR node_ref) -> (int32 status,bool is_alternate)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollection.IsAlternateFor"
+    },
+    {
         "declaration": "(bool has_constraints,fuchsia.sysmem/BufferCollectionConstraints constraints)",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.SetConstraints"
@@ -277,6 +287,16 @@
         "name": "fuchsia.sysmem/BufferCollectionToken.DuplicateSync"
     },
     {
+        "declaration": "() -> (zx/handle:EVENTPAIR node_ref)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.GetNodeRef"
+    },
+    {
+        "declaration": "(zx/handle:EVENTPAIR node_ref) -> (int32 status,bool is_alternate)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.IsAlternateFor"
+    },
+    {
         "declaration": "(string:64 name,uint64 id)",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.SetDebugClientInfo"
@@ -329,6 +349,16 @@
         "declaration": "(vector<zx/rights>:64 rights_attenuation_masks) -> (vector<client_end:fuchsia.sysmem/BufferCollectionToken>:64 tokens)",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionTokenGroup.CreateChildrenSync"
+    },
+    {
+        "declaration": "() -> (zx/handle:EVENTPAIR node_ref)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionTokenGroup.GetNodeRef"
+    },
+    {
+        "declaration": "(zx/handle:EVENTPAIR node_ref) -> (int32 status,bool is_alternate)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionTokenGroup.IsAlternateFor"
     },
     {
         "declaration": "(string:64 name,uint64 id)",
@@ -1191,6 +1221,16 @@
         "declaration": "()",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Node.Close"
+    },
+    {
+        "declaration": "() -> (zx/handle:EVENTPAIR node_ref)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.GetNodeRef"
+    },
+    {
+        "declaration": "(zx/handle:EVENTPAIR node_ref) -> (int32 status,bool is_alternate)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.IsAlternateFor"
     },
     {
         "declaration": "(string:64 name,uint64 id)",

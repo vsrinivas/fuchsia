@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
+#include <zircon/rights.h>
 #include <zircon/types.h>
 
 #include <unordered_set>
@@ -215,6 +216,72 @@ class Node : public fbl::RefCounted<Node> {
       return;
     }
     logical_buffer_collection_->SetVerboseLogging();
+  }
+
+  template <class GetNodeRefCompleterSync>
+  void GetNodeRefImplV1(GetNodeRefCompleterSync& completer) {
+    table_set().MitigateChurn();
+    if (is_done_) {
+      FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "GetNodeRef() after Close()");
+      return;
+    }
+    zx::event to_vend;
+    // No process actually needs to wait on or signal this event.  It's just a generic handle that
+    // needs get_info to work so we can check the koid.
+    zx_status_t status =
+        node_properties_->node_ref()->duplicate(ZX_RIGHTS_BASIC & ~(ZX_RIGHT_WAIT), &to_vend);
+    if (status != ZX_OK) {
+      // We treat this similarly to a code page-in that fails due to low memory.
+      ZX_PANIC("node_ref_vend_.duplicate() failed - sysmem terminating");
+    }
+    completer.Reply(std::move(to_vend));
+  }
+
+  template <class IsAlternateForRequestView, class IsAlternateForCompleterSync>
+  void IsAlternateForImplV1(IsAlternateForRequestView request,
+                            IsAlternateForCompleterSync& completer) {
+    table_set().MitigateChurn();
+    if (is_done_) {
+      FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "IsAlternateFor() after Close()");
+      return;
+    }
+    zx::event node_ref = std::move(request->node_ref);
+    zx_koid_t node_ref_koid;
+    zx_koid_t not_used;
+    zx_status_t status = get_handle_koids(node_ref, &node_ref_koid, &not_used, ZX_OBJ_TYPE_EVENT);
+    if (status != ZX_OK) {
+      completer.Reply(fit::error(ZX_ERR_INVALID_ARGS));
+      return;
+    }
+    auto maybe_other_node_properties =
+        logical_buffer_collection_->FindNodePropertiesByNodeRefKoid(node_ref_koid);
+    if (!maybe_other_node_properties) {
+      completer.Reply(fit::error(ZX_ERR_NOT_FOUND));
+      return;
+    }
+    auto* other_node_properties = maybe_other_node_properties.value();
+
+    for (auto* iter = &node_properties(); iter; iter = iter->parent()) {
+      iter->set_marked(true);
+    }
+    // Ensure we set_marked(false), even if we add an early return.
+    auto clear_marked = fit::defer([this] {
+      for (auto* iter = &node_properties(); iter; iter = iter->parent()) {
+        iter->set_marked(false);
+      }
+    });
+    NodeProperties* common_parent = nullptr;
+    for (auto* iter = other_node_properties; iter; iter = iter->parent()) {
+      if (iter->is_marked()) {
+        common_parent = iter;
+        break;
+      }
+    }
+    clear_marked.call();
+
+    ZX_DEBUG_ASSERT(common_parent);
+    bool is_alternate_for = !!common_parent->node()->buffer_collection_token_group();
+    completer.ReplySuccess(is_alternate_for);
   }
 
   void CloseChannel(zx_status_t epitaph);

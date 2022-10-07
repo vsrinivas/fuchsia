@@ -228,6 +228,15 @@ void BufferCollectionToken::SetVerboseLogging(SetVerboseLoggingCompleter::Sync& 
   SetVerboseLoggingImplV1(completer);
 }
 
+void BufferCollectionToken::GetNodeRef(GetNodeRefCompleter::Sync& completer) {
+  GetNodeRefImplV1(completer);
+}
+
+void BufferCollectionToken::IsAlternateFor(IsAlternateForRequestView request,
+                                           IsAlternateForCompleter::Sync& completer) {
+  IsAlternateForImplV1(request, completer);
+}
+
 BufferCollectionToken::BufferCollectionToken(
     fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_param,
     NodeProperties* new_node_properties, zx::unowned_channel server_end)

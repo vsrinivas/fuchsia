@@ -35,6 +35,9 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   void DeprecatedSync(DeprecatedSyncCompleter::Sync& completer) override;
   void Close(CloseCompleter::Sync& completer) override;
   void DeprecatedClose(DeprecatedCloseCompleter::Sync& completer) override;
+  void GetNodeRef(GetNodeRefCompleter::Sync& completer) override;
+  void IsAlternateFor(IsAlternateForRequestView request,
+                      IsAlternateForCompleter::Sync& completer) override;
   void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
   void DeprecatedSetName(DeprecatedSetNameRequestView request,
                          DeprecatedSetNameCompleter::Sync& completer) override;

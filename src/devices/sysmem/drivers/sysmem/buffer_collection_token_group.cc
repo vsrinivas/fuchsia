@@ -19,6 +19,15 @@ void BufferCollectionTokenGroup::Sync(SyncCompleter::Sync& completer) { SyncImpl
 
 void BufferCollectionTokenGroup::Close(CloseCompleter::Sync& completer) { CloseImplV1(completer); }
 
+void BufferCollectionTokenGroup::GetNodeRef(GetNodeRefCompleter::Sync& completer) {
+  GetNodeRefImplV1(completer);
+}
+
+void BufferCollectionTokenGroup::IsAlternateFor(IsAlternateForRequestView request,
+                                                IsAlternateForCompleter::Sync& completer) {
+  IsAlternateForImplV1(request, completer);
+}
+
 void BufferCollectionTokenGroup::SetName(SetNameRequestView request,
                                          SetNameCompleter::Sync& completer) {
   SetNameImplV1(request, completer);

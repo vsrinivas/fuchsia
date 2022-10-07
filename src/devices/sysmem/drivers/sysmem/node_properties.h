@@ -192,6 +192,12 @@ class NodeProperties : public std::enable_shared_from_this<NodeProperties> {
   uint32_t buffer_collection_count() const;
   uint32_t buffer_collection_token_count() const;
 
+  zx::unowned<zx::event> node_ref() { return zx::unowned(node_ref_); }
+  zx_koid_t node_ref_koid() { return node_ref_koid_; }
+
+  bool is_marked() { return is_marked_; }
+  void set_marked(bool is_marked) { is_marked_ = is_marked; }
+
   void LogInfo(Location location, const char* format, ...) const __PRINTFLIKE(3, 4);
 
   // For debugging.
@@ -265,6 +271,17 @@ class NodeProperties : public std::enable_shared_from_this<NodeProperties> {
   // changed repeatedly for a BufferCollectionTokenGroup as we enumerate through combinations of
   // child selections among all groups.
   std::optional<uint32_t> which_child_ = std::nullopt;
+
+  // We can duplicate this handle out to a client, then the client can provide a handle to this same
+  // object to prove that the client obtained the handle from a specific Node.  See also
+  // GetNodeRefImpl() and IsAlternateForImpl().
+  zx::event node_ref_;
+
+  zx_koid_t node_ref_koid_ = {};
+
+  // Used for finding the closest parent in common between two NodeProperties.  This will always be
+  // false unless an IsAlternateFor() operation is in progress.
+  bool is_marked_ = false;
 };
 
 }  // namespace sysmem_driver
