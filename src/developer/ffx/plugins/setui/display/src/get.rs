@@ -70,8 +70,6 @@ mod test {
     }
 
     #[should_panic]
-    // TODO(fxbug.dev/88496): delete the below
-    #[cfg_attr(feature = "variant_asan", ignore)]
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_failure() {
         let expected_display = SetArgs {
