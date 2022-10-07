@@ -26,9 +26,8 @@ lazy_static::lazy_static! {
     pub(super) static ref CONTACT_STATE_PROP: StringReference<'static> = "contacts".into();
     pub(super) static ref X_POS_PROP: StringReference<'static> = "pos_x_mm".into();
     pub(super) static ref Y_POS_PROP: StringReference<'static> = "pos_y_mm".into();
-    // TODO(https://fxbug.dev/108886): normalize to mm.
-    pub(super) static ref WIDTH_PROP: StringReference<'static> = "width_raw".into();
-    pub(super) static ref HEIGHT_PROP: StringReference<'static> = "height_raw".into();
+    pub(super) static ref WIDTH_PROP: StringReference<'static> = "width_mm".into();
+    pub(super) static ref HEIGHT_PROP: StringReference<'static> = "height_mm".into();
 
     // Reason properties. Shared between `MISMATCH_EVENT_NODE`s, and
     // `GESTURE_END_NODE`s.
@@ -144,10 +143,10 @@ lazy_static::lazy_static! {
 //           "pressed_buttons": [],
 //           "contacts": {
 //             "1": {
-//               "height_raw": 40.0,
+//               "height_mm": 4.0,
 //               "pos_x_mm": 2.0,
 //               "pos_y_mm": 3.0,
-//               "width_raw": 30.0
+//               "width_mm": 3.0
 //             }
 //           }
 //         }
@@ -208,10 +207,10 @@ lazy_static::lazy_static! {
 //               pressed_buttons = []
 //               contacts:
 //                 0:
-//                   height_raw = 2584.000000
+//                   height_mm = 2.5840000
 //                   pos_x_mm = 26.528000
 //                   pos_y_mm = 23.712999
-//                   width_raw = 2953.000000
+//                   width_mm = 2.9530000
 //           /* mismatches on u64 properties */
 //           151:
 //             mismatch_event:
@@ -235,10 +234,10 @@ lazy_static::lazy_static! {
 //               pressed_buttons = []
 //               contacts:
 //                 0:
-//                   height_raw = 2584.000000
+//                   height_mm = 2.5840000
 //                   pos_x_mm = 27.162001
 //                   pos_y_mm = 24.061001
-//                   width_raw = 2953.000000
+//                   width_mm = 2.9530000
 //           /* mismatches on float properties */
 //           160:
 //             mismatch_event:
@@ -290,10 +289,10 @@ lazy_static::lazy_static! {
 //               pressed_buttons = []
 //               contacts:
 //                 0:
-//                   height_raw = 2584.000000
+//                   height_mm = 2.5840000
 //                   pos_x_mm = 76.887001
 //                   pos_y_mm = 25.962999
-//                   width_raw = 2953.000000
+//                   width_mm = 2.9530000
 //           /* ... many entries omitted ... */
 //           752:
 //             touchpad_event:
@@ -302,10 +301,10 @@ lazy_static::lazy_static! {
 //               pressed_buttons = []
 //               contacts:
 //                 0:
-//                   height_raw = 3230.000000
+//                   height_mm = 3.2300000
 //                   pos_x_mm = 76.949997
 //                   pos_y_mm = 26.184999
-//                   width_raw = 2953.000000
+//                   width_mm = 2.9530000
 //           /* mismatches on i64 properties */
 //           753:
 //             mismatch_event:
