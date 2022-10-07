@@ -71,7 +71,6 @@ To manually exclude a directory from VS Code’s watcher:
             "**/src/chromium": true,
             "**/topaz": true,
             "**/zircon/experimental": true,
-            "**/zircon/prebuilt": true,
             "**/zircon/third_party": true,
         }
     ```

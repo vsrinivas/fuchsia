@@ -26,7 +26,7 @@ PICKLE_FILE = STORE_DIR + 'fd.pickle'
 
 EXCLUDE_DIRS = [
     '"*/.git"', './build', './out', './prebuilt', './third_party',
-    './zircon/build', './zircon/prebuilt', './cmake-build-debug', './zircon/third_party',
+    './zircon/build', './cmake-build-debug', './zircon/third_party',
 ]
 
 

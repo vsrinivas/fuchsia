@@ -65,8 +65,6 @@ tables_generator_tests_*.txt
 
 ### Checkout generated files
 /build/cipd.gni
-/zircon/prebuilt/config.gni
-/zircon/prebuilt/downloads/
 
 ### Infra files
 # These files may exist in a checkout on an Infra VM but not locally
