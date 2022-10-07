@@ -178,6 +178,105 @@ impl Partition for MockPartition {
     }
 }
 
+// Create a partition whose GUID and label match the account partition,
+// whose block device has a zxcrypt header, and which can be unsealed with any arbitrary key
+pub fn make_formatted_account_partition_any_key() -> MockPartition {
+    MockPartition {
+        guid_behavior: Ok(Match::Any),
+        label_behavior: Ok(Match::Any),
+        block: MockBlockDevice {
+            zxcrypt_header_behavior: Ok(Match::Any),
+            bind_behavior: Ok(MockEncryptedBlockDevice {
+                format_behavior: Ok(()),
+                unseal_behavior: UnsealBehavior::AcceptAnyKey(Box::new(MockBlockDevice {
+                    zxcrypt_header_behavior: Ok(Match::None),
+                    bind_behavior: Err(|| {
+                        DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
+                    }),
+                })),
+                shred_behavior: Ok(()),
+            }),
+        },
+    }
+}
+
+// Create a partition whose GUID and label match the account partition,
+// and whose block device has a zxcrypt header.
+pub fn make_formatted_account_partition(accepted_key: Key) -> MockPartition {
+    let acceptable_keys = vec![accepted_key];
+    MockPartition {
+        guid_behavior: Ok(Match::Any),
+        label_behavior: Ok(Match::Any),
+        block: MockBlockDevice {
+            zxcrypt_header_behavior: Ok(Match::Any),
+            bind_behavior: Ok(MockEncryptedBlockDevice {
+                format_behavior: Ok(()),
+                unseal_behavior: UnsealBehavior::AcceptExactKeys((
+                    acceptable_keys,
+                    Box::new(MockBlockDevice {
+                        zxcrypt_header_behavior: Ok(Match::None),
+                        bind_behavior: Err(|| {
+                            DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
+                        }),
+                    }),
+                )),
+                shred_behavior: Ok(()),
+            }),
+        },
+    }
+}
+
+// Create a partition whose GUID and label match the account partition,
+// and whose block device has a zxcrypt header, and which, if told to shred, will
+// fail with an IO error
+pub fn make_formatted_account_partition_fail_shred(accepted_key: Key) -> MockPartition {
+    let acceptable_keys = vec![accepted_key];
+    MockPartition {
+        guid_behavior: Ok(Match::Any),
+        label_behavior: Ok(Match::Any),
+        block: MockBlockDevice {
+            zxcrypt_header_behavior: Ok(Match::Any),
+            bind_behavior: Ok(MockEncryptedBlockDevice {
+                format_behavior: Ok(()),
+                unseal_behavior: UnsealBehavior::AcceptExactKeys((
+                    acceptable_keys,
+                    Box::new(MockBlockDevice {
+                        zxcrypt_header_behavior: Ok(Match::None),
+                        bind_behavior: Err(|| {
+                            DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
+                        }),
+                    }),
+                )),
+                shred_behavior: Err(|| DiskError::FailedToShredZxcrypt(Status::IO)),
+            }),
+        },
+    }
+}
+
+// Create a partition whose GUID and label match the account partition,
+// and whose block device does not have a zxcrypt header.  Expect the client to
+// format and unseal it, at which point we will accept any key and expose an empty
+// inner block device.
+pub fn make_unformatted_account_partition() -> MockPartition {
+    MockPartition {
+        guid_behavior: Ok(Match::Any),
+        label_behavior: Ok(Match::Any),
+        block: MockBlockDevice {
+            zxcrypt_header_behavior: Ok(Match::None),
+            bind_behavior: Ok(MockEncryptedBlockDevice {
+                format_behavior: Ok(()),
+                unseal_behavior: UnsealBehavior::AcceptAnyKey(Box::new(MockBlockDevice {
+                    zxcrypt_header_behavior: Ok(Match::None),
+                    bind_behavior: Err(|| {
+                        DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
+                    }),
+                })),
+                shred_behavior: Ok(()),
+            }),
+        },
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MockBlockDevice {
     // Whether or not the block device has a zxcrypt header in the first block.
