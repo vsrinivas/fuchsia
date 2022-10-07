@@ -462,7 +462,11 @@ void Devnode::open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ip
   }
   Devnode& dn = *dn_result.value();
 
-  auto open_locally = [&]() {
+  auto open_as_directory = [&]() {
+    if (flags & fio::wire::OpenFlags::kNotDirectory) {
+      describe(zx::error(ZX_ERR_NOT_FILE));
+      return;
+    }
     auto ios = std::make_unique<DcIostate>(dn, dispatcher);
     if (ios == nullptr) {
       describe(zx::error(ZX_ERR_NO_MEMORY));
@@ -473,12 +477,12 @@ void Devnode::open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ip
   };
 
   if (flags & fio::wire::OpenFlags::kDirectory) {
-    open_locally();
+    open_as_directory();
     return;
   }
 
   return std::visit(
-      overloaded{[&](const NoRemote&) { open_locally(); },
+      overloaded{[&](const NoRemote&) { open_as_directory(); },
                  [&](const Service& service) {
                    __UNUSED const fidl::WireResult result =
                        fidl::WireCall(service.remote)
@@ -490,7 +494,7 @@ void Devnode::open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ip
                      __UNUSED const fidl::Status result =
                          device.device_controller()->Open(flags, 0, ".", std::move(ipc));
                    } else {
-                     open_locally();
+                     open_as_directory();
                    }
                  }},
       dn.target_);

@@ -123,7 +123,7 @@ fn create_ramdisk(vmo: &Vmo, ramdisk_block_size: u64) -> RamdiskClient {
     let duplicated_vmo = Vmo::from(duplicated_handle);
 
     // Create the ramdisks
-    let dev_root = OpenOptions::new().read(true).write(true).open(&DEV_PATH).unwrap();
+    let dev_root = OpenOptions::new().read(true).open(&DEV_PATH).unwrap();
     VmoRamdiskClientBuilder::new(duplicated_vmo)
         .block_size(ramdisk_block_size)
         .dev_root(dev_root)
