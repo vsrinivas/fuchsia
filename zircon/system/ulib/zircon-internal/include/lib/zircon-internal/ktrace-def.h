@@ -127,11 +127,6 @@ KTRACE_DEF(0x130, 32B, CHANNEL_CREATE, IPC)  // id0, id1, flags
 KTRACE_DEF(0x131, 32B, CHANNEL_WRITE, IPC)   // id0, bytes, handles
 KTRACE_DEF(0x132, 32B, CHANNEL_READ, IPC)    // id1, bytes, handles
 
-KTRACE_DEF(0x140, 32B, PORT_WAIT, IPC)       // id
-KTRACE_DEF(0x141, 32B, PORT_WAIT_DONE, IPC)  // id, status
-KTRACE_DEF(0x142, 32B, PORT_CREATE, IPC)     // id
-KTRACE_DEF(0x143, 32B, PORT_QUEUE, IPC)      // id, size
-
 KTRACE_DEF(0x150, 32B, WAIT_ONE, IPC)       // id, signals, timeoutlo, timeouthi
 KTRACE_DEF(0x151, 32B, WAIT_ONE_DONE, IPC)  // id, status, pending
 

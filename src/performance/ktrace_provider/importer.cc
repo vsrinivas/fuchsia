@@ -375,14 +375,6 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
       return HandleChannelWrite(record->ts, record->tid, record->a, record->b, record->c);
     case KTRACE_EVENT(TAG_CHANNEL_READ):
       return HandleChannelRead(record->ts, record->tid, record->a, record->b, record->c);
-    case KTRACE_EVENT(TAG_PORT_WAIT):
-      return HandlePortWait(record->ts, record->tid, record->a);
-    case KTRACE_EVENT(TAG_PORT_WAIT_DONE):
-      return HandlePortWaitDone(record->ts, record->tid, record->a, record->b);
-    case KTRACE_EVENT(TAG_PORT_CREATE):
-      return HandlePortCreate(record->ts, record->tid, record->a);
-    case KTRACE_EVENT(TAG_PORT_QUEUE):
-      return HandlePortQueue(record->ts, record->tid, record->a, record->b);
     case KTRACE_EVENT(TAG_WAIT_ONE):
       return HandleWaitOne(record->ts, record->tid, record->a, record->b,
                            ToUInt64(record->c, record->d));
@@ -963,24 +955,6 @@ bool Importer::HandleChannelRead(trace_ticks_t event_time, zx_koid_t thread, zx_
                                             &channel_category_ref_, &channel_read_name_ref_,
                                             counter, args, std::size(args));
   return true;
-}
-
-bool Importer::HandlePortWait(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t port) {
-  return false;
-}
-
-bool Importer::HandlePortWaitDone(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t port,
-                                  uint32_t status) {
-  return false;
-}
-
-bool Importer::HandlePortCreate(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t port) {
-  return false;
-}
-
-bool Importer::HandlePortQueue(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t port,
-                               uint32_t num_bytes) {
-  return false;
 }
 
 bool Importer::HandleWaitOne(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t object,

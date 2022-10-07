@@ -37,11 +37,8 @@ zx_status_t sys_port_create(uint32_t options, user_out_handle* out) {
     return result;
   }
 
-  uint32_t koid = static_cast<uint32_t>(handle.dispatcher()->get_koid());
-
   result = out->make(ktl::move(handle), rights);
 
-  ktrace(TAG_PORT_CREATE, koid, 0, 0, 0);
   return result;
 }
 
@@ -82,12 +79,8 @@ zx_status_t sys_port_wait(zx_handle_t handle, zx_time_t deadline,
 
   const Deadline slackDeadline(deadline, up->GetTimerSlackPolicy());
 
-  ktrace(TAG_PORT_WAIT, static_cast<uint32_t>(port->get_koid()), 0, 0, 0);
-
   zx_port_packet_t pp;
   zx_status_t st = port->Dequeue(slackDeadline, &pp);
-
-  ktrace(TAG_PORT_WAIT_DONE, static_cast<uint32_t>(port->get_koid()), st, 0, 0);
 
   if (st != ZX_OK) {
     return st;
