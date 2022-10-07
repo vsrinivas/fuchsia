@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.driver.index/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/boot/cpp/fidl.h>
-#include <fuchsia/kernel/cpp/fidl.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -109,47 +109,47 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
   };
 }
 
-static const std::string kRootJobPath = "/svc/" + std::string(fuchsia::kernel::RootJob::Name_);
-static const std::string kRootResourcePath =
-    "/svc/" + std::string(fuchsia::boot::RootResource::Name_);
-static const std::string kMexecResourcePath =
-    "/svc/" + std::string(fuchsia::kernel::MexecResource::Name_);
-
 // Get the root job from the root job service.
-zx_status_t get_root_job(zx::job* root_job) {
-  fuchsia::kernel::RootJobSyncPtr root_job_ptr;
-  zx_status_t const status =
-      fdio_service_connect(kRootJobPath.c_str(), root_job_ptr.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    return status;
+zx::status<zx::job> get_root_job() {
+  zx::status client_end = component::Connect<fuchsia_kernel::RootJob>();
+  if (client_end.is_error()) {
+    return client_end.take_error();
   }
-  return root_job_ptr->Get(root_job);
+  fidl::WireResult result = fidl::WireCall(client_end.value())->Get();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  return zx::ok(std::move(result.value().job));
 }
 
 // Get the root resource from the root resource service. Not receiving the
 // startup handle is logged, but not fatal.  In test environments, it would not
 // be present.
-zx_status_t get_root_resource(zx::resource* root_resource) {
-  fuchsia::boot::RootResourceSyncPtr root_resource_ptr;
-  zx_status_t const status = fdio_service_connect(
-      kRootResourcePath.c_str(), root_resource_ptr.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    return status;
+zx::status<zx::resource> get_root_resource() {
+  zx::status client_end = component::Connect<fuchsia_boot::RootResource>();
+  if (client_end.is_error()) {
+    return client_end.take_error();
   }
-  return root_resource_ptr->Get(root_resource);
+  fidl::WireResult result = fidl::WireCall(client_end.value())->Get();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  return zx::ok(std::move(result.value().resource));
 }
 
 // Get the mexec resource from the mexec resource service. Not receiving the
 // startup handle is logged, but not fatal.  In test environments, it would not
 // be present.
-zx_status_t get_mexec_resource(zx::resource* mexec_resource) {
-  fuchsia::kernel::MexecResourceSyncPtr mexec_resource_ptr;
-  zx_status_t status = fdio_service_connect(
-      kMexecResourcePath.c_str(), mexec_resource_ptr.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    return status;
+zx::status<zx::resource> get_mexec_resource() {
+  zx::status client_end = component::Connect<fuchsia_kernel::MexecResource>();
+  if (client_end.is_error()) {
+    return client_end.take_error();
   }
-  return mexec_resource_ptr->Get(mexec_resource);
+  fidl::WireResult result = fidl::WireCall(client_end.value())->Get();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  return zx::ok(std::move(result.value().resource));
 }
 
 }  // namespace
@@ -225,24 +225,27 @@ int main(int argc, char** argv) {
       std::move(driver_index_client.value()), loop.dispatcher());
 
   // TODO(fxbug.dev/33958): Remove all uses of the root resource.
-  status = get_root_resource(&config.root_resource);
-  if (status != ZX_OK) {
-    LOGF(INFO, "Failed to get root resource, assuming test environment and continuing");
+  if (zx::status root_resource = get_root_resource(); root_resource.is_error()) {
+    LOGF(INFO, "Failed to get root resource, assuming test environment and continuing (%s)",
+         root_resource.status_string());
+  } else {
+    config.root_resource = std::move(root_resource.value());
   }
   // TODO(fxbug.dev/33957): Remove all uses of the root job.
-  zx::job root_job;
-  status = get_root_job(&root_job);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
-    return status;
+  zx::status root_job = get_root_job();
+  if (root_job.is_error()) {
+    LOGF(ERROR, "Failed to get root job: %s", root_job.status_string());
+    return root_job.status_value();
   }
-  status = get_mexec_resource(&config.mexec_resource);
-  if (status != ZX_OK) {
-    LOGF(INFO, "Failed to get mexec resource, assuming test environment and continuing");
+  if (zx::status mexec_resource = get_mexec_resource(); mexec_resource.is_error()) {
+    LOGF(INFO, "Failed to get mexec resource, assuming test environment and continuing (%s)",
+         mexec_resource.status_string());
+  } else {
+    config.mexec_resource = std::move(mexec_resource.value());
   }
 
   zx_handle_t oom_event;
-  status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
+  status = zx_system_get_event(root_job.value().get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
   if (status != ZX_OK) {
     LOGF(INFO, "Failed to get OOM event, assuming test environment and continuing");
   } else {
@@ -288,7 +291,7 @@ int main(int argc, char** argv) {
     coordinator.PublishDriverDevelopmentService(outgoing);
 
     // V1 Drivers.
-    status = system_instance.CreateDriverHostJob(root_job, &config.driver_host_job);
+    status = system_instance.CreateDriverHostJob(root_job.value(), &config.driver_host_job);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to create driver_host job: %s", zx_status_get_string(status));
       return status;
@@ -403,9 +406,7 @@ int main(int argc, char** argv) {
   ZX_ASSERT(outgoing.ServeFromStartupInfo().is_ok());
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
-  auto log_loop_start = std::make_unique<async::TaskClosure>(
-      [] { LOGF(INFO, "driver_manager main loop is running"); });
-  log_loop_start->Post(loop.dispatcher());
+  async::PostTask(loop.dispatcher(), [] { LOGF(INFO, "driver_manager main loop is running"); });
 
   coordinator.set_running(true);
   status = loop.Run();
