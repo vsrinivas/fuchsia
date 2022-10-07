@@ -5,7 +5,7 @@ Fuchsia running on a device. Use the dropdown menu next to the table to filter
 the results. See [Descriptions](#descriptions) for an explanation of each dropdown menu.
 
 {%- set metadata | yamlloads %}
-{% include "docs/development/hardware/provision/_metadata.yaml" %}
+{% include "docs/development/hardware/setup/_metadata.yaml" %}
 {%- endset %}
 
 <section>
