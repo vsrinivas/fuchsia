@@ -228,6 +228,63 @@ TEST_F(ClientConnectionTest, Disconnect) {
   ASSERT_EQ(1u, disconnect_calls.load());
 }
 
+TEST_F(ClientConnectionTest, DisconnectOnDestruct) {
+  // Test that Disconnect is called when a connection object is destroyed.
+
+  constexpr uint16_t kReasonCode = REASON_CODE_LEAVING_NETWORK_DEAUTH;
+
+  std::atomic<bool> disconnect_called = false;
+  auto on_ioctl = [&](t_void *, pmlan_ioctl_req req) -> mlan_status {
+    if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_BSS) {
+      auto bss = reinterpret_cast<const mlan_ds_bss *>(req->pbuf);
+      if (bss->sub_command == MLAN_OID_BSS_START) {
+        // This is the connect call. Complete it asynchronously.
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        return MLAN_STATUS_PENDING;
+      }
+      if (bss->sub_command == MLAN_OID_BSS_STOP) {
+        // This is the cancel call. Complete it asynchronously.
+        // Make sure the correct reason code is used.
+        auto &deauth = reinterpret_cast<const mlan_ds_bss *>(req->pbuf)->param.deauth_param;
+        EXPECT_EQ(kReasonCode, deauth.reason_code);
+        // And that an empty MAC address was indicated.
+        EXPECT_BYTES_EQ("\0\0\0\0\0\0", deauth.mac_addr, ETH_ALEN);
+        disconnect_called = true;
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        return MLAN_STATUS_PENDING;
+      }
+    }
+    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG) {
+      // Connecting performs security and IE (MISC ioctl) configuration, make sure it succeeds.
+      return MLAN_STATUS_SUCCESS;
+    }
+
+    // Unexpected
+    ADD_FAILURE("Should not reach this point, unexpected ioctl");
+    return MLAN_STATUS_FAILURE;
+  };
+  mocks_.SetOnMlanIoctl(std::move(on_ioctl));
+
+  {
+    ClientConnection connection(&test_ifc_, &context_, key_ring_.get(), kTestBssIndex);
+
+    wlan_fullmac_connect_req_t request = kMinimumConnectReq;
+
+    sync_completion_t connect_completion;
+    auto on_connect = [&](ClientConnection::StatusCode status, const uint8_t *ies, size_t ies_len) {
+      EXPECT_EQ(ClientConnection::StatusCode::kSuccess, status);
+      sync_completion_signal(&connect_completion);
+    };
+
+    // First we connect so that we can successfully disconnect
+    ASSERT_OK(connection.Connect(&request, std::move(on_connect)));
+    ASSERT_OK(sync_completion_wait(&connect_completion, ZX_TIME_INFINITE));
+  }
+  // The ClientConnection object has now gone out of scope and should have disconnected as part of
+  // being destroyed.
+  ASSERT_TRUE(disconnect_called.load());
+}
+
 TEST_F(ClientConnectionTest, DisconnectAsyncFailure) {
   // Test that if the disconnect ioctl fails asynchronously we get the correct status code.
   constexpr uint8_t kStaAddr[] = {0x0e, 0x0d, 0x16, 0x28, 0x3a, 0x4c};

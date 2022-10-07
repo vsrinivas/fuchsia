@@ -50,6 +50,16 @@ ClientConnection::~ClientConnection() {
     // Don't attempt to wait for the correct state here, it might never happen.
     return;
   }
+
+  // Using a MAC address of all zeroes will disconnect from the currently connected BSSID.
+  constexpr uint8_t kZeroMac[ETH_ALEN] = {};
+  status = Disconnect(kZeroMac, REASON_CODE_LEAVING_NETWORK_DEAUTH, [](IoctlStatus) {});
+  if (status != ZX_OK && status != ZX_ERR_NOT_CONNECTED && status != ZX_ERR_ALREADY_EXISTS) {
+    NXPF_ERR("Failed to disconnect: %s", zx_status_get_string(status));
+    // Don't attempt to wait for the disconnected state here, it might never happen.
+    return;
+  }
+
   // Wait until any connect or disconnect attempt has completed. A connect or disconnect attempt
   // will cause asynchronous callbacks that could crash if the connection object goes away. By
   // waiting for an attempt to finish we avoid this. The CancelConnect call above should immediately
