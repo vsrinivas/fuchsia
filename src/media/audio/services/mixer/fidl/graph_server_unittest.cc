@@ -17,6 +17,7 @@
 #include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "fidl/fuchsia.mem/cpp/wire_types.h"
 #include "lib/fidl/cpp/wire/arena.h"
+#include "lib/fidl/cpp/wire/vector_view.h"
 #include "lib/fidl/cpp/wire/wire_types.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/services/common/logging.h"
@@ -168,6 +169,14 @@ MakeDefaultProcessorConfig(fidl::AnyArena& arena) {
   builder.processor(std::move(endpoints->client));
 
   return builder;
+}
+
+fidl::VectorView<GainControlId> MakeDefaultGainControls(fidl::AnyArena& arena) {
+  fidl::VectorView<GainControlId> gain_controls(arena, 3);
+  for (int i = 0; i < 3; ++i) {
+    gain_controls.at(i) = GainControlId(i + 1);
+  }
+  return gain_controls;
 }
 
 // Testing strategy: we test all error cases implemented in graph_server.cc and very high-level
@@ -1123,6 +1132,89 @@ TEST_F(GraphServerTest, CreateEdgeSuccess) {
       client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
                                .source_id(producer_id)
                                .dest_id(consumer_id)
+                               .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_FALSE(result->is_error()) << result->error_value();
+}
+
+TEST_F(GraphServerTest, CreateEdgeSuccessMixerDest) {
+  // Producer.
+  NodeId producer_id;
+  {
+    auto result = client()->CreateProducer(
+        fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
+            .name(fidl::StringView::FromExternal("producer"))
+            .direction(PipelineDirection::kOutput)
+            .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
+                arena_, MakeDefaultRingBuffer(arena_).Build()))
+            .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    producer_id = result->value()->id();
+  }
+
+  // Mixer.
+  NodeId mixer_id;
+  {
+    auto result = client()->CreateMixer(MakeDefaultCreateMixerRequest(arena_).Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    mixer_id = result->value()->id();
+  }
+
+  auto result =
+      client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                               .source_id(producer_id)
+                               .dest_id(mixer_id)
+                               .gain_controls(MakeDefaultGainControls(arena_))
+                               .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_FALSE(result->is_error()) << result->error_value();
+}
+
+TEST_F(GraphServerTest, CreateEdgeSuccessMixerSource) {
+  // Mixer.
+  NodeId mixer_id;
+  {
+    auto result = client()->CreateMixer(MakeDefaultCreateMixerRequest(arena_).Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    mixer_id = result->value()->id();
+  }
+
+  // Custom.
+  NodeId custom_source_id;
+  {
+    auto result = client()->CreateCustom(
+        fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+            .name(fidl::StringView::FromExternal("custom"))
+            .direction(PipelineDirection::kInput)
+            .config(MakeDefaultProcessorConfig(arena_).Build())
+            .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+            .reference_clock(MakeReferenceClock(arena_))
+            .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_node_properties());
+    ASSERT_TRUE(result->value()->node_properties().has_source_ids());
+    ASSERT_EQ(result->value()->node_properties().source_ids().count(), 1ul);
+    custom_source_id = result->value()->node_properties().source_ids().at(0);
+  }
+
+  auto result =
+      client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                               .source_id(mixer_id)
+                               .dest_id(custom_source_id)
+                               .gain_controls(MakeDefaultGainControls(arena_))
                                .Build());
 
   ASSERT_TRUE(result.ok()) << result;

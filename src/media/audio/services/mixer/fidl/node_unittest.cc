@@ -79,7 +79,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryAlreadyConnected) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(2));
+                                 /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
 }
@@ -93,7 +93,8 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySourceDisallowsOutgoingEdges) {
   source->SetAllowsDest(false);
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, /*dest=*/graph.node(2));
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), source, /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
@@ -107,7 +108,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySourceAlreadyHasOutgoingEdge) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(3));
+                                 /*dest=*/graph.node(3), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
@@ -123,7 +124,8 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryDestNodeTooManyIncomingEdges) {
   dest->SetMaxSources(1);
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(2), dest);
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(2), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
@@ -137,7 +139,24 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryIncompatibleFormats) {
   dest->SetOnCanAcceptSourceFormat([](auto n) { return false; });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest);
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest, /*options=*/{});
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+}
+
+TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryIncompatibleFormatsMixerDest) {
+  const auto source_format = Format::CreateOrDie({fuchsia_audio::SampleType::kFloat32, 2, 48000});
+  const auto dest_format = Format::CreateOrDie({fuchsia_audio::SampleType::kFloat32, 9, 48000});
+  FakeGraph graph({
+      .unconnected_ordinary_nodes = {1, 2},
+      .types = {{Node::Type::kMixer, {2}}},
+      .formats = {{&source_format, {1}}, {&dest_format, {2}}},
+  });
+
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
+                                 graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
@@ -154,7 +173,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryPipelineMismatch) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(2));
+                                 /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
@@ -167,7 +186,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryCycle) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(3),
-                                 /*dest=*/graph.node(1));
+                                 /*dest=*/graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kCycle);
 }
@@ -185,7 +204,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySuccess) {
   ASSERT_EQ(dest->thread(), graph.thread(kThreadId));
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest);
+  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->dest(), dest);
@@ -205,7 +224,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaAlreadyConnected) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(3));
+                                 /*dest=*/graph.node(3), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
 }
@@ -220,7 +239,8 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSourceDisallowsOutgoingEdges) {
   source->SetAllowsDest(false);
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, /*dest=*/graph.node(2));
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), source, /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
@@ -234,7 +254,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSourceAlreadyHasOutgoingEdge) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(3));
+                                 /*dest=*/graph.node(3), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
@@ -254,7 +274,8 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaIncompatibleFormats) {
   });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest);
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
@@ -272,7 +293,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaPipelineMismatch) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(2));
+                                 /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
@@ -288,7 +309,8 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaDestNodeTooManyIncomingEdges) {
   dest->SetOnCreateNewChildSource([]() { return nullptr; });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest);
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
@@ -301,7 +323,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaCycle) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(3),
-                                 /*dest=*/graph.node(1));
+                                 /*dest=*/graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kCycle);
 }
@@ -325,7 +347,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSuccess) {
   });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest);
+  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
   ASSERT_TRUE(result.is_ok());
   ASSERT_EQ(dest->child_sources().size(), 1u);
   ASSERT_EQ(dest->child_dests().size(), 0u);
@@ -351,7 +373,8 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinarySourceNodeTooManyOutgoingEdges) {
   source->SetOnCreateNewChildDest([]() { return nullptr; });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, /*dest=*/graph.node(2));
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), source, /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
@@ -371,7 +394,8 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinaryDestNodeTooManyIncomingEdges) {
   dest->SetMaxSources(1);
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(3), dest);
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(3), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
@@ -386,7 +410,28 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinaryIncompatibleFormats) {
   dest->SetOnCanAcceptSourceFormat([](auto n) { return false; });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest);
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest, /*options=*/{});
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+}
+
+TEST_F(NodeCreateEdgeTest, MetaToOrdinaryIncompatibleFormatsMixerDest) {
+  const auto source_format = Format::CreateOrDie({fuchsia_audio::SampleType::kFloat32, 2, 48000});
+  const auto dest_format = Format::CreateOrDie({fuchsia_audio::SampleType::kFloat32, 9, 48000});
+  FakeGraph graph({
+      .meta_nodes =
+          {
+              {1, {.source_children = {}, .dest_children = {2}}},
+          },
+      .unconnected_ordinary_nodes = {3},
+      .types = {{Node::Type::kMixer, {3}}},
+      .formats = {{&source_format, {2}}, {&dest_format, {3}}},
+  });
+
+  auto q = graph.global_task_queue();
+  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(2),
+                                 graph.node(3), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
@@ -404,7 +449,7 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinaryPipelineMismatch) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(2));
+                                 /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
@@ -418,7 +463,7 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinaryCycle) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(3),
-                                 /*dest=*/graph.node(1));
+                                 /*dest=*/graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kCycle);
 }
@@ -434,7 +479,7 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinarySuccess) {
   auto dest = graph.node(2);
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest);
+  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
   ASSERT_TRUE(result.is_ok());
   ASSERT_EQ(source->child_sources().size(), 0u);
   ASSERT_EQ(source->child_dests().size(), 1u);
@@ -463,7 +508,8 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaSourceNodeTooManyOutgoingEdges) {
   source->SetOnCreateNewChildDest([]() { return nullptr; });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, /*dest=*/graph.node(2));
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), source, /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
@@ -482,7 +528,8 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaDestNodeTooManyIncomingEdges) {
   dest->SetOnCreateNewChildSource([]() { return nullptr; });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest);
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
@@ -504,7 +551,8 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaIncompatibleFormats) {
   });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest);
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1), dest, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
@@ -525,7 +573,7 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaPipelineMismatch) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(2));
+                                 /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
@@ -543,7 +591,7 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaCycle) {
 
   auto q = graph.global_task_queue();
   auto result = Node::CreateEdge(*q, graph.detached_thread(), /*source=*/graph.node(4),
-                                 /*dest=*/graph.node(1));
+                                 /*dest=*/graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kCycle);
 }
@@ -570,7 +618,7 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaSuccess) {
   });
 
   auto q = graph.global_task_queue();
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest);
+  auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
   ASSERT_TRUE(result.is_ok());
   ASSERT_EQ(source->child_sources().size(), 0u);
   ASSERT_EQ(source->child_dests().size(), 1u);
@@ -935,7 +983,7 @@ TEST(NodeCreateDeleteEdgeTest, ThreadMoves) {
 
   // Create source -> dest.
   {
-    auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest);
+    auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -1049,7 +1097,7 @@ TEST(NodeCreateDeleteEdgeTest, MaxDownstreamConsumers) {
 
   // Create source -> dest.
   {
-    auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest);
+    auto result = Node::CreateEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 

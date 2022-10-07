@@ -13,11 +13,13 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 #include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/lib/processing/sampler.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
 #include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
@@ -118,9 +120,14 @@ class Node {
   // connected indirectly through child nodes.
   //
   // Returns an error if the edge is not allowed.
+  struct CreateEdgeOptions {
+    // TODO(fxbug.dev/87651): Convert this to list of `GainControl`s to use in `MixerGainControls`.
+    std::unordered_set<GainControlId> gain_ids = {};
+    Sampler::Type sampler_type = Sampler::Type::kDefault;
+  };
   static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdge(
       GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
-      NodePtr dest);
+      NodePtr dest, CreateEdgeOptions options);
 
   // Deletes the edge from `source` -> `dest`. This is the inverse of `CreateEdge`.
   //

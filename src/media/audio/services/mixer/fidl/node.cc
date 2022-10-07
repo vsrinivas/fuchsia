@@ -9,19 +9,25 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include "fidl/fuchsia.audio.mixer/cpp/common_types.h"
 #include "src/media/audio/lib/clock/clock.h"
+#include "src/media/audio/lib/clock/clock_synchronizer.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/reachability.h"
+#include "src/media/audio/services/mixer/mix/mixer_stage.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 #include "src/media/audio/services/mixer/mix/pipeline_thread.h"
 
 namespace media_audio {
 
 namespace {
+
+using ::fuchsia_audio_mixer::CreateEdgeError;
 
 bool HasNode(const std::vector<NodePtr>& nodes, const NodePtr& node) {
   FX_CHECK(node);
@@ -69,16 +75,17 @@ Node::Node(Type type, std::string_view name, std::shared_ptr<Clock> reference_cl
   }
 }
 
-fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
-    GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
-    NodePtr dest) {
+fpromise::result<void, CreateEdgeError> Node::CreateEdge(GlobalTaskQueue& global_queue,
+                                                         GraphDetachedThreadPtr detached_thread,
+                                                         NodePtr source, NodePtr dest,
+                                                         CreateEdgeOptions options) {
   FX_CHECK(source);
   FX_CHECK(dest);
 
   // If there already exists a path from dest -> source, then adding source -> dest would create a
   // cycle.
   if (ExistsPath(*dest, *source)) {
-    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kCycle);
+    return fpromise::error(CreateEdgeError::kCycle);
   }
 
   NodePtr source_parent;
@@ -87,12 +94,11 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
   // Create a node in source->child_dests() if needed.
   if (source->type() == Type::kMeta) {
     if (HasDestInChildren(source->child_dests(), dest)) {
-      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+      return fpromise::error(CreateEdgeError::kAlreadyConnected);
     }
     NodePtr child = source->CreateNewChildDest();
     if (!child) {
-      return fpromise::error(
-          fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
+      return fpromise::error(CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
     }
     source_parent = source;
     source = child;
@@ -101,34 +107,34 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
   // Create a node in dest->child_sources() if needed.
   if (dest->type() == Type::kMeta) {
     if (HasSourceInChildren(dest->child_sources(), source)) {
-      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+      return fpromise::error(CreateEdgeError::kAlreadyConnected);
     }
     NodePtr child = dest->CreateNewChildSource();
     if (!child) {
-      return fpromise::error(
-          fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
+      return fpromise::error(CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
     }
     dest_parent = dest;
     dest = child;
   }
 
+  const auto& source_format = source->pipeline_stage()->format();
+  const auto& dest_format = dest->pipeline_stage()->format();
+
   if (source->dest() == dest) {
-    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+    return fpromise::error(CreateEdgeError::kAlreadyConnected);
   }
   if (source->dest() || !source->AllowsDest()) {
-    return fpromise::error(
-        fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
+    return fpromise::error(CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
   }
   if (auto max = dest->MaxSources(); max && dest->sources().size() >= *max) {
-    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
+    return fpromise::error(CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
   }
-  if (!dest->CanAcceptSourceFormat(source->pipeline_stage()->format())) {
-    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+  if (!dest->CanAcceptSourceFormat(source_format)) {
+    return fpromise::error(CreateEdgeError::kIncompatibleFormats);
   }
   if (dest->pipeline_direction() == PipelineDirection::kOutput &&
       source->pipeline_direction() == PipelineDirection::kInput) {
-    return fpromise::error(
-        fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
+    return fpromise::error(CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
   }
 
   // Since there is no forwards link (source -> dest), the backwards link (dest -> source) shouldn't
@@ -151,9 +157,29 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
   auto stages_to_move =
       MoveNodeToThread(*source, /*new_thread=*/dest->thread(), /*expected_thread=*/detached_thread);
 
-  // Update downstream consumer counts. Do this after moving to `dest->threaD()` so updates to
+  // Update downstream consumer counts. Do this after moving to `dest->thread()` so updates to
   // `source` get batched into the `dest->thread()` async task.
   auto stages_to_update_downstream_consumers = RecomputeMaxDownstreamConsumers(*source);
+
+  // Populate `add_source_options` if destination node is a mixer.
+  PipelineStage::AddSourceOptions add_source_options;
+  if (dest->type() == Node::Type::kMixer) {
+    // TODO(fxbug.dev/87651): Refactor this based on the new clock leader assignment rules.
+    add_source_options.clock_sync =
+        ClockSynchronizer::SelectModeAndCreate(source->reference_clock(), dest->reference_clock());
+    add_source_options.gain_ids = std::move(options.gain_ids);
+    add_source_options.sampler = Sampler::Create(source_format, dest_format, options.sampler_type);
+
+    if (!add_source_options.sampler) {
+      return fpromise::error(CreateEdgeError::kIncompatibleFormats);
+    }
+  }
+
+  // Populate destination gains if source node is a mixer.
+  std::optional<std::unordered_set<GainControlId>> mixer_dest_gain_ids = std::nullopt;
+  if (source->type() == Node::Type::kMixer) {
+    mixer_dest_gain_ids = std::move(options.gain_ids);
+  }
 
   // Update the PipelineStages asynchronously.
   // Fist apply updates that must happen on dest's thread, which includes connecting source -> dest.
@@ -164,7 +190,9 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
                      stages_to_update_downstream_consumers =
                          std::move(stages_to_update_downstream_consumers[dest->thread()->id()]),  //
                      new_thread = dest->thread()->pipeline_thread(),                              //
-                     old_thread = detached_thread->pipeline_thread()]() {
+                     old_thread = detached_thread->pipeline_thread(),
+                     add_source_options = std::move(add_source_options),
+                     mixer_dest_gain_ids = std::move(mixer_dest_gain_ids)]() mutable {
                       // Before we acquire a checker, verify the dest_stage has the expected thread.
                       FX_CHECK(dest_stage->thread() == new_thread)
                           << dest_stage->thread()->name() << " != " << new_thread->name();
@@ -183,8 +211,13 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
                       }
 
                       ScopedThreadChecker checker(dest_stage->thread()->checker());
-                      // TODO(fxbug.dev/87651): Pass in `gain_ids`.
-                      dest_stage->AddSource(source_stage, /*options=*/{});
+                      if (mixer_dest_gain_ids) {
+                        // TODO(fxbug.dev/87651): Consider generalizing this logic for
+                        // `PipelineStage` without having to do an explicit cast.
+                        static_cast<MixerStage*>(source_stage.get())
+                            ->SetDestGains(std::move(*mixer_dest_gain_ids));
+                      }
+                      dest_stage->AddSource(source_stage, std::move(add_source_options));
                     });
 
   // Apply updates that must happen on other threads.

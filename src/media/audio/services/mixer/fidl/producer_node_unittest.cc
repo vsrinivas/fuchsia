@@ -53,7 +53,8 @@ TEST(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
   EXPECT_EQ(producer->thread(), graph.detached_thread());
   EXPECT_EQ(producer->pipeline_stage()->thread(), graph.detached_thread()->pipeline_thread());
 
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), graph.node(1), producer);
+  auto result =
+      Node::CreateEdge(*q, graph.detached_thread(), graph.node(1), producer, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
@@ -87,7 +88,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
   // Connect producer -> dest.
   auto dest = graph.node(1);
   {
-    auto result = Node::CreateEdge(*q, graph.detached_thread(), producer, dest);
+    auto result = Node::CreateEdge(*q, graph.detached_thread(), producer, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -173,7 +174,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
   // Connect producer -> dest.
   auto dest = graph.node(1);
   {
-    auto result = Node::CreateEdge(*q, graph.detached_thread(), producer, dest);
+    auto result = Node::CreateEdge(*q, graph.detached_thread(), producer, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 

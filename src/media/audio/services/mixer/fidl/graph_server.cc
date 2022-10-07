@@ -213,6 +213,26 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
   });
 }
 
+fpromise::result<Node::CreateEdgeOptions, fuchsia_audio_mixer::CreateEdgeError>
+ParseCreateEdgeOptions(const GraphServer::CreateEdgeRequestView& request) {
+  Node::CreateEdgeOptions options;
+  if (request->has_mixer_sampler()) {
+    if (request->mixer_sampler().is_sinc_sampler()) {
+      // TODO(fxbug.dev/87651): Make use of `fuchsia_audio_mixer::wire::SincSampler` parameters.
+      options.sampler_type = Sampler::Type::kSincSampler;
+    } else {
+      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kUnsupportedOption);
+    }
+  }
+  if (request->has_gain_controls()) {
+    options.gain_ids.reserve(request->gain_controls().count());
+    for (const auto& gain_id : request->gain_controls()) {
+      options.gain_ids.insert(gain_id);
+    }
+  }
+  return fpromise::ok(std::move(options));
+}
+
 }  // namespace
 
 // static
@@ -569,9 +589,6 @@ void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter:
   TRACE_DURATION("audio", "Graph:::CreateEdge");
   ScopedThreadChecker checker(thread().checker());
 
-  // TODO(fxbug.dev/87651): also handle `request->mixer_sampler` and `request->gain_stages` (which
-  // should be renamed to `request->gain_controls`)
-
   if (!request->has_source_id()) {
     FX_LOGS(WARNING) << "CreateEdge: missing source_id";
     completer.ReplyError(fuchsia_audio_mixer::CreateEdgeError::kInvalidSourceId);
@@ -597,9 +614,16 @@ void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter:
     return;
   }
 
+  auto options = ParseCreateEdgeOptions(request);
+  if (!options.is_ok()) {
+    completer.ReplyError(options.error());
+    return;
+  }
+
   auto& source = source_it->second;
   auto& dest = dest_it->second;
-  auto result = Node::CreateEdge(*global_task_queue_, detached_thread_, source, dest);
+  auto result =
+      Node::CreateEdge(*global_task_queue_, detached_thread_, source, dest, options.take_value());
   if (!result.is_ok()) {
     completer.ReplyError(result.error());
     return;

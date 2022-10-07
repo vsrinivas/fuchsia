@@ -575,6 +575,11 @@ type CreateEdgeError = flexible enum {
     /// The source node has PipelineDirection INPUT and the destination node has
     /// PipelineDirection OUTPUT.
     OUTPUT_PIPELINE_CANNOT_READ_FROM_INPUT_PIPELINE = 8;
+
+    /// A flexible field had an unsupported option. This can happen when a
+    /// client built with API version X+1 talks to a server built with API
+    /// version X.
+    UNSUPPORTED_OPTION = 9;
 };
 
 /// Type of errors return by [`DeleteEdge`].
