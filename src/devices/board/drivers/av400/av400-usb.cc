@@ -12,12 +12,12 @@
 #include <lib/zircon-internal/align.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
 
 #include <ddk/usb-peripheral-config.h>
 #include <soc/aml-a5/a5-gpio.h>
 #include <soc/aml-common/aml-registers.h>
+#include <usb/cdc.h>
 #include <usb/dwc2/metadata.h>
 
 #include "src/devices/board/drivers/av400/av400.h"

@@ -15,12 +15,12 @@
 #include <lib/zx/status.h>
 #include <threads.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 
 #include <memory>
 
 #include <fbl/auto_lock.h>
 #include <src/lib/listnode/listnode.h>
+#include <usb/cdc.h>
 #include <usb/usb.h>
 
 namespace usb_cdc_ecm {

@@ -37,6 +37,7 @@ fuchsia_driver("qmi_function-driver") {
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
     "//src/lib/ddk",
     "//zircon/system/ulib/zx",
   ]

@@ -20,10 +20,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/syscalls.h>
 
 #include <fbl/string.h>
+#include <usb/cdc.h>
 #include <zxtest/zxtest.h>
 
 namespace usb_virtual_bus {

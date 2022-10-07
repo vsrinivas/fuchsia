@@ -412,6 +412,7 @@ fuchsia_driver("astro-driver") {
     "//src/devices/lib/thermal",
     "//src/devices/lib/ti",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
     "//src/graphics/display/lib/device-protocol-display",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",

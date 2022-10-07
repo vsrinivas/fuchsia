@@ -21,9 +21,10 @@
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/fidl.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <usb/cdc.h>
 
 #define DEV_USB_PERIPHERAL_DIR "/dev/class/usb-peripheral"
 

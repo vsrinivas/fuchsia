@@ -14,7 +14,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/operation/ethernet.h>
-#include <zircon/hw/usb/cdc.h>
 
 #include <array>
 #include <queue>
@@ -22,6 +21,7 @@
 
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
+#include <usb/cdc.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>

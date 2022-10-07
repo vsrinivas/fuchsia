@@ -7,9 +7,9 @@
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <fuchsia/hardware/usb/composite/c/banjo.h>
 #include <lib/ddk/debug.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
 
+#include <usb/cdc.h>
 #include <usb/usb-request.h>
 
 #include "src/connectivity/ethernet/drivers/usb-cdc-ecm/ethernet_usb_cdc_ecm-bind.h"

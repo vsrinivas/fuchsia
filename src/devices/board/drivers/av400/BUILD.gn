@@ -265,6 +265,7 @@ fuchsia_driver("av400-driver") {
     "//src/devices/lib/mmio",
     "//src/devices/lib/ti",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//zircon/system/ulib/fbl",

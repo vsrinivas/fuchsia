@@ -150,6 +150,7 @@ fuchsia_driver("vim3-driver") {
     "//src/devices/lib/metadata:llcpp",
     "//src/devices/lib/mmio",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
 

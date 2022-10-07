@@ -31,6 +31,7 @@ fuchsia_driver("usb-cdc-function-driver") {
     "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",

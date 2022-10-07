@@ -20,7 +20,6 @@
 #include <zircon/compiler.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/errors.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -34,6 +33,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <usb/cdc.h>
 #include <usb/usb-request.h>
 
 #include "src/connectivity/ethernet/drivers/usb-cdc-function/usb_cdc-bind.h"

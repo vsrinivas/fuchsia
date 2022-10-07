@@ -33,6 +33,7 @@ source_set("rndis-function-lib") {
     "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
     "//src/connectivity/ethernet/lib/rndis",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async",

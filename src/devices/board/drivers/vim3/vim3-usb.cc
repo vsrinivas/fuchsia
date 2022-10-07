@@ -13,7 +13,6 @@
 #include <lib/zircon-internal/align.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
 
 #include <cstring>
@@ -21,6 +20,7 @@
 #include <ddk/usb-peripheral-config.h>
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-meson/g12b-clk.h>
+#include <usb/cdc.h>
 #include <usb/dwc2/metadata.h>
 
 #include "src/devices/board/drivers/vim3/vim3-gpios.h"

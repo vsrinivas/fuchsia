@@ -55,6 +55,7 @@ source_set("qmi_driver_src") {
     "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop_cpp_wire",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",

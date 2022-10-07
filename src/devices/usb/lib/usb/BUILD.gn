@@ -67,3 +67,8 @@ zx_library("hid") {
   sdk = "source"
   sdk_headers = [ "usb/hid.h" ]
 }
+
+zx_library("cdc") {
+  sdk = "source"
+  sdk_headers = [ "usb/cdc.h" ]
+}

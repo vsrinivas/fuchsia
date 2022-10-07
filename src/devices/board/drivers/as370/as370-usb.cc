@@ -12,11 +12,11 @@
 #include <unistd.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 
 #include <ddk/usb-peripheral-config.h>
 #include <soc/as370/as370-reset.h>
 #include <soc/as370/as370-usb.h>
+#include <usb/cdc.h>
 #include <usb/dwc2/metadata.h>
 
 #include "as370.h"

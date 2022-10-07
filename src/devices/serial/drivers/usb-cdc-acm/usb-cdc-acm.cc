@@ -9,9 +9,9 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 
 #include <fbl/alloc_checker.h>
+#include <usb/cdc.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>

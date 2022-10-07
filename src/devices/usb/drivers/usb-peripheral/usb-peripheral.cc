@@ -21,7 +21,6 @@
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/errors.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/listnode.h>
 
 #include <ddk/usb-peripheral-config.h>
@@ -29,6 +28,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <usb/cdc.h>
 
 #include "src/devices/usb/drivers/usb-peripheral/usb_peripheral-bind.h"
 #include "usb-function.h"

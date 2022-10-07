@@ -14,8 +14,8 @@
 #include <lib/zx/clock.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 
+#include <usb/cdc.h>
 #include <zxtest/zxtest.h>
 
 #include "asix-88179-regs.h"

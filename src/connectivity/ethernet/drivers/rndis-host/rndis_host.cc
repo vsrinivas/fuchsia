@@ -14,11 +14,11 @@
 #include <string.h>
 #include <threads.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/listnode.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <usb/cdc.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 

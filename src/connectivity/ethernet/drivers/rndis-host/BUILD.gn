@@ -41,6 +41,7 @@ fuchsia_driver("fuchsia_driver") {
     "//src/connectivity/ethernet/lib/rndis",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",

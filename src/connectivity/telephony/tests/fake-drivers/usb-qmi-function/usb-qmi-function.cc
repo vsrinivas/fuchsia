@@ -14,13 +14,13 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>
 #include <memory>
 
+#include <usb/cdc.h>
 #include <usb/usb-request.h>
 
 #include "src/connectivity/telephony/tests/fake-drivers/usb-qmi-function/usb_qmi_function_bind.h"

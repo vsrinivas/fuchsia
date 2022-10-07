@@ -8,7 +8,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
-#include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
@@ -19,6 +18,7 @@
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <usb/cdc.h>
 #include <usb/usb.h>
 
 #include "src/connectivity/telephony/drivers/qmi-usb-transport/qmi_usb_bind.h"

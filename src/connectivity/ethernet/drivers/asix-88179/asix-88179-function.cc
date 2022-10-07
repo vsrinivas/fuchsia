@@ -12,7 +12,6 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/cdc.h>
 
 #include <algorithm>
 #include <memory>
@@ -25,6 +24,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
+#include <usb/cdc.h>
 #include <usb/hid.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
