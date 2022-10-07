@@ -1,0 +1,3 @@
+# Remove these when we figure out how to remove them everywhere.
+config.gni
+downloads
