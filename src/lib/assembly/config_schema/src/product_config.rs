@@ -152,6 +152,7 @@ pub struct PlatformInputConfig {
 pub enum InputDeviceType {
     Button,
     Keyboard,
+    LightSensor,
     Mouse,
     Touchscreen,
 }
