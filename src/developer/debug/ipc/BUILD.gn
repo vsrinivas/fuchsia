@@ -2,23 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This library is shared between the client and agent code. You should depend
-# on it via one of those targets.
+# This library is shared between the client and agent code.
 
 import("//build/config/fuchsia/platform_version.gni")
 
-group("ipc") {
-  testonly = true
-  deps = [
-    ":agent",
-    ":client",
-    ":shared",
-    ":tests",
-  ]
-}
-
-static_library("shared") {
-  visibility = [ ":*" ]
+static_library("ipc") {
   sources = [
     "automation_instruction.cc",
     "automation_instruction.h",
@@ -59,14 +47,6 @@ config("fuchsia_api_level") {
   ]
 }
 
-group("agent") {
-  public_deps = [ ":shared" ]
-}
-
-group("client") {
-  public_deps = [ ":shared" ]
-}
-
 # Unit tests for this directory. These are intended to be referenced by unit
 # test targets for the consumers of this library.
 source_set("tests") {
@@ -85,8 +65,5 @@ source_set("tests") {
     "//third_party/googletest:gtest",
   ]
 
-  public_deps = [
-    ":agent",
-    ":client",
-  ]
+  public_deps = [ ":ipc" ]
 }

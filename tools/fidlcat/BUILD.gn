@@ -15,7 +15,7 @@ if (is_host) {
     deps = [
       ":lib",
       "//sdk/lib/fidl_base",
-      "//src/developer/debug/ipc:client",
+      "//src/developer/debug/ipc",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/common",
       "//src/lib/fidl_codec",

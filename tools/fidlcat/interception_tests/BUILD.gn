@@ -57,7 +57,7 @@ if (is_host) {
 
     deps = [
       "//sdk/lib/fidl_base",
-      "//src/developer/debug/ipc:client",
+      "//src/developer/debug/ipc",
       "//src/developer/debug/zxdb/client:test_support",
       "//src/lib/fidl_codec",
       "//third_party/googletest:gtest",

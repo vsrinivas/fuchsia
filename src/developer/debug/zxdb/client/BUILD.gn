@@ -143,7 +143,7 @@ static_library("client") {
 
   public_deps = [
     "//sdk/lib/fit",
-    "//src/developer/debug/ipc:client",
+    "//src/developer/debug/ipc",
     "//src/developer/debug/shared",
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/expr",

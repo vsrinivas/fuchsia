@@ -160,7 +160,7 @@ static_library("symbols") {
   # base helpers.
   public_deps = [
     "//sdk/lib/stdcompat",
-    "//src/developer/debug/ipc:client",
+    "//src/developer/debug/ipc",
     "//src/developer/debug/shared",
     "//src/developer/debug/zxdb/common",
     "//src/lib/elflib",

@@ -34,7 +34,7 @@ test("integration_tests") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//src/developer/debug/debug_agent:test_lib",
-    "//src/developer/debug/ipc:client",
+    "//src/developer/debug/ipc",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
