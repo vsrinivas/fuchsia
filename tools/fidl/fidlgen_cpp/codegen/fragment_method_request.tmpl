@@ -87,36 +87,11 @@ struct ::fidl::internal::WireCodingTraits<{{ .WireTransactionalRequest }}, ::fid
 
 
 {{- define "Method:Request:NaturalMessagingHeader" }}
-{{- IfdefFuchsia -}}
-{{- EnsureNamespace "" }}
-
-template <>
-class {{ .NaturalRequest }} final
-    {{- if .RequestMessageBase }} : public {{ .RequestMessageBase }} {{ end }} {
- public:
-  {{- if .HasRequestPayload }}
-    using {{ .RequestPayload }}::{{ .RequestPayload.Self }};
-    {{ .NaturalRequest.Self }}({{ .RequestPayload }} v) : {{ .RequestPayload }}(std::move(v)) {}
-  {{- end }}
-};
-
-template <>
-struct {{ .RequestMessageTraits }} final {
- public:
-  static constexpr bool kHasPayload = {{ .HasRequestPayload }};
-  {{- if .HasRequestPayload }}
-    using Payload = {{ .RequestPayload }};
-  {{- end }}
-};
-
-
-{{- EndifFuchsia -}}
 {{- end }}
 
 
 
 {{- define "Method:Request:NaturalMessagingSource" }}
-
 {{- end }}
 
 

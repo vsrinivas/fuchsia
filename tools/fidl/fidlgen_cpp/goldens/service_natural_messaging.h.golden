@@ -14,8 +14,17 @@
 
 namespace fidl {
 
-#ifdef __Fuchsia__
 }  // namespace fidl
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_service::FirstProtocol::MethodOnFirst> {
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_service::FirstProtocol::MethodOnFirst>&)>;
+};
+
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_service::FirstProtocol> final : public ::fidl::internal::NaturalClientBase {
@@ -23,11 +32,8 @@ class ::fidl::internal::NaturalClientImpl<::test_service::FirstProtocol> final :
   using NaturalClientBase::NaturalClientBase;
   ::fit::result<::fidl::Error> MethodOnFirst() const;
 };
-namespace fidl {
 
 #endif  // __Fuchsia__
-
-}  // namespace fidl
 
 #ifdef __Fuchsia__
 
@@ -100,21 +106,6 @@ class ::fidl::internal::NaturalEventSender<::test_service::FirstProtocol>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_service::FirstProtocol::MethodOnFirst>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::Server<::test_service::FirstProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -124,10 +115,10 @@ class ::fidl::Server<::test_service::FirstProtocol> : public ::fidl::internal::I
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_service::FirstProtocol;
 
-  using MethodOnFirstRequest = ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst>;
   using MethodOnFirstCompleter = ::fidl::internal::NaturalCompleter<::test_service::FirstProtocol::MethodOnFirst>;
 
-  virtual void MethodOnFirst(MethodOnFirstRequest& request, MethodOnFirstCompleter::Sync& completer) = 0;
+  virtual void MethodOnFirst(
+      MethodOnFirstCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -152,6 +143,14 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_service::FirstProtocol> 
 };
 
 #endif  // __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_service::SecondProtocol::MethodOnSecond> {
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_service::SecondProtocol::MethodOnSecond>&)>;
+};
 
 #ifdef __Fuchsia__
 
@@ -235,21 +234,6 @@ class ::fidl::internal::NaturalEventSender<::test_service::SecondProtocol>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::Server<::test_service::SecondProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -259,10 +243,10 @@ class ::fidl::Server<::test_service::SecondProtocol> : public ::fidl::internal::
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_service::SecondProtocol;
 
-  using MethodOnSecondRequest = ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>;
   using MethodOnSecondCompleter = ::fidl::internal::NaturalCompleter<::test_service::SecondProtocol::MethodOnSecond>;
 
-  virtual void MethodOnSecond(MethodOnSecondRequest& request, MethodOnSecondCompleter::Sync& completer) = 0;
+  virtual void MethodOnSecond(
+      MethodOnSecondCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

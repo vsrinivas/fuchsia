@@ -44,7 +44,7 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
   }
 
   // fdf::Server<ft::Root>
-  void GetString(GetStringRequest& request, GetStringCompleter::Sync& completer) override {
+  void GetString(GetStringCompleter::Sync& completer) override {
     char str[100];
     strcpy(str, "hello world!");
     completer.Reply(std::string(str));

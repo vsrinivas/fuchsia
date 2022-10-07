@@ -108,10 +108,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_versions::Protocol::Foo> request;
           ::fidl::internal::NaturalCompleter<::test_versions::Protocol::Foo>::Sync completer(txn);
           static_cast<::fidl::Server<::test_versions::Protocol>*>(interface)->Foo(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },

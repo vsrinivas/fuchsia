@@ -100,8 +100,7 @@ class {{ .NaturalSyncClientImpl }} final
     ::fidl::internal::NaturalMessageEncoder encoder{
         &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
     {{- if .HasRequestPayload }}
-    encoder.EncodeBody(
-        {{ .NaturalRequestConverter }}::IntoDomainObject({{ .Request.Forward "request" }}));
+    encoder.EncodeBody({{ .Request.Forward "request" }});
     {{- end }}
     ::fidl::OutgoingMessage msg = encoder.GetMessage();
     {{ .IncomingMessageStorageForResponse }} response_storage;
@@ -117,8 +116,7 @@ class {{ .NaturalSyncClientImpl }} final
     ::fidl::internal::NaturalMessageEncoder encoder{
         &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
     {{- if .HasRequestPayload }}
-    encoder.EncodeBody(
-        {{ .NaturalRequestConverter }}::IntoDomainObject({{ .Request.Forward "request" }}));
+    encoder.EncodeBody({{ .Request.Forward "request" }});
     {{- end }}
     ::fidl::OutgoingMessage msg = encoder.GetMessage();
     msg.Write(_client_end().handle());

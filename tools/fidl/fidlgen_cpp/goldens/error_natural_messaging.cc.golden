@@ -17,8 +17,7 @@ fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(const ::fidl::Requ
   return ::fidl::internal::NaturalThenable<::test_error::Example::Foo>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_error::kExample_foo_Ordinal, ::test_error::kExample_foo_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_error::Example::Foo>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -42,8 +41,7 @@ namespace test_error {
 fidl::internal::NaturalSyncClientImpl<::test_error::Example>::Foo(const ::fidl::Request<::test_error::Example::Foo>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_error::kExample_foo_Ordinal, ::test_error::kExample_foo_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_error::Example::Foo>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_error::Example::Foo>(
@@ -87,10 +85,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_error::Example::Foo> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_error::Example::Foo>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_error::Example::Foo>::Sync completer(txn);
           static_cast<::fidl::Server<::test_error::Example>*>(interface)->Foo(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

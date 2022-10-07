@@ -122,10 +122,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> request;
           ::fidl::internal::NaturalCompleter<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::Sync completer(txn);
           static_cast<::fidl::Server<::test_union::TestProtocol>*>(interface)->StrictXUnionHenceResponseMayBeStackAllocated(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -137,10 +137,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> request;
           ::fidl::internal::NaturalCompleter<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::Sync completer(txn);
           static_cast<::fidl::Server<::test_union::TestProtocol>*>(interface)->FlexibleXUnionHenceResponseMustBeHeapAllocated(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },

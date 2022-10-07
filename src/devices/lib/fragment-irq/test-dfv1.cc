@@ -39,7 +39,7 @@ class Dfv1Test : public gtest::TestLoopFixture, public fidl::Server<fint::Provid
     root_->AddFidlService(fint::Service::Name, std::move(endpoints->client), "irq001");
   }
 
-  void Get(GetRequest& request, GetCompleter::Sync& completer) override {
+  void Get(GetCompleter::Sync& completer) override {
     fint::ProviderGetResponse ret;
     zx::interrupt fake;
     ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &fake));

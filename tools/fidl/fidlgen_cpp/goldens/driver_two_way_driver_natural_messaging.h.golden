@@ -13,15 +13,14 @@
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_drivertwoway::TwoWay::Add> {
+  using Request = ::test_drivertwoway::TwoWayAddRequest;
+
+  using Response = ::test_drivertwoway::TwoWayAddResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add>>;
 
   using ResultCallback =
       ::fit::callback<void(::fdf::Result<::test_drivertwoway::TwoWay::Add>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_drivertwoway {
 __LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
@@ -91,24 +90,6 @@ class ::fidl::internal::NaturalEventDispatcher<::test_drivertwoway::TwoWay> fina
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_drivertwoway::TwoWay::Add> final : public ::test_drivertwoway::TwoWayAddRequest {
- public:
-  using ::test_drivertwoway::TwoWayAddRequest::TwoWayAddRequest;
-  Request(::test_drivertwoway::TwoWayAddRequest v) : ::test_drivertwoway::TwoWayAddRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_drivertwoway::TwoWay::Add>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_drivertwoway::TwoWayAddRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add> : public ::fidl::CompleterBase {
  public:
@@ -130,7 +111,8 @@ class ::fdf::Server<::test_drivertwoway::TwoWay> : public ::fidl::internal::Inco
   using AddRequest = ::fidl::Request<::test_drivertwoway::TwoWay::Add>;
   using AddCompleter = ::fidl::internal::NaturalCompleter<::test_drivertwoway::TwoWay::Add>;
 
-  virtual void Add(AddRequest& request, AddCompleter::Sync& completer) = 0;
+  virtual void Add(AddRequest& request,
+                   AddCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

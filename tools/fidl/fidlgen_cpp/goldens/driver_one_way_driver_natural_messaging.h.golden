@@ -11,6 +11,15 @@
 
 #endif  // __Fuchsia__
 
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_driveroneway::OneWay::Send> {
+  using Request = ::test_driveroneway::OneWaySendRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fdf::Result<::test_driveroneway::OneWay::Send>&)>;
+};
 namespace test_driveroneway {
 __LOCAL extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 
@@ -53,24 +62,6 @@ class ::fidl::internal::NaturalEventDispatcher<::test_driveroneway::OneWay> fina
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_driveroneway::OneWay::Send> final : public ::test_driveroneway::OneWaySendRequest {
- public:
-  using ::test_driveroneway::OneWaySendRequest::OneWaySendRequest;
-  Request(::test_driveroneway::OneWaySendRequest v) : ::test_driveroneway::OneWaySendRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_driveroneway::OneWay::Send>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_driveroneway::OneWaySendRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fdf::Server<::test_driveroneway::OneWay> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -83,7 +74,8 @@ class ::fdf::Server<::test_driveroneway::OneWay> : public ::fidl::internal::Inco
   using SendRequest = ::fidl::Request<::test_driveroneway::OneWay::Send>;
   using SendCompleter = ::fidl::internal::NaturalCompleter<::test_driveroneway::OneWay::Send>;
 
-  virtual void Send(SendRequest& request, SendCompleter::Sync& completer) = 0;
+  virtual void Send(SendRequest& request,
+                    SendCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

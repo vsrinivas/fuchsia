@@ -27,7 +27,7 @@ class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
   const std::string& url() const { return url_; }
   void set_binding(fidl::ServerBindingRef<fuchsia_driver_host::Driver> binding);
 
-  void Stop(StopRequest& request, StopCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
 
   // Starts the driver.
   zx::status<> Start(fuchsia_driver_framework::DriverStartArgs start_args,

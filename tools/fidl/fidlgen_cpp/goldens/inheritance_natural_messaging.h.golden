@@ -18,15 +18,14 @@ namespace fidl {
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Super::Foo> {
+  using Request = ::test_inheritance::SuperFooRequest;
+
+  using Response = ::test_inheritance::SuperFooResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_inheritance::Super::Foo>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_inheritance {
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
@@ -144,24 +143,6 @@ class ::fidl::internal::NaturalEventSender<::test_inheritance::Super>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_inheritance::Super::Foo> final : public ::test_inheritance::SuperFooRequest {
- public:
-  using ::test_inheritance::SuperFooRequest::SuperFooRequest;
-  Request(::test_inheritance::SuperFooRequest v) : ::test_inheritance::SuperFooRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritance::Super::Foo>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_inheritance::SuperFooRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo> : public ::fidl::CompleterBase {
  public:
@@ -183,7 +164,8 @@ class ::fidl::Server<::test_inheritance::Super> : public ::fidl::internal::Incom
   using FooRequest = ::fidl::Request<::test_inheritance::Super::Foo>;
   using FooCompleter = ::fidl::internal::NaturalCompleter<::test_inheritance::Super::Foo>;
 
-  virtual void Foo(FooRequest& request, FooCompleter::Sync& completer) = 0;
+  virtual void Foo(FooRequest& request,
+                   FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -211,15 +193,14 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Super> fina
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Sub::Foo> {
+  using Request = ::test_inheritance::SuperFooRequest;
+
+  using Response = ::test_inheritance::SuperFooResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_inheritance::Sub::Foo>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 #ifdef __Fuchsia__
@@ -327,24 +308,6 @@ class ::fidl::internal::NaturalEventSender<::test_inheritance::Sub>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_inheritance::Sub::Foo> final : public ::test_inheritance::SuperFooRequest {
- public:
-  using ::test_inheritance::SuperFooRequest::SuperFooRequest;
-  Request(::test_inheritance::SuperFooRequest v) : ::test_inheritance::SuperFooRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritance::Sub::Foo>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_inheritance::SuperFooRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo> : public ::fidl::CompleterBase {
  public:
@@ -366,7 +329,8 @@ class ::fidl::Server<::test_inheritance::Sub> : public ::fidl::internal::Incomin
   using FooRequest = ::fidl::Request<::test_inheritance::Sub::Foo>;
   using FooCompleter = ::fidl::internal::NaturalCompleter<::test_inheritance::Sub::Foo>;
 
-  virtual void Foo(FooRequest& request, FooCompleter::Sync& completer) = 0;
+  virtual void Foo(FooRequest& request,
+                   FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

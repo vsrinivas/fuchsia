@@ -103,8 +103,7 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::GetChildReque
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_TakeChild_Ordinal, ::test_protocolrequest::kParent_TakeChild_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::IntoDomainObject(std::move(request)));
+  _encoder.EncodeBody(std::move(request));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -115,8 +114,7 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(::f
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal, ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>::IntoDomainObject(std::move(request)));
+  _encoder.EncodeBody(std::move(request));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -154,8 +152,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::GetChildR
 fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChild(::fidl::Request<::test_protocolrequest::Parent::TakeChild> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_TakeChild_Ordinal, ::test_protocolrequest::kParent_TakeChild_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -165,8 +162,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChild
 fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal, ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -218,10 +214,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolrequest::Parent::GetChild> request;
           ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::GetChild>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocolrequest::Parent>*>(interface)->GetChild(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -233,10 +229,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> request;
           ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::GetChildRequest>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocolrequest::Parent>*>(interface)->GetChildRequest(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -248,10 +244,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolrequest::Parent::TakeChild> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolrequest::Parent::TakeChild>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::TakeChild>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocolrequest::Parent>*>(interface)->TakeChild(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -263,10 +259,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::TakeChildRequest>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocolrequest::Parent>*>(interface)->TakeChildRequest(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

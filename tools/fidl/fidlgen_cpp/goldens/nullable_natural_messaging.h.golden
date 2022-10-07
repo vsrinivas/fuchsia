@@ -18,15 +18,14 @@ namespace fidl {
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_nullable::SimpleProtocol::Add> {
+  using Request = ::test_nullable::SimpleProtocolAddRequest;
+
+  using Response = ::test_nullable::SimpleProtocolAddResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_nullable::SimpleProtocol::Add>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_nullable::SimpleProtocol::Add>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_nullable {
 __LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
@@ -144,24 +143,6 @@ class ::fidl::internal::NaturalEventSender<::test_nullable::SimpleProtocol>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_nullable::SimpleProtocol::Add> final : public ::test_nullable::SimpleProtocolAddRequest {
- public:
-  using ::test_nullable::SimpleProtocolAddRequest::SimpleProtocolAddRequest;
-  Request(::test_nullable::SimpleProtocolAddRequest v) : ::test_nullable::SimpleProtocolAddRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_nullable::SimpleProtocol::Add>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_nullable::SimpleProtocolAddRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_nullable::SimpleProtocol::Add> : public ::fidl::CompleterBase {
  public:
@@ -183,7 +164,8 @@ class ::fidl::Server<::test_nullable::SimpleProtocol> : public ::fidl::internal:
   using AddRequest = ::fidl::Request<::test_nullable::SimpleProtocol::Add>;
   using AddCompleter = ::fidl::internal::NaturalCompleter<::test_nullable::SimpleProtocol::Add>;
 
-  virtual void Add(AddRequest& request, AddCompleter::Sync& completer) = 0;
+  virtual void Add(AddRequest& request,
+                   AddCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

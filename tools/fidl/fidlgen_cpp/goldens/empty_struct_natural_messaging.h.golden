@@ -17,16 +17,35 @@ namespace fidl {
 }  // namespace fidl
 
 template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_emptystruct::EmptyProtocol::Send> {
+  using Request = ::test_emptystruct::EmptyProtocolSendRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_emptystruct::EmptyProtocol::Send>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_emptystruct::EmptyProtocol::Receive> {
+  using Request = ::test_emptystruct::EmptyProtocolReceiveRequest;
+
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::Receive>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_emptystruct::EmptyProtocol::Receive>&)>;
+};
+
+template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_emptystruct::EmptyProtocol::SendAndReceive> {
+  using Request = ::test_emptystruct::EmptyProtocolSendAndReceiveRequest;
+
+  using Response = ::test_emptystruct::EmptyProtocolSendAndReceiveResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::SendAndReceive>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_emptystruct {
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
@@ -177,42 +196,6 @@ class ::fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> final : public ::test_emptystruct::EmptyProtocolSendRequest {
- public:
-  using ::test_emptystruct::EmptyProtocolSendRequest::EmptyProtocolSendRequest;
-  Request(::test_emptystruct::EmptyProtocolSendRequest v) : ::test_emptystruct::EmptyProtocolSendRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_emptystruct::EmptyProtocol::Send>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_emptystruct::EmptyProtocolSendRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::test_emptystruct::EmptyProtocolSendAndReceiveRequest {
- public:
-  using ::test_emptystruct::EmptyProtocolSendAndReceiveRequest::EmptyProtocolSendAndReceiveRequest;
-  Request(::test_emptystruct::EmptyProtocolSendAndReceiveRequest v) : ::test_emptystruct::EmptyProtocolSendAndReceiveRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_emptystruct::EmptyProtocolSendAndReceiveRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::SendAndReceive> : public ::fidl::CompleterBase {
  public:
@@ -234,12 +217,14 @@ class ::fidl::Server<::test_emptystruct::EmptyProtocol> : public ::fidl::interna
   using SendRequest = ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>;
   using SendCompleter = ::fidl::internal::NaturalCompleter<::test_emptystruct::EmptyProtocol::Send>;
 
-  virtual void Send(SendRequest& request, SendCompleter::Sync& completer) = 0;
+  virtual void Send(SendRequest& request,
+                    SendCompleter::Sync& completer) = 0;
 
   using SendAndReceiveRequest = ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>;
   using SendAndReceiveCompleter = ::fidl::internal::NaturalCompleter<::test_emptystruct::EmptyProtocol::SendAndReceive>;
 
-  virtual void SendAndReceive(SendAndReceiveRequest& request, SendAndReceiveCompleter::Sync& completer) = 0;
+  virtual void SendAndReceive(SendAndReceiveRequest& request,
+                              SendAndReceiveCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

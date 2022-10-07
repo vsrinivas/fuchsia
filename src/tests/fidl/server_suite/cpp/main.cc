@@ -14,15 +14,13 @@ class ClosedTargetServer : public fidl::Server<fidl_serversuite::ClosedTarget> {
   explicit ClosedTargetServer(fidl::ClientEnd<fidl_serversuite::Reporter> reporter)
       : reporter_(std::move(reporter)) {}
 
-  void OneWayNoPayload(OneWayNoPayloadRequest& request,
-                       OneWayNoPayloadCompleter::Sync& completer) override {
+  void OneWayNoPayload(OneWayNoPayloadCompleter::Sync& completer) override {
     std::cout << "ClosedTarget.OneWayNoPayload()" << std::endl;
     auto result = reporter_->ReceivedOneWayNoPayload();
     ZX_ASSERT(result.is_ok());
   }
 
-  void TwoWayNoPayload(TwoWayNoPayloadRequest& request,
-                       TwoWayNoPayloadCompleter::Sync& completer) override {
+  void TwoWayNoPayload(TwoWayNoPayloadCompleter::Sync& completer) override {
     std::cout << "ClosedTarget.TwoWayNoPayload()" << std::endl;
     completer.Reply();
   }
@@ -154,20 +152,17 @@ class OpenTargetServer : public fidl::Server<fidl_serversuite::OpenTarget> {
     }
   }
 
-  void StrictOneWay(StrictOneWayRequest& request, StrictOneWayCompleter::Sync& completer) override {
+  void StrictOneWay(StrictOneWayCompleter::Sync& completer) override {
     auto result = reporter_->ReceivedStrictOneWay();
     ZX_ASSERT(result.is_ok());
   }
 
-  void FlexibleOneWay(FlexibleOneWayRequest& request,
-                      FlexibleOneWayCompleter::Sync& completer) override {
+  void FlexibleOneWay(FlexibleOneWayCompleter::Sync& completer) override {
     auto result = reporter_->ReceivedFlexibleOneWay();
     ZX_ASSERT(result.is_ok());
   }
 
-  void StrictTwoWay(StrictTwoWayRequest& request, StrictTwoWayCompleter::Sync& completer) override {
-    completer.Reply();
-  }
+  void StrictTwoWay(StrictTwoWayCompleter::Sync& completer) override { completer.Reply(); }
 
   void StrictTwoWayFields(StrictTwoWayFieldsRequest& request,
                           StrictTwoWayFieldsCompleter::Sync& completer) override {
@@ -198,10 +193,7 @@ class OpenTargetServer : public fidl::Server<fidl_serversuite::OpenTarget> {
     }
   }
 
-  void FlexibleTwoWay(FlexibleTwoWayRequest& request,
-                      FlexibleTwoWayCompleter::Sync& completer) override {
-    completer.Reply();
-  }
+  void FlexibleTwoWay(FlexibleTwoWayCompleter::Sync& completer) override { completer.Reply(); }
 
   void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request,
                             FlexibleTwoWayFieldsCompleter::Sync& completer) override {
@@ -331,9 +323,7 @@ class RunnerServer : public fidl::Server<fidl_serversuite::Runner> {
     }
   }
 
-  void CheckAlive(CheckAliveRequest& request, CheckAliveCompleter::Sync& completer) override {
-    completer.Reply();
-  }
+  void CheckAlive(CheckAliveCompleter::Sync& completer) override { completer.Reply(); }
 
  private:
   async_dispatcher_t* dispatcher_;

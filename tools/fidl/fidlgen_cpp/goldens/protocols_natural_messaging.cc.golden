@@ -77,8 +77,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestRespons
   return ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -95,8 +94,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestRespons
   return ::fidl::internal::NaturalThenable<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -121,8 +119,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestRespons
 fidl::internal::NaturalClientImpl<::test_protocols::WithAndWithoutRequestResponse>::WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>>::IntoDomainObject(request));
+  _encoder.EncodeBody(request);
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -160,8 +157,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestRes
 fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestResponse>::WithRequestEmptyResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(
@@ -172,8 +168,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestRes
 fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestResponse>::WithRequestWithResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(
@@ -193,8 +188,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestRes
 fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestResponse>::WithRequestNoResponse(const ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal, ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -328,10 +322,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> request;
           ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestNoResponse(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -343,10 +337,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> request;
           ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestEmptyResponse(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -358,10 +352,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> request;
           ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestWithResponse(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -373,10 +367,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->WithRequestNoResponse(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -388,10 +382,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->WithRequestEmptyResponse(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -403,10 +397,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->WithRequestWithResponse(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -625,10 +619,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct> request;
           ::fidl::internal::NaturalCompleter<::test_protocols::WithErrorSyntax::ResponseAsStruct>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithErrorSyntax>*>(interface)->ResponseAsStruct(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -640,10 +634,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> request;
           ::fidl::internal::NaturalCompleter<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithErrorSyntax>*>(interface)->ErrorAsPrimitive(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -655,10 +649,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum> request;
           ::fidl::internal::NaturalCompleter<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithErrorSyntax>*>(interface)->ErrorAsEnum(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -670,10 +664,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult> request;
           ::fidl::internal::NaturalCompleter<::test_protocols::WithErrorSyntax::HandleInResult>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithErrorSyntax>*>(interface)->HandleInResult(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -725,8 +719,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MethodB(co
   return ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MethodB>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MethodB_Ordinal, ::test_protocols::kChannelProtocol_MethodB_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MethodB>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -743,8 +736,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::TakeHandle
   return ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::TakeHandle>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_TakeHandle_Ordinal, ::test_protocols::kChannelProtocol_TakeHandle_DynamicFlags,
       [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>>::IntoDomainObject(std::move(request)));
+        encoder.EncodeBody(std::move(request));
         return ZX_OK;
       },
       [](
@@ -761,8 +753,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MutateSock
   return ::fidl::internal::NaturalThenable<::test_protocols::ChannelProtocol::MutateSocket>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MutateSocket_Ordinal, ::test_protocols::kChannelProtocol_MutateSocket_DynamicFlags,
       [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>>::IntoDomainObject(std::move(request)));
+        encoder.EncodeBody(std::move(request));
         return ZX_OK;
       },
       [](
@@ -778,8 +769,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MutateSock
 fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MethodA_Ordinal, ::test_protocols::kChannelProtocol_MethodA_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MethodA>>::IntoDomainObject(request));
+  _encoder.EncodeBody(request);
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -797,8 +787,7 @@ namespace test_protocols {
 fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::MethodB(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MethodB_Ordinal, ::test_protocols::kChannelProtocol_MethodB_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MethodB>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::ChannelProtocol::MethodB>(
@@ -809,8 +798,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::Method
 fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::TakeHandle(::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_TakeHandle_Ordinal, ::test_protocols::kChannelProtocol_TakeHandle_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::ChannelProtocol::TakeHandle>(
@@ -821,8 +809,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::TakeHa
 fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::MutateSocket(::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MutateSocket_Ordinal, ::test_protocols::kChannelProtocol_MutateSocket_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::ChannelProtocol::MutateSocket>(
@@ -833,8 +820,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::Mutate
 fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::MethodA(const ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kChannelProtocol_MethodA_Ordinal, ::test_protocols::kChannelProtocol_MethodA_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MethodA>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -934,10 +920,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MethodA>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::ChannelProtocol::MethodA>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::ChannelProtocol>*>(interface)->MethodA(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -949,10 +935,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::ChannelProtocol::MethodB> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MethodB>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::ChannelProtocol::MethodB>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::ChannelProtocol>*>(interface)->MethodB(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -964,10 +950,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::ChannelProtocol::TakeHandle>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::ChannelProtocol>*>(interface)->TakeHandle(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -979,10 +965,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::ChannelProtocol::MutateSocket>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::ChannelProtocol>*>(interface)->MutateSocket(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1026,8 +1012,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::Request(const
   return ::fidl::internal::NaturalThenable<::test_protocols::Transitional::Request>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_Request_Ordinal, ::test_protocols::kTransitional_Request_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::Transitional::Request>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -1043,8 +1028,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::Request(const
 fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_OneWay_Ordinal, ::test_protocols::kTransitional_OneWay_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::Transitional::OneWay>>::IntoDomainObject(request));
+  _encoder.EncodeBody(request);
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -1062,8 +1046,7 @@ namespace test_protocols {
 fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>::Request(const ::fidl::Request<::test_protocols::Transitional::Request>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_Request_Ordinal, ::test_protocols::kTransitional_Request_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::Transitional::Request>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::Transitional::Request>(
@@ -1074,8 +1057,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>::Request(c
 fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>::OneWay(const ::fidl::Request<::test_protocols::Transitional::OneWay>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kTransitional_OneWay_Ordinal, ::test_protocols::kTransitional_OneWay_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::Transitional::OneWay>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -1159,10 +1141,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::Transitional::Request> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::Transitional::Request>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::Transitional::Request>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::Transitional>*>(interface)->Request(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1174,10 +1156,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::Transitional::OneWay> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::Transitional::OneWay>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::Transitional::OneWay>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::Transitional>*>(interface)->OneWay(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1261,10 +1243,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::DiscoverableProtocol::Method> request;
           ::fidl::internal::NaturalCompleter<::test_protocols::DiscoverableProtocol::Method>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::DiscoverableProtocol>*>(interface)->Method(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1351,8 +1333,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::Respo
   return ::fidl::internal::NaturalThenable<::test_protocols::HandleRightsProtocol::ResponseMethod>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_ResponseMethod_DynamicFlags,
       [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>>::IntoDomainObject(std::move(request)));
+        encoder.EncodeBody(std::move(request));
         return ZX_OK;
       },
       [](
@@ -1368,8 +1349,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::Respo
 fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>>::IntoDomainObject(std::move(request)));
+  _encoder.EncodeBody(std::move(request));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -1387,8 +1367,7 @@ namespace test_protocols {
 fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol>::ResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_ResponseMethod_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::HandleRightsProtocol::ResponseMethod>(
@@ -1399,8 +1378,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol>::R
 fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol>::NoResponseMethod(::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal, ::test_protocols::kHandleRightsProtocol_NoResponseMethod_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -1484,10 +1462,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::HandleRightsProtocol::NoResponseMethod>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::HandleRightsProtocol>*>(interface)->NoResponseMethod(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1499,10 +1477,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::HandleRightsProtocol::ResponseMethod>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::HandleRightsProtocol>*>(interface)->ResponseMethod(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1546,8 +1524,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::ClientEnd
   return ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ClientEnds>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ClientEnds_DynamicFlags,
       [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>>::IntoDomainObject(std::move(request)));
+        encoder.EncodeBody(std::move(request));
         return ZX_OK;
       },
       [](
@@ -1564,8 +1541,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::ServerEnd
   return ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::ServerEnds>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ServerEnds_DynamicFlags,
       [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>>::IntoDomainObject(std::move(request)));
+        encoder.EncodeBody(std::move(request));
         return ZX_OK;
       },
       [](
@@ -1582,8 +1558,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::StructCon
   return ::fidl::internal::NaturalThenable<::test_protocols::WithProtocolEnds::StructContainingEnds>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal, ::test_protocols::kWithProtocolEnds_StructContainingEnds_DynamicFlags,
       [request = std::move(request)](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>>::IntoDomainObject(std::move(request)));
+        encoder.EncodeBody(std::move(request));
         return ZX_OK;
       },
       [](
@@ -1607,8 +1582,7 @@ namespace test_protocols {
 fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds>::ClientEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ClientEnds_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::WithProtocolEnds::ClientEnds>(
@@ -1619,8 +1593,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds>::Clien
 fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds>::ServerEnds(::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal, ::test_protocols::kWithProtocolEnds_ServerEnds_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::WithProtocolEnds::ServerEnds>(
@@ -1631,8 +1604,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds>::Serve
 fidl::internal::NaturalSyncClientImpl<::test_protocols::WithProtocolEnds>::StructContainingEnds(::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal, ::test_protocols::kWithProtocolEnds_StructContainingEnds_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::WithProtocolEnds::StructContainingEnds>(
@@ -1694,10 +1666,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::ClientEnds>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithProtocolEnds>*>(interface)->ClientEnds(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1709,10 +1681,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::ServerEnds>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithProtocolEnds>*>(interface)->ServerEnds(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1724,10 +1696,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::StructContainingEnds>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::WithProtocolEnds>*>(interface)->StructContainingEnds(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1762,8 +1734,7 @@ namespace test_protocols {
 fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters>::Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kManyParameters_Fifteen_Ordinal, ::test_protocols::kManyParameters_Fifteen_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ManyParameters::Fifteen>>::IntoDomainObject(request));
+  _encoder.EncodeBody(request);
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -1781,8 +1752,7 @@ namespace test_protocols {
 fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters>::Fifteen(const ::fidl::Request<::test_protocols::ManyParameters::Fifteen>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kManyParameters_Fifteen_Ordinal, ::test_protocols::kManyParameters_Fifteen_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ManyParameters::Fifteen>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -1816,10 +1786,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::ManyParameters::Fifteen> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::ManyParameters::Fifteen>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::ManyParameters::Fifteen>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::ManyParameters>*>(interface)->Fifteen(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1855,8 +1825,7 @@ fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion>::UnionMetho
   return ::fidl::internal::NaturalThenable<::test_protocols::MethodWithUnion::UnionMethod>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -1880,8 +1849,7 @@ namespace test_protocols {
 fidl::internal::NaturalSyncClientImpl<::test_protocols::MethodWithUnion>::UnionMethod(const ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal, ::test_protocols::kMethodWithUnion_UnionMethod_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_protocols::MethodWithUnion::UnionMethod>(
@@ -1925,10 +1893,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_protocols::MethodWithUnion::UnionMethod>::Sync completer(txn);
           static_cast<::fidl::Server<::test_protocols::MethodWithUnion>*>(interface)->UnionMethod(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

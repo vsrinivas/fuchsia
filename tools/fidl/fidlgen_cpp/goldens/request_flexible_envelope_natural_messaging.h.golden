@@ -18,28 +18,26 @@ namespace fidl {
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> {
+  using Request = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest;
+
+  using Response = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> {
+  using Request = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest;
+
+  using Response = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_requestflexibleenvelope {
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
@@ -188,42 +186,6 @@ class ::fidl::internal::NaturalEventSender<::test_requestflexibleenvelope::Proto
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final : public ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest {
- public:
-  using ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::ProtocolRequestStrictResponseFlexibleRequest;
-  Request(::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest v) : ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final : public ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest {
- public:
-  using ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::ProtocolRequestFlexibleResponseStrictRequest;
-  Request(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest v) : ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> : public ::fidl::CompleterBase {
  public:
@@ -254,12 +216,14 @@ class ::fidl::Server<::test_requestflexibleenvelope::Protocol> : public ::fidl::
   using RequestStrictResponseFlexibleRequest = ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
   using RequestStrictResponseFlexibleCompleter = ::fidl::internal::NaturalCompleter<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
 
-  virtual void RequestStrictResponseFlexible(RequestStrictResponseFlexibleRequest& request, RequestStrictResponseFlexibleCompleter::Sync& completer) = 0;
+  virtual void RequestStrictResponseFlexible(RequestStrictResponseFlexibleRequest& request,
+                                             RequestStrictResponseFlexibleCompleter::Sync& completer) = 0;
 
   using RequestFlexibleResponseStrictRequest = ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
   using RequestFlexibleResponseStrictCompleter = ::fidl::internal::NaturalCompleter<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
 
-  virtual void RequestFlexibleResponseStrict(RequestFlexibleResponseStrictRequest& request, RequestFlexibleResponseStrictCompleter::Sync& completer) = 0;
+  virtual void RequestFlexibleResponseStrict(RequestFlexibleResponseStrictRequest& request,
+                                             RequestFlexibleResponseStrictCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

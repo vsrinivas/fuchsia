@@ -47,8 +47,7 @@ fidl::internal::NaturalClientImpl<::test_driverhandle::HandlesInProtocol>::SendH
       .outgoing_transport_context =
           ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get()),
   };
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles>>::IntoDomainObject(std::move(request)));
+  _encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   ::fidl::Status status = client_base().SendOneWay(_arena_msg, std::move(_options));
@@ -74,10 +73,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_driverhandle::HandlesInProtocol::SendHandles>::Sync completer(txn);
           static_cast<::fdf::Server<::test_driverhandle::HandlesInProtocol>*>(interface)->SendHandles(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

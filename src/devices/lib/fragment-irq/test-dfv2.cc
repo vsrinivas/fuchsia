@@ -48,7 +48,7 @@ class Dfv2Test : public gtest::TestLoopFixture, public fidl::Server<fint::Provid
     ns_ = std::move(*ns);
   }
 
-  void Get(GetRequest& request, GetCompleter::Sync& completer) override {
+  void Get(GetCompleter::Sync& completer) override {
     fint::ProviderGetResponse ret;
     zx::interrupt fake;
     ASSERT_EQ(ZX_OK, zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &fake));

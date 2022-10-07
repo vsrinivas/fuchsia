@@ -80,51 +80,43 @@ class UnknownInteractionsEventHandlerBase
 };
 
 class UnknownInteractionsServerBase : public ::fidl::Server<::test::UnknownInteractionsProtocol> {
-  void StrictOneWay(StrictOneWayRequest& request, StrictOneWayCompleter::Sync& completer) override {
+  void StrictOneWay(StrictOneWayCompleter::Sync& completer) override {
     ADD_FAILURE() << "StrictOneWay called unexpectedly";
   }
 
-  void FlexibleOneWay(FlexibleOneWayRequest& request,
-                      FlexibleOneWayCompleter::Sync& completer) override {
+  void FlexibleOneWay(FlexibleOneWayCompleter::Sync& completer) override {
     ADD_FAILURE() << "FlexibleOneWay called unexpectedly";
   }
 
-  void StrictTwoWay(StrictTwoWayRequest& request, StrictTwoWayCompleter::Sync& completer) override {
+  void StrictTwoWay(StrictTwoWayCompleter::Sync& completer) override {
     ADD_FAILURE() << "StrictTwoWay called unexpectedly";
   }
 
-  void StrictTwoWayFields(StrictTwoWayFieldsRequest& request,
-                          StrictTwoWayFieldsCompleter::Sync& completer) override {
+  void StrictTwoWayFields(StrictTwoWayFieldsCompleter::Sync& completer) override {
     ADD_FAILURE() << "StrictTwoWayFields called unexpectedly";
   }
 
-  void FlexibleTwoWay(FlexibleTwoWayRequest& request,
-                      FlexibleTwoWayCompleter::Sync& completer) override {
+  void FlexibleTwoWay(FlexibleTwoWayCompleter::Sync& completer) override {
     ADD_FAILURE() << "FlexibleTwoWay called unexpectedly";
   }
 
-  void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request,
-                            FlexibleTwoWayFieldsCompleter::Sync& completer) override {
+  void FlexibleTwoWayFields(FlexibleTwoWayFieldsCompleter::Sync& completer) override {
     ADD_FAILURE() << "FlexibleTwoWayFields called unexpectedly";
   }
 
-  void StrictTwoWayErr(StrictTwoWayErrRequest& request,
-                       StrictTwoWayErrCompleter::Sync& completer) override {
+  void StrictTwoWayErr(StrictTwoWayErrCompleter::Sync& completer) override {
     ADD_FAILURE() << "StrictTwoWayErr called unexpectedly";
   }
 
-  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequest& request,
-                             StrictTwoWayFieldsErrCompleter::Sync& completer) override {
+  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrCompleter::Sync& completer) override {
     ADD_FAILURE() << "StrictTwoWayFieldsErr called unexpectedly";
   }
 
-  void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
-                         FlexibleTwoWayErrCompleter::Sync& completer) override {
+  void FlexibleTwoWayErr(FlexibleTwoWayErrCompleter::Sync& completer) override {
     ADD_FAILURE() << "FlexibleTwoWayErr called unexpectedly";
   }
 
-  void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
-                               FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+  void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
     ADD_FAILURE() << "FlexibleTwoWayFieldsErr called unexpectedly";
   }
 
@@ -1698,10 +1690,7 @@ TEST_F(UnknownInteractions, SendFlexibleEvent) {
 TEST_F(UnknownInteractions, StrictTwoWayResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void StrictTwoWay(StrictTwoWayRequest& request,
-                      StrictTwoWayCompleter::Sync& completer) override {
-      completer.Reply();
-    }
+    void StrictTwoWay(StrictTwoWayCompleter::Sync& completer) override { completer.Reply(); }
   };
   Server server;
   auto server_binding = BindServer(&server);
@@ -1722,10 +1711,7 @@ TEST_F(UnknownInteractions, StrictTwoWayResponse) {
 TEST_F(UnknownInteractions, StrictTwoWayResponseMismatchedStrictness) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void StrictTwoWay(StrictTwoWayRequest& request,
-                      StrictTwoWayCompleter::Sync& completer) override {
-      completer.Reply();
-    }
+    void StrictTwoWay(StrictTwoWayCompleter::Sync& completer) override { completer.Reply(); }
   };
   Server server;
   auto server_binding = BindServer(&server);
@@ -1747,8 +1733,7 @@ TEST_F(UnknownInteractions, StrictTwoWayResponseMismatchedStrictness) {
 TEST_F(UnknownInteractions, StrictTwoWayErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void StrictTwoWayErr(StrictTwoWayErrRequest& request,
-                         StrictTwoWayErrCompleter::Sync& completer) override {
+    void StrictTwoWayErr(StrictTwoWayErrCompleter::Sync& completer) override {
       completer.Reply(fit::ok());
     }
   };
@@ -1771,10 +1756,7 @@ TEST_F(UnknownInteractions, StrictTwoWayErrResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWay(FlexibleTwoWayRequest& request,
-                        FlexibleTwoWayCompleter::Sync& completer) override {
-      completer.Reply();
-    }
+    void FlexibleTwoWay(FlexibleTwoWayCompleter::Sync& completer) override { completer.Reply(); }
   };
   Server server;
   auto server_binding = BindServer(&server);
@@ -1795,10 +1777,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayResponseMismatchedStrictness) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWay(FlexibleTwoWayRequest& request,
-                        FlexibleTwoWayCompleter::Sync& completer) override {
-      completer.Reply();
-    }
+    void FlexibleTwoWay(FlexibleTwoWayCompleter::Sync& completer) override { completer.Reply(); }
   };
   Server server;
   auto server_binding = BindServer(&server);
@@ -1820,8 +1799,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayResponseMismatchedStrictness) {
 TEST_F(UnknownInteractions, FlexibleTwoWayFieldsResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request,
-                              FlexibleTwoWayFieldsCompleter::Sync& completer) override {
+    void FlexibleTwoWayFields(FlexibleTwoWayFieldsCompleter::Sync& completer) override {
       completer.Reply({{.some_field = 42}});
     }
   };
@@ -1844,8 +1822,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
-                           FlexibleTwoWayErrCompleter::Sync& completer) override {
+    void FlexibleTwoWayErr(FlexibleTwoWayErrCompleter::Sync& completer) override {
       completer.Reply(fit::ok());
     }
   };
@@ -1868,8 +1845,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
-                           FlexibleTwoWayErrCompleter::Sync& completer) override {
+    void FlexibleTwoWayErr(FlexibleTwoWayErrCompleter::Sync& completer) override {
       completer.Reply(fit::error(3203));
     }
   };
@@ -1893,8 +1869,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
 TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
-                                 FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
       completer.Reply(::fit::ok(
           ::test::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse({.some_field = 42})));
     }
@@ -1918,8 +1893,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponseError) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
-                                 FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
       completer.Reply(fit::error(3203));
     }
   };

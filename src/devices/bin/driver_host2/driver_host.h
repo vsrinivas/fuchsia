@@ -35,8 +35,7 @@ class DriverHost : public fidl::Server<fuchsia_driver_host::DriverHost> {
   // fidl::Server<fuchsia_driver_host::DriverHost>
   void Start(StartRequest& request, StartCompleter::Sync& completer) override;
 
-  void GetProcessKoid(GetProcessKoidRequest& request,
-                      GetProcessKoidCompleter::Sync& completer) override;
+  void GetProcessKoid(GetProcessKoidCompleter::Sync& completer) override;
 
   zx::status<> StartDriver(fbl::RefPtr<Driver> driver,
                            fuchsia_driver_framework::DriverStartArgs start_args,

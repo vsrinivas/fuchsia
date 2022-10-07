@@ -16,8 +16,7 @@ namespace test_placementofattributes {
 fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_placementofattributes::kExampleProtocol_Method_Ordinal, ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::IntoDomainObject(request));
+  _encoder.EncodeBody(request);
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -35,8 +34,7 @@ namespace test_placementofattributes {
 fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProtocol>::Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_placementofattributes::kExampleProtocol_Method_Ordinal, ::test_placementofattributes::kExampleProtocol_Method_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -70,10 +68,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_placementofattributes::ExampleProtocol::Method>::Sync completer(txn);
           static_cast<::fidl::Server<::test_placementofattributes::ExampleProtocol>*>(interface)->Method(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

@@ -18,17 +18,14 @@ namespace fidl {
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_error::Example::Foo> {
+  using Request = ::test_error::ExampleFooRequest;
+
+  using Response = ::test_error::ExampleFooTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_error::Example::Foo>&)>;
-
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsEmptyStructPayload = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_error {
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
@@ -169,24 +166,6 @@ class ::fidl::internal::NaturalEventSender<::test_error::Example>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_error::Example::Foo> final : public ::test_error::ExampleFooRequest {
- public:
-  using ::test_error::ExampleFooRequest::ExampleFooRequest;
-  Request(::test_error::ExampleFooRequest v) : ::test_error::ExampleFooRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_error::Example::Foo>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_error::ExampleFooRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo> : public ::fidl::CompleterBase {
  public:
@@ -208,7 +187,8 @@ class ::fidl::Server<::test_error::Example> : public ::fidl::internal::IncomingM
   using FooRequest = ::fidl::Request<::test_error::Example::Foo>;
   using FooCompleter = ::fidl::internal::NaturalCompleter<::test_error::Example::Foo>;
 
-  virtual void Foo(FooRequest& request, FooCompleter::Sync& completer) = 0;
+  virtual void Foo(FooRequest& request,
+                   FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

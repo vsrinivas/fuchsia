@@ -26,11 +26,9 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
                                 ::std::optional<::fidl::UnbindInfo>* out_maybe_unbind) {
   using ResultType = typename FidlMethod::Protocol::Transport::template Result<FidlMethod>;
   using NaturalResponse = ::fidl::Response<FidlMethod>;
-  constexpr bool IsAbsentBody = ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsAbsentBody;
-  constexpr bool kHasDomainError =
-      ::fidl::internal::NaturalMethodTypes<FidlMethod>::kHasDomainError;
-  constexpr bool kHasFrameworkError =
-      ::fidl::internal::NaturalMethodTypes<FidlMethod>::kHasFrameworkError;
+  constexpr bool IsAbsentBody = !FidlMethod::kHasResponseBody;
+  constexpr bool kHasDomainError = FidlMethod::kHasDomainError;
+  constexpr bool kHasFrameworkError = FidlMethod::kHasFrameworkError;
 
   // Check error from the underlying transport.
   if (!incoming.ok()) {
@@ -84,8 +82,7 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
       }
     }
     if constexpr (kHasDomainError || kHasFrameworkError) {
-      constexpr bool IsEmptyStructPayload =
-          ::fidl::internal::NaturalMethodTypes<FidlMethod>::IsEmptyStructPayload;
+      constexpr bool IsEmptyStructPayload = !FidlMethod::kHasNonEmptyPayload;
 
       ZX_DEBUG_ASSERT(domain_object.result().response().has_value());
       if constexpr (IsEmptyStructPayload) {

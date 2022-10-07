@@ -97,7 +97,7 @@ var (
 	NaturalResult           = transportNs.member("Result")
 	MessageTraits           = internalNs.member("MessageTraits")
 	MessageBase             = internalNs.member("MessageBase")
-	NaturalMessageConverter = internalNs.member("NaturalMessageConverter ")
+	NaturalMessageConverter = internalNs.member("NaturalMessageConverter")
 	NaturalMethodTypes      = internalNs.member("NaturalMethodTypes")
 
 	// Client types

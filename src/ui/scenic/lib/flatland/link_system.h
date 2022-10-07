@@ -86,7 +86,7 @@ class ParentViewportWatcherImpl
     status_helper_.Update(std::move(status));
   }
   // |fuchsia::ui::composition::ParentViewportWatcher|
-  void GetLayout(GetLayoutRequest& request, GetLayoutCompleter::Sync& sync_completer) override {
+  void GetLayout(GetLayoutCompleter::Sync& sync_completer) override {
     if (layout_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
       error_callback_(
@@ -103,7 +103,7 @@ class ParentViewportWatcherImpl
   }
 
   // |fuchsia_ui_composition::ParentViewportWatcher|
-  void GetStatus(GetStatusRequest& request, GetStatusCompleter::Sync& sync_completer) override {
+  void GetStatus(GetStatusCompleter::Sync& sync_completer) override {
     if (status_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
       error_callback_(
@@ -199,7 +199,7 @@ class ChildViewWatcherImpl : public fidl::Server<fuchsia_ui_composition::ChildVi
   }
 
   // |fuchsia_ui_composition::ChildViewWatcher|
-  void GetStatus(GetStatusRequest& request, GetStatusCompleter::Sync& sync_completer) override {
+  void GetStatus(GetStatusCompleter::Sync& sync_completer) override {
     if (status_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
       error_callback_(
@@ -216,7 +216,7 @@ class ChildViewWatcherImpl : public fidl::Server<fuchsia_ui_composition::ChildVi
   }
 
   // |fuchsia_ui_composition::ChildViewWatcher|
-  void GetViewRef(GetViewRefRequest& request, GetViewRefCompleter::Sync& sync_completer) override {
+  void GetViewRef(GetViewRefCompleter::Sync& sync_completer) override {
     if (viewref_helper_.HasPendingCallback()) {
       FX_DCHECK(error_callback_);
       error_callback_(

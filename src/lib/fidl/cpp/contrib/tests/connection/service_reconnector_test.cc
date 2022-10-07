@@ -32,7 +32,7 @@ class SimpleProtocolImpl : public fidl::Server<SimpleProtocol> {
  public:
   SimpleProtocolImpl() = default;
 
-  void DoAction(DoActionRequest& request, DoActionCompleter::Sync& completer) override {
+  void DoAction(DoActionCompleter::Sync& completer) override {
     actions_attempted_ += 1;
     fit::result<Error> result = fit::ok();
     if (auto error = next_error()) {

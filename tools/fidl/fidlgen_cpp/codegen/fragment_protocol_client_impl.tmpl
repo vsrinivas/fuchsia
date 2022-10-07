@@ -156,8 +156,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }},
       [{{ if .HasRequestPayload }}request = {{ .Request.Forward "request" }}{{ end }}](NaturalMessageEncoder& encoder) mutable {
         {{- if .HasRequestPayload }}
-        encoder.EncodeBody(
-            {{ .NaturalRequestConverter }}::IntoDomainObject({{ .Request.Forward "request" }}));
+        encoder.EncodeBody({{ .Request.Forward "request" }});
         {{- end }}
         return ZX_OK;
       },
@@ -181,8 +180,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
   {{- if .HasRequestPayload }}
-  _encoder.EncodeBody(
-      {{ .NaturalRequestConverter }}::IntoDomainObject({{ .Request.Forward "request" }}));
+  _encoder.EncodeBody({{ .Request.Forward "request" }});
   {{ end }}
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);

@@ -19,8 +19,7 @@ fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(const ::fid
       .outgoing_transport_context =
           ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get()),
   };
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_driveroneway::OneWay::Send>>::IntoDomainObject(request));
+  _encoder.EncodeBody(request);
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   ::fidl::Status status = client_base().SendOneWay(_arena_msg, std::move(_options));
@@ -46,10 +45,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_driveroneway::OneWay::Send> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_driveroneway::OneWay::Send>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_driveroneway::OneWay::Send>::Sync completer(txn);
           static_cast<::fdf::Server<::test_driveroneway::OneWay>*>(interface)->Send(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

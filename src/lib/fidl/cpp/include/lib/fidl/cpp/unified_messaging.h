@@ -20,12 +20,16 @@
 
 namespace fidl {
 
-namespace internal {
+// |Request| is a type alias referencing the request body of a FIDL method,
+// using natural types. See |WireRequest| for the equivalent using wire types.
+//
+// When |Method| request has a body, |Request| aliases to the body type.
+//
+// When |Method| request has no body, the alias will be undefined.
+template <typename Method>
+using Request = typename fidl::internal::NaturalMethodTypes<Method>::Request;
 
-template <typename FidlMethod>
-struct NaturalMethodTypes {
-  using Completer = ::fidl::Completer<>;
-};
+namespace internal {
 
 template <typename FidlMethod>
 using NaturalCompleter = typename fidl::internal::NaturalMethodTypes<FidlMethod>::Completer;
@@ -41,8 +45,7 @@ using NaturalDomainError = typename fidl::internal::WireMethodTypes<FidlMethod>:
 // unions in methods using the error syntax will be converted to
 // |fit::result<DomainError, Payload>| when sending.
 //
-// |Message| is either a |fidl::Request<Foo>|, |fidl::Response<Foo>|, or
-// |fidl::Event<Foo>|.
+// |Message| is either a |fidl::Response<Foo>| or |fidl::Event<Foo>|.
 //
 // It should only be used when |Message| has a body.
 //

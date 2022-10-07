@@ -76,7 +76,7 @@ class RootDriver : public driver::DriverBase,
   }
 
   // fdf::Server<ft::Getter>
-  void Get(GetRequest& request, GetCompleter::Sync& completer) override {
+  void Get(GetCompleter::Sync& completer) override {
     ZX_ASSERT(child_value_.has_value());
     completer.Reply(fit::ok(child_value_.value()));
   }

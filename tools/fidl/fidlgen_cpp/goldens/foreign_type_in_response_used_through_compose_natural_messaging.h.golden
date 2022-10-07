@@ -20,15 +20,12 @@ namespace fidl {
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
+  using Response = ::test_middle::MiddleGetFooResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 namespace test_foreigntypeinresponseusedthroughcompose {
@@ -145,21 +142,6 @@ class ::fidl::internal::NaturalEventSender<::test_foreigntypeinresponseusedthrou
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> : public ::fidl::CompleterBase {
  public:
@@ -178,10 +160,10 @@ class ::fidl::Server<::test_foreigntypeinresponseusedthroughcompose::Top> : publ
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_foreigntypeinresponseusedthroughcompose::Top;
 
-  using GetFooRequest = ::fidl::Request<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
   using GetFooCompleter = ::fidl::internal::NaturalCompleter<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 
-  virtual void GetFoo(GetFooRequest& request, GetFooCompleter::Sync& completer) = 0;
+  virtual void GetFoo(
+      GetFooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

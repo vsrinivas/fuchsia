@@ -17,8 +17,7 @@ fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(const ::fidl::
   return ::fidl::internal::NaturalThenable<::test_inheritance::Super::Foo>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_inheritance::ksuper_foo_Ordinal, ::test_inheritance::ksuper_foo_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Super::Foo>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -42,8 +41,7 @@ namespace test_inheritance {
 fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super>::Foo(const ::fidl::Request<::test_inheritance::Super::Foo>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritance::ksuper_foo_Ordinal, ::test_inheritance::ksuper_foo_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Super::Foo>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_inheritance::Super::Foo>(
@@ -87,10 +85,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_inheritance::Super::Foo> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Super::Foo>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_inheritance::Super::Foo>::Sync completer(txn);
           static_cast<::fidl::Server<::test_inheritance::Super>*>(interface)->Foo(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -126,8 +124,7 @@ fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(const ::fidl::Re
   return ::fidl::internal::NaturalThenable<::test_inheritance::Sub::Foo>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_inheritance::ksub_foo_Ordinal, ::test_inheritance::ksub_foo_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Sub::Foo>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -151,8 +148,7 @@ namespace test_inheritance {
 fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub>::Foo(const ::fidl::Request<::test_inheritance::Sub::Foo>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritance::ksub_foo_Ordinal, ::test_inheritance::ksub_foo_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Sub::Foo>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_inheritance::Sub::Foo>(
@@ -196,10 +192,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_inheritance::Sub::Foo> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritance::Sub::Foo>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_inheritance::Sub::Foo>::Sync completer(txn);
           static_cast<::fidl::Server<::test_inheritance::Sub>*>(interface)->Foo(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

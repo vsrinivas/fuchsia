@@ -18,28 +18,22 @@ namespace fidl {
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> {
+  using Response = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> {
+  using Response = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 namespace test_union {
@@ -185,36 +179,6 @@ class ::fidl::internal::NaturalEventSender<::test_union::TestProtocol>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> : public ::fidl::CompleterBase {
  public:
@@ -242,15 +206,15 @@ class ::fidl::Server<::test_union::TestProtocol> : public ::fidl::internal::Inco
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_union::TestProtocol;
 
-  using StrictXUnionHenceResponseMayBeStackAllocatedRequest = ::fidl::Request<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>;
   using StrictXUnionHenceResponseMayBeStackAllocatedCompleter = ::fidl::internal::NaturalCompleter<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>;
 
-  virtual void StrictXUnionHenceResponseMayBeStackAllocated(StrictXUnionHenceResponseMayBeStackAllocatedRequest& request, StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync& completer) = 0;
+  virtual void StrictXUnionHenceResponseMayBeStackAllocated(
+      StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync& completer) = 0;
 
-  using FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest = ::fidl::Request<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>;
   using FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter = ::fidl::internal::NaturalCompleter<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>;
 
-  virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest& request, FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync& completer) = 0;
+  virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

@@ -19,32 +19,26 @@ namespace fidl {
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> {
+  using Request = ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest;
+
+  using Response = ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>&)>;
-
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsEmptyStructPayload = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> {
+  using Request = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+
+  using Response = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&)>;
-
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsEmptyStructPayload = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_errorsyntax {
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable;
@@ -239,42 +233,6 @@ class ::fidl::internal::NaturalEventSender<::test_errorsyntax::ExampleUseOfError
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final : public ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest {
- public:
-  using ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest;
-  Request(::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest v) : ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final : public ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
- public:
-  using ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
-  Request(::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest v) : ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> : public ::fidl::CompleterBase {
  public:
@@ -305,12 +263,14 @@ class ::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fid
   using ComposedCallWhichMayFailRequest = ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
   using ComposedCallWhichMayFailCompleter = ::fidl::internal::NaturalCompleter<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
 
-  virtual void ComposedCallWhichMayFail(ComposedCallWhichMayFailRequest& request, ComposedCallWhichMayFailCompleter::Sync& completer) = 0;
+  virtual void ComposedCallWhichMayFail(ComposedCallWhichMayFailRequest& request,
+                                        ComposedCallWhichMayFailCompleter::Sync& completer) = 0;
 
   using CallWhichMayFailRequest = ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
   using CallWhichMayFailCompleter = ::fidl::internal::NaturalCompleter<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
 
-  virtual void CallWhichMayFail(CallWhichMayFailRequest& request, CallWhichMayFailCompleter::Sync& completer) = 0;
+  virtual void CallWhichMayFail(CallWhichMayFailRequest& request,
+                                CallWhichMayFailCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

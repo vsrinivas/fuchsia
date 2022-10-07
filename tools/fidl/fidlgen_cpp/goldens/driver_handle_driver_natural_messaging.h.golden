@@ -78,6 +78,15 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProt
 
 #endif  // __Fuchsia__
 
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_driverhandle::HandlesInProtocol::SendHandles> {
+  using Request = ::test_driverhandle::HandlesInProtocolSendHandlesRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fdf::Result<::test_driverhandle::HandlesInProtocol::SendHandles>&)>;
+};
 namespace test_driverhandle {
 __LOCAL extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
 
@@ -120,24 +129,6 @@ class ::fidl::internal::NaturalEventDispatcher<::test_driverhandle::HandlesInPro
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles> final : public ::test_driverhandle::HandlesInProtocolSendHandlesRequest {
- public:
-  using ::test_driverhandle::HandlesInProtocolSendHandlesRequest::HandlesInProtocolSendHandlesRequest;
-  Request(::test_driverhandle::HandlesInProtocolSendHandlesRequest v) : ::test_driverhandle::HandlesInProtocolSendHandlesRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_driverhandle::HandlesInProtocolSendHandlesRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fdf::Server<::test_driverhandle::HandlesInProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -150,7 +141,8 @@ class ::fdf::Server<::test_driverhandle::HandlesInProtocol> : public ::fidl::int
   using SendHandlesRequest = ::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles>;
   using SendHandlesCompleter = ::fidl::internal::NaturalCompleter<::test_driverhandle::HandlesInProtocol::SendHandles>;
 
-  virtual void SendHandles(SendHandlesRequest& request, SendHandlesCompleter::Sync& completer) = 0;
+  virtual void SendHandles(SendHandlesRequest& request,
+                           SendHandlesCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

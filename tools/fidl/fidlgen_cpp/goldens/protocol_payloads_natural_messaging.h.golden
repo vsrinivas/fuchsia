@@ -18,115 +18,219 @@ namespace fidl {
 }  // namespace fidl
 
 template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OneWayComposed> {
+  using Request = ::test_protocolpayloads_imported::ImportStructPayload;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OneWayComposed>&)>;
+};
+
+template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayComposed> {
+  using Request = ::test_protocolpayloads_imported::ImportStructPayload;
+
+  using Response = ::test_protocolpayloads_imported::ImportStructPayload;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposed>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposed>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> {
+  using Request = ::test_protocolpayloads_imported::ImportStructPayload;
+
+  using Response = ::test_protocolpayloads_imported::ComposedProtocolTwoWayComposedWithErrorTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>&)>;
+};
 
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnComposed> {
+  using Request = ::test_protocolpayloads_imported::ImportStructPayload;
 
-  static constexpr bool IsEmptyStructPayload = false;
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnComposed>>;
 
-  static constexpr bool IsAbsentBody = false;
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnComposed>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnComposedWithError> {
+  using Request = ::test_protocolpayloads_imported::ComposedProtocolOnComposedWithErrorRequest;
+
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnComposedWithError>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnComposedWithError>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OneWayLocal> {
+  using Request = ::test_protocolpayloads::LocalStructPayload;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OneWayLocal>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayLocal> {
+  using Request = ::test_protocolpayloads::LocalStructPayload;
+
+  using Response = ::test_protocolpayloads::LocalStructPayload;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocal>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocal>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> {
+  using Request = ::test_protocolpayloads::LocalStructPayload;
+
+  using Response = ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>&)>;
+};
 
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnLocal> {
+  using Request = ::test_protocolpayloads::LocalStructPayload;
 
-  static constexpr bool IsEmptyStructPayload = false;
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnLocal>>;
 
-  static constexpr bool IsAbsentBody = false;
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnLocal>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnLocalWithError> {
+  using Request = ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest;
+
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnLocalWithError>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnLocalWithError>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OneWayImport> {
+  using Request = ::test_protocolpayloads_imported::ImportStructPayload;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OneWayImport>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayImport> {
+  using Request = ::test_protocolpayloads_imported::ImportStructPayload;
+
+  using Response = ::test_protocolpayloads_imported::ImportStructPayload;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImport>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImport>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> {
+  using Request = ::test_protocolpayloads_imported::ImportStructPayload;
+
+  using Response = ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>&)>;
+};
 
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnImport> {
+  using Request = ::test_protocolpayloads_imported::ImportStructPayload;
 
-  static constexpr bool IsEmptyStructPayload = false;
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnImport>>;
 
-  static constexpr bool IsAbsentBody = false;
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnImport>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnImportWithError> {
+  using Request = ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest;
+
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnImportWithError>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnImportWithError>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OneWayAnon> {
+  using Request = ::test_protocolpayloads::MainProtocolOneWayAnonRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OneWayAnon>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayAnon> {
+  using Request = ::test_protocolpayloads::MainProtocolTwoWayAnonRequest;
+
+  using Response = ::test_protocolpayloads::MainProtocolTwoWayAnonResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnon>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnon>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> {
+  using Request = ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest;
+
+  using Response = ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>&)>;
+};
 
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnAnon> {
+  using Request = ::test_protocolpayloads::MainProtocolOnAnonRequest;
 
-  static constexpr bool IsEmptyStructPayload = false;
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnAnon>>;
 
-  static constexpr bool IsAbsentBody = false;
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnAnon>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolpayloads::MainProtocol::OnAnonWithError> {
+  using Request = ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest;
+
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::OnAnonWithError>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolpayloads::MainProtocol::OnAnonWithError>&)>;
 };
 namespace test_protocolpayloads {
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_imported_ImportStructPayloadTable;
@@ -838,222 +942,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocolpayloads::MainProtocol
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed> final : public ::test_protocolpayloads_imported::ImportStructPayload {
- public:
-  using ::test_protocolpayloads_imported::ImportStructPayload::ImportStructPayload;
-  Request(::test_protocolpayloads_imported::ImportStructPayload v) : ::test_protocolpayloads_imported::ImportStructPayload(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads_imported::ImportStructPayload;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed> final : public ::test_protocolpayloads_imported::ImportStructPayload {
- public:
-  using ::test_protocolpayloads_imported::ImportStructPayload::ImportStructPayload;
-  Request(::test_protocolpayloads_imported::ImportStructPayload v) : ::test_protocolpayloads_imported::ImportStructPayload(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads_imported::ImportStructPayload;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> final : public ::test_protocolpayloads_imported::ImportStructPayload {
- public:
-  using ::test_protocolpayloads_imported::ImportStructPayload::ImportStructPayload;
-  Request(::test_protocolpayloads_imported::ImportStructPayload v) : ::test_protocolpayloads_imported::ImportStructPayload(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads_imported::ImportStructPayload;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal> final : public ::test_protocolpayloads::LocalStructPayload {
- public:
-  using ::test_protocolpayloads::LocalStructPayload::LocalStructPayload;
-  Request(::test_protocolpayloads::LocalStructPayload v) : ::test_protocolpayloads::LocalStructPayload(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads::LocalStructPayload;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal> final : public ::test_protocolpayloads::LocalStructPayload {
- public:
-  using ::test_protocolpayloads::LocalStructPayload::LocalStructPayload;
-  Request(::test_protocolpayloads::LocalStructPayload v) : ::test_protocolpayloads::LocalStructPayload(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads::LocalStructPayload;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> final : public ::test_protocolpayloads::LocalStructPayload {
- public:
-  using ::test_protocolpayloads::LocalStructPayload::LocalStructPayload;
-  Request(::test_protocolpayloads::LocalStructPayload v) : ::test_protocolpayloads::LocalStructPayload(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads::LocalStructPayload;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport> final : public ::test_protocolpayloads_imported::ImportStructPayload {
- public:
-  using ::test_protocolpayloads_imported::ImportStructPayload::ImportStructPayload;
-  Request(::test_protocolpayloads_imported::ImportStructPayload v) : ::test_protocolpayloads_imported::ImportStructPayload(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads_imported::ImportStructPayload;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport> final : public ::test_protocolpayloads_imported::ImportStructPayload {
- public:
-  using ::test_protocolpayloads_imported::ImportStructPayload::ImportStructPayload;
-  Request(::test_protocolpayloads_imported::ImportStructPayload v) : ::test_protocolpayloads_imported::ImportStructPayload(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads_imported::ImportStructPayload;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError> final : public ::test_protocolpayloads_imported::ImportStructPayload {
- public:
-  using ::test_protocolpayloads_imported::ImportStructPayload::ImportStructPayload;
-  Request(::test_protocolpayloads_imported::ImportStructPayload v) : ::test_protocolpayloads_imported::ImportStructPayload(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads_imported::ImportStructPayload;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon> final : public ::test_protocolpayloads::MainProtocolOneWayAnonRequest {
- public:
-  using ::test_protocolpayloads::MainProtocolOneWayAnonRequest::MainProtocolOneWayAnonRequest;
-  Request(::test_protocolpayloads::MainProtocolOneWayAnonRequest v) : ::test_protocolpayloads::MainProtocolOneWayAnonRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads::MainProtocolOneWayAnonRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon> final : public ::test_protocolpayloads::MainProtocolTwoWayAnonRequest {
- public:
-  using ::test_protocolpayloads::MainProtocolTwoWayAnonRequest::MainProtocolTwoWayAnonRequest;
-  Request(::test_protocolpayloads::MainProtocolTwoWayAnonRequest v) : ::test_protocolpayloads::MainProtocolTwoWayAnonRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads::MainProtocolTwoWayAnonRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> final : public ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest {
- public:
-  using ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest::MainProtocolTwoWayAnonWithErrorRequest;
-  Request(::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest v) : ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol::TwoWayComposed> : public ::fidl::CompleterBase {
  public:
@@ -1138,62 +1026,74 @@ class ::fidl::Server<::test_protocolpayloads::MainProtocol> : public ::fidl::int
   using OneWayComposedRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayComposed>;
   using OneWayComposedCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::OneWayComposed>;
 
-  virtual void OneWayComposed(OneWayComposedRequest& request, OneWayComposedCompleter::Sync& completer) = 0;
+  virtual void OneWayComposed(OneWayComposedRequest& request,
+                              OneWayComposedCompleter::Sync& completer) = 0;
 
   using TwoWayComposedRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>;
   using TwoWayComposedCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayComposed>;
 
-  virtual void TwoWayComposed(TwoWayComposedRequest& request, TwoWayComposedCompleter::Sync& completer) = 0;
+  virtual void TwoWayComposed(TwoWayComposedRequest& request,
+                              TwoWayComposedCompleter::Sync& completer) = 0;
 
   using TwoWayComposedWithErrorRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>;
   using TwoWayComposedWithErrorCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>;
 
-  virtual void TwoWayComposedWithError(TwoWayComposedWithErrorRequest& request, TwoWayComposedWithErrorCompleter::Sync& completer) = 0;
+  virtual void TwoWayComposedWithError(TwoWayComposedWithErrorRequest& request,
+                                       TwoWayComposedWithErrorCompleter::Sync& completer) = 0;
 
   using OneWayLocalRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayLocal>;
   using OneWayLocalCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::OneWayLocal>;
 
-  virtual void OneWayLocal(OneWayLocalRequest& request, OneWayLocalCompleter::Sync& completer) = 0;
+  virtual void OneWayLocal(OneWayLocalRequest& request,
+                           OneWayLocalCompleter::Sync& completer) = 0;
 
   using TwoWayLocalRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocal>;
   using TwoWayLocalCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayLocal>;
 
-  virtual void TwoWayLocal(TwoWayLocalRequest& request, TwoWayLocalCompleter::Sync& completer) = 0;
+  virtual void TwoWayLocal(TwoWayLocalRequest& request,
+                           TwoWayLocalCompleter::Sync& completer) = 0;
 
   using TwoWayLocalWithErrorRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>;
   using TwoWayLocalWithErrorCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>;
 
-  virtual void TwoWayLocalWithError(TwoWayLocalWithErrorRequest& request, TwoWayLocalWithErrorCompleter::Sync& completer) = 0;
+  virtual void TwoWayLocalWithError(TwoWayLocalWithErrorRequest& request,
+                                    TwoWayLocalWithErrorCompleter::Sync& completer) = 0;
 
   using OneWayImportRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayImport>;
   using OneWayImportCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::OneWayImport>;
 
-  virtual void OneWayImport(OneWayImportRequest& request, OneWayImportCompleter::Sync& completer) = 0;
+  virtual void OneWayImport(OneWayImportRequest& request,
+                            OneWayImportCompleter::Sync& completer) = 0;
 
   using TwoWayImportRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImport>;
   using TwoWayImportCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayImport>;
 
-  virtual void TwoWayImport(TwoWayImportRequest& request, TwoWayImportCompleter::Sync& completer) = 0;
+  virtual void TwoWayImport(TwoWayImportRequest& request,
+                            TwoWayImportCompleter::Sync& completer) = 0;
 
   using TwoWayImportWithErrorRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>;
   using TwoWayImportWithErrorCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>;
 
-  virtual void TwoWayImportWithError(TwoWayImportWithErrorRequest& request, TwoWayImportWithErrorCompleter::Sync& completer) = 0;
+  virtual void TwoWayImportWithError(TwoWayImportWithErrorRequest& request,
+                                     TwoWayImportWithErrorCompleter::Sync& completer) = 0;
 
   using OneWayAnonRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::OneWayAnon>;
   using OneWayAnonCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::OneWayAnon>;
 
-  virtual void OneWayAnon(OneWayAnonRequest& request, OneWayAnonCompleter::Sync& completer) = 0;
+  virtual void OneWayAnon(OneWayAnonRequest& request,
+                          OneWayAnonCompleter::Sync& completer) = 0;
 
   using TwoWayAnonRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnon>;
   using TwoWayAnonCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayAnon>;
 
-  virtual void TwoWayAnon(TwoWayAnonRequest& request, TwoWayAnonCompleter::Sync& completer) = 0;
+  virtual void TwoWayAnon(TwoWayAnonRequest& request,
+                          TwoWayAnonCompleter::Sync& completer) = 0;
 
   using TwoWayAnonWithErrorRequest = ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>;
   using TwoWayAnonWithErrorCompleter = ::fidl::internal::NaturalCompleter<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>;
 
-  virtual void TwoWayAnonWithError(TwoWayAnonWithErrorRequest& request, TwoWayAnonWithErrorCompleter::Sync& completer) = 0;
+  virtual void TwoWayAnonWithError(TwoWayAnonWithErrorRequest& request,
+                                   TwoWayAnonWithErrorCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

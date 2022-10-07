@@ -93,7 +93,7 @@ class DemoNumberServer : public fidl::Server<fuchsia_hardware_demo::Demo> {
  public:
   DemoNumberServer(driver::Logger* logger) : logger_(logger) {}
 
-  void GetNumber(GetNumberRequest& request, GetNumberCompleter::Sync& completer) override {
+  void GetNumber(GetNumberCompleter::Sync& completer) override {
     completer.Reply(current_number);
     current_number += 1;
   }

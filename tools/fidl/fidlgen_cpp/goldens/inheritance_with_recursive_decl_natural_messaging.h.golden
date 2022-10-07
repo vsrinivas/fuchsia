@@ -15,6 +15,16 @@
 namespace fidl {
 
 }  // namespace fidl
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_inheritancewithrecursivedecl::Parent::First> {
+  using Request = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_inheritancewithrecursivedecl::Parent::First>&)>;
+};
 namespace test_inheritancewithrecursivedecl {
 __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
@@ -104,24 +114,6 @@ class ::fidl::internal::NaturalEventSender<::test_inheritancewithrecursivedecl::
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> final : public ::test_inheritancewithrecursivedecl::ParentFirstRequest {
- public:
-  using ::test_inheritancewithrecursivedecl::ParentFirstRequest::ParentFirstRequest;
-  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest v) : ::test_inheritancewithrecursivedecl::ParentFirstRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -134,7 +126,8 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent> : public ::fid
   using FirstRequest = ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>;
   using FirstCompleter = ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Parent::First>;
 
-  virtual void First(FirstRequest& request, FirstCompleter::Sync& completer) = 0;
+  virtual void First(FirstRequest& request,
+                     FirstCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -159,6 +152,26 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursive
 };
 
 #endif  // __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_inheritancewithrecursivedecl::Child::First> {
+  using Request = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_inheritancewithrecursivedecl::Child::First>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_inheritancewithrecursivedecl::Child::Second> {
+  using Request = ::test_inheritancewithrecursivedecl::ChildSecondRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_inheritancewithrecursivedecl::Child::Second>&)>;
+};
 
 namespace test_inheritancewithrecursivedecl {
 __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSecondRequestTable;
@@ -253,42 +266,6 @@ class ::fidl::internal::NaturalEventSender<::test_inheritancewithrecursivedecl::
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> final : public ::test_inheritancewithrecursivedecl::ParentFirstRequest {
- public:
-  using ::test_inheritancewithrecursivedecl::ParentFirstRequest::ParentFirstRequest;
-  Request(::test_inheritancewithrecursivedecl::ParentFirstRequest v) : ::test_inheritancewithrecursivedecl::ParentFirstRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> final : public ::test_inheritancewithrecursivedecl::ChildSecondRequest {
- public:
-  using ::test_inheritancewithrecursivedecl::ChildSecondRequest::ChildSecondRequest;
-  Request(::test_inheritancewithrecursivedecl::ChildSecondRequest v) : ::test_inheritancewithrecursivedecl::ChildSecondRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_inheritancewithrecursivedecl::ChildSecondRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::Server<::test_inheritancewithrecursivedecl::Child> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -301,12 +278,14 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Child> : public ::fidl
   using FirstRequest = ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>;
   using FirstCompleter = ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Child::First>;
 
-  virtual void First(FirstRequest& request, FirstCompleter::Sync& completer) = 0;
+  virtual void First(FirstRequest& request,
+                     FirstCompleter::Sync& completer) = 0;
 
   using SecondRequest = ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>;
   using SecondCompleter = ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Child::Second>;
 
-  virtual void Second(SecondRequest& request, SecondCompleter::Sync& completer) = 0;
+  virtual void Second(SecondRequest& request,
+                      SecondCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

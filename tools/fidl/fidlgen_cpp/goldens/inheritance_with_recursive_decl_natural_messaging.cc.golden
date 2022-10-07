@@ -16,8 +16,7 @@ namespace test_inheritancewithrecursivedecl {
 fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Parent>::First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kParent_First_Ordinal, ::test_inheritancewithrecursivedecl::kParent_First_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>::IntoDomainObject(std::move(request)));
+  _encoder.EncodeBody(std::move(request));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -35,8 +34,7 @@ namespace test_inheritancewithrecursivedecl {
 fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Parent>::First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kParent_First_Ordinal, ::test_inheritancewithrecursivedecl::kParent_First_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -70,10 +68,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Parent::First>::Sync completer(txn);
           static_cast<::fidl::Server<::test_inheritancewithrecursivedecl::Parent>*>(interface)->First(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -112,8 +110,7 @@ namespace test_inheritancewithrecursivedecl {
 fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Child>::First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kChild_First_Ordinal, ::test_inheritancewithrecursivedecl::kChild_First_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>::IntoDomainObject(std::move(request)));
+  _encoder.EncodeBody(std::move(request));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -124,8 +121,7 @@ fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Child>::F
 fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal, ::test_inheritancewithrecursivedecl::kChild_Second_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>::IntoDomainObject(std::move(request)));
+  _encoder.EncodeBody(std::move(request));
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -143,8 +139,7 @@ namespace test_inheritancewithrecursivedecl {
 fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child>::First(::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kChild_First_Ordinal, ::test_inheritancewithrecursivedecl::kChild_First_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -154,8 +149,7 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child
 fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal, ::test_inheritancewithrecursivedecl::kChild_Second_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>::IntoDomainObject(std::move(request)));
+  encoder.EncodeBody(std::move(request));
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -189,10 +183,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Child::First>::Sync completer(txn);
           static_cast<::fidl::Server<::test_inheritancewithrecursivedecl::Child>*>(interface)->First(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -204,10 +198,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_inheritancewithrecursivedecl::Child::Second>::Sync completer(txn);
           static_cast<::fidl::Server<::test_inheritancewithrecursivedecl::Child>*>(interface)->Second(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

@@ -130,6 +130,14 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_versions::OtherProtocol>
 
 #endif  // __Fuchsia__
 
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_versions::Protocol::Foo> {
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_versions::Protocol::Foo>&)>;
+};
+
 #ifdef __Fuchsia__
 
 template <>
@@ -212,21 +220,6 @@ class ::fidl::internal::NaturalEventSender<::test_versions::Protocol>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_versions::Protocol::Foo> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_versions::Protocol::Foo>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::Server<::test_versions::Protocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -236,10 +229,10 @@ class ::fidl::Server<::test_versions::Protocol> : public ::fidl::internal::Incom
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_versions::Protocol;
 
-  using FooRequest = ::fidl::Request<::test_versions::Protocol::Foo>;
   using FooCompleter = ::fidl::internal::NaturalCompleter<::test_versions::Protocol::Foo>;
 
-  virtual void Foo(FooRequest& request, FooCompleter::Sync& completer) = 0;
+  virtual void Foo(
+      FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

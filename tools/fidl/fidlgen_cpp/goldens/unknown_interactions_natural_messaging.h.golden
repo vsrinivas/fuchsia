@@ -25,341 +25,637 @@ namespace fidl {
 }  // namespace fidl
 
 template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> {
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> {
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>&)>;
+};
+
+
+
+template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>>;
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = true;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = true;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = true;
-    
-      static constexpr bool IsEmptyStructPayload = true;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = true;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = true;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = true;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = true;
-    
-      static constexpr bool IsEmptyStructPayload = true;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = true;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = true;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> {
+  
+    
+    
+  
 
   
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = true;
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> {
+  
     
-      static constexpr bool IsEmptyStructPayload = false;
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsRequest;
     
   
 
   
-    static constexpr bool IsAbsentBody = false;
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>>;
   
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> {
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>&)>;
 };
     
     
@@ -539,7 +835,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrRequest;
 
  public:
@@ -578,7 +874,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrRequest;
 
  public:
@@ -617,7 +913,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrRequest;
 
  public:
@@ -656,7 +952,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrRequest;
 
  public:
@@ -756,7 +1052,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrRequest;
 
  public:
@@ -795,7 +1091,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest;
 
  public:
@@ -834,7 +1130,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrRequest;
 
  public:
@@ -873,7 +1169,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest;
 
  public:
@@ -1013,7 +1309,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrTopResponse;
 
  public:
@@ -1065,7 +1361,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse;
 
  public:
@@ -1117,7 +1413,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse;
 
  public:
@@ -1169,7 +1465,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse;
 
  public:
@@ -1218,7 +1514,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTopResponse;
 
  public:
@@ -1256,7 +1552,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse;
 
  public:
@@ -1294,7 +1590,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse;
 
  public:
@@ -1332,7 +1628,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse;
 
  public:
@@ -1371,7 +1667,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse;
 
  public:
@@ -1413,7 +1709,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse;
 
  public:
@@ -1455,7 +1751,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse;
 
  public:
@@ -1497,7 +1793,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse;
 
  public:
@@ -1856,312 +2152,6 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::UnknownIn
 #endif  // __Fuchsia__
 
 
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 
 
 template<>
@@ -2333,130 +2323,130 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol> : 
   using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
 
 
-  using StrictOneWayRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>;
   using StrictOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>;
 
   
-  virtual void StrictOneWay(StrictOneWayRequest& request, StrictOneWayCompleter::Sync& completer
+  virtual void StrictOneWay(
+      StrictOneWayCompleter::Sync& completer
   )= 0;
 
-  using FlexibleOneWayRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>;
   using FlexibleOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>;
 
   
-  virtual void FlexibleOneWay(FlexibleOneWayRequest& request, FlexibleOneWayCompleter::Sync& completer
+  virtual void FlexibleOneWay(
+      FlexibleOneWayCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>;
   using StrictTwoWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>;
 
   
-  virtual void StrictTwoWay(StrictTwoWayRequest& request, StrictTwoWayCompleter::Sync& completer
+  virtual void StrictTwoWay(
+      StrictTwoWayCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayFieldsRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>;
   using StrictTwoWayFieldsCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>;
 
   
-  virtual void StrictTwoWayFields(StrictTwoWayFieldsRequest& request, StrictTwoWayFieldsCompleter::Sync& completer
+  virtual void StrictTwoWayFields(
+      StrictTwoWayFieldsCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayUnionRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>;
   using StrictTwoWayUnionCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>;
 
   
-  virtual void StrictTwoWayUnion(StrictTwoWayUnionRequest& request, StrictTwoWayUnionCompleter::Sync& completer
+  virtual void StrictTwoWayUnion(
+      StrictTwoWayUnionCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayTableRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>;
   using StrictTwoWayTableCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>;
 
   
-  virtual void StrictTwoWayTable(StrictTwoWayTableRequest& request, StrictTwoWayTableCompleter::Sync& completer
+  virtual void StrictTwoWayTable(
+      StrictTwoWayTableCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>;
   using StrictTwoWayErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>;
 
   
-  virtual void StrictTwoWayErr(StrictTwoWayErrRequest& request, StrictTwoWayErrCompleter::Sync& completer
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayFieldsErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>;
   using StrictTwoWayFieldsErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>;
 
   
-  virtual void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequest& request, StrictTwoWayFieldsErrCompleter::Sync& completer
+  virtual void StrictTwoWayFieldsErr(
+      StrictTwoWayFieldsErrCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayUnionErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>;
   using StrictTwoWayUnionErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>;
 
   
-  virtual void StrictTwoWayUnionErr(StrictTwoWayUnionErrRequest& request, StrictTwoWayUnionErrCompleter::Sync& completer
+  virtual void StrictTwoWayUnionErr(
+      StrictTwoWayUnionErrCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayTableErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>;
   using StrictTwoWayTableErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>;
 
   
-  virtual void StrictTwoWayTableErr(StrictTwoWayTableErrRequest& request, StrictTwoWayTableErrCompleter::Sync& completer
+  virtual void StrictTwoWayTableErr(
+      StrictTwoWayTableErrCompleter::Sync& completer
   )= 0;
 
-  using FlexibleTwoWayRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>;
   using FlexibleTwoWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>;
 
   
-  virtual void FlexibleTwoWay(FlexibleTwoWayRequest& request, FlexibleTwoWayCompleter::Sync& completer
+  virtual void FlexibleTwoWay(
+      FlexibleTwoWayCompleter::Sync& completer
   )= 0;
 
-  using FlexibleTwoWayFieldsRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>;
   using FlexibleTwoWayFieldsCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>;
 
   
-  virtual void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request, FlexibleTwoWayFieldsCompleter::Sync& completer
+  virtual void FlexibleTwoWayFields(
+      FlexibleTwoWayFieldsCompleter::Sync& completer
   )= 0;
 
-  using FlexibleTwoWayUnionRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>;
   using FlexibleTwoWayUnionCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>;
 
   
-  virtual void FlexibleTwoWayUnion(FlexibleTwoWayUnionRequest& request, FlexibleTwoWayUnionCompleter::Sync& completer
+  virtual void FlexibleTwoWayUnion(
+      FlexibleTwoWayUnionCompleter::Sync& completer
   )= 0;
 
-  using FlexibleTwoWayTableRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>;
   using FlexibleTwoWayTableCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>;
 
   
-  virtual void FlexibleTwoWayTable(FlexibleTwoWayTableRequest& request, FlexibleTwoWayTableCompleter::Sync& completer
+  virtual void FlexibleTwoWayTable(
+      FlexibleTwoWayTableCompleter::Sync& completer
   )= 0;
 
-  using FlexibleTwoWayErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>;
   using FlexibleTwoWayErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>;
 
   
-  virtual void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request, FlexibleTwoWayErrCompleter::Sync& completer
+  virtual void FlexibleTwoWayErr(
+      FlexibleTwoWayErrCompleter::Sync& completer
   )= 0;
 
-  using FlexibleTwoWayFieldsErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>;
   using FlexibleTwoWayFieldsErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>;
 
   
-  virtual void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request, FlexibleTwoWayFieldsErrCompleter::Sync& completer
+  virtual void FlexibleTwoWayFieldsErr(
+      FlexibleTwoWayFieldsErrCompleter::Sync& completer
   )= 0;
 
-  using FlexibleTwoWayUnionErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>;
   using FlexibleTwoWayUnionErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>;
 
   
-  virtual void FlexibleTwoWayUnionErr(FlexibleTwoWayUnionErrRequest& request, FlexibleTwoWayUnionErrCompleter::Sync& completer
+  virtual void FlexibleTwoWayUnionErr(
+      FlexibleTwoWayUnionErrCompleter::Sync& completer
   )= 0;
 
-  using FlexibleTwoWayTableErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>;
   using FlexibleTwoWayTableErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>;
 
   
-  virtual void FlexibleTwoWayTableErr(FlexibleTwoWayTableErrRequest& request, FlexibleTwoWayTableErrCompleter::Sync& completer
+  virtual void FlexibleTwoWayTableErr(
+      FlexibleTwoWayTableErrCompleter::Sync& completer
   )= 0;
 
 
@@ -2490,165 +2480,485 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
 
 
 template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> {
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> {
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>&)>;
+};
+
+
+
+template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>>;
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = true;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = true;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> {
+  
+    
+    
+  
 
   
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> {
+  
     
-      static constexpr bool IsEmptyStructPayload = false;
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsRequest;
     
   
 
   
-    static constexpr bool IsAbsentBody = false;
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>>;
   
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> {
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>&)>;
 };
     
     
@@ -2804,7 +3114,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrRequest;
 
  public:
@@ -2843,7 +3153,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest;
 
  public:
@@ -2882,7 +3192,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest;
 
  public:
@@ -2921,7 +3231,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrRequest;
 
  public:
@@ -3021,7 +3331,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrRequest;
 
  public:
@@ -3060,7 +3370,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest;
 
  public:
@@ -3099,7 +3409,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest;
 
  public:
@@ -3138,7 +3448,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest;
 
  public:
@@ -3278,7 +3588,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse;
 
  public:
@@ -3330,7 +3640,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse;
 
  public:
@@ -3382,7 +3692,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse;
 
  public:
@@ -3434,7 +3744,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse;
 
  public:
@@ -3755,176 +4065,6 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::UnknownIn
 #endif  // __Fuchsia__
 
 
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 
 
 template<>
@@ -4016,74 +4156,74 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol
   using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
 
 
-  using StrictOneWayRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>;
   using StrictOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>;
 
   
-  virtual void StrictOneWay(StrictOneWayRequest& request, StrictOneWayCompleter::Sync& completer
+  virtual void StrictOneWay(
+      StrictOneWayCompleter::Sync& completer
   )= 0;
 
-  using FlexibleOneWayRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>;
   using FlexibleOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>;
 
   
-  virtual void FlexibleOneWay(FlexibleOneWayRequest& request, FlexibleOneWayCompleter::Sync& completer
+  virtual void FlexibleOneWay(
+      FlexibleOneWayCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>;
   using StrictTwoWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>;
 
   
-  virtual void StrictTwoWay(StrictTwoWayRequest& request, StrictTwoWayCompleter::Sync& completer
+  virtual void StrictTwoWay(
+      StrictTwoWayCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayFieldsRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>;
   using StrictTwoWayFieldsCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>;
 
   
-  virtual void StrictTwoWayFields(StrictTwoWayFieldsRequest& request, StrictTwoWayFieldsCompleter::Sync& completer
+  virtual void StrictTwoWayFields(
+      StrictTwoWayFieldsCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayUnionRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>;
   using StrictTwoWayUnionCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>;
 
   
-  virtual void StrictTwoWayUnion(StrictTwoWayUnionRequest& request, StrictTwoWayUnionCompleter::Sync& completer
+  virtual void StrictTwoWayUnion(
+      StrictTwoWayUnionCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayTableRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>;
   using StrictTwoWayTableCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>;
 
   
-  virtual void StrictTwoWayTable(StrictTwoWayTableRequest& request, StrictTwoWayTableCompleter::Sync& completer
+  virtual void StrictTwoWayTable(
+      StrictTwoWayTableCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>;
   using StrictTwoWayErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>;
 
   
-  virtual void StrictTwoWayErr(StrictTwoWayErrRequest& request, StrictTwoWayErrCompleter::Sync& completer
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayFieldsErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>;
   using StrictTwoWayFieldsErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>;
 
   
-  virtual void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequest& request, StrictTwoWayFieldsErrCompleter::Sync& completer
+  virtual void StrictTwoWayFieldsErr(
+      StrictTwoWayFieldsErrCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayUnionErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>;
   using StrictTwoWayUnionErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>;
 
   
-  virtual void StrictTwoWayUnionErr(StrictTwoWayUnionErrRequest& request, StrictTwoWayUnionErrCompleter::Sync& completer
+  virtual void StrictTwoWayUnionErr(
+      StrictTwoWayUnionErrCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayTableErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>;
   using StrictTwoWayTableErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>;
 
   
-  virtual void StrictTwoWayTableErr(StrictTwoWayTableErrRequest& request, StrictTwoWayTableErrCompleter::Sync& completer
+  virtual void StrictTwoWayTableErr(
+      StrictTwoWayTableErrCompleter::Sync& completer
   )= 0;
 
 
@@ -4117,165 +4257,318 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
 
 
 template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> {
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>&)>;
+};
+
+
+
+template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>>;
+  
+    
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = true;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>&)>;
-
-  
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = true;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>&)>;
-
-  
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
-    
-      static constexpr bool IsEmptyStructPayload = false;
-    
-  
-
-  
-    static constexpr bool IsAbsentBody = false;
-  
 };
 
 
 
 template<>
 struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> {
-  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>>;
+  
+    
+    
+      using Response = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>>;
+  
 
   using ResultCallback =
       ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> {
+  
+    
+    
+  
 
   
-    static constexpr bool kHasDomainError = true;
-    static constexpr bool kHasFrameworkError = false;
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> {
+  
     
-      static constexpr bool IsEmptyStructPayload = false;
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsRequest;
     
   
 
   
-    static constexpr bool IsAbsentBody = false;
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>>;
   
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>&)>;
+};
+
+
+
+template<>
+struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> {
+  
+    
+    
+      using Request = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest;
+    
+  
+
+  
+    using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>>;
+  
+
+  using ResultCallback =
+      ::fit::callback<void (::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>&)>;
 };
     
     
@@ -4406,7 +4699,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrRequest;
 
  public:
@@ -4445,7 +4738,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest;
 
  public:
@@ -4484,7 +4777,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest;
 
  public:
@@ -4523,7 +4816,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_unknowninteractions:
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest;
 
  public:
@@ -4663,7 +4956,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse;
 
  public:
@@ -4715,7 +5008,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse;
 
  public:
@@ -4767,7 +5060,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse;
 
  public:
@@ -4819,7 +5112,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse;
 };
 template <>
-class ::fidl::internal::NaturalMessageConverter <::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> {
+class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> {
   using DomainObject = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse;
 
  public:
@@ -5070,159 +5363,6 @@ class ::fidl::internal::NaturalEventSender<::test_unknowninteractions::UnknownIn
 #endif  // __Fuchsia__
 
 
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-
-
-template <>
-class ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 
 
 template<>
@@ -5314,67 +5454,67 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtoc
   using _EnclosingProtocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
 
 
-  using StrictOneWayRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>;
   using StrictOneWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>;
 
   
-  virtual void StrictOneWay(StrictOneWayRequest& request, StrictOneWayCompleter::Sync& completer
+  virtual void StrictOneWay(
+      StrictOneWayCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>;
   using StrictTwoWayCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>;
 
   
-  virtual void StrictTwoWay(StrictTwoWayRequest& request, StrictTwoWayCompleter::Sync& completer
+  virtual void StrictTwoWay(
+      StrictTwoWayCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayFieldsRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>;
   using StrictTwoWayFieldsCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>;
 
   
-  virtual void StrictTwoWayFields(StrictTwoWayFieldsRequest& request, StrictTwoWayFieldsCompleter::Sync& completer
+  virtual void StrictTwoWayFields(
+      StrictTwoWayFieldsCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayUnionRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>;
   using StrictTwoWayUnionCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>;
 
   
-  virtual void StrictTwoWayUnion(StrictTwoWayUnionRequest& request, StrictTwoWayUnionCompleter::Sync& completer
+  virtual void StrictTwoWayUnion(
+      StrictTwoWayUnionCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayTableRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>;
   using StrictTwoWayTableCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>;
 
   
-  virtual void StrictTwoWayTable(StrictTwoWayTableRequest& request, StrictTwoWayTableCompleter::Sync& completer
+  virtual void StrictTwoWayTable(
+      StrictTwoWayTableCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>;
   using StrictTwoWayErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>;
 
   
-  virtual void StrictTwoWayErr(StrictTwoWayErrRequest& request, StrictTwoWayErrCompleter::Sync& completer
+  virtual void StrictTwoWayErr(
+      StrictTwoWayErrCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayFieldsErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>;
   using StrictTwoWayFieldsErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>;
 
   
-  virtual void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequest& request, StrictTwoWayFieldsErrCompleter::Sync& completer
+  virtual void StrictTwoWayFieldsErr(
+      StrictTwoWayFieldsErrCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayUnionErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>;
   using StrictTwoWayUnionErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>;
 
   
-  virtual void StrictTwoWayUnionErr(StrictTwoWayUnionErrRequest& request, StrictTwoWayUnionErrCompleter::Sync& completer
+  virtual void StrictTwoWayUnionErr(
+      StrictTwoWayUnionErrCompleter::Sync& completer
   )= 0;
 
-  using StrictTwoWayTableErrRequest = ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>;
   using StrictTwoWayTableErrCompleter = ::fidl::internal::NaturalCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>;
 
   
-  virtual void StrictTwoWayTableErr(StrictTwoWayTableErrRequest& request, StrictTwoWayTableErrCompleter::Sync& completer
+  virtual void StrictTwoWayTableErr(
+      StrictTwoWayTableErrCompleter::Sync& completer
   )= 0;
 
 

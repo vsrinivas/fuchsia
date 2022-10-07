@@ -93,7 +93,7 @@ class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake>
   }
 
   // fidl::Server<ft::Handshake>
-  void Do(DoRequest& request, DoCompleter::Sync& completer) override { completer.Reply(); }
+  void Do(DoCompleter::Sync& completer) override { completer.Reply(); }
 
   fidl::SharedClient<fdf::Node> node_;
   fidl::SharedClient<fdf::NodeController> controller_;

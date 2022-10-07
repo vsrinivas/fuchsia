@@ -54,29 +54,28 @@ struct {{ .WireMethodTypes }} {
 {{ EnsureNamespace "" }}
 template<>
 struct {{ .NaturalMethodTypes }} {
-  using Completer = fidl::Completer<{{ .NaturalCompleterBase }}>;
+  {{ if and .HasResponse (not .HasRequest) }}
+    {{/* Events */}}
+    {{ if .HasResponsePayload }}
+      using Request = {{ .ResponsePayload }};
+    {{ end }}
+  {{ else }}
+    {{ if .HasRequestPayload }}
+      using Request = {{ .RequestPayload }};
+    {{ end }}
+    {{ if .HasResponsePayload }}
+      using Response = {{ .ResponsePayload }};
+    {{ end }}
+  {{ end }}
+
+  {{ if .HasResponse }}
+    using Completer = fidl::Completer<{{ .NaturalCompleterBase }}>;
+  {{ else }}
+    using Completer = fidl::Completer<>;
+  {{ end }}
 
   using ResultCallback =
       ::fit::callback<void ({{ .NaturalResult }}&)>;
-
-  {{ if .Result }}
-    static constexpr bool kHasDomainError = {{ .Result.HasError }};
-    static constexpr bool kHasFrameworkError = {{ .Result.HasFrameworkError }};
-    {{ if .Result.ValueParameters }}
-      static constexpr bool IsEmptyStructPayload = false;
-    {{ else }}
-      static constexpr bool IsEmptyStructPayload = true;
-    {{ end }}
-  {{ else }}
-    static constexpr bool kHasDomainError = false;
-    static constexpr bool kHasFrameworkError = false;
-  {{ end }}
-
-  {{ if .ResponseArgs }}
-    static constexpr bool IsAbsentBody = false;
-  {{ else }}
-    static constexpr bool IsAbsentBody = true;
-  {{ end }}
 };
 
 {{- end }}

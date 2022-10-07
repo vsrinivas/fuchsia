@@ -140,7 +140,7 @@ void Driver::set_binding(fidl::ServerBindingRef<fdh::Driver> binding) {
   binding_.emplace(std::move(binding));
 }
 
-void Driver::Stop(StopRequest& request, StopCompleter::Sync& completer) { binding_->Unbind(); }
+void Driver::Stop(StopCompleter::Sync& completer) { binding_->Unbind(); }
 
 zx::status<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
                            ::fdf::Dispatcher dispatcher) {

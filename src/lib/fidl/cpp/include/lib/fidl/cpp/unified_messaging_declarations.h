@@ -14,18 +14,6 @@
 // definitions from FIDL protocols in the schema.
 namespace fidl {
 
-// |Request| represents the request of a FIDL method call, using natural
-// types. See |WireRequest| for the equivalent using wire types.
-//
-// When |Method| request has a payload, |Request| inherits from the payload
-// type, exposing the operations of that type.
-//
-// When |Method| request has no payload, those operations will be absent.
-//
-// When |Method| has no request (event), this class will be undefined.
-template <typename Method>
-class Request;
-
 // |Response| represents the response of a FIDL method call, using natural
 // types. See |WireResponse| for the equivalent using wire types.
 //
@@ -92,6 +80,20 @@ class Result;
 
 namespace internal {
 
+// |NaturalMethodTypes| contains information about an interaction:
+//
+// When |FidlMethod| has a request (including events) with a body:
+// - Request: the natural domain object representing the request body.
+//
+// When |FidlMethod| has a response with a body:
+// - Response: the natural domain object representing the response body.
+//
+// When |FidlMethod| is two-way:
+// - Completer:      the completer type used on servers.
+// - ResultCallback: the callback type for the corresponding asynchronous call.
+template <typename FidlMethod>
+struct NaturalMethodTypes;
+
 // |MessageTraits| contains information about a request or response message:
 // |Message| must be either a |fidl::Request<Foo>| or |fidl::Response<Foo>|.
 //
@@ -126,17 +128,6 @@ class NaturalSyncClientImpl;
 // |fidl::internal::NaturalClientBase|.
 template <typename Protocol>
 class NaturalClientImpl;
-
-// |NaturalMethodTypes| gives access to:
-// - |Completer|: the completer type associated with a particular method.
-// - if two-way:
-//     - |ResultCallback|: the client callback taking a |fidl::Result| type.
-//     - |IsAbsentBody|: whether the response has no body.
-//     - |kHasDomainError|: whether the method uses the error syntax.
-//     - if using the error syntax:
-//         - |IsEmptyStructPayload|: whether the success payload is an empty struct.
-template <typename FidlMethod>
-struct NaturalMethodTypes;
 
 // |NaturalEventHandlerInterface| contains handlers for each event inside
 // the protocol |FidlProtocol|.

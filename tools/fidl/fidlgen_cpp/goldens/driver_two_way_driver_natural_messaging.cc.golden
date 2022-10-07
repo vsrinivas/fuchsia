@@ -19,8 +19,7 @@ fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(const ::fidl
   return ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>(
       &client_base(), std::move(_options), &::fidl::internal::DriverTransport::VTable, ::test_drivertwoway::kTwoWay_Add_Ordinal, ::test_drivertwoway::kTwoWay_Add_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_drivertwoway::TwoWay::Add>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
       },
       [arena = std::move(_arena)](
           ::fidl::internal::ThenableBase* base,
@@ -65,10 +64,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_drivertwoway::TwoWay::Add> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_drivertwoway::TwoWay::Add>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_drivertwoway::TwoWay::Add>::Sync completer(txn);
           static_cast<::fdf::Server<::test_drivertwoway::TwoWay>*>(interface)->Add(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

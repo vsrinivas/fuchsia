@@ -132,28 +132,42 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child> 
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetChild> {
+  using Response = ::test_protocolrequest::ParentGetChildResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChild>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::GetChild>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetChildRequest> {
+  using Response = ::test_protocolrequest::ParentGetChildRequestResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChildRequest>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::GetChildRequest>&)>;
+};
 
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::TakeChild> {
+  using Request = ::test_protocolrequest::ParentTakeChildRequest;
 
-  static constexpr bool IsAbsentBody = false;
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::TakeChild>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::TakeChildRequest> {
+  using Request = ::test_protocolrequest::ParentTakeChildRequestRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocolrequest::Parent::TakeChildRequest>&)>;
 };
 
 namespace test_protocolrequest {
@@ -311,72 +325,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocolrequest::Parent>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolrequest::Parent::GetChild> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::Parent::GetChild>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolrequest::Parent::TakeChild> final : public ::test_protocolrequest::ParentTakeChildRequest {
- public:
-  using ::test_protocolrequest::ParentTakeChildRequest::ParentTakeChildRequest;
-  Request(::test_protocolrequest::ParentTakeChildRequest v) : ::test_protocolrequest::ParentTakeChildRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::Parent::TakeChild>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolrequest::ParentTakeChildRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> final : public ::test_protocolrequest::ParentTakeChildRequestRequest {
- public:
-  using ::test_protocolrequest::ParentTakeChildRequestRequest::ParentTakeChildRequestRequest;
-  Request(::test_protocolrequest::ParentTakeChildRequestRequest v) : ::test_protocolrequest::ParentTakeChildRequestRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolrequest::ParentTakeChildRequestRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocolrequest::Parent::GetChild> : public ::fidl::CompleterBase {
  public:
@@ -404,25 +352,27 @@ class ::fidl::Server<::test_protocolrequest::Parent> : public ::fidl::internal::
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocolrequest::Parent;
 
-  using GetChildRequest = ::fidl::Request<::test_protocolrequest::Parent::GetChild>;
   using GetChildCompleter = ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::GetChild>;
 
-  virtual void GetChild(GetChildRequest& request, GetChildCompleter::Sync& completer) = 0;
+  virtual void GetChild(
+      GetChildCompleter::Sync& completer) = 0;
 
-  using GetChildRequestRequest = ::fidl::Request<::test_protocolrequest::Parent::GetChildRequest>;
   using GetChildRequestCompleter = ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::GetChildRequest>;
 
-  virtual void GetChildRequest(GetChildRequestRequest& request, GetChildRequestCompleter::Sync& completer) = 0;
+  virtual void GetChildRequest(
+      GetChildRequestCompleter::Sync& completer) = 0;
 
   using TakeChildRequest = ::fidl::Request<::test_protocolrequest::Parent::TakeChild>;
   using TakeChildCompleter = ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::TakeChild>;
 
-  virtual void TakeChild(TakeChildRequest& request, TakeChildCompleter::Sync& completer) = 0;
+  virtual void TakeChild(TakeChildRequest& request,
+                         TakeChildCompleter::Sync& completer) = 0;
 
   using TakeChildRequestRequest = ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>;
   using TakeChildRequestCompleter = ::fidl::internal::NaturalCompleter<::test_protocolrequest::Parent::TakeChildRequest>;
 
-  virtual void TakeChildRequest(TakeChildRequestRequest& request, TakeChildRequestCompleter::Sync& completer) = 0;
+  virtual void TakeChildRequest(TakeChildRequestRequest& request,
+                                TakeChildRequestCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

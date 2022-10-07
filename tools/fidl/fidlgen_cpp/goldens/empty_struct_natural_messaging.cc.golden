@@ -25,8 +25,7 @@ fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::SendAndRec
   return ::fidl::internal::NaturalThenable<::test_emptystruct::EmptyProtocol::SendAndReceive>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal, ::test_emptystruct::kEmptyProtocol_SendAndReceive_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -42,8 +41,7 @@ fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::SendAndRec
 fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_Send_Ordinal, ::test_emptystruct::kEmptyProtocol_Send_DynamicFlags};
-  _encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_emptystruct::EmptyProtocol::Send>>::IntoDomainObject(request));
+  _encoder.EncodeBody(request);
 
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
@@ -61,8 +59,7 @@ namespace test_emptystruct {
 fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>::SendAndReceive(const ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal, ::test_emptystruct::kEmptyProtocol_SendAndReceive_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_emptystruct::EmptyProtocol::SendAndReceive>(
@@ -73,8 +70,7 @@ fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>::SendAn
 fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>::Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_emptystruct::kEmptyProtocol_Send_Ordinal, ::test_emptystruct::kEmptyProtocol_Send_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_emptystruct::EmptyProtocol::Send>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   msg.Write(_client_end().handle());
   return ::fidl::internal::ToFitxResult(::fidl::Status{msg});
@@ -158,10 +154,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_emptystruct::EmptyProtocol::Send>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_emptystruct::EmptyProtocol::Send>::Sync completer(txn);
           static_cast<::fidl::Server<::test_emptystruct::EmptyProtocol>*>(interface)->Send(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -173,10 +169,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_emptystruct::EmptyProtocol::SendAndReceive>::Sync completer(txn);
           static_cast<::fidl::Server<::test_emptystruct::EmptyProtocol>*>(interface)->SendAndReceive(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

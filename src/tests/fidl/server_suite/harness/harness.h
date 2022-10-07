@@ -37,8 +37,7 @@ namespace server_suite {
 
 class Reporter : public fidl::Server<fidl_serversuite::Reporter> {
  public:
-  void ReceivedOneWayNoPayload(ReceivedOneWayNoPayloadRequest& request,
-                               ReceivedOneWayNoPayloadCompleter::Sync& completer) override;
+  void ReceivedOneWayNoPayload(ReceivedOneWayNoPayloadCompleter::Sync& completer) override;
 
   bool received_one_way_no_payload() const { return received_one_way_no_payload_; }
 
@@ -49,12 +48,10 @@ class Reporter : public fidl::Server<fidl_serversuite::Reporter> {
     return unknown_method_info_;
   }
 
-  void ReceivedStrictOneWay(ReceivedStrictOneWayRequest& request,
-                            ReceivedStrictOneWayCompleter::Sync& completer) override;
+  void ReceivedStrictOneWay(ReceivedStrictOneWayCompleter::Sync& completer) override;
   bool received_strict_one_way() const { return received_strict_one_way_; }
 
-  void ReceivedFlexibleOneWay(ReceivedFlexibleOneWayRequest& request,
-                              ReceivedFlexibleOneWayCompleter::Sync& completer) override;
+  void ReceivedFlexibleOneWay(ReceivedFlexibleOneWayCompleter::Sync& completer) override;
   bool received_flexible_one_way() const { return received_flexible_one_way_; }
 
  private:

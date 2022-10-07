@@ -83,7 +83,7 @@ class Root : public DeviceType, public fdf::Server<fuchsia_compat_runtime::Root>
   void DdkRelease() { delete this; }
 
   // fdf::Server<ft::Root>
-  void GetString(GetStringRequest& request, GetStringCompleter::Sync& completer) override {
+  void GetString(GetStringCompleter::Sync& completer) override {
     char str[100];
     strcpy(str, "hello world!");
     completer.Reply(std::string(str));

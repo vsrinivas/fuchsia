@@ -17,8 +17,7 @@ fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(const ::
   return ::fidl::internal::NaturalThenable<::test_nullable::SimpleProtocol::Add>(
       &client_base(), {}, &::fidl::internal::ChannelTransport::VTable, ::test_nullable::kSimpleProtocol_Add_Ordinal, ::test_nullable::kSimpleProtocol_Add_DynamicFlags,
       [request = request](NaturalMessageEncoder& encoder) mutable {
-        encoder.EncodeBody(
-            ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_nullable::SimpleProtocol::Add>>::IntoDomainObject(request));
+        encoder.EncodeBody(request);
         return ZX_OK;
       },
       [](
@@ -42,8 +41,7 @@ namespace test_nullable {
 fidl::internal::NaturalSyncClientImpl<::test_nullable::SimpleProtocol>::Add(const ::fidl::Request<::test_nullable::SimpleProtocol::Add>& request) {
   ::fidl::internal::NaturalMessageEncoder encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_nullable::kSimpleProtocol_Add_Ordinal, ::test_nullable::kSimpleProtocol_Add_DynamicFlags};
-  encoder.EncodeBody(
-      ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_nullable::SimpleProtocol::Add>>::IntoDomainObject(request));
+  encoder.EncodeBody(request);
   ::fidl::OutgoingMessage msg = encoder.GetMessage();
   ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> response_storage;
   return ::fidl::internal::DecodeResponseAndFoldError<::test_nullable::SimpleProtocol::Add>(
@@ -87,10 +85,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_nullable::SimpleProtocol::Add> request = ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_nullable::SimpleProtocol::Add>>::FromDomainObject(std::move(decoded.value()));
           ::fidl::internal::NaturalCompleter<::test_nullable::SimpleProtocol::Add>::Sync completer(txn);
           static_cast<::fidl::Server<::test_nullable::SimpleProtocol>*>(interface)->Add(
-              request, completer);
+              decoded.value(),
+              completer);
           return ::fidl::Status::Ok();
         },
     },

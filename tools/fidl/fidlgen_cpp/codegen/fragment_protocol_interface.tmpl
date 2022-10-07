@@ -91,12 +91,17 @@ class {{ .NaturalServer }} : public ::fidl::internal::IncomingMessageDispatcher
 
 {{ "" }}
   {{- range .ClientMethods }}
-  using {{ .NaturalRequestAlias.Self }} = {{ .NaturalRequest }};
+    {{- if .HasRequestPayload }}
+      using {{ .NaturalRequestAlias.Self }} = {{ .NaturalRequest }};
+    {{- end }}
   using {{ .NaturalCompleterAlias.Self }} = {{ .NaturalCompleter }};
 
   {{ .Docs }}
   virtual void {{ .Name }}(
-      {{- .NaturalRequestAlias.Self }}& request, {{ .NaturalCompleterArg }}& completer
+      {{- if .HasRequestPayload }}
+        {{- .NaturalRequestAlias.Self }}& request,
+      {{- end }}
+      {{ .NaturalCompleterArg }}& completer
   )
     {{- if .Transitional -}}
       { completer.Close(ZX_ERR_NOT_SUPPORTED); }

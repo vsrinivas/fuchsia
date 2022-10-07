@@ -65,10 +65,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_service::FirstProtocol::MethodOnFirst> request;
           ::fidl::internal::NaturalCompleter<::test_service::FirstProtocol::MethodOnFirst>::Sync completer(txn);
           static_cast<::fidl::Server<::test_service::FirstProtocol>*>(interface)->MethodOnFirst(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -152,10 +152,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> request;
           ::fidl::internal::NaturalCompleter<::test_service::SecondProtocol::MethodOnSecond>::Sync completer(txn);
           static_cast<::fidl::Server<::test_service::SecondProtocol>*>(interface)->MethodOnSecond(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },

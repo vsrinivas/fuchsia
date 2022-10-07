@@ -8,8 +8,7 @@
 
 namespace server_suite {
 
-void Reporter::ReceivedOneWayNoPayload(ReceivedOneWayNoPayloadRequest& request,
-                                       ReceivedOneWayNoPayloadCompleter::Sync& completer) {
+void Reporter::ReceivedOneWayNoPayload(ReceivedOneWayNoPayloadCompleter::Sync& completer) {
   received_one_way_no_payload_ = true;
 }
 
@@ -18,13 +17,11 @@ void Reporter::ReceivedUnknownMethod(ReceivedUnknownMethodRequest& request,
   unknown_method_info_ = std::move(request);
 }
 
-void Reporter::ReceivedStrictOneWay(ReceivedStrictOneWayRequest& request,
-                                    ReceivedStrictOneWayCompleter::Sync& completer) {
+void Reporter::ReceivedStrictOneWay(ReceivedStrictOneWayCompleter::Sync& completer) {
   received_strict_one_way_ = true;
 }
 
-void Reporter::ReceivedFlexibleOneWay(ReceivedFlexibleOneWayRequest& request,
-                                      ReceivedFlexibleOneWayCompleter::Sync& completer) {
+void Reporter::ReceivedFlexibleOneWay(ReceivedFlexibleOneWayCompleter::Sync& completer) {
   received_flexible_one_way_ = true;
 }
 

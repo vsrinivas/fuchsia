@@ -161,13 +161,10 @@ constexpr ::fidl::internal::MethodEntry {{ .NaturalServerDispatcher.NoLeading }}
         if (decoded.is_error()) {
           return decoded.error_value();
         }
-        {{ .NaturalRequest }} request
-        {{- if .HasRequestPayload }}
-            = {{ .NaturalRequestConverter }}::FromDomainObject(std::move(decoded.value()))
-        {{- end }};
         {{ .NaturalCompleter }}::Sync completer(txn);
         static_cast<{{ $.NaturalServer }}*>(interface)->{{ .Name }}(
-            request, completer);
+            {{ if .HasRequestPayload }}decoded.value(),{{ end }}
+            completer);
         return ::fidl::Status::Ok();
       },
     },

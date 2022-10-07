@@ -18,17 +18,14 @@ namespace fidl {
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_anonymous::SomeProtocol::SomeMethod> {
+  using Request = ::test_anonymous::SomeProtocolSomeMethodRequest;
+
+  using Response = ::test_anonymous::SomeProtocolSomeMethodTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod>&)>;
-
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsEmptyStructPayload = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_anonymous {
 __LOCAL extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
@@ -169,24 +166,6 @@ class ::fidl::internal::NaturalEventSender<::test_anonymous::SomeProtocol>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> final : public ::test_anonymous::SomeProtocolSomeMethodRequest {
- public:
-  using ::test_anonymous::SomeProtocolSomeMethodRequest::SomeProtocolSomeMethodRequest;
-  Request(::test_anonymous::SomeProtocolSomeMethodRequest v) : ::test_anonymous::SomeProtocolSomeMethodRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_anonymous::SomeProtocolSomeMethodRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_anonymous::SomeProtocol::SomeMethod> : public ::fidl::CompleterBase {
  public:
@@ -208,7 +187,8 @@ class ::fidl::Server<::test_anonymous::SomeProtocol> : public ::fidl::internal::
   using SomeMethodRequest = ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>;
   using SomeMethodCompleter = ::fidl::internal::NaturalCompleter<::test_anonymous::SomeProtocol::SomeMethod>;
 
-  virtual void SomeMethod(SomeMethodRequest& request, SomeMethodCompleter::Sync& completer) = 0;
+  virtual void SomeMethod(SomeMethodRequest& request,
+                          SomeMethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

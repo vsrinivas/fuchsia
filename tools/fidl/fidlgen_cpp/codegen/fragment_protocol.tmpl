@@ -474,7 +474,7 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 
 
 {{- define "Protocol:NaturalMessagingHeader" }}
-  {{- range .TwoWayMethods }}
+  {{- range .Methods }}
     {{- template "Method:Types:NaturalMessagingHeader" . }}
   {{- end }}
 

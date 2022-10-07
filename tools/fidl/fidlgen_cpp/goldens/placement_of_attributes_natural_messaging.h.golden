@@ -16,6 +16,16 @@
 namespace fidl {
 
 }  // namespace fidl
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_placementofattributes::ExampleProtocol::Method> {
+  using Request = ::test_placementofattributes::ExampleProtocolMethodRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_placementofattributes::ExampleProtocol::Method>&)>;
+};
 namespace test_placementofattributes {
 __LOCAL extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 
@@ -105,24 +115,6 @@ class ::fidl::internal::NaturalEventSender<::test_placementofattributes::Example
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> final : public ::test_placementofattributes::ExampleProtocolMethodRequest {
- public:
-  using ::test_placementofattributes::ExampleProtocolMethodRequest::ExampleProtocolMethodRequest;
-  Request(::test_placementofattributes::ExampleProtocolMethodRequest v) : ::test_placementofattributes::ExampleProtocolMethodRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_placementofattributes::ExampleProtocolMethodRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::Server<::test_placementofattributes::ExampleProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -135,7 +127,8 @@ class ::fidl::Server<::test_placementofattributes::ExampleProtocol> : public ::f
   using MethodRequest = ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>;
   using MethodCompleter = ::fidl::internal::NaturalCompleter<::test_placementofattributes::ExampleProtocol::Method>;
 
-  virtual void Method(MethodRequest& request, MethodCompleter::Sync& completer) = 0;
+  virtual void Method(MethodRequest& request,
+                      MethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

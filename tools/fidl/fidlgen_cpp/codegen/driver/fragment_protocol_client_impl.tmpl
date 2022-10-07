@@ -141,8 +141,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
       &client_base(), std::move(_options), &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }},
       [{{ if .HasRequestPayload }}request = {{ .Request.Forward "request" }}{{ end }}](NaturalMessageEncoder& encoder) mutable {
         {{- if .HasRequestPayload }}
-        encoder.EncodeBody(
-            {{ .NaturalRequestConverter }}::IntoDomainObject({{ .Request.Forward "request" }}));
+        encoder.EncodeBody({{ .Request.Forward "request" }});
         {{- end }}
       },
       [arena = std::move(_arena)] (
@@ -173,8 +172,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
       ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get()),
   };
   {{- if .HasRequestPayload }}
-  _encoder.EncodeBody(
-      {{ .NaturalRequestConverter }}::IntoDomainObject({{ .Request.Forward "request" }}));
+  _encoder.EncodeBody({{ .Request.Forward "request" }});
   {{- end }}
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
   ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);

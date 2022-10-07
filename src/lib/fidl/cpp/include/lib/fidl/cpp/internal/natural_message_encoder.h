@@ -34,11 +34,17 @@ class NaturalMessageEncoder final {
   // Do not move the encoder object until the message is sent.
   template <typename Payload>
   void EncodeBody(Payload&& payload) {
-    using PayloadDecay = std::decay_t<Payload>;
+    using PayloadDecay = std::remove_cv_t<std::decay_t<Payload>>;
+    // When payload is not a resource, |Payload| may be a const reference type,
+    // to optimize away a deep copy. Since non-resource types will never have
+    // handles, the encoder will never mutate |payload|. This const cast is
+    // thus safe.
+    auto* payload_const_casted = const_cast<PayloadDecay*>(&payload);
     body_encoder().Alloc(
         NaturalEncodingInlineSize<PayloadDecay, NaturalCodingConstraintEmpty>(&body_encoder()));
     NaturalCodingTraits<PayloadDecay, NaturalCodingConstraintEmpty>::Encode(
-        &body_encoder(), &payload, sizeof(fidl_message_header_t), kRecursionDepthInitial);
+        &body_encoder(), payload_const_casted, sizeof(fidl_message_header_t),
+        kRecursionDepthInitial);
   }
 
   void Reset(uint64_t ordinal, MessageDynamicFlags dynamic_flags);

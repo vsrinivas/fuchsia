@@ -83,8 +83,7 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
   LoadDriver(std::move(request.start_args()), loop_.dispatcher(), std::move(callback));
 }
 
-void DriverHost::GetProcessKoid(GetProcessKoidRequest& request,
-                                GetProcessKoidCompleter::Sync& completer) {
+void DriverHost::GetProcessKoid(GetProcessKoidCompleter::Sync& completer) {
   zx_info_handle_basic_t info;
   zx_status_t status =
       zx::process::self()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);

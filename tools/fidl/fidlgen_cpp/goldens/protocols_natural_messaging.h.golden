@@ -17,55 +17,79 @@ namespace fidl {
 }  // namespace fidl
 
 template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> {
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>&)>;
+};
+
+template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = true;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> {
+  using Response = ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>&)>;
+};
 
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> {
+  using Request = ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest;
 
-  static constexpr bool IsAbsentBody = false;
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>&)>;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> {
+  using Request = ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = true;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> {
+  using Request = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest;
+
+  using Response = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>&)>;
+};
 
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> {
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>;
 
-  static constexpr bool IsAbsentBody = false;
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> {
+  using Request = ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest;
+
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>&)>;
 };
 
 namespace test_protocols {
@@ -319,105 +343,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::WithAndWithoutReque
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> final : public ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest {
- public:
-  using ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest::WithAndWithoutRequestResponseWithRequestNoResponseRequest;
-  Request(::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest v) : ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final : public ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
- public:
-  using ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
-  Request(::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest v) : ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest {
- public:
-  using ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest::WithAndWithoutRequestResponseWithRequestWithResponseRequest;
-  Request(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest v) : ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> : public ::fidl::CompleterBase {
  public:
@@ -463,35 +388,38 @@ class ::fidl::Server<::test_protocols::WithAndWithoutRequestResponse> : public :
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::WithAndWithoutRequestResponse;
 
-  using NoRequestNoResponseRequest = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>;
   using NoRequestNoResponseCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>;
 
-  virtual void NoRequestNoResponse(NoRequestNoResponseRequest& request, NoRequestNoResponseCompleter::Sync& completer) = 0;
+  virtual void NoRequestNoResponse(
+      NoRequestNoResponseCompleter::Sync& completer) = 0;
 
-  using NoRequestEmptyResponseRequest = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
   using NoRequestEmptyResponseCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
 
-  virtual void NoRequestEmptyResponse(NoRequestEmptyResponseRequest& request, NoRequestEmptyResponseCompleter::Sync& completer) = 0;
+  virtual void NoRequestEmptyResponse(
+      NoRequestEmptyResponseCompleter::Sync& completer) = 0;
 
-  using NoRequestWithResponseRequest = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
   using NoRequestWithResponseCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
 
-  virtual void NoRequestWithResponse(NoRequestWithResponseRequest& request, NoRequestWithResponseCompleter::Sync& completer) = 0;
+  virtual void NoRequestWithResponse(
+      NoRequestWithResponseCompleter::Sync& completer) = 0;
 
   using WithRequestNoResponseRequest = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>;
   using WithRequestNoResponseCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>;
 
-  virtual void WithRequestNoResponse(WithRequestNoResponseRequest& request, WithRequestNoResponseCompleter::Sync& completer) = 0;
+  virtual void WithRequestNoResponse(WithRequestNoResponseRequest& request,
+                                     WithRequestNoResponseCompleter::Sync& completer) = 0;
 
   using WithRequestEmptyResponseRequest = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>;
   using WithRequestEmptyResponseCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>;
 
-  virtual void WithRequestEmptyResponse(WithRequestEmptyResponseRequest& request, WithRequestEmptyResponseCompleter::Sync& completer) = 0;
+  virtual void WithRequestEmptyResponse(WithRequestEmptyResponseRequest& request,
+                                        WithRequestEmptyResponseCompleter::Sync& completer) = 0;
 
   using WithRequestWithResponseRequest = ::fidl::Request<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
   using WithRequestWithResponseCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
 
-  virtual void WithRequestWithResponse(WithRequestWithResponseRequest& request, WithRequestWithResponseCompleter::Sync& completer) = 0;
+  virtual void WithRequestWithResponse(WithRequestWithResponseRequest& request,
+                                       WithRequestWithResponseCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -519,62 +447,42 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithAndWithou
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::ResponseAsStruct> {
+  using Response = ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ResponseAsStruct>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::ResponseAsStruct>&)>;
-
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsEmptyStructPayload = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
+  using Response = ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>&)>;
-
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsEmptyStructPayload = true;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::ErrorAsEnum> {
+  using Response = ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsEnum>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::ErrorAsEnum>&)>;
-
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsEmptyStructPayload = true;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithErrorSyntax::HandleInResult> {
+  using Response = ::test_protocols::WithErrorSyntaxHandleInResultTopResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::HandleInResult>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithErrorSyntax::HandleInResult>&)>;
-
-  static constexpr bool kHasDomainError = true;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsEmptyStructPayload = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 namespace test_protocols {
@@ -870,66 +778,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::WithErrorSyntax>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::ResponseAsStruct> : public ::fidl::CompleterBase {
  public:
@@ -975,25 +823,25 @@ class ::fidl::Server<::test_protocols::WithErrorSyntax> : public ::fidl::interna
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::WithErrorSyntax;
 
-  using ResponseAsStructRequest = ::fidl::Request<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
   using ResponseAsStructCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
 
-  virtual void ResponseAsStruct(ResponseAsStructRequest& request, ResponseAsStructCompleter::Sync& completer) = 0;
+  virtual void ResponseAsStruct(
+      ResponseAsStructCompleter::Sync& completer) = 0;
 
-  using ErrorAsPrimitiveRequest = ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
   using ErrorAsPrimitiveCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
 
-  virtual void ErrorAsPrimitive(ErrorAsPrimitiveRequest& request, ErrorAsPrimitiveCompleter::Sync& completer) = 0;
+  virtual void ErrorAsPrimitive(
+      ErrorAsPrimitiveCompleter::Sync& completer) = 0;
 
-  using ErrorAsEnumRequest = ::fidl::Request<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
   using ErrorAsEnumCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
 
-  virtual void ErrorAsEnum(ErrorAsEnumRequest& request, ErrorAsEnumCompleter::Sync& completer) = 0;
+  virtual void ErrorAsEnum(
+      ErrorAsEnumCompleter::Sync& completer) = 0;
 
-  using HandleInResultRequest = ::fidl::Request<::test_protocols::WithErrorSyntax::HandleInResult>;
   using HandleInResultCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithErrorSyntax::HandleInResult>;
 
-  virtual void HandleInResult(HandleInResultRequest& request, HandleInResultCompleter::Sync& completer) = 0;
+  virtual void HandleInResult(
+      HandleInResultCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -1020,42 +868,57 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithErrorSynt
 #endif  // __Fuchsia__
 
 template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::MethodA> {
+  using Request = ::test_protocols::ChannelProtocolMethodARequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::MethodA>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::EventA> {
+  using Request = ::test_protocols::ChannelProtocolEventARequest;
+
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::EventA>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::EventA>&)>;
+};
+
+template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::MethodB> {
+  using Request = ::test_protocols::ChannelProtocolMethodBRequest;
+
+  using Response = ::test_protocols::ChannelProtocolMethodBResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::MethodB>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::MethodB>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::TakeHandle> {
+  using Request = ::test_protocols::ChannelProtocolTakeHandleRequest;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::TakeHandle>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = true;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ChannelProtocol::MutateSocket> {
+  using Request = ::test_protocols::ChannelProtocolMutateSocketRequest;
+
+  using Response = ::test_protocols::ChannelProtocolMutateSocketResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::MutateSocket>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
@@ -1263,78 +1126,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::ChannelProtocol::MethodA> final : public ::test_protocols::ChannelProtocolMethodARequest {
- public:
-  using ::test_protocols::ChannelProtocolMethodARequest::ChannelProtocolMethodARequest;
-  Request(::test_protocols::ChannelProtocolMethodARequest v) : ::test_protocols::ChannelProtocolMethodARequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::ChannelProtocol::MethodA>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ChannelProtocolMethodARequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::ChannelProtocol::MethodB> final : public ::test_protocols::ChannelProtocolMethodBRequest {
- public:
-  using ::test_protocols::ChannelProtocolMethodBRequest::ChannelProtocolMethodBRequest;
-  Request(::test_protocols::ChannelProtocolMethodBRequest v) : ::test_protocols::ChannelProtocolMethodBRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::ChannelProtocol::MethodB>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ChannelProtocolMethodBRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle> final : public ::test_protocols::ChannelProtocolTakeHandleRequest {
- public:
-  using ::test_protocols::ChannelProtocolTakeHandleRequest::ChannelProtocolTakeHandleRequest;
-  Request(::test_protocols::ChannelProtocolTakeHandleRequest v) : ::test_protocols::ChannelProtocolTakeHandleRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ChannelProtocolTakeHandleRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket> final : public ::test_protocols::ChannelProtocolMutateSocketRequest {
- public:
-  using ::test_protocols::ChannelProtocolMutateSocketRequest::ChannelProtocolMutateSocketRequest;
-  Request(::test_protocols::ChannelProtocolMutateSocketRequest v) : ::test_protocols::ChannelProtocolMutateSocketRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ChannelProtocolMutateSocketRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::MethodB> : public ::fidl::CompleterBase {
  public:
@@ -1374,22 +1165,26 @@ class ::fidl::Server<::test_protocols::ChannelProtocol> : public ::fidl::interna
   using MethodARequest = ::fidl::Request<::test_protocols::ChannelProtocol::MethodA>;
   using MethodACompleter = ::fidl::internal::NaturalCompleter<::test_protocols::ChannelProtocol::MethodA>;
 
-  virtual void MethodA(MethodARequest& request, MethodACompleter::Sync& completer) = 0;
+  virtual void MethodA(MethodARequest& request,
+                       MethodACompleter::Sync& completer) = 0;
 
   using MethodBRequest = ::fidl::Request<::test_protocols::ChannelProtocol::MethodB>;
   using MethodBCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::ChannelProtocol::MethodB>;
 
-  virtual void MethodB(MethodBRequest& request, MethodBCompleter::Sync& completer) = 0;
+  virtual void MethodB(MethodBRequest& request,
+                       MethodBCompleter::Sync& completer) = 0;
 
   using TakeHandleRequest = ::fidl::Request<::test_protocols::ChannelProtocol::TakeHandle>;
   using TakeHandleCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::ChannelProtocol::TakeHandle>;
 
-  virtual void TakeHandle(TakeHandleRequest& request, TakeHandleCompleter::Sync& completer) = 0;
+  virtual void TakeHandle(TakeHandleRequest& request,
+                          TakeHandleCompleter::Sync& completer) = 0;
 
   using MutateSocketRequest = ::fidl::Request<::test_protocols::ChannelProtocol::MutateSocket>;
   using MutateSocketCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::ChannelProtocol::MutateSocket>;
 
-  virtual void MutateSocket(MutateSocketRequest& request, MutateSocketCompleter::Sync& completer) = 0;
+  virtual void MutateSocket(MutateSocketRequest& request,
+                            MutateSocketCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -1417,15 +1212,34 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::ChannelProtoc
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::Request> {
+  using Request = ::test_protocols::TransitionalRequestRequest;
+
+  using Response = ::test_protocols::TransitionalRequestResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Request>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::Transitional::Request>&)>;
+};
 
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::OneWay> {
+  using Request = ::test_protocols::TransitionalOneWayRequest;
 
-  static constexpr bool IsAbsentBody = false;
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::Transitional::OneWay>&)>;
+};
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::Event> {
+  using Request = ::test_protocols::TransitionalEventRequest;
+
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Event>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::Transitional::Event>&)>;
 };
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
@@ -1577,42 +1391,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::Transitional>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::Transitional::Request> final : public ::test_protocols::TransitionalRequestRequest {
- public:
-  using ::test_protocols::TransitionalRequestRequest::TransitionalRequestRequest;
-  Request(::test_protocols::TransitionalRequestRequest v) : ::test_protocols::TransitionalRequestRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::Transitional::Request>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::TransitionalRequestRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::Transitional::OneWay> final : public ::test_protocols::TransitionalOneWayRequest {
- public:
-  using ::test_protocols::TransitionalOneWayRequest::TransitionalOneWayRequest;
-  Request(::test_protocols::TransitionalOneWayRequest v) : ::test_protocols::TransitionalOneWayRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::Transitional::OneWay>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::TransitionalOneWayRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Request> : public ::fidl::CompleterBase {
  public:
@@ -1634,12 +1412,14 @@ class ::fidl::Server<::test_protocols::Transitional> : public ::fidl::internal::
   using RequestRequest = ::fidl::Request<::test_protocols::Transitional::Request>;
   using RequestCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::Transitional::Request>;
 
-  virtual void Request(RequestRequest& request, RequestCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  virtual void Request(RequestRequest& request,
+                       RequestCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
   using OneWayRequest = ::fidl::Request<::test_protocols::Transitional::OneWay>;
   using OneWayCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::Transitional::OneWay>;
 
-  virtual void OneWay(OneWayRequest& request, OneWayCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  virtual void OneWay(OneWayRequest& request,
+                      OneWayCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
  private:
   void dispatch_message(
@@ -1664,6 +1444,14 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional>
 };
 
 #endif  // __Fuchsia__
+
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::DiscoverableProtocol::Method> {
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::DiscoverableProtocol::Method>&)>;
+};
 
 #ifdef __Fuchsia__
 
@@ -1747,21 +1535,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::DiscoverableProtoco
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::DiscoverableProtocol::Method> final {
- public:
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::DiscoverableProtocol::Method>> final {
- public:
-  static constexpr bool kHasPayload = false;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::Server<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -1771,10 +1544,10 @@ class ::fidl::Server<::test_protocols::DiscoverableProtocol> : public ::fidl::in
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::test_protocols::DiscoverableProtocol;
 
-  using MethodRequest = ::fidl::Request<::test_protocols::DiscoverableProtocol::Method>;
   using MethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::DiscoverableProtocol::Method>;
 
-  virtual void Method(MethodRequest& request, MethodCompleter::Sync& completer) = 0;
+  virtual void Method(
+      MethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -1913,16 +1686,35 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::AnotherDiscov
 #endif  // __Fuchsia__
 
 template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtocol::NoResponseMethod> {
+  using Request = ::test_protocols::HandleRightsProtocolNoResponseMethodRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::HandleRightsProtocol::NoResponseMethod>&)>;
+};
+
+template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtocol::ResponseMethod> {
+  using Request = ::test_protocols::HandleRightsProtocolResponseMethodRequest;
+
+  using Response = ::test_protocols::HandleRightsProtocolResponseMethodResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod>&)>;
+};
 
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::HandleRightsProtocol::AnEvent> {
+  using Request = ::test_protocols::HandleRightsProtocolAnEventRequest;
 
-  static constexpr bool IsAbsentBody = false;
+  using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::AnEvent>>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::HandleRightsProtocol::AnEvent>&)>;
 };
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
@@ -2073,42 +1865,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::HandleRightsProtoco
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod> final : public ::test_protocols::HandleRightsProtocolNoResponseMethodRequest {
- public:
-  using ::test_protocols::HandleRightsProtocolNoResponseMethodRequest::HandleRightsProtocolNoResponseMethodRequest;
-  Request(::test_protocols::HandleRightsProtocolNoResponseMethodRequest v) : ::test_protocols::HandleRightsProtocolNoResponseMethodRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::HandleRightsProtocolNoResponseMethodRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::HandleRightsProtocolResponseMethodRequest {
- public:
-  using ::test_protocols::HandleRightsProtocolResponseMethodRequest::HandleRightsProtocolResponseMethodRequest;
-  Request(::test_protocols::HandleRightsProtocolResponseMethodRequest v) : ::test_protocols::HandleRightsProtocolResponseMethodRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::HandleRightsProtocolResponseMethodRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod> : public ::fidl::CompleterBase {
  public:
@@ -2130,12 +1886,14 @@ class ::fidl::Server<::test_protocols::HandleRightsProtocol> : public ::fidl::in
   using NoResponseMethodRequest = ::fidl::Request<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
   using NoResponseMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
 
-  virtual void NoResponseMethod(NoResponseMethodRequest& request, NoResponseMethodCompleter::Sync& completer) = 0;
+  virtual void NoResponseMethod(NoResponseMethodRequest& request,
+                                NoResponseMethodCompleter::Sync& completer) = 0;
 
   using ResponseMethodRequest = ::fidl::Request<::test_protocols::HandleRightsProtocol::ResponseMethod>;
   using ResponseMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::HandleRightsProtocol::ResponseMethod>;
 
-  virtual void ResponseMethod(ResponseMethodRequest& request, ResponseMethodCompleter::Sync& completer) = 0;
+  virtual void ResponseMethod(ResponseMethodRequest& request,
+                              ResponseMethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -2163,41 +1921,38 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::HandleRightsP
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::ClientEnds> {
+  using Request = ::test_protocols::WithProtocolEndsClientEndsRequest;
+
+  using Response = ::test_protocols::WithProtocolEndsClientEndsResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::ServerEnds> {
+  using Request = ::test_protocols::WithProtocolEndsServerEndsRequest;
+
+  using Response = ::test_protocols::WithProtocolEndsServerEndsResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::StructContainingEnds> {
+  using Request = ::test_protocols::WithProtocolEndsStructContainingEndsRequest;
+
+  using Response = ::test_protocols::WithProtocolEndsStructContainingEndsResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::StructContainingEnds>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
@@ -2377,60 +2132,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::WithProtocolEnds>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::WithProtocolEndsClientEndsRequest {
- public:
-  using ::test_protocols::WithProtocolEndsClientEndsRequest::WithProtocolEndsClientEndsRequest;
-  Request(::test_protocols::WithProtocolEndsClientEndsRequest v) : ::test_protocols::WithProtocolEndsClientEndsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsClientEndsRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::WithProtocolEndsServerEndsRequest {
- public:
-  using ::test_protocols::WithProtocolEndsServerEndsRequest::WithProtocolEndsServerEndsRequest;
-  Request(::test_protocols::WithProtocolEndsServerEndsRequest v) : ::test_protocols::WithProtocolEndsServerEndsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsServerEndsRequest;
-};
-
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::WithProtocolEndsStructContainingEndsRequest {
- public:
-  using ::test_protocols::WithProtocolEndsStructContainingEndsRequest::WithProtocolEndsStructContainingEndsRequest;
-  Request(::test_protocols::WithProtocolEndsStructContainingEndsRequest v) : ::test_protocols::WithProtocolEndsStructContainingEndsRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsStructContainingEndsRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds> : public ::fidl::CompleterBase {
  public:
@@ -2470,17 +2171,20 @@ class ::fidl::Server<::test_protocols::WithProtocolEnds> : public ::fidl::intern
   using ClientEndsRequest = ::fidl::Request<::test_protocols::WithProtocolEnds::ClientEnds>;
   using ClientEndsCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::ClientEnds>;
 
-  virtual void ClientEnds(ClientEndsRequest& request, ClientEndsCompleter::Sync& completer) = 0;
+  virtual void ClientEnds(ClientEndsRequest& request,
+                          ClientEndsCompleter::Sync& completer) = 0;
 
   using ServerEndsRequest = ::fidl::Request<::test_protocols::WithProtocolEnds::ServerEnds>;
   using ServerEndsCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::ServerEnds>;
 
-  virtual void ServerEnds(ServerEndsRequest& request, ServerEndsCompleter::Sync& completer) = 0;
+  virtual void ServerEnds(ServerEndsRequest& request,
+                          ServerEndsCompleter::Sync& completer) = 0;
 
   using StructContainingEndsRequest = ::fidl::Request<::test_protocols::WithProtocolEnds::StructContainingEnds>;
   using StructContainingEndsCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::WithProtocolEnds::StructContainingEnds>;
 
-  virtual void StructContainingEnds(StructContainingEndsRequest& request, StructContainingEndsCompleter::Sync& completer) = 0;
+  virtual void StructContainingEnds(StructContainingEndsRequest& request,
+                                    StructContainingEndsCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -2506,6 +2210,15 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolE
 
 #endif  // __Fuchsia__
 
+template <>
+struct ::fidl::internal::NaturalMethodTypes<::test_protocols::ManyParameters::Fifteen> {
+  using Request = ::test_protocols::ManyParametersFifteenRequest;
+
+  using Completer = fidl::Completer<>;
+
+  using ResultCallback =
+      ::fit::callback<void(::fidl::Result<::test_protocols::ManyParameters::Fifteen>&)>;
+};
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 
@@ -2595,24 +2308,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::ManyParameters>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::ManyParameters::Fifteen> final : public ::test_protocols::ManyParametersFifteenRequest {
- public:
-  using ::test_protocols::ManyParametersFifteenRequest::ManyParametersFifteenRequest;
-  Request(::test_protocols::ManyParametersFifteenRequest v) : ::test_protocols::ManyParametersFifteenRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::ManyParameters::Fifteen>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ManyParametersFifteenRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::Server<::test_protocols::ManyParameters> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -2625,7 +2320,8 @@ class ::fidl::Server<::test_protocols::ManyParameters> : public ::fidl::internal
   using FifteenRequest = ::fidl::Request<::test_protocols::ManyParameters::Fifteen>;
   using FifteenCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::ManyParameters::Fifteen>;
 
-  virtual void Fifteen(FifteenRequest& request, FifteenCompleter::Sync& completer) = 0;
+  virtual void Fifteen(FifteenRequest& request,
+                       FifteenCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -2653,15 +2349,14 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::ManyParameter
 
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocols::MethodWithUnion::UnionMethod> {
+  using Request = ::test_protocols::MethodWithUnionUnionMethodRequest;
+
+  using Response = ::test_protocols::MethodWithUnionUnionMethodResponse;
+
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod>>;
 
   using ResultCallback =
       ::fit::callback<void(::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod>&)>;
-
-  static constexpr bool kHasDomainError = false;
-  static constexpr bool kHasFrameworkError = false;
-
-  static constexpr bool IsAbsentBody = false;
 };
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
@@ -2779,24 +2474,6 @@ class ::fidl::internal::NaturalEventSender<::test_protocols::MethodWithUnion>
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodRequest {
- public:
-  using ::test_protocols::MethodWithUnionUnionMethodRequest::MethodWithUnionUnionMethodRequest;
-  Request(::test_protocols::MethodWithUnionUnionMethodRequest v) : ::test_protocols::MethodWithUnionUnionMethodRequest(std::move(v)) {}
-};
-
-template <>
-struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>> final {
- public:
-  static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::MethodWithUnionUnionMethodRequest;
-};
-
-#endif  // __Fuchsia__
-
 template <>
 class ::fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::UnionMethod> : public ::fidl::CompleterBase {
  public:
@@ -2818,7 +2495,8 @@ class ::fidl::Server<::test_protocols::MethodWithUnion> : public ::fidl::interna
   using UnionMethodRequest = ::fidl::Request<::test_protocols::MethodWithUnion::UnionMethod>;
   using UnionMethodCompleter = ::fidl::internal::NaturalCompleter<::test_protocols::MethodWithUnion::UnionMethod>;
 
-  virtual void UnionMethod(UnionMethodRequest& request, UnionMethodCompleter::Sync& completer) = 0;
+  virtual void UnionMethod(UnionMethodRequest& request,
+                           UnionMethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

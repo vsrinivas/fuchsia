@@ -83,10 +83,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
           if (decoded.is_error()) {
             return decoded.error_value();
           }
-          ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo> request;
           ::fidl::internal::NaturalCompleter<::test_transitivedependenciescompose::Top::GetFoo>::Sync completer(txn);
           static_cast<::fidl::Server<::test_transitivedependenciescompose::Top>*>(interface)->GetFoo(
-              request, completer);
+
+              completer);
           return ::fidl::Status::Ok();
         },
     },
