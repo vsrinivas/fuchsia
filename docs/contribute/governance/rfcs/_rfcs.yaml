@@ -2510,3 +2510,16 @@
   reviewers: ['surajmalhotra@google.com', 'curtisgalloway@google.com', 'gkalsi@google.com', 'bradenkell@google.com', 'cja@google.com', 'dpursell@google.com']
   submitted: '2022-08-03'
   reviewed: '2022-10-01'
+
+- name: 'RFC-0193'
+  title: 'Supported C++ Versions'
+  short_description: 'Drop C++14 support from the SDK and clarify how support for C++ versions will be decided and supported in the future.'
+  authors: ['ianloic@google.com']
+  file: '0193_supported_c++_versions.md'
+  area: ['Build', 'Developer', 'Toolchain']
+  issue: ['']
+  gerrit_change_id: ['705630']
+  status: 'Accepted'
+  reviewers: ['johngro@google.com', 'dschuyler@google.com', 'abarth@google.com']
+  submitted: '2022-07-29'
+  reviewed: '2022-10-03'

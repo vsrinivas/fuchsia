@@ -400,3 +400,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0191_fuchsia-on-gce_as_a_supported_system_configuration.md
   - title: "RFC-0192: Device Trees on Fuchsia"
     path: /docs/contribute/governance/rfcs/0192_device_trees_on_fuchsia.md
+  - title: "RFC-0193: Supported C++ Versions"
+    path: /docs/contribute/governance/rfcs/0193_supported_c++_versions.md
