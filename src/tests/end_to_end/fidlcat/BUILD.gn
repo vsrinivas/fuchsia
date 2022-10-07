@@ -4,6 +4,7 @@
 
 import("//build/dart/test.gni")
 import("//build/fidl/fidl.gni")
+import("//build/fidl/toolchain.gni")
 import("//build/host.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
@@ -107,7 +108,7 @@ if (is_host) {
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
     deps = [
-      ":echo",
+      ":echo($fidl_toolchain)",
       ":echo_client_sym",
       "//sdk/fidl/fuchsia.io($fidl_toolchain)",
       "//sdk/fidl/fuchsia.mem($fidl_toolchain)",
