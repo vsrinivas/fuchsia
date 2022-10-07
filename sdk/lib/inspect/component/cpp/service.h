@@ -16,6 +16,14 @@
 
 namespace inspect {
 
+// TreeServer is an implementation of the fuchsia.inspect.Tree protocol.
+//
+// Generally, it is not necessary to use this directly. See `inspect::ComponentInspector`.
+//
+// This class can be used directly if the client wishes to manage protocol registration
+// details manually.
+//
+// For an example of usage, see the constructor for `inspect::ComponentInspector`.
 class TreeServer final : public fidl::WireServer<fuchsia_inspect::Tree> {
  public:
   // Starts a new server. The implementation deletes itself during teardown after an unbind.
@@ -38,16 +46,16 @@ class TreeServer final : public fidl::WireServer<fuchsia_inspect::Tree> {
 
  private:
   TreeServer(Inspector inspector, TreeHandlerSettings settings, async_dispatcher_t* disp)
-      : settings_(settings), inspector_(inspector), executor_(disp) {}
+      : executor_(disp), settings_(settings), inspector_(std::move(inspector)) {}
   TreeServer(const TreeServer&) = delete;
   TreeServer(TreeServer&&) = delete;
   TreeServer& operator=(TreeServer&&) = delete;
   TreeServer& operator=(const TreeServer&) = delete;
 
-  cpp17::optional<fidl::ServerBindingRef<fuchsia_inspect::Tree>> binding_;
+  async::Executor executor_;
   TreeHandlerSettings settings_;
   Inspector inspector_;
-  async::Executor executor_;
+  cpp17::optional<fidl::ServerBindingRef<fuchsia_inspect::Tree>> binding_;
 };
 
 }  // namespace inspect

@@ -12,9 +12,43 @@
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
 namespace inspect {
+// ComponentInspector is a component-wide instance of an Inspector that
+// serves its Inspect data via the fuchsia.inspect.Tree protocol.
+//
+// Example:
+//
+// ```
+// #include <lib/async-loop/cpp/loop.h>
+// #include <lib/async-loop/default.h>
+// #include <lib/inspect/component/cpp/component.h>
+// #include "lib/sys/component/cpp/outgoing_directory.h"
+//
+// int main() {
+//   using inspect::ComponentInspector;
+//
+//   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+//   auto* dispatcher = loop.dispatcher();
+//   auto out = component::OutgoingDirectory::Create(dispatcher);
+//   auto inspector = ComponentInspector(out, dispatcher);
+//
+//   inspector.root().RecordInt("val1", 1);
+//
+//   if (out.ServeFromStartupInfo().is_error()) {
+//     return -1;
+//   }
+//
+//   inspector.Health().Ok();
+//
+//   loop.Run();
+//   return 0;
+// }
+// ```
 class ComponentInspector final {
  public:
-  // Construct a ComponentInspector. Note that the OutgoingDirectory is not served automatically.
+  // Construct a ComponentInspector a component-wide Inspector and host it on the given
+  // outgoing directory.
+  //
+  // Note that it is the caller's responsibility to ensure the outgoing directory is served.
   explicit ComponentInspector(component::OutgoingDirectory& out, async_dispatcher_t* dispatcher,
                               Inspector inspector = {}, TreeHandlerSettings settings = {});
 
@@ -29,12 +63,6 @@ class ComponentInspector final {
   // Gets the NodeHealth for this component.
   // This method is not thread safe.
   NodeHealth& Health();
-
-  // Emplace a value in the wrapped Inspector.
-  template <typename T>
-  void emplace(T value) {
-    inspector_.emplace(std::move(value));
-  }
 
  private:
   ComponentInspector() = delete;

@@ -5,7 +5,7 @@
 import("//build/cpp/sdk_source_set.gni")
 
 sdk_source_set("inspect_component_cpp") {
-  category = "internal"
+  category = "experimental"
 
   sdk_name = "inspect_component_cpp"
 
@@ -30,6 +30,8 @@ sdk_source_set("inspect_component_cpp") {
   ]
 
   public_configs = [ "//sdk/config" ]
+
+  data_deps = [ "//sdk/lib/inspect:client_includes" ]
 }
 
 group("tests") {

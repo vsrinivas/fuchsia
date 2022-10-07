@@ -62,8 +62,8 @@ void TreeServer::StartSelfManagedServer(Inspector inspector, TreeHandlerSettings
                                         fidl::ServerEnd<fuchsia_inspect::Tree>&& request) {
   ZX_ASSERT(dispatcher);
 
-  auto impl =
-      std::unique_ptr<TreeServer>(new TreeServer(inspector, std::move(settings), dispatcher));
+  auto impl = std::unique_ptr<TreeServer>(
+      new TreeServer(std::move(inspector), std::move(settings), dispatcher));
 
   auto* impl_ptr = impl.get();
   auto binding_ref = fidl::BindServer(dispatcher, std::move(request), std::move(impl), nullptr);

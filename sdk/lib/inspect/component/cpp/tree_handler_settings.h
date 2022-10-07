@@ -9,15 +9,36 @@
 
 namespace inspect {
 
-// TreeServerSendPreference describes how the VMO should be served.
+// TreeServerSendPreference describes how the Inspect VMO should be served.
+//
+// The server has a primary behavior and a failure behavior. These describe the way that the
+// Inspector's VMO handle will be duplicated. The options in general are:
+// - Frozen: this is copy-on-write.
+// - Live: updates to the server side VMO propagate to the client. The client is read-only.
+// - DeepCopy: completely copies the VMO data into a new VMO.
+//
+// The primary behavior is always configurable. By default, the primary behavior is Frozen.
+//
+// The failure behavior is configurable when the primary behavior is Frozen. In that case,
+// the failure behavior can be set to either Live or DeepCopy. The default is Live.
+//
+// The ultimate fallback behavior is always to send a Live VMO.
 class TreeServerSendPreference {
  public:
   // Default behavior is to send a Frozen VMO; on failure, it will send a Live VMO.
   TreeServerSendPreference() = default;
 
+  // Defines the behavior of the VMO sent over this service.
   enum class Type {
+
+    // The VMO is copy-on-write.
     Frozen,
+
+    // The VMO is a live reference to the original. Updates to the server side
+    // affect the client side.
     Live,
+
+    // The VMO is fully copied before being sent.
     DeepCopy,
   };
 
