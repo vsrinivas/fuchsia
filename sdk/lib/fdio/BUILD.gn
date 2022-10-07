@@ -121,7 +121,6 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//sdk/lib/stdcompat",
       "//sdk/lib/zxio",
       "//sdk/lib/zxio:inception",
-      "//src/connectivity/network/netstack/udp_serde",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/zircon-internal",
       "//zircon/system/ulib/zx",

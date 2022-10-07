@@ -12,7 +12,6 @@
 #include <lib/zxio/cpp/cmsg.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/socket_address.h>
-#include <lib/zxio/cpp/transitional.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
 #include <netinet/icmp6.h>
@@ -28,6 +27,7 @@
 #include <safemath/safe_conversions.h>
 
 #include "sdk/lib/zxio/private.h"
+#include "src/connectivity/network/netstack/udp_serde/udp_serde.h"
 
 namespace fio = fuchsia_io;
 namespace fsocket = fuchsia_posix_socket;
@@ -50,6 +50,40 @@ uint16_t fidl_protoassoc_to_protocol(
       return ETH_P_ALL;
     case fpacketsocket::wire::ProtocolAssociation::Tag::kSpecified:
       return protocol.specified();
+  }
+}
+
+socklen_t fidl_to_sockaddr(const fuchsia_net::wire::SocketAddress& fidl, void* addr,
+                           socklen_t addr_len) {
+  switch (fidl.Which()) {
+    case fuchsia_net::wire::SocketAddress::Tag::kIpv4: {
+      const auto& ipv4 = fidl.ipv4();
+      struct sockaddr_in tmp = {
+          .sin_family = AF_INET,
+          .sin_port = htons(ipv4.port),
+      };
+      static_assert(sizeof(tmp.sin_addr.s_addr) == sizeof(ipv4.address.addr),
+                    "size of IPv4 addresses should be the same");
+      memcpy(&tmp.sin_addr.s_addr, ipv4.address.addr.data(), sizeof(ipv4.address.addr));
+      // Copy truncated address.
+      memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
+      return sizeof(tmp);
+    }
+    case fuchsia_net::wire::SocketAddress::Tag::kIpv6: {
+      const auto& ipv6 = fidl.ipv6();
+      struct sockaddr_in6 tmp = {
+          .sin6_family = AF_INET6,
+          .sin6_port = htons(ipv6.port),
+          .sin6_scope_id = static_cast<uint32_t>(ipv6.zone_index),
+      };
+      static_assert(std::size(tmp.sin6_addr.s6_addr) == decltype(ipv6.address.addr)::size(),
+                    "size of IPv6 addresses should be the same");
+      std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(),
+                std::begin(tmp.sin6_addr.s6_addr));
+      // Copy truncated address.
+      memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
+      return sizeof(tmp);
+    }
   }
 }
 
@@ -838,7 +872,7 @@ struct network_socket : public base_socket<T> {
     }
     *out_code = 0;
     auto const& out = result.value()->addr;
-    *addrlen = zxio_fidl_to_sockaddr(out, addr, *addrlen);
+    *addrlen = fidl_to_sockaddr(out, addr, *addrlen);
     return ZX_OK;
   }
 
@@ -1280,7 +1314,7 @@ void recvmsg_populate_socketaddress(const fnet::wire::SocketAddress& fidl, void*
     return;
   }
 
-  addr_len = zxio_fidl_to_sockaddr(fidl, addr, addr_len);
+  addr_len = fidl_to_sockaddr(fidl, addr, addr_len);
 }
 
 uint16_t fidl_hwtype_to_arphrd(const fpacketsocket::wire::HardwareType type) {
@@ -1383,9 +1417,7 @@ struct PacketSocket {
   }
 };
 
-}  // namespace
-
-std::optional<size_t> zxio_total_iov_len(const struct msghdr& msg) {
+std::optional<size_t> total_iov_len(const struct msghdr& msg) {
   size_t total = 0;
   for (int i = 0; i < msg.msg_iovlen; ++i) {
     const iovec& iov = msg.msg_iov[i];
@@ -1397,8 +1429,8 @@ std::optional<size_t> zxio_total_iov_len(const struct msghdr& msg) {
   return total;
 }
 
-size_t zxio_set_trunc_flags_and_return_out_actual(struct msghdr& msg, size_t written,
-                                                  size_t truncated, int flags) {
+size_t set_trunc_flags_and_return_out_actual(struct msghdr& msg, size_t written, size_t truncated,
+                                             int flags) {
   if (truncated != 0) {
     msg.msg_flags |= MSG_TRUNC;
   } else {
@@ -1409,8 +1441,6 @@ size_t zxio_set_trunc_flags_and_return_out_actual(struct msghdr& msg, size_t wri
   }
   return written;
 }
-
-namespace {
 
 template <typename R, typename = int>
 struct FitResultHasValue : std::false_type {};
@@ -1474,8 +1504,8 @@ struct socket_with_event {
           return ZX_OK;
         }
       }
-      *out_actual = zxio_set_trunc_flags_and_return_out_actual(*msg, out.count() - remaining,
-                                                               result.value()->truncated, flags);
+      *out_actual = set_trunc_flags_and_return_out_actual(*msg, out.count() - remaining,
+                                                          result.value()->truncated, flags);
     }
 
     if (want_cmsg) {
@@ -1510,7 +1540,7 @@ struct socket_with_event {
       }
     }
 
-    std::optional opt_total = zxio_total_iov_len(msghdr_ref);
+    std::optional opt_total = total_iov_len(*msg);
     if (!opt_total.has_value()) {
       *out_code = EFAULT;
       return ZX_OK;
@@ -1699,6 +1729,381 @@ static zxio_datagram_socket_t& zxio_datagram_socket(zxio_t* io) {
   return *reinterpret_cast<zxio_datagram_socket_t*>(io);
 }
 
+namespace {
+
+template <typename Client, typename = std::enable_if_t<std::is_same_v<
+                               Client, fidl::WireSyncClient<fsocket::DatagramSocket>>>>
+class socket_with_zx_socket {
+ public:
+  explicit socket_with_zx_socket(Client& client) : client_(client) {}
+
+ protected:
+  Client& client() { return client_; }
+
+  virtual ErrOrOutCode GetError() = 0;
+
+  std::optional<ErrOrOutCode> GetZxSocketWriteError(zx_status_t status) {
+    switch (status) {
+      case ZX_OK:
+        return std::nullopt;
+      case ZX_ERR_INVALID_ARGS:
+        return zx::ok(static_cast<int16_t>(EFAULT));
+      case ZX_ERR_BAD_STATE:
+        __FALLTHROUGH;
+      case ZX_ERR_PEER_CLOSED: {
+        zx::status err = GetError();
+        if (err.is_error()) {
+          return zx::error(err.status_value());
+        }
+        if (int value = err.value(); value != 0) {
+          return zx::ok(static_cast<int16_t>(value));
+        }
+        // Error was consumed.
+        return zx::ok(static_cast<int16_t>(EPIPE));
+      }
+      default:
+        return zx::error(status);
+    }
+  }
+
+  virtual std::optional<ErrOrOutCode> GetZxSocketReadError(zx_status_t status) {
+    switch (status) {
+      case ZX_OK:
+        return std::nullopt;
+      case ZX_ERR_INVALID_ARGS:
+        return zx::ok(static_cast<int16_t>(EFAULT));
+      case ZX_ERR_BAD_STATE:
+        __FALLTHROUGH;
+      case ZX_ERR_PEER_CLOSED: {
+        zx::status err = GetError();
+        if (err.is_error()) {
+          return zx::error(err.status_value());
+        }
+        return zx::ok(static_cast<int16_t>(err.value()));
+      }
+      default:
+        return zx::error(status);
+    }
+  }
+
+ private:
+  Client& client_;
+};
+
+struct datagram_socket
+    : public socket_with_zx_socket<fidl::WireSyncClient<fsocket::DatagramSocket>> {
+ public:
+  explicit datagram_socket(zxio_datagram_socket_t& datagram_socket)
+      : socket_with_zx_socket(datagram_socket.client), datagram_socket_(datagram_socket) {}
+  static constexpr zx_signals_t kSignalError = ZX_USER_SIGNAL_2;
+
+  std::optional<ErrOrOutCode> GetZxSocketReadError(zx_status_t status) override {
+    switch (status) {
+      case ZX_ERR_BAD_STATE:
+        // Datagram sockets return EAGAIN when a socket is read from after shutdown,
+        // whereas stream sockets return zero bytes. Enforce this behavior here.
+        return zx::ok(static_cast<int16_t>(EAGAIN));
+      default:
+        return socket_with_zx_socket::GetZxSocketReadError(status);
+    }
+  }
+
+  zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+    // Before reading from the socket, we need to check for asynchronous
+    // errors. Here, we combine this check with a cache lookup for the
+    // requested control message set; when cmsgs are requested, this lets us
+    // save a syscall.
+    bool cmsg_requested = msg->msg_controllen != 0 && msg->msg_control != nullptr;
+    RequestedCmsgCache::Result cache_result = datagram_socket_.cmsg_cache.Get(
+        socket_err_wait_item(), cmsg_requested, datagram_socket_.client);
+    if (!cache_result.is_ok()) {
+      ErrOrOutCode err_value = cache_result.error_value();
+      if (err_value.is_error()) {
+        return err_value.status_value();
+      }
+      *out_code = err_value.value();
+      return ZX_OK;
+    }
+    std::optional<RequestedCmsgSet> requested_cmsg_set = cache_result.value();
+
+    zxio_flags_t zxio_flags = 0;
+    if (flags & MSG_PEEK) {
+      zxio_flags |= ZXIO_PEEK;
+    }
+
+    // Use stack allocated memory whenever the client-versioned `kRxUdpPreludeSize` is
+    // at least as large as the server's.
+    std::unique_ptr<uint8_t[]> heap_allocated_buf;
+    uint8_t stack_allocated_buf[kRxUdpPreludeSize];
+    uint8_t* buf = stack_allocated_buf;
+    if (datagram_socket_.prelude_size.rx > kRxUdpPreludeSize) {
+      heap_allocated_buf = std::make_unique<uint8_t[]>(datagram_socket_.prelude_size.rx);
+      buf = heap_allocated_buf.get();
+    }
+
+    zx_iovec_t zx_iov[msg->msg_iovlen + 1];
+    zx_iov[0] = {
+        .buffer = buf,
+        .capacity = datagram_socket_.prelude_size.rx,
+    };
+
+    size_t zx_iov_idx = 1;
+    std::optional<size_t> fault_idx;
+    {
+      size_t idx = 0;
+      for (int i = 0; i < msg->msg_iovlen; ++i) {
+        iovec const& iov = msg->msg_iov[i];
+        if (iov.iov_base != nullptr) {
+          zx_iov[zx_iov_idx] = {
+              .buffer = iov.iov_base,
+              .capacity = iov.iov_len,
+          };
+          zx_iov_idx++;
+          idx += iov.iov_len;
+        } else if (iov.iov_len != 0) {
+          fault_idx = idx;
+          break;
+        }
+      }
+    }
+
+    size_t count_bytes_read;
+    std::optional read_error = GetZxSocketReadError(
+        zxio_readv(&datagram_socket_.io, zx_iov, zx_iov_idx, zxio_flags, &count_bytes_read));
+    if (read_error.has_value()) {
+      zx::status err = read_error.value();
+      if (!err.is_error()) {
+        if (err.value() == 0) {
+          *out_actual = 0;
+        }
+        *out_code = err.value();
+      }
+      return err.status_value();
+    }
+
+    if (count_bytes_read < datagram_socket_.prelude_size.rx) {
+      *out_code = EIO;
+      return ZX_OK;
+    }
+
+    fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> decoded_meta =
+        deserialize_recv_msg_meta(cpp20::span<uint8_t>(buf, datagram_socket_.prelude_size.rx));
+
+    if (!decoded_meta.ok()) {
+      *out_code = EIO;
+      return ZX_OK;
+    }
+
+    const fuchsia_posix_socket::wire::RecvMsgMeta& meta = *decoded_meta.PrimaryObject();
+
+    if (msg->msg_namelen != 0 && msg->msg_name != nullptr) {
+      if (!meta.has_from()) {
+        *out_code = EIO;
+        return ZX_OK;
+      }
+      msg->msg_namelen = static_cast<socklen_t>(fidl_to_sockaddr(
+          meta.from(), static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen));
+    }
+
+    size_t payload_bytes_read = count_bytes_read - datagram_socket_.prelude_size.rx;
+    if (payload_bytes_read > meta.payload_len()) {
+      *out_code = EIO;
+      return ZX_OK;
+    }
+    if (fault_idx.has_value() && meta.payload_len() > fault_idx.value()) {
+      *out_code = EFAULT;
+      return ZX_OK;
+    }
+
+    size_t truncated =
+        meta.payload_len() > payload_bytes_read ? meta.payload_len() - payload_bytes_read : 0;
+    *out_actual = set_trunc_flags_and_return_out_actual(*msg, payload_bytes_read, truncated, flags);
+
+    if (cmsg_requested) {
+      FidlControlDataProcessor proc(msg->msg_control, msg->msg_controllen);
+      ZX_ASSERT_MSG(cmsg_requested == requested_cmsg_set.has_value(),
+                    "cache lookup should return the RequestedCmsgSet iff it was requested");
+      msg->msg_controllen = proc.Store(meta.control(), requested_cmsg_set.value());
+    } else {
+      msg->msg_controllen = 0;
+    }
+
+    *out_code = 0;
+    return ZX_OK;
+  }
+
+  zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
+    // TODO(https://fxbug.dev/110570) Add tests with msg as nullptr.
+    if (msg == nullptr) {
+      *out_code = EFAULT;
+      return ZX_OK;
+    }
+    const msghdr& msghdr_ref = *msg;
+    std::optional opt_total = total_iov_len(msghdr_ref);
+    if (!opt_total.has_value()) {
+      *out_code = EFAULT;
+      return ZX_OK;
+    }
+    size_t total = opt_total.value();
+
+    std::optional<SocketAddress> remote_addr;
+    // Attempt to load socket address if either name or namelen is set.
+    // If only one is set, it'll result in INVALID_ARGS.
+    if (msg->msg_namelen != 0 || msg->msg_name != nullptr) {
+      zx_status_t status = remote_addr.emplace().LoadSockAddr(
+          static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+
+    // TODO(https://fxbug.dev/103740): Avoid allocating into this arena.
+    fidl::Arena alloc;
+    fit::result cmsg_result =
+        ParseControlMessages<fsocket::wire::DatagramSocketSendControlData>(alloc, msghdr_ref);
+    if (cmsg_result.is_error()) {
+      *out_code = cmsg_result.error_value();
+      return ZX_OK;
+    }
+    const fsocket::wire::DatagramSocketSendControlData& cdata = cmsg_result.value();
+    const std::optional local_iface_and_addr =
+        [&cdata]() -> std::optional<std::pair<uint64_t, fuchsia_net::wire::Ipv6Address>> {
+      if (!cdata.has_network()) {
+        return {};
+      }
+      const fuchsia_posix_socket::wire::NetworkSocketSendControlData& network = cdata.network();
+      if (!network.has_ipv6()) {
+        return {};
+      }
+      const fuchsia_posix_socket::wire::Ipv6SendControlData& ipv6 = network.ipv6();
+      if (!ipv6.has_pktinfo()) {
+        return {};
+      }
+      const fuchsia_posix_socket::wire::Ipv6PktInfoSendControlData& pktinfo = ipv6.pktinfo();
+      return std::make_pair(pktinfo.iface, pktinfo.local_addr);
+    }();
+
+    RouteCache::Result result = datagram_socket_.route_cache.Get(
+        remote_addr, local_iface_and_addr, socket_err_wait_item(), datagram_socket_.client);
+
+    if (!result.is_ok()) {
+      ErrOrOutCode err_value = result.error_value();
+      if (err_value.is_error()) {
+        return err_value.status_value();
+      }
+      *out_code = err_value.value();
+      return ZX_OK;
+    }
+
+    if (result.value() < total) {
+      *out_code = EMSGSIZE;
+      return ZX_OK;
+    }
+
+    // Use stack allocated memory whenever the client-versioned `kTxUdpPreludeSize` is
+    // at least as large as the server's.
+    std::unique_ptr<uint8_t[]> heap_allocated_buf;
+    uint8_t stack_allocated_buf[kTxUdpPreludeSize];
+    uint8_t* buf = stack_allocated_buf;
+    if (datagram_socket_.prelude_size.tx > kTxUdpPreludeSize) {
+      heap_allocated_buf = std::make_unique<uint8_t[]>(datagram_socket_.prelude_size.tx);
+      buf = heap_allocated_buf.get();
+    }
+
+    auto meta_builder_with_cdata = [&alloc, &cdata]() {
+      fidl::WireTableBuilder meta_builder = fuchsia_posix_socket::wire::SendMsgMeta::Builder(alloc);
+      meta_builder.control(cdata);
+      return meta_builder;
+    };
+
+    auto build_and_serialize =
+        [this, &buf](fidl::WireTableBuilder<fsocket::wire::SendMsgMeta>& meta_builder) {
+          fsocket::wire::SendMsgMeta meta = meta_builder.Build();
+          return serialize_send_msg_meta(
+              meta, cpp20::span<uint8_t>(buf, datagram_socket_.prelude_size.tx));
+        };
+
+    SerializeSendMsgMetaError serialize_err;
+    if (remote_addr.has_value()) {
+      serialize_err = remote_addr.value().WithFIDL(
+          [&build_and_serialize, &meta_builder_with_cdata](fnet::wire::SocketAddress address) {
+            fidl::WireTableBuilder meta_builder = meta_builder_with_cdata();
+            meta_builder.to(address);
+            return build_and_serialize(meta_builder);
+          });
+    } else {
+      fidl::WireTableBuilder meta_builder = meta_builder_with_cdata();
+      serialize_err = build_and_serialize(meta_builder);
+    }
+
+    if (serialize_err != SerializeSendMsgMetaErrorNone) {
+      *out_code = EIO;
+      return ZX_OK;
+    }
+
+    zx_iovec_t zx_iov[msg->msg_iovlen + 1];
+    zx_iov[0] = {
+        .buffer = buf,
+        .capacity = datagram_socket_.prelude_size.tx,
+    };
+
+    size_t zx_iov_idx = 1;
+    for (int i = 0; i < msg->msg_iovlen; ++i) {
+      iovec const& iov = msg->msg_iov[i];
+      if (iov.iov_base != nullptr) {
+        zx_iov[zx_iov_idx] = {
+            .buffer = iov.iov_base,
+            .capacity = iov.iov_len,
+        };
+        zx_iov_idx++;
+      }
+    }
+
+    size_t bytes_written;
+    std::optional write_error = GetZxSocketWriteError(
+        zxio_writev(&datagram_socket_.io, zx_iov, zx_iov_idx, 0, &bytes_written));
+    if (write_error.has_value()) {
+      zx::status err = write_error.value();
+      if (!err.is_error()) {
+        *out_code = err.value();
+      }
+      return err.status_value();
+    }
+
+    size_t total_with_prelude = datagram_socket_.prelude_size.tx + total;
+    if (bytes_written != total_with_prelude) {
+      // Datagram writes should never be short.
+      *out_code = EIO;
+      return ZX_OK;
+    }
+    // A successful datagram socket write is never short, so we can assume all bytes
+    // were written.
+    *out_actual = total;
+    *out_code = 0;
+    return ZX_OK;
+  }
+
+ private:
+  zx_wait_item_t socket_err_wait_item() {
+    return {
+        .handle = datagram_socket_.pipe.socket.get(),
+        .waitfor = kSignalError,
+    };
+  }
+
+  ErrOrOutCode GetError() override {
+    std::optional err = GetErrorWithClient(client());
+    if (!err.has_value()) {
+      return zx::ok(static_cast<int16_t>(0));
+    }
+    return err.value();
+  }
+
+  zxio_datagram_socket_t& datagram_socket_;
+};
+
+}  // namespace
+
 static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   zxio_ops_t ops = zxio_default_socket_ops;
   ops.close = [](zxio_t* io) {
@@ -1767,6 +2172,14 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
                                .setsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
+  };
+  ops.recvmsg = [](zxio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                   int16_t* out_code) {
+    return datagram_socket(zxio_datagram_socket(io)).recvmsg(msg, flags, out_actual, out_code);
+  };
+  ops.sendmsg = [](zxio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
+                   int16_t* out_code) {
+    return datagram_socket(zxio_datagram_socket(io)).sendmsg(msg, flags, out_actual, out_code);
   };
   return ops;
 }();
@@ -1933,7 +2346,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
 
     // Result address is not provided by the server (when want_addr is false).
     if (want_addr && out.has_value()) {
-      *addrlen = static_cast<socklen_t>(zxio_fidl_to_sockaddr(out.value(), addr, *addrlen));
+      *addrlen = static_cast<socklen_t>(fidl_to_sockaddr(out.value(), addr, *addrlen));
     }
 
     fidl::ClientEnd<fsocket::StreamSocket>& control = result.value()->s;

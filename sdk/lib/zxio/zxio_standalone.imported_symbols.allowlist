@@ -141,6 +141,7 @@ zx_handle_duplicate
 zx_handle_replace
 zx_object_get_info
 zx_object_get_property
+zx_object_wait_many
 zx_object_wait_one
 zx_socket_read
 zx_socket_set_disposition

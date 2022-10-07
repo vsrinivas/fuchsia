@@ -152,40 +152,6 @@ size_t SocketAddress::hash() const {
                     storage_.value());
 }
 
-socklen_t zxio_fidl_to_sockaddr(const fuchsia_net::wire::SocketAddress& fidl, void* addr,
-                                socklen_t addr_len) {
-  switch (fidl.Which()) {
-    case fuchsia_net::wire::SocketAddress::Tag::kIpv4: {
-      const auto& ipv4 = fidl.ipv4();
-      struct sockaddr_in tmp = {
-          .sin_family = AF_INET,
-          .sin_port = htons(ipv4.port),
-      };
-      static_assert(sizeof(tmp.sin_addr.s_addr) == sizeof(ipv4.address.addr),
-                    "size of IPv4 addresses should be the same");
-      memcpy(&tmp.sin_addr.s_addr, ipv4.address.addr.data(), sizeof(ipv4.address.addr));
-      // Copy truncated address.
-      memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
-      return sizeof(tmp);
-    }
-    case fuchsia_net::wire::SocketAddress::Tag::kIpv6: {
-      const auto& ipv6 = fidl.ipv6();
-      struct sockaddr_in6 tmp = {
-          .sin6_family = AF_INET6,
-          .sin6_port = htons(ipv6.port),
-          .sin6_scope_id = static_cast<uint32_t>(ipv6.zone_index),
-      };
-      static_assert(std::size(tmp.sin6_addr.s6_addr) == decltype(ipv6.address.addr)::size(),
-                    "size of IPv6 addresses should be the same");
-      std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(),
-                std::begin(tmp.sin6_addr.s6_addr));
-      // Copy truncated address.
-      memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
-      return sizeof(tmp);
-    }
-  }
-}
-
 zx_status_t PacketInfo::LoadSockAddr(const sockaddr* addr, size_t addr_len) {
   // Address length larger than sockaddr_storage causes an error for API compatibility only.
   if (addr == nullptr || addr_len > sizeof(sockaddr_storage)) {

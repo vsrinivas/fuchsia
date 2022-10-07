@@ -43,7 +43,6 @@ library_headers("inception") {
     "lib/zxio/cpp/dgram_cache.h",
     "lib/zxio/cpp/inception.h",
     "lib/zxio/cpp/socket_address.h",
-    "lib/zxio/cpp/transitional.h",
   ]
 
   public_deps = [
@@ -96,6 +95,7 @@ source_set("zxio") {
     "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_cpp_wire",
     "//sdk/lib/stdcompat",
     "//sdk/lib/zxio:inception",
+    "//src/connectivity/network/netstack/udp_serde",
     "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/safemath",
   ]

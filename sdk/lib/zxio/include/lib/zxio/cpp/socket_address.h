@@ -69,12 +69,6 @@ class SocketAddress {
       storage_;
 };
 
-// Writes |fidl| as a sockaddr in |*addr|. Truncates to |addr_len| if necessary.
-//
-// Returns the untruncated size of |fidl| as a sockaddr.
-socklen_t zxio_fidl_to_sockaddr(const fuchsia_net::wire::SocketAddress& fidl, void* addr,
-                                socklen_t addr_len);
-
 // A helper structure to keep a packet info and any members' variants
 // allocations on the stack.
 class PacketInfo {
