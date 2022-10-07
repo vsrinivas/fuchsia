@@ -28,7 +28,7 @@ pub type SessionId = u64;
 pub(crate) async fn discovery_service_mock(
     handles: LocalComponentHandles,
     watchers: Arc<Mutex<Vec<SessionsWatcherProxy>>>,
-    watcher_sender: Option<Sender<()>>,
+    watcher_sender: Sender<()>,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     let watchers = Arc::clone(&watchers);
@@ -46,9 +46,7 @@ pub(crate) async fn discovery_service_mock(
                     {
                         if let Ok(proxy) = session_watcher.into_proxy() {
                             watchers.lock().await.push(proxy);
-                            if let Some(ref mut sender) = watcher_sender {
-                                sender.send(()).await.expect("watch sent");
-                            }
+                            watcher_sender.send(()).await.expect("watch sent");
                         }
                     }
                 }

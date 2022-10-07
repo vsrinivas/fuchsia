@@ -29,26 +29,20 @@ const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettin
 // max volume plays.
 #[fuchsia::test]
 async fn test_max_volume_sound_on_press() {
-    let mut volume_change_earcons_test = VolumeChangeEarconsTest::create();
     let (media_button_sender, mut media_button_receiver) =
         futures::channel::mpsc::channel::<MediaButtonsListenerProxy>(0);
-    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
-    let instance = volume_change_earcons_test
-        .create_realm_with_input_device_registry(media_button_sender, signal_sender)
-        .await
-        .expect("setting up test realm");
-    let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
-    // Verify that audio core receives the initial request on start.
-    let _ = signal_receiver.next().await;
+
+    let test_instance =
+        VolumeChangeEarconsTest::create_realm_with_input_and_init(Some(media_button_sender))
+            .await
+            .expect("Failed to set up test realm");
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
-    let mut sound_event_receiver =
-        VolumeChangeEarconsTest::create_sound_played_listener(&volume_change_earcons_test).await;
+    let mut sound_event_receiver = test_instance.create_sound_played_listener().await;
 
     // Set volume to max.
-    VolumeChangeEarconsTest::set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX])
-        .await;
+    test_instance.set_volume(vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
     VolumeChangeEarconsTest::verify_earcon(
         &mut sound_event_receiver,
         MAX_VOLUME_EARCON_ID,
@@ -63,8 +57,7 @@ async fn test_max_volume_sound_on_press() {
     let _ = listener_proxy.on_event(buttons_event.clone()).await;
 
     // Sets volume max again.
-    VolumeChangeEarconsTest::set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX])
-        .await;
+    test_instance.set_volume(vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
     VolumeChangeEarconsTest::verify_earcon(
         &mut sound_event_receiver,
         MAX_VOLUME_EARCON_ID,
@@ -73,8 +66,7 @@ async fn test_max_volume_sound_on_press() {
     .await;
 
     // Set volume to max again, to simulate holding button.
-    VolumeChangeEarconsTest::set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX])
-        .await;
+    test_instance.set_volume(vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
     VolumeChangeEarconsTest::verify_earcon(
         &mut sound_event_receiver,
         MAX_VOLUME_EARCON_ID,
@@ -83,7 +75,7 @@ async fn test_max_volume_sound_on_press() {
     .await;
 
     // Check that the sound played the correct number of times.
-    assert_eq!(volume_change_earcons_test.play_counts().lock().await.get(&0).copied(), Some(3));
+    assert_eq!(test_instance.play_counts().lock().await.get(&0).copied(), Some(3));
 
-    let _ = instance.destroy().await;
+    let _ = test_instance.destroy().await;
 }
