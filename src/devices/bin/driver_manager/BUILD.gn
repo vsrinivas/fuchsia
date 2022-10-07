@@ -201,6 +201,7 @@ executable("driver_manager") {
   deps = [
     ":lib",
     "//src/sys/lib/stdout-to-debuglog/cpp",
+    "//zircon/system/ulib/fdio-caller",
   ]
 
   configs += [ "//build/config:all_source" ]

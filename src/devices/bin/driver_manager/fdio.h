@@ -15,8 +15,8 @@ class FsProvider {
   // Opens a path relative to locally-specified roots.
   //
   // This acts similar to 'open', but avoids utilizing the local process' namespace.
-  // Instead, it manually translates hardcoded paths, such as "svc", "dev", etc into
-  // their corresponding root connection, where the request is forwarded.
+  // Instead, it manually translates hardcoded paths such as "svc" into their
+  // corresponding root connection, where the request is forwarded.
   //
   // This function is implemented by both devmgr and fshost.
   virtual fidl::ClientEnd<fuchsia_io::Directory> CloneFs(const char* path) = 0;

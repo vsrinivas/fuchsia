@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/wire/transaction.h>
@@ -19,26 +20,12 @@
 
 class DeviceWatcher : public fidl::WireServer<fuchsia_device_manager::DeviceWatcher> {
  public:
-  DeviceWatcher(std::string dir_path, async_dispatcher_t* dispatcher) {
-    dir_path_ = std::move(dir_path);
-    dispatcher_ = dispatcher;
+  DeviceWatcher(async_dispatcher_t* dispatcher, fbl::unique_fd fd)
+      : watcher_(fsl::DeviceWatcher::CreateWithIdleCallback(
+            std::move(fd), fit::bind_member<&DeviceWatcher::FdCallback>(this), [] {}, dispatcher)) {
   }
 
   void NextDevice(NextDeviceCompleter::Sync& completer) override {
-    if (watcher_ == nullptr) {
-      fbl::unique_fd fd;
-      zx_status_t status =
-          fdio_open_fd(dir_path_.c_str(),
-                       static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightWritable |
-                                             fuchsia_io::wire::OpenFlags::kRightReadable),
-                       fd.reset_and_get_address());
-      if (status != ZX_OK) {
-        completer.ReplyError(status);
-        return;
-      }
-      watcher_ = fsl::DeviceWatcher::CreateWithIdleCallback(
-          std::move(fd), fit::bind_member<&DeviceWatcher::FdCallback>(this), [] {}, dispatcher_);
-    }
     if (request_) {
       completer.ReplyError(ZX_ERR_ALREADY_BOUND);
       return;
@@ -53,31 +40,28 @@ class DeviceWatcher : public fidl::WireServer<fuchsia_device_manager::DeviceWatc
 
  private:
   void FdCallback(int dir_fd, const std::string& filename) {
-    int fd = 0;
-    zx_status_t status = fdio_open_fd_at(dir_fd, filename.c_str(), O_RDONLY, &fd);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to open device " << filename;
+    zx::channel client, server;
+    if (const zx_status_t status = zx::channel::create(0, &client, &server); status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "failed to create channel";
       return;
     }
-    zx::channel channel;
-    status = fdio_get_service_handle(fd, channel.reset_and_get_address());
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to get service handle " << filename;
+    if (const zx_status_t status =
+            fdio_service_connect_at(fdio_cpp::UnownedFdioCaller(dir_fd).borrow_channel(),
+                                    filename.c_str(), server.release());
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "failed to connect to device";
       return;
     }
-
-    if (request_) {
-      request_->ReplySuccess(std::move(channel));
-      request_.reset();
-      return;
+    if (std::optional request = std::exchange(request_, {}); request.has_value()) {
+      request.value().ReplySuccess(std::move(client));
+    } else {
+      channels_list_.push_back(std::move(client));
     }
-    channels_list_.push_back(std::move(channel));
   }
+
+  const std::unique_ptr<fsl::DeviceWatcher> watcher_;
   std::optional<NextDeviceCompleter::Async> request_;
-  std::unique_ptr<fsl::DeviceWatcher> watcher_;
   std::list<zx::channel> channels_list_;
-  std::string dir_path_;
-  async_dispatcher_t* dispatcher_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_WATCHER_H_

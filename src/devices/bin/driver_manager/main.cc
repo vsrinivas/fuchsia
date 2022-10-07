@@ -329,29 +329,6 @@ int main(int argc, char** argv) {
          "continuing");
   }
 
-  fs::SynchronousVfs vfs(coordinator.dispatcher());
-
-  // Install devfs into our own namespace. Why? Unclear.
-  {
-    fdio_ns_t* ns;
-    zx_status_t status;
-    status = fdio_ns_get_installed(&ns);
-    ZX_ASSERT_MSG(status == ZX_OK, "driver_manager: cannot get namespace: %s",
-                  zx_status_get_string(status));
-
-    zx::status devfs_client = coordinator.devfs().Connect(vfs);
-    ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
-
-    status = fdio_ns_bind(ns, "/dev", devfs_client.value().TakeChannel().release());
-    ZX_ASSERT_MSG(status == ZX_OK, "driver_manager: cannot bind /dev to namespace: %s",
-                  zx_status_get_string(status));
-  }
-  {
-    zx::status devfs_client = coordinator.devfs().Connect(vfs);
-    ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
-    system_instance.ServiceStarter(&coordinator, std::move(devfs_client.value()));
-  }
-
   fbl::unique_fd lib_fd;
   {
     status = fdio_open_fd("/boot/lib/",
@@ -384,14 +361,60 @@ int main(int argc, char** argv) {
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   LOGF(INFO, "driver_manager loader loop started");
 
-  auto result = outgoing.AddProtocol<fuchsia_device_manager::DeviceWatcher>(
-      [&loader_loop](fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
-        auto watcher =
-            std::make_unique<DeviceWatcher>("/dev/class/usb-device", loader_loop.dispatcher());
-        fidl::BindServer(loader_loop.dispatcher(), std::move(request), std::move(watcher));
-      },
-      "fuchsia.hardware.usb.DeviceWatcher");
-  ZX_ASSERT(result.is_ok());
+  fs::SynchronousVfs vfs(loop.dispatcher());
+
+  {
+    zx::status devfs_client = coordinator.devfs().Connect(vfs);
+    ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
+    system_instance.ServiceStarter(&coordinator, std::move(devfs_client.value()));
+  }
+
+  // Serve the USB device watcher protocol.
+  {
+    zx::status devfs_client = coordinator.devfs().Connect(vfs);
+    ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
+
+    const zx::status result = outgoing.AddProtocol<fuchsia_device_manager::DeviceWatcher>(
+        [devfs_client = std::move(devfs_client.value()), dispatcher = loader_loop.dispatcher()](
+            fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
+          // Move off the main loop, which is also serving devfs.
+          async::PostTask(
+              dispatcher, [&devfs_client, dispatcher, request = std::move(request)]() mutable {
+                zx::status fd = [&devfs_client]() -> zx::status<fbl::unique_fd> {
+                  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+                  if (endpoints.is_error()) {
+                    return endpoints.take_error();
+                  }
+                  auto& [client, server] = endpoints.value();
+
+                  if (const zx_status_t status = fdio_open_at(
+                          devfs_client.channel().get(), "class/usb-device",
+                          static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
+                                                fuchsia_io::wire::OpenFlags::kRightWritable),
+                          server.TakeChannel().release());
+                      status != ZX_OK) {
+                    return zx::error(status);
+                  }
+
+                  fbl::unique_fd fd;
+                  if (const zx_status_t status = fdio_fd_create(client.TakeChannel().release(),
+                                                                fd.reset_and_get_address());
+                      status != ZX_OK) {
+                    return zx::error(status);
+                  }
+                  return zx::ok(std::move(fd));
+                }();
+                if (fd.is_error()) {
+                  request.Close(fd.status_value());
+                }
+                std::unique_ptr watcher =
+                    std::make_unique<DeviceWatcher>(dispatcher, std::move(fd.value()));
+                fidl::BindServer(dispatcher, std::move(request), std::move(watcher));
+              });
+        },
+        "fuchsia.hardware.usb.DeviceWatcher");
+    ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
+  }
 
   zx::status diagnostics_client = coordinator.inspect_manager().Connect();
   ZX_ASSERT_MSG(diagnostics_client.is_ok(), "%s", diagnostics_client.status_string());
@@ -399,11 +422,20 @@ int main(int argc, char** argv) {
   zx::status devfs_client = coordinator.devfs().Connect(vfs);
   ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
 
-  result = outgoing.AddDirectory(std::move(devfs_client.value()), "dev");
-  ZX_ASSERT(result.is_ok());
-  result = outgoing.AddDirectory(std::move(diagnostics_client.value()), "diagnostics");
-  ZX_ASSERT(result.is_ok());
-  ZX_ASSERT(outgoing.ServeFromStartupInfo().is_ok());
+  {
+    const zx::status result = outgoing.AddDirectory(std::move(devfs_client.value()), "dev");
+    ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
+  }
+  {
+    const zx::status result =
+        outgoing.AddDirectory(std::move(diagnostics_client.value()), "diagnostics");
+    ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
+  }
+
+  {
+    const zx::status result = outgoing.ServeFromStartupInfo();
+    ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
+  }
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   async::PostTask(loop.dispatcher(), [] { LOGF(INFO, "driver_manager main loop is running"); });
