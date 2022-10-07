@@ -45,9 +45,9 @@ source_set("driver_runner") {
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_cpp_wire",
     "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_cpp_wire",
     "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_cpp_wire",
+    "//sdk/lib/inspect/component/cpp:inspect_component_cpp",
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/system/ulib/inspect",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

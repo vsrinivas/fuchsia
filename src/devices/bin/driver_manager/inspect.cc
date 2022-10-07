@@ -5,7 +5,7 @@
 #include "src/devices/bin/driver_manager/inspect.h"
 
 #include <lib/ddk/driver.h>
-#include <lib/inspect/service/cpp/service.h>
+#include <lib/inspect/component/cpp/service.h>
 
 #include <utility>
 
@@ -138,13 +138,13 @@ InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
   auto driver_manager_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   driver_manager_dir->AddEntry("driver_host", driver_host_dir_);
 
-  auto tree_handler = inspect::MakeTreeHandler(&inspector_, dispatcher);
-  auto tree_service = fbl::MakeRefCounted<fs::Service>(
-      [tree_handler = std::move(tree_handler)](zx::channel request) {
-        tree_handler(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(request)));
-        return ZX_OK;
-      });
-  driver_manager_dir->AddEntry(fuchsia::inspect::Tree::Name_, std::move(tree_service));
+  auto tree_service = fbl::MakeRefCounted<fs::Service>([this, dispatcher](zx::channel request) {
+    inspect::TreeServer::StartSelfManagedServer(
+        inspector_, {}, dispatcher, fidl::ServerEnd<fuchsia_inspect::Tree>(std::move(request)));
+    return ZX_OK;
+  });
+  driver_manager_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_inspect::Tree>,
+                               std::move(tree_service));
 
   diagnostics_dir_->AddEntry("driver_manager", driver_manager_dir);
   auto status = InspectDevfs::Create(diagnostics_dir_);
