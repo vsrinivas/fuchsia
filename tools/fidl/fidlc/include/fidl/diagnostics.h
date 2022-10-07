@@ -56,7 +56,7 @@ constexpr UndocumentedWarningDef<26> WarnCommentWithinDocCommentBlock(
     "cannot have comment within doc comment block");
 constexpr UndocumentedWarningDef<27> WarnBlankLinesWithinDocCommentBlock(
     "cannot have blank lines within doc comment block");
-constexpr UndocumentedWarningDef<28> WarnDocCommentMustBeFollowedByDeclaration(
+constexpr WarningDef<28> WarnDocCommentMustBeFollowedByDeclaration(
     "doc comment must be followed by a declaration");
 constexpr UndocumentedErrorDef<29> ErrMustHaveOneProperty("must have at least one property");
 constexpr UndocumentedErrorDef<30, Token::KindAndSubkind, Token::KindAndSubkind>

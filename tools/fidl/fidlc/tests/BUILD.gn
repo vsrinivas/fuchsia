@@ -22,6 +22,7 @@ host_test_data("bad_cases") {
     "fidl/bad/files_disagree_on_library_name_2.test.fidl",
     "fidl/bad/max_ordinal_not_table.test.fidl",
     "fidl/bad/missing_resourceness.test.fidl",
+    "fidl/bad/orphaned_doc_comment.test.fidl",
     "fidl/bad/recursive_protocol_reference.test.fidl",
     "fidl/bad/recursive_struct_reference.test.fidl",
     "fidl/bad/self_referential_struct.test.fidl",
@@ -37,12 +38,14 @@ host_test_data("bad_cases") {
 
 host_test_data("good_cases") {
   sources = [
+    "fidl/good/doc_attribute.test.fidl",
     "fidl/good/library_multiple_files_1.test.fidl",
     "fidl/good/library_multiple_files_2.test.fidl",
     "fidl/good/masked_bits.test.fidl",
     "fidl/good/max_ordinal_table.test.fidl",
     "fidl/good/recursive_type.test.fidl",
     "fidl/good/simple_bits.test.fidl",
+    "fidl/good/simple_doc_comment.test.fidl",
     "fidl/good/simple_enum.test.fidl",
     "fidl/good/simple_import.test.fidl",
     "fidl/good/simple_int_const.test.fidl",

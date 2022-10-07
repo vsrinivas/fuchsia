@@ -516,7 +516,28 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
                "Bar");
 }
 
-TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
+TEST(ParsingTests, GoodSimpleDocComment) {
+  TestLibrary library;
+  library.AddFile("good/simple_doc_comment.test.fidl");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  ASSERT_TRUE(library.Parse(&ast));
+
+  std::unique_ptr<fidl::raw::Attribute> attribute =
+      std::move(ast->type_decls.front()->attributes->attributes.front());
+  ASSERT_EQ(attribute->provenance, fidl::raw::Attribute::Provenance::kDocComment);
+
+  // We set the name to "doc" in the flat AST.
+  ASSERT_NULL(attribute->maybe_name);
+  ASSERT_TRUE(attribute->args.size() == 1);
+
+  std::unique_ptr<fidl::raw::AttributeArg> arg = std::move(attribute->args[0]);
+  auto arg_value = static_cast<fidl::raw::LiteralConstant*>(arg->value.get());
+  ASSERT_STREQ(static_cast<fidl::raw::DocCommentLiteral*>(arg_value->literal.get())->MakeContents(),
+               " A doc comment\n");
+}
+
+TEST(ParsingTests, GoodMultilineDocCommentHasCorrectContents) {
   TestLibrary library(R"FIDL(
   library example;
 
@@ -610,7 +631,8 @@ type Empty = struct{};
 TEST(ParsingTests, GoodBlankLinesAfterDocCommentTest) {
   TestLibrary library(R"FIDL(library example;
 
-/// doc comment
+/// A doc comment
+
 type Empty = struct {};
 )FIDL");
 
@@ -634,12 +656,8 @@ type Empty = struct {};
 }
 
 TEST(ParsingTests, WarnTrailingDocCommentTest) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Empty = struct {};
-/// bad
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/orphaned_doc_comment.test.fidl");
 
   ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnDocCommentMustBeFollowedByDeclaration);
 }

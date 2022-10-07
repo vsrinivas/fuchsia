@@ -350,6 +350,13 @@ protocol A {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "canonical form 'the_same'");
 }
 
+TEST(AttributesTests, GoodDocAttribute) {
+  TestLibrary library;
+  library.AddFile("good/doc_attribute.test.fidl");
+
+  ASSERT_COMPILED(library);
+}
+
 // Test that doc comments and doc attributes clash are properly checked.
 TEST(AttributesTests, BadNoTwoSameDocAttribute) {
   TestLibrary library(R"FIDL(
