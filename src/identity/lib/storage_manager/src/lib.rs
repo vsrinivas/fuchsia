@@ -69,15 +69,17 @@ impl TryFrom<&Key> for [u8; 32] {
 ///
 #[async_trait]
 pub trait StorageManager: Sized {
+    type Key;
+
     /// Provisions a new storage instance.  The same `Key` must be supplied
     /// during a call to `unlock`. Moves the `StorageManager` from the
     /// uninitialized to the unlocked state.
-    async fn provision(&self, key: &Key) -> Result<(), AccountManagerError>;
+    async fn provision(&self, key: &Self::Key) -> Result<(), AccountManagerError>;
 
     /// Unlocks a locked storage resource.  Moves the `StorageManager` from
     /// the locked or uninitialized state to the available state. Fails if
     /// the key does not match the key originally given through `provision`.
-    async fn unlock(&self, key: &Key) -> Result<(), AccountManagerError>;
+    async fn unlock(&self, key: &Self::Key) -> Result<(), AccountManagerError>;
 
     /// Locks the storage resource.  All connections to the directory should be
     /// closed prior to calling this method.  Moves the `StorageManager` from

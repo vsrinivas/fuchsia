@@ -76,7 +76,9 @@ pub struct InsecureKeyDirectoryStorageManager {
 
 #[async_trait]
 impl StorageManager for InsecureKeyDirectoryStorageManager {
-    async fn provision(&self, key: &Key) -> Result<(), AccountManagerError> {
+    type Key = Key;
+
+    async fn provision(&self, key: &Self::Key) -> Result<(), AccountManagerError> {
         let mut state_lock = self.state.lock().await;
         match *state_lock {
             StorageManagerState::Uninitialized => {
@@ -102,7 +104,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
         }
     }
 
-    async fn unlock(&self, key: &Key) -> Result<(), AccountManagerError> {
+    async fn unlock(&self, key: &Self::Key) -> Result<(), AccountManagerError> {
         let mut state_lock = self.state.lock().await;
         match *state_lock {
             StorageManagerState::Locked => {

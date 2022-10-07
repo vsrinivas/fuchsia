@@ -14,11 +14,13 @@ pub struct EncryptedVolumeStorageManager;
 
 #[async_trait]
 impl StorageManager for EncryptedVolumeStorageManager {
-    async fn provision(&self, _key: &Key) -> Result<(), AccountManagerError> {
+    type Key = Key;
+
+    async fn provision(&self, _key: &Self::Key) -> Result<(), AccountManagerError> {
         Err(AccountManagerError::new(ApiError::UnsupportedOperation))
     }
 
-    async fn unlock(&self, _key: &Key) -> Result<(), AccountManagerError> {
+    async fn unlock(&self, _key: &Self::Key) -> Result<(), AccountManagerError> {
         Err(AccountManagerError::new(ApiError::UnsupportedOperation))
     }
 

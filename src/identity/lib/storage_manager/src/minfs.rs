@@ -7,7 +7,7 @@ use crate::{
         constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
         disk::{DiskError, DiskManager, Partition},
     },
-    Key, StorageManager as StorageManagerTrait,
+    StorageManager as StorageManagerTrait,
 };
 use account_common::AccountManagerError;
 use async_trait::async_trait;
@@ -87,11 +87,13 @@ impl<DM> StorageManagerTrait for StorageManager<DM>
 where
     DM: DiskManager,
 {
-    async fn provision(&self, _key: &Key) -> Result<(), AccountManagerError> {
+    type Key = [u8; 32];
+
+    async fn provision(&self, _key: &Self::Key) -> Result<(), AccountManagerError> {
         unimplemented!();
     }
 
-    async fn unlock(&self, _key: &Key) -> Result<(), AccountManagerError> {
+    async fn unlock(&self, _key: &Self::Key) -> Result<(), AccountManagerError> {
         unimplemented!();
     }
 
