@@ -28,7 +28,7 @@ use {
 };
 
 type ArchiveIteratorResult = Result<LogEntry, ArchiveIteratorError>;
-const PIPELINE_SIZE: usize = 20;
+const PIPELINE_SIZE: usize = 1;
 const NO_STREAM_ERROR: &str = "\
 The proactive logger isn't connected to this target.
 
