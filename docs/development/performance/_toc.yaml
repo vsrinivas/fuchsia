@@ -12,3 +12,5 @@ toc:
   path: /docs/development/performance/fuchsiaperf_format.md
 - title: "Metric name expectation files"
   path: /docs/development/performance/metric_name_expectations.md
+- title: "Chromeperf uploading and config"
+  path: /docs/development/performance/chromeperf_uploading_config.md
