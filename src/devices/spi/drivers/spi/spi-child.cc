@@ -300,4 +300,26 @@ zx_status_t SpiFidlChild::SetUpOutgoingDirectory(
   return outgoing_.Serve(std::move(server_end)).status_value();
 }
 
+void SpiBanjoChild::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+
+zx_status_t SpiBanjoChild::SpiTransmit(const uint8_t* txdata_list, size_t txdata_count) {
+  return spi_->SpiTransmit(txdata_list, txdata_count);
+}
+
+zx_status_t SpiBanjoChild::SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
+                                      size_t* out_rxdata_actual) {
+  return spi_->SpiReceive(size, out_rxdata_list, rxdata_count, out_rxdata_actual);
+}
+
+zx_status_t SpiBanjoChild::SpiExchange(const uint8_t* txdata_list, size_t txdata_count,
+                                       uint8_t* out_rxdata_list, size_t rxdata_count,
+                                       size_t* out_rxdata_actual) {
+  return spi_->SpiExchange(txdata_list, txdata_count, out_rxdata_list, rxdata_count,
+                           out_rxdata_actual);
+}
+
+void SpiBanjoChild::SpiConnectServer(zx::channel server) {
+  spi_->SpiConnectServer(std::move(server));
+}
+
 }  // namespace spi

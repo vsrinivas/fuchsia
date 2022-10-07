@@ -110,29 +110,18 @@ void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi, async_dispatc
     char fidl_name[25];
     snprintf(fidl_name, sizeof(fidl_name), "spi-fidl-%u-%u", bus_id, cs);
 
-    zx_status_t status;
-    if (vid || pid || did) {
-      zx_device_prop_t props[] = {
-          {BIND_SPI_BUS_ID, 0, bus_id},    {BIND_SPI_CHIP_SELECT, 0, cs},
-          {BIND_PLATFORM_DEV_VID, 0, vid}, {BIND_PLATFORM_DEV_PID, 0, pid},
-          {BIND_PLATFORM_DEV_DID, 0, did},
-      };
+    char banjo_name[26];
+    snprintf(banjo_name, sizeof(banjo_name), "spi-banjo-%u-%u", bus_id, cs);
 
-      status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props).set_proto_id(ZX_PROTOCOL_SPI));
-    } else {
-      zx_device_prop_t props[] = {
-          {BIND_SPI_BUS_ID, 0, bus_id},
-          {BIND_SPI_CHIP_SELECT, 0, cs},
-      };
-
-      status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props).set_proto_id(ZX_PROTOCOL_SPI));
-    }
-
+    // The SpiChild device is non-bindable and exists to serve as the parent of the FIDL and Banjo
+    // children, which are bindable.
+    zx_status_t status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_flags(DEVICE_ADD_NON_BINDABLE));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "DdkAdd failed for Banjo device: %s", zx_status_get_string(status));
+      zxlogf(ERROR, "DdkAdd failed for SPI child device: %s", zx_status_get_string(status));
       return;
     }
 
+    // Create the FIDL child.
     auto fidl_dev = std::make_unique<SpiFidlChild>(dev->zxdev(), dev.get(), dispatcher);
 
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -163,6 +152,35 @@ void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi, async_dispatc
 
     // Owned by the framework now.
     __UNUSED auto ptr = fidl_dev.release();
+
+    // Create the Banjo child.
+    auto banjo_dev = std::make_unique<SpiBanjoChild>(dev->zxdev(), dev.get());
+    if (vid || pid || did) {
+      zx_device_prop_t props[] = {
+          {BIND_SPI_BUS_ID, 0, bus_id},    {BIND_SPI_CHIP_SELECT, 0, cs},
+          {BIND_PLATFORM_DEV_VID, 0, vid}, {BIND_PLATFORM_DEV_PID, 0, pid},
+          {BIND_PLATFORM_DEV_DID, 0, did},
+      };
+
+      status = banjo_dev->DdkAdd(
+          ddk::DeviceAddArgs(banjo_name).set_props(props).set_proto_id(ZX_PROTOCOL_SPI));
+    } else {
+      zx_device_prop_t props[] = {
+          {BIND_SPI_BUS_ID, 0, bus_id},
+          {BIND_SPI_CHIP_SELECT, 0, cs},
+      };
+
+      status = banjo_dev->DdkAdd(
+          ddk::DeviceAddArgs(banjo_name).set_props(props).set_proto_id(ZX_PROTOCOL_SPI));
+    }
+
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "DdkAdd failed for Banjo device: %s", zx_status_get_string(status));
+      return;
+    }
+
+    // Owned by the framework now.
+    __UNUSED auto ptr2 = banjo_dev.release();
 
     dev->AddRef();  // DdkAdd succeeded -- increment the counter now that the DDK has a reference.
 
