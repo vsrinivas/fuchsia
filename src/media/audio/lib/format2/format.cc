@@ -175,9 +175,7 @@ Format::Format(fuchsia_audio::SampleType sample_type, int64_t channels, int64_t 
 
   bytes_per_frame_ = bytes_per_sample * channels_;
   frames_per_ns_ = TimelineRate(frames_per_second_, zx::sec(1).to_nsecs());
-
-  auto frac_frames_per_frame = TimelineRate(Fixed(1).raw_value(), 1);
-  frac_frames_per_ns_ = TimelineRate::Product(frames_per_ns_, frac_frames_per_frame);
+  frac_frames_per_ns_ = TimelineRate(Fixed(frames_per_second_).raw_value(), zx::sec(1).to_nsecs());
 }
 
 bool Format::operator==(const Format& rhs) const {
@@ -239,6 +237,10 @@ Fixed Format::frac_frames_per(zx::duration duration, TimelineRate::RoundingMode 
 
 int64_t Format::bytes_per(zx::duration duration, TimelineRate::RoundingMode mode) const {
   return bytes_per_frame_ * integer_frames_per(duration, mode);
+}
+
+zx::duration Format::duration_per(Fixed frames, media::TimelineRate::RoundingMode mode) const {
+  return zx::duration(frac_frames_per_ns_.Inverse().Scale(frames.raw_value(), mode));
 }
 
 std::ostream& operator<<(std::ostream& out, const Format& format) {

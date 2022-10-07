@@ -179,10 +179,10 @@ TEST(FormatTest, IntegerFramesPer) {
   EXPECT_EQ(format.integer_frames_per(zx::msec(10) + zx::nsec(1)), 481);
 
   // Round down should work too.
-  auto Floor = media::TimelineRate::RoundingMode::Floor;
-  EXPECT_EQ(format.integer_frames_per(zx::msec(10) - zx::nsec(1), Floor), 479);
-  EXPECT_EQ(format.integer_frames_per(zx::msec(10) + zx::nsec(0), Floor), 480);
-  EXPECT_EQ(format.integer_frames_per(zx::msec(10) + zx::nsec(1), Floor), 480);
+  constexpr auto kFloor = media::TimelineRate::RoundingMode::Floor;
+  EXPECT_EQ(format.integer_frames_per(zx::msec(10) - zx::nsec(1), kFloor), 479);
+  EXPECT_EQ(format.integer_frames_per(zx::msec(10) + zx::nsec(0), kFloor), 480);
+  EXPECT_EQ(format.integer_frames_per(zx::msec(10) + zx::nsec(1), kFloor), 480);
 }
 
 TEST(FormatTest, FracFramesPer) {
@@ -207,10 +207,10 @@ TEST(FormatTest, FracFramesPer) {
   EXPECT_EQ(format.frac_frames_per(zx::nsec(93750) + zx::nsec(1)), expected_plus_one);
 
   // Round down should work too.
-  auto Floor = media::TimelineRate::RoundingMode::Floor;
-  EXPECT_EQ(format.frac_frames_per(zx::nsec(93750) - zx::nsec(1), Floor), expected_minus_one);
-  EXPECT_EQ(format.frac_frames_per(zx::nsec(93750) + zx::nsec(0), Floor), expected);
-  EXPECT_EQ(format.frac_frames_per(zx::nsec(93750) + zx::nsec(1), Floor), expected);
+  constexpr auto kFloor = media::TimelineRate::RoundingMode::Floor;
+  EXPECT_EQ(format.frac_frames_per(zx::nsec(93750) - zx::nsec(1), kFloor), expected_minus_one);
+  EXPECT_EQ(format.frac_frames_per(zx::nsec(93750) + zx::nsec(0), kFloor), expected);
+  EXPECT_EQ(format.frac_frames_per(zx::nsec(93750) + zx::nsec(1), kFloor), expected);
 }
 
 TEST(FormatTest, BytesPer) {
@@ -226,10 +226,36 @@ TEST(FormatTest, BytesPer) {
   EXPECT_EQ(format.bytes_per(zx::msec(10) + zx::nsec(1)), 481 * 8);
 
   // Round down should work too.
-  auto Floor = media::TimelineRate::RoundingMode::Floor;
-  EXPECT_EQ(format.bytes_per(zx::msec(10) - zx::nsec(1), Floor), 479 * 8);
-  EXPECT_EQ(format.bytes_per(zx::msec(10) + zx::nsec(0), Floor), 480 * 8);
-  EXPECT_EQ(format.bytes_per(zx::msec(10) + zx::nsec(1), Floor), 480 * 8);
+  constexpr auto kFloor = media::TimelineRate::RoundingMode::Floor;
+  EXPECT_EQ(format.bytes_per(zx::msec(10) - zx::nsec(1), kFloor), 479 * 8);
+  EXPECT_EQ(format.bytes_per(zx::msec(10) + zx::nsec(0), kFloor), 480 * 8);
+  EXPECT_EQ(format.bytes_per(zx::msec(10) + zx::nsec(1), kFloor), 480 * 8);
+}
+
+TEST(FormatTest, DurationPer) {
+  Format format = Format::CreateOrDie({
+      .sample_type = SampleType::kFloat32,
+      .channels = 2,
+      .frames_per_second = 300000,
+  });
+
+  // For 300kHz audio, there are ~3333 ns/frame, which is ~2.4 subframes/ns
+  // (since Fixed has 8192 subframes/frame). Hence, adding or subtracting
+  // 1 subframe should round to the same ns.
+
+  // For 300kHz audio, 4.5 frames = 15000ns.
+  const Fixed frame = ffl::FromRatio(9, 2);
+
+  // Rounds up by default.
+  EXPECT_EQ(format.duration_per(frame - Fixed::FromRaw(1)), zx::nsec(15000));
+  EXPECT_EQ(format.duration_per(frame + Fixed::FromRaw(0)), zx::nsec(15000));
+  EXPECT_EQ(format.duration_per(frame + Fixed::FromRaw(1)), zx::nsec(15001));
+
+  // Round down should work too.
+  constexpr auto kFloor = media::TimelineRate::RoundingMode::Floor;
+  EXPECT_EQ(format.duration_per(frame - Fixed::FromRaw(1), kFloor), zx::nsec(14999));
+  EXPECT_EQ(format.duration_per(frame + Fixed::FromRaw(0), kFloor), zx::nsec(15000));
+  EXPECT_EQ(format.duration_per(frame + Fixed::FromRaw(1), kFloor), zx::nsec(15000));
 }
 
 }  // namespace media_audio

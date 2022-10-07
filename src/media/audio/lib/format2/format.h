@@ -72,18 +72,23 @@ class Format {
   // Rounds up by default.
   int64_t integer_frames_per(zx::duration duration,
                              media::TimelineRate::RoundingMode rounding_mode =
-                                 ::media::TimelineRate::RoundingMode::Ceiling) const;
+                                 media::TimelineRate::RoundingMode::Ceiling) const;
 
   // Computes the number of fractional frames for the given duration.
   // Rounds up by default.
   Fixed frac_frames_per(zx::duration duration,
                         media::TimelineRate::RoundingMode rounding_mode =
-                            ::media::TimelineRate::RoundingMode::Ceiling) const;
+                            media::TimelineRate::RoundingMode::Ceiling) const;
 
   // Computes the number of bytes for the given duration.
   // Rounds up by default.
   int64_t bytes_per(zx::duration duration, media::TimelineRate::RoundingMode rounding_mode =
                                                media::TimelineRate::RoundingMode::Ceiling) const;
+
+  // Computes the duration that covers the given number of fractional frames.
+  // Rounds up by default.
+  zx::duration duration_per(Fixed frames, media::TimelineRate::RoundingMode rounding_mode =
+                                              media::TimelineRate::RoundingMode::Ceiling) const;
 
  private:
   Format(fuchsia_audio::SampleType sample_type, int64_t channels, int64_t frames_per_second);
