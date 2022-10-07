@@ -42,21 +42,16 @@ class DriverHostContext {
                             zx::channel c);
 
   // routines driver_host uses to talk to driver_manager
-  // |client_remote| will only be a valid handle if the device was added with
-  // DEVICE_ADD_MUST_ISOLATE.
   zx_status_t DriverManagerAdd(const fbl::RefPtr<zx_device_t>& dev,
                                const fbl::RefPtr<zx_device_t>& child, device_add_args_t* add_args,
-                               zx::vmo inspect, zx::channel client_remote,
-                               fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir)
+                               zx::vmo inspect, fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir)
       TA_REQ(api_lock_);
   // Note that DriverManagerRemove() takes a RefPtr rather than a const RefPtr&.
   // It intends to consume a reference.
   zx_status_t DriverManagerRemove(fbl::RefPtr<zx_device_t> dev) TA_REQ(api_lock_);
 
-  // |client_remote| will only be a valid handle if the device was added with
-  // DEVICE_ADD_MUST_ISOLATE.
   zx_status_t DeviceAdd(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
-                        device_add_args_t* add_args, zx::vmo inspect, zx::channel client_remote,
+                        device_add_args_t* add_args, zx::vmo inspect,
                         fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir) TA_REQ(api_lock_);
 
   zx_status_t DeviceInit(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);

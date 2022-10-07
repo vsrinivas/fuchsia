@@ -104,7 +104,7 @@ class Device final
 
   Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
          fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
-         zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir);
+         fidl::ClientEnd<fio::Directory> outgoing_dir);
   ~Device() override;
 
   // Create a new device with the given parameters.  This sets up its
@@ -117,7 +117,7 @@ class Device final
       fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
       fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
       fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-      bool want_init_task, bool skip_autobind, zx::vmo inspect, zx::channel client_remote,
+      bool want_init_task, bool skip_autobind, zx::vmo inspect,
       fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device);
 
   // Create a new composite device.
@@ -284,8 +284,6 @@ class Device final
   zx_status_t CompleteUnbind(zx_status_t status = ZX_OK);
   // Run the completion for the outstanding remove, if any.
   zx_status_t CompleteRemove(zx_status_t status = ZX_OK);
-
-  zx_status_t ConnectClientRemote();
 
   // Drops the reference to the task.
   // This should be called if the device will not send an init, suspend, unbind or remove request.
@@ -496,10 +494,6 @@ class Device final
 
   // Name of the inspect vmo file as it appears in diagnostics class directory
   fbl::String link_name_;
-
-  // For attaching as an open connection to the proxy device,
-  // or once the device becomes visible.
-  zx::channel client_remote_;
 
   // Provides incoming directory for the driver which binds to this device.
   fidl::ClientEnd<fio::Directory> outgoing_dir_;

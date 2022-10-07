@@ -56,7 +56,7 @@ std::string StateToString(Device::State state) {
 
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
                fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
-               zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir)
+               fidl::ClientEnd<fio::Directory> outgoing_dir)
     : coordinator(coord),
       name_(std::move(name)),
       libname_(std::move(libname)),
@@ -64,7 +64,6 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       parent_(std::move(parent)),
       protocol_id_(protocol_id),
       publish_task_([this] { coordinator->device_manager()->HandleNewDevice(fbl::RefPtr(this)); }),
-      client_remote_(std::move(client_remote)),
       outgoing_dir_(std::move(outgoing_dir)),
       inspect_(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
                name_.c_str(), std::move(inspect)) {
@@ -131,7 +130,7 @@ zx_status_t Device::Create(
     fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
     fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
     fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-    bool want_init_task, bool skip_autobind, zx::vmo inspect, zx::channel client_remote,
+    bool want_init_task, bool skip_autobind, zx::vmo inspect,
     fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
@@ -142,9 +141,9 @@ zx_status_t Device::Create(
     real_parent = parent;
   }
 
-  auto dev = fbl::MakeRefCounted<Device>(
-      coordinator, std::move(name), std::move(driver_path), std::move(args), real_parent,
-      protocol_id, std::move(inspect), std::move(client_remote), std::move(outgoing_dir));
+  auto dev = fbl::MakeRefCounted<Device>(coordinator, std::move(name), std::move(driver_path),
+                                         std::move(args), real_parent, protocol_id,
+                                         std::move(inspect), std::move(outgoing_dir));
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -229,9 +228,9 @@ zx_status_t Device::CreateComposite(
   // device?
   const fbl::RefPtr<Device>& parent = coordinator->root_device();
 
-  auto dev = fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(),
-                                         fbl::String(), parent, 0, zx::vmo(), zx::channel(),
-                                         fidl::ClientEnd<fio::Directory>());
+  auto dev =
+      fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(), fbl::String(),
+                                  parent, 0, zx::vmo(), fidl::ClientEnd<fio::Directory>());
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -287,10 +286,9 @@ zx_status_t Device::CreateProxy() {
     }
   }
 
-  auto dev = fbl::MakeRefCounted<Device>(this->coordinator, fbl::String::Concat({name_, "-proxy"}),
-                                         std::move(driver_path), fbl::String(), fbl::RefPtr(this),
-                                         protocol_id_, zx::vmo(), zx::channel(),
-                                         fidl::ClientEnd<fio::Directory>());
+  auto dev = fbl::MakeRefCounted<Device>(
+      this->coordinator, fbl::String::Concat({name_, "-proxy"}), std::move(driver_path),
+      fbl::String(), fbl::RefPtr(this), protocol_id_, zx::vmo(), fidl::ClientEnd<fio::Directory>());
   if (dev == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -307,7 +305,7 @@ zx_status_t Device::CreateProxy() {
 zx_status_t Device::CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out) {
   auto dev = fbl::MakeRefCounted<Device>(
       this->coordinator, fbl::String::Concat({name_, "-new-proxy"}), fbl::String(), fbl::String(),
-      fbl::RefPtr(this), 0, zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
+      fbl::RefPtr(this), 0, zx::vmo(), fidl::ClientEnd<fio::Directory>());
   if (dev == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -680,15 +678,6 @@ zx_status_t Device::CompleteRemove(zx_status_t status) {
   return ZX_OK;
 }
 
-zx_status_t Device::ConnectClientRemote() {
-  if (!client_remote_.is_valid()) {
-    return ZX_OK;
-  }
-  const fidl::Status result =
-      device_controller()->Open({}, 0, ".", fidl::ServerEnd<fio::Node>(std::move(client_remote_)));
-  return result.status();
-}
-
 zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
   // This function should only be called once
   ZX_DEBUG_ASSERT(props_.data() == nullptr);
@@ -760,8 +749,7 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
       request->args.property_list.props.data(), request->args.property_list.props.count(),
       request->args.property_list.str_props.data(), request->args.property_list.str_props.count(),
       name, request->args.protocol_id, driver_path, args, skip_autobind, request->args.has_init,
-      kEnableAlwaysInit, std::move(request->inspect), std::move(request->client_remote),
-      std::move(request->outgoing_dir), &device);
+      kEnableAlwaysInit, std::move(request->inspect), std::move(request->outgoing_dir), &device);
 
   if (device != nullptr) {
     device->dfv2_device_symbol_ = request->args.dfv2_device_symbol;

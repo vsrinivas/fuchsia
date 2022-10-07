@@ -281,7 +281,6 @@ type AddDeviceArgs = struct {
 /// manager.
 protocol Coordinator {
     /// Record the addition of a new device that can be communicated with via `device_controller`.
-    /// `client_remote`, if present, will be passed to the device as an open connection for the client.
     /// On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // TODO(fxb/74654): String properties are unimplemented.
     AddDevice(resource struct {
@@ -289,7 +288,6 @@ protocol Coordinator {
         coordinator server_end:Coordinator;
         device_controller client_end:DeviceController;
         inspect zx.handle:<VMO, optional>;
-        client_remote zx.handle:<CHANNEL, optional>;
         outgoing_dir client_end:<fuchsia.io.Directory, optional>;
     }) -> (struct {
         local_device_id LocalDeviceId;

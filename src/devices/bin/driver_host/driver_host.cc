@@ -423,7 +423,6 @@ void DriverHostContext::SetupDriverHostController(
 zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& parent,
                                                 const fbl::RefPtr<zx_device_t>& child,
                                                 device_add_args_t* add_args, zx::vmo inspect,
-                                                zx::channel client_remote,
                                                 fidl::ClientEnd<fio::Directory> outgoing_dir) {
   using fuchsia_device_manager::wire::AddDeviceConfig;
   AddDeviceConfig add_device_config;
@@ -520,8 +519,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
 
   auto response = coordinator_client.sync()->AddDevice(
       std::move(add_device_args), std::move(coordinator_endpoints->server),
-      std::move(controller_endpoints->client), std::move(inspect), std::move(client_remote),
-      std::move(outgoing_dir));
+      std::move(controller_endpoints->client), std::move(inspect), std::move(outgoing_dir));
   zx_status_t status = response.status();
   if (status == ZX_OK) {
     if (response->is_ok()) {

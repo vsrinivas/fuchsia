@@ -358,7 +358,6 @@ zx_status_t DriverHostContext::DeviceCreate(fbl::RefPtr<Driver> drv, const char*
 zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
                                          const fbl::RefPtr<zx_device_t>& parent,
                                          device_add_args_t* add_args, zx::vmo inspect,
-                                         zx::channel client_remote,
                                          fidl::ClientEnd<fio::Directory> outgoing_dir) {
   inspect_.DeviceAddStats().Update();
   auto mark_dead = fit::defer([&dev]() {
@@ -424,8 +423,7 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
 
   if (!(dev->flags() & DEV_FLAG_INSTANCE)) {
     // Add always consumes the handle
-    status = DriverManagerAdd(parent, dev, add_args, std::move(inspect), std::move(client_remote),
-                              std::move(outgoing_dir));
+    status = DriverManagerAdd(parent, dev, add_args, std::move(inspect), std::move(outgoing_dir));
     if (status < 0) {
       constexpr char kLogFormat[] = "Failed to add device %p to driver_manager: %s";
       if (status == ZX_ERR_PEER_CLOSED) {

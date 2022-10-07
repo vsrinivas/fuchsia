@@ -258,7 +258,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       base_resolver_(config_.boot_args),
       inspect_manager_(inspect_manager),
       root_device_(fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
-                                               ZX_PROTOCOL_ROOT, zx::vmo(), zx::channel(),
+                                               ZX_PROTOCOL_ROOT, zx::vmo(),
                                                fidl::ClientEnd<fio::Directory>())),
       devfs_(root_device_->self, root_device_.get(),
              [this]() {
@@ -331,9 +331,8 @@ void Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
     driver_loader_.LoadDriverUrl(string);
   }
 
-  sys_device_ =
-      fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
-                                  zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
+  sys_device_ = fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
+                                            zx::vmo(), fidl::ClientEnd<fio::Directory>());
   sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
 }
 
@@ -680,13 +679,6 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
       if (const zx_status_t status = fdio_service_connect(kItemsPath, h0.release());
           status != ZX_OK) {
         LOGF(ERROR, "Failed to connect to %s: %s", kItemsPath, zx_status_get_string(status));
-      }
-    }
-    {
-      const zx_status_t status = dev->proxy()->ConnectClientRemote();
-      if (status != ZX_OK) {
-        LOGF(ERROR, "Failed to connect to service from proxy device '%s' in driver_host '%s': %s",
-             dev->name().data(), driver_hostname, zx_status_get_string(status));
       }
     }
   }

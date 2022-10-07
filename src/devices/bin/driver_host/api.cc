@@ -209,20 +209,18 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     *out = dev.get();
   }
   if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-    r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect), /* client_remote */ {},
-                           std::move(outgoing_dir));
+    r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect), std::move(outgoing_dir));
   } else if (args->flags & DEVICE_ADD_INSTANCE) {
     dev->set_flag(DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE);
     // Set props and proxy args to null just in case:
     args->str_prop_count = 0;
     args->prop_count = 0;
     args->proxy_args = nullptr;
-    r = api_ctx->DeviceAdd(dev, parent_ref, args, zx::vmo(), zx::channel() /* client_remote */,
-                           fidl::ClientEnd<fio::Directory>());
+    r = api_ctx->DeviceAdd(dev, parent_ref, args, zx::vmo(), fidl::ClientEnd<fio::Directory>());
   } else {
     args->proxy_args = nullptr;
     r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect),
-                           zx::channel() /* client_remote */, fidl::ClientEnd<fio::Directory>());
+                           fidl::ClientEnd<fio::Directory>());
   }
   if (r != ZX_OK) {
     if (out) {
