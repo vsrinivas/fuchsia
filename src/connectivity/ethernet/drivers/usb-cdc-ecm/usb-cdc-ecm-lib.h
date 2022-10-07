@@ -53,7 +53,7 @@ using MacAddress = std::array<uint8_t, ETH_MAC_SIZE>;
 
 class UsbCdcDescriptorParser {
  public:
-  static zx::status<UsbCdcDescriptorParser> Parse(usb_protocol_t* usb);
+  static zx::status<UsbCdcDescriptorParser> Parse(usb::UsbDevice& usb);
 
   EcmEndpoint GetInterruptEndpoint() const { return int_ep_; }
   EcmEndpoint GetTxEndpoint() const { return tx_ep_; }
@@ -79,8 +79,13 @@ class UsbCdcDescriptorParser {
 
   static const uint16_t kCdcSupportedVersion = 0x0110; /* 1.10 */
 
-  static zx::status<MacAddress> ParseMacAddress(usb_protocol_t* usb,
-                                                usb_cs_ethernet_interface_descriptor_t* desc);
+  // MAC address is stored in a string descriptor in UTF-16 format, so we get one byte of
+  // address for each 32 bits of text.
+  static const size_t kExpectedStringSize =
+      sizeof(usb_string_descriptor_t) + ETH_MAC_SIZE * sizeof(uint32_t);
+
+  static zx::status<MacAddress> ParseMacAddress(usb::UsbDevice& usb,
+                                                const usb_cs_ethernet_interface_descriptor_t* desc);
 
   EcmEndpoint int_ep_;
   EcmEndpoint tx_ep_;

@@ -7,6 +7,7 @@
 #include <zxtest/zxtest.h>
 
 #include "usb-cdc-ecm-lib.h"
+#include "usb/usb.h"
 
 namespace {
 
@@ -106,13 +107,33 @@ TEST_F(UsbCdcEcmTest, ParseUsbDescriptorTest) {
       .b_interface_number = 0,
       .b_alternate_setting = 0,
       .b_num_endpoints = 1,
-      .b_interface_class = USB_CLASS_CDC,
+      .b_interface_class = USB_CLASS_COMM,
       .b_interface_sub_class = 0,
       .b_interface_protocol = 0,
       .i_interface = 0,
   };
   buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&test_interrupt_ifc),
                 reinterpret_cast<uint8_t*>(&test_interrupt_ifc) + sizeof(test_interrupt_ifc));
+  usb_cs_header_interface_descriptor_t test_cdc_header_desc = {
+      .bLength = sizeof(usb_cs_header_interface_descriptor_t),
+      .bDescriptorType = USB_DT_CS_INTERFACE,
+      .bDescriptorSubType = USB_CDC_DST_HEADER,
+      .bcdCDC = 0x0110,
+  };
+  buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&test_cdc_header_desc),
+                reinterpret_cast<uint8_t*>(&test_cdc_header_desc) + sizeof(test_cdc_header_desc));
+  usb_cs_ethernet_interface_descriptor_t test_cdc_eth_ifc = {
+      .bLength = sizeof(usb_cs_ethernet_interface_descriptor_t),
+      .bDescriptorType = USB_DT_CS_INTERFACE,
+      .bDescriptorSubType = USB_CDC_DST_ETHERNET,
+      .iMACAddress = 1,
+      .bmEthernetStatistics = 0,
+      .wMaxSegmentSize = 1,
+      .wNumberMCFilters = 0,
+      .bNumberPowerFilters = 0,
+  };
+  buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&test_cdc_eth_ifc),
+                reinterpret_cast<uint8_t*>(&test_cdc_eth_ifc) + sizeof(test_cdc_eth_ifc));
   usb_endpoint_descriptor_t test_int_ep = {
       .b_length = sizeof(usb_endpoint_descriptor_t),
       .b_descriptor_type = USB_DT_ENDPOINT,
@@ -156,30 +177,10 @@ TEST_F(UsbCdcEcmTest, ParseUsbDescriptorTest) {
   };
   buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&test_out_ep),
                 reinterpret_cast<uint8_t*>(&test_out_ep) + sizeof(test_out_ep));
-  usb_cs_header_interface_descriptor_t test_cdc_header_desc = {
-      .bLength = sizeof(usb_cs_header_interface_descriptor_t),
-      .bDescriptorType = USB_DT_CS_INTERFACE,
-      .bDescriptorSubType = USB_CDC_DST_HEADER,
-      .bcdCDC = 0x0110,
-  };
-  buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&test_cdc_header_desc),
-                reinterpret_cast<uint8_t*>(&test_cdc_header_desc) + sizeof(test_cdc_header_desc));
-  usb_cs_ethernet_interface_descriptor_t test_cdc_eth_ifc = {
-      .bLength = sizeof(usb_cs_ethernet_interface_descriptor_t),
-      .bDescriptorType = USB_DT_CS_INTERFACE,
-      .bDescriptorSubType = USB_CDC_DST_ETHERNET,
-      .iMACAddress = 1,
-      .bmEthernetStatistics = 0,
-      .wMaxSegmentSize = 1,
-      .wNumberMCFilters = 0,
-      .bNumberPowerFilters = 0,
-  };
-  buffer.insert(buffer.end(), reinterpret_cast<uint8_t*>(&test_cdc_eth_ifc),
-                reinterpret_cast<uint8_t*>(&test_cdc_eth_ifc) + sizeof(test_cdc_eth_ifc));
 
   SetDescriptors(buffer.data());
   SetDescriptorLength(buffer.size());
-  usb_protocol_t* usb = GetUsbProto();
+  usb::UsbDevice usb = usb::UsbDevice(GetUsbProto());
   auto parser = usb_cdc_ecm::UsbCdcDescriptorParser::Parse(usb);
 
   ASSERT_OK(parser.status_value());

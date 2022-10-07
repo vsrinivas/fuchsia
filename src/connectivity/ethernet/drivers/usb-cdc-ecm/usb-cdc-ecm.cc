@@ -330,9 +330,7 @@ zx_status_t UsbCdcEcm::Init() {
   parent_req_size_ = usb_.GetRequestSize();
 
   // Find the CDC descriptors and endpoints
-  usb_protocol_t proto;
-  usb_.GetProto(&proto);
-  auto parser = UsbCdcDescriptorParser::Parse(&proto);
+  auto parser = UsbCdcDescriptorParser::Parse(usb_);
   if (parser.is_error()) {
     zxlogf(ERROR, "Failed to parse usb descriptor: %s", parser.status_string());
     return parser.error_value();

@@ -57,8 +57,9 @@ usb_protocol_ops_t kFuzzedUsbProtocolOps = {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
   FuzzInput input = {.data = Data, .size = Size};
-  usb_protocol_t usb = {.ops = &kFuzzedUsbProtocolOps, .ctx = &input};
+  usb_protocol_t protocol = {.ops = &kFuzzedUsbProtocolOps, .ctx = &input};
+  usb::UsbDevice usb = usb::UsbDevice(&protocol);
 
-  __UNUSED auto parser = usb_cdc_ecm::UsbCdcDescriptorParser::Parse(&usb);
+  __UNUSED auto parser = usb_cdc_ecm::UsbCdcDescriptorParser::Parse(usb);
   return 0;
 }

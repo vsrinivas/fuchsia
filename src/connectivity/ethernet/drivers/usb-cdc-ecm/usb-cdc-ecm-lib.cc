@@ -6,33 +6,32 @@
 
 #include <lib/fit/defer.h>
 #include <zircon/errors.h>
+#include <zircon/hw/usb.h>
+
+#include "fuchsia/hardware/usb/descriptor/c/banjo.h"
+#include "usb/usb.h"
 
 namespace usb_cdc_ecm {
 
 zx::status<MacAddress> UsbCdcDescriptorParser::ParseMacAddress(
-    usb_protocol_t* usb, usb_cs_ethernet_interface_descriptor_t* desc) {
-  // MAC address is stored in a string descriptor in UTF-16 format, so we get one byte of
-  // address for each 32 bits of text.
-  const size_t expected_str_size = sizeof(usb_string_descriptor_t) + ETH_MAC_SIZE * 4;
-  char str_desc_buf[expected_str_size];
-
+    usb::UsbDevice& usb, const usb_cs_ethernet_interface_descriptor_t* desc) {
   // Read string descriptor for MAC address (string index is in iMACAddress field)
   size_t out_length;
-  zx_status_t result =
-      usb_get_descriptor(usb, 0, USB_DT_STRING, desc->iMACAddress, (uint8_t*)str_desc_buf,
-                         sizeof(str_desc_buf), ZX_TIME_INFINITE, &out_length);
-  if (result != ZX_OK) {
+  uint8_t str_desc_buf[kExpectedStringSize];
+  zx_status_t status = usb.GetDescriptor(0, USB_DT_STRING, desc->iMACAddress, str_desc_buf,
+                                         sizeof(str_desc_buf), ZX_TIME_INFINITE, &out_length);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "Error reading MAC address");
-    return zx::error(result);
+    return zx::error(status);
   }
-  if (out_length != expected_str_size) {
+  if (out_length != kExpectedStringSize) {
     zxlogf(ERROR, "MAC address string incorrect length (saw %zd, expected %zd)", out_length,
-           expected_str_size);
+           kExpectedStringSize);
     return zx::error(ZX_ERR_IO);
   }
 
   // Convert MAC address to something more machine-friendly
-  usb_string_descriptor_t* str_desc = (usb_string_descriptor_t*)str_desc_buf;
+  auto str_desc = reinterpret_cast<usb_string_descriptor_t*>(str_desc_buf);
   uint8_t* str = str_desc->b_string;
   size_t ndx;
   MacAddress mac_addr;
@@ -65,101 +64,118 @@ zx::status<MacAddress> UsbCdcDescriptorParser::ParseMacAddress(
   return zx::ok(mac_addr);
 }
 
-zx::status<UsbCdcDescriptorParser> UsbCdcDescriptorParser::Parse(usb_protocol_t* usb) {
-  usb_desc_iter_t iter = {};
-  zx_status_t result = usb_desc_iter_init(usb, &iter);
-  if (result != ZX_OK) {
-    return zx::error(result);
+zx::status<UsbCdcDescriptorParser> UsbCdcDescriptorParser::Parse(usb::UsbDevice& usb) {
+  std::optional<usb::InterfaceList> interfaces;
+  zx_status_t status = usb::InterfaceList::Create(usb, false, &interfaces);
+  if (status != ZX_OK) {
+    return zx::error(status);
   }
-  auto iter_cleanup = fit::defer([&iter]() { usb_desc_iter_release(&iter); });
 
-  usb_endpoint_descriptor_t* int_ep = nullptr;
-  usb_endpoint_descriptor_t* tx_ep = nullptr;
-  usb_endpoint_descriptor_t* rx_ep = nullptr;
-  usb_interface_descriptor_t* default_ifc = nullptr;
-  usb_interface_descriptor_t* data_ifc = nullptr;
+  std::optional<EcmEndpoint> int_ep;
+  std::optional<EcmEndpoint> tx_ep;
+  std::optional<EcmEndpoint> rx_ep;
+  std::optional<EcmInterface> default_ifc;
+  std::optional<EcmInterface> data_ifc;
 
-  usb_descriptor_header_t* desc;
-  usb_cs_header_interface_descriptor_t* cdc_header_desc = nullptr;
-  usb_cs_ethernet_interface_descriptor_t* cdc_eth_desc = nullptr;
-  // TODO: use usb::DescriptorList
-  while ((desc = usb_desc_iter_peek(&iter)) != nullptr) {
-    if (desc->b_descriptor_type == USB_DT_INTERFACE) {
-      usb_interface_descriptor_t* ifc_desc = reinterpret_cast<usb_interface_descriptor_t*>(
-          usb_desc_iter_get_structure(&iter, sizeof(usb_interface_descriptor_t)));
-      if (ifc_desc == nullptr) {
-        return zx::error(ZX_ERR_NOT_SUPPORTED);
-      }
-      if (ifc_desc->b_interface_class == USB_CLASS_CDC) {
-        if (ifc_desc->b_num_endpoints == 0) {
-          if (default_ifc) {
-            zxlogf(ERROR, "Multiple default interfaces found");
-            return zx::error(ZX_ERR_NOT_SUPPORTED);
-          }
-          default_ifc = ifc_desc;
-        } else if (ifc_desc->b_num_endpoints == 2) {
-          if (data_ifc) {
-            zxlogf(ERROR, "Multiple data interfaces found");
-            return zx::error(ZX_ERR_NOT_SUPPORTED);
-          }
-          data_ifc = ifc_desc;
-        }
-      }
-    } else if (desc->b_descriptor_type == USB_DT_CS_INTERFACE) {
-      usb_cs_interface_descriptor_t* cs_ifc_desc = reinterpret_cast<usb_cs_interface_descriptor_t*>(
-          usb_desc_iter_get_structure(&iter, sizeof(usb_cs_interface_descriptor_t)));
-      if (cs_ifc_desc == nullptr) {
-        return zx::error(ZX_ERR_NOT_SUPPORTED);
-      }
-      if (cs_ifc_desc->b_descriptor_sub_type == USB_CDC_DST_HEADER) {
-        if (cdc_header_desc != nullptr) {
-          zxlogf(ERROR, "Multiple CDC headers");
-          return zx::error(ZX_ERR_NOT_SUPPORTED);
-        }
-        cdc_header_desc = reinterpret_cast<usb_cs_header_interface_descriptor_t*>(
-            usb_desc_iter_get_structure(&iter, sizeof(usb_cs_header_interface_descriptor_t)));
-      } else if (cs_ifc_desc->b_descriptor_sub_type == USB_CDC_DST_ETHERNET) {
-        if (cdc_eth_desc != nullptr) {
-          zxlogf(ERROR, "Multiple CDC ethernet descriptors");
-          return zx::error(ZX_ERR_NOT_SUPPORTED);
-        }
-        cdc_eth_desc = reinterpret_cast<usb_cs_ethernet_interface_descriptor_t*>(
-            usb_desc_iter_get_structure(&iter, sizeof(usb_cs_ethernet_interface_descriptor_t)));
-      }
-    } else if (desc->b_descriptor_type == USB_DT_ENDPOINT) {
-      usb_endpoint_descriptor_t* endpoint_desc = reinterpret_cast<usb_endpoint_descriptor_t*>(
-          usb_desc_iter_get_structure(&iter, sizeof(usb_endpoint_descriptor_t)));
-      if (endpoint_desc == nullptr) {
-        return zx::error(ZX_ERR_NOT_SUPPORTED);
-      }
-      if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_IN &&
-          usb_ep_type(endpoint_desc) == USB_ENDPOINT_INTERRUPT) {
-        if (int_ep != nullptr) {
-          zxlogf(ERROR, "Multiple interrupt endpoint descriptors");
-          return zx::error(ZX_ERR_NOT_SUPPORTED);
-        }
-        int_ep = endpoint_desc;
-      } else if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_OUT &&
-                 usb_ep_type(endpoint_desc) == USB_ENDPOINT_BULK) {
-        if (tx_ep != nullptr) {
+  // Find default interface.
+  for (const usb::Interface& interface : *interfaces) {
+    const usb_interface_descriptor_t* desc = interface.descriptor();
+    if (desc->b_interface_class != USB_CLASS_CDC) {
+      continue;
+    }
+    if (desc->b_num_endpoints != 0) {
+      continue;
+    }
+    if (default_ifc.has_value()) {
+      zxlogf(ERROR, "Multiple default interfaces found");
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+    default_ifc = EcmInterface(desc);
+  }
+
+  // Find data interface.
+  for (const usb::Interface& interface : *interfaces) {
+    const usb_interface_descriptor_t* desc = interface.descriptor();
+    if (desc->b_interface_class != USB_CLASS_CDC) {
+      continue;
+    }
+    if (desc->b_num_endpoints != 2) {
+      continue;
+    }
+    if (data_ifc.has_value()) {
+      zxlogf(ERROR, "Multiple data interfaces found");
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+    data_ifc = EcmInterface(desc);
+
+    for (const auto& endpoint : interface.GetEndpointList()) {
+      const usb_endpoint_descriptor_t* endpoint_desc = endpoint.descriptor();
+      if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_OUT &&
+          usb_ep_type(endpoint_desc) == USB_ENDPOINT_BULK) {
+        if (tx_ep.has_value()) {
           zxlogf(ERROR, "Multiple tx endpoint descriptors");
           return zx::error(ZX_ERR_NOT_SUPPORTED);
         }
-        tx_ep = endpoint_desc;
+        tx_ep = EcmEndpoint(endpoint_desc);
       } else if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_IN &&
                  usb_ep_type(endpoint_desc) == USB_ENDPOINT_BULK) {
-        if (rx_ep != nullptr) {
+        if (rx_ep.has_value()) {
           zxlogf(ERROR, "Multiple rx endpoint descriptors");
           return zx::error(ZX_ERR_NOT_SUPPORTED);
         }
-        rx_ep = endpoint_desc;
+        rx_ep = EcmEndpoint(endpoint_desc);
       } else {
         zxlogf(ERROR, "Unrecognized endpoint");
         return zx::error(ZX_ERR_NOT_SUPPORTED);
       }
     }
-    usb_desc_iter_advance(&iter);
   }
+
+  // Find communications interface, which has CDC headers and interrupt endpoint.
+  const usb_cs_header_interface_descriptor_t* cdc_header_desc = nullptr;
+  const usb_cs_ethernet_interface_descriptor_t* cdc_eth_desc = nullptr;
+  for (const usb::Interface& interface : *interfaces) {
+    if (interface.descriptor()->b_interface_class != USB_CLASS_COMM) {
+      continue;
+    }
+
+    for (auto& descriptor : interface.GetDescriptorList()) {
+      if (descriptor.b_descriptor_type != USB_DT_CS_INTERFACE) {
+        continue;
+      }
+
+      const usb_cs_interface_descriptor_t* cs_ifc_desc =
+          reinterpret_cast<const usb_cs_interface_descriptor_t*>(&descriptor);
+
+      if (cs_ifc_desc->b_descriptor_sub_type == USB_CDC_DST_HEADER) {
+        if (cdc_header_desc != nullptr) {
+          zxlogf(ERROR, "Multiple CDC headers");
+          return zx::error(ZX_ERR_NOT_SUPPORTED);
+        }
+        cdc_header_desc =
+            reinterpret_cast<const usb_cs_header_interface_descriptor_t*>(&descriptor);
+      } else if (cs_ifc_desc->b_descriptor_sub_type == USB_CDC_DST_ETHERNET) {
+        if (cdc_eth_desc != nullptr) {
+          zxlogf(ERROR, "Multiple CDC ethernet descriptors");
+          return zx::error(ZX_ERR_NOT_SUPPORTED);
+        }
+        cdc_eth_desc = reinterpret_cast<const usb_cs_ethernet_interface_descriptor_t*>(&descriptor);
+      }
+    }
+
+    for (const auto& endpoint : interface.GetEndpointList()) {
+      const usb_endpoint_descriptor_t* endpoint_desc = endpoint.descriptor();
+      if (usb_ep_direction(endpoint_desc) == USB_ENDPOINT_IN &&
+          usb_ep_type(endpoint_desc) == USB_ENDPOINT_INTERRUPT) {
+        if (int_ep.has_value()) {
+          zxlogf(ERROR, "Multiple interrupt endpoint descriptors");
+          return zx::error(ZX_ERR_NOT_SUPPORTED);
+        }
+        int_ep = EcmEndpoint(endpoint_desc);
+      }
+    }
+  }
+
   if (cdc_header_desc == nullptr || cdc_eth_desc == nullptr) {
     zxlogf(ERROR, "CDC %s descriptor(s) not found",
            cdc_header_desc ? "ethernet"
@@ -167,15 +183,15 @@ zx::status<UsbCdcDescriptorParser> UsbCdcDescriptorParser::Parse(usb_protocol_t*
                            : "ethernet and header");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
-  if (int_ep == nullptr || tx_ep == nullptr || rx_ep == nullptr) {
+  if (!int_ep.has_value() || !tx_ep.has_value() || !rx_ep.has_value()) {
     zxlogf(ERROR, "Missing one or more required endpoints");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
-  if (default_ifc == nullptr) {
+  if (!default_ifc.has_value()) {
     zxlogf(ERROR, "Unable to find CDC default interface");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
-  if (data_ifc == nullptr) {
+  if (!data_ifc.has_value()) {
     zxlogf(ERROR, "Unable to find CDC data interface");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
@@ -187,7 +203,7 @@ zx::status<UsbCdcDescriptorParser> UsbCdcDescriptorParser::Parse(usb_protocol_t*
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  uint16_t mtu = cdc_eth_desc->wMaxSegmentSize;
+  const uint16_t mtu = cdc_eth_desc->wMaxSegmentSize;
 
   auto mac_addr = UsbCdcDescriptorParser::ParseMacAddress(usb, cdc_eth_desc);
   if (mac_addr.is_error()) {
@@ -195,8 +211,8 @@ zx::status<UsbCdcDescriptorParser> UsbCdcDescriptorParser::Parse(usb_protocol_t*
     return mac_addr.take_error();
   }
 
-  return zx::ok(UsbCdcDescriptorParser(EcmEndpoint(int_ep), EcmEndpoint(tx_ep), EcmEndpoint(rx_ep),
-                                       EcmInterface(default_ifc), EcmInterface(data_ifc), mtu,
+  return zx::ok(UsbCdcDescriptorParser(int_ep.value(), tx_ep.value(), rx_ep.value(),
+                                       default_ifc.value(), data_ifc.value(), mtu,
                                        mac_addr.value()));
 }
 
