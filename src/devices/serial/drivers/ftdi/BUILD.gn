@@ -86,6 +86,7 @@ fuchsia_driver("ftdi-fake-usb-driver") {
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_cpp_wire",
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:hid",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",

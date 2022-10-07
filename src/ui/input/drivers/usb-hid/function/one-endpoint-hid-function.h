@@ -8,12 +8,12 @@
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/ddk/device.h>
-#include <zircon/hw/usb/hid.h>
 
 #include <memory>
 #include <vector>
 
 #include <ddktl/device.h>
+#include <usb/hid.h>
 
 namespace one_endpoint_hid_function {
 

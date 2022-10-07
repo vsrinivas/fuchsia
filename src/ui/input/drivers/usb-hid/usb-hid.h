@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <fuchsia/hardware/usb/cpp/banjo.h>
 #include <lib/sync/completion.h>
-#include <zircon/hw/usb/hid.h>
 
 #include <memory>
 #include <thread>
@@ -16,6 +15,7 @@
 #include <ddktl/device.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
+#include <usb/hid.h>
 #include <usb/usb.h>
 
 namespace usb_hid {

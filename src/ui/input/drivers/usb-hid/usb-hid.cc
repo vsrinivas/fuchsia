@@ -15,7 +15,6 @@
 #include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/hw/usb/hid.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -23,6 +22,7 @@
 
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
+#include <usb/hid.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 

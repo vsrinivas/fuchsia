@@ -17,7 +17,6 @@
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
-#include <zircon/hw/usb/hid.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -30,6 +29,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
+#include <usb/hid.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>

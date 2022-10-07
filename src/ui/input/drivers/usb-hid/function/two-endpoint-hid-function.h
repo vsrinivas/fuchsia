@@ -9,7 +9,6 @@
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/hw/usb/hid.h>
 
 #include <memory>
 #include <optional>
@@ -17,6 +16,7 @@
 
 #include <ddktl/device.h>
 #include <fbl/condition_variable.h>
+#include <usb/hid.h>
 #include <usb/request-cpp.h>
 #include <usb/usb.h>
 

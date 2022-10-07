@@ -4,9 +4,8 @@
 
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/usb/descriptor/c/banjo.h>
-#include <zircon/hw/usb.h>
-#include <zircon/hw/usb/hid.h>
 
+#include <usb/hid.h>
 #include <usb/usb.h>
 #include <zxtest/zxtest.h>
 

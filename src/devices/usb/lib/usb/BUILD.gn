@@ -62,3 +62,8 @@ zx_library("ums") {
   sdk = "source"
   sdk_headers = [ "usb/ums.h" ]
 }
+
+zx_library("hid") {
+  sdk = "source"
+  sdk_headers = [ "usb/hid.h" ]
+}
