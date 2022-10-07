@@ -10,7 +10,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -29,73 +28,11 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
-	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	testrunnerconstants "go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 
 	"github.com/google/subcommands"
 	"golang.org/x/sync/errgroup"
 )
-
-// target represents a generic fuchsia instance.
-type target interface {
-	// AddPackageRepository adds a given package repository to the target.
-	AddPackageRepository(client *sshutil.Client, repoURL, blobURL string) error
-
-	// CaptureSerialLog starts capturing serial logs to the given file.
-	// This is only valid once the target has a serial multiplexer running.
-	CaptureSerialLog(filename string) error
-
-	// CaptureSyslog starts capturing the syslog to the given file.
-	// This is only valid when the target has SSH running.
-	CaptureSyslog(client *sshutil.Client, filename, repoURL, blobURL string) error
-
-	// IPv4 returns the IPv4 of the target; this is nil unless explicitly
-	// configured.
-	IPv4() (net.IP, error)
-
-	// IPv6 returns the IPv6 of the target.
-	IPv6() (*net.IPAddr, error)
-
-	// Nodename returns the name of the target node.
-	Nodename() string
-
-	// Serial returns the serial device associated with the target for serial i/o.
-	Serial() io.ReadWriteCloser
-
-	// SerialSocketPath returns the path to the target's serial socket.
-	SerialSocketPath() string
-
-	// SSHClient returns an SSH client to the device (if the device has SSH running).
-	SSHClient() (*sshutil.Client, error)
-
-	// SSHKey returns the private key corresponding an authorized SSH key of the target.
-	SSHKey() string
-
-	// Start starts the target.
-	Start(ctx context.Context, images []bootserver.Image, args []string) error
-
-	// StartSerialServer starts the serial server for the target iff one
-	// does not exist.
-	StartSerialServer() error
-
-	// Stop stops the target.
-	Stop() error
-
-	// Wait waits for the target to finish running.
-	Wait(context.Context) error
-
-	// SetFFX attaches an ffx instance and env to the target.
-	SetFFX(*targets.FFXInstance, []string)
-
-	// UseFFX returns whether to enable using ffx.
-	UseFFX() bool
-
-	// FFXEnv returns the env vars that the ffx instance should run with.
-	FFXEnv() []string
-
-	// SetImageOverrides sets the images to override the defaults in images.json.
-	SetImageOverrides(build.ImageOverrides)
-}
 
 // RunCommand is a Command implementation for booting a device and running a
 // given command locally.
@@ -471,7 +408,7 @@ func (r *RunCommand) runPreflights(ctx context.Context) error {
 
 // createTestbedConfig creates a configuration file that describes the targets
 // attached and returns the path to the file.
-func (r *RunCommand) createTestbedConfig(targetSlice []target) (string, error) {
+func (r *RunCommand) createTestbedConfig(targetSlice []targets.Target) (string, error) {
 	var testbedConfig []targetInfo
 	for _, t := range targetSlice {
 		cfg := targetInfo{
@@ -511,7 +448,7 @@ func (r *RunCommand) createTestbedConfig(targetSlice []target) (string, error) {
 	return f.Name(), nil
 }
 
-func (r *RunCommand) startTargets(ctx context.Context, targetSlice []target) error {
+func (r *RunCommand) startTargets(ctx context.Context, targetSlice []targets.Target) error {
 	bootMode := bootserver.ModePave
 	if r.netboot {
 		bootMode = bootserver.ModeNetboot
@@ -535,7 +472,7 @@ func (r *RunCommand) startTargets(ctx context.Context, targetSlice []target) err
 	return eg.Wait()
 }
 
-func (r *RunCommand) stopTargets(ctx context.Context, targetSlice []target) {
+func (r *RunCommand) stopTargets(ctx context.Context, targetSlice []targets.Target) {
 	// Stop the targets in parallel.
 	var eg errgroup.Group
 	for _, t := range targetSlice {
@@ -570,7 +507,7 @@ func (r *RunCommand) dumpSyslogOverSerial(ctx context.Context, socketPath string
 	return nil
 }
 
-func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []string, testbedConfig string) error {
+func (r *RunCommand) runAgainstTarget(ctx context.Context, t targets.Target, args []string, testbedConfig string) error {
 	subprocessEnv := map[string]string{
 		constants.NodenameEnvKey:      t.Nodename(),
 		constants.SerialSocketEnvKey:  t.SerialSocketPath(),
@@ -674,47 +611,7 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	return subcommands.ExitSuccess
 }
 
-func deriveTarget(ctx context.Context, obj []byte, opts targets.Options) (target, error) {
-	type typed struct {
-		Type string `json:"type"`
-	}
-	var x typed
-
-	if err := json.Unmarshal(obj, &x); err != nil {
-		return nil, fmt.Errorf("object in list has no \"type\" field: %w", err)
-	}
-	switch x.Type {
-	case "aemu":
-		var cfg targets.QEMUConfig
-		if err := json.Unmarshal(obj, &cfg); err != nil {
-			return nil, fmt.Errorf("invalid QEMU config found: %w", err)
-		}
-		return targets.NewAEMUTarget(ctx, cfg, opts)
-	case "qemu":
-		var cfg targets.QEMUConfig
-		if err := json.Unmarshal(obj, &cfg); err != nil {
-			return nil, fmt.Errorf("invalid QEMU config found: %w", err)
-		}
-		return targets.NewQEMUTarget(ctx, cfg, opts)
-	case "device":
-		var cfg targets.DeviceConfig
-		if err := json.Unmarshal(obj, &cfg); err != nil {
-			return nil, fmt.Errorf("invalid device config found: %w", err)
-		}
-		t, err := targets.NewDeviceTarget(ctx, cfg, opts)
-		return t, err
-	case "gce":
-		var cfg targets.GCEConfig
-		if err := json.Unmarshal(obj, &cfg); err != nil {
-			return nil, fmt.Errorf("invalid GCE config found: %w", err)
-		}
-		return targets.NewGCETarget(ctx, cfg, opts)
-	default:
-		return nil, fmt.Errorf("unknown type found: %q", x.Type)
-	}
-}
-
-func (r *RunCommand) deriveTargetsFromFile(ctx context.Context) ([]target, error) {
+func (r *RunCommand) deriveTargetsFromFile(ctx context.Context) ([]targets.Target, error) {
 	opts := targets.Options{
 		Netboot: r.netboot,
 		SSHKey:  r.sshKey,
@@ -729,9 +626,9 @@ func (r *RunCommand) deriveTargetsFromFile(ctx context.Context) ([]target, error
 		return nil, fmt.Errorf("could not unmarshal config file as a JSON list: %w", err)
 	}
 
-	var targetSlice []target
+	var targetSlice []targets.Target
 	for _, obj := range objs {
-		t, err := deriveTarget(ctx, obj, opts)
+		t, err := targets.DeriveTarget(ctx, obj, opts)
 		if err != nil {
 			return nil, err
 		}

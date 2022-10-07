@@ -10,6 +10,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -45,6 +46,67 @@ type FFXInstance struct {
 	// ExperimentLevel specifies what level of experimental ffx features
 	// to enable.
 	ExperimentLevel int
+}
+
+// target represents a generic fuchsia instance.
+type Target interface {
+	// AddPackageRepository adds a given package repository to the target.
+	AddPackageRepository(client *sshutil.Client, repoURL, blobURL string) error
+
+	// CaptureSerialLog starts capturing serial logs to the given file.
+	// This is only valid once the target has a serial multiplexer running.
+	CaptureSerialLog(filename string) error
+
+	// CaptureSyslog starts capturing the syslog to the given file.
+	// This is only valid when the target has SSH running.
+	CaptureSyslog(client *sshutil.Client, filename, repoURL, blobURL string) error
+
+	// IPv4 returns the IPv4 of the target; this is nil unless explicitly
+	// configured.
+	IPv4() (net.IP, error)
+
+	// IPv6 returns the IPv6 of the target.
+	IPv6() (*net.IPAddr, error)
+
+	// Nodename returns the name of the target node.
+	Nodename() string
+
+	// Serial returns the serial device associated with the target for serial i/o.
+	Serial() io.ReadWriteCloser
+
+	// SerialSocketPath returns the path to the target's serial socket.
+	SerialSocketPath() string
+
+	// SSHClient returns an SSH client to the device (if the device has SSH running).
+	SSHClient() (*sshutil.Client, error)
+
+	// SSHKey returns the private key corresponding an authorized SSH key of the target.
+	SSHKey() string
+
+	// Start starts the target.
+	Start(ctx context.Context, images []bootserver.Image, args []string) error
+
+	// StartSerialServer starts the serial server for the target iff one
+	// does not exist.
+	StartSerialServer() error
+
+	// Stop stops the target.
+	Stop() error
+
+	// Wait waits for the target to finish running.
+	Wait(context.Context) error
+
+	// SetFFX attaches an ffx instance and env to the target.
+	SetFFX(*FFXInstance, []string)
+
+	// UseFFX returns whether to enable using ffx.
+	UseFFX() bool
+
+	// FFXEnv returns the env vars that the ffx instance should run with
+	FFXEnv() []string
+
+	// SetImageOverrides sets the images to override the defaults in images.json.
+	SetImageOverrides(build.ImageOverrides)
 }
 
 // target is a generic Fuchsia instance.
@@ -457,4 +519,44 @@ type Options struct {
 	// SSHKey is a private SSH key file, corresponding to an authorized key to be paved or
 	// to one baked into a boot image.
 	SSHKey string
+}
+
+func DeriveTarget(ctx context.Context, obj []byte, opts Options) (Target, error) {
+	type typed struct {
+		Type string `json:"type"`
+	}
+	var x typed
+
+	if err := json.Unmarshal(obj, &x); err != nil {
+		return nil, fmt.Errorf("object in list has no \"type\" field: %w", err)
+	}
+	switch x.Type {
+	case "aemu":
+		var cfg QEMUConfig
+		if err := json.Unmarshal(obj, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid QEMU config found: %w", err)
+		}
+		return NewAEMUTarget(ctx, cfg, opts)
+	case "qemu":
+		var cfg QEMUConfig
+		if err := json.Unmarshal(obj, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid QEMU config found: %w", err)
+		}
+		return NewQEMUTarget(ctx, cfg, opts)
+	case "device":
+		var cfg DeviceConfig
+		if err := json.Unmarshal(obj, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid device config found: %w", err)
+		}
+		t, err := NewDeviceTarget(ctx, cfg, opts)
+		return t, err
+	case "gce":
+		var cfg GCEConfig
+		if err := json.Unmarshal(obj, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid GCE config found: %w", err)
+		}
+		return NewGCETarget(ctx, cfg, opts)
+	default:
+		return nil, fmt.Errorf("unknown type found: %q", x.Type)
+	}
 }
