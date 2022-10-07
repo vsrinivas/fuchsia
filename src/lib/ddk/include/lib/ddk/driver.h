@@ -208,7 +208,7 @@ typedef struct device_add_args {
   uint32_t flags;
 
   // Optional channel passed to the |dev| that serves as an open connection for the client.
-  // If DEVICE_ADD_MUST_ISOLATE is set, the client will be connected to the proxy instead.
+  // This will not work if DEVICE_ADD_MUST_ISOLATE is set.
   zx_handle_t client_remote;
 
   // Optional VMO representing that will get used in devfs inspect tree.

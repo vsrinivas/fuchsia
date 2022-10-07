@@ -104,6 +104,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   // we can connect the client immediately after adding the device.
   // Otherwise we will pass this channel to the devcoordinator via internal::device_add.
   zx::channel client_remote(args->client_remote);
+  if (args->flags & DEVICE_ADD_MUST_ISOLATE && client_remote.is_valid()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   zx::vmo inspect(args->inspect_vmo);
 
@@ -206,7 +209,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     *out = dev.get();
   }
   if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-    r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect), std::move(client_remote),
+    r = api_ctx->DeviceAdd(dev, parent_ref, args, std::move(inspect), /* client_remote */ {},
                            std::move(outgoing_dir));
   } else if (args->flags & DEVICE_ADD_INSTANCE) {
     dev->set_flag(DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE);
