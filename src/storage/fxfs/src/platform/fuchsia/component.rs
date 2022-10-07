@@ -178,19 +178,19 @@ impl Component {
             match request {
                 StartupRequest::Start { responder, device, options } => {
                     responder.send(&mut self.handle_start(device, options).await.map_err(|e| {
-                        error!(error = e.as_value(), "handle_start failed");
+                        error!(?e, "handle_start failed");
                         map_to_raw_status(e)
                     }))?
                 }
                 StartupRequest::Format { responder, device, .. } => {
                     responder.send(&mut self.handle_format(device).await.map_err(|e| {
-                        error!(error = e.as_value(), "handle_format failed");
+                        error!(?e, "handle_format failed");
                         map_to_raw_status(e)
                     }))?
                 }
                 StartupRequest::Check { responder, device, options } => {
                     responder.send(&mut self.handle_check(device, options).await.map_err(|e| {
-                        error!(error = e.as_value(), "handle_check failed");
+                        error!(?e, "handle_check failed");
                         map_to_raw_status(e)
                     }))?
                 }

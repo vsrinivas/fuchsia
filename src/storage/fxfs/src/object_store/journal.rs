@@ -277,7 +277,7 @@ impl Journal {
     /// Used during replay to validate a mutation.  This should return false if the mutation is not
     /// valid and should not be applied.  This could be for benign reasons: e.g. the device flushed
     /// data out-of-order, or because of a malicious actor.
-    fn validate_mutation(&self, mutation: &Mutation) -> Result<bool, Error> {
+    fn validate_mutation(&self, mutation: &Mutation) -> bool {
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation {
                 item:
@@ -301,36 +301,37 @@ impl Journal {
                 ..
             }) => {
                 if checksums.len() == 0 {
-                    return Ok(false);
+                    return false;
                 }
-                let len = if let Ok(l) = usize::try_from(range.length()?) {
-                    l
-                } else {
-                    return Ok(false);
-                };
+                let len =
+                    if let Some(len) = range.length().ok().and_then(|l| usize::try_from(l).ok()) {
+                        len
+                    } else {
+                        return false;
+                    };
                 if len % checksums.len() != 0 {
-                    return Ok(false);
+                    return false;
                 }
                 if (len / checksums.len()) % 4 != 0 {
-                    return Ok(false);
+                    return false;
                 }
             }
             Mutation::ObjectStore(_) => {}
             Mutation::EncryptedObjectStore(_) => {}
             Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
-                return Ok(device_range.valid() && *owner_object_id != INVALID_OBJECT_ID);
+                return device_range.valid() && *owner_object_id != INVALID_OBJECT_ID;
             }
             Mutation::Allocator(AllocatorMutation::Deallocate {
                 device_range,
                 owner_object_id,
             }) => {
-                return Ok(device_range.valid() && *owner_object_id != INVALID_OBJECT_ID);
+                return device_range.valid() && *owner_object_id != INVALID_OBJECT_ID;
             }
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
-                return Ok(*owner_object_id != INVALID_OBJECT_ID);
+                return *owner_object_id != INVALID_OBJECT_ID;
             }
             Mutation::Allocator(AllocatorMutation::SetLimit { owner_object_id, .. }) => {
-                return Ok(*owner_object_id != INVALID_OBJECT_ID);
+                return *owner_object_id != INVALID_OBJECT_ID;
             }
             Mutation::BeginFlush => {}
             Mutation::EndFlush => {}
@@ -338,7 +339,7 @@ impl Journal {
             Mutation::UpdateBorrowed(_) => {}
             Mutation::UpdateMutationsKey(_) => {}
         }
-        Ok(true)
+        true
     }
 
     fn update_checksum_list(
@@ -439,7 +440,8 @@ impl Journal {
                         BLOCK_SIZE,
                     ))),
                 )))
-                .await?;
+                .await
+                .context("Failed to seek root parent store")?;
             let start_offset = if let Some(ItemRef {
                 key:
                     ObjectKey {
@@ -484,7 +486,7 @@ impl Journal {
                 } {
                     break;
                 }
-                iter.advance().await?;
+                iter.advance().await.context("Failed to advance root parent store iterator")?;
             }
         }
         let mut reader =
@@ -498,13 +500,15 @@ impl Journal {
         loop {
             // Cache the checkpoint before we deserialize a record.
             let checkpoint = reader.journal_file_checkpoint();
-            let result = reader.deserialize().await?;
+            let result =
+                reader.deserialize().await.context("Failed to deserialize journal record")?;
             match result {
                 ReadResult::Reset => {
                     let version;
                     reader.consume({
                         let mut cursor = std::io::Cursor::new(reader.buffer());
-                        version = Version::deserialize_from(&mut cursor)?;
+                        version = Version::deserialize_from(&mut cursor)
+                            .context("Failed to deserialize version")?;
                         cursor.position() as usize
                     });
                     reader.set_version(version);
@@ -646,7 +650,7 @@ impl Journal {
         let mut valid_to = reader.journal_file_checkpoint().file_offset;
         'bad_replay: for (checkpoint, mutations, _) in &transactions {
             for (object_id, mutation) in mutations {
-                if !self.validate_mutation(&mutation)? {
+                if !self.validate_mutation(&mutation) {
                     info!(?mutation, "Stopping replay at bad mutation");
                     valid_to = checkpoint.file_offset;
                     break 'bad_replay;
@@ -683,14 +687,18 @@ impl Journal {
                             &ApplyContext { mode: ApplyMode::Replay, checkpoint },
                             end_offset,
                         )
-                        .await?;
+                        .await
+                        .context("Failed to replay mutations")?;
                 }
                 break reader.journal_file_checkpoint();
             }
         };
 
         let root_store = self.objects.root_store();
-        root_store.on_replay_complete().await?;
+        root_store
+            .on_replay_complete()
+            .await
+            .context("Failed to complete replay for root store")?;
         allocator.open().await?;
 
         // Configure the journal writer so that we can continue.
@@ -731,7 +739,10 @@ impl Journal {
             }
         }
 
-        self.objects.on_replay_complete().await?;
+        self.objects
+            .on_replay_complete()
+            .await
+            .context("Failed to complete replay for object manager")?;
 
         if last_checkpoint.file_offset != reader.journal_file_checkpoint().file_offset {
             info!(
@@ -740,7 +751,7 @@ impl Journal {
                 "replay complete"
             );
         } else {
-            info!(checkpoint = reader.journal_file_checkpoint().file_offset, "replay complete",);
+            info!(checkpoint = reader.journal_file_checkpoint().file_offset, "replay complete");
         }
         Ok(())
     }
