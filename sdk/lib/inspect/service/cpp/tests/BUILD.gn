@@ -27,5 +27,5 @@ fuchsia_unittest_package("inspect_service_cpp_tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":inspect_service_cpp_unittests" ]
+  deps = [ ":inspect_service_cpp_tests" ]
 }
