@@ -14,6 +14,7 @@
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 
+#include <efi/types.h>
 #include <ktl/algorithm.h>
 #include <ktl/byte.h>
 #include <ktl/span.h>
@@ -169,6 +170,16 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<ktl::byte> zbi) {
         handoff()->smbios_phys = *reinterpret_cast<const uint64_t*>(payload.data());
         SaveForMexec(*header, payload);
         break;
+
+      case ZBI_TYPE_EFI_MEMORY_ATTRIBUTES_TABLE: {
+        ktl::span handoff_table = New(handoff()->efi_memory_attributes, ac, payload.size());
+        ZX_ASSERT_MSG(ac.check(), "Cannot allocate %zu bytes for EFI memory attributes",
+                      payload.size());
+        ktl::copy(payload.begin(), payload.end(), handoff_table.begin());
+
+        SaveForMexec(*header, payload);
+        break;
+      }
 
       // Default assumption is that the type is architecture-specific.
       default:

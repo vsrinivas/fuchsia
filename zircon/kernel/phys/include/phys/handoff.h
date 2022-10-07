@@ -125,6 +125,10 @@ struct PhysHandoff {
   // ZBI_TYPE_SMBIOS payload.
   // Physical address of the SMBIOS tables.
   ktl::optional<uint64_t> smbios_phys;
+
+  // ZBI_TYPE_EFI_MEMORY_ATTRIBUTES_TABLE payload.
+  // EFI memory attributes table.
+  PhysHandoffTemporarySpan<const std::byte> efi_memory_attributes;
 };
 
 static_assert(ktl::is_default_constructible_v<PhysHandoff>);
