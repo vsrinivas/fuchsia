@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_EFI_H_
-#define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_EFI_H_
+#ifndef ZIRCON_KERNEL_INCLUDE_PLATFORM_EFI_H_
+#define ZIRCON_KERNEL_INCLUDE_PLATFORM_EFI_H_
 
 #include <lib/instrumentation/asan.h>
 #include <zircon/compiler.h>
@@ -35,6 +35,9 @@ NO_ASAN zx_status_t InitEfiServices(uint64_t efi_system_table);
 // WARNING: Users of the pointer returned by this function  must be tagged
 // with the NO_ASAN attribute to avoid crashes when running under KASAN.
 NO_ASAN EfiServicesActivation TryActivateEfiServices();
+
+// Returns true if the EFI tests should be expected to succeed.
+extern bool IsEfiExpected();
 
 // Manages access to "efi_runtime_services" and restoration of the previous
 // address space.
@@ -79,4 +82,4 @@ class EfiServicesActivation {
   efi_runtime_services* services_ = nullptr;
 };
 
-#endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_EFI_H_
+#endif  // ZIRCON_KERNEL_INCLUDE_PLATFORM_EFI_H_

@@ -13,7 +13,7 @@
 #include <ktl/optional.h>
 #include <lk/init.h>
 #include <phys/handoff.h>
-#include <platform/pc/efi.h>
+#include <platform/efi.h>
 #include <vm/bootreserve.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
@@ -42,6 +42,25 @@ void PanicFriendlySwitchAspace(VmAspace* aspace) {
     vmm_set_active_aspace(aspace);
   }
 }
+
+void EfiInitHook(uint level) {
+  // Attempt to initialize EFI.
+  if (gPhysHandoff->efi_system_table) {
+    zx_status_t status = InitEfiServices(gPhysHandoff->efi_system_table.value());
+    if (status != ZX_OK) {
+      dprintf(INFO, "Unable to initialize EFI services: %d\n", status);
+      return;
+    } else {
+      printf("Init EFI OK\n");
+    }
+  } else {
+    dprintf(INFO, "No EFI available on system.\n");
+    return;
+  }
+}
+
+// Init EFI before INIT_LEVEL_PLATFORM in case the platform code wants to use the EFI crashlog.
+LK_INIT_HOOK(efi_init, EfiInitHook, LK_INIT_LEVEL_PLATFORM - 1)
 
 // Helper function that maps the region with size |size| at |base| into the given aspace.
 zx_status_t MapUnalignedRegion(VmAspace* aspace, paddr_t base, size_t size, const char* name,

@@ -5,7 +5,10 @@
 # https://opensource.org/licenses/MIT
 
 source_set("generic-arm") {
-  sources = [ "platform.cc" ]
+  sources = [
+    "efi.cc",
+    "platform.cc",
+  ]
   deps = [
     "//zircon/kernel/dev/hdcp/amlogic_s912",
     "//zircon/kernel/dev/hw_rng",
@@ -28,6 +31,7 @@ source_set("generic-arm") {
     "//zircon/kernel/lib/cbuf",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/crashlog",
+    "//zircon/kernel/lib/efi:headers",
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/instrumentation:headers",

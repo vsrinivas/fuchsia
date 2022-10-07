@@ -13,8 +13,7 @@ zx_library("pc") {
     "cmos_bootbyte.cc",
     "console.cc",
     "debug.cc",
-    "efi.cc",
-    "efi_crashlog.cc",
+    "efi_expected.cc",
     "hpet.cc",
     "interrupts.cc",
     "keyboard.cc",
@@ -61,9 +60,6 @@ zx_library("pc") {
   public_deps = [
     # <platform/pc/smbios.h> has #include <lib/smbios/smbios.h>.
     "//zircon/system/ulib/smbios:headers",
-
-    # <platform/pc/efi.h> has #include <efi/runtime_services.h>
-    "//zircon/kernel/lib/efi:headers",
   ]
 
   if (toolchain_environment == "kernel") {
@@ -76,10 +72,7 @@ zx_library("pc") {
 
 source_set("tests") {
   # TODO: testonly = true
-  sources = [
-    "efi_test.cc",
-    "interrupts_test.cc",
-  ]
+  sources = [ "interrupts_test.cc" ]
   deps = [
     ":headers",
     "//zircon/kernel/dev/interrupt",

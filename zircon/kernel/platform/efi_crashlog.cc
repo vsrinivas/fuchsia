@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <platform/pc/efi.h>
-#include <platform/pc/efi_crashlog.h>
+#include <platform/efi.h>
+#include <platform/efi_crashlog.h>
 
 namespace {
 efi_guid kZirconVendorGuid = ZIRCON_VENDOR_GUID;

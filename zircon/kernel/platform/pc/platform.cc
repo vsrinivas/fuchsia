@@ -51,12 +51,12 @@
 #include <lk/init.h>
 #include <platform/console.h>
 #include <platform/crashlog.h>
+#include <platform/efi.h>
+#include <platform/efi_crashlog.h>
 #include <platform/keyboard.h>
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
-#include <platform/pc/efi.h>
-#include <platform/pc/efi_crashlog.h>
 #include <platform/pc/smbios.h>
 #include <platform/ram_mappable_crashlog.h>
 #include <vm/bootalloc.h>
@@ -189,18 +189,6 @@ LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM
 static void platform_init_crashlog(void) {
   // Nothing to do if we have already selected a crashlog implementation.
   if (PlatformCrashlog::HasNonTrivialImpl()) {
-    return;
-  }
-
-  // Attempt to initialize EFI.
-  if (gPhysHandoff->efi_system_table) {
-    zx_status_t status = InitEfiServices(gPhysHandoff->efi_system_table.value());
-    if (status != ZX_OK) {
-      dprintf(INFO, "Unable to initialize EFI services: %d\n", status);
-      return;
-    }
-  } else {
-    dprintf(INFO, "No EFI available on system.\n");
     return;
   }
 

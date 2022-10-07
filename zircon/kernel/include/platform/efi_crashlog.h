@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_EFI_CRASHLOG_H_
-#define ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_EFI_CRASHLOG_H_
+#ifndef ZIRCON_KERNEL_INCLUDE_PLATFORM_EFI_CRASHLOG_H_
+#define ZIRCON_KERNEL_INCLUDE_PLATFORM_EFI_CRASHLOG_H_
 
 #include <kernel/spinlock.h>
 #include <platform/crashlog.h>
@@ -35,4 +35,4 @@ class EfiCrashlog final : public PlatformCrashlog::Interface {
   char render_target_[kMaxEfiCrashlogLen];
 };
 
-#endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_EFI_CRASHLOG_H_
+#endif  // ZIRCON_KERNEL_INCLUDE_PLATFORM_EFI_CRASHLOG_H_

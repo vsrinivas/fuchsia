@@ -7,28 +7,9 @@
 #include <lib/instrumentation/asan.h>
 #include <lib/unittest/unittest.h>
 
-#include <platform/pc.h>
-#include <platform/pc/efi.h>
-#include <platform/pc/smbios.h>
+#include <platform/efi.h>
 
 namespace {
-
-// Is the string `needle` in the string `haysack`?
-bool StringContains(ktl::string_view haysack, ktl::string_view needle) {
-  return haysack.find(needle) != ktl::string_view::npos;
-}
-
-// Return true if the the named platform/manufacturer is expected to have
-// functioning EFI support.
-//
-// Return false if no EFI is expected or unknown.
-//
-// While most x86_64 platforms _will_ have EFI support, but some platforms (in
-// particular, QEMU) don't have EFI support, and this is fine.
-bool IsEfiExpected(ktl::string_view manufacturer, ktl::string_view product) {
-  // All Intel NUCs are expected to have functining EFI support.
-  return StringContains(manufacturer, "Intel") && StringContains(product, "NUC");
-}
 
 // Ensure EFI is present on platforms we know should have it.
 //
@@ -43,7 +24,7 @@ NO_ASAN bool TestEfiPresent() {
   EfiServicesActivation services = TryActivateEfiServices();
 
   // Ensure we got back a valid result if EFI meant to be present.
-  if (IsEfiExpected(manufacturer, product)) {
+  if (IsEfiExpected()) {
     EXPECT_TRUE(services.valid());
     // This should switch back to the old aspace.
     services.reset();
@@ -51,10 +32,7 @@ NO_ASAN bool TestEfiPresent() {
     // Make sure it actually did.
     EXPECT_EQ(old_aspace, Thread::Current::Get()->aspace());
   } else {
-    printf(
-        "Unknown if EFI is expected to be supported on platform "
-        "(manufaturer=\"%s\", product=\"%s\"). Skipping test.\n",
-        manufacturer, product);
+    printf("Unknown if EFI is expected to be supported on platform. Skipping test.\n");
   }
 
   END_TEST;

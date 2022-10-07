@@ -8,6 +8,9 @@ import("//build/zircon/zircon_cpu.gni")
 
 source_set("platform") {
   sources = [
+    "efi.cc",
+    "efi_crashlog.cc",
+    "efi_test.cc",
     "halt_helper.cc",
     "hw_reboot_reason.cc",
     "mexec.cc",
@@ -24,13 +27,20 @@ source_set("platform") {
     "//zircon/kernel/lib/crashlog",
     "//zircon/kernel/lib/debuglog",
     "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/instrumentation:headers",
     "//zircon/kernel/lib/jtrace:headers",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/persistent-debuglog",
     "//zircon/kernel/lib/root_resource_filter",
+    "//zircon/kernel/lib/unittest",
     "//zircon/kernel/phys:handoff",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ram-crashlog",
     "//zircon/system/ulib/zxc",
+  ]
+
+  public_deps = [
+    # <platform/efi.h> has #include <efi/runtime_services.h>
+    "//zircon/kernel/lib/efi:headers",
   ]
 }
