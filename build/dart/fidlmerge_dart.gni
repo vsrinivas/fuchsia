@@ -110,7 +110,7 @@ template("fidlmerge_dart") {
   copy_source_target_name = "${target_name}_dart_sources"
 
   library_name = target_name
-  root_dir = "$target_gen_dir/${library_name}_package"
+  root_dir = "$target_gen_dir/${fidl_target}/dart"
 
   copy(copy_pubspec_target_name) {
     sources = [ "//build/dart/empty_pubspec.yaml" ]

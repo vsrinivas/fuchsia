@@ -48,11 +48,7 @@ _hlcpp_output_stem = "cpp/fidl"
 
 template("_fidl_cpp_codegen_impl") {
   generation_target_name = "${target_name}_generate"
-  fidl_target_name = invoker.fidl_target_name
-
-  fidl_target_gen_dir =
-      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  root = "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
+  root = "${invoker.fidl_gen_dir}/${invoker.bindings_flavor}"
 
   generation_visibility = [
     ":$target_name",
@@ -144,8 +140,8 @@ template("_fidl_cpp_codegen_impl") {
 #
 # Parameters
 #
-#  fidl_target_name (required)
-#    Name of the GN target corresponding to the FIDL library.
+#  fidl_gen_dir (required)
+#    The directory into which bindings should be generated.
 #
 #  bindings_flavor (required)
 #    Identifies which kind of bindings (hlcpp, cpp, ...).
@@ -187,14 +183,14 @@ template("fidl_cpp_codegen") {
 }
 
 template("_fidl_cpp_library_impl") {
-  generation_target_name =
-      "${invoker.fidl_target_name}_${invoker.bindings_flavor}_generate"
+  forward_variables_from(invoker,
+                         [
+                           "fidl_target",
+                           "fidl_gen_dir",
+                         ])
+  generation_target_name = "${fidl_target}_${invoker.bindings_flavor}_generate"
 
-  not_needed(invoker, [ "library_name" ])
-  fidl_target_name = invoker.fidl_target_name
-  fidl_target_gen_dir =
-      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  root = "$fidl_target_gen_dir/$fidl_target_name/${invoker.bindings_flavor}"
+  root = "$fidl_gen_dir/${invoker.bindings_flavor}"
 
   if (defined(invoker.generated_headers)) {
     config_target_name = "${target_name}__config"
@@ -250,8 +246,8 @@ template("_fidl_cpp_library_impl") {
 
     public_deps = [
       ":$generation_target_name($fidl_toolchain)",
-      ":${invoker.fidl_target_name}($fidl_toolchain)",
-      ":${invoker.fidl_target_name}_tables",
+      ":${fidl_target}($fidl_toolchain)",
+      ":${fidl_target}_tables",
     ]
 
     # Map FIDL library dependencies to generated library dependencies
@@ -292,7 +288,7 @@ template("_fidl_cpp_library_impl") {
 #  library_name (required)
 #    Name of the FIDL library.
 #
-#  fidl_target_name (required)
+#  fidl_target (required)
 #    Name of the GN target corresponding to the FIDL library.
 #
 #  bindings_flavor (required)
@@ -339,6 +335,7 @@ template("fidl_cpp_library") {
       _fidl_cpp_library_impl(target_name) {
         forward_variables_from(invoker, "*")
       }
+      not_needed(invoker, [ "library_name" ])
     }
   } else {
     # No-op under FIDL toolchain
@@ -389,11 +386,7 @@ template("fidl_cpp_family") {
   assert(defined(invoker.fidl_ir_target),
          "fidl_cpp_family(\"$target_name\") must define `fidl_ir_target`")
 
-  forward_variables_from(invoker,
-                         [
-                           "fidl_target",
-                           "library_name",
-                         ])
+  forward_variables_from(invoker, [ "library_name" ])
   library_name_slashes = string_replace(library_name, ".", "/")
   if (current_toolchain == fidl_toolchain) {
     not_needed(invoker, [ "sdk_category" ])
@@ -416,13 +409,6 @@ template("fidl_cpp_family") {
     ]
   }
 
-  common_options = {
-    fidl_target_name = fidl_target
-    library_name = library_name
-    not_needed([ "library_name" ])
-    forward_variables_from(invoker, [ "testonly" ])
-  }
-
   #
   # HLCPP Bindings
   #
@@ -440,20 +426,23 @@ template("fidl_cpp_family") {
   fidl_cpp_codegen("${target_name}_hlcpp") {
     forward_variables_from(invoker,
                            [
+                             "testonly",
+                             "fidl_gen_dir",
                              "fidl_ir_json",
                              "fidl_ir_target",
                            ])
-    forward_variables_from(common_options, "*")
     forward_variables_from(hlcpp_options, "*")
     fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
   }
   fidl_cpp_library("${target_name}_hlcpp") {
     forward_variables_from(invoker,
                            [
-                             "public_deps",
+                             "testonly",
                              "visibility",
+                             "public_deps",
+                             "fidl_target",
+                             "fidl_gen_dir",
                            ])
-    forward_variables_from(common_options, "*")
     forward_variables_from(hlcpp_options, "*")
     additional_public_deps = hlcpp_public_deps
   }
@@ -634,11 +623,13 @@ template("fidl_cpp_family") {
     fidl_cpp_library(layer_target_name) {
       forward_variables_from(invoker,
                              [
+                               "testonly",
+                               "visibility",
                                "public_configs",
                                "public_deps",
-                               "visibility",
+                               "fidl_target",
+                               "fidl_gen_dir",
                              ])
-      forward_variables_from(common_options, "*")
       bindings_flavor = "cpp"
       bindings_layer = layer.layer
       if (defined(layer.headers)) {
@@ -676,10 +667,11 @@ template("fidl_cpp_family") {
   fidl_cpp_codegen("${target_name}_cpp") {
     forward_variables_from(invoker,
                            [
+                             "testonly",
+                             "fidl_gen_dir",
                              "fidl_ir_json",
                              "fidl_ir_target",
                            ])
-    forward_variables_from(common_options, "*")
     bindings_flavor = "cpp"
     fidlgen_tool = "//tools/fidl/fidlgen_cpp"
     generated_headers = []
@@ -717,12 +709,13 @@ template("fidl_cpp_family") {
   fidl_cpp_codegen("${target_name}_libfuzzer") {
     forward_variables_from(invoker,
                            [
+                             "testonly",
                              "fuzzers",
                              "golden_fuzzer",
+                             "fidl_gen_dir",
                              "fidl_ir_json",
                              "fidl_ir_target",
                            ])
-    forward_variables_from(common_options, "*")
     forward_variables_from(libfuzzer_options, "*")
     generated_headers = libfuzzer_headers
     generated_sources = libfuzzer_sources
@@ -733,10 +726,12 @@ template("fidl_cpp_family") {
   fidl_cpp_library("${target_name}_libfuzzer") {
     forward_variables_from(invoker,
                            [
-                             "public_deps",
+                             "testonly",
                              "visibility",
+                             "public_deps",
+                             "fidl_target",
+                             "fidl_gen_dir",
                            ])
-    forward_variables_from(common_options, "*")
     forward_variables_from(libfuzzer_options, "*")
     testonly = true
     additional_public_deps = [
@@ -788,10 +783,12 @@ template("fidl_cpp_family") {
       fidl_cpp_library(fuzzer_lib_name) {
         forward_variables_from(invoker,
                                [
+                                 "testonly",
                                  "visibility",
                                  "public_deps",
+                                 "fidl_target",
+                                 "fidl_gen_dir",
                                ])
-        forward_variables_from(common_options, "*")
         forward_variables_from(libfuzzer_options, "*")
         testonly = true
         defines = library_defines
@@ -808,10 +805,12 @@ template("fidl_cpp_family") {
     fidl_cpp_library("${target_name}_libfuzzer__golden") {
       forward_variables_from(invoker,
                              [
+                               "testonly",
                                "visibility",
                                "public_deps",
+                               "fidl_target",
+                               "fidl_gen_dir",
                              ])
-      forward_variables_from(common_options, "*")
       forward_variables_from(libfuzzer_options, "*")
       testonly = true
       defines = [ "GOLDEN_FUZZER" ]

@@ -11,9 +11,14 @@ template("_fidl_banjo_c") {
   c_target_name = target_name
   c_fidlgen_target_name = "${target_name}_generate"
   c_config_target_name = "${target_name}_config"
-  c_header_path = string_replace(invoker.library_name, ".", "/")
+  forward_variables_from(invoker,
+                         [
+                           "library_name",
+                           "fidl_gen_dir",
+                         ])
+  c_header_path = string_replace(library_name, ".", "/")
   c_header_path = string_replace(c_header_path, "_", "-")
-  c_header_include_base = "${invoker.gen_dir}/$target_name"
+  c_header_include_base = "${fidl_gen_dir}/c"
   c_header_file = "$c_header_include_base/$c_header_path/c/banjo.h"
 
   if (current_toolchain == fidl_toolchain) {
@@ -89,17 +94,20 @@ template("_fidl_banjo_c") {
 template("_fidl_banjo_cpp") {
   c_target_name = "${invoker.fidl_target}_banjo_c"
   cpp_target_name = target_name
+  cpp_config_target_name = "${target_name}_config"
   cpp_mock_target_name = "${target_name}_mock"
   cpp_public_fidlgen_target_name = "${target_name}_public_generate"
   cpp_private_fidlgen_target_name = "${target_name}_private_generate"
   cpp_mock_fidlgen_target_name = "${cpp_mock_target_name}_generate"
 
-  cpp_header_path = string_replace(invoker.library_name, ".", "/")
+  forward_variables_from(invoker,
+                         [
+                           "library_name",
+                           "fidl_gen_dir",
+                         ])
+  cpp_header_path = string_replace(library_name, ".", "/")
   cpp_header_path = string_replace(cpp_header_path, "_", "-")
-
-  # Note: C++ headers are explicitly installed in the same location as their C
-  # counterparts as they expect to be colocated.
-  cpp_header_include_base = "${invoker.gen_dir}/$c_target_name"
+  cpp_header_include_base = "${fidl_gen_dir}/cpp"
   cpp_public_file = "$cpp_header_include_base/$cpp_header_path/cpp/banjo.h"
   cpp_private_file =
       "$cpp_header_include_base/$cpp_header_path/cpp/banjo-internal.h"
@@ -185,6 +193,10 @@ template("_fidl_banjo_cpp") {
 
   # Build the C++ code that was generated in the FIDL toolchain.
 
+  config(cpp_config_target_name) {
+    include_dirs = [ cpp_header_include_base ]
+  }
+
   source_set(cpp_target_name) {
     forward_variables_from(invoker,
                            [
@@ -197,7 +209,10 @@ template("_fidl_banjo_cpp") {
     sources = [ cpp_private_file ]
 
     # Let dependencies use `#include "$file_stem.h"`.
-    public_configs = [ "//build/c:banjo_gen_config" ]
+    public_configs = [
+      ":$cpp_config_target_name",
+      "//build/c:banjo_gen_config",
+    ]
 
     deps = [
       ":$cpp_private_fidlgen_target_name($fidl_toolchain)",
@@ -219,7 +234,7 @@ template("_fidl_banjo_cpp") {
       foreach(dep, invoker.public_deps) {
         _name = get_label_info(dep, "name")
         _dir = get_label_info(dep, "dir")
-        deps += [ "$_dir:${_name}_banjo_cpp" ]
+        public_deps += [ "$_dir:${_name}_banjo_cpp" ]
       }
     }
   }
@@ -244,7 +259,7 @@ template("_fidl_banjo_cpp") {
       foreach(dep, invoker.public_deps) {
         _name = get_label_info(dep, "name")
         _dir = get_label_info(dep, "dir")
-        deps += [ "$_dir:${_name}_banjo_cpp_mock" ]
+        public_deps += [ "$_dir:${_name}_banjo_cpp_mock" ]
       }
     }
   }
@@ -264,9 +279,15 @@ template("_fidl_banjo_cpp") {
 template("_fidl_banjo_rust") {
   rust_target_name = target_name
   rust_fidlgen_target_name = "${target_name}_generate"
-  rust_library_name = "banjo_" + string_replace(invoker.library_name, ".", "_")
+
+  forward_variables_from(invoker,
+                         [
+                           "library_name",
+                           "fidl_gen_dir",
+                         ])
+  rust_library_name = "banjo_" + string_replace(library_name, ".", "_")
   rust_file_name = "$rust_library_name.rs"
-  rust_source_file = "${invoker.gen_dir}/$target_name/$rust_file_name"
+  rust_source_file = "${fidl_gen_dir}/rust/$rust_file_name"
 
   if (current_toolchain == fidl_toolchain) {
     # Run fidlgen_banjo on the IR and generate Rust code.
@@ -350,6 +371,10 @@ template("_fidl_banjo_rust") {
 #    - Required: The name of the associated fidl() target.
 #    - Type: string
 #
+#  * fidl_gen_dir
+#    - Required: The directory under which bindings should be generated.
+#    - Type: path
+#
 #  * fidl_ir_json
 #    - Required: The path to the associated FIDL IR JSON file.
 #    - Type: path
@@ -374,11 +399,10 @@ template("fidl_banjo") {
                              "public_deps",
                              "library_name",
                              "fidl_target",
+                             "fidl_gen_dir",
                              "fidl_ir_json",
                              "fidl_ir_target",
                            ])
-
-    gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
   }
 
   _fidl_banjo_c("${target_name}_c") {

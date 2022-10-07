@@ -57,7 +57,7 @@ if (is_host) {
         comparisons += [
           {
             golden = "goldens/${info.name}.go.golden"
-            candidate = "${info.fidl_gen_dir}/${info.target_name}/${info.library}.fidl/impl.go"
+            candidate = "${info.fidl_gen_dir}/${info.target_name}/go/${info.library}.fidl/impl.go"
           },
         ]
       }

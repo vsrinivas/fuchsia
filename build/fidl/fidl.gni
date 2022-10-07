@@ -113,6 +113,8 @@ template("fidl") {
     }
 
     fidl_target = target_name
+    fidl_gen_dir = get_label_info(":$fidl_target($fidl_toolchain)",
+                                  "target_gen_dir") + "/$fidl_target"
 
     # The FIDL IR target, to be forwarded to each backend as a dependency.
     fidl_ir_target = ":${target_name}_compile_fidlc($fidl_toolchain)"
@@ -172,6 +174,7 @@ template("fidl") {
                                    "sdk_category",
                                  ])
       forward_variables_from(extra_parameters, "*")
+      fidl_gen_dir += "/dart"
     }
   } else {
     not_needed(invoker, dart_only)
@@ -185,7 +188,8 @@ template("fidl") {
                                "visibility",
                                "public_deps",
                              ])
-      forward_variables_from(extra_parameters, "*")
+      forward_variables_from(extra_parameters, "*", [ "fidl_target" ])
+      fidl_gen_dir += "/go"
     }
     not_needed(invoker, [ "sdk_category" ])
   }
@@ -214,7 +218,8 @@ template("fidl") {
                                "visibility",
                                "public_deps",
                              ])
-      forward_variables_from(extra_parameters, "*")
+      forward_variables_from(extra_parameters, "*", [ "fidl_target" ])
+      fidl_gen_dir += "/rust"
     }
 
     fidl_bind_library("${target_name}_bindlib") {
@@ -223,7 +228,8 @@ template("fidl") {
                                "testonly",
                                "visibility",
                              ])
-      forward_variables_from(extra_parameters, "*")
+      forward_variables_from(extra_parameters, "*", [ "fidl_target" ])
+      fidl_gen_dir += "/bindlib"
     }
 
     fidl_banjo("${target_name}_banjo") {
@@ -234,6 +240,7 @@ template("fidl") {
                                "public_deps",
                              ])
       forward_variables_from(extra_parameters, "*")
+      fidl_gen_dir += "/banjo"
     }
 
     fidl_tables("${target_name}_tables") {
@@ -258,7 +265,9 @@ template("fidl") {
                                [
                                  "library_name",
                                  "fidl_target",
+                                 "fidl_gen_dir",
                                ])
+        fidl_gen_dir += "/c"
       }
     }
   } else {

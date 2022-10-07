@@ -62,11 +62,11 @@ if (is_host) {
         comparisons += [
           {
             golden = "goldens/${info.name}_async.dart.golden"
-            candidate = "${info.fidl_gen_dir}/${info.library}_package/lib/fidl_async.dart"
+            candidate = "${info.fidl_gen_dir}/${info.target_name}/dart/lib/fidl_async.dart"
           },
           {
             golden = "goldens/${info.name}_test.dart.golden"
-            candidate = "${info.fidl_gen_dir}/${info.library}_package/lib/fidl_test.dart"
+            candidate = "${info.fidl_gen_dir}/${info.target_name}/dart/lib/fidl_test.dart"
           },
         ]
       }

@@ -12,9 +12,9 @@ import("//build/bind/bind.gni")
 #    - Required: The name of the FIDL library.
 #    - Type: string
 #
-#  * fidl_target
-#    - Required: The name of the associated fidl() target.
-#    - Type: string
+#  * fidl_gen_dir
+#    - Required: The directory under which bindings should be generated.
+#    - Type: path
 #
 #  * fidl_ir_json
 #    - Required: The path to the associated FIDL IR JSON file.
@@ -30,8 +30,8 @@ import("//build/bind/bind.gni")
 template("fidl_bind_library") {
   assert(defined(invoker.library_name),
          "fidl_bind_library(\"$target_name\") must define `library_name`")
-  assert(defined(invoker.fidl_target),
-         "fidl_bind_library(\"$target_name\") must define `fidl_target`")
+  assert(defined(invoker.fidl_gen_dir),
+         "fidl_bind_library(\"$target_name\") must define `fidl_gen_dir`")
   assert(defined(invoker.fidl_ir_json),
          "fidl_bind_library(\"$target_name\") must define `fidl_ir_json`")
   assert(defined(invoker.fidl_ir_target),
@@ -40,17 +40,13 @@ template("fidl_bind_library") {
   main_target = target_name
   generation_target = "${target_name}_generate"
 
-  fidl_target_gen_dir =
-      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-
   forward_variables_from(invoker,
                          [
-                           "fidl_target",
+                           "fidl_gen_dir",
                            "library_name",
                          ])
   bind_library_file_name = "${library_name}.bind"
-  generated_bind_library =
-      "$fidl_target_gen_dir/$fidl_target/fidl_bindlibs/$bind_library_file_name"
+  generated_bind_library = "$fidl_gen_dir/$bind_library_file_name"
 
   if (current_toolchain == fidl_toolchain) {
     compiled_action(generation_target) {

@@ -44,6 +44,8 @@ template("fidl_dart") {
          "fidl_dart(\"$target_name\") must define `library_name`")
   assert(defined(invoker.fidl_target),
          "fidl_dart(\"$target_name\") must define `fidl_target`")
+  assert(defined(invoker.fidl_gen_dir),
+         "fidl_dart(\"$target_name\") must define `fidl_gen_dir`")
   assert(defined(invoker.fidl_ir_json),
          "fidl_dart(\"$target_name\") must define `fidl_ir_json`")
   assert(defined(invoker.fidl_ir_target),
@@ -55,16 +57,10 @@ template("fidl_dart") {
 
   forward_variables_from(invoker,
                          [
-                           "fidl_target",
                            "library_name",
+                           "fidl_gen_dir",
                          ])
-  fidl_target_gen_dir =
-      get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  if (library_name == fidl_target) {
-    root_dir = "$fidl_target_gen_dir/${library_name}_package"
-  } else {
-    root_dir = "$fidl_target_gen_dir/${target_name}_${library_name}_package"
-  }
+  root_dir = fidl_gen_dir
   bindings_dir = "$root_dir/lib"
   async_bindings_file = "$bindings_dir/fidl_async.dart"
   test_bindings_file = "$bindings_dir/fidl_test.dart"
@@ -156,7 +152,9 @@ template("fidl_dart") {
     # original library.
     sdk_target_name = "${main_target}_sdk"
     sdk_atom_alias(sdk_target_name) {
-      atom = ":${fidl_target}_sdk($fidl_toolchain)"
+      atom = ":${invoker.fidl_target}_sdk($fidl_toolchain)"
     }
+  } else {
+    not_needed(invoker, [ "fidl_target" ])
   }
 }
