@@ -624,7 +624,21 @@ static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t 
   if (status != ZX_OK) {
     return status;
   }
-  return zx_bti_create(iommu_handle, 0, bdf, bti);
+
+  status = zx_bti_create(iommu_handle, 0, bdf, bti);
+  if (status == ZX_OK) {
+    char name[ZX_MAX_NAME_LEN]{};
+    snprintf(name, std::size(name) - 1, "kpci bti %02x:%02x.%1x", (bdf >> 8) & 0xFF,
+             (bdf >> 3) & 0x1F, bdf & 0x7);
+    const zx_status_t name_status =
+        zx_object_set_property(*bti, ZX_PROP_NAME, name, std::size(name));
+    if (name_status != ZX_OK) {
+      zxlogf(WARNING, "Couldn't set name for BTI '%s': %s", name,
+             zx_status_get_string(name_status));
+    }
+  }
+
+  return status;
 }
 
 static zx_status_t pciroot_op_get_pci_platform_info(void* ctx, pci_platform_info_t* info) {

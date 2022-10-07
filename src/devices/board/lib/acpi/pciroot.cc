@@ -31,7 +31,19 @@ zx_status_t AcpiPciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bt
   }
 
   auto iommu = context_.iommu->IommuForPciDevice(bdf);
-  return zx::bti::create(*iommu, 0, bdf, bti);
+  const zx_status_t status = zx::bti::create(*iommu, 0, bdf, bti);
+  if (status == ZX_OK) {
+    char name[ZX_MAX_NAME_LEN]{};
+    snprintf(name, std::size(name) - 1, "acpi bti %02x:%02x.%1x", (bdf >> 8) & 0xFF,
+             (bdf >> 3) & 0x1F, bdf & 0x7);
+    const zx_status_t name_status = bti->set_property(ZX_PROP_NAME, name, std::size(name));
+    if (name_status != ZX_OK) {
+      zxlogf(WARNING, "Couldn't set name for BTI '%s': %s", name,
+             zx_status_get_string(name_status));
+    }
+  }
+
+  return status;
 }
 
 zx_status_t AcpiPciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {

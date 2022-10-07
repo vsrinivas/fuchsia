@@ -124,6 +124,13 @@ zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::
     if (status != ZX_OK) {
       return status;
     }
+
+    char name[ZX_MAX_NAME_LEN]{};
+    snprintf(name, std::size(name) - 1, "pbus bti %02x:%02x", iommu_index, bti_id);
+    status = new_bti.set_property(ZX_PROP_NAME, name, std::size(name));
+    if (status != ZX_OK) {
+      zxlogf(WARNING, "Couldn't set name for BTI '%s': %s", name, zx_status_get_string(status));
+    }
     auto [iter, _] = cached_btis_.emplace(key, std::move(new_bti));
     bti = iter;
   }
