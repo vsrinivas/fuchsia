@@ -52,7 +52,7 @@ constexpr UndocumentedErrorDef<23> ErrRedundantAttributePlacement(
 constexpr ErrorDef<24> ErrDocCommentOnParameters("cannot have doc comment on parameters");
 constexpr UndocumentedErrorDef<25> ErrLibraryImportsMustBeGroupedAtTopOfFile(
     "library imports must be grouped at top-of-file");
-constexpr UndocumentedWarningDef<26> WarnCommentWithinDocCommentBlock(
+constexpr WarningDef<26> WarnCommentWithinDocCommentBlock(
     "cannot have comment within doc comment block");
 constexpr UndocumentedWarningDef<27> WarnBlankLinesWithinDocCommentBlock(
     "cannot have blank lines within doc comment block");

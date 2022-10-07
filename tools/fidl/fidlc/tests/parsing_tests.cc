@@ -576,15 +576,9 @@ type Empty = struct {};
   ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
-TEST(NewSyntaxTests, WarnCommentInsideDocCommentTest) {
-  TestLibrary library(R"FIDL(
-library example;
-
-/// start
-// middle
-/// end
-type Empty = struct {};
-)FIDL");
+TEST(ParsingTests, WarnCommentInsideDocCommentTest) {
+  TestLibrary library;
+  library.AddFile("bad/comment_inside_doc_comment.test.fidl");
 
   ASSERT_WARNED_TWICE_DURING_COMPILE(library, fidl::WarnCommentWithinDocCommentBlock,
                                      fidl::WarnBlankLinesWithinDocCommentBlock);
@@ -613,16 +607,8 @@ TEST(ParsingTests, BadDocCommentNotAllowedOnParams) {
 }
 
 TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
-  TestLibrary library(R"FIDL(library example;
-
-// some comments above,
-// maybe about the doc comment
-/// A
-/// multiline
-/// comment!
-// another comment about the struct
-type Empty = struct{};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("good/comments_around_doc_comment.test.fidl");
 
   library.set_warnings_as_errors(true);
   ASSERT_COMPILED(library);

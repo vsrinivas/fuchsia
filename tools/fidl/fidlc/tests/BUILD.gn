@@ -16,6 +16,7 @@ host_test_data("bad_cases") {
     "fidl/bad/attribute_typo.test.fidl",
     "fidl/bad/bits_non_power_of_two.test.fidl",
     "fidl/bad/cannot_start_at_zero.test.fidl",
+    "fidl/bad/comment_inside_doc_comment.test.fidl",
     "fidl/bad/conflicting_modifiers.test.fidl",
     "fidl/bad/doc_comment_on_parameter_list.test.fidl",
     "fidl/bad/files_disagree_on_library_name_1.test.fidl",
@@ -38,6 +39,7 @@ host_test_data("bad_cases") {
 
 host_test_data("good_cases") {
   sources = [
+    "fidl/good/comments_around_doc_comment.test.fidl",
     "fidl/good/doc_attribute.test.fidl",
     "fidl/good/library_multiple_files_1.test.fidl",
     "fidl/good/library_multiple_files_2.test.fidl",
