@@ -688,9 +688,17 @@ mod tests {
         // call split_suites_by_hermeticity
         let get_facets_fn = |test_url, _resolver| async move {
             if test_url == "hermetic_suite".to_string() {
-                Ok(SuiteFacets { collection: TEST_TYPE_REALM_MAP["hermetic"] })
+                Ok(SuiteFacets {
+                    collection: TEST_TYPE_REALM_MAP["hermetic"],
+                    deprecated_allowed_packages: None,
+                    deprecated_allowed_all_packages: None,
+                })
             } else {
-                Ok(SuiteFacets { collection: TEST_TYPE_REALM_MAP["system"] })
+                Ok(SuiteFacets {
+                    collection: TEST_TYPE_REALM_MAP["system"],
+                    deprecated_allowed_packages: None,
+                    deprecated_allowed_all_packages: None,
+                })
             }
         };
         let (serial_suites, parallel_suites) =

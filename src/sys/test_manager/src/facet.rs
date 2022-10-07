@@ -14,10 +14,19 @@ use {
 };
 
 const TEST_TYPE_FACET_KEY: &'static str = "fuchsia.test.type";
+const TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY: &'static str =
+    "fuchsia.test.deprecated-allowed-packages";
+const TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY: &'static str =
+    "fuchsia.test.deprecated-allowed-all-packages";
 
 /// Set of facets attached to a test component's manifest that describe how to run it.
+#[derive(Debug)]
 pub(crate) struct SuiteFacets {
     pub collection: &'static str,
+    #[allow(dead_code)]
+    pub deprecated_allowed_packages: Option<Vec<String>>,
+    #[allow(dead_code)]
+    pub deprecated_allowed_all_packages: Option<bool>,
 }
 
 pub(crate) enum ResolveStatus {
@@ -39,72 +48,126 @@ pub(crate) async fn get_suite_facets(
     let component_decl: fdecl::Component = fidl::encoding::decode_persistent(&bytes)
         .map_err(|e| LaunchTestError::InvalidManifest(e.into()))?;
 
-    let collection = get_suite_collection(&component_decl)?;
-    Ok(SuiteFacets { collection })
+    parse_facet(&component_decl).map_err(|e| e.into())
 }
 
-fn get_suite_collection(decl: &fdecl::Component) -> Result<&'static str, FacetError> {
+fn parse_facet(decl: &fdecl::Component) -> Result<SuiteFacets, FacetError> {
+    let mut collection = HERMETIC_TESTS_COLLECTION;
+    let mut deprecated_allowed_all_packages = None;
+    let mut deprecated_allowed_packages = None;
     if let Some(obj) = &decl.facets {
         let entries = obj.entries.as_ref().map(Vec::as_slice).unwrap_or_default();
         for entry in entries {
             if entry.key == TEST_TYPE_FACET_KEY {
-                let test_type =
-                    entry.value.as_ref().ok_or(FacetError::NullFacet(TEST_TYPE_FACET_KEY))?;
+                collection = parse_suite_collection(&entry)?;
+            } else if entry.key == TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY {
+                let test_type = entry
+                    .value
+                    .as_ref()
+                    .ok_or(FacetError::NullFacet(TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY))?;
                 // Temporarily allow unreachable patterns while fuchsia.data.DictionaryValue
                 // is migrated from `strict` to `flexible`.
                 // TODO(https://fxbug.dev/92247): Remove this.
                 #[allow(unreachable_patterns)]
                 match test_type.as_ref() {
-                    fdata::DictionaryValue::Str(s) => {
-                        if TEST_TYPE_REALM_MAP.contains_key(s.as_str()) {
-                            return Ok(TEST_TYPE_REALM_MAP[s.as_str()]);
+                    fdata::DictionaryValue::Str(s) => match s.trim().parse::<bool>() {
+                        Ok(s) => deprecated_allowed_all_packages = Some(s),
+                        Err(_) => {
+                            return Err(FacetError::InvalidFacetValue(
+                                TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY,
+                                format!("{:?}", test_type),
+                                "'true, false'".to_string(),
+                            ));
                         }
+                    },
+                    _ => {
                         return Err(FacetError::InvalidFacetValue(
-                            TEST_TYPE_FACET_KEY,
-                            format!("{:?}", s),
-                            format!(
-                                "one of {}",
-                                TEST_TYPE_REALM_MAP
-                                    .keys()
-                                    .map(|k| k.to_string())
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            ),
+                            TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY,
+                            format!("{:?}", test_type),
+                            "'true, false'".to_string(),
                         ));
                     }
+                }
+            } else if entry.key == TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY {
+                let test_type = entry
+                    .value
+                    .as_ref()
+                    .ok_or(FacetError::NullFacet(TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY))?;
+                // Temporarily allow unreachable patterns while fuchsia.data.DictionaryValue
+                // is migrated from `strict` to `flexible`.
+                // TODO(https://fxbug.dev/92247): Remove this.
+                #[allow(unreachable_patterns)]
+                match test_type.as_ref() {
                     fdata::DictionaryValue::StrVec(s) => {
-                        return Err(FacetError::InvalidFacetValue(
-                            TEST_TYPE_FACET_KEY,
-                            format!("{:?}", s),
-                            format!(
-                                "one of {}",
-                                TEST_TYPE_REALM_MAP
-                                    .keys()
-                                    .map(|k| k.to_string())
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            ),
-                        ));
+                        deprecated_allowed_packages = Some(s.clone());
                     }
                     _ => {
                         return Err(FacetError::InvalidFacetValue(
-                            TEST_TYPE_FACET_KEY,
+                            TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY,
                             format!("{:?}", test_type),
-                            format!(
-                                "one of {}",
-                                TEST_TYPE_REALM_MAP
-                                    .keys()
-                                    .map(|k| k.to_string())
-                                    .collect::<Vec<_>>()
-                                    .join(", ")
-                            ),
+                            "vector of allowed packages names".to_string(),
                         ));
                     }
-                };
+                }
             }
         }
     }
-    Ok(HERMETIC_TESTS_COLLECTION)
+    Ok(SuiteFacets { collection, deprecated_allowed_packages, deprecated_allowed_all_packages })
+}
+
+fn parse_suite_collection(entry: &fdata::DictionaryEntry) -> Result<&'static str, FacetError> {
+    let test_type = entry.value.as_ref().ok_or(FacetError::NullFacet(TEST_TYPE_FACET_KEY))?;
+    // Temporarily allow unreachable patterns while fuchsia.data.DictionaryValue
+    // is migrated from `strict` to `flexible`.
+    // TODO(https://fxbug.dev/92247): Remove this.
+    #[allow(unreachable_patterns)]
+    match test_type.as_ref() {
+        fdata::DictionaryValue::Str(s) => {
+            if TEST_TYPE_REALM_MAP.contains_key(s.as_str()) {
+                return Ok(TEST_TYPE_REALM_MAP[s.as_str()]);
+            }
+            return Err(FacetError::InvalidFacetValue(
+                TEST_TYPE_FACET_KEY,
+                format!("{:?}", s),
+                format!(
+                    "one of {}",
+                    TEST_TYPE_REALM_MAP
+                        .keys()
+                        .map(|k| k.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            ));
+        }
+        fdata::DictionaryValue::StrVec(s) => {
+            return Err(FacetError::InvalidFacetValue(
+                TEST_TYPE_FACET_KEY,
+                format!("{:?}", s),
+                format!(
+                    "one of {}",
+                    TEST_TYPE_REALM_MAP
+                        .keys()
+                        .map(|k| k.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            ));
+        }
+        _ => {
+            return Err(FacetError::InvalidFacetValue(
+                TEST_TYPE_FACET_KEY,
+                format!("{:?}", test_type),
+                format!(
+                    "one of {}",
+                    TEST_TYPE_REALM_MAP
+                        .keys()
+                        .map(|k| k.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+            ));
+        }
+    };
 }
 
 #[cfg(test)]
@@ -116,28 +179,28 @@ mod test {
     };
 
     #[test]
-    fn get_suite_collection_works() {
+    fn parse_suite_collection_works() {
         const TEST_FACET: &str = "fuchsia.test";
 
         // test that default hermetic value is true
         let mut decl = fdecl::Component::EMPTY;
-        assert_eq!(get_suite_collection(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, HERMETIC_TESTS_COLLECTION);
 
         // empty facet
         decl.facets =
             Some(fdata::Dictionary { entries: vec![].into(), ..fdata::Dictionary::EMPTY });
-        assert_eq!(get_suite_collection(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, HERMETIC_TESTS_COLLECTION);
 
         // empty facet
         decl.facets = Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY });
-        assert_eq!(get_suite_collection(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, HERMETIC_TESTS_COLLECTION);
 
         // make sure that the func can handle some other facet key
         decl.facets = Some(fdata::Dictionary {
             entries: vec![fdata::DictionaryEntry { key: "somekey".into(), value: None }].into(),
             ..fdata::Dictionary::EMPTY
         });
-        assert_eq!(get_suite_collection(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, HERMETIC_TESTS_COLLECTION);
 
         // test facet with some other key works
         decl.facets = Some(fdata::Dictionary {
@@ -151,7 +214,7 @@ mod test {
             .into(),
             ..fdata::Dictionary::EMPTY
         });
-        assert_eq!(get_suite_collection(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, HERMETIC_TESTS_COLLECTION);
 
         decl.facets = Some(fdata::Dictionary {
             entries: vec![
@@ -168,7 +231,7 @@ mod test {
             .into(),
             ..fdata::Dictionary::EMPTY
         });
-        assert_eq!(get_suite_collection(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, HERMETIC_TESTS_COLLECTION);
 
         decl.facets = Some(fdata::Dictionary {
             entries: vec![
@@ -185,7 +248,7 @@ mod test {
             .into(),
             ..fdata::Dictionary::EMPTY
         });
-        assert_eq!(get_suite_collection(&decl).unwrap(), SYSTEM_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, SYSTEM_TESTS_COLLECTION);
 
         decl.facets = Some(fdata::Dictionary {
             entries: vec![
@@ -202,7 +265,7 @@ mod test {
             .into(),
             ..fdata::Dictionary::EMPTY
         });
-        assert_eq!(get_suite_collection(&decl).unwrap(), CTS_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, CTS_TESTS_COLLECTION);
 
         decl.facets = Some(fdata::Dictionary {
             entries: vec![
@@ -219,7 +282,7 @@ mod test {
             .into(),
             ..fdata::Dictionary::EMPTY
         });
-        assert_eq!(get_suite_collection(&decl).unwrap(), VULKAN_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, VULKAN_TESTS_COLLECTION);
 
         decl.facets = Some(fdata::Dictionary {
             entries: vec![
@@ -236,7 +299,7 @@ mod test {
             .into(),
             ..fdata::Dictionary::EMPTY
         });
-        assert_eq!(get_suite_collection(&decl).unwrap(), CHROMIUM_TESTS_COLLECTION);
+        assert_eq!(parse_facet(&decl).unwrap().collection, CHROMIUM_TESTS_COLLECTION);
 
         // invalid facets
         decl.facets = Some(fdata::Dictionary {
@@ -254,7 +317,7 @@ mod test {
             .into(),
             ..fdata::Dictionary::EMPTY
         });
-        let _ = get_suite_collection(&decl).expect_err("this should have failed");
+        let _ = parse_facet(&decl).expect_err("this should have failed");
 
         decl.facets = Some(fdata::Dictionary {
             entries: vec![
@@ -268,6 +331,191 @@ mod test {
             .into(),
             ..fdata::Dictionary::EMPTY
         });
-        let _ = get_suite_collection(&decl).expect_err("this should have failed");
+        let _ = parse_facet(&decl).expect_err("this should have failed");
+    }
+
+    #[test]
+    fn parse_allowed_packages_works() {
+        const TEST_FACET: &str = "fuchsia.test";
+
+        let mut decl = fdecl::Component::EMPTY;
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, None);
+        assert_eq!(facet.deprecated_allowed_packages, None);
+
+        // empty facet
+        decl.facets =
+            Some(fdata::Dictionary { entries: vec![].into(), ..fdata::Dictionary::EMPTY });
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, None);
+        assert_eq!(facet.deprecated_allowed_packages, None);
+
+        // empty facet
+        decl.facets = Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY });
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, None);
+        assert_eq!(facet.deprecated_allowed_packages, None);
+
+        // make sure that the func can handle some other facet key
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![fdata::DictionaryEntry { key: "somekey".into(), value: None }].into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, None);
+        assert_eq!(facet.deprecated_allowed_packages, None);
+
+        // test facet with some other key works
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, None);
+        assert_eq!(facet.deprecated_allowed_packages, None);
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::Str("true".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, Some(true));
+        assert_eq!(facet.deprecated_allowed_packages, None);
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::Str("false".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, Some(false));
+        assert_eq!(facet.deprecated_allowed_packages, None);
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.into(),
+                    value: Some(
+                        fdata::DictionaryValue::StrVec(vec![
+                            "package-one".into(),
+                            "package-two".into(),
+                        ])
+                        .into(),
+                    ),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, None);
+        assert_eq!(
+            facet.deprecated_allowed_packages,
+            Some(vec!["package-one".into(), "package-two".into()])
+        );
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::StrVec(vec![]).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, None);
+        assert_eq!(facet.deprecated_allowed_packages, Some(vec![]));
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.into(),
+                    value: Some(
+                        fdata::DictionaryValue::StrVec(vec![
+                            "package-one".into(),
+                            "package-two".into(),
+                        ])
+                        .into(),
+                    ),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::Str("true".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let facet = parse_facet(&decl).unwrap();
+        assert_eq!(facet.deprecated_allowed_all_packages, Some(true));
+        assert_eq!(
+            facet.deprecated_allowed_packages,
+            Some(vec!["package-one".into(), "package-two".into()])
+        );
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY.into(),
+                value: Some(fdata::DictionaryValue::Str("something".into()).into()),
+            }]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let _ = parse_facet(&decl).expect_err("this should have failed");
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.into(),
+                value: Some(fdata::DictionaryValue::Str("something".into()).into()),
+            }]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        let _ = parse_facet(&decl).expect_err("this should have failed");
     }
 }
