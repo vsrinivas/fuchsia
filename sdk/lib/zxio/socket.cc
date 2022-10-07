@@ -1305,16 +1305,15 @@ uint8_t fidl_pkttype_to_pkttype(const fpacketsocket::wire::PacketType type) {
   }
 }
 
-void recvmsg_populate_socketaddress(const fnet::wire::SocketAddress& fidl, void* addr,
-                                    socklen_t& addr_len) {
-  // Result address has invalid tag when it's not provided by the server (when the address
+void recvmsg_populate_socketaddress(const fidl::WireOptional<fnet::wire::SocketAddress>& fidl,
+                                    void* addr, socklen_t& addr_len) {
+  // Result address is absent when it's not provided by the server (when the address
   // is not requested).
-  // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
-  if (fidl.has_invalid_tag()) {
+  if (!fidl.has_value()) {
     return;
   }
 
-  addr_len = fidl_to_sockaddr(fidl, addr, addr_len);
+  addr_len = fidl_to_sockaddr(fidl.value(), addr, addr_len);
 }
 
 uint16_t fidl_hwtype_to_arphrd(const fpacketsocket::wire::HardwareType type) {

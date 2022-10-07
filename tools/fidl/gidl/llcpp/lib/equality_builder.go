@@ -168,7 +168,7 @@ func (b *equalityCheckBuilder) visit(actualExpr fidlExpr, expectedValue gidlir.V
 		case *gidlmixer.HandleDecl:
 			return boolSprintf("!%s.is_valid()", actualExpr)
 		case *gidlmixer.UnionDecl:
-			return boolSprintf("%s.has_invalid_tag()", actualExpr)
+			return boolSprintf("!%s.has_value()", actualExpr)
 		case *gidlmixer.StructDecl:
 			return boolSprintf("(%s == nullptr)", actualExpr)
 		}
@@ -275,10 +275,16 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr fidlExpr, expectedValue gid
 	if !ok {
 		panic(fmt.Sprintf("field %s not found", field.Key.Name))
 	}
-	actualFieldExpr := fidlSprintf("%s.%s()", actualVar, fidlgen.ToSnakeCase(field.Key.Name))
+	op := "."
+	presenceCheck := ""
+	if decl.IsNullable() {
+		op = "->"
+		presenceCheck = fmt.Sprintf("%s.has_value() && ", actualVar)
+	}
+	actualFieldExpr := fidlSprintf("%s%s%s()", actualVar, op, fidlgen.ToSnakeCase(field.Key.Name))
 	fieldEquality := b.visit(actualFieldExpr, field.Value, fieldDecl)
-	return boolSprintf("(%s.Which() == %s::Tag::%s && %s)",
-		actualVar, declName(decl), fidlgen.ConstNameToKCamelCase(field.Key.Name), fieldEquality)
+	return boolSprintf("(%s%s%sWhich() == %s::Tag::%s && %s)",
+		presenceCheck, actualVar, op, declName(decl), fidlgen.ConstNameToKCamelCase(field.Key.Name), fieldEquality)
 }
 
 func (b *equalityCheckBuilder) visitList(actualExpr fidlExpr, expectedValue []gidlir.Value, decl gidlmixer.ListDeclaration) boolExpr {

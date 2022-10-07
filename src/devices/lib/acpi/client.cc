@@ -80,12 +80,14 @@ zx::status<Object> Client::CallDsm(Uuid uuid, uint64_t revision, uint64_t func_i
     return zx::ok(Object(result->error_value()));
   }
 
-  if (!result->value()->result.is_object()) {
+  fidl::WireOptional<fuchsia_hardware_acpi::wire::EncodedObject>& maybe_encoded =
+      result->value()->result;
+  if (!maybe_encoded.has_value() || !maybe_encoded->is_object()) {
     // We called EvaluateObject with mode == PlainObject, so don't expect anything else back.
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  return zx::ok(Object(result->value()->result.object()));
+  return zx::ok(Object(maybe_encoded->object()));
 }
 
 }  // namespace acpi

@@ -601,7 +601,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeReturnValue) {
   auto &object = result.value().response().result;
   // Expect a value of this size to be encoded in-line.
   auto expected = facpi::Object::WithIntegerVal(alloc, 47);
-  ASSERT_NO_FATAL_FAILURE(CheckEq(object.object(), expected));
+  ASSERT_NO_FATAL_FAILURE(CheckEq(object->object(), expected));
 }
 
 TEST_F(FidlEvaluateObjectTest, TestEncodeMmioResource) {
@@ -654,8 +654,9 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeMmioResource) {
   auto result = helper.EncodeResourcesReturnValue(arena, &fake_object);
   ASSERT_OK(result.zx_status_value());
   ASSERT_TRUE(result->is_response());
-  ASSERT_TRUE(result->response().result.is_resources());
-  auto &fidl = result->response().result.resources();
+  ASSERT_TRUE(result->response().result.has_value());
+  ASSERT_TRUE(result->response().result->is_resources());
+  auto &fidl = result->response().result->resources();
   ASSERT_EQ(fidl.count(), 1);
   ASSERT_TRUE(fidl[0].is_mmio());
 
@@ -671,5 +672,5 @@ TEST_F(FidlEvaluateObjectTest, TestMethodReturnsNothing) {
   fidl::Arena<> arena;
   auto result = helper.EncodeReturnValue(arena, nullptr);
   ASSERT_EQ(result.status_value(), AE_OK);
-  ASSERT_TRUE(result->response().result.has_invalid_tag());
+  ASSERT_FALSE(result->response().result.has_value());
 }

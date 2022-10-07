@@ -227,7 +227,7 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
         reply.u = test::wire::HandleUnion::WithH1(std::move(event));
       } else if (request->field == 2) {
         reply.u = test::wire::HandleUnion::WithH2(test::wire::HandleStruct());
-        zx::event::create(0, &reply.u.h2().h);
+        zx::event::create(0, &reply.u->h2().h);
       }
     }
     completer.Reply(std::move(reply));
@@ -744,8 +744,9 @@ TEST_F(HandleCloseTest, OptionalHandleUnion1) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value().value.is_h1());
-    checker.AddEvent(result.value().value.h1());
+    ASSERT_TRUE(result.value().value.has_value());
+    ASSERT_TRUE(result.value().value->is_h1());
+    checker.AddEvent(result.value().value->h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -760,8 +761,9 @@ TEST_F(HandleCloseTest, OptionalHandleUnion2) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value().value.is_h2());
-    checker.AddEvent(result.value().value.h2().h);
+    ASSERT_TRUE(result.value().value.has_value());
+    ASSERT_TRUE(result.value().value->is_h2());
+    checker.AddEvent(result.value().value->h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -919,8 +921,9 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct1) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value().value.u.is_h1());
-    checker.AddEvent(result.value().value.u.h1());
+    ASSERT_TRUE(result.value().value.u.has_value());
+    ASSERT_TRUE(result.value().value.u->is_h1());
+    checker.AddEvent(result.value().value.u->h1());
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.
@@ -935,8 +938,9 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct2) {
 
     ASSERT_TRUE(result.ok()) << result.error();
 
-    ASSERT_TRUE(result.value().value.u.is_h2());
-    checker.AddEvent(result.value().value.u.h2().h);
+    ASSERT_TRUE(result.value().value.u.has_value());
+    ASSERT_TRUE(result.value().value.u->is_h2());
+    checker.AddEvent(result.value().value.u->h2().h);
   }
 
   // After the destruction of the result, each handle in dupes should have only one link.

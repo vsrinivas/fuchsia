@@ -85,12 +85,13 @@ zx_status_t IntelThermal::Bind() {
     return ZX_ERR_INTERNAL;
   }
 
-  if (!description->value()->result.is_object() ||
-      !description->value()->result.object().is_buffer_val()) {
+  fidl::WireOptional<facpi::EncodedObject>& maybe_encoded = description->value()->result;
+  if (!maybe_encoded.has_value() || !maybe_encoded->is_object() ||
+      !maybe_encoded->object().is_buffer_val()) {
     zxlogf(ERROR, "EvaluateObject returned a bad type, expected a buffer.");
     return ZX_ERR_WRONG_TYPE;
   }
-  auto& buf = description->value()->result.object().buffer_val();
+  auto& buf = maybe_encoded->object().buffer_val();
 
   /* The description is a UTF16 string. Use iconv(3) to convert between UTF16 and ASCII. */
   char dest_buf[256];
@@ -281,12 +282,14 @@ zx::status<uint64_t> IntelThermal::EvaluateInteger(const char* name) {
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  if (!result->value()->result.is_object() || !result->value()->result.object().is_integer_val()) {
+  fidl::WireOptional<facpi::EncodedObject>& maybe_encoded = result->value()->result;
+  if (!maybe_encoded.has_value() || !maybe_encoded->is_object() ||
+      !maybe_encoded->object().is_integer_val()) {
     zxlogf(ERROR, "EvaluateObject(%s) returned the wrong type", name);
     return zx::error(ZX_ERR_WRONG_TYPE);
   }
 
-  return zx::ok(result->value()->result.object().integer_val());
+  return zx::ok(maybe_encoded->object().integer_val());
 }
 
 static zx_driver_ops_t intel_thermal_driver_ops{

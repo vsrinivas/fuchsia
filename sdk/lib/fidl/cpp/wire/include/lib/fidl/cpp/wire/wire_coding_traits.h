@@ -431,7 +431,7 @@ struct WireCodingTraits<fidl::WireOptional<T>, Constraint, IsRecursive> {
   static void Encode(internal::WireEncoder* encoder, fidl::WireOptional<T>* value,
                      fidl::internal::WirePosition position,
                      RecursionDepth<IsRecursive> recursion_depth) {
-    return MemberTrait::Encode(encoder, value, position, recursion_depth);
+    return MemberTrait::Encode(encoder, &value->t_, position, recursion_depth);
   }
 
   static void Decode(internal::WireDecoder* decoder, fidl::internal::WirePosition position,

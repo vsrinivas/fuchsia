@@ -190,11 +190,12 @@ zx_status_t ChromeosAcpi::EvaluateObjectHelper(const char* name,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (!result->value()->result.is_object()) {
+  fidl::WireOptional<facpi::EncodedObject>& maybe_encoded = result->value()->result;
+  if (!maybe_encoded.has_value() || !maybe_encoded->is_object()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  callback(result->value()->result.object());
+  callback(maybe_encoded->object());
   return ZX_OK;
 }
 

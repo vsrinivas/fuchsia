@@ -102,12 +102,15 @@ zx::status<> IntelDsp::ParseNhlt() {
     LOG(ERROR, "NHLT query failed: %d", fidl::ToUnderlying(result->error_value()));
     return zx::error(ZX_ERR_INTERNAL);
   }
-  if (!result->value()->result.is_resources() || result->value()->result.resources().empty() ||
-      !result->value()->result.resources()[0].is_mmio()) {
+
+  fidl::WireOptional<fuchsia_hardware_acpi::wire::EncodedObject>& maybe_encoded =
+      result->value()->result;
+  if (!maybe_encoded.has_value() || !maybe_encoded->is_resources() ||
+      maybe_encoded->resources().empty() || !maybe_encoded->resources()[0].is_mmio()) {
     LOG(ERROR, "ACPI did not return NHLT resource");
     return zx::error(ZX_ERR_INTERNAL);
   }
-  auto& resource = result->value()->result.resources()[0].mmio();
+  auto& resource = maybe_encoded->resources()[0].mmio();
   size_t size = resource.size;
   // Allocate buffer.
   fbl::AllocChecker ac;

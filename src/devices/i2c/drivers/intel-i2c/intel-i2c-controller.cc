@@ -213,7 +213,19 @@ void IntelI2cController::GetAcpiConfiguration(const char* name, uint16_t* scl_hc
     return;
   }
 
-  auto& obj = result.value().value()->result.object();
+  fidl::WireOptional<fuchsia_hardware_acpi::wire::EncodedObject>& maybe_encoded =
+      result->value()->result;
+  if (!maybe_encoded.has_value()) {
+    zxlogf(WARNING, "Received an absent |EncodedObject| union.");
+    return;
+  }
+
+  if (!maybe_encoded->is_object()) {
+    zxlogf(WARNING, "Received a present |EncodedObject| union that does not contain an object.");
+    return;
+  }
+
+  auto& obj = maybe_encoded->object();
   if (obj.is_package_val() && obj.package_val().value.count() == 3) {
     auto& package = obj.package_val().value;
     *scl_hcnt = package[0].integer_val();

@@ -127,13 +127,15 @@ zx_status_t AcpiBattery::CheckAcpiState() {
     return ZX_ERR_INTERNAL;
   }
 
-  if (!result->value()->result.is_object() || !result->value()->result.object().is_integer_val()) {
+  fidl::WireOptional<facpi::EncodedObject>& maybe_encoded = result->value()->result;
+  if (!maybe_encoded.has_value() || !maybe_encoded->is_object() ||
+      !maybe_encoded->object().is_integer_val()) {
     zxlogf(ERROR, "Unexpected response from EvaluateObject");
     return ZX_ERR_INTERNAL;
   }
 
   std::scoped_lock lock(lock_);
-  uint64_t state = result->value()->result.object().integer_val();
+  uint64_t state = maybe_encoded->object().integer_val();
   uint8_t old = source_info_.state;
   if (state & kStaBatteryPresent) {
     source_info_.state |= fpower::kPowerStateOnline;
@@ -161,14 +163,16 @@ zx_status_t AcpiBattery::CheckAcpiBatteryInformation() {
     return ZX_ERR_INTERNAL;
   }
 
-  if (!result->value()->result.is_object() || !result->value()->result.object().is_package_val() ||
-      result->value()->result.object().package_val().value.count() < BifFields::kBifMax) {
+  fidl::WireOptional<facpi::EncodedObject>& maybe_encoded = result->value()->result;
+  if (!maybe_encoded.has_value() || !maybe_encoded->is_object() ||
+      !maybe_encoded->object().is_package_val() ||
+      maybe_encoded->object().package_val().value.count() < BifFields::kBifMax) {
     zxlogf(ERROR, "Unexpected response from EvaluateObject");
     return ZX_ERR_INTERNAL;
   }
 
   // Validate the _BIF package elements' types.
-  auto& elements = result->value()->result.object().package_val().value;
+  auto& elements = maybe_encoded->object().package_val().value;
   for (size_t i = 0; i < BifFields::kModelNumber; i++) {
     if (!elements[i].is_integer_val()) {
       zxlogf(ERROR, "_BIF expected field %zu to be an integer", i);
@@ -219,14 +223,16 @@ zx_status_t AcpiBattery::CheckAcpiBatteryState() {
     return ZX_ERR_INTERNAL;
   }
 
-  if (!result->value()->result.is_object() || !result->value()->result.object().is_package_val() ||
-      result->value()->result.object().package_val().value.count() < BstFields::kBstMax) {
+  fidl::WireOptional<facpi::EncodedObject>& maybe_encoded = result->value()->result;
+  if (!maybe_encoded.has_value() || !maybe_encoded->is_object() ||
+      !maybe_encoded->object().is_package_val() ||
+      maybe_encoded->object().package_val().value.count() < BstFields::kBstMax) {
     zxlogf(ERROR, "Unexpected response from EvaluateObject");
     return ZX_ERR_INTERNAL;
   }
 
   // Validate the _BST package elements' types.
-  auto& elements = result->value()->result.object().package_val().value;
+  auto& elements = maybe_encoded->object().package_val().value;
   for (size_t i = 0; i < BstFields::kBstMax; i++) {
     if (!elements[i].is_integer_val()) {
       zxlogf(ERROR, "_BST expected field %zu to be an integer", i);

@@ -207,12 +207,14 @@ zx_status_t AcpiLid::UpdateLidStateLocked() {
     return ZX_ERR_INTERNAL;
   }
 
-  if (!result->value()->result.is_object() || !result->value()->result.object().is_integer_val()) {
+  fidl::WireOptional<facpi::EncodedObject>& maybe_encoded = result->value()->result;
+  if (!maybe_encoded.has_value() || !maybe_encoded->is_object() ||
+      !maybe_encoded->object().is_integer_val()) {
     zxlogf(ERROR, "Unexpected response from EvaluateObject");
     return ZX_ERR_INTERNAL;
   }
 
-  uint64_t int_lid_state = result->value()->result.object().integer_val();
+  uint64_t int_lid_state = maybe_encoded->object().integer_val();
   lid_state_ = int_lid_state ? LidState::kOpen : LidState::kClosed;
 
   return ZX_OK;

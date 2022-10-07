@@ -144,7 +144,7 @@ TEST(Service, ServiceNodeIsNotDirectory) {
 
     void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override {
       EXPECT_EQ(ZX_ERR_NOT_DIR, event->s);
-      EXPECT_TRUE(event->info.has_invalid_tag());
+      EXPECT_FALSE(event->info.has_value());
     }
 
     void NotImplemented_(const std::string& name) override {

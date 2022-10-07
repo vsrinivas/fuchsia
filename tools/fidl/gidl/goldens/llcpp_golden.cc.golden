@@ -729,7 +729,7 @@ var1.v = std::move(var2);
     [[maybe_unused]] const auto& f1 = actual;
 [[maybe_unused]] const auto& f2 = f1.v;
 
-    return ((f2.Which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2.v() == int16_t(1ull))));
+    return ((f2.has_value() && f2->Which() == test_conformance::wire::GoldenUnion::Tag::kV && (f2->v() == int16_t(1ull))));
   };
   EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
     ::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));
@@ -750,7 +750,7 @@ var1.v = fidl::WireOptional<test_conformance::wire::GoldenUnion>();
   auto equality_check = [&](test_conformance::wire::GoldenNullableUnionStruct& actual) -> bool {
     [[maybe_unused]] const auto& f1 = actual;
 
-    return (f1.v.has_invalid_tag());
+    return (!f1.v.has_value());
   };
   EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(
     ::fidl::internal::WireFormatVersion::kV2, &obj, std::move(bytes), std::move(handles), std::move(equality_check)));

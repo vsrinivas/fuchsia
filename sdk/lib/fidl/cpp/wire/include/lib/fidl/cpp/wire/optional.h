@@ -20,19 +20,13 @@ struct WireCodingTraits;
 // it is optimized to have the same memory layout as |T|, using the fact that
 // FIDL unions are naturally optional (an absent union consists of all zeros).
 //
-// TODO(fxbug.dev/58503): Store |T| as a member variable to hide its methods
-// after migration. The `public T` inheritance is only for incrementally
-// migrating users.
-//
 // TODO(fxbug.dev/109737): Consider using |fidl::WireOptional| to represent optional
 // vectors and optional strings.
 template <typename T>
-struct WireOptional final : public T {
+struct WireOptional final {
  public:
-  using T::T;
-
   // Constructs an absent optional union.
-  WireOptional() : T() { static_assert(IsUnion<T>::value, "|T| must be a wire FIDL union."); }
+  WireOptional() : t_() { static_assert(IsUnion<T>::value, "|T| must be a wire FIDL union."); }
 
   WireOptional(const WireOptional& other) = default;
   WireOptional(WireOptional&& other) noexcept = default;
@@ -42,34 +36,34 @@ struct WireOptional final : public T {
 
   // Intentional implicit constructor to go from |T| to an |WireOptional<T>|
   // NOLINTNEXTLINE(google-explicit-constructor)
-  WireOptional(const T& t) : T(t) {}
+  WireOptional(const T& t) : t_(t) {}
 
   // Intentional implicit constructor to go from |T| to an |WireOptional<T>|
   // NOLINTNEXTLINE(google-explicit-constructor)
-  WireOptional(T&& t) noexcept : T(std::move(t)) {}
+  WireOptional(T&& t) noexcept : t_(std::move(t)) {}
 
   WireOptional& operator=(const T& other) {
-    T::operator=(other);
+    t_ = other;
     return *this;
   }
   WireOptional& operator=(T&& other) noexcept {
-    T::operator=(std::move(other));
+    t_ = std::move(other);
     return *this;
   }
 
   // Returns whether the union is present.
-  bool has_value() const { return !T::has_invalid_tag(); }
+  bool has_value() const { return !t_.has_invalid_tag(); }
 
   // Accesses the union.
   T& value() {
     ZX_ASSERT(has_value());
-    return *this;
+    return t_;
   }
 
   // Accesses the union.
   const T& value() const {
     ZX_ASSERT(has_value());
-    return *this;
+    return t_;
   }
 
   T* operator->() { return &value(); }
@@ -81,6 +75,8 @@ struct WireOptional final : public T {
  private:
   template <typename U, typename Constraint, bool IsRecursive, class Enable>
   friend struct ::fidl::internal::WireCodingTraits;
+
+  T t_;
 };
 
 template <typename T>

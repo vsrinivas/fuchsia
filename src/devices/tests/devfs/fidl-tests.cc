@@ -37,8 +37,8 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
 
     void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override {
       status_ = event->s;
-      if (!event->info.has_invalid_tag()) {
-        tag_ = event->info.Which();
+      if (event->info.has_value()) {
+        tag_ = event->info->Which();
       }
     }
 

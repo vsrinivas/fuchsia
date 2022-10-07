@@ -71,10 +71,10 @@ inline zx::status<std::string> ProgramValue(const fuchsia_data::wire::Dictionary
       if (!std::equal(key.begin(), key.end(), entry.key.begin())) {
         continue;
       }
-      if (!entry.value.is_str()) {
+      if (!entry.value.has_value() || !entry.value->is_str()) {
         return zx::error(ZX_ERR_WRONG_TYPE);
       }
-      auto& value = entry.value.str();
+      auto& value = entry.value->str();
       return zx::ok(std::string{value.data(), value.size()});
     }
   }
@@ -106,10 +106,10 @@ inline zx::status<std::vector<std::string>> ProgramValueAsVector(
       if (!std::equal(key.begin(), key.end(), entry.key.begin())) {
         continue;
       }
-      if (!entry.value.is_str_vec()) {
+      if (!entry.value.has_value() || !entry.value->is_str_vec()) {
         return zx::error(ZX_ERR_WRONG_TYPE);
       }
-      auto& values = entry.value.str_vec();
+      auto& values = entry.value->str_vec();
       std::vector<std::string> result;
       result.reserve(values.count());
       for (auto& value : values) {

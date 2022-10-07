@@ -59,7 +59,7 @@ void StreamSinkServer::PutPacket(PutPacketRequestView request,
       return;
   }
 
-  if (!request->packet.compression_properties.has_invalid_tag()) {
+  if (request->packet.compression_properties.has_value()) {
     FX_LOGS(WARNING) << "Skipping packet: compression_properties not supported";
     return;
   }

@@ -91,8 +91,8 @@ zx::status<fio::wire::NodeInfoDeprecated> GetOnOpenResponse(
       node_info = zx::error(response.s);
       return;
     }
-    ASSERT_FALSE(response.info.has_invalid_tag());
-    node_info = zx::ok(std::move(response.info));
+    ASSERT_TRUE(response.info.has_value());
+    node_info = zx::ok(std::move(response.info.value()));
   };
   get_on_open_response(std::move(channel), node_info);
   return node_info;
