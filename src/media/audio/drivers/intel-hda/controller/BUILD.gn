@@ -127,7 +127,6 @@ fuchsia_driver_component("intel-hda") {
   component_name = "intel-hda"
   deps = [ ":intel-hda-driver" ]
   info = "intel-hda-info.json"
-  colocate = true
   uses_profiles = true
   default_dispatcher_opts = [ "allow_sync_calls" ]
 }

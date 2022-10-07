@@ -121,7 +121,6 @@ fuchsia_driver_component("component") {
   info = "component-info.json"
   component_name = "chromiumos-ec-core"
   deps = [ ":driver" ]
-  colocate = true
 }
 
 fuchsia_driver_package("chromiumos-ec-core") {

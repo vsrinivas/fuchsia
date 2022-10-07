@@ -75,10 +75,9 @@ fuchsia_driver_component("iwlwifi_driver") {
   ]
   visibility = []
   visibility = [ "*" ]
-  colocate = true
 }
 
-# TODO(fxbug.dev/93333: Remove this when DFv2 has stabilised.
+# TODO(fxbug.dev/93333): Remove this when DFv2 has stabilised.
 fuchsia_driver_component("iwlwifi_driver_dfv2") {
   info = "iwlwifi_driver-info.json"
   component_name = "iwlwifi"
@@ -88,7 +87,6 @@ fuchsia_driver_component("iwlwifi_driver_dfv2") {
   ]
   visibility = []
   visibility = [ "*" ]
-  colocate = true
 }
 
 all_fw_files = [
