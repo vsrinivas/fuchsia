@@ -179,7 +179,7 @@ pub type zxio_t = zxio_tag;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct zxio_private {
-    pub reserved: [u64; 26usize],
+    pub reserved: [u64; 29usize],
 }
 pub type zxio_private_t = zxio_private;
 #[repr(C)]
@@ -272,6 +272,7 @@ impl Default for zxio_dirent {
 }
 pub type zxio_dirent_t = zxio_dirent;
 pub type zxio_shutdown_options_t = u32;
+pub type va_list = __builtin_va_list;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct zx_info_handle_basic {
@@ -560,6 +561,29 @@ extern "C" {
 extern "C" {
     pub fn zxio_set_window_size(io: *mut zxio_t, width: u32, height: u32) -> zx_status_t;
 }
+extern "C" {
+    pub fn zxio_ioctl(
+        io: *mut zxio_t,
+        request: ::std::os::raw::c_int,
+        out_code: *mut i16,
+        va: *mut __va_list_tag,
+    ) -> zx_status_t;
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct iovec {
+    pub iov_base: *mut ::std::os::raw::c_void,
+    pub iov_len: usize,
+}
+impl Default for iovec {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
 pub type socklen_t = __socklen_t;
 pub type sa_family_t = ::std::os::raw::c_ushort;
 #[repr(C)]
@@ -567,6 +591,26 @@ pub type sa_family_t = ::std::os::raw::c_ushort;
 pub struct sockaddr {
     pub sa_family: sa_family_t,
     pub sa_data: [::std::os::raw::c_char; 14usize],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct msghdr {
+    pub msg_name: *mut ::std::os::raw::c_void,
+    pub msg_namelen: socklen_t,
+    pub msg_iov: *mut iovec,
+    pub msg_iovlen: usize,
+    pub msg_control: *mut ::std::os::raw::c_void,
+    pub msg_controllen: usize,
+    pub msg_flags: ::std::os::raw::c_int,
+}
+impl Default for msghdr {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
 }
 pub type zxio_service_connector = ::std::option::Option<
     unsafe extern "C" fn(
@@ -654,6 +698,24 @@ extern "C" {
     ) -> zx_status_t;
 }
 extern "C" {
+    pub fn zxio_recvmsg(
+        io: *mut zxio_t,
+        msg: *mut msghdr,
+        flags: ::std::os::raw::c_int,
+        out_actual: *mut usize,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_sendmsg(
+        io: *mut zxio_t,
+        msg: *const msghdr,
+        flags: ::std::os::raw::c_int,
+        out_actual: *mut usize,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
     pub fn zxio_get_posix_mode(
         protocols: zxio_node_protocols_t,
         abilities: zxio_abilities_t,
@@ -661,3 +723,21 @@ extern "C" {
 }
 pub const ZXIO_SHUTDOWN_OPTIONS_READ: zxio_shutdown_options_t = 2;
 pub const ZXIO_SHUTDOWN_OPTIONS_WRITE: zxio_shutdown_options_t = 1;
+pub type __builtin_va_list = [__va_list_tag; 1usize];
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __va_list_tag {
+    pub gp_offset: ::std::os::raw::c_uint,
+    pub fp_offset: ::std::os::raw::c_uint,
+    pub overflow_arg_area: *mut ::std::os::raw::c_void,
+    pub reg_save_area: *mut ::std::os::raw::c_void,
+}
+impl Default for __va_list_tag {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
