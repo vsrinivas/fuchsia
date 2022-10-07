@@ -63,7 +63,12 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       args_(std::move(args)),
       parent_(std::move(parent)),
       protocol_id_(protocol_id),
-      publish_task_([this] { coordinator->device_manager()->HandleNewDevice(fbl::RefPtr(this)); }),
+      publish_task_([this] {
+        // TODO(tesienbe): We probably should do something with the return value
+        // from this...
+        coordinator->bind_driver_manager()->BindDevice(fbl::RefPtr(this), {} /* libdrvname */,
+                                                       true /* new device */);
+      }),
       outgoing_dir_(std::move(outgoing_dir)),
       inspect_(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
                name_.c_str(), std::move(inspect)) {

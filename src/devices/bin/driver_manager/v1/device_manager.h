@@ -39,8 +39,6 @@ class DeviceManager {
   zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, std::string_view name,
                                  fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc);
 
-  void HandleNewDevice(const fbl::RefPtr<Device>& dev);
-
   // Begin scheduling for removal of the device and unbinding of its children.
   void ScheduleRemove(const fbl::RefPtr<Device>& dev);
 

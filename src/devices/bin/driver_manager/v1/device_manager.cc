@@ -164,12 +164,6 @@ zx_status_t DeviceManager::AddCompositeDevice(const fbl::RefPtr<Device>& dev, st
 
 void DeviceManager::AddToDevices(fbl::RefPtr<Device> new_device) { devices_.push_back(new_device); }
 
-void DeviceManager::HandleNewDevice(const fbl::RefPtr<Device>& dev) {
-  // TODO(tesienbe): We probably should do something with the return value
-  // from this...
-  coordinator_->bind_driver_manager()->BindDevice(dev, {} /* libdrvname */, true /* new device */);
-}
-
 void DeviceManager::ScheduleRemove(const fbl::RefPtr<Device>& dev) {
   dev->CreateUnbindRemoveTasks(
       UnbindTaskOpts{.do_unbind = false, .post_on_create = true, .driver_host_requested = false});
