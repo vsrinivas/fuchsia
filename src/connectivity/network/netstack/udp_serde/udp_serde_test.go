@@ -114,35 +114,42 @@ func TestSerializeThenDeserializeSendMsgMetaWithLinkLocalIPv6Addr(t *testing.T) 
 	}
 }
 
-func TestSerializeThenDeserializeSendMsgMetaWithUnspecifiedIPv6PacketInfoAddr(t *testing.T) {
-	buf := make([]byte, TxUdpPreludeSize())
-	addr := tcpip.FullAddress{
-		Port: testPort,
-		Addr: ipv6LinkLocal,
-		NIC:  testNICID,
-	}
-	cmsgSet := tcpip.SendableControlMessages{
-		HasIPv6PacketInfo: true,
-		IPv6PacketInfo: tcpip.IPv6PacketInfo{
-			Addr: tcpip.Address(""),
-			NIC:  testNICID,
-		},
-	}
+func TestSerializeThenDeserializeSendMsgMetaWithUnspecifiedAddrs(t *testing.T) {
+	for _, netProto := range []tcpip.NetworkProtocolNumber{
+		header.IPv4ProtocolNumber,
+		header.IPv6ProtocolNumber,
+	} {
+		t.Run(fmt.Sprintf("%d", netProto), func(t *testing.T) {
+			buf := make([]byte, TxUdpPreludeSize())
+			addr := tcpip.FullAddress{
+				Port: testPort,
+				Addr: tcpip.Address(""),
+			}
+			cmsgSet := tcpip.SendableControlMessages{}
+			if netProto == header.IPv6ProtocolNumber {
+				cmsgSet.HasIPv6PacketInfo = true
+				cmsgSet.IPv6PacketInfo = tcpip.IPv6PacketInfo{
+					Addr: tcpip.Address(""),
+					NIC:  testNICID,
+				}
+			}
 
-	if err := SerializeSendMsgMeta(ipv6.ProtocolNumber, addr, cmsgSet, buf); err != nil {
-		t.Fatalf("got SerializeSendMsgMeta(%d, %#v, %#v, _) = (%#v), want (%#v)", ipv6.ProtocolNumber, addr, cmsgSet, err, nil)
-	}
+			if err := SerializeSendMsgMeta(netProto, addr, cmsgSet, buf); err != nil {
+				t.Fatalf("got SerializeSendMsgMeta(%d, %#v, %#v, _) = (%#v), want (%#v)", netProto, addr, cmsgSet, err, nil)
+			}
 
-	deserializedAddr, deserializedCmsg, err := DeserializeSendMsgMeta(buf)
+			deserializedAddr, deserializedCmsg, err := DeserializeSendMsgMeta(buf)
 
-	if err != nil {
-		t.Fatalf("expect DeserializeSendMsgMeta(_) succeeds, got: %s", err)
-	}
-	if got, want := *deserializedAddr, addr; got != want {
-		t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
-	}
-	if got, want := deserializedCmsg, cmsgSet; got != want {
-		t.Errorf("got cmsg after serde = (%#v), want (%#v)", got, want)
+			if err != nil {
+				t.Fatalf("expect DeserializeSendMsgMeta(_) succeeds, got: %s", err)
+			}
+			if got, want := *deserializedAddr, addr; got != want {
+				t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
+			}
+			if got, want := deserializedCmsg, cmsgSet; got != want {
+				t.Errorf("got cmsg after serde = (%#v), want (%#v)", got, want)
+			}
+		})
 	}
 }
 
@@ -357,6 +364,48 @@ func TestSerializeThenDeserializeRecvMsgMetaWithLinkLocalIPv6Addr(t *testing.T) 
 
 	if got, want := *res.addr, readResult.RemoteAddr; got != want {
 		t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
+	}
+}
+
+func TestSerializeThenDeserializeRecvMsgMetaWithUnspecifiedAddrs(t *testing.T) {
+	for _, netProto := range []tcpip.NetworkProtocolNumber{
+		header.IPv4ProtocolNumber,
+		header.IPv6ProtocolNumber,
+	} {
+		t.Run(fmt.Sprintf("%d", netProto), func(t *testing.T) {
+			buf := make([]byte, RxUdpPreludeSize())
+			readResult := tcpip.ReadResult{
+				RemoteAddr: tcpip.FullAddress{
+					Port: testPort,
+					Addr: tcpip.Address(""),
+				},
+				ControlMessages: tcpip.ReceivableControlMessages{},
+			}
+
+			if netProto == header.IPv6ProtocolNumber {
+				readResult.ControlMessages.HasIPv6PacketInfo = true
+				readResult.ControlMessages.IPv6PacketInfo = tcpip.IPv6PacketInfo{
+					Addr: tcpip.Address(""),
+					NIC:  testNICID,
+				}
+			}
+
+			if err := SerializeRecvMsgMeta(netProto, readResult, buf); err != nil {
+				t.Fatalf("got SerializeRecvMsgMeta(%d, %#v, _) = (%#v), want (%#v)", netProto, readResult, err, nil)
+			}
+
+			res, err := DeserializeRecvMsgMeta(buf)
+
+			if err != nil {
+				t.Fatalf("expect DeserializeRecvMsgMeta(_) succeeds, got: %s", err)
+			}
+			if got, want := *res.addr, readResult.RemoteAddr; got != want {
+				t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
+			}
+			if got, want := res.control, readResult.ControlMessages; got != want {
+				t.Errorf("got cmsg after serde = (%#v), want (%#v)", got, want)
+			}
+		})
 	}
 }
 

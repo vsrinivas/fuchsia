@@ -1740,6 +1740,61 @@ INSTANTIATE_TEST_SUITE_P(IOSendingMethodTests, IOSendingMethodTest,
                          DomainAndIOMethodToString);
 #endif  // defined(__Fuchsia__)
 
+std::pair<sockaddr_storage, socklen_t> AnySockaddrAndSocklenForDomain(const SocketDomain& domain) {
+  sockaddr_storage addr{
+      .ss_family = domain.Get(),
+  };
+  switch (domain.which()) {
+    case SocketDomain::Which::IPv4: {
+      auto& sin = *reinterpret_cast<sockaddr_in*>(&addr);
+      sin.sin_addr.s_addr = htonl(INADDR_ANY);
+      return std::make_pair(addr, sizeof(sin));
+    }
+    case SocketDomain::Which::IPv6: {
+      auto& sin6 = *reinterpret_cast<sockaddr_in6*>(&addr);
+      sin6.sin6_addr = IN6ADDR_ANY_INIT;
+      return std::make_pair(addr, sizeof(sin6));
+    }
+  }
+}
+
+class AllDomainTests : public testing::TestWithParam<SocketDomain> {};
+
+TEST_P(AllDomainTests, SendToAnyAddr) {
+  auto const& domain = GetParam();
+  fbl::unique_fd recv_fd;
+  ASSERT_TRUE(recv_fd = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, 0))) << strerror(errno);
+
+  auto [sock_addr, socklen] = AnySockaddrAndSocklenForDomain(domain);
+  ASSERT_EQ(bind(recv_fd.get(), reinterpret_cast<const sockaddr*>(&sock_addr), sizeof(sock_addr)),
+            0)
+      << strerror(errno);
+
+  socklen_t addrlen = socklen;
+  ASSERT_EQ(getsockname(recv_fd.get(), reinterpret_cast<sockaddr*>(&sock_addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, socklen);
+
+  const char sendbuf[] = "hello";
+  fbl::unique_fd send_fd;
+  ASSERT_TRUE(send_fd = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, 0))) << strerror(errno);
+  ASSERT_EQ(sendto(send_fd.get(), sendbuf, sizeof(sendbuf), 0,
+                   reinterpret_cast<sockaddr*>(&sock_addr), socklen),
+            ssize_t(sizeof(sendbuf)))
+      << strerror(errno);
+
+  char recvbuf[sizeof(sendbuf) + 1];
+  ASSERT_EQ(read(recv_fd.get(), recvbuf, sizeof(recvbuf)), ssize_t(sizeof(sendbuf)))
+      << strerror(errno);
+  ASSERT_STREQ(recvbuf, sendbuf);
+}
+
+INSTANTIATE_TEST_SUITE_P(AllDomainTests, AllDomainTests,
+                         testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
+                         [](const auto info) {
+                           return std::string(socketDomainToString(info.param));
+                         });
+
 class NetDatagramSocketsTestBase {
  protected:
   void SetUpDatagramSockets(const SocketDomain& domain) {

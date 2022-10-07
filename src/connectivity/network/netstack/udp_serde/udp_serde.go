@@ -79,10 +79,10 @@ func DeserializeSendMsgMeta(buf []byte) (*tcpip.FullAddress, tcpip.SendableContr
 			switch res.addr.addr_type {
 			case C.Ipv4:
 				src := res.addr.addr[:header.IPv4AddressSize]
-				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
+				addr = fidlconv.BytesToAddressDroppingUnspecified(*(*[]byte)(unsafe.Pointer(&src)))
 			case C.Ipv6:
 				src := res.addr.addr[:]
-				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
+				addr = fidlconv.BytesToAddressDroppingUnspecified(*(*[]byte)(unsafe.Pointer(&src)))
 			}
 			return &tcpip.FullAddress{
 				Addr: addr,
@@ -231,10 +231,10 @@ func DeserializeRecvMsgMeta(buf []byte) (RecvMsgMeta, error) {
 			switch res.addr.addr_type {
 			case C.Ipv4:
 				src := res.addr.addr[:header.IPv4AddressSize]
-				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
+				addr = fidlconv.BytesToAddressDroppingUnspecified(*(*[]byte)(unsafe.Pointer(&src)))
 			case C.Ipv6:
 				src := res.addr.addr[:]
-				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
+				addr = fidlconv.BytesToAddressDroppingUnspecified(*(*[]byte)(unsafe.Pointer(&src)))
 			}
 			return &tcpip.FullAddress{
 				Addr: addr,
@@ -271,7 +271,7 @@ func DeserializeRecvMsgMeta(buf []byte) (RecvMsgMeta, error) {
 		src := res.cmsg_set.send_and_recv.ipv6_pktinfo.addr[:]
 		cmsgSet.IPv6PacketInfo = tcpip.IPv6PacketInfo{
 			NIC:  tcpip.NICID(res.cmsg_set.send_and_recv.ipv6_pktinfo.if_index),
-			Addr: tcpip.Address(*(*[]byte)(unsafe.Pointer(&src))),
+			Addr: fidlconv.BytesToAddressDroppingUnspecified(*(*[]byte)(unsafe.Pointer(&src))),
 		}
 	}
 	return RecvMsgMeta{
