@@ -6,6 +6,7 @@ use {
     crate::{
         client::{bss_selection, network_selection, types},
         config_management::{self, PastConnectionData, SavedNetworksManagerApi},
+        mode_management::iface_manager_api::SmeForScan,
         telemetry::{DisconnectInfo, TelemetryEvent, TelemetrySender},
         util::{
             listener::{
@@ -429,7 +430,7 @@ async fn connecting_state<'a>(
             info!("Connection requested, scanning to find a BSS for the network");
             network_selector
                 .find_connection_candidate_for_network(
-                    common_options.proxy.clone(),
+                    SmeForScan::new(common_options.proxy.clone(), common_options.iface_id),
                     options.connect_request.target.network.clone(),
                 )
                 .map(|candidate| {

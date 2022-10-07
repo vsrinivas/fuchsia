@@ -15,7 +15,7 @@ use {
         },
         config_management::SavedNetworksManagerApi,
         mode_management::{
-            iface_manager_api::IfaceManagerApi,
+            iface_manager_api::{IfaceManagerApi, SmeForScan},
             iface_manager_types::*,
             phy_manager::{CreateClientIfacesReason, PhyManagerApi},
             Defect,
@@ -662,13 +662,12 @@ impl IfaceManagerService {
         self.aps.retain(|ap_container| ap_container.iface_id != iface_id);
     }
 
-    async fn get_sme_proxy_for_scan(
-        &mut self,
-    ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+    async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
         let client_iface = self.get_client(None).await?;
-        let sme_proxy = client_iface.sme_proxy.clone();
+        let proxy = client_iface.sme_proxy.clone();
+        let iface_id = client_iface.iface_id;
         self.clients.push(client_iface);
-        Ok(sme_proxy)
+        Ok(SmeForScan::new(proxy, iface_id))
     }
 
     fn stop_client_connections(
@@ -4271,9 +4270,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn get_sme_proxy_for_scan(
-            &mut self,
-        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+        async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
             self.scan_proxy_requested = true;
             Err(format_err!("scan failed"))
         }

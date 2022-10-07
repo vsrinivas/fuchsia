@@ -44,7 +44,7 @@ pub trait IfaceManagerApi {
     async fn handle_removed_iface(&mut self, iface_id: u16) -> Result<(), Error>;
 
     /// Selects a client iface and return it for use with a scan
-    async fn get_sme_proxy_for_scan(&mut self) -> Result<fidl_sme::ClientSmeProxy, Error>;
+    async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error>;
 
     /// Disconnects all configured clients and disposes of all client ifaces before instructing
     /// the PhyManager to stop client connections.
@@ -136,9 +136,7 @@ impl IfaceManagerApi for IfaceManager {
         Ok(())
     }
 
-    async fn get_sme_proxy_for_scan(
-        &mut self,
-    ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+    async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
         let (responder, receiver) = oneshot::channel();
         let req = ScanProxyRequest { responder };
         self.sender.try_send(IfaceManagerRequest::GetScanProxy(req))?;
@@ -205,6 +203,27 @@ impl IfaceManagerApi for IfaceManager {
         let req = ReportDefectRequest { defect, responder };
         self.sender.try_send(IfaceManagerRequest::ReportDefect(req))?;
         Ok(receiver.await?)
+    }
+}
+
+#[derive(Debug)]
+pub struct SmeForScan {
+    proxy: fidl_sme::ClientSmeProxy,
+    #[allow(unused)]
+    iface_id: u16,
+}
+
+impl SmeForScan {
+    pub fn new(proxy: fidl_sme::ClientSmeProxy, iface_id: u16) -> Self {
+        SmeForScan { proxy, iface_id }
+    }
+
+    pub fn scan(
+        &self,
+        req: &mut fidl_sme::ScanRequest,
+        txn: fidl::endpoints::ServerEnd<fidl_sme::ScanTransactionMarker>,
+    ) -> Result<(), fidl::Error> {
+        self.proxy.scan(req, txn)
     }
 }
 
@@ -791,7 +810,7 @@ mod tests {
             }))) => {
                 let (proxy, _) = create_proxy::<fidl_sme::ClientSmeMarker>()
                     .expect("failed to create scan sme proxy");
-                responder.send(Ok(proxy)).expect("failed to send scan sme proxy");
+                responder.send(Ok(SmeForScan{proxy, iface_id: 0})).expect("failed to send scan sme proxy");
             }
         );
 
@@ -1339,5 +1358,37 @@ mod tests {
 
         // Verify that the client gets the response
         assert_variant!(test_values.exec.run_until_stalled(&mut report_fut), Poll::Ready(Err(_)));
+    }
+
+    #[fuchsia::test]
+    fn test_sme_for_scan() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        // Build an SME specifically for scanning.
+        let (proxy, server_end) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create client SME");
+        let sme = SmeForScan::new(proxy, 0);
+        let mut sme_stream = server_end.into_stream().expect("faield to create SME stream");
+
+        // Construct a scan request.
+        let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
+            ssids: vec![vec![]],
+            channels: vec![],
+        });
+        let (_, remote) =
+            fidl::endpoints::create_proxy().expect("failed to create SME transaction endpoints");
+
+        // Issue the scan request.
+        sme.scan(&mut scan_request.clone(), remote).expect("could not make scan request");
+
+        // Poll the server end of the SME and expect that a scan request has been forwarded.
+        assert_variant!(
+            exec.run_until_stalled(&mut sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
+                req, ..
+            }))) => {
+                assert_eq!(scan_request, req)
+            }
+        );
     }
 }

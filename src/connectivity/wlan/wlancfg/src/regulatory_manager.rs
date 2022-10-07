@@ -80,7 +80,7 @@ mod tests {
         crate::{
             access_point::{state_machine as ap_fsm, types as ap_types},
             client::types as client_types,
-            mode_management::Defect,
+            mode_management::{iface_manager_api::SmeForScan, Defect},
             regulatory_manager::REGION_CODE_LEN,
         },
         anyhow::{format_err, Error},
@@ -90,7 +90,7 @@ mod tests {
             RegulatoryRegionWatcherMarker, RegulatoryRegionWatcherRequest,
             RegulatoryRegionWatcherRequestStream,
         },
-        fidl_fuchsia_wlan_sme, fuchsia_async as fasync,
+        fuchsia_async as fasync,
         futures::{
             channel::{mpsc, oneshot},
             stream::{self, Stream, StreamExt},
@@ -447,9 +447,7 @@ mod tests {
             unimplemented!();
         }
 
-        async fn get_sme_proxy_for_scan(
-            &mut self,
-        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+        async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
             unimplemented!()
         }
 

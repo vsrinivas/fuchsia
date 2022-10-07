@@ -13,12 +13,11 @@ use {
             network_config::{AddAndGetRecent, PastConnectionsByBssid},
             ConnectFailure, Credential, FailureReason, SavedNetworksManagerApi,
         },
-        mode_management::iface_manager_api::IfaceManagerApi,
+        mode_management::iface_manager_api::{IfaceManagerApi, SmeForScan},
         telemetry::{self, TelemetryEvent, TelemetrySender},
     },
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async as fasync,
+    fidl_fuchsia_wlan_internal as fidl_internal, fuchsia_async as fasync,
     fuchsia_inspect::{Node as InspectNode, StringReference},
     fuchsia_inspect_contrib::{
         auto_persist::{self, AutoPersist},
@@ -346,7 +345,7 @@ impl NetworkSelector {
     /// Find a suitable BSS for the given network.
     pub(crate) async fn find_connection_candidate_for_network(
         &self,
-        sme_proxy: fidl_sme::ClientSmeProxy,
+        sme_proxy: SmeForScan,
         network: types::NetworkIdentifier,
     ) -> Option<types::ConnectionCandidate> {
         // TODO: check if we have recent enough scan results that we can pull from instead?
@@ -693,7 +692,7 @@ mod tests {
                 network_config::{PastConnectionData, PastConnectionsByBssid},
                 SavedNetworksManager,
             },
-            mode_management::Defect,
+            mode_management::{iface_manager_api::SmeForScan, Defect},
             telemetry::ScanIssue,
             util::testing::{
                 create_inspect_persistence_channel, create_wlan_hasher, generate_channel,
@@ -801,10 +800,8 @@ mod tests {
             unimplemented!()
         }
 
-        async fn get_sme_proxy_for_scan(
-            &mut self,
-        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
-            Ok(self.sme_proxy.clone())
+        async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
+            Ok(SmeForScan::new(self.sme_proxy.clone(), 0))
         }
 
         async fn stop_client_connections(

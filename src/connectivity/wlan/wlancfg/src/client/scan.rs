@@ -9,7 +9,7 @@ use {
         config_management::{
             select_subset_potentially_hidden_networks, SavedNetworksManagerApi, ScanResultType,
         },
-        mode_management::iface_manager_api::IfaceManagerApi,
+        mode_management::iface_manager_api::{IfaceManagerApi, SmeForScan},
         telemetry::{ScanIssue, TelemetryEvent, TelemetrySender},
     },
     anyhow::{format_err, Error},
@@ -55,7 +55,7 @@ pub trait ScanResultUpdate: Sync + Send {
 
 /// Requests a new SME scan and returns the results.
 async fn sme_scan(
-    sme_proxy: &fidl_sme::ClientSmeProxy,
+    sme_proxy: &SmeForScan,
     scan_request: fidl_sme::ScanRequest,
     telemetry_sender: Option<TelemetrySender>,
 ) -> Result<Vec<wlan_common::scan::ScanResult>, types::ScanError> {
@@ -260,7 +260,7 @@ async fn record_undirected_scan_results(
 
 /// Perform a directed active scan for a given network on given channels.
 pub(crate) async fn perform_directed_active_scan(
-    sme_proxy: &fidl_sme::ClientSmeProxy,
+    sme_proxy: &SmeForScan,
     ssid: &types::Ssid,
     channels: Option<Vec<u8>>,
     telemetry_sender: Option<TelemetrySender>,
@@ -577,7 +577,7 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::network_config::Credential,
-            mode_management::Defect,
+            mode_management::{iface_manager_api::SmeForScan, Defect},
             util::testing::{
                 fakes::FakeSavedNetworksManager, generate_random_sme_scan_result,
                 validate_sme_scan_request_and_send_results,
@@ -646,10 +646,8 @@ mod tests {
             unimplemented!()
         }
 
-        async fn get_sme_proxy_for_scan(
-            &mut self,
-        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
-            Ok(self.sme_proxy.clone())
+        async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
+            Ok(SmeForScan::new(self.sme_proxy.clone(), 0))
         }
 
         async fn stop_client_connections(
@@ -1120,6 +1118,7 @@ mod tests {
     fn sme_scan_with_passive_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+        let sme_proxy = SmeForScan::new(sme_proxy, 0);
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
@@ -1165,6 +1164,7 @@ mod tests {
     fn sme_scan_with_active_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+        let sme_proxy = SmeForScan::new(sme_proxy, 0);
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
@@ -1250,6 +1250,7 @@ mod tests {
     ) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+        let sme_proxy = SmeForScan::new(sme_proxy, 0);
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
@@ -1296,6 +1297,7 @@ mod tests {
     fn sme_scan_channel_closed() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+        let sme_proxy = SmeForScan::new(sme_proxy, 0);
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
@@ -2255,6 +2257,7 @@ mod tests {
     fn directed_active_scan_filters_desired_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+        let sme_proxy = SmeForScan::new(sme_proxy, 0);
 
         // Issue request to scan.
         let desired_ssid = types::Ssid::try_from("test_ssid").unwrap();

@@ -492,7 +492,7 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
-            mode_management::Defect,
+            mode_management::{iface_manager_api::SmeForScan, Defect},
             telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::fakes::FakeSavedNetworksManager,
         },
@@ -606,10 +606,8 @@ mod tests {
             unimplemented!()
         }
 
-        async fn get_sme_proxy_for_scan(
-            &mut self,
-        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
-            Ok(self.sme_proxy.clone())
+        async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
+            Ok(SmeForScan::new(self.sme_proxy.clone(), 0))
         }
 
         async fn stop_client_connections(
@@ -1768,9 +1766,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn get_sme_proxy_for_scan(
-            &mut self,
-        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+        async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
             Err(format_err!("No ifaces"))
         }
 

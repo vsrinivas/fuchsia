@@ -355,7 +355,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            client::types as client_types, mode_management::Defect,
+            client::types as client_types,
+            mode_management::{iface_manager_api::SmeForScan, Defect},
             regulatory_manager::REGION_CODE_LEN,
         },
         async_trait::async_trait,
@@ -417,9 +418,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn get_sme_proxy_for_scan(
-            &mut self,
-        ) -> Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error> {
+        async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
             unimplemented!()
         }
 

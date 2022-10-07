@@ -6,11 +6,10 @@ use {
     crate::{
         access_point::{state_machine as ap_fsm, types as ap_types},
         client::types as client_types,
-        mode_management::Defect,
+        mode_management::{iface_manager_api as api, Defect},
         regulatory_manager::REGION_CODE_LEN,
     },
     anyhow::Error,
-    fidl_fuchsia_wlan_sme,
     futures::channel::oneshot,
 };
 
@@ -54,7 +53,7 @@ pub struct RemoveIfaceRequest {
 
 #[derive(Debug)]
 pub struct ScanProxyRequest {
-    pub responder: oneshot::Sender<Result<fidl_fuchsia_wlan_sme::ClientSmeProxy, Error>>,
+    pub responder: oneshot::Sender<Result<api::SmeForScan, Error>>,
 }
 
 #[derive(Debug)]
