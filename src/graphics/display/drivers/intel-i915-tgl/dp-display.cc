@@ -15,6 +15,7 @@
 #include <math.h>
 #include <string.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <algorithm>
 #include <iterator>
@@ -30,9 +31,9 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/power-controller.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-gt-mailbox.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-typec.h"
@@ -1354,32 +1355,20 @@ bool DpDisplay::TypeCConnectTigerLake() {
     return true;
   }
 
-  int count = 0;
-  for (;;) {
-    // IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "GT Driver Mailbox to Block
-    // TCCOLD", page 404.
-    auto mailbox_data0 = tgl_registers::PowerMailboxData0::Get().FromValue(0);
-    mailbox_data0.WriteTo(mmio_space());
-
-    tgl_registers::PowerMailboxData1::Get().FromValue(0).WriteTo(mmio_space());
-
-    auto mailbox_interface = tgl_registers::PowerMailboxInterface::Get().FromValue(0);
-    mailbox_interface.set_command_code(0x26).set_has_active_transaction(1).WriteTo(mmio_space());
-
-    if (!PollUntil(
-            [&] { return !mailbox_interface.ReadFrom(mmio_space()).has_active_transaction(); },
-            zx::usec(1), 200)) {
-      zxlogf(ERROR, "Failed to block TypeC cold state: GT Driver Mailbox  busy");
+  // TODO(fxbug.dev/111088): TCCOLD (Type C cold power state) blocking should
+  // be decided at the display engine level. We may have already blocked TCCOLD
+  // while bringing up another Type C DDI.
+  {
+    zxlogf(TRACE, "Asking PCU firmware to block Type C cold power state");
+    PowerController power_controller(mmio_space());
+    zx::status<> power_status = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+        /*blocked=*/true, PowerController::RetryBehavior::kRetryUntilStateChanges);
+    if (power_status.is_error()) {
+      zxlogf(ERROR, "Type C ports unusable. PCU firmware didn't block Type C cold power state: %s",
+             power_status.status_string());
       return false;
     }
-    if ((mailbox_data0.ReadFrom(mmio_space()).reg_value() & 0x1) == 0) {
-      break;
-    }
-    if (count++ == 12) {
-      zxlogf(ERROR, "Failed to block tccold");
-      return false;
-    }
-    zx_nanosleep(zx_deadline_after(ZX_USEC(50)));
+    zxlogf(TRACE, "PCU firmware blocked Type C cold power state");
   }
 
   fit::deferred_callback unblock_tccold([mmio_space = mmio_space(), ddi = ddi()] {
@@ -1392,17 +1381,23 @@ bool DpDisplay::TypeCConnectTigerLake() {
     dp_csss.set_safe_mode_disabled_for_ddi(ddi, /*disabled=*/false);
     dp_csss.WriteTo(mmio_space);
 
-    // IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "GT Driver Mailbox to Unblock
-    // TCCOLD", page 404.
-    tgl_registers::PowerMailboxData0::Get().FromValue(1).WriteTo(mmio_space);
-    tgl_registers::PowerMailboxData1::Get().FromValue(0).WriteTo(mmio_space);
-
-    auto mailbox_interface = tgl_registers::PowerMailboxInterface::Get().FromValue(0);
-    mailbox_interface.set_command_code(0x26).set_has_active_transaction(1).WriteTo(mmio_space);
-
-    if (!PollUntil([&] { return !mailbox_interface.ReadFrom(mmio_space).has_active_transaction(); },
-                   zx::usec(1), 200)) {
-      zxlogf(ERROR, "Failed to unblock TypeC cold state: GT Driver Mailbox busy");
+    {
+      zxlogf(TRACE, "Asking PCU firmware to unblock Type C cold power state");
+      PowerController power_controller(mmio_space);
+      zx::status<> power_status = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+          /*blocked=*/false, PowerController::RetryBehavior::kNoRetry);
+      if (power_status.is_error()) {
+        if (power_status.error_value() == ZX_ERR_IO_REFUSED) {
+          zxlogf(
+              INFO,
+              "PCU firmware did not enter Type C cold power state. Type C ports in use elsewhere.");
+        } else {
+          zxlogf(ERROR,
+                 "PCU firmware failed to unblock Type C cold power state. Type C ports unusable.");
+        }
+      } else {
+        zxlogf(TRACE, "PCU firmware unblocked and entered Type C cold power state");
+      }
     }
   });
 
@@ -1538,17 +1533,23 @@ bool DpDisplay::TypeCDisconnectTigerLake() {
   dp_csss.set_safe_mode_disabled_for_ddi(ddi(), /*disabled=*/false);
   dp_csss.WriteTo(mmio_space());
 
-  // IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "GT Driver Mailbox to Unblock
-  // TCCOLD", page 404.
-  tgl_registers::PowerMailboxData0::Get().FromValue(1).WriteTo(mmio_space());
-  tgl_registers::PowerMailboxData1::Get().FromValue(0).WriteTo(mmio_space());
-
-  auto mailbox_interface = tgl_registers::PowerMailboxInterface::Get().FromValue(0);
-  mailbox_interface.set_command_code(0x26).set_has_active_transaction(1).WriteTo(mmio_space());
-
-  if (!PollUntil([&] { return !mailbox_interface.ReadFrom(mmio_space()).has_active_transaction(); },
-                 zx::usec(1), 200)) {
-    zxlogf(ERROR, "Failed to unblock TypeC cold state: GT Driver Mailbox busy");
+  // TODO(fxbug.dev/111088): TCCOLD (Type C cold power state) blocking should
+  // be decided at the display engine level. Unblocking may be inapproprate
+  // here, if another Type C DDI is active.
+  zxlogf(TRACE, "Asking PCU firmware to unblock Type C cold power state");
+  PowerController power_controller(mmio_space());
+  zx::status<> power_status = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+      /*blocked=*/false, PowerController::RetryBehavior::kNoRetry);
+  if (power_status.is_error()) {
+    if (power_status.error_value() == ZX_ERR_IO_REFUSED) {
+      zxlogf(INFO,
+             "PCU firmware did not enter Type C cold power state. Type C ports in use elsewhere.");
+    } else {
+      zxlogf(ERROR,
+             "PCU firmware failed to unblock Type C cold power state. Type C ports unusable.");
+    }
+  } else {
+    zxlogf(TRACE, "PCU firmware unblocked and entered Type C cold power state");
   }
   return true;
 }

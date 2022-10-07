@@ -5,65 +5,18 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/clock/cdclk.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 
 #include <cstdint>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/power-controller.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-gt-mailbox.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
 namespace i915_tgl {
-
-namespace {
-
-struct GtDriverMailboxOp {
-  uint32_t command;
-  uint64_t data;
-  uint32_t poll_busy_timeout_us = 150;
-  uint32_t poll_freq_us = 0;
-  uint32_t total_timeout_us = 0;
-};
-
-bool WriteToGtMailbox(fdf::MmioBuffer* mmio_space, GtDriverMailboxOp op) {
-  auto mailbox_data0 = tgl_registers::PowerMailboxData0::Get().FromValue(0);
-  auto mailbox_data1 = tgl_registers::PowerMailboxData1::Get().FromValue(0);
-  auto mailbox_interface = tgl_registers::PowerMailboxInterface::Get().FromValue(0);
-
-  for (uint32_t total_wait_us = 0;;) {
-    mailbox_data0.set_reg_value(static_cast<uint32_t>(op.data)).WriteTo(mmio_space);
-    mailbox_data1.set_reg_value(static_cast<uint32_t>(op.data >> 32)).WriteTo(mmio_space);
-    mailbox_interface.set_command_code(op.command)
-        .set_has_active_transaction(true)
-        .WriteTo(mmio_space);
-
-    if (op.total_timeout_us == 0 || op.poll_freq_us == 0) {
-      return true;
-    }
-
-    if (!PollUntil([&] { return !mailbox_interface.ReadFrom(mmio_space).has_active_transaction(); },
-                   zx::usec(1), static_cast<int32_t>(op.poll_busy_timeout_us))) {
-      zxlogf(ERROR, "GT Driver Mailbox driver busy");
-      return false;
-    }
-
-    if (PollUntil([&] { return (mailbox_data0.ReadFrom(mmio_space).reg_value() & 0x1) != 0; },
-                  zx::usec(1), static_cast<int32_t>(op.poll_freq_us))) {
-      break;
-    }
-
-    total_wait_us += op.poll_freq_us;
-    if (total_wait_us >= op.total_timeout_us) {
-      zxlogf(ERROR, "GT Driver Mailbox: Write timeout");
-      return false;
-    }
-  }
-  return true;
-}
-
-}  // namespace
 
 CoreDisplayClockSkylake::CoreDisplayClockSkylake(fdf::MmioBuffer* mmio_space)
     : mmio_space_(mmio_space) {
@@ -109,31 +62,40 @@ bool CoreDisplayClockSkylake::LoadState() {
 }
 
 bool CoreDisplayClockSkylake::PreChangeFreq() {
-  bool raise_voltage_result = WriteToGtMailbox(mmio_space_, {
-                                                                .command = 0x07,
-                                                                .data = 0x3,
-                                                                .poll_busy_timeout_us = 150,
-                                                                .poll_freq_us = 150,
-                                                                .total_timeout_us = 3000,
-                                                            });
-  if (!raise_voltage_result) {
-    zxlogf(ERROR, "Set CDCLK: Failed to raise voltage to max level");
+  zxlogf(TRACE, "Asking PCU firmware to raise display voltage to maximum level");
+  PowerController power_controller(mmio_space_);
+  const zx::status<> status = power_controller.RequestDisplayVoltageLevel(
+      3, PowerController::RetryBehavior::kRetryUntilStateChanges);
+  if (status.is_error()) {
+    zxlogf(ERROR, "PCU firmware malfunction! Failed to raise voltage to maximum level: %s",
+           status.status_string());
     return false;
   }
+  zxlogf(TRACE, "PMU firmware raised display voltage to maximum level");
   return true;
 }
 
 bool CoreDisplayClockSkylake::PostChangeFreq(uint32_t freq_khz) {
-  bool set_voltage_result = WriteToGtMailbox(mmio_space_, {
-                                                              .command = 0x07,
-                                                              .data = FreqToVoltageLevel(freq_khz),
-                                                              .poll_busy_timeout_us = 0,
-                                                              .poll_freq_us = 0,
-                                                              .total_timeout_us = 0,
-                                                          });
-  if (!set_voltage_result) {
-    zxlogf(ERROR, "Set CDCLK: Failed to set voltage");
-    return false;
+  const int voltage_level = VoltageLevelForFrequency(freq_khz);
+  zxlogf(TRACE, "Asking PCU firmware to drop display voltage to level %d", voltage_level);
+
+  PowerController power_controller(mmio_space_);
+  const zx::status<> status = power_controller.RequestDisplayVoltageLevel(
+      voltage_level, PowerController::RetryBehavior::kNoRetry);
+  if (status.is_error()) {
+    if (status.error_value() == ZX_ERR_IO_REFUSED) {
+      zxlogf(
+          INFO,
+          "PCU firmware refused to drop voltage level to %d. Another consumer may need more power.",
+          voltage_level);
+    } else {
+      zxlogf(WARNING,
+             "PCU firmware malfunction! Failed to communicate requested voltage level %d: %s",
+             voltage_level, status.status_string());
+      return false;
+    }
+  } else {
+    zxlogf(TRACE, "PMU firmware dropped display voltage level to %d", voltage_level);
   }
   return true;
 }
@@ -209,14 +171,20 @@ bool CoreDisplayClockSkylake::SetFrequency(uint32_t freq_khz) {
 }
 
 // static
-uint32_t CoreDisplayClockSkylake::FreqToVoltageLevel(uint32_t freq_khz) {
-  if (freq_khz > 540'000) {
+int CoreDisplayClockSkylake::VoltageLevelForFrequency(uint32_t frequency_khz) {
+  // The voltage level mapping is documented in the "Sequences for Changing CD
+  // Clock Frequency" section of Intel's display engine PRMs.
+  //
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 pages 138-139
+  // Skylake: IHD-OS-SKL-Vol 12-05.16 pages 135-136
+
+  if (frequency_khz > 540'000) {
     return 0x3;
   }
-  if (freq_khz > 450'000) {
+  if (frequency_khz > 450'000) {
     return 0x2;
   }
-  if (freq_khz > 337'500) {
+  if (frequency_khz > 337'500) {
     return 0x1;
   }
   return 0x0;
@@ -362,30 +330,42 @@ bool CoreDisplayClockTigerLake::SetFrequency(uint32_t freq_khz) {
 }
 
 bool CoreDisplayClockTigerLake::PreChangeFreq() {
-  bool raise_voltage_result = WriteToGtMailbox(mmio_space_, {
-                                                                .command = 0x07,
-                                                                .data = 0x3,
-                                                                .poll_busy_timeout_us = 150,
-                                                                .poll_freq_us = 150,
-                                                                .total_timeout_us = 3000,
-                                                            });
-  if (!raise_voltage_result) {
-    zxlogf(ERROR, "Set CDCLK: Failed to raise voltage to max level");
+  zxlogf(TRACE, "Asking PCU firmware to raise display voltage to maximum level");
+
+  PowerController power_controller(mmio_space_);
+  const zx::status<> status = power_controller.RequestDisplayVoltageLevel(
+      3, PowerController::RetryBehavior::kRetryUntilStateChanges);
+  if (!status.is_ok()) {
+    zxlogf(ERROR, "PCU firmware malfunction! Failed to raise voltage to maximum level: %s",
+           status.status_string());
     return false;
   }
   return true;
 }
 
 bool CoreDisplayClockTigerLake::PostChangeFreq(uint32_t freq_khz) {
-  bool set_voltage_result = WriteToGtMailbox(mmio_space_, {
-                                                              .command = 0x07,
-                                                              .data = FreqToVoltageLevel(freq_khz),
-                                                              .poll_busy_timeout_us = 0,
-                                                              .poll_freq_us = 0,
-                                                              .total_timeout_us = 0,
-                                                          });
-  if (!set_voltage_result) {
-    zxlogf(ERROR, "Set CDCLK: Failed to set voltage");
+  const int voltage_level = VoltageLevelForFrequency(freq_khz);
+  zxlogf(TRACE, "Asking PCU firmware to drop display voltage to level %d", voltage_level);
+
+  // The display engine PRM states that the driver can continue after submitting
+  // the voltage level change request to the PCU firmware via the GT Driver
+  // Mailbox. RequestDisplayVoltageLevel() waits until the PCU firmware replies
+  // to the request via the GT Driver Mailbox. This makes it a bit easier to
+  // reason about the driver's behavior. We may revisit this optimization
+  // opportunity in the future.
+  PowerController power_controller(mmio_space_);
+  const zx::status<> status = power_controller.RequestDisplayVoltageLevel(
+      voltage_level, PowerController::RetryBehavior::kNoRetry);
+  if (status.is_error()) {
+    if (status.error_value() == ZX_ERR_IO_REFUSED) {
+      zxlogf(
+          INFO,
+          "PCU firmware refused to drop voltage level to %d. Another consumer may need more power.",
+          voltage_level);
+    } else {
+      zxlogf(WARNING, "PCU malfunction! Failed to communicate requested voltage level %d: %s",
+             voltage_level, status.status_string());
+    }
     return false;
   }
   return true;
@@ -512,14 +492,24 @@ bool CoreDisplayClockTigerLake::ChangeFreq(uint32_t freq_khz) {
 }
 
 // static
-uint32_t CoreDisplayClockTigerLake::FreqToVoltageLevel(uint32_t freq_khz) {
-  if (freq_khz > 556'800) {
+int CoreDisplayClockTigerLake::VoltageLevelForFrequency(uint32_t frequency_khz) {
+  // The voltage level mapping is documented in the "Display Voltage Frequency
+  // Switching" (DVFS) section of Intel's display engine PRMs.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 page 194
+  // DG1: IHD-OS-DG1-Vol 12-2.21 page 154
+  //
+
+  // TODO(fxbug.dev/111046): Follow the PRM calculation, which requires knowing
+  //                         all the DDI clock frequencies.
+
+  if (frequency_khz > 556'800) {
     return 0x3;
   }
-  if (freq_khz > 326'400) {
+  if (frequency_khz > 326'400) {
     return 0x2;
   }
-  if (freq_khz > 312'000) {
+  if (frequency_khz > 312'000) {
     return 0x1;
   }
   return 0x0;

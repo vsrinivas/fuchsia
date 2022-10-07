@@ -47,6 +47,7 @@ source_set("common_srcs") {
     "pch-engine.cc",
     "pipe-manager.cc",
     "pipe.cc",
+    "power-controller.cc",
     "power.cc",
   ]
   public_deps = [
@@ -116,6 +117,7 @@ test("intel-i915-tgl-test") {
     "pipe-manager-unittest.cc",
     "pipe-unittest.cc",
     "poll-until-unittest.cc",
+    "power-controller-unittest.cc",
     "power-unittest.cc",
     "registers-ddi-unittest.cc",
     "registers-transcoder-unittest.cc",

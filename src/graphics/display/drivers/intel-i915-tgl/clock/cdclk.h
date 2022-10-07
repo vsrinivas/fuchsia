@@ -54,7 +54,7 @@ class CoreDisplayClockSkylake final : public CoreDisplayClock {
   bool ChangeFreq(uint32_t freq_khz);
   bool PostChangeFreq(uint32_t freq_khz);
 
-  static uint32_t FreqToVoltageLevel(uint32_t freq_khz);
+  static int VoltageLevelForFrequency(uint32_t frequency_khz);
 
   fdf::MmioBuffer* mmio_space_ = nullptr;
 };
@@ -86,7 +86,7 @@ class CoreDisplayClockTigerLake final : public CoreDisplayClock {
   bool ChangeFreq(uint32_t freq_khz);
   bool PostChangeFreq(uint32_t freq_khz);
 
-  static uint32_t FreqToVoltageLevel(uint32_t freq_khz);
+  static int VoltageLevelForFrequency(uint32_t frequency_khz);
 
   bool Disable();
   bool Enable(uint32_t freq_khz, State state);
