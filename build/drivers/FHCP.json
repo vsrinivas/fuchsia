@@ -6,9 +6,7 @@
     },
     "system_types": {
         "workstation": {},
-        "smart_speaker": {},
-        "tablet": {},
-        "phone": {}
+        "smart_display": {}
     },
     "driver_test_types": {
         "generic_driver_tests": {},
