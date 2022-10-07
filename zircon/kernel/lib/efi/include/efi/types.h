@@ -97,6 +97,11 @@ __BEGIN_CDECLS
     0xf2fd1544, 0x9794, 0x4a2c, { 0x99, 0x2e, 0xe5, 0xbb, 0xcf, 0x20, 0xe3, 0x94 } \
   }
 
+#define EFI_MEMORY_ATTRIBUTES_GUID                                                 \
+  {                                                                                \
+    0xdcfa911d, 0x26eb, 0x469f, { 0xa2, 0x20, 0x38, 0xb7, 0xdc, 0x46, 0x12, 0x20 } \
+  }
+
 typedef struct {
   uint64_t Signature;
   uint32_t Revision;
@@ -132,6 +137,13 @@ typedef union {
   efi_ipv4_addr v4;
   efi_ipv6_addr v6;
 } efi_ip_addr;
+
+typedef struct efi_memory_attributes_table_header {
+  uint32_t version;
+  uint32_t number_of_entries;
+  uint32_t descriptor_size;
+  uint32_t reserved;
+} efi_memory_attributes_table_header;
 
 // This really belongs in boot-services.h, but causes circular dependencies with
 // device-path.h.

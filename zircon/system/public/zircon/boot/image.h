@@ -135,7 +135,8 @@ typedef struct {
     macro(ZBI_TYPE_SERIAL_NUMBER, "SERIAL_NUMBER", ".txt") \
     macro(ZBI_TYPE_BOOTLOADER_FILE, "BOOTLOADER_FILE", ".bin") \
     macro(ZBI_TYPE_DEVICETREE, "DEVICETREE", ".dtb") \
-    macro(ZBI_TYPE_SECURE_ENTROPY, "ENTROPY", ".bin")
+    macro(ZBI_TYPE_SECURE_ENTROPY, "ENTROPY", ".bin") \
+    macro(ZBI_TYPE_EFI_MEMORY_ATTRIBUTES_TABLE, "EFI_MEMORY_ATTRIBUTES_TABLE", ".bin")
 // clang-format on
 
 // Each ZBI starts with a container header.
@@ -548,6 +549,11 @@ typedef struct {
 
 // EFI system table, a uint64_t physical address.
 #define ZBI_TYPE_EFI_SYSTEM_TABLE (0x53494645)  // EFIS
+
+// EFI memory attributes table. An example of this format can be found in UEFI 2.10 section 4.6.4,
+// but the consumer of this item is responsible for interpreting whatever the bootloader supplies
+// (in particular the "version" field may differ as the format evolves).
+#define ZBI_TYPE_EFI_MEMORY_ATTRIBUTES_TABLE (0x54414d45)  // EMAT
 
 /* EFI Variable for Crash Log */
 #define ZIRCON_VENDOR_GUID                                                         \

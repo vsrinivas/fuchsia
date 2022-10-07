@@ -335,14 +335,16 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     // Assemble a GIC config if one exists.
     gic_version = gic_driver_from_madt(madt, &v2_gic_cfg, &v3_gic_cfg);
     if (gic_version == 2) {
-      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2,
-                                             0, &v2_gic_cfg, sizeof(v2_gic_cfg));
+      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER,
+                                             ZBI_KERNEL_DRIVER_ARM_GIC_V2, 0, &v2_gic_cfg,
+                                             sizeof(v2_gic_cfg));
       if (result != ZBI_RESULT_OK) {
         return -1;
       }
     } else if (gic_version == 3) {
-      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V3,
-                                             0, &v3_gic_cfg, sizeof(v3_gic_cfg));
+      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER,
+                                             ZBI_KERNEL_DRIVER_ARM_GIC_V3, 0, &v3_gic_cfg,
+                                             sizeof(v3_gic_cfg));
       if (result != ZBI_RESULT_OK) {
         return -1;
       }
@@ -354,8 +356,9 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   if (fadt != 0) {
     zbi_dcfg_arm_psci_driver_t psci_cfg;
     if (!psci_driver_from_fadt(fadt, &psci_cfg)) {
-      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_PSCI, 0,
-                                             &psci_cfg, sizeof(psci_cfg));
+      result =
+          zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER,
+                                        ZBI_KERNEL_DRIVER_ARM_PSCI, 0, &psci_cfg, sizeof(psci_cfg));
       if (result != ZBI_RESULT_OK) {
         return -1;
       }
@@ -368,7 +371,8 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     zbi_dcfg_arm_generic_timer_driver_t timer;
     timer_from_gtdt(gtdt, &timer);
     result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER,
-                                           ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER, 0, &timer, sizeof(timer));
+                                           ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER, 0, &timer,
+                                           sizeof(timer));
     if (result != ZBI_RESULT_OK) {
       return -1;
     }
@@ -407,6 +411,22 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
         zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_FRAMEBUFFER, 0, 0, &fb, sizeof(fb));
     if (result != ZBI_RESULT_OK) {
       return -1;
+    }
+  }
+
+  // Look for an EFI memory attributes table we can pass to the kernel.
+  const efi_guid kMemoryAttributesGuid = EFI_MEMORY_ATTRIBUTES_GUID;
+  for (size_t i = 0; i < sys->NumberOfTableEntries; i++) {
+    if (!memcmp(&kMemoryAttributesGuid, &sys->ConfigurationTable[i].VendorGuid, sizeof(efi_guid))) {
+      const efi_memory_attributes_table_header* hdr = sys->ConfigurationTable[i].VendorTable;
+      result = zbi_create_entry_with_payload(
+          ramdisk, rsz, ZBI_TYPE_EFI_MEMORY_ATTRIBUTES_TABLE, 0, 0, hdr,
+          sizeof(*hdr) + (hdr->number_of_entries * hdr->descriptor_size));
+      if (result != ZBI_RESULT_OK) {
+        printf(
+            "warning: failed to create EFI memory attributes ZBI item. EFI runtime services won't "
+            "work.\n");
+      }
     }
   }
 
