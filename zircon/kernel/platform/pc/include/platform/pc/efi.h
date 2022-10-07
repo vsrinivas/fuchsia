@@ -22,7 +22,7 @@ extern "C" {
 class EfiServicesActivation;
 
 // Initialize data structures for EFI services.
-zx_status_t InitEfiServices(uint64_t efi_system_table);
+NO_ASAN zx_status_t InitEfiServices(uint64_t efi_system_table);
 
 // Activate EFI services.
 //

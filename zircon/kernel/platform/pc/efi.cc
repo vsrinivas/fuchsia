@@ -4,11 +4,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
+
 #include <arch/interrupt.h>
+#include <efi/boot-services.h>
+#include <efi/types.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/optional.h>
+#include <lk/init.h>
+#include <phys/handoff.h>
 #include <platform/pc/efi.h>
+#include <vm/bootreserve.h>
+#include <vm/vm.h>
+#include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
+#include <vm/vm_object_physical.h>
 
 #include <ktl/enforce.h>
 
@@ -33,6 +43,58 @@ void PanicFriendlySwitchAspace(VmAspace* aspace) {
   }
 }
 
+// Helper function that maps the region with size |size| at |base| into the given aspace.
+zx_status_t MapUnalignedRegion(VmAspace* aspace, paddr_t base, size_t size, const char* name,
+                               uint arch_mmu_flags) {
+  auto vmar = aspace->RootVmar();
+
+  bool is_reserved = !boot_reserve_foreach([base, size](reserve_range_t range) {
+    if (base >= range.pa && (base + size) <= (range.pa + range.len)) {
+      // Found the range, return false to early exit.
+      return false;
+    }
+    return true;
+  });
+  if (!is_reserved) {
+    printf("ERROR: Attempted to map EFI region [0x%lx, 0x%zx), which is not a reserved region.\n",
+           base, base + size);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fbl::RefPtr<VmObjectPhysical> vmo;
+  paddr_t aligned_base = ROUNDDOWN(base, PAGE_SIZE);
+  size_t aligned_size = PAGE_ALIGN(size + (base - aligned_base));
+  zx_status_t status = VmObjectPhysical::Create(aligned_base, aligned_size, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  uint32_t vmar_flags = VMAR_FLAG_SPECIFIC_OVERWRITE;
+  if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ) {
+    vmar_flags |= VMAR_FLAG_CAN_MAP_READ;
+  }
+  if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
+    vmar_flags |= VMAR_FLAG_CAN_MAP_WRITE;
+  }
+  if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
+    vmar_flags |= VMAR_FLAG_CAN_MAP_EXECUTE;
+  }
+
+  fbl::RefPtr<VmMapping> mapping;
+  status = vmar->CreateVmMapping(aligned_base, aligned_size, ZX_PAGE_SHIFT, vmar_flags, vmo, 0,
+                                 arch_mmu_flags, name, &mapping);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = mapping->MapRange(0, aligned_size, true);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace
 
 zx_status_t InitEfiServices(uint64_t efi_system_table) {
@@ -44,23 +106,59 @@ zx_status_t InitEfiServices(uint64_t efi_system_table) {
   if (!efi_aspace) {
     return ZX_ERR_NO_RESOURCES;
   }
+  auto error_cleanup = fit::defer([]() { efi_aspace.reset(); });
 
-  // Map in EFI services.
-  //
-  // We map the first 16 GiB of address space 1:1 from virt/phys.
-  //
-  // TODO: Be more precise about this. This gets the job done on the platforms
-  // we're working on right now, but is probably not entirely correct.
-  auto* desired_location = static_cast<void*>(0);  // NOLINT
-  zx_status_t result = efi_aspace->AllocPhysical(
-      "1:1", 16 * 1024 * 1024 * 1024UL, &desired_location, PAGE_SIZE_SHIFT, 0,
-      VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
-      ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
-  if (result != ZX_OK) {
-    efi_aspace.reset();
-    return result;
+  // Switch to the EFI address space.
+  VmAspace* old_aspace = Thread::Current::Get()->aspace();
+  auto switch_to_old_aspace = fit::defer([old_aspace]() { PanicFriendlySwitchAspace(old_aspace); });
+  PanicFriendlySwitchAspace(efi_aspace.get());
+
+  if (gPhysHandoff->efi_memory_attributes.get().size() == 0) {
+    dprintf(CRITICAL, "EFI did not provide memory table, cannot map runtime services.\n");
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // Map in the system table.
+  const efi_memory_attributes_table_header* efi_memory_table =
+      reinterpret_cast<const efi_memory_attributes_table_header*>(
+          gPhysHandoff->efi_memory_attributes.get().begin());
+
+  if (efi_memory_table == nullptr) {
+    dprintf(CRITICAL, "EFI did not provide memory table, cannot map runtime services.\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  const uint8_t* raw_desc = reinterpret_cast<const uint8_t*>(efi_memory_table);
+  raw_desc += sizeof(*efi_memory_table);
+  // Iterate through the memory table and map each entry appropriately.
+  for (size_t i = 0; i < efi_memory_table->number_of_entries; i++) {
+    const efi_memory_descriptor* desc = reinterpret_cast<const efi_memory_descriptor*>(raw_desc);
+    if (!(desc->Attribute & EFI_MEMORY_RUNTIME)) {
+      continue;
+    }
+    if (desc->Type != EfiRuntimeServicesCode && desc->Type != EfiRuntimeServicesData) {
+      continue;
+    }
+
+    uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_RWX_MASK;
+    // UEFI v2.9, section 4.6, "EFI_MEMORY_ATTRIBUTES_TABLE" says that only RUNTIME, RO and XP are
+    // allowed to be set.
+    if (desc->Attribute & EFI_MEMORY_RO) {
+      arch_mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
+    }
+    if (desc->Attribute & EFI_MEMORY_XP) {
+      arch_mmu_flags &= ~ARCH_MMU_FLAG_PERM_EXECUTE;
+    }
+    zx_status_t result =
+        MapUnalignedRegion(efi_aspace.get(), desc->PhysicalStart, desc->NumberOfPages * PAGE_SIZE,
+                           "efi_runtime", arch_mmu_flags);
+    if (result != ZX_OK) {
+      return result;
+    }
+    raw_desc += efi_memory_table->descriptor_size;
+  }
+
+  error_cleanup.cancel();
   return ZX_OK;
 }
 
