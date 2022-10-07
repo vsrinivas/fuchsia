@@ -14,6 +14,7 @@ rustc_library("fs_management") {
     "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_rust",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
@@ -33,10 +34,13 @@ rustc_library("fs_management") {
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/ramdevice_client",
     "//src/storage/fs_test:crypt_service",
+    "//third_party/rust_crates:futures",
   ]
   sources = [
     "src/error.rs",
     "src/filesystem.rs",
+    "src/format.rs",
+    "src/format/constants.rs",
     "src/lib.rs",
   ]
 }

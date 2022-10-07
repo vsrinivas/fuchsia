@@ -11,6 +11,7 @@
 
 mod error;
 pub mod filesystem;
+pub mod format;
 
 use {
     anyhow::Error,
