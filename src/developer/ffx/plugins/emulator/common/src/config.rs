@@ -20,9 +20,17 @@ pub const ZBI_HOST_TOOL: &'static str = "zbi";
 /// The experimental flag for the console subcommand. Defaults to false.
 pub const EMU_CONSOLE_FLAG: &'static str = "emu.console.enabled";
 
+/// The default virtual device name to configure the emulator. Defaults to
+/// the empty string, but can be overridden by the user.
+pub const EMU_DEFAULT_DEVICE: &'static str = "emu.device";
+
 /// The default engine to launch from `ffx emu start`. Defaults to
 /// femu, but can be overridden by the user.
 pub const EMU_DEFAULT_ENGINE: &'static str = "emu.engine";
+
+/// The default gpu type to use in `ffx emu start`. Defaults to
+/// "auto", but can be overridden by the user.
+pub const EMU_DEFAULT_GPU: &'static str = "emu.gpu";
 
 /// The root directory for storing instance specific data. Instances
 /// should create a subdirectory in this directory to store data.

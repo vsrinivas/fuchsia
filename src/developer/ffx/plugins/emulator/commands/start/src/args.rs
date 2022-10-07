@@ -6,7 +6,7 @@ use argh::FromArgs;
 use ffx_config::FfxConfigBacked;
 use ffx_core::ffx_command;
 use ffx_emulator_common::host_is_mac;
-use ffx_emulator_config::{AccelerationMode, GpuType, NetworkingMode};
+use ffx_emulator_config::{AccelerationMode, NetworkingMode};
 use std::path::PathBuf;
 
 #[ffx_command()]
@@ -53,6 +53,17 @@ pub struct StartCommand {
     #[argh(switch)]
     pub debugger: bool,
 
+    /// specify the virtual device specification to use from the product bundle. If no device is
+    /// specified then the first device listed in the PBM is used. A default can be set by running
+    /// `ffx config set emu.device <type>`.
+    #[argh(option)]
+    #[ffx_config_default(key = "emu.device")]
+    pub device: Option<String>,
+
+    /// print the list of available virtual devices.
+    #[argh(switch)]
+    pub device_list: bool,
+
     /// sets up the emulation, but doesn't start the emulator. The command line arguments that the
     /// current configuration generates will be printed to stdout for review.
     #[argh(switch)]
@@ -72,9 +83,10 @@ pub struct StartCommand {
     /// GPU acceleration mode. Allowed values are "host", "guest", "swiftshader_indirect", or
     /// "auto". Default is "auto". Note: this is unused when using the "qemu" engine type. See
     /// https://developer.android.com/studio/run/emulator-acceleration#command-gpu for details on
-    /// the available options.
-    #[argh(option, default = "GpuType::Auto")]
-    pub gpu: GpuType,
+    /// the available options. This can be overridden by running `ffx config set emu.gpu <type>`.
+    #[argh(option)]
+    #[ffx_config_default(key = "emu.gpu", default = "auto")]
+    pub gpu: Option<String>,
 
     /// run the emulator without a GUI. The guest system may still initialize graphics drivers,
     /// but no graphics interface will be presented to the user.
@@ -128,15 +140,6 @@ pub struct StartCommand {
     /// used (e.g. if there is only one PBM available).
     #[argh(positional)]
     pub product_bundle: Option<String>,
-
-    /// specify the virtual device specification to use from the product bundle. If no device is
-    /// specified then the first device listed in the PBM is used.
-    #[argh(option)]
-    pub device: Option<String>,
-
-    /// print the list of available virtual devices.
-    #[argh(switch)]
-    pub device_list: bool,
 
     /// reuse a persistent emulator's state when starting up. If an emulator with the same name as
     /// this instance has been previously started and then stopped without cleanup, this instance

@@ -42,19 +42,18 @@ pub async fn convert_bundle_to_configs(
 
             // Determine the correct device name from the user, or default to the first one listed
             // in the product bundle.
-            let virtual_device = match device_name {
+            let virtual_device = match device_name.as_deref() {
                 // If no device_name is given, choose the first virtual device listed in the
                 // productbundle.
-                None => match &virtual_devices[0] {
+                None | Some("") => match &virtual_devices[0] {
                     sdk_metadata::VirtualDevice::V1(v) => v,
                 },
 
                 // Otherwise, find the virtual device by name in the product bundle.
                 Some(device_name) => {
-                    let vd = virtual_devices
-                        .iter()
-                        .find(|vd| vd.name() == device_name)
-                        .ok_or(anyhow!("The device is not found in the product bundle"))?;
+                    let vd = virtual_devices.iter().find(|vd| vd.name() == device_name).ok_or(
+                        anyhow!("The device '{}' is not found in the product bundle.", device_name),
+                    )?;
                     match vd {
                         sdk_metadata::VirtualDevice::V1(v) => v,
                     }

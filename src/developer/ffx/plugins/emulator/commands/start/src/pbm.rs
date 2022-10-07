@@ -12,12 +12,13 @@ use ffx_emulator_common::{
     tuntap::tap_available,
 };
 use ffx_emulator_config::{
-    convert_bundle_to_configs, AccelerationMode, ConsoleType, EmulatorConfiguration, LogLevel,
-    NetworkingMode, OperatingSystem,
+    convert_bundle_to_configs, AccelerationMode, ConsoleType, EmulatorConfiguration, GpuType,
+    LogLevel, NetworkingMode, OperatingSystem,
 };
 use ffx_emulator_start_args::StartCommand;
 use pbms::{load_product_bundle, ListingMode};
 use sdk_metadata::ProductBundle;
+use std::str::FromStr;
 use std::{collections::hash_map::DefaultHasher, env, hash::Hasher, path::PathBuf, time::Duration};
 
 /// Lists the virtual device spec names in the specified product.
@@ -35,7 +36,7 @@ pub(crate) async fn list_virtual_devices(cmd: &StartCommand) -> Result<Vec<Strin
 pub(crate) async fn make_configs(cmd: &StartCommand) -> Result<EmulatorConfiguration> {
     // Apply the values from the manifest to an emulation configuration.
     let mut emu_config =
-        convert_bundle_to_configs(cmd.product_bundle.clone(), cmd.device.clone(), cmd.verbose)
+        convert_bundle_to_configs(cmd.product_bundle.clone(), cmd.device().await?, cmd.verbose)
             .await
             .context("problem with convert_bundle_to_configs")?;
 
@@ -60,10 +61,11 @@ async fn apply_command_line_options(
 ) -> Result<EmulatorConfiguration> {
     // Clone any fields that can simply copy over.
     emu_config.host.acceleration = cmd.accel.clone();
-    emu_config.host.gpu = cmd.gpu.clone();
     emu_config.host.networking = cmd.net.clone();
 
     // Process any values that are Options, have Auto values, or need any transformation.
+    emu_config.host.gpu = GpuType::from_str(&cmd.gpu().await?)?;
+
     if let Some(log) = &cmd.log {
         // It'd be nice to canonicalize this path, to clean up relative bits like "..", but the
         // canonicalize method also checks for existence and symlinks, and we don't generally
@@ -229,7 +231,10 @@ fn generate_mac_address(name: &str) -> String {
 mod tests {
     use super::*;
     use ffx_config::{query, ConfigLevel};
-    use ffx_emulator_common::config::EMU_INSTANCE_ROOT_DIR;
+    use ffx_emulator_common::config::{
+        EMU_DEFAULT_DEVICE, EMU_DEFAULT_ENGINE, EMU_DEFAULT_GPU, EMU_INSTANCE_ROOT_DIR,
+        EMU_START_TIMEOUT,
+    };
     use ffx_emulator_config::{
         AccelerationMode, ConsoleType, CpuArchitecture, EmulatorConfiguration, GpuType, LogLevel,
         NetworkingMode, PortMapping,
@@ -252,7 +257,7 @@ mod tests {
             config: Some(PathBuf::from("/path/to/template")),
             console: true,
             debugger: true,
-            gpu: GpuType::Host,
+            gpu: Some(String::from("host")),
             headless: true,
             hidpi_scaling: true,
             log: Some(PathBuf::from("/path/to/log")),
@@ -355,6 +360,48 @@ mod tests {
         assert_eq!(opts.runtime.template, long_path.join("absolute.template"));
 
         env::set_current_dir(cwd).context("Revert to previous CWD")?;
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_config_backed_values() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
+        let mut cmd = StartCommand::default();
+        let emu_config = EmulatorConfiguration::default();
+
+        assert_eq!(cmd.device().await.unwrap(), Some(String::from("")));
+        assert_eq!(cmd.engine().await.unwrap(), "femu");
+        assert_eq!(cmd.gpu().await.unwrap(), "auto");
+        assert_eq!(cmd.startup_timeout().await.unwrap(), 60);
+
+        let result = apply_command_line_options(emu_config.clone(), &cmd).await;
+        assert!(result.is_ok(), "{:?}", result.err());
+        let opts = result.unwrap();
+        assert_eq!(opts.host.gpu, GpuType::Auto);
+
+        query(EMU_DEFAULT_DEVICE).level(Some(ConfigLevel::User)).set(json!("my_device")).await?;
+        query(EMU_DEFAULT_ENGINE).level(Some(ConfigLevel::User)).set(json!("qemu")).await?;
+        query(EMU_DEFAULT_GPU).level(Some(ConfigLevel::User)).set(json!("host")).await?;
+        query(EMU_START_TIMEOUT).level(Some(ConfigLevel::User)).set(json!(120)).await?;
+
+        assert_eq!(cmd.device().await.unwrap(), Some(String::from("my_device")));
+        assert_eq!(cmd.engine().await.unwrap(), "qemu");
+        assert_eq!(cmd.gpu().await.unwrap(), "host");
+        assert_eq!(cmd.startup_timeout().await.unwrap(), 120);
+
+        let result = apply_command_line_options(emu_config.clone(), &cmd).await;
+        assert!(result.is_ok(), "{:?}", result.err());
+        let opts = result.unwrap();
+        assert_eq!(opts.host.gpu, GpuType::Host);
+
+        cmd.gpu = Some(String::from("guest"));
+
+        assert_eq!(cmd.gpu().await.unwrap(), "guest");
+        let result = apply_command_line_options(emu_config.clone(), &cmd).await;
+        assert!(result.is_ok(), "{:?}", result.err());
+        let opts = result.unwrap();
+        assert_eq!(opts.host.gpu, GpuType::Guest);
 
         Ok(())
     }
