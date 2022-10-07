@@ -13,11 +13,12 @@ import("//build/fidl/toolchain.gni")
 import("//build/go/fidl_go.gni")
 import("//build/go/toolchain.gni")
 import("//build/rust/fidl_rust.gni")
+import("//zircon/tools/zither/zither_library.gni")
 
 # Declares a FIDL library.
 #
 # Supported backends: rust, hlcpp, llcpp, banjo_{c,cpp,rust}, bindlib, dart,
-# and go.
+# go, and zither.
 #
 # Subtargets:
 #  * `${target_name}`: available only in the FIDL toolchain
@@ -137,7 +138,7 @@ template("fidl") {
     "goldens_dir",
     "non_fidl_deps",
     "should_lint",
-    "sources",
+    "vendor_use_new_api_summary",
   ]
   if (current_toolchain == fidl_toolchain) {
     fidl_library(target_name) {
@@ -147,6 +148,7 @@ template("fidl") {
                                    "visibility",
                                    "public_deps",
                                    "sdk_category",
+                                   "sources",
                                  ])
       forward_variables_from(extra_parameters,
                              [
@@ -272,5 +274,16 @@ template("fidl") {
     }
   } else {
     not_needed(invoker, non_dart_go_only)
+  }
+
+  zither_library("${target_name}_zither") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "sources",
+                           ])
+    forward_variables_from(extra_parameters, "*")
+    fidl_gen_dir += "/zither"
   }
 }

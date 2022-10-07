@@ -11,8 +11,8 @@ import("//zircon/tools/zither/zither_library.gni")
 #
 # Parameters:
 #
-#  * library
-#    - Required: The label of a zither library, necessarily defined earlier in
+#  * fidl
+#    - Required: The label of a `fidl()` target, necessarily defined earlier in
 #      the same file (for `get_target_outputs` purposes).
 #    - Type: label
 #
@@ -29,8 +29,8 @@ import("//zircon/tools/zither/zither_library.gni")
 #    - Type: list(relative path)
 #
 template("zither_golden_files") {
-  assert(defined(invoker.library),
-         "zither_golden_files(\"$target_name\") requires `library`")
+  assert(defined(invoker.fidl),
+         "zither_golden_files(\"$target_name\") requires `fidl`")
   assert(defined(invoker.backend),
          "zither_golden_files(\"$target_name\") requires `backend`")
   assert(defined(invoker.backend),
@@ -43,7 +43,7 @@ template("zither_golden_files") {
 
   if (current_toolchain == default_toolchain) {
     # An internal means of accessing a backend's outputs.
-    backend_gen_label = "${invoker.library}.${invoker.backend}.gen"
+    backend_gen_label = "${invoker.fidl}_zither.${invoker.backend}.gen"
     backend_outputs = get_target_outputs(backend_gen_label)
 
     backend_info = supported_zither_backend_info[invoker.backend]

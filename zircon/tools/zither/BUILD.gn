@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
@@ -129,7 +130,7 @@ template("zither_golden_test") {
   case_name = target_name
   case_data_dir = "testdata/${case_name}"
 
-  zither_library(library_target) {
+  fidl(library_target) {
     sources = []
     foreach(source, invoker.sources) {
       sources += [ "${case_data_dir}/$source" ]
@@ -142,7 +143,8 @@ template("zither_golden_test") {
     assert(defined(case.files) && case.files != [],
            "`${case}` must provide `files`")
 
-    backend_label = ":${library_target}.${case.backend}($default_toolchain)"
+    backend_label =
+        ":${library_target}_zither.${case.backend}($default_toolchain)"
 
     goldens_target =
         "_zither_golden_test.${target_name}-${case.backend}.zither_golden_files"
@@ -150,7 +152,7 @@ template("zither_golden_test") {
         "_zither_golden_test.${target_name}-${case.backend}.compilation_check"
 
     zither_golden_files(goldens_target) {
-      library = ":$library_target"
+      fidl = ":$library_target"
       backend = case.backend
 
       goldens = []

@@ -117,9 +117,13 @@ supported_zither_backend_info = {
 #    - Required: The Zither backend to invoke.
 #    - Type: string
 #
-#  * fidl_ir
-#    - Required: A FIDL IR JSON file.
+#  * fidl_ir_json
+#    - Required: The path to the associated FIDL IR JSON file.
 #    - Type: path
+#
+#  * fidl_ir_target
+#    - Required: The label of the target that generates the FIDL IR JSON file.
+#    - Type: label
 #
 #  * output_dir
 #    - Required: The directory for Zither outputs.
@@ -144,7 +148,6 @@ template("_zither") {
                            [
                              "generated_files",
                              "backend",
-                             "fidl_ir",
                              "output_dir",
                              "formatter",
                            ])
@@ -161,17 +164,18 @@ template("_zither") {
       forward_variables_from(invoker,
                              [
                                "testonly",
-                               "deps",
+                               "fidl_ir_json",
+                               "fidl_ir_target",
                              ])
       visibility = [ ":*" ]
 
       tool = "//zircon/tools/zither"
 
-      inputs = [ fidl_ir ]
+      inputs = [ fidl_ir_json ]
       outputs = generated_files + [ output_manifest ]
       args = [
         "-ir",
-        rebase_path(fidl_ir, root_build_dir),
+        rebase_path(fidl_ir_json, root_build_dir),
         "-backend",
         backend,
         "-output-manifest",
@@ -193,6 +197,7 @@ template("_zither") {
           inputs += formatter.inputs
         }
       }
+      deps = [ fidl_ir_target ]
     }
 
     # Ensures that the outputs were fully specified above.
@@ -241,7 +246,7 @@ template("_zither") {
 #      for entries.
 #    - Type: relative path
 #
-#  * fidl_ir, output_dir, formatter
+#  * fidl_ir_json, fidl_ir_target, output_dir, formatter
 #    - Same as `_zither()`.
 #
 #  * testonly, visibility, deps
@@ -270,7 +275,8 @@ template("_zither_c_family_library") {
                              "testonly",
                              "visibility",
                              "deps",
-                             "fidl_ir",
+                             "fidl_ir_json",
+                             "fidl_ir_target",
                              "generated_files",
                              "backend",
                              "formatter",
@@ -317,7 +323,8 @@ template("_zither_go_library") {
                              "testonly",
                              "visibility",
                              "deps",
-                             "fidl_ir",
+                             "fidl_ir_json",
+                             "fidl_ir_target",
                              "generated_files",
                              "formatter",
                            ])
@@ -343,12 +350,13 @@ template("_zither_go_library") {
 
 # Define a full set of per-backend targets for a Zither library.
 #
-# `zither_library()` consumes FIDL source and defines the relevant language
-# library targets that collect the bindings of the various supported Zither
-# backends. These backends are listed in `supported_zither_backends` and the
-# details of their bindings can be found in //zircon/tools/zither/README.md;
-# The nature associated backend library subtargets are as follows where
-# `${output_subdir}` is as described above in `supported_zither_backend_info`:
+# `zither_library()` is meant to be instantiated within `fidl()`. It consumes
+# FIDL source and defines the relevant language library targets that collect
+# the bindings of the various supported Zither backends. These backends are
+# listed in `supported_zither_backends` and the details of their bindings can
+# be found in //zircon/tools/zither/README.md. The associated backend library
+# subtargets are as follows where `${output_subdir}` is as described above in
+# `supported_zither_backend_info`:
 #
 # Subtargets:
 #
@@ -368,52 +376,38 @@ template("_zither_go_library") {
 #
 # Parameters:
 #
+#  * library_name
+#    - Required: The name of the FIDL library.
+#    - Type: string
+#
 #  * sources
 #    - Required: The input FIDL sources, comprising one library necessarily of the
 #      name $target_name.
 #    - Type: list(path)
 #
+#  * fidl_gen_dir
+#    - Required: The directory under which Zither outputs should be generated.
+#    - Type: path
+#
+#  * fidl_ir_json
+#    - Required: The path to the associated FIDL IR JSON file.
+#    - Type: path
+#
+#  * fidl_ir_target
+#    - Required: The label of the target that generates the FIDL IR JSON file.
+#    - Type: label
+#
 template("zither_library") {
   assert(defined(invoker.sources),
          "zither_library(\"$target_name\") requires `sources`")
-
-  fidlc_target = "_zither_library.${target_name}.fidlc"
-
-  default_target_gen_dir =
-      get_label_info(":$target_name($default_toolchain)", "target_gen_dir")
-  fidl_ir = "${default_target_gen_dir}/${target_name}.fidl.json"
-
-  library_name = target_name
-  if (current_toolchain == default_toolchain) {
-    # Generate the IR.
-    compiled_action(fidlc_target) {
-      visibility = [ ":*" ]
-      forward_variables_from(invoker,
-                             [
-                               "sources",
-                               "testonly",
-                             ])
-
-      tool = "//tools/fidl/fidlc"
-
-      outputs = [ fidl_ir ]
-
-      args = [
-               "--name",
-               library_name,
-               "--json",
-               rebase_path(outputs[0], root_build_dir),
-               "--files",
-             ] + rebase_path(sources, root_build_dir)
-    }
-  } else {
-    group(fidlc_target) {
-      forward_variables_from(invoker, [ "testonly" ])
-      visibility = [ ":*" ]
-      deps = [ ":$fidlc_target($default_toolchain)" ]
-    }
-    not_needed(invoker, "*", [ "testonly" ])
-  }
+  assert(defined(invoker.library_name),
+         "zither_library(\"target_name\") must define `library_name`")
+  assert(defined(invoker.fidl_gen_dir),
+         "zither_library(\"target_name\") must define `fidl_gen_dir`")
+  assert(defined(invoker.fidl_ir_json),
+         "zither_library(\"target_name\") must define `fidl_ir_json`")
+  assert(defined(invoker.fidl_ir_target),
+         "zither_library(\"target_name\") must define `fidl_ir_target`")
 
   foreach(backend, supported_zither_backends) {
     backend_info = {
@@ -425,14 +419,15 @@ template("zither_library") {
                              [
                                "testonly",
                                "visibility",
-                               "fidl_ir",
+                               "library_name",
+                               "fidl_gen_dir",
+                               "fidl_ir_json",
+                               "fidl_ir_target",
                                "backend",
                              ])
       forward_variables_from(backend_info, [ "formatter" ])
 
-      # Zither will only be invoked in the default toolchain.
-      output_dir = "$default_target_gen_dir/${target_name}-${backend}"
-
+      output_dir = "${fidl_gen_dir}/${backend}"
       output_subdir_info = {
         prefix = ""
         suffix = ""
@@ -453,8 +448,6 @@ template("zither_library") {
         }
         source_names += [ name ]
       }
-
-      deps = [ ":$fidlc_target" ]
     }
   }
 }
