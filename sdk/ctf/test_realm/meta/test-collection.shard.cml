@@ -11,7 +11,7 @@
 //           "fuchsia.test": { type: "cts" },
 //         }
 //
-// Or by including //sdk/ctf/test_realm/meta/cts.shard.cml.
+// Or by including //sdk/ctf/meta/test.shard.cml.
 {
     collections: [
         {

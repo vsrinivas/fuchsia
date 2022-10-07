@@ -73,7 +73,7 @@ Note: This section assumes familiarity with the concept of [Test Components].
         // Select the appropriate test runner shard here:
         // rust, elf, etc.
         "//src/sys/test_runners/rust/default.shard.cml",
-        "//sdk/ctf/test_realm/meta/cts.shard.cml",
+        "//sdk/ctf/test_realm/meta/ctf.shard.cml",
     ],
     program: {
         binary: "bin/my_test_binary",
