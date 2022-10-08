@@ -37,7 +37,7 @@ impl Resource {
 
     pub async fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<(), Error> {
         buf.reserve(self.content_len() as usize);
-        Ok(read_stream_to_end(&mut self.stream, buf).await?)
+        Ok(read_stream_to_end(&mut self.stream, buf).await.map_err(Error::Io)?)
     }
 }
 

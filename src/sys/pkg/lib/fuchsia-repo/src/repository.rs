@@ -64,16 +64,6 @@ pub enum Error {
     RangeNotSatisfiable,
 }
 
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Self {
-        if err.kind() == std::io::ErrorKind::NotFound {
-            Error::NotFound
-        } else {
-            Error::Io(err)
-        }
-    }
-}
-
 impl From<ParseError> for Error {
     fn from(err: ParseError) -> Self {
         Error::URLParseError(err)

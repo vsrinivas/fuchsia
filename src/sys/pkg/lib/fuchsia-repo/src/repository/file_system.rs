@@ -118,8 +118,15 @@ impl FileSystemRepository {
         let file_path = sanitize_path(repo_path, resource_path);
         async move {
             let file_path = file_path?;
-            let mut file = async_fs::File::open(&file_path).await?;
-            let total_len = file.metadata().await?.len();
+            let mut file = async_fs::File::open(&file_path).await.map_err(|err| {
+                if err.kind() == std::io::ErrorKind::NotFound {
+                    Error::NotFound
+                } else {
+                    Error::Io(err)
+                }
+            })?;
+
+            let total_len = file.metadata().await.map_err(Error::Io)?.len();
 
             let content_range = match range {
                 Range::Full => ContentRange::Full { complete_len: total_len },
@@ -131,7 +138,7 @@ impl FileSystemRepository {
                         return Err(Error::RangeNotSatisfiable);
                     }
 
-                    file.seek(SeekFrom::Start(first_byte_pos)).await?;
+                    file.seek(SeekFrom::Start(first_byte_pos)).await.map_err(Error::Io)?;
 
                     ContentRange::Inclusive {
                         first_byte_pos,
@@ -144,7 +151,7 @@ impl FileSystemRepository {
                         return Err(Error::RangeNotSatisfiable);
                     }
 
-                    file.seek(SeekFrom::Start(first_byte_pos)).await?;
+                    file.seek(SeekFrom::Start(first_byte_pos)).await.map_err(Error::Io)?;
 
                     ContentRange::Inclusive {
                         first_byte_pos,
@@ -157,7 +164,7 @@ impl FileSystemRepository {
                         return Err(Error::RangeNotSatisfiable);
                     }
                     let start = total_len - len;
-                    file.seek(SeekFrom::Start(start)).await?;
+                    file.seek(SeekFrom::Start(start)).await.map_err(Error::Io)?;
 
                     ContentRange::Inclusive {
                         first_byte_pos: start,

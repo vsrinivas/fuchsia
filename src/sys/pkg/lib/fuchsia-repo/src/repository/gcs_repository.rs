@@ -191,10 +191,10 @@ where
         let mut tmp = AsyncSpooledTempFile::new(UNKNOWN_CONTENT_LEN_BUF_SIZE);
 
         while let Some(chunk) = body.try_next().await? {
-            tmp.write_all(&chunk).await?;
+            tmp.write_all(&chunk).await.map_err(Error::Io)?;
         }
 
-        let (len, stream) = tmp.into_stream().await?;
+        let (len, stream) = tmp.into_stream().await.map_err(Error::Io)?;
 
         // Make sure we didn't try to fetch data that's out of bounds.
         let content_len = ContentLength::new(len);
