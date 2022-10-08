@@ -11,7 +11,8 @@ use {
     fuchsia_pkg::PackageManifest,
     std::collections::HashMap,
     tuf::{
-        metadata::TargetPath, pouf::Pouf1, repo_builder::RepoBuilder as TufRepoBuilder, Database,
+        crypto::HashAlgorithm, metadata::TargetPath, pouf::Pouf1,
+        repo_builder::RepoBuilder as TufRepoBuilder, Database,
     },
 };
 
@@ -169,7 +170,9 @@ where
             repo_builder.stage_root_if_necessary()?
         };
 
-        repo_builder = repo_builder.inherit_from_trusted_targets(self.inherit_from_trusted_targets);
+        repo_builder = repo_builder
+            .inherit_from_trusted_targets(self.inherit_from_trusted_targets)
+            .target_hash_algorithms(&[HashAlgorithm::Sha512]);
 
         // Gather up all package blobs, and separate out the the meta.far blobs.
         let mut staged_blobs = HashMap::new();
