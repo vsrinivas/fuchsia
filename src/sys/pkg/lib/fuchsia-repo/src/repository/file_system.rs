@@ -328,7 +328,13 @@ impl RepoStorage for FileSystemRepository {
                 CopyMode::Copy => {
                     let temp_path = create_temp_file(&dst).await?;
                     async_fs::copy(src, &temp_path).await?;
-                    temp_path.persist(dst)?;
+                    temp_path.persist(&dst)?;
+
+                    // Set the blob to be read-only.
+                    let file = async_fs::File::open(dst).await?;
+                    let mut permissions = file.metadata().await?.permissions();
+                    permissions.set_readonly(true);
+                    file.set_permissions(permissions).await?;
                 }
                 CopyMode::HardLink => {
                     async_fs::hard_link(src, &dst).await?;
@@ -552,8 +558,10 @@ mod tests {
 
         // Make sure we can read it back.
         let blob_path = blob_repo_path.join(hash.to_string());
-        let actual = std::fs::read(blob_path).unwrap();
+        let actual = std::fs::read(&blob_path).unwrap();
         assert_eq!(&actual, &contents[..]);
+
+        assert!(std::fs::metadata(blob_path).unwrap().permissions().readonly());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
