@@ -81,7 +81,9 @@ impl FileSystemRepositoryBuilder {
             metadata_repo_path: self.metadata_repo_path.clone(),
             blob_repo_path: self.blob_repo_path,
             copy_mode: self.copy_mode,
-            tuf_repo: TufFileSystemRepositoryBuilder::new(self.metadata_repo_path).build(),
+            tuf_repo: TufFileSystemRepositoryBuilder::new(self.metadata_repo_path)
+                .targets_prefix("targets")
+                .build(),
         }
     }
 }
