@@ -237,7 +237,9 @@ impl<'a> RequestBuilder<'a> {
         cup_handler: Option<&impl Cupv2RequestHandler>,
     ) -> Result<(http::Request<hyper::Body>, Option<RequestMetadata>)> {
         let (intermediate, request_metadata) = self.build_intermediate(cup_handler)?;
-        info!("Building Request: {}", intermediate);
+        if self.app_entries.iter().any(|app| app.update_check.is_some()) {
+            info!("Building Request: {}", intermediate);
+        }
         Ok((Into::<Result<http::Request<hyper::Body>>>::into(intermediate)?, request_metadata))
     }
 
