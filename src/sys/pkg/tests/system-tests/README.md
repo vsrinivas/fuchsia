@@ -12,7 +12,13 @@ In order to build the system tests, add this to your `fx set`:
 ```
 
 Next, you need to authenticate against luci to be able to download build
-artifacts. Install chromium's `depot_tools` by following
+artifacts. First, authenticate against cipd with:
+
+```
+% cipd auth-login
+```
+
+Next, install chromium's `depot_tools` by following
 [these instructions](https://commondatastorage.googleapis.com/chrome-infra-docs/flat/depot_tools/docs/html/depot_tools_tutorial.html).
 Then, login to luci by running:
 
