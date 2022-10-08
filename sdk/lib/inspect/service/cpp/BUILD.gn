@@ -26,6 +26,8 @@ sdk_source_set("cpp") {
   ]
 
   public_configs = [ "//sdk/config" ]
+
+  data_deps = [ "//sdk/lib/inspect:client_includes" ]
 }
 
 group("tests") {

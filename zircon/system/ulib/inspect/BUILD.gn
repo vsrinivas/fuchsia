@@ -43,8 +43,6 @@ zx_library("inspect") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/zx",
   ]
-
-  data_deps = [ "//sdk/lib/inspect:client_includes" ]
 }
 
 group("tests") {
