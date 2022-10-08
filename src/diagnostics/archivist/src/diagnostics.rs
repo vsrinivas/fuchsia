@@ -98,6 +98,10 @@ pub struct AccessorStats {
     pub inspect_stats: Arc<GlobalConnectionStats>,
 
     /// Global stats tracking the usages of StreamDiagnostics for
+    /// exfiltrating lifecycle data.
+    pub lifecycle_stats: Arc<GlobalConnectionStats>,
+
+    /// Global stats tracking the usages of StreamDiagnostics for
     /// exfiltrating logs.
     pub logs_stats: Arc<GlobalConnectionStats>,
 }
@@ -120,6 +124,7 @@ impl AccessorStats {
         let stream_diagnostics_requests = node.create_uint("stream_diagnostics_requests", 0);
 
         let inspect_stats = Arc::new(GlobalConnectionStats::new(node.create_child("inspect")));
+        let lifecycle_stats = Arc::new(GlobalConnectionStats::new(node.create_child("lifecycle")));
         let logs_stats = Arc::new(GlobalConnectionStats::new(node.create_child("logs")));
 
         AccessorStats {
@@ -130,12 +135,17 @@ impl AccessorStats {
                 stream_diagnostics_requests,
             }),
             inspect_stats,
+            lifecycle_stats,
             logs_stats,
         }
     }
 
     pub fn new_inspect_batch_iterator(&self) -> BatchIteratorConnectionStats {
         self.inspect_stats.new_batch_iterator_connection()
+    }
+
+    pub fn new_lifecycle_batch_iterator(&self) -> BatchIteratorConnectionStats {
+        self.lifecycle_stats.new_batch_iterator_connection()
     }
 
     pub fn new_logs_batch_iterator(&self) -> BatchIteratorConnectionStats {

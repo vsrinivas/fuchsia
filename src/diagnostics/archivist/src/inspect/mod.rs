@@ -855,6 +855,27 @@ mod tests {
                     max_snapshot_sizes_bytes: AnyProperty,
                     snapshot_schema_truncation_percentage: AnyProperty,
                 },
+                lifecycle: {
+                    batch_iterator_connections: {},
+                    batch_iterator: {
+                        connections_closed: 0u64,
+                        connections_opened: 0u64,
+                        get_next: {
+                            errors: 0u64,
+                            requests: 0u64,
+                            responses: 0u64,
+                            result_count: 0u64,
+                            result_errors: 0u64,
+                            time_usec: AnyProperty,
+                        }
+                    },
+                    component_timeouts_count: 0u64,
+                    reader_servers_constructed: 0u64,
+                    reader_servers_destroyed: 0u64,
+                    max_snapshot_sizes_bytes: AnyProperty,
+                    snapshot_schema_truncation_percentage: AnyProperty,
+                    schema_truncation_count: 0u64,
+                },
                 logs: {
                     batch_iterator_connections: {},
                     batch_iterator: {
@@ -965,6 +986,27 @@ mod tests {
                             }
                         },
                     },
+                    lifecycle: {
+                        batch_iterator_connections: {},
+                        batch_iterator: {
+                            connections_closed: 0u64,
+                            connections_opened: 0u64,
+                            get_next: {
+                                errors: 0u64,
+                                requests: 0u64,
+                                responses: 0u64,
+                                result_count: 0u64,
+                                result_errors: 0u64,
+                                time_usec: AnyProperty,
+                            }
+                        },
+                        component_timeouts_count: 0u64,
+                        reader_servers_constructed: 0u64,
+                        reader_servers_destroyed: 0u64,
+                        max_snapshot_sizes_bytes: AnyProperty,
+                        snapshot_schema_truncation_percentage: AnyProperty,
+                        schema_truncation_count: 0u64,
+                    },
                     logs: {
                         batch_iterator_connections: {},
                         batch_iterator: {
@@ -1037,6 +1079,27 @@ mod tests {
                                 duration_seconds: AnyProperty,
                             }
                         },
+                    },
+                    lifecycle: {
+                        batch_iterator_connections: {},
+                        batch_iterator: {
+                            connections_closed: 0u64,
+                            connections_opened: 0u64,
+                            get_next: {
+                                errors: 0u64,
+                                requests: 0u64,
+                                responses: 0u64,
+                                result_count: 0u64,
+                                result_errors: 0u64,
+                                time_usec: AnyProperty,
+                            }
+                        },
+                        component_timeouts_count: 0u64,
+                        reader_servers_constructed: 0u64,
+                        reader_servers_destroyed: 0u64,
+                        max_snapshot_sizes_bytes: AnyProperty,
+                        snapshot_schema_truncation_percentage: AnyProperty,
+                        schema_truncation_count: 0u64,
                     },
                     logs: {
                         batch_iterator_connections: {},
