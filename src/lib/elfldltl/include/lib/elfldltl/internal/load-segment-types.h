@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <string_view>
+#include <type_traits>
 
 #include "../constants.h"
 #include "../layout.h"
@@ -56,6 +57,15 @@ struct LoadSegmentTypes {
 
     constexpr explicit SegmentBase(size_type offset, size_type memsz)
         : offset_(offset), memsz_(memsz) {}
+
+    // These are shadowed by the subclass methods when the permission is
+    // possible.
+
+    constexpr std::true_type readable() const { return {}; }
+
+    constexpr std::false_type writable() const { return {}; }
+
+    constexpr std::false_type executable() const { return {}; }
 
    protected:
     constexpr void set_offset(size_type offset) { offset_ = offset; }
@@ -110,6 +120,8 @@ struct LoadSegmentTypes {
       assert(filesz == memsz);
     }
 
+    constexpr std::true_type writable() const { return {}; }
+
     // The whole segment is loaded from the file.
     constexpr size_type filesz() const { return this->memsz(); }
   };
@@ -123,6 +135,8 @@ struct LoadSegmentTypes {
     constexpr explicit DataWithZeroFillSegment(size_type offset, size_type vaddr, size_type memsz,
                                                size_type filesz)
         : Segment<Policy>(offset, vaddr, memsz), filesz_(filesz) {}
+
+    constexpr std::true_type writable() const { return {}; }
 
     // Only a leading subset of the in-memory segment is loaded from the file.
     constexpr size_type filesz() const { return filesz_; }
@@ -140,6 +154,8 @@ struct LoadSegmentTypes {
   class ZeroFillSegment : public SegmentBase {
    public:
     using SegmentBase::SegmentBase;
+
+    constexpr std::true_type writable() const { return {}; }
 
     constexpr size_type vaddr() const { return this->offset(); }
   };

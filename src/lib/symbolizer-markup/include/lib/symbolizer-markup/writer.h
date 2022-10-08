@@ -165,9 +165,9 @@ class Writer {
   // Emits the markup for the load image of a module. The given permissions
   // must admit at least one of reading, writing, or execution.
   //
-  // {{mmap:$start:$size:load:$module_id:$perms:$load_bias}}
-  Writer& LoadImageMmap(uintptr_t start, size_t size, unsigned int module_id,
-                        const MemoryPermissions& perms, uint64_t load_bias) {
+  // {{mmap:$vaddr:$size:load:$module_id:$perms:$file_vaddr}}
+  Writer& LoadImageMmap(uintptr_t vaddr, size_t size, unsigned int module_id,
+                        const MemoryPermissions& perms, uint64_t file_vaddr) {
     ZX_ASSERT(perms.read || perms.write || perms.execute);
     char perm_str[3];
     size_t perm_size = 0;
@@ -182,12 +182,12 @@ class Writer {
     }
 
     return BeginElement(kMmap)
-        .HexField(start)
+        .HexField(vaddr)
         .HexField(size)
         .Field(kLoad)
         .DecimalField(module_id)
         .Field({perm_str, perm_size})
-        .HexField(load_bias)
+        .HexField(file_vaddr)
         .EndElement();
   }
 
