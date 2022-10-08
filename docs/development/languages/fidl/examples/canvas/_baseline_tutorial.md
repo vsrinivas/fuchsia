@@ -1,4 +1,19 @@
-<!-- TODO(fxbug.dev/111273): Document -->
+This baseline case showcases an end-to-end implementation of a simple canvas
+using FIDL. This design specifies the `Canvas` protocol, which allows a client
+to add lines to the canvas via the `AddLine` method, and receive draw updates
+from the server via the `OnDrawn` event.
+
+The protocol we design here will be functional, but suboptimal in terms of both
+performance and flow control. For instance, our current "refresh rate" is a
+glacial 1 frame per second. What happens if we decide to update at 60 frames per
+second (ie, roughly every 16ms, rather than once a second)? Is it possible that
+`OnDrawn` events will overwhelm the client? Conversely, what happens when a
+client loads send many `AddLine` requests at once, perhaps after loading them
+from a file? Will the server now be crushed under the load?
+
+This unthrottled implementation is best regarded as a first pass - a relatively
+simple protocol that demonstrates some functionality, but one that could use
+some improvement to extract optimal performance, especially under stress.
 
 Note: The source code for this example is located at
 [//examples/fidl/new/canvas/baseline](/examples/fidl/new/canvas/baseline).

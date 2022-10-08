@@ -15,7 +15,9 @@ types available in the language.
 
 ### Canvas
 
-<!-- TODO(fxbug.dev/111273): Document -->
+The [canvas][example-canvas] example demonstrates how to build a simple 2D
+line-rendering canvas using FIDL in order to learn about commonly used data flow
+patterns.
 
 ## Concept index
 
