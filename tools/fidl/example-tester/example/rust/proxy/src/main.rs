@@ -37,6 +37,8 @@ enum IncomingService {
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
     println!("Started");
+    println!("trim me (Rust)");
+
     let client = create_async_client()?;
     println!("Outgoing connection enabled");
 

@@ -30,6 +30,7 @@ class SimpleImpl final : public fidl::WireServer<test_exampletester::Simple> {
 
 int main(int argc, char** argv) {
   FX_LOGS(INFO) << "Started";
+  FX_LOGS(INFO) << "trim me (C++ wire)";
 
   // The event loop is used to asynchronously listen for incoming connections and requests from the
   // client. The following initializes the loop, and obtains the dispatcher, which will be used when

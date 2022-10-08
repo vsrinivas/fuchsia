@@ -13,6 +13,8 @@ use {
 
 fn main() -> Result<(), Error> {
     println!("Started");
+    println!("trim me (Rust)");
+
     let config = Config::take_from_startup_handle();
 
     // Only try to contact the server if instructed - if not, do the calculation locally instead.

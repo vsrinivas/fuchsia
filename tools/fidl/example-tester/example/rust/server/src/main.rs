@@ -30,6 +30,8 @@ enum IncomingService {
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
     println!("Started");
+    println!("trim me (Rust)");
+
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Simple);
     fs.take_and_serve_directory_handle()?;

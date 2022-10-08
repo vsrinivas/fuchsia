@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     diagnostics_data::{Data, Logs},
     example_tester::{
-        assert_logs_eq_to_golden, logs_to_str, run_test, Client, Proxy, Server, TestKind,
+        assert_filtered_logs_eq_to_golden, logs_to_str, run_test, Client, Proxy, Server, TestKind,
     },
     fidl::prelude::*,
     fuchsia_async as fasync,
@@ -44,6 +44,15 @@ async fn test_one_component_log_by_log() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn test_one_component() -> Result<(), Error> {
     let client = Client::new("test_one_component", "#meta/example_tester_example_client.cm");
+    let filter = |raw_log: &&Data<Logs>| {
+        let msg = raw_log.payload_message().expect("payload not found").properties[0]
+            .string()
+            .expect("message is not string");
+        if msg.contains("trim me") {
+            return false;
+        }
+        true
+    };
 
     run_test(
         fidl_test_exampletester::SimpleMarker::PROTOCOL_NAME,
@@ -56,7 +65,7 @@ async fn test_one_component() -> Result<(), Error> {
             Ok::<(RealmBuilder, ChildRef), Error>((builder, client))
         },
         |raw_logs: Vec<Data<Logs>>| {
-            assert_logs_eq_to_golden(&raw_logs, &client);
+            assert_filtered_logs_eq_to_golden(&raw_logs, &client, filter);
         },
     )
     .await
@@ -110,6 +119,15 @@ async fn test_two_component() -> Result<(), Error> {
     let test_name = "test_two_component";
     let client = Client::new(test_name, "#meta/example_tester_example_client.cm");
     let server = Server::new(test_name, "#meta/example_tester_example_server.cm");
+    let filter = |raw_log: &&Data<Logs>| {
+        let msg = raw_log.payload_message().expect("payload not found").properties[0]
+            .string()
+            .expect("message is not string");
+        if msg.contains("trim me") {
+            return false;
+        }
+        true
+    };
 
     run_test(
         fidl_test_exampletester::SimpleMarker::PROTOCOL_NAME,
@@ -122,8 +140,8 @@ async fn test_two_component() -> Result<(), Error> {
             Ok::<(RealmBuilder, ChildRef), Error>((builder, client))
         },
         |raw_logs: Vec<Data<Logs>>| {
-            assert_logs_eq_to_golden(&raw_logs, &client);
-            assert_logs_eq_to_golden(&raw_logs, &server);
+            assert_filtered_logs_eq_to_golden(&raw_logs, &client, filter);
+            assert_filtered_logs_eq_to_golden(&raw_logs, &server, filter);
         },
     )
     .await
@@ -179,6 +197,15 @@ async fn test_three_component() -> Result<(), Error> {
     let client = Client::new(test_name, "#meta/example_tester_example_client.cm");
     let proxy = Proxy::new(test_name, "#meta/example_tester_example_proxy.cm");
     let server = Server::new(test_name, "#meta/example_tester_example_server.cm");
+    let filter = |raw_log: &&Data<Logs>| {
+        let msg = raw_log.payload_message().expect("payload not found").properties[0]
+            .string()
+            .expect("message is not string");
+        if msg.contains("trim me") {
+            return false;
+        }
+        true
+    };
 
     run_test(
         fidl_test_exampletester::SimpleMarker::PROTOCOL_NAME,
@@ -191,9 +218,9 @@ async fn test_three_component() -> Result<(), Error> {
             Ok::<(RealmBuilder, ChildRef), Error>((builder, client))
         },
         |raw_logs: Vec<Data<Logs>>| {
-            assert_logs_eq_to_golden(&raw_logs, &client);
-            assert_logs_eq_to_golden(&raw_logs, &proxy);
-            assert_logs_eq_to_golden(&raw_logs, &server);
+            assert_filtered_logs_eq_to_golden(&raw_logs, &client, filter);
+            assert_filtered_logs_eq_to_golden(&raw_logs, &proxy, filter);
+            assert_filtered_logs_eq_to_golden(&raw_logs, &server, filter);
         },
     )
     .await

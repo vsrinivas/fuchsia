@@ -11,6 +11,7 @@
 
 int main(int argc, const char** argv) {
   FX_LOGS(INFO) << "Started";
+  FX_LOGS(INFO) << "trim me (C++ wire)";
 
   // Retrieve component configuration.
   auto conf = config::Config::TakeFromStartupHandle();

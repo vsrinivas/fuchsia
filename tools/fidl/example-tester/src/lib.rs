@@ -319,6 +319,17 @@ pub fn logs_to_str<'a>(
     raw_logs: &'a Vec<Data<Logs>>,
     maybe_filter_by_process: Option<Vec<&'a dyn Component>>,
 ) -> impl Iterator<Item = &'a str> + 'a {
+    logs_to_str_filtered(raw_logs, maybe_filter_by_process, |_raw_log| true)
+}
+
+/// Same as |logs_to_str|, except an additional filtering function may be used to trim arbitrary
+/// logs. This is particularly useful if one or more languages produces logs that we don't want to
+/// include in the final, common output to be compared across language implementations.
+pub fn logs_to_str_filtered<'a>(
+    raw_logs: &'a Vec<Data<Logs>>,
+    maybe_filter_by_process: Option<Vec<&'a dyn Component>>,
+    filter_by_log: impl FnMut(&&Data<Logs>) -> bool + 'a,
+) -> impl Iterator<Item = &'a str> + 'a {
     raw_logs
         .iter()
         .filter(move |raw_log| match maybe_filter_by_process {
@@ -332,6 +343,7 @@ pub fn logs_to_str<'a>(
             }
             None => true,
         })
+        .filter(filter_by_log)
         .map(|raw_log| {
             raw_log.payload_message().expect("payload not found").properties[0]
                 .string()
@@ -349,6 +361,17 @@ pub fn logs_to_str<'a>(
 ///   /pkg/data/goldens/test_foo_bar_server.log.golden
 ///
 pub fn assert_logs_eq_to_golden<'a>(raw_logs: &'a Vec<Data<Logs>>, comp: &'a dyn Component) {
+    assert_filtered_logs_eq_to_golden(raw_logs, comp, |_raw_log| true)
+}
+
+/// Same as |assert_logs_eq_to_golden|, except an additional filtering function may be used to trim
+/// arbitrary logs. This is particularly useful if one or more languages produces logs that we don't
+/// want to include in the final, common output to be compared across language implementations.
+pub fn assert_filtered_logs_eq_to_golden<'a>(
+    raw_logs: &'a Vec<Data<Logs>>,
+    comp: &'a dyn Component,
+    filter_by_log: impl FnMut(&&Data<Logs>) -> bool + 'a,
+) {
     // Extract the golden log data.
     let golden_path = format!("/pkg/data/goldens/{}.log.golden", comp.get_name());
     let golden_file = std::fs::read_to_string(golden_path.clone())
@@ -357,7 +380,9 @@ pub fn assert_logs_eq_to_golden<'a>(raw_logs: &'a Vec<Data<Logs>>, comp: &'a dyn
     let golden_logs = golden_file.as_str().trim();
 
     // Compare it to the actual components actual logs, asserting if there is a mismatch.
-    let logs = logs_to_str(&raw_logs, Some(vec![comp])).collect::<Vec<&str>>().join("\n");
+    let logs = logs_to_str_filtered(&raw_logs, Some(vec![comp]), filter_by_log)
+        .collect::<Vec<&str>>()
+        .join("\n");
     if logs != golden_logs.trim() {
         print!(
             "
