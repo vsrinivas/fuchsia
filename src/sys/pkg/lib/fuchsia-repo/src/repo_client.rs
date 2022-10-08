@@ -511,7 +511,7 @@ fn is_component_manifest(s: &str) -> bool {
 
 pub(crate) async fn get_tuf_client<R>(
     tuf_repo: R,
-) -> Result<TufClient<Pouf1, EphemeralRepository<Pouf1>, R>, anyhow::Error>
+) -> Result<TufClient<Pouf1, EphemeralRepository<Pouf1>, R>, Error>
 where
     R: RepositoryProvider<Pouf1> + Sync,
 {
@@ -532,7 +532,7 @@ where
         };
 
         let mut buf = Vec::new();
-        root.read_to_end(&mut buf).await.context("reading metadata")?;
+        root.read_to_end(&mut buf).await.map_err(Error::Io)?;
 
         RawSignedMetadata::<Pouf1, _>::new(buf)
     };

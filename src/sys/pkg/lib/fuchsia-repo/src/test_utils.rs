@@ -107,6 +107,11 @@ pub fn make_repo_keys() -> RepoKeys {
     repo_keys
 }
 
+pub fn make_repo_keys_dir(root: &Utf8Path) {
+    let src = PathBuf::from(EMPTY_REPO_PATH).canonicalize().unwrap();
+    copy_dir(&src.join("keys"), root.as_std_path()).unwrap();
+}
+
 pub fn make_empty_pm_repo_dir(root: &Utf8Path) {
     let src = PathBuf::from(EMPTY_REPO_PATH).canonicalize().unwrap();
     copy_dir(&src, root.as_std_path()).unwrap();

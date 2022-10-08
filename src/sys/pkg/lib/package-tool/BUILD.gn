@@ -21,6 +21,7 @@ if (is_host) {
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:tuf",
     ]
 
     test_deps = [
@@ -33,7 +34,6 @@ if (is_host) {
       "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:pretty_assertions",
-      "//third_party/rust_crates:tuf",
     ]
 
     sources = [

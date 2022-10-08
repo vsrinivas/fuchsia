@@ -514,6 +514,58 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_refresh_metadata_with_root_metadata() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(tmp.path()).unwrap();
+
+        // First create a repository.
+        let full_repo_path = root.join("full");
+        let full_metadata_repo_path = full_repo_path.join("repository");
+        test_utils::make_pm_repo_dir(full_repo_path.as_std_path()).await;
+
+        // Then create a repository, which only has the root metadata in it.
+        let test_repo_path = root.join("test");
+        let test_metadata_repo_path = test_repo_path.join("repository");
+        std::fs::create_dir_all(&test_metadata_repo_path).unwrap();
+
+        std::fs::copy(
+            full_metadata_repo_path.join("root.json"),
+            test_metadata_repo_path.join("1.root.json"),
+        )
+        .unwrap();
+
+        // Create a repo client and download the root metadata. Update should fail with missint TUF
+        // metadata since we don't have any other metadata.
+        let repo = PmRepository::new(test_repo_path);
+        let mut repo_client = RepoClient::from_trusted_remote(&repo).await.unwrap();
+        assert_matches!(
+            repo_client.update().await,
+            Err(crate::repository::Error::Tuf(tuf::Error::MetadataNotFound { path, .. }))
+            if path == tuf::metadata::MetadataPath::timestamp()
+        );
+
+        assert!(repo_client.database().trusted_targets().is_none());
+        assert!(repo_client.database().trusted_snapshot().is_none());
+        assert!(repo_client.database().trusted_timestamp().is_none());
+
+        // Update the metadata expiration. We'll use the keys from the full pm directory.
+        let repo_keys =
+            RepoKeys::from_dir(&full_repo_path.join("keys").into_std_path_buf()).unwrap();
+        RepoBuilder::from_database(repo_client.remote_repo(), &repo_keys, repo_client.database())
+            .refresh_metadata(true)
+            .commit()
+            .await
+            .unwrap();
+
+        // Updating the client should succeed since we created the missing metadata.
+        assert_matches!(repo_client.update().await, Ok(true));
+
+        assert!(repo_client.database().trusted_targets().is_some());
+        assert!(repo_client.database().trusted_snapshot().is_some());
+        assert!(repo_client.database().trusted_timestamp().is_some());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_inherit_from_trusted_targets() {
         let tmp = tempfile::tempdir().unwrap();
         let root = Utf8Path::from_path(tmp.path()).unwrap();

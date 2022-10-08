@@ -7,13 +7,16 @@ use {
     anyhow::{Context, Result},
     fuchsia_pkg::{PackageManifest, PackageManifestList},
     fuchsia_repo::{
-        repo_builder::RepoBuilder, repo_client::RepoClient, repo_keys::RepoKeys,
-        repository::PmRepository,
+        repo_builder::RepoBuilder,
+        repo_client::RepoClient,
+        repo_keys::RepoKeys,
+        repository::{Error as RepoError, PmRepository},
     },
     std::{
         fs::File,
         io::{BufWriter, Write},
     },
+    tuf::Error as TufError,
 };
 
 pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
@@ -25,10 +28,6 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     } else {
         repo.repo_keys()?
     };
-
-    // Connect to the repository and make sure we have the latest version available.
-    let mut client = RepoClient::from_trusted_remote(repo).await?;
-    client.update().await?;
 
     // Load in all the package manifests up front so we'd error out if any are missing or malformed.
     let mut deps = vec![];
@@ -52,8 +51,35 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
         deps.push(package_list_manifest_path);
     }
 
+    // Try to connect to the repository. This should succeed if we have at least some root metadata
+    // in the repository. If none exists, we'll create a new repository.
+    let client = match RepoClient::from_trusted_remote(&repo).await {
+        Ok(mut client) => {
+            // Make sure our client has the latest metadata. It's okay if this fails with missing
+            // metadata since we'll create it when we publish to the repository.
+            match client.update().await {
+                Ok(_) | Err(RepoError::Tuf(TufError::MetadataNotFound { .. })) => {}
+                Err(err) => {
+                    return Err(err.into());
+                }
+            }
+
+            Some(client)
+        }
+        Err(RepoError::Tuf(TufError::MetadataNotFound { .. })) => None,
+        Err(err) => {
+            return Err(err.into());
+        }
+    };
+
+    let repo_builder = if let Some(client) = &client {
+        RepoBuilder::from_database(&repo, &repo_keys, client.database())
+    } else {
+        RepoBuilder::create(&repo, &repo_keys)
+    };
+
     // Publish all the packages.
-    let mut repo_builder = RepoBuilder::from_client(&client, &repo_keys)
+    let mut repo_builder = repo_builder
         .refresh_non_root_metadata(true)
         .time_versioning(cmd.time_versioning)
         .inherit_from_trusted_targets(!cmd.clean);
@@ -97,7 +123,7 @@ mod tests {
     };
 
     #[fuchsia::test]
-    async fn test_repository_does_not_exist() {
+    async fn test_repository_should_error_with_no_keys_if_it_does_not_exist() {
         let tempdir = tempfile::tempdir().unwrap();
         let repo_path = Utf8Path::from_path(tempdir.path()).unwrap();
 
@@ -113,6 +139,85 @@ mod tests {
         };
 
         assert_matches!(cmd_repo_publish(cmd).await, Err(_));
+    }
+
+    #[fuchsia::test]
+    async fn test_repository_should_create_repo_with_keys_if_it_does_not_exist() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(tempdir.path()).unwrap();
+
+        let repo_keys_path = root.join("keys");
+        let repo_path = root.join("repo");
+
+        test_utils::make_repo_keys_dir(&repo_keys_path);
+
+        let cmd = RepoPublishCommand {
+            keys: Some(repo_keys_path),
+            package_manifests: vec![],
+            package_list_manifests: vec![],
+            time_versioning: false,
+            clean: false,
+            depfile: None,
+            copy_mode: CopyMode::Copy,
+            repo_path: repo_path.to_path_buf(),
+        };
+
+        assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
+
+        let repo = PmRepository::new(repo_path);
+        let mut repo_client = RepoClient::from_trusted_remote(repo).await.unwrap();
+
+        assert_matches!(repo_client.update().await, Ok(true));
+        assert_eq!(repo_client.database().trusted_root().version(), 1);
+        assert_eq!(repo_client.database().trusted_targets().map(|m| m.version()), Some(1));
+        assert_eq!(repo_client.database().trusted_snapshot().map(|m| m.version()), Some(1));
+        assert_eq!(repo_client.database().trusted_timestamp().map(|m| m.version()), Some(1));
+    }
+
+    #[fuchsia::test]
+    async fn test_repository_should_create_repo_if_only_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(tmp.path()).unwrap();
+
+        // First create a repository.
+        let full_repo_path = root.join("full");
+        let full_metadata_repo_path = full_repo_path.join("repository");
+        test_utils::make_pm_repo_dir(full_repo_path.as_std_path()).await;
+
+        // Then create a repository, which only has the keys and root metadata in it.
+        let test_repo_path = root.join("test");
+        let test_metadata_repo_path = test_repo_path.join("repository");
+        std::fs::create_dir_all(&test_metadata_repo_path).unwrap();
+
+        std::fs::rename(full_repo_path.join("keys"), test_repo_path.join("keys")).unwrap();
+
+        std::fs::copy(
+            full_metadata_repo_path.join("root.json"),
+            test_metadata_repo_path.join("1.root.json"),
+        )
+        .unwrap();
+
+        let cmd = RepoPublishCommand {
+            keys: None,
+            package_manifests: vec![],
+            package_list_manifests: vec![],
+            time_versioning: false,
+            clean: false,
+            depfile: None,
+            copy_mode: CopyMode::Copy,
+            repo_path: test_repo_path.to_path_buf(),
+        };
+
+        assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
+
+        let repo = PmRepository::new(test_repo_path);
+        let mut repo_client = RepoClient::from_trusted_remote(repo).await.unwrap();
+
+        assert_matches!(repo_client.update().await, Ok(true));
+        assert_eq!(repo_client.database().trusted_root().version(), 1);
+        assert_eq!(repo_client.database().trusted_targets().map(|m| m.version()), Some(1));
+        assert_eq!(repo_client.database().trusted_snapshot().map(|m| m.version()), Some(1));
+        assert_eq!(repo_client.database().trusted_timestamp().map(|m| m.version()), Some(1));
     }
 
     #[fuchsia::test]
