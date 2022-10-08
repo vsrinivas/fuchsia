@@ -81,7 +81,7 @@ TEST(FlexibleUnion, Construction) {
 TEST(FlexibleUnion, Unknown) {
   // Use an internal API to make an unknown union.
   test_types::TestXUnion unknown{fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
-  EXPECT_EQ(unknown.Which(), test_types::TestXUnion::Tag::kUnknown);
+  EXPECT_TRUE(unknown.IsUnknown());
 }
 
 // In flexible unions it might be tempting to reset the moved-from union to an

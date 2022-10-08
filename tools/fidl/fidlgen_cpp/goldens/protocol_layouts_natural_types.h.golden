@@ -117,9 +117,9 @@ class LocalUnionPayload {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kB = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   LocalUnionPayload(LocalUnionPayload&& other) noexcept
@@ -145,6 +145,9 @@ class LocalUnionPayload {
   }
   bool operator!=(const LocalUnionPayload& other) const noexcept {
     return *storage_ != *other.storage_;
+  }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_protocollayouts::LocalUnionPayload::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 
   constexpr ::test_protocollayouts::LocalUnionPayload::Tag Which() const {
@@ -179,7 +182,7 @@ class LocalUnionPayload {
     switch (tag) {
       case ::test_protocollayouts::LocalUnionPayload::Tag::kB:
         return 1;
-      case ::test_protocollayouts::LocalUnionPayload::Tag::kUnknown:
+      case ::test_protocollayouts::LocalUnionPayload::Tag::_do_not_handle_this__write_a_default_case_instead:
         return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -193,7 +196,7 @@ class LocalUnionPayload {
       case 1:
         return ::test_protocollayouts::LocalUnionPayload::Tag::kB;
       default:
-        return ::test_protocollayouts::LocalUnionPayload::Tag::kUnknown;
+        return ::test_protocollayouts::LocalUnionPayload::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 };
@@ -208,7 +211,7 @@ class MainProtocolTwoWayImportWithErrorResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };
@@ -373,7 +376,7 @@ class MainProtocolOnImportWithErrorResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };
@@ -538,7 +541,7 @@ class MainProtocolTwoWayLocalWithErrorResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };
@@ -703,7 +706,7 @@ class MainProtocolOnLocalWithErrorResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };
@@ -914,9 +917,9 @@ class MainProtocolTwoWayAnonRequest {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kB = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   MainProtocolTwoWayAnonRequest(MainProtocolTwoWayAnonRequest&& other) noexcept
@@ -942,6 +945,9 @@ class MainProtocolTwoWayAnonRequest {
   }
   bool operator!=(const MainProtocolTwoWayAnonRequest& other) const noexcept {
     return *storage_ != *other.storage_;
+  }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 
   constexpr ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag Which() const {
@@ -976,7 +982,7 @@ class MainProtocolTwoWayAnonRequest {
     switch (tag) {
       case ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB:
         return 1;
-      case ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kUnknown:
+      case ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead:
         return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -990,7 +996,7 @@ class MainProtocolTwoWayAnonRequest {
       case 1:
         return ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB;
       default:
-        return ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kUnknown;
+        return ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 };
@@ -1097,9 +1103,9 @@ class MainProtocolTwoWayAnonWithErrorResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kB = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   MainProtocolTwoWayAnonWithErrorResponse(MainProtocolTwoWayAnonWithErrorResponse&& other) noexcept
@@ -1125,6 +1131,9 @@ class MainProtocolTwoWayAnonWithErrorResponse {
   }
   bool operator!=(const MainProtocolTwoWayAnonWithErrorResponse& other) const noexcept {
     return *storage_ != *other.storage_;
+  }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 
   constexpr ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag Which() const {
@@ -1159,7 +1168,7 @@ class MainProtocolTwoWayAnonWithErrorResponse {
     switch (tag) {
       case ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag::kB:
         return 1;
-      case ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag::kUnknown:
+      case ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag::_do_not_handle_this__write_a_default_case_instead:
         return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -1173,7 +1182,7 @@ class MainProtocolTwoWayAnonWithErrorResponse {
       case 1:
         return ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag::kB;
       default:
-        return ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag::kUnknown;
+        return ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 };
@@ -1188,7 +1197,7 @@ class MainProtocolTwoWayAnonWithErrorResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };
@@ -1353,9 +1362,9 @@ class MainProtocolOnAnonRequest {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kB = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   MainProtocolOnAnonRequest(MainProtocolOnAnonRequest&& other) noexcept
@@ -1381,6 +1390,9 @@ class MainProtocolOnAnonRequest {
   }
   bool operator!=(const MainProtocolOnAnonRequest& other) const noexcept {
     return *storage_ != *other.storage_;
+  }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 
   constexpr ::test_protocollayouts::MainProtocolOnAnonRequest::Tag Which() const {
@@ -1415,7 +1427,7 @@ class MainProtocolOnAnonRequest {
     switch (tag) {
       case ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::kB:
         return 1;
-      case ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::kUnknown:
+      case ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead:
         return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -1429,7 +1441,7 @@ class MainProtocolOnAnonRequest {
       case 1:
         return ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::kB;
       default:
-        return ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::kUnknown;
+        return ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 };
@@ -1490,7 +1502,7 @@ class MainProtocolOnAnonWithErrorResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };

@@ -250,7 +250,7 @@ class UnionSmallArray {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kA = 1,  // 0x1
   };
 
@@ -338,7 +338,7 @@ class UnionLargeArray {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kA = 1,  // 0x1
   };
 

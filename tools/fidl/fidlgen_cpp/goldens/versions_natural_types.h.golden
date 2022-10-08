@@ -144,9 +144,9 @@ class Union {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kX = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Union(Union&& other) noexcept
@@ -172,6 +172,9 @@ class Union {
   }
   bool operator!=(const Union& other) const noexcept {
     return *storage_ != *other.storage_;
+  }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_versions::Union::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 
   constexpr ::test_versions::Union::Tag Which() const {
@@ -206,7 +209,7 @@ class Union {
     switch (tag) {
       case ::test_versions::Union::Tag::kX:
         return 1;
-      case ::test_versions::Union::Tag::kUnknown:
+      case ::test_versions::Union::Tag::_do_not_handle_this__write_a_default_case_instead:
         return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -220,7 +223,7 @@ class Union {
       case 1:
         return ::test_versions::Union::Tag::kX;
       default:
-        return ::test_versions::Union::Tag::kUnknown;
+        return ::test_versions::Union::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 };

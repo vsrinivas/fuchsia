@@ -872,9 +872,9 @@ class UnknownInteractionsProtocolStrictTwoWayUnionResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsProtocolStrictTwoWayUnionResponse(UnknownInteractionsProtocolStrictTwoWayUnionResponse&& other) noexcept
@@ -901,6 +901,9 @@ class UnknownInteractionsProtocolStrictTwoWayUnionResponse {
     bool operator!=(const UnknownInteractionsProtocolStrictTwoWayUnionResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag Which() const {
     return UnknownInteractionsProtocolStrictTwoWayUnionResponse::IndexToTag(storage_->index()).value();
@@ -934,7 +937,7 @@ class UnknownInteractionsProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -945,7 +948,7 @@ class UnknownInteractionsProtocolStrictTwoWayUnionResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -1098,7 +1101,7 @@ class UnknownInteractionsProtocolStrictTwoWayErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -1356,7 +1359,7 @@ class UnknownInteractionsProtocolStrictTwoWayFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -1540,9 +1543,9 @@ class UnknownInteractionsProtocolStrictTwoWayUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsProtocolStrictTwoWayUnionErrResponse(UnknownInteractionsProtocolStrictTwoWayUnionErrResponse&& other) noexcept
@@ -1569,6 +1572,9 @@ class UnknownInteractionsProtocolStrictTwoWayUnionErrResponse {
     bool operator!=(const UnknownInteractionsProtocolStrictTwoWayUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag Which() const {
     return UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -1602,7 +1608,7 @@ class UnknownInteractionsProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -1613,7 +1619,7 @@ class UnknownInteractionsProtocolStrictTwoWayUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -1639,7 +1645,7 @@ class UnknownInteractionsProtocolStrictTwoWayUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -1878,7 +1884,7 @@ class UnknownInteractionsProtocolStrictTwoWayTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -2136,7 +2142,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kTransportErr = 3,  // 0x3
   };
@@ -2394,7 +2400,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayFieldsResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kTransportErr = 3,  // 0x3
   };
@@ -2578,9 +2584,9 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsProtocolFlexibleTwoWayUnionResponse(UnknownInteractionsProtocolFlexibleTwoWayUnionResponse&& other) noexcept
@@ -2607,6 +2613,9 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionResponse {
     bool operator!=(const UnknownInteractionsProtocolFlexibleTwoWayUnionResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag Which() const {
     return UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::IndexToTag(storage_->index()).value();
@@ -2640,7 +2649,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -2651,7 +2660,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -2677,7 +2686,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kTransportErr = 3,  // 0x3
   };
@@ -2916,7 +2925,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayTableResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kTransportErr = 3,  // 0x3
   };
@@ -3175,7 +3184,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
     kTransportErr = 3,  // 0x3
@@ -3450,7 +3459,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
     kTransportErr = 3,  // 0x3
@@ -3650,9 +3659,9 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse(UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse&& other) noexcept
@@ -3679,6 +3688,9 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse {
     bool operator!=(const UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag Which() const {
     return UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -3712,7 +3724,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -3723,7 +3735,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -3750,7 +3762,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
     kTransportErr = 3,  // 0x3
@@ -4006,7 +4018,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
     kTransportErr = 3,  // 0x3
@@ -4279,9 +4291,9 @@ class UnknownInteractionsProtocolStrictEventUnionRequest {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsProtocolStrictEventUnionRequest(UnknownInteractionsProtocolStrictEventUnionRequest&& other) noexcept
@@ -4308,6 +4320,9 @@ class UnknownInteractionsProtocolStrictEventUnionRequest {
     bool operator!=(const UnknownInteractionsProtocolStrictEventUnionRequest& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag Which() const {
     return UnknownInteractionsProtocolStrictEventUnionRequest::IndexToTag(storage_->index()).value();
@@ -4341,7 +4356,7 @@ class UnknownInteractionsProtocolStrictEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -4352,7 +4367,7 @@ class UnknownInteractionsProtocolStrictEventUnionRequest {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -4505,7 +4520,7 @@ class UnknownInteractionsProtocolStrictEventErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -4763,7 +4778,7 @@ class UnknownInteractionsProtocolStrictEventFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -4947,9 +4962,9 @@ class UnknownInteractionsProtocolStrictEventUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsProtocolStrictEventUnionErrResponse(UnknownInteractionsProtocolStrictEventUnionErrResponse&& other) noexcept
@@ -4976,6 +4991,9 @@ class UnknownInteractionsProtocolStrictEventUnionErrResponse {
     bool operator!=(const UnknownInteractionsProtocolStrictEventUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag Which() const {
     return UnknownInteractionsProtocolStrictEventUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -5009,7 +5027,7 @@ class UnknownInteractionsProtocolStrictEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -5020,7 +5038,7 @@ class UnknownInteractionsProtocolStrictEventUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -5046,7 +5064,7 @@ class UnknownInteractionsProtocolStrictEventUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -5285,7 +5303,7 @@ class UnknownInteractionsProtocolStrictEventTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -5542,9 +5560,9 @@ class UnknownInteractionsProtocolFlexibleEventUnionRequest {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsProtocolFlexibleEventUnionRequest(UnknownInteractionsProtocolFlexibleEventUnionRequest&& other) noexcept
@@ -5571,6 +5589,9 @@ class UnknownInteractionsProtocolFlexibleEventUnionRequest {
     bool operator!=(const UnknownInteractionsProtocolFlexibleEventUnionRequest& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag Which() const {
     return UnknownInteractionsProtocolFlexibleEventUnionRequest::IndexToTag(storage_->index()).value();
@@ -5604,7 +5625,7 @@ class UnknownInteractionsProtocolFlexibleEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -5615,7 +5636,7 @@ class UnknownInteractionsProtocolFlexibleEventUnionRequest {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -5768,7 +5789,7 @@ class UnknownInteractionsProtocolFlexibleEventErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -6026,7 +6047,7 @@ class UnknownInteractionsProtocolFlexibleEventFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -6210,9 +6231,9 @@ class UnknownInteractionsProtocolFlexibleEventUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsProtocolFlexibleEventUnionErrResponse(UnknownInteractionsProtocolFlexibleEventUnionErrResponse&& other) noexcept
@@ -6239,6 +6260,9 @@ class UnknownInteractionsProtocolFlexibleEventUnionErrResponse {
     bool operator!=(const UnknownInteractionsProtocolFlexibleEventUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag Which() const {
     return UnknownInteractionsProtocolFlexibleEventUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -6272,7 +6296,7 @@ class UnknownInteractionsProtocolFlexibleEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -6283,7 +6307,7 @@ class UnknownInteractionsProtocolFlexibleEventUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -6309,7 +6333,7 @@ class UnknownInteractionsProtocolFlexibleEventUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -6548,7 +6572,7 @@ class UnknownInteractionsProtocolFlexibleEventTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -6808,9 +6832,9 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse(UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse&& other) noexcept
@@ -6837,6 +6861,9 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse {
     bool operator!=(const UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag Which() const {
     return UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::IndexToTag(storage_->index()).value();
@@ -6870,7 +6897,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -6881,7 +6908,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -7034,7 +7061,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -7292,7 +7319,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -7476,9 +7503,9 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse(UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse&& other) noexcept
@@ -7505,6 +7532,9 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse {
     bool operator!=(const UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag Which() const {
     return UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -7538,7 +7568,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -7549,7 +7579,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -7575,7 +7605,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -7814,7 +7844,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -8071,9 +8101,9 @@ class UnknownInteractionsAjarProtocolStrictEventUnionRequest {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsAjarProtocolStrictEventUnionRequest(UnknownInteractionsAjarProtocolStrictEventUnionRequest&& other) noexcept
@@ -8100,6 +8130,9 @@ class UnknownInteractionsAjarProtocolStrictEventUnionRequest {
     bool operator!=(const UnknownInteractionsAjarProtocolStrictEventUnionRequest& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag Which() const {
     return UnknownInteractionsAjarProtocolStrictEventUnionRequest::IndexToTag(storage_->index()).value();
@@ -8133,7 +8166,7 @@ class UnknownInteractionsAjarProtocolStrictEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -8144,7 +8177,7 @@ class UnknownInteractionsAjarProtocolStrictEventUnionRequest {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -8297,7 +8330,7 @@ class UnknownInteractionsAjarProtocolStrictEventErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -8555,7 +8588,7 @@ class UnknownInteractionsAjarProtocolStrictEventFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -8739,9 +8772,9 @@ class UnknownInteractionsAjarProtocolStrictEventUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsAjarProtocolStrictEventUnionErrResponse(UnknownInteractionsAjarProtocolStrictEventUnionErrResponse&& other) noexcept
@@ -8768,6 +8801,9 @@ class UnknownInteractionsAjarProtocolStrictEventUnionErrResponse {
     bool operator!=(const UnknownInteractionsAjarProtocolStrictEventUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag Which() const {
     return UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -8801,7 +8837,7 @@ class UnknownInteractionsAjarProtocolStrictEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -8812,7 +8848,7 @@ class UnknownInteractionsAjarProtocolStrictEventUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -8838,7 +8874,7 @@ class UnknownInteractionsAjarProtocolStrictEventUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -9077,7 +9113,7 @@ class UnknownInteractionsAjarProtocolStrictEventTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -9334,9 +9370,9 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionRequest {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsAjarProtocolFlexibleEventUnionRequest(UnknownInteractionsAjarProtocolFlexibleEventUnionRequest&& other) noexcept
@@ -9363,6 +9399,9 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionRequest {
     bool operator!=(const UnknownInteractionsAjarProtocolFlexibleEventUnionRequest& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag Which() const {
     return UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::IndexToTag(storage_->index()).value();
@@ -9396,7 +9435,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -9407,7 +9446,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionRequest {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -9560,7 +9599,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -9818,7 +9857,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -10002,9 +10041,9 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse(UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse&& other) noexcept
@@ -10031,6 +10070,9 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse {
     bool operator!=(const UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag Which() const {
     return UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -10064,7 +10106,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -10075,7 +10117,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -10101,7 +10143,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -10340,7 +10382,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -10600,9 +10642,9 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse(UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse&& other) noexcept
@@ -10629,6 +10671,9 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse {
     bool operator!=(const UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag Which() const {
     return UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::IndexToTag(storage_->index()).value();
@@ -10662,7 +10707,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -10673,7 +10718,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -10826,7 +10871,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -11084,7 +11129,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -11268,9 +11313,9 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse(UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse&& other) noexcept
@@ -11297,6 +11342,9 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse {
     bool operator!=(const UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag Which() const {
     return UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -11330,7 +11378,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -11341,7 +11389,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -11367,7 +11415,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -11606,7 +11654,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -11863,9 +11911,9 @@ class UnknownInteractionsClosedProtocolStrictEventUnionRequest {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsClosedProtocolStrictEventUnionRequest(UnknownInteractionsClosedProtocolStrictEventUnionRequest&& other) noexcept
@@ -11892,6 +11940,9 @@ class UnknownInteractionsClosedProtocolStrictEventUnionRequest {
     bool operator!=(const UnknownInteractionsClosedProtocolStrictEventUnionRequest& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag Which() const {
     return UnknownInteractionsClosedProtocolStrictEventUnionRequest::IndexToTag(storage_->index()).value();
@@ -11925,7 +11976,7 @@ class UnknownInteractionsClosedProtocolStrictEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -11936,7 +11987,7 @@ class UnknownInteractionsClosedProtocolStrictEventUnionRequest {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -12089,7 +12140,7 @@ class UnknownInteractionsClosedProtocolStrictEventErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -12347,7 +12398,7 @@ class UnknownInteractionsClosedProtocolStrictEventFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -12531,9 +12582,9 @@ class UnknownInteractionsClosedProtocolStrictEventUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsClosedProtocolStrictEventUnionErrResponse(UnknownInteractionsClosedProtocolStrictEventUnionErrResponse&& other) noexcept
@@ -12560,6 +12611,9 @@ class UnknownInteractionsClosedProtocolStrictEventUnionErrResponse {
     bool operator!=(const UnknownInteractionsClosedProtocolStrictEventUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag Which() const {
     return UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -12593,7 +12647,7 @@ class UnknownInteractionsClosedProtocolStrictEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -12604,7 +12658,7 @@ class UnknownInteractionsClosedProtocolStrictEventUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -12630,7 +12684,7 @@ class UnknownInteractionsClosedProtocolStrictEventUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -12869,7 +12923,7 @@ class UnknownInteractionsClosedProtocolStrictEventTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -13129,9 +13183,9 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse(UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse&& other) noexcept
@@ -13158,6 +13212,9 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse {
     bool operator!=(const UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag Which() const {
     return UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::IndexToTag(storage_->index()).value();
@@ -13191,7 +13248,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -13202,7 +13259,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -13355,7 +13412,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -13613,7 +13670,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -13797,9 +13854,9 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse(UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse&& other) noexcept
@@ -13826,6 +13883,9 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse {
     bool operator!=(const UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag Which() const {
     return UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -13859,7 +13919,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -13870,7 +13930,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -13896,7 +13956,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -14135,7 +14195,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -14393,7 +14453,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kTransportErr = 3,  // 0x3
   };
@@ -14651,7 +14711,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kTransportErr = 3,  // 0x3
   };
@@ -14835,9 +14895,9 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse(UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse&& other) noexcept
@@ -14864,6 +14924,9 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse {
     bool operator!=(const UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag Which() const {
     return UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::IndexToTag(storage_->index()).value();
@@ -14897,7 +14960,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -14908,7 +14971,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -14934,7 +14997,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kTransportErr = 3,  // 0x3
   };
@@ -15173,7 +15236,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kTransportErr = 3,  // 0x3
   };
@@ -15432,7 +15495,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
     kTransportErr = 3,  // 0x3
@@ -15707,7 +15770,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
     kTransportErr = 3,  // 0x3
@@ -15907,9 +15970,9 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse(UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse&& other) noexcept
@@ -15936,6 +15999,9 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse {
     bool operator!=(const UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag Which() const {
     return UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -15969,7 +16035,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -15980,7 +16046,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -16007,7 +16073,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
     kTransportErr = 3,  // 0x3
@@ -16263,7 +16329,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
     kTransportErr = 3,  // 0x3
@@ -16539,9 +16605,9 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse(UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse&& other) noexcept
@@ -16568,6 +16634,9 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse {
     bool operator!=(const UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag Which() const {
     return UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::IndexToTag(storage_->index()).value();
@@ -16601,7 +16670,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -16612,7 +16681,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -16765,7 +16834,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -17023,7 +17092,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -17207,9 +17276,9 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse(UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse&& other) noexcept
@@ -17236,6 +17305,9 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse {
     bool operator!=(const UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag Which() const {
     return UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -17269,7 +17341,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -17280,7 +17352,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -17306,7 +17378,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -17545,7 +17617,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -17805,9 +17877,9 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse(UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse&& other) noexcept
@@ -17834,6 +17906,9 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse {
     bool operator!=(const UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag Which() const {
     return UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::IndexToTag(storage_->index()).value();
@@ -17867,7 +17942,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -17878,7 +17953,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -18031,7 +18106,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -18289,7 +18364,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -18473,9 +18548,9 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kSomeField = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse(UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse&& other) noexcept
@@ -18502,6 +18577,9 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse {
     bool operator!=(const UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag Which() const {
     return UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::IndexToTag(storage_->index()).value();
@@ -18535,7 +18613,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown: return 0;
+        case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -18546,7 +18624,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse {
   static constexpr std::optional<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField;
-        default: return ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+        default: return ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 
@@ -18572,7 +18650,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -18811,7 +18889,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };

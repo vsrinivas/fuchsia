@@ -30,7 +30,7 @@ class {{ .Name }} {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class {{ .TagEnum.Self }} : fidl_union_tag_t {
+  enum class {{ .TagEnum.Self }} : fidl_xunion_tag_t {
   {{- range .Members }}
     {{ .TagName.Self }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
   {{- end }}
@@ -64,6 +64,12 @@ class {{ .Name }} {
     bool operator!=(const {{ .Name }}& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  {{- end }}
+
+  {{- if .IsFlexible }}
+  constexpr bool IsUnknown() const {
+    return Which() == {{ .TagUnknown }};
+  }
   {{- end }}
 
   constexpr {{ .TagEnum }} Which() const {

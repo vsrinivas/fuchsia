@@ -343,8 +343,11 @@ class FlexiblePizzaOrPasta {
   enum class Tag : fidl_xunion_tag_t {
     kPizza = 1,  // 0x1
     kPasta = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::FlexiblePizzaOrPasta::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::FlexiblePizzaOrPasta::Ordinal::Invalid; }
 
@@ -633,8 +636,11 @@ class FlexibleUnion {
     kPrimitive = 1,  // 0x1
     kStringNeedsConstructor = 2,  // 0x2
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::FlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::FlexibleUnion::Ordinal::Invalid; }
 
@@ -1066,8 +1072,11 @@ class FlexibleFoo {
   enum class Tag : fidl_xunion_tag_t {
     kS = 1,  // 0x1
     kI = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::FlexibleFoo::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::FlexibleFoo::Ordinal::Invalid; }
 
@@ -1230,8 +1239,11 @@ class ExplicitFoo {
   enum class Tag : fidl_xunion_tag_t {
     kS = 2,  // 0x2
     kI = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::ExplicitFoo::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::ExplicitFoo::Ordinal::Invalid; }
 
@@ -1394,8 +1406,11 @@ class OlderSimpleUnion {
   enum class Tag : fidl_xunion_tag_t {
     kI = 1,  // 0x1
     kF = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::OlderSimpleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::OlderSimpleUnion::Ordinal::Invalid; }
 
@@ -1476,8 +1491,11 @@ class NewerSimpleUnion {
     kI = 1,  // 0x1
     kS = 2,  // 0x2
     kV = 3,  // 0x3
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::NewerSimpleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::NewerSimpleUnion::Ordinal::Invalid; }
 
@@ -1694,8 +1712,11 @@ class XUnionContainingEmptyStruct {
 
   enum class Tag : fidl_xunion_tag_t {
     kEmpty = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::XUnionContainingEmptyStruct::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::XUnionContainingEmptyStruct::Ordinal::Invalid; }
 
@@ -1810,8 +1831,11 @@ class ExplicitXUnion {
   enum class Tag : fidl_xunion_tag_t {
     kI = 1,  // 0x1
     kF = 4,  // 0x4
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::ExplicitXUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::ExplicitXUnion::Ordinal::Invalid; }
 
@@ -1890,8 +1914,11 @@ class UnionWithAttributes {
 
   enum class Tag : fidl_xunion_tag_t {
     kX = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::UnionWithAttributes::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::UnionWithAttributes::Ordinal::Invalid; }
 
@@ -1949,8 +1976,11 @@ class EmptyFlexibleUnion {
   EmptyFlexibleUnion& operator=(EmptyFlexibleUnion&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::EmptyFlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::EmptyFlexibleUnion::Ordinal::Invalid; }
   ::test_union::wire::EmptyFlexibleUnion::Tag Which() const;
@@ -1981,8 +2011,11 @@ class OnlyReservedFlexibleUnion {
   OnlyReservedFlexibleUnion& operator=(OnlyReservedFlexibleUnion&&) = default;
 
   enum class Tag : fidl_xunion_tag_t {
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_union::wire::OnlyReservedFlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_union::wire::OnlyReservedFlexibleUnion::Ordinal::Invalid; }
   ::test_union::wire::OnlyReservedFlexibleUnion::Tag Which() const;

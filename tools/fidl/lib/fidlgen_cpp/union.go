@@ -92,6 +92,11 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 	codingTableType := name.Wire.ns.member(c.compileCodingTableType(val.Name))
 	tagEnum := name.nest("Tag")
 	wireOrdinalEnum := name.Wire.nest("Ordinal")
+	// HLCPP use "kUnknown", whereas the new C++ bindings use the un-spellable name.
+	tagUnknown := tagEnum.nest("kUnknown")
+	tagUnknownNew := tagEnum.nest("_do_not_handle_this__write_a_default_case_instead")
+	tagUnknown.Wire = tagUnknownNew.Wire
+	tagUnknown.Unified = tagUnknownNew.Unified
 	u := Union{
 		UnionName:          UnionName{nameVariants: name},
 		Attributes:         Attributes{val.Attributes},
@@ -102,7 +107,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 		Resourceness:       val.Resourceness,
 		CodingTableType:    codingTableType,
 		TagEnum:            tagEnum,
-		TagUnknown:         tagEnum.nest("kUnknown"),
+		TagUnknown:         tagUnknown,
 		TagInvalid:         tagEnum.nest("Invalid"),
 		WireOrdinalEnum:    wireOrdinalEnum,
 		WireInvalidOrdinal: wireOrdinalEnum.nest("Invalid"),

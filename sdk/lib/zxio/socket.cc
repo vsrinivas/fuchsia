@@ -1329,8 +1329,9 @@ uint16_t fidl_hwtype_to_arphrd(const fpacketsocket::wire::HardwareType type) {
 
 void populate_from_fidl_hwaddr(const fpacketsocket::wire::HardwareAddress& addr, sockaddr_ll& s) {
   switch (addr.Which()) {
-    case fpacketsocket::wire::HardwareAddress::Tag::kUnknown:
-      // The server is newer than us and sending a variant we don't understand.
+    default:
+      // The server is newer than us and sending a variant we don't understand,
+      // or there was a new |HardwareAddress| member that is yet to be handled.
       __FALLTHROUGH;
     case fpacketsocket::wire::HardwareAddress::Tag::kNone:
       s.sll_halen = 0;

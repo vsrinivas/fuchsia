@@ -247,7 +247,7 @@ TEST_F(GraphServerTest, CreateProducerFailsUnknownDataSource) {
   };
   // C++ type punning requires using std::memcpy.
   RawProducerDataSource raw{
-      .ordinal = static_cast<fidl_xunion_tag_t>(ProducerDataSource::Tag::kUnknown),
+      .ordinal = std::numeric_limits<fidl_xunion_tag_t>::max(),
   };
   ProducerDataSource data_source;
   static_assert(sizeof(data_source) == sizeof(raw));

@@ -292,8 +292,11 @@ class ExampleXUnion {
 
   enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_placementofattributes::wire::ExampleXUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_placementofattributes::wire::ExampleXUnion::Ordinal::Invalid; }
 

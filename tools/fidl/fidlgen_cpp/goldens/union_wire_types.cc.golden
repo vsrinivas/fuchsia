@@ -21,7 +21,7 @@ auto ::test_union::wire::FlexiblePizzaOrPasta::Which() const -> ::test_union::wi
     case ::test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPasta:
       return static_cast<::test_union::wire::FlexiblePizzaOrPasta::Tag>(ordinal_);
     default:
-      return ::test_union::wire::FlexiblePizzaOrPasta::Tag::kUnknown;
+      return ::test_union::wire::FlexiblePizzaOrPasta::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -51,7 +51,7 @@ auto ::test_union::wire::FlexibleUnion::Which() const -> ::test_union::wire::Fle
     case ::test_union::wire::FlexibleUnion::Ordinal::kVectorStringAlsoNeedsConstructor:
       return static_cast<::test_union::wire::FlexibleUnion::Tag>(ordinal_);
     default:
-      return ::test_union::wire::FlexibleUnion::Tag::kUnknown;
+      return ::test_union::wire::FlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -92,7 +92,7 @@ auto ::test_union::wire::FlexibleFoo::Which() const -> ::test_union::wire::Flexi
     case ::test_union::wire::FlexibleFoo::Ordinal::kI:
       return static_cast<::test_union::wire::FlexibleFoo::Tag>(ordinal_);
     default:
-      return ::test_union::wire::FlexibleFoo::Tag::kUnknown;
+      return ::test_union::wire::FlexibleFoo::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -115,7 +115,7 @@ auto ::test_union::wire::ExplicitFoo::Which() const -> ::test_union::wire::Expli
     case ::test_union::wire::ExplicitFoo::Ordinal::kI:
       return static_cast<::test_union::wire::ExplicitFoo::Tag>(ordinal_);
     default:
-      return ::test_union::wire::ExplicitFoo::Tag::kUnknown;
+      return ::test_union::wire::ExplicitFoo::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -138,7 +138,7 @@ auto ::test_union::wire::OlderSimpleUnion::Which() const -> ::test_union::wire::
     case ::test_union::wire::OlderSimpleUnion::Ordinal::kF:
       return static_cast<::test_union::wire::OlderSimpleUnion::Tag>(ordinal_);
     default:
-      return ::test_union::wire::OlderSimpleUnion::Tag::kUnknown;
+      return ::test_union::wire::OlderSimpleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -156,7 +156,7 @@ auto ::test_union::wire::NewerSimpleUnion::Which() const -> ::test_union::wire::
     case ::test_union::wire::NewerSimpleUnion::Ordinal::kV:
       return static_cast<::test_union::wire::NewerSimpleUnion::Tag>(ordinal_);
     default:
-      return ::test_union::wire::NewerSimpleUnion::Tag::kUnknown;
+      return ::test_union::wire::NewerSimpleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -178,7 +178,7 @@ auto ::test_union::wire::XUnionContainingEmptyStruct::Which() const -> ::test_un
     case ::test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty:
       return static_cast<::test_union::wire::XUnionContainingEmptyStruct::Tag>(ordinal_);
     default:
-      return ::test_union::wire::XUnionContainingEmptyStruct::Tag::kUnknown;
+      return ::test_union::wire::XUnionContainingEmptyStruct::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -201,7 +201,7 @@ auto ::test_union::wire::ExplicitXUnion::Which() const -> ::test_union::wire::Ex
     case ::test_union::wire::ExplicitXUnion::Ordinal::kF:
       return static_cast<::test_union::wire::ExplicitXUnion::Tag>(ordinal_);
     default:
-      return ::test_union::wire::ExplicitXUnion::Tag::kUnknown;
+      return ::test_union::wire::ExplicitXUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -217,7 +217,7 @@ auto ::test_union::wire::UnionWithAttributes::Which() const -> ::test_union::wir
     case ::test_union::wire::UnionWithAttributes::Ordinal::kX:
       return static_cast<::test_union::wire::UnionWithAttributes::Tag>(ordinal_);
     default:
-      return ::test_union::wire::UnionWithAttributes::Tag::kUnknown;
+      return ::test_union::wire::UnionWithAttributes::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -229,7 +229,7 @@ void ::test_union::wire::UnionWithAttributes::SizeAndOffsetAssertionHelper() {
 
 auto ::test_union::wire::EmptyFlexibleUnion::Which() const -> ::test_union::wire::EmptyFlexibleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
-  return ::test_union::wire::EmptyFlexibleUnion::Tag::kUnknown;
+  return ::test_union::wire::EmptyFlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
 }
 
 void ::test_union::wire::EmptyFlexibleUnion::SizeAndOffsetAssertionHelper() {
@@ -240,7 +240,7 @@ void ::test_union::wire::EmptyFlexibleUnion::SizeAndOffsetAssertionHelper() {
 
 auto ::test_union::wire::OnlyReservedFlexibleUnion::Which() const -> ::test_union::wire::OnlyReservedFlexibleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());
-  return ::test_union::wire::OnlyReservedFlexibleUnion::Tag::kUnknown;
+  return ::test_union::wire::OnlyReservedFlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
 }
 
 void ::test_union::wire::OnlyReservedFlexibleUnion::SizeAndOffsetAssertionHelper() {

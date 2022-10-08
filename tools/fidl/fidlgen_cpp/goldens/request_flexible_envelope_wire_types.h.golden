@@ -52,8 +52,11 @@ class FlexibleFoo {
   enum class Tag : fidl_xunion_tag_t {
     kS = 1,  // 0x1
     kI = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::Invalid; }
 

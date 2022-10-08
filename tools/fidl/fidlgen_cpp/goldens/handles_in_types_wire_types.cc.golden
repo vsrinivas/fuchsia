@@ -30,7 +30,7 @@ auto ::test_handlesintypes::wire::UnionWithHandle::Which() const -> ::test_handl
     case ::test_handlesintypes::wire::UnionWithHandle::Ordinal::kH:
       return static_cast<::test_handlesintypes::wire::UnionWithHandle::Tag>(ordinal_);
     default:
-      return ::test_handlesintypes::wire::UnionWithHandle::Tag::kUnknown;
+      return ::test_handlesintypes::wire::UnionWithHandle::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 

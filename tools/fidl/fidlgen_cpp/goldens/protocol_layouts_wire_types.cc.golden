@@ -8,7 +8,7 @@ auto ::test_protocollayouts::wire::LocalUnionPayload::Which() const -> ::test_pr
     case ::test_protocollayouts::wire::LocalUnionPayload::Ordinal::kB:
       return static_cast<::test_protocollayouts::wire::LocalUnionPayload::Tag>(ordinal_);
     default:
-      return ::test_protocollayouts::wire::LocalUnionPayload::Tag::kUnknown;
+      return ::test_protocollayouts::wire::LocalUnionPayload::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -48,7 +48,7 @@ auto ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest::Which() const 
     case ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest::Ordinal::kB:
       return static_cast<::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest::Tag>(ordinal_);
     default:
-      return ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest::Tag::kUnknown;
+      return ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -64,7 +64,7 @@ auto ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse::Whic
     case ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse::Ordinal::kB:
       return static_cast<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse::Tag>(ordinal_);
     default:
-      return ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse::Tag::kUnknown;
+      return ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -86,7 +86,7 @@ auto ::test_protocollayouts::wire::MainProtocolOnAnonRequest::Which() const -> :
     case ::test_protocollayouts::wire::MainProtocolOnAnonRequest::Ordinal::kB:
       return static_cast<::test_protocollayouts::wire::MainProtocolOnAnonRequest::Tag>(ordinal_);
     default:
-      return ::test_protocollayouts::wire::MainProtocolOnAnonRequest::Tag::kUnknown;
+      return ::test_protocollayouts::wire::MainProtocolOnAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 

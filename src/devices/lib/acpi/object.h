@@ -64,8 +64,8 @@ class Object {
         value_ = object.power_resource_val();
         break;
       }
-      case Tag::kUnknown: {
-        ZX_ASSERT_MSG(false, "Unknown object type");
+      default: {
+        ZX_PANIC("Unknown object type: %" PRIu64, static_cast<fidl_xunion_tag_t>(object.Which()));
       }
     }
   }

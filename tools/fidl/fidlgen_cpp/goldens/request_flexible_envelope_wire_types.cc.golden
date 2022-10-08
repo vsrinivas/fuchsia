@@ -9,7 +9,7 @@ auto ::test_requestflexibleenvelope::wire::FlexibleFoo::Which() const -> ::test_
     case ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI:
       return static_cast<::test_requestflexibleenvelope::wire::FlexibleFoo::Tag>(ordinal_);
     default:
-      return ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag::kUnknown;
+      return ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 

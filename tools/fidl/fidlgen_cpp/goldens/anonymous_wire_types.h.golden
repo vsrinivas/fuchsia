@@ -567,8 +567,11 @@ class Expression {
     kValue = 1,                // 0x1
     kBinOp = 2,                // 0x2
     kFunctionApplication = 3,  // 0x3
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_anonymous::wire::Expression::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_anonymous::wire::Expression::Ordinal::Invalid; }
 
@@ -672,8 +675,11 @@ class UnionMember {
 
   enum class Tag : fidl_xunion_tag_t {
     kUnionData = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_anonymous::wire::UnionMember::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::Invalid; }
 

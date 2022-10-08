@@ -72,7 +72,7 @@ void FileConnection::Describe2(Describe2Completer::Sync& completer) {
   }
   ConnectionInfoConverter converter(std::move(result).value());
   switch (converter.representation.Which()) {
-    case fio::wire::Representation::Tag::kUnknown:
+    default:
     case fio::wire::Representation::Tag::kConnector:
     case fio::wire::Representation::Tag::kDirectory:
       return completer.Close(ZX_ERR_BAD_STATE);

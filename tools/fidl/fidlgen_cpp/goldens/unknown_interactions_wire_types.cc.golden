@@ -8,7 +8,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUn
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -36,7 +36,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUn
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -76,7 +76,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWay
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -116,7 +116,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWay
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -144,7 +144,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUni
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -172,7 +172,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUni
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -200,7 +200,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventU
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -228,7 +228,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventU
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -256,7 +256,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoW
     case ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -284,7 +284,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoW
     case ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -312,7 +312,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEven
     case ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -340,7 +340,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEven
     case ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -368,7 +368,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEv
     case ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -396,7 +396,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEv
     case ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -424,7 +424,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTw
     case ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -452,7 +452,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTw
     case ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -480,7 +480,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEv
     case ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -508,7 +508,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEv
     case ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -536,7 +536,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTw
     case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -564,7 +564,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTw
     case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -604,7 +604,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexible
     case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -644,7 +644,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexible
     case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -672,7 +672,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStri
     case ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -700,7 +700,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStri
     case ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -728,7 +728,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolSt
     case ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -756,7 +756,7 @@ auto ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolSt
     case ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Ordinal::kSomeField:
       return static_cast<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag>(ordinal_);
     default:
-      return ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::kUnknown;
+      return ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 

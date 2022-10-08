@@ -15,7 +15,7 @@ void use_union(fidl_test::wire::JsonValue* value) {
       printf("string value: %s\n", value->string_value().data());
       break;
     default:
-      printf("<unknown variant>\n");
+      printf("<unknown member: %" PRIu64 ">\n", static_cast<fidl_xunion_tag_t>(value->Which()));
   }
 }
 // [END contents]

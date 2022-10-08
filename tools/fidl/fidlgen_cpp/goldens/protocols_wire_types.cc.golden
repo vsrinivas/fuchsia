@@ -188,7 +188,7 @@ auto ::test_protocols::wire::TheUnion::Which() const -> ::test_protocols::wire::
     case ::test_protocols::wire::TheUnion::Ordinal::kV:
       return static_cast<::test_protocols::wire::TheUnion::Tag>(ordinal_);
     default:
-      return ::test_protocols::wire::TheUnion::Tag::kUnknown;
+      return ::test_protocols::wire::TheUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 

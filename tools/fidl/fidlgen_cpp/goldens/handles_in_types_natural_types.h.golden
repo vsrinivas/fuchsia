@@ -74,9 +74,9 @@ class UnionWithHandle {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kH = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnionWithHandle(UnionWithHandle&& other) noexcept
@@ -88,6 +88,9 @@ class UnionWithHandle {
       *storage_ = std::move(*other.storage_);
     }
     return *this;
+  }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_handlesintypes::UnionWithHandle::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 
   constexpr ::test_handlesintypes::UnionWithHandle::Tag Which() const {
@@ -121,7 +124,7 @@ class UnionWithHandle {
     switch (tag) {
       case ::test_handlesintypes::UnionWithHandle::Tag::kH:
         return 1;
-      case ::test_handlesintypes::UnionWithHandle::Tag::kUnknown:
+      case ::test_handlesintypes::UnionWithHandle::Tag::_do_not_handle_this__write_a_default_case_instead:
         return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -135,7 +138,7 @@ class UnionWithHandle {
       case 1:
         return ::test_handlesintypes::UnionWithHandle::Tag::kH;
       default:
-        return ::test_handlesintypes::UnionWithHandle::Tag::kUnknown;
+        return ::test_handlesintypes::UnionWithHandle::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 };

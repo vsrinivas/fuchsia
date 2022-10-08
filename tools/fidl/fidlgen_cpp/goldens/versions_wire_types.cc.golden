@@ -8,7 +8,7 @@ auto ::test_versions::wire::Union::Which() const -> ::test_versions::wire::Union
     case ::test_versions::wire::Union::Ordinal::kX:
       return static_cast<::test_versions::wire::Union::Tag>(ordinal_);
     default:
-      return ::test_versions::wire::Union::Tag::kUnknown;
+      return ::test_versions::wire::Union::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 

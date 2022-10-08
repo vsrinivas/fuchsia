@@ -10,7 +10,7 @@ auto ::test_anonymous::wire::Expression::Which() const -> ::test_anonymous::wire
     case ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication:
       return static_cast<::test_anonymous::wire::Expression::Tag>(ordinal_);
     default:
-      return ::test_anonymous::wire::Expression::Tag::kUnknown;
+      return ::test_anonymous::wire::Expression::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 
@@ -26,7 +26,7 @@ auto ::test_anonymous::wire::UnionMember::Which() const -> ::test_anonymous::wir
     case ::test_anonymous::wire::UnionMember::Ordinal::kUnionData:
       return static_cast<::test_anonymous::wire::UnionMember::Tag>(ordinal_);
     default:
-      return ::test_anonymous::wire::UnionMember::Tag::kUnknown;
+      return ::test_anonymous::wire::UnionMember::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 

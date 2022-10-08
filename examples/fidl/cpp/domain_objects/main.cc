@@ -218,15 +218,21 @@ TEST(NaturalTypes, Unions) {
   fuchsia_examples::JsonValue value_moved{std::move(value)};
   ASSERT_EQ(value_moved.string_value().value(), "bar");
 
-  // A flexible union additionally supports querying if the active member was
-  // not defined in the FIDL schema.
+  // When switching over the tag from a flexible union, one must add a `default:`
+  // case, to handle members not understood by the FIDL schema or to handle
+  // newly added members in a source compatible way.
   fuchsia_examples::FlexibleJsonValue flexible_value =
       fuchsia_examples::FlexibleJsonValue::WithIntValue(1);
-  // If |flexible_value| was received from a peer with a different FIDL schema,
-  // |Which| may return |kUnknown| if that peer sent a union with a member that
-  // we do not understand. In this example |flexible_value| holds a known active
-  // member.
-  ASSERT_NE(flexible_value.Which(), fuchsia_examples::FlexibleJsonValue::Tag::kUnknown);
+  switch (flexible_value.Which()) {
+    case fuchsia_examples::FlexibleJsonValue::Tag::kIntValue:
+      ASSERT_EQ(flexible_value.int_value().value(), 1);
+      break;
+    case fuchsia_examples::FlexibleJsonValue::Tag::kStringValue:
+      FAIL() << "Unexpected tag. |flexible_value| was set to int";
+      break;
+    default:  // Removing this branch will fail to compile.
+      break;
+  }
 }
 // [END natural-unions]
 
@@ -387,15 +393,21 @@ TEST(WireTypes, Unions) {
   fuchsia_examples::wire::JsonValue& value = optional_json.value();
   ASSERT_TRUE(value.is_int_value());
 
-  // A flexible union additionally supports querying if the active member was
-  // not defined in the FIDL schema.
+  // When switching over the tag from a flexible union, one must add a `default:`
+  // case, to handle members not understood by the FIDL schema or to handle
+  // newly added members in a source compatible way.
   fuchsia_examples::wire::FlexibleJsonValue flexible_value =
       fuchsia_examples::wire::FlexibleJsonValue::WithIntValue(1);
-  // If |flexible_value| was received from a peer with a different FIDL schema,
-  // |Which| may return |kUnknown| if that peer sent a union with a member that
-  // we do not understand. In this example |flexible_value| holds a known active
-  // member because we just created it ourselves.
-  ASSERT_NE(flexible_value.Which(), fuchsia_examples::wire::FlexibleJsonValue::Tag::kUnknown);
+  switch (flexible_value.Which()) {
+    case fuchsia_examples::wire::FlexibleJsonValue::Tag::kIntValue:
+      ASSERT_EQ(flexible_value.int_value(), 1);
+      break;
+    case fuchsia_examples::wire::FlexibleJsonValue::Tag::kStringValue:
+      FAIL() << "Unexpected tag. |flexible_value| was set to int";
+      break;
+    default:  // Removing this branch will fail to compile.
+      break;
+  }
 }
 // [END wire-unions]
 

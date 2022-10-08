@@ -997,8 +997,11 @@ class LocalUnionPayload {
 
   enum class Tag : fidl_xunion_tag_t {
     kB = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_protocollayouts::wire::LocalUnionPayload::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_protocollayouts::wire::LocalUnionPayload::Ordinal::Invalid; }
 
@@ -1382,8 +1385,11 @@ class MainProtocolTwoWayAnonRequest {
 
   enum class Tag : fidl_xunion_tag_t {
     kB = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest::Ordinal::Invalid; }
 
@@ -1435,8 +1441,11 @@ class MainProtocolTwoWayAnonWithErrorResponse {
 
   enum class Tag : fidl_xunion_tag_t {
     kB = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse::Ordinal::Invalid; }
 
@@ -1572,8 +1581,11 @@ class MainProtocolOnAnonRequest {
 
   enum class Tag : fidl_xunion_tag_t {
     kB = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_protocollayouts::wire::MainProtocolOnAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   bool has_invalid_tag() const { return ordinal_ == ::test_protocollayouts::wire::MainProtocolOnAnonRequest::Ordinal::Invalid; }
 

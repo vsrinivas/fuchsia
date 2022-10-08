@@ -157,7 +157,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };

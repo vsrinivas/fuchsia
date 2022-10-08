@@ -14,7 +14,7 @@ auto ::test_doccomments::wire::FlexibleUnion::Which() const -> ::test_doccomment
     case ::test_doccomments::wire::FlexibleUnion::Ordinal::kField:
       return static_cast<::test_doccomments::wire::FlexibleUnion::Tag>(ordinal_);
     default:
-      return ::test_doccomments::wire::FlexibleUnion::Tag::kUnknown;
+      return ::test_doccomments::wire::FlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 

@@ -191,11 +191,11 @@ class Expression {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kValue = 1,                // 0x1
     kBinOp = 2,                // 0x2
     kFunctionApplication = 3,  // 0x3
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Expression(Expression&& other) noexcept
@@ -221,6 +221,9 @@ class Expression {
   }
   bool operator!=(const Expression& other) const noexcept {
     return *storage_ != *other.storage_;
+  }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_anonymous::Expression::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 
   constexpr ::test_anonymous::Expression::Tag Which() const {
@@ -283,7 +286,7 @@ class Expression {
         return 2;
       case ::test_anonymous::Expression::Tag::kFunctionApplication:
         return 3;
-      case ::test_anonymous::Expression::Tag::kUnknown:
+      case ::test_anonymous::Expression::Tag::_do_not_handle_this__write_a_default_case_instead:
         return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -301,7 +304,7 @@ class Expression {
       case 3:
         return ::test_anonymous::Expression::Tag::kFunctionApplication;
       default:
-        return ::test_anonymous::Expression::Tag::kUnknown;
+        return ::test_anonymous::Expression::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 };
@@ -316,9 +319,9 @@ class UnionMember {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kUnionData = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnionMember(UnionMember&& other) noexcept
@@ -344,6 +347,9 @@ class UnionMember {
   }
   bool operator!=(const UnionMember& other) const noexcept {
     return *storage_ != *other.storage_;
+  }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_anonymous::UnionMember::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 
   constexpr ::test_anonymous::UnionMember::Tag Which() const {
@@ -378,7 +384,7 @@ class UnionMember {
     switch (tag) {
       case ::test_anonymous::UnionMember::Tag::kUnionData:
         return 1;
-      case ::test_anonymous::UnionMember::Tag::kUnknown:
+      case ::test_anonymous::UnionMember::Tag::_do_not_handle_this__write_a_default_case_instead:
         return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -392,7 +398,7 @@ class UnionMember {
       case 1:
         return ::test_anonymous::UnionMember::Tag::kUnionData;
       default:
-        return ::test_anonymous::UnionMember::Tag::kUnknown;
+        return ::test_anonymous::UnionMember::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 };
@@ -646,7 +652,7 @@ class SomeProtocolSomeMethodResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };

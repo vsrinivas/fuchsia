@@ -53,6 +53,12 @@ class {{ .Name }} {
   {{- end }}
   };
 
+  {{- if .IsFlexible }}
+  constexpr bool IsUnknown() const {
+    return Which() == {{ .TagUnknown }};
+  }
+  {{- end }}
+
   bool has_invalid_tag() const { return ordinal_ == {{ .WireInvalidOrdinal }}; }
 
   {{- range $index, $member := .Members }}

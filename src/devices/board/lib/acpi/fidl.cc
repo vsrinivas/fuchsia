@@ -447,7 +447,7 @@ acpi::status<> EvaluateObjectFidlHelper::DecodeObject(
       out->Reference.Handle = hnd;
       break;
     }
-    case Tag::kUnknown:
+    default:
       return acpi::error(AE_NOT_IMPLEMENTED);
   }
   return acpi::ok();

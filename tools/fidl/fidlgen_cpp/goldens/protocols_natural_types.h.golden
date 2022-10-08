@@ -734,7 +734,7 @@ class WithErrorSyntaxResponseAsStructResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -992,7 +992,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -1250,7 +1250,7 @@ class WithErrorSyntaxErrorAsEnumResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -1501,7 +1501,7 @@ class WithErrorSyntaxHandleInResultResult {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,  // 0x2
   };
@@ -3651,9 +3651,9 @@ class TheUnion {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kV = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   TheUnion(TheUnion&& other) noexcept
@@ -3680,6 +3680,9 @@ class TheUnion {
     bool operator!=(const TheUnion& other) const noexcept {
       return *storage_ != *other.storage_;
     }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_protocols::TheUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
+  }
 
   constexpr ::test_protocols::TheUnion::Tag Which() const {
     return TheUnion::IndexToTag(storage_->index()).value();
@@ -3713,7 +3716,7 @@ class TheUnion {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_protocols::TheUnion::Tag tag) {
     switch (tag) {
         case ::test_protocols::TheUnion::Tag::kV: return 1;
-        case ::test_protocols::TheUnion::Tag::kUnknown: return 0;
+        case ::test_protocols::TheUnion::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
@@ -3724,7 +3727,7 @@ class TheUnion {
   static constexpr std::optional<::test_protocols::TheUnion::Tag> IndexToTag(size_t index) {
     switch (index) {
         case 1: return ::test_protocols::TheUnion::Tag::kV;
-        default: return ::test_protocols::TheUnion::Tag::kUnknown;
+        default: return ::test_protocols::TheUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 

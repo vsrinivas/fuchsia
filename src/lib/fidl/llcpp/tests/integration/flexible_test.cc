@@ -182,7 +182,7 @@ class RewriteTransaction : public fidl::Transaction {
                  kUnknownBytes);
           break;
         }
-        case test::wire::FlexibleXUnion::Tag::kUnknown:
+        default:
           ZX_ASSERT_MSG(false, "Cannot reach here");
       }
     }
@@ -347,7 +347,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreBytes) {
   auto result = client->GetUnknownXUnionMoreBytes();
   EXPECT_TRUE(result.ok());
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  ASSERT_EQ(result.value().xu.Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
+  ASSERT_TRUE(result.value().xu.IsUnknown());
 }
 
 static_assert(fidl::internal::ClampedHandleCount<
@@ -361,7 +361,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreHandles) {
   auto result = client->GetUnknownXUnionMoreHandles();
   EXPECT_TRUE(result.ok());
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
-  ASSERT_EQ(result.value().xu.Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
+  ASSERT_TRUE(result.value().xu.IsUnknown());
 }
 
 static_assert(
@@ -494,7 +494,7 @@ TEST_F(FlexibleEnvelopeEventTest, ReceiveUnknownXUnionFieldWithMoreBytes) {
         fidl::WireEvent<test::ReceiveFlexibleEnvelope::OnUnknownXUnionMoreBytes>* event) final {
       EXPECT_FALSE(event->is_want_more_than_30_bytes());
       EXPECT_FALSE(event->is_want_more_than_4_handles());
-      EXPECT_EQ(event->Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
+      EXPECT_TRUE(event->IsUnknown());
       called = true;
     }
 
@@ -541,7 +541,7 @@ TEST_F(FlexibleEnvelopeEventTest, ReceiveUnknownXUnionFieldWithMoreHandles) {
         fidl::WireEvent<test::ReceiveFlexibleEnvelope::OnUnknownXUnionMoreHandles>* event) final {
       EXPECT_FALSE(event->is_want_more_than_30_bytes());
       EXPECT_FALSE(event->is_want_more_than_4_handles());
-      EXPECT_EQ(event->Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
+      EXPECT_TRUE(event->IsUnknown());
       called = true;
     }
 

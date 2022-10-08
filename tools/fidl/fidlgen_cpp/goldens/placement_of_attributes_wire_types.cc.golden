@@ -14,7 +14,7 @@ auto ::test_placementofattributes::wire::ExampleXUnion::Which() const -> ::test_
     case ::test_placementofattributes::wire::ExampleXUnion::Ordinal::kVariant:
       return static_cast<::test_placementofattributes::wire::ExampleXUnion::Tag>(ordinal_);
     default:
-      return ::test_placementofattributes::wire::ExampleXUnion::Tag::kUnknown;
+      return ::test_placementofattributes::wire::ExampleXUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 }
 

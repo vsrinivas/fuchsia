@@ -118,8 +118,8 @@ void CheckEq(facpi::Object value, facpi::Object expected) {
       ASSERT_EQ(val.object_type, exp.object_type);
       break;
     }
-    case Tag::kUnknown:
-      ASSERT_TRUE(false);
+    default:
+      FAIL("Unexpected tag: %" PRIu64, static_cast<fidl_xunion_tag_t>(value.Which()));
   }
 }
 

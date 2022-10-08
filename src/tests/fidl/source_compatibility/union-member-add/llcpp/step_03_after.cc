@@ -45,8 +45,9 @@ std::string reader(const fidl_test::wire::JsonValue& value) {
       return std::string(value.string_value().data(), value.string_value().size());
     case fidl_test::wire::JsonValue::Tag::kFloatValue:
       return std::to_string(value.float_value());
-    case fidl_test::wire::JsonValue::Tag::kUnknown:
-      return "<unknown>";
+    default:
+      return std::string("<unknown member: ") +
+             std::to_string(static_cast<fidl_xunion_tag_t>(value.Which())) + ">";
   }
 }
 // [END contents]

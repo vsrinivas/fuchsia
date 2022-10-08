@@ -207,7 +207,7 @@ class ExampleUnion {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
   };
 
@@ -295,9 +295,9 @@ class ExampleXUnion {
 
  public:
   // TODO: share union tag types between wire & natural.
-  enum class Tag : fidl_union_tag_t {
+  enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+    _do_not_handle_this__write_a_default_case_instead = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   ExampleXUnion(ExampleXUnion&& other) noexcept
@@ -323,6 +323,9 @@ class ExampleXUnion {
   }
   bool operator!=(const ExampleXUnion& other) const noexcept {
     return *storage_ != *other.storage_;
+  }
+  constexpr bool IsUnknown() const {
+    return Which() == ::test_placementofattributes::ExampleXUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
   }
 
   constexpr ::test_placementofattributes::ExampleXUnion::Tag Which() const {
@@ -357,7 +360,7 @@ class ExampleXUnion {
     switch (tag) {
       case ::test_placementofattributes::ExampleXUnion::Tag::kVariant:
         return 1;
-      case ::test_placementofattributes::ExampleXUnion::Tag::kUnknown:
+      case ::test_placementofattributes::ExampleXUnion::Tag::_do_not_handle_this__write_a_default_case_instead:
         return 0;
       default: {
         decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
@@ -371,7 +374,7 @@ class ExampleXUnion {
       case 1:
         return ::test_placementofattributes::ExampleXUnion::Tag::kVariant;
       default:
-        return ::test_placementofattributes::ExampleXUnion::Tag::kUnknown;
+        return ::test_placementofattributes::ExampleXUnion::Tag::_do_not_handle_this__write_a_default_case_instead;
     }
   }
 };
