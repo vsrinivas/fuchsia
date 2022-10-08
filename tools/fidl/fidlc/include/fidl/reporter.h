@@ -60,13 +60,6 @@ class Reporter {
     Report(Diagnostic::MakeWarning(def, span, args...));
   }
 
-  // TODO(fxbug.dev/108248): Remove once all outstanding warnings are documented.
-  template <ErrorId Id, typename... Args>
-  void Warn(const UndocumentedWarningDef<Id, Args...>& def, SourceSpan span,
-            const identity_t<Args>&... args) {
-    Report(Diagnostic::MakeWarning(def, span, args...));
-  }
-
   // Reports an error or warning.
   void Report(std::unique_ptr<Diagnostic> diag);
 
@@ -140,13 +133,6 @@ class ReporterMixin {
 
   template <ErrorId Id, typename... Args>
   void Warn(const WarningDef<Id, Args...>& def, SourceSpan span,
-            const identity_t<Args>&... args) const {
-    reporter_->Warn(def, span, args...);
-  }
-
-  // TODO(fxbug.dev/108248): Remove once all outstanding warnings are documented.
-  template <ErrorId Id, typename... Args>
-  void Warn(const UndocumentedWarningDef<Id, Args...>& def, SourceSpan span,
             const identity_t<Args>&... args) const {
     reporter_->Warn(def, span, args...);
   }

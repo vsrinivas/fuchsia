@@ -172,16 +172,6 @@ struct WarningDef final : DiagnosticDef {
   }
 };
 
-// TODO(fxbug.dev/108248): Remove once all outstanding warnings are documented.
-// Identical to a Warning, except it does not print the permalink.
-template <ErrorId Id, typename... Args>
-struct UndocumentedWarningDef final : DiagnosticDef {
-  constexpr explicit UndocumentedWarningDef(std::string_view msg)
-      : DiagnosticDef(Id, DiagnosticKind::kWarning, DiagnosticDocumented::kNotDocumented, msg) {
-    internal::CheckFormatArgs<Args...>(msg);
-  }
-};
-
 // The definition of an obsolete error. These are never displayed to the user -
 // they are merely used to retire error numerals from circulation.
 template <ErrorId Id, typename... Args>
@@ -220,13 +210,6 @@ struct Diagnostic {
 
   template <ErrorId Id, typename... Args>
   static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Id, Args...>& def,
-                                                 SourceSpan span, const identity_t<Args>&... args) {
-    return std::make_unique<Diagnostic>(def, span, args...);
-  }
-
-  // TODO(fxbug.dev/108248): Remove once all outstanding warnings are documented.
-  template <ErrorId Id, typename... Args>
-  static std::unique_ptr<Diagnostic> MakeWarning(const UndocumentedWarningDef<Id, Args...>& def,
                                                  SourceSpan span, const identity_t<Args>&... args) {
     return std::make_unique<Diagnostic>(def, span, args...);
   }

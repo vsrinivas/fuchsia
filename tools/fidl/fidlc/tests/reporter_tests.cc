@@ -20,25 +20,19 @@ using fidl::SourceSpan;
 using fidl::VirtualSourceFile;
 using fidl::WarningDef;
 
-// TODO(fxbug.dev/108248): Remove once all outstanding diagnostics are documented.
+// TODO(fxbug.dev/108248): Remove once all outstanding errors are documented.
 using fidl::UndocumentedErrorDef;
-using fidl::UndocumentedWarningDef;
-const fidl::ErrorId kTestUndocumentedErrorId = 9996;
-const std::string kTestUndocumentedErrorIdStr = "fi-9996";
-const fidl::ErrorId kTestUndocumentedWarningId = 9997;
-const std::string kTestUndocumentedWarningIdStr = "fi-9997";
+const fidl::ErrorId kTestUndocumentedErrorId = 9997;
+const std::string kTestUndocumentedErrorIdStr = "fi-9997";
 
 const fidl::ErrorId kTestErrorId = 9998;
 const std::string kTestErrorIdStr = "fi-9998";
 const fidl::ErrorId kTestWarningId = 9999;
 const std::string kTestWarningIdStr = "fi-9999";
 
-// TODO(fxbug.dev/108248): Remove once all outstanding diagnostics are documented.
+// TODO(fxbug.dev/108248): Remove once all outstanding errors are documented.
 constexpr UndocumentedErrorDef<kTestUndocumentedErrorId, std::string_view, std::string_view>
     UndocumentedErrTest("This undocumented test error has one string param '{}' and another '{}'.");
-constexpr UndocumentedWarningDef<kTestUndocumentedWarningId, std::string_view, std::string_view>
-    UndocumentedWarnTest(
-        "This undocumented test warning has one string param '{}' and another '{}'.");
 
 constexpr ErrorDef<kTestErrorId, std::string_view, std::string_view> ErrTest(
     "This test error has one string param '{}' and another '{}'.");
@@ -79,44 +73,6 @@ TEST(ReporterTests, MakeUndocumentedErrorThenReportIt) {
   EXPECT_NOT_SUBSTR(errors[0]->msg.c_str(), kTestUndocumentedErrorIdStr);
   ASSERT_SUBSTR(errors[0]->msg.c_str(),
                 "This undocumented test error has one string param 'param1' and another 'param2'.");
-}
-
-// TODO(fxbug.dev/108248): Remove once all outstanding warnings are documented.
-TEST(ReporterTests, ReportUndocumentedWarningFormatParams) {
-  Reporter reporter;
-  VirtualSourceFile file("fake");
-  SourceSpan span("span text", file);
-  reporter.Warn(UndocumentedWarnTest, span, "param1", "param2");
-
-  const auto& warnings = reporter.warnings();
-  ASSERT_EQ(warnings.size(), 1);
-  ASSERT_EQ(warnings[0]->span, span);
-  EXPECT_EQ(warnings[0]->PrintId(), kTestUndocumentedWarningIdStr);
-  EXPECT_NOT_SUBSTR(warnings[0]->Print().c_str(), kTestUndocumentedWarningIdStr);
-  EXPECT_NOT_SUBSTR(warnings[0]->msg.c_str(), kTestUndocumentedWarningIdStr);
-  EXPECT_SUBSTR(
-      warnings[0]->msg.c_str(),
-      "This undocumented test warning has one string param 'param1' and another 'param2'.");
-}
-
-// TODO(fxbug.dev/108248): Remove once all outstanding warnings are documented.
-TEST(ReporterTests, MakeUndocumentedWarningThenReportIt) {
-  Reporter reporter;
-  VirtualSourceFile file("fake");
-  SourceSpan span("span text", file);
-  std::unique_ptr<Diagnostic> diag =
-      Diagnostic::MakeWarning(UndocumentedWarnTest, span, "param1", "param2");
-  reporter.Report(std::move(diag));
-
-  const auto& warnings = reporter.warnings();
-  ASSERT_EQ(warnings.size(), 1);
-  ASSERT_EQ(warnings[0]->span, span);
-  EXPECT_EQ(warnings[0]->PrintId(), kTestUndocumentedWarningIdStr);
-  EXPECT_NOT_SUBSTR(warnings[0]->Print().c_str(), kTestUndocumentedWarningIdStr);
-  EXPECT_NOT_SUBSTR(warnings[0]->msg.c_str(), kTestUndocumentedWarningIdStr);
-  EXPECT_SUBSTR(
-      warnings[0]->msg.c_str(),
-      "This undocumented test warning has one string param 'param1' and another 'param2'.");
 }
 
 TEST(ReporterTests, ReportErrorFormatParams) {
