@@ -28,6 +28,7 @@ group("tests") {
 
   # TODO(fxbug.dev/111273): Add per-binding `:tests` target after building out each implementation.
   deps = [
+    "cpp-natural:tests",
     "cpp-wire:tests",
     "rust:tests",
   ]
