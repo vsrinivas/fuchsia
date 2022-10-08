@@ -564,14 +564,8 @@ TEST(ParsingTests, GoodMultilineDocCommentHasCorrectContents) {
 }
 
 TEST(ParsingTests, WarnDocCommentBlankLineTest) {
-  TestLibrary library(R"FIDL(
-library example;
-
-/// start
-
-/// end
-type Empty = struct {};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/blank_line_inside_doc_comment.test.fidl");
 
   ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnBlankLinesWithinDocCommentBlock);
 }
@@ -615,12 +609,8 @@ TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
 }
 
 TEST(ParsingTests, GoodBlankLinesAfterDocCommentTest) {
-  TestLibrary library(R"FIDL(library example;
-
-/// A doc comment
-
-type Empty = struct {};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("good/blank_line_after_doc_comment.test.fidl");
 
   library.set_warnings_as_errors(true);
   ASSERT_COMPILED(library);

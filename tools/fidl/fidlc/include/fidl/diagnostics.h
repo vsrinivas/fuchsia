@@ -54,7 +54,7 @@ constexpr UndocumentedErrorDef<25> ErrLibraryImportsMustBeGroupedAtTopOfFile(
     "library imports must be grouped at top-of-file");
 constexpr WarningDef<26> WarnCommentWithinDocCommentBlock(
     "cannot have comment within doc comment block");
-constexpr UndocumentedWarningDef<27> WarnBlankLinesWithinDocCommentBlock(
+constexpr WarningDef<27> WarnBlankLinesWithinDocCommentBlock(
     "cannot have blank lines within doc comment block");
 constexpr WarningDef<28> WarnDocCommentMustBeFollowedByDeclaration(
     "doc comment must be followed by a declaration");

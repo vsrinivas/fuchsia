@@ -18,6 +18,8 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<error-catalog/_fi-0026.md>>
 
+<<error-catalog/_fi-0027.md>>
+
 <<error-catalog/_fi-0028.md>>
 
 <<error-catalog/_fi-0033.md>>
