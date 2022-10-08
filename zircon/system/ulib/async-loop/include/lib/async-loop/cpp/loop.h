@@ -79,6 +79,16 @@ class Loop {
   /// without waiting. This is useful for unit testing, because the behavior
   /// doesn't depend on time.
   ///
+  /// WARNING: Calling RunUntilIdle() with a dispatcher that runs on a separate
+  /// thread or a multi-threaded dispatcher (common outside single-threaded
+  /// tests) can have subtle unexpected consequences:
+  ///   1) This may return before newly queued work is completed, because the
+  ///      work may be dispatched to a different thread. The calling thread will
+  ///      not wait on that work to complete, only for it to be removed from the
+  ///      pending work queue (roughly speaking).
+  ///   2) Work that was previously queued, prior to calling RunUntilIdle(), is
+  ///      also not guaranteed to have completed when RunUntilIdle() finishes.
+  ///
   /// Returns |ZX_OK| if the dispatcher reaches an idle state.
   /// Returns |ZX_ERR_CANCELED| if the loop quitted.
   /// Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |Shutdown()|.
