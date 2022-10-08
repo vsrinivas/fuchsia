@@ -24,7 +24,7 @@ import("//build/toolchain/variant.gni")
 # These flags are enabled by default in Fuchsia's Clang toolchain, but we set
 # them explicitly to support other Clang toolchains and Clang-based tools.
 config("clang_defaults") {
-  cflags = []
+  cflags = [ "-fcrash-diagnostics=all" ]
   if (clang_embed_bitcode) {
     cflags += [
       "-Xclang",
@@ -33,10 +33,6 @@ config("clang_defaults") {
   }
   if (clang_enable_error_reproducers) {
     cflags += [ "-gen-reproducer=error" ]
-
-    # TODO(fxbug.dev/72786): This should be the default after the clang roll. It is just
-    # behind this flag until then.
-    cflags += [ "-fcrash-diagnostics=all" ]
   }
   if (current_cpu == "x64") {
     asmflags = [ "-Wa,--mrelax-relocations=yes" ]
