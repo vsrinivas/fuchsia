@@ -120,6 +120,7 @@ test("intel-i915-tgl-test") {
     "power-controller-unittest.cc",
     "power-unittest.cc",
     "registers-ddi-unittest.cc",
+    "registers-pipe-unittest.cc",
     "registers-transcoder-unittest.cc",
     "registers-typec-unittest.cc",
     "registers-unittest.cc",

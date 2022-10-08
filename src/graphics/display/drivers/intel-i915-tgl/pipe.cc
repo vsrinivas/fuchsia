@@ -5,6 +5,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
 
 #include <float.h>
+#include <lib/ddk/debug.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <math.h>
@@ -316,8 +317,8 @@ void Pipe::ApplyModeConfig(const display_mode_t& mode) {
 
   tgl_registers::PipeRegs pipe_regs(pipe_id());
   auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
-  pipe_size.set_horizontal_source_size(mode.h_addressable - 1);
-  pipe_size.set_vertical_source_size(mode.v_addressable - 1);
+  pipe_size.set_horizontal_source_size_minus_one(mode.h_addressable - 1);
+  pipe_size.set_vertical_source_size_minus_one(mode.v_addressable - 1);
   pipe_size.WriteTo(mmio_space_);
 }
 
@@ -364,8 +365,8 @@ void Pipe::LoadActiveMode(display_mode_t* mode) {
   // the display mode size, since we never scale pipes.
   tgl_registers::PipeRegs pipe_regs(pipe_);
   auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
-  pipe_size.set_horizontal_source_size(mode->h_addressable - 1);
-  pipe_size.set_vertical_source_size(mode->v_addressable - 1);
+  pipe_size.set_horizontal_source_size_minus_one(mode->h_addressable - 1);
+  pipe_size.set_vertical_source_size_minus_one(mode->v_addressable - 1);
   pipe_size.WriteTo(mmio_space_);
 }
 
@@ -483,11 +484,12 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
 
   auto plane_ctrl = pipe_regs.PlaneControl(plane_num).ReadFrom(mmio_space_);
   if (primary == nullptr) {
-    plane_ctrl.set_plane_enable(0).WriteTo(mmio_space_);
+    plane_ctrl.set_plane_enabled(false).WriteTo(mmio_space_);
     regs->plane_surf[plane_num] = 0;
     return;
   }
-  plane_ctrl.set_render_decompression(false).set_allow_double_buffer_update_disable(1);
+  plane_ctrl.set_decompress_render_compressed_surfaces(false)
+      .set_double_buffer_update_disabling_allowed(true);
 
   const image_t* image = &primary->image;
 
@@ -579,12 +581,26 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
   stride_reg.set_stride(stride);
   stride_reg.WriteTo(mmio_space_);
 
+  tgl_registers::PlaneControlAlphaMode alpha_mode;
+  if (primary->alpha_mode == ALPHA_DISABLE ||
+      primary->image.pixel_format == ZX_PIXEL_FORMAT_RGB_x888 ||
+      primary->image.pixel_format == ZX_PIXEL_FORMAT_BGR_888x) {
+    alpha_mode = tgl_registers::PlaneControlAlphaMode::kAlphaIgnored;
+  } else if (primary->alpha_mode == ALPHA_PREMULTIPLIED) {
+    alpha_mode = tgl_registers::PlaneControlAlphaMode::kAlphaPreMultiplied;
+  } else {
+    ZX_ASSERT(primary->alpha_mode == ALPHA_HW_MULTIPLY);
+    alpha_mode = tgl_registers::PlaneControlAlphaMode::kAlphaHardwareMultiply;
+  }
+
   if (platform_ == tgl_registers::Platform::kTigerLake) {
-    auto plane_color_ctl = pipe_regs.PlaneColorControlTigerLake(0).ReadFrom(mmio_space_);
-    plane_color_ctl.set_pipe_gamma_enable(0)
-        .set_pipe_csc_enable(enable_csc)
-        .set_plane_input_csc_enable(0)
-        .set_plane_gamma_disable(1)
+    auto plane_color_ctl = pipe_regs.PlaneColorControlTigerLake(plane_num).ReadFrom(mmio_space_);
+    plane_color_ctl.set_pipe_gamma_enabled_deprecated(false)
+        .set_pipe_csc_enabled_deprecated(enable_csc)
+        .set_plane_input_csc_enabled(false)
+        .set_pre_csc_gamma_enabled(false)
+        .set_post_csc_gamma_disabled(true)
+        .set_alpha_mode(alpha_mode)
         .WriteTo(mmio_space_);
   }
 
@@ -599,56 +615,49 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
     plane_key_max.WriteTo(mmio_space_);
   }
   plane_key_mask.WriteTo(mmio_space_);
-  if (primary->alpha_mode == ALPHA_DISABLE ||
-      primary->image.pixel_format == ZX_PIXEL_FORMAT_RGB_x888 ||
-      primary->image.pixel_format == ZX_PIXEL_FORMAT_BGR_888x) {
-    plane_ctrl.set_alpha_mode(plane_ctrl.kAlphaDisable);
-  } else if (primary->alpha_mode == ALPHA_PREMULTIPLIED) {
-    plane_ctrl.set_alpha_mode(plane_ctrl.kAlphaPreMultiply);
-  } else {
-    ZX_ASSERT(primary->alpha_mode == ALPHA_HW_MULTIPLY);
-    plane_ctrl.set_alpha_mode(plane_ctrl.kAlphaHwMultiply);
-  }
 
-  plane_ctrl.set_plane_enable(1);
+  plane_ctrl.set_plane_enabled(true);
   if (platform_ != tgl_registers::Platform::kTigerLake) {
-    plane_ctrl.set_pipe_csc_enable_kaby_lake(enable_csc);
+    plane_ctrl.set_pipe_csc_enabled_kaby_lake(enable_csc).set_alpha_mode_kaby_lake(alpha_mode);
   }
   if (platform_ == tgl_registers::Platform::kTigerLake) {
-    plane_ctrl.set_source_pixel_format_tiger_lake(plane_ctrl.kFormatRgb8888);
+    plane_ctrl.set_source_pixel_format_tiger_lake(
+        tgl_registers::PlaneControl::ColorFormatTigerLake::kRgb8888);
   } else {
-    plane_ctrl.set_source_pixel_format_kaby_lake(plane_ctrl.kFormatRgb8888);
+    plane_ctrl.set_source_pixel_format_kaby_lake(
+        tgl_registers::PlaneControl::ColorFormatKabyLake::kRgb8888);
   }
   if (primary->image.pixel_format == ZX_PIXEL_FORMAT_ABGR_8888 ||
       primary->image.pixel_format == ZX_PIXEL_FORMAT_BGR_888x) {
-    plane_ctrl.set_rgb_color_order(plane_ctrl.kOrderRgbx);
+    plane_ctrl.set_rgb_color_order(tgl_registers::PlaneControl::RgbColorOrder::kRgbx);
   } else {
-    plane_ctrl.set_rgb_color_order(plane_ctrl.kOrderBgrx);
+    plane_ctrl.set_rgb_color_order(tgl_registers::PlaneControl::RgbColorOrder::kBgrx);
   }
   if (primary->image.type == IMAGE_TYPE_SIMPLE) {
-    plane_ctrl.set_tiled_surface(plane_ctrl.kLinear);
+    plane_ctrl.set_surface_tiling(tgl_registers::PlaneControl::SurfaceTiling::kLinear);
   } else if (primary->image.type == IMAGE_TYPE_X_TILED) {
-    plane_ctrl.set_tiled_surface(plane_ctrl.kTilingX);
+    plane_ctrl.set_surface_tiling(tgl_registers::PlaneControl::SurfaceTiling::kTilingX);
   } else if (primary->image.type == IMAGE_TYPE_Y_LEGACY_TILED) {
-    plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYLegacy);
+    plane_ctrl.set_surface_tiling(tgl_registers::PlaneControl::SurfaceTiling::kTilingYLegacy);
   } else {
     ZX_ASSERT(primary->image.type == IMAGE_TYPE_YF_TILED);
-    plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYF);
+    if (platform_ == tgl_registers::Platform::kTigerLake) {
+      // TODO(fxbug.dev/111347): Remove this warning or turn it into an error.
+      zxlogf(ERROR, "The Tiger Lake display engine may not support YF tiling.");
+    }
+    plane_ctrl.set_surface_tiling(tgl_registers::PlaneControl::SurfaceTiling::kTilingYFKabyLake);
   }
   if (primary->transform_mode == FRAME_TRANSFORM_IDENTITY) {
-    plane_ctrl.set_plane_rotation(plane_ctrl.kIdentity);
+    plane_ctrl.set_rotation(tgl_registers::PlaneControl::Rotation::kIdentity);
   } else if (primary->transform_mode == FRAME_TRANSFORM_ROT_90) {
-    plane_ctrl.set_plane_rotation(plane_ctrl.k90deg);
+    plane_ctrl.set_rotation(tgl_registers::PlaneControl::Rotation::k90degrees);
   } else if (primary->transform_mode == FRAME_TRANSFORM_ROT_180) {
-    plane_ctrl.set_plane_rotation(plane_ctrl.k180deg);
+    plane_ctrl.set_rotation(tgl_registers::PlaneControl::Rotation::k180degrees);
   } else {
     ZX_ASSERT(primary->transform_mode == FRAME_TRANSFORM_ROT_270);
-    plane_ctrl.set_plane_rotation(plane_ctrl.k270deg);
+    plane_ctrl.set_rotation(tgl_registers::PlaneControl::Rotation::k270degrees);
   }
-  if (platform_ == tgl_registers::Platform::kTigerLake) {
-    plane_ctrl.set_render_decompression(false).set_allow_double_buffer_update_disable(true).WriteTo(
-        mmio_space_);
-  }
+  plane_ctrl.WriteTo(mmio_space_);
 
   auto plane_surface = pipe_regs.PlaneSurface(plane_num).ReadFrom(mmio_space_);
   plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);

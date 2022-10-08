@@ -452,7 +452,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 void Controller::ResetPipePlaneBuffers(tgl_registers::Pipe pipe) {
   fbl::AutoLock lock(&plane_buffers_lock_);
   for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
-    plane_buffers_[pipe][plane_num].start = tgl_registers::PlaneBufCfg::kBufferCount;
+    plane_buffers_[pipe][plane_num].start = tgl_registers::PlaneBufferConfig::kBufferCount;
   }
 }
 
@@ -916,7 +916,7 @@ bool Controller::GetPlaneLayer(Pipe* pipe, uint32_t plane,
 
 uint16_t Controller::CalculateBuffersPerPipe(size_t active_pipe_count) {
   ZX_ASSERT(active_pipe_count < tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size());
-  return static_cast<uint16_t>(tgl_registers::PlaneBufCfg::kBufferCount / active_pipe_count);
+  return static_cast<uint16_t>(tgl_registers::PlaneBufferConfig::kBufferCount / active_pipe_count);
 }
 
 bool Controller::CalculateMinimumAllocations(
@@ -1041,7 +1041,7 @@ void Controller::UpdateAllocations(
         auto cur = &plane_buffers_[pipe_num][plane_num];
 
         if (allocs[pipe_num][plane_num] == 0) {
-          cur->start = tgl_registers::PlaneBufCfg::kBufferCount;
+          cur->start = tgl_registers::PlaneBufferConfig::kBufferCount;
           cur->end = static_cast<uint16_t>(cur->start + 1);
         } else {
           cur->start = start;
@@ -1062,7 +1062,7 @@ void Controller::UpdateAllocations(
 
         // TODO(stevensd): Real watermark programming
         auto wm0 = pipe_regs.PlaneWatermark(plane_num + 1, 0).FromValue(0);
-        wm0.set_enable(cur->start != tgl_registers::PlaneBufCfg::kBufferCount);
+        wm0.set_enable(cur->start != tgl_registers::PlaneBufferConfig::kBufferCount);
         wm0.set_blocks(cur->end - cur->start);
         wm0.WriteTo(mmio_space());
 
@@ -1075,7 +1075,7 @@ void Controller::UpdateAllocations(
           buf_cfg.WriteTo(mmio_space());
 
           auto wm0 = pipe_regs.PlaneWatermark(0, 0).FromValue(0);
-          wm0.set_enable(cur->start != tgl_registers::PlaneBufCfg::kBufferCount);
+          wm0.set_enable(cur->start != tgl_registers::PlaneBufferConfig::kBufferCount);
           wm0.set_blocks(cur->end - cur->start);
           wm0.WriteTo(mmio_space());
         }
