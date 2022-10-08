@@ -1,0 +1,35 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library examples.canvas;
+
+/// A point in 2D space.
+type Point = struct {
+    x int64;
+    y int64;
+};
+
+/// A line in 2D space.
+alias Line = array<Point, 2>;
+
+/// A bounding box in 2D space. This is the result of "drawing" operations on our canvas, and what
+/// the server reports back to the client. These bounds are sufficient to contain all of the
+/// lines (inclusive) on a canvas at a given time.
+type BoundingBox = struct {
+    top_left Point;
+    bottom_right Point;
+};
+
+/// Manages a single instance of a canvas. Each session of this protocol is responsible for a new
+/// canvas.
+@discoverable
+protocol Instance {
+    /// Add a line to the canvas.
+    AddLine(struct {
+        line Line;
+    });
+
+    /// Update the client with the latest drawing state. The server makes no guarantees about how
+    /// often this event occurs - it could occur multiple times per board state, for example.
+    -> OnDrawn(BoundingBox);
+};

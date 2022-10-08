@@ -4,8 +4,5 @@
 
 group("tests") {
   testonly = true
-  deps = [
-    "canvas:tests",
-    "key-value-store:tests",
-  ]
+  deps = [ "baseline:tests" ]
 }

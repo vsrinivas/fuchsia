@@ -83,5 +83,7 @@ toc:
   section:
   - title: "Overview"
     path: /docs/development/languages/fidl/examples/README.md
+  - title: "Canvas"
+    path: /docs/development/languages/fidl/examples/canvas/README.md
   - title: "Key value store"
     path: /docs/development/languages/fidl/examples/key-value-store/README.md

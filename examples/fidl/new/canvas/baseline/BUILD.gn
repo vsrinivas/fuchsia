@@ -1,0 +1,30 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+# Generate the manifest for the client component.
+fuchsia_component_manifest("client_manifest") {
+  component_name = "canvas_client"
+  manifest = "//examples/fidl/new/canvas/baseline/meta/client.cml"
+}
+
+# Set structured configuration values for the client component manifest specified above. This
+# provides a means by which to pass arguments to our client component. Such arguments may be set at
+# compile-time, as seen here, or altered for testing purposes via a RealmBuilder. In this case,
+# because this is an example, and will this only ever be executed as a test, we intentionally ignore
+# the compile-time values set here and overwrite them via the RealmBuilder.
+fuchsia_structured_config_values("client_config_values") {
+  cm_label = ":client_manifest"
+  values = {
+  }
+}
+
+group("tests") {
+  testonly = true
+
+  # TODO(fxbug.dev/111273): Add per-binding `:tests` target after building out each implementation.
+  deps = []
+}

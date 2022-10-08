@@ -13,6 +13,10 @@ The [key-value store][example-key-value-store] example demonstrates how to build
 a simple key-value store using FIDL in order to learn about the various data
 types available in the language.
 
+### Canvas
+
+<!-- TODO(fxbug.dev/111273): Document -->
+
 ## Concept index
 
 Each "concept" in the FIDL language is exemplified in at least one of the
@@ -34,4 +38,5 @@ section.
 
 <<../concepts/_named_payload.md>>
 
+[example-canvas]: canvas/README.md
 [example-key-value-store]: key-value-store/README.md
