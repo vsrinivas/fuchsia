@@ -1,0 +1,40 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run.
+    program: {
+        // The binary to run for this component.
+        binary: "bin/calc_integration_test_cpp",
+    },
+
+    // Child components orchestrated by the integration test.
+    children: [
+        {
+            name: "calc_server",
+            url: "#meta/server.cm",
+        },
+    ],
+
+    // Capabilities used by this component.
+    use: [
+        {
+            protocol: [ "fuchsia.examples.calculator.Calculator" ],
+            from: "#calc_server",
+        },
+    ],
+
+    // Capabilities required by components under test.
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#calc_server",
+        },
+    ],
+}

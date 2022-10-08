@@ -5,9 +5,15 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/calculator_client",
+        binary: "bin/calculator_server_cpp",
     },
-    use: [
+    capabilities: [
         { protocol: "fuchsia.examples.calculator.Calculator" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.examples.calculator.Calculator",
+            from: "self",
+        },
     ],
 }

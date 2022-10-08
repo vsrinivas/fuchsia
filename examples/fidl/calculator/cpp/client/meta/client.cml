@@ -5,7 +5,7 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/calculator_client",
+        binary: "bin/calculator_client_cpp",
     },
     use: [
         { protocol: "fuchsia.examples.calculator.Calculator" },

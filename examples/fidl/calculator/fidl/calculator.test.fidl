@@ -15,7 +15,7 @@ library fuchsia.examples.calculator;
 /// + [`fuchsia.examples.calculator/Calculator.Pow`]
 @discoverable
 protocol Calculator {
-    /// Adds two numbers togther and returns their `sum`.
+    /// Adds two numbers together and returns their `sum`.
     ///
     /// For example, with `a` being 4.5 and `b` being 3.2, the response `sum` is
     /// 7.7.

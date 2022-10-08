@@ -19,16 +19,8 @@ group("tests") {
   deps = [ ":calculator-client-rust-unittests" ]
 }
 
-resource("input") {
-  sources = [ "src/input.txt" ]
-
-  # {{source_file_part}} is something specific to GN. It allows us to get
-  # "input.txt" from "src/input.txt" in a general way.
-  outputs = [ "data/{{source_file_part}}" ]
-}
-
 rustc_binary("bin") {
-  output_name = "calculator-client"
+  output_name = "calculator_client"
   with_unit_tests = true
   edition = "2021"
   deps = [
@@ -50,10 +42,7 @@ rustc_binary("bin") {
 fuchsia_component("component") {
   component_name = "client"
   manifest = "meta/client.cml"
-  deps = [
-    ":bin",
-    ":input",
-  ]
+  deps = [ ":bin" ]
 }
 
 fuchsia_package("package") {

@@ -1,0 +1,56 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "calculator_client_cpp"
+  sources = [ "main.cc" ]
+
+  deps = [
+    # This is the FIDL Calculator protocol we're connecting to
+    "//examples/fidl/calculator/fidl:calculator_cpp",
+
+    # This library is used to log messages.
+    "//sdk/lib/syslog/cpp",
+
+    # This library provides an asynchronous event loop implementation.
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+
+    # This library is used to consume capabilities, e.g. protocols,
+    # from the component's incoming directory.
+    "//sdk/lib/sys/component/cpp",
+
+    # The parser library.
+    ":parser-lib",
+  ]
+}
+
+# The parser library for input to the calculator client
+source_set("parser-lib") {
+  sources = [
+    "calc_parser.cc",
+    "calc_parser.h",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "client"
+  manifest = "meta/client.cml"
+  deps = [ ":bin" ]
+}
+
+executable("parser_unittests_bin") {
+  sources = [ "parser_unittest.cc" ]
+  deps = [
+    ":parser-lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+  testonly = true
+}
+
+fuchsia_unittest_package("calculator-client-cpp-parser-unittests") {
+  deps = [ ":parser_unittests_bin" ]
+}

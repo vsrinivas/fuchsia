@@ -6,8 +6,8 @@ import("//build/components.gni")
 group("all") {
   testonly = true
   deps = [
+    ":calculator-example-cpp",
     ":calculator-example-rust",
-    #TODO(fxbug.dev/103280): add in C++ version here
   ]
 }
 
@@ -17,24 +17,37 @@ fuchsia_component("calculator_realm") {
   manifest = "realm/meta/realm.cml"
 }
 
+# An input file with commands for the calculator client.
+resource("input") {
+  sources = [ "input.txt" ]
+
+  # {{source_file_part}} is something specific to GN. It allows us to get
+  # "input.txt" from "src/input.txt" in a general way.
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
 fuchsia_package("calculator-example-rust") {
   deps = [
     ":calculator_realm",
+    ":input",
     "//examples/fidl/calculator/rust/client:component",
     "//examples/fidl/calculator/rust/server:component",
   ]
 }
 
-#TODO(fxbug.dev/103280): add in C++ version here, e.g.
-#fuchsia_package("calculator-example-cpp") {
-#  deps = [
-#    ":calculator_realm",
-#    "//examples/fidl/calculator/cpp/client:component",
-#    "//examples/fidl/calculator/cpp/server:component",
-#  ]
-#}
+fuchsia_package("calculator-example-cpp") {
+  deps = [
+    ":calculator_realm",
+    ":input",
+    "//examples/fidl/calculator/cpp/client:component",
+    "//examples/fidl/calculator/cpp/server:component",
+  ]
+}
 
 group("tests") {
   testonly = true
-  deps = [ "rust:tests" ]
+  deps = [
+    "cpp:tests",
+    "rust:tests",
+  ]
 }

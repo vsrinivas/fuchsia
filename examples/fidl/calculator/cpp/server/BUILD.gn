@@ -1,0 +1,30 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "calculator_server_cpp"
+  sources = [ "main.cc" ]
+  deps = [
+    # This is the FIDL Calculator protocol we're implementing
+    "//examples/fidl/calculator/fidl:calculator_cpp",
+
+    # This library is used to log messages.
+    "//sdk/lib/syslog/cpp",
+
+    # This library is used to publish capabilities, e.g. protocols,
+    # to the component's outgoing directory.
+    "//sdk/lib/sys/component/cpp",
+
+    # This library provides an the asynchronous event loop implementation.
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "server"
+  manifest = "meta/server.cml"
+  deps = [ ":bin" ]
+}
