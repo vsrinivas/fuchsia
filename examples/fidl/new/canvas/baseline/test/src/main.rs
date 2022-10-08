@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     diagnostics_data::{Data, Logs},
-    example_tester::{assert_logs_eq_to_golden, run_test, Client, Server, TestKind},
+    example_tester::{assert_filtered_logs_eq_to_golden, run_test, Client, Server, TestKind},
     fidl::prelude::*,
     fidl_examples_canvas::InstanceMarker,
     fuchsia_async as fasync,
@@ -17,6 +17,17 @@ async fn test_draw_success() -> Result<(), Error> {
     let test_name = "test_draw_success";
     let client = Client::new(test_name, "#meta/canvas_client.cm");
     let server = Server::new(test_name, "#meta/canvas_server.cm");
+    let filter = |raw_log: &&Data<Logs>| {
+        let msg = raw_log.payload_message().expect("payload not found").properties[0]
+            .string()
+            .expect("message is not string");
+
+        // C++ warning emitted when killing a thread.
+        if msg.contains("libc++abi: terminating") {
+            return false;
+        }
+        true
+    };
 
     run_test(
         InstanceMarker::PROTOCOL_NAME,
@@ -33,8 +44,8 @@ async fn test_draw_success() -> Result<(), Error> {
             Ok::<(RealmBuilder, ChildRef), Error>((builder, client))
         },
         |raw_logs: Vec<Data<Logs>>| {
-            assert_logs_eq_to_golden(&raw_logs, &client);
-            assert_logs_eq_to_golden(&raw_logs, &server);
+            assert_filtered_logs_eq_to_golden(&raw_logs, &client, filter);
+            assert_filtered_logs_eq_to_golden(&raw_logs, &server, filter);
         },
     )
     .await
