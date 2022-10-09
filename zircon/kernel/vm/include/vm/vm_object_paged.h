@@ -119,7 +119,7 @@ class VmObjectPaged final : public VmObject {
     return cow_pages_locked()->EvictionEventCountLocked();
   }
 
-  size_t AttributedPagesInRange(uint64_t offset, uint64_t len) const override {
+  AttributionCounts AttributedPagesInRange(uint64_t offset, uint64_t len) const override {
     Guard<CriticalMutex> guard{&lock_};
     return AttributedPagesInRangeLocked(offset, len);
   }
@@ -241,7 +241,7 @@ class VmObjectPaged final : public VmObject {
   // count at the time of caching the attributed page count.
   struct CachedPageAttribution {
     uint64_t generation_count = 0;
-    size_t page_count = 0;
+    AttributionCounts page_counts;
   };
 
   // Exposed for testing.
@@ -315,7 +315,7 @@ class VmObjectPaged final : public VmObject {
   zx_status_t DecommitRangeLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
   // see AttributedPagesInRange
-  size_t AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
+  AttributionCounts AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
 
   // internal read/write routine that takes a templated copy function to help share some code
   template <typename T>

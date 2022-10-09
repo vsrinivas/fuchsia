@@ -151,8 +151,6 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // Counts memory usage under the VmAspace.
   zx_status_t GetMemoryUsage(vm_usage_t* usage);
 
-  size_t AllocatedPages() const;
-
   // Generates a soft fault against this aspace. This is similar to a PageFault except:
   //  * This aspace may not currently be active and this does not have to be called from the
   //    hardware exception handler.

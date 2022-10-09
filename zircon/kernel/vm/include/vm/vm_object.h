@@ -290,12 +290,31 @@ class VmObject : public VmHierarchyBase,
   // VMOs).
   virtual void mark_modified_locked() TA_REQ(lock_) {}
 
+  struct AttributionCounts {
+    size_t uncompressed = 0;
+    size_t compressed = 0;
+
+    const AttributionCounts& operator+=(const AttributionCounts& other) {
+      uncompressed += other.uncompressed;
+      compressed += other.compressed;
+      return *this;
+    }
+
+    bool operator==(const AttributionCounts& other) const {
+      return uncompressed == other.uncompressed && compressed == other.compressed;
+    }
+
+    bool operator!=(const AttributionCounts& other) const { return !(*this == other); }
+  };
+
   // Returns the number of physical pages currently attributed to the
   // object where (offset <= page_offset < offset+len).
   // |offset| and |len| are in bytes.
-  virtual size_t AttributedPagesInRange(uint64_t offset, uint64_t len) const { return 0; }
+  virtual AttributionCounts AttributedPagesInRange(uint64_t offset, uint64_t len) const {
+    return AttributionCounts{};
+  }
   // Returns the number of physical pages currently attributed to the object.
-  size_t AttributedPages() const { return AttributedPagesInRange(0, size()); }
+  AttributionCounts AttributedPages() const { return AttributedPagesInRange(0, size()); }
 
   // find physical pages to back the range of the object
   // May block on user pager requests and must be called without locks held.

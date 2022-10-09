@@ -124,7 +124,8 @@ bool fill_and_test_user(user_inout_ptr<void> ptr, size_t len);
 // Verifies that the current generation count is |vmo_gen| and the current page attribution count is
 // |pages|. Also verifies that the cached page attribution has the expected generation and page
 // counts after the call to AttributedPages().
-bool verify_object_page_attribution(VmObject* vmo, uint64_t vmo_gen, size_t pages);
+bool verify_object_page_attribution(VmObject* vmo, uint64_t vmo_gen,
+                                    VmObject::AttributionCounts pages);
 
 // Helper function used by the vm_mapping_attribution_* tests.
 // Verifies that the mapping generation count is |mapping_gen| and the current page attribution
@@ -132,7 +133,7 @@ bool verify_object_page_attribution(VmObject* vmo, uint64_t vmo_gen, size_t page
 // mapping generation count, |vmo_gen| as the VMO generation count and |pages| as the page count
 // after the call to AllocatedPages().
 bool verify_mapping_page_attribution(VmMapping* mapping, uint64_t mapping_gen, uint64_t vmo_gen,
-                                     size_t pages);
+                                     VmObject::AttributionCounts pages);
 
 // Helper function that internally creates a PageRequest to pass to LookupPages.
 zx_status_t vmo_lookup_pages(VmObject* vmo, uint64_t offset, uint pf_flags,

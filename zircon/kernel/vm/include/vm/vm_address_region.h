@@ -105,7 +105,8 @@ class VmAddressRegionOrMapping
   const fbl::RefPtr<VmAspace>& aspace() const { return aspace_; }
 
   // Recursively compute the number of allocated pages within this region
-  virtual size_t AllocatedPages() const;
+  using AttributionCounts = VmObject::AttributionCounts;
+  virtual AttributionCounts AllocatedPages() const;
 
   // Subtype information and safe down-casting
   bool is_mapping() const { return is_mapping_; }
@@ -197,7 +198,7 @@ class VmAddressRegionOrMapping
 
   virtual zx_status_t DestroyLocked() TA_REQ(lock()) = 0;
 
-  virtual size_t AllocatedPagesLocked() const TA_REQ(lock()) = 0;
+  virtual AttributionCounts AllocatedPagesLocked() const TA_REQ(lock()) = 0;
 
   // Transition from NOT_READY to READY, and add references to self to related
   // structures.
@@ -578,7 +579,7 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   // constructor for use in creating the kernel aspace singleton
   explicit VmAddressRegion(VmAspace& kernel_aspace);
   // Count the allocated pages, caller must be holding the aspace lock
-  size_t AllocatedPagesLocked() const TA_REQ(lock()) override;
+  AttributionCounts AllocatedPagesLocked() const TA_REQ(lock()) override;
 
   // Used to implement VmAspace::EnumerateChildren.
   // |aspace_->lock()| must be held.
@@ -883,7 +884,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
   struct CachedPageAttribution {
     uint64_t mapping_generation_count = 0;
     uint64_t vmo_generation_count = 0;
-    size_t page_count = 0;
+    AttributionCounts page_counts;
   };
 
   // Exposed for testing.
@@ -955,7 +956,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
   static zx_status_t ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base, size_t size,
                                     uint new_arch_mmu_flags);
 
-  size_t AllocatedPagesLocked() const TA_REQ(lock()) override;
+  AttributionCounts AllocatedPagesLocked() const TA_REQ(lock()) override;
 
   void Activate() TA_REQ(lock()) override;
 

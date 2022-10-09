@@ -52,10 +52,10 @@ VmAddressRegionOrMapping::~VmAddressRegionOrMapping() {
   DEBUG_ASSERT(!this->in_subregion_tree());
 }
 
-size_t VmAddressRegionOrMapping::AllocatedPages() const {
+VmObject::AttributionCounts VmAddressRegionOrMapping::AllocatedPages() const {
   Guard<CriticalMutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
-    return 0;
+    return AttributionCounts{};
   }
   return AllocatedPagesLocked();
 }

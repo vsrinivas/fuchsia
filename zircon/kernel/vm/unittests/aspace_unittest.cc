@@ -637,6 +637,7 @@ static bool vm_mapping_attribution_commit_decommit_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
+  using AttributionCounts = VmObject::AttributionCounts;
   // Create a test VmAspace to temporarily switch to for creating test mappings.
   fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test-aspace");
   ASSERT_NONNULL(aspace);
@@ -649,7 +650,8 @@ static bool vm_mapping_attribution_commit_decommit_test() {
 
   uint64_t expected_vmo_gen_count = 1;
   uint64_t expected_mapping_gen_count = 1;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true,
+            verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, AttributionCounts{}));
 
   // Map the left half of the VMO.
   fbl::RefPtr<VmMapping> mapping;
@@ -658,45 +660,52 @@ static bool vm_mapping_attribution_commit_decommit_test() {
                                                "test-mapping", &mapping);
   EXPECT_EQ(ZX_OK, status);
 
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true,
+            verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, AttributionCounts{}));
   EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 0u));
+                                                  expected_vmo_gen_count, AttributionCounts{}));
 
   // Commit pages a little into the mapping, and past it.
   // Should increment the vmo generation count, but not the mapping generation count.
   status = vmo->CommitRange(4 * PAGE_SIZE, 8 * PAGE_SIZE);
   ASSERT_EQ(ZX_OK, status);
   expected_vmo_gen_count += 8;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
-  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 4u));
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                 AttributionCounts{8u, 0u}));
+  EXPECT_EQ(true,
+            verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                            expected_vmo_gen_count, AttributionCounts{4u, 0u}));
 
   // Decommit the pages committed above, returning the VMO to zero committed pages.
   // Should increment the vmo generation count, but not the mapping generation count.
   status = vmo->DecommitRange(4 * PAGE_SIZE, 8 * PAGE_SIZE);
   ASSERT_EQ(ZX_OK, status);
   ++expected_vmo_gen_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true,
+            verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, AttributionCounts{}));
   EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 0u));
+                                                  expected_vmo_gen_count, AttributionCounts{}));
 
   // Commit some pages in the VMO again.
   // Should increment the vmo generation count, but not the mapping generation count.
   status = vmo->CommitRange(0, 10 * PAGE_SIZE);
   ASSERT_EQ(ZX_OK, status);
   expected_vmo_gen_count += 10;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
-  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 8u));
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                 AttributionCounts{10u, 0u}));
+  EXPECT_EQ(true,
+            verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                            expected_vmo_gen_count, AttributionCounts{8u, 0u}));
 
   // Decommit pages in the vmo via the mapping.
   // Should increment the vmo generation count, not the mapping generation count.
   status = mapping->DecommitRange(0, mapping->size());
   ASSERT_EQ(ZX_OK, status);
   ++expected_vmo_gen_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 2u));
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                 AttributionCounts{2u, 0u}));
   EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 0u));
+                                                  expected_vmo_gen_count, AttributionCounts{}));
 
   // Destroy the mapping.
   // Should increment the mapping generation count, and invalidate the cached attribution.
@@ -704,13 +713,14 @@ static bool vm_mapping_attribution_commit_decommit_test() {
   ASSERT_EQ(ZX_OK, status);
   EXPECT_EQ(0ul, mapping->size());
   ++expected_mapping_gen_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 2u));
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                 AttributionCounts{2u, 0u}));
   EXPECT_EQ(expected_mapping_gen_count, mapping->GetMappingGenerationCount());
-  EXPECT_EQ(0ul, mapping->AllocatedPages());
+  EXPECT_EQ(0ul, mapping->AllocatedPages().uncompressed);
   VmMapping::CachedPageAttribution attr = mapping->GetCachedPageAttribution();
   EXPECT_EQ(0ul, attr.mapping_generation_count);
   EXPECT_EQ(0ul, attr.vmo_generation_count);
-  EXPECT_EQ(0ul, attr.page_count);
+  EXPECT_EQ(0ul, attr.page_counts.uncompressed);
 
   // Free the test address space.
   status = aspace->Destroy();
@@ -725,6 +735,7 @@ static bool vm_mapping_attribution_map_unmap_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
+  using AttributionCounts = VmObject::AttributionCounts;
   // Create a test VmAspace to temporarily switch to for creating test mappings.
   fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test-aspace");
   ASSERT_NONNULL(aspace);
@@ -737,7 +748,8 @@ static bool vm_mapping_attribution_map_unmap_test() {
 
   uint64_t expected_vmo_gen_count = 1;
   uint64_t expected_mapping_gen_count = 1;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true,
+            verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, AttributionCounts{}));
 
   // Map the left half of the VMO.
   fbl::RefPtr<VmMapping> mapping;
@@ -746,18 +758,21 @@ static bool vm_mapping_attribution_map_unmap_test() {
                                                "test-mapping", &mapping);
   EXPECT_EQ(ZX_OK, status);
 
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true,
+            verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, AttributionCounts{}));
   EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 0u));
+                                                  expected_vmo_gen_count, AttributionCounts{}));
 
   // Commit pages in the vmo via the mapping.
   // Should increment the vmo generation count, not the mapping generation count.
   status = mapping->MapRange(0, mapping->size(), true);
   ASSERT_EQ(ZX_OK, status);
   expected_vmo_gen_count += 8;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
-  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 8u));
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                 AttributionCounts{8u, 0u}));
+  EXPECT_EQ(true,
+            verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                            expected_vmo_gen_count, AttributionCounts{8u, 0u}));
 
   // Unmap from the right end of the mapping.
   // Should increment the mapping generation count.
@@ -767,9 +782,11 @@ static bool vm_mapping_attribution_map_unmap_test() {
   EXPECT_EQ(old_base, mapping->base());
   EXPECT_EQ(7ul * PAGE_SIZE, mapping->size());
   ++expected_mapping_gen_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
-  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 7u));
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                 AttributionCounts{8u, 0u}));
+  EXPECT_EQ(true,
+            verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                            expected_vmo_gen_count, AttributionCounts{7u, 0u}));
 
   // Unmap from the center of the mapping.
   // Should increment the mapping generation count.
@@ -778,9 +795,11 @@ static bool vm_mapping_attribution_map_unmap_test() {
   EXPECT_EQ(old_base, mapping->base());
   EXPECT_EQ(4ul * PAGE_SIZE, mapping->size());
   ++expected_mapping_gen_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
-  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 4u));
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                 AttributionCounts{8u, 0u}));
+  EXPECT_EQ(true,
+            verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                            expected_vmo_gen_count, AttributionCounts{4u, 0u}));
 
   // Unmap from the left end of the mapping.
   // Should increment the mapping generation count.
@@ -789,9 +808,11 @@ static bool vm_mapping_attribution_map_unmap_test() {
   EXPECT_NE(old_base, mapping->base());
   EXPECT_EQ(3ul * PAGE_SIZE, mapping->size());
   ++expected_mapping_gen_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
-  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
-                                                  expected_vmo_gen_count, 3u));
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                 AttributionCounts{8u, 0u}));
+  EXPECT_EQ(true,
+            verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                            expected_vmo_gen_count, AttributionCounts{3u, 0u}));
 
   // Free the test address space.
   status = aspace->Destroy();
@@ -806,6 +827,7 @@ static bool vm_mapping_attribution_merge_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
+  using AttributionCounts = VmObject::AttributionCounts;
   // Create a test VmAspace to temporarily switch to for creating test mappings.
   fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test-aspace");
   ASSERT_NONNULL(aspace);
@@ -818,14 +840,15 @@ static bool vm_mapping_attribution_merge_test() {
   ASSERT_EQ(ZX_OK, status);
 
   uint64_t expected_vmo_gen_count = 1;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true,
+            verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, AttributionCounts{}));
 
   // Create some contiguous mappings, marked unmergeable (default behavior) to begin with.
   struct {
     fbl::RefPtr<VmMapping> ref = nullptr;
     VmMapping* ptr = nullptr;
     uint64_t expected_gen_count = 1;
-    uint64_t expected_page_count = 0;
+    AttributionCounts expected_page_count;
   } mappings[4];
 
   uint64_t offset = 0;
@@ -836,7 +859,8 @@ static bool vm_mapping_attribution_merge_test() {
                                             kArchRwUserFlags, "test-mapping", &mappings[i].ref);
     ASSERT_EQ(ZX_OK, status);
     mappings[i].ptr = mappings[i].ref.get();
-    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                   AttributionCounts{}));
     EXPECT_EQ(true, verify_mapping_page_attribution(mappings[i].ptr, mappings[i].expected_gen_count,
                                                     expected_vmo_gen_count,
                                                     mappings[i].expected_page_count));
@@ -849,8 +873,9 @@ static bool vm_mapping_attribution_merge_test() {
   ASSERT_EQ(ZX_OK, status);
   expected_vmo_gen_count += 16;
   for (int i = 0; i < 4; i++) {
-    mappings[i].expected_page_count += 4;
-    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 16u));
+    mappings[i].expected_page_count.uncompressed += 4;
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                   AttributionCounts{16u, 0u}));
     EXPECT_EQ(true, verify_mapping_page_attribution(mappings[i].ptr, mappings[i].expected_gen_count,
                                                     expected_vmo_gen_count,
                                                     mappings[i].expected_page_count));
@@ -861,7 +886,8 @@ static bool vm_mapping_attribution_merge_test() {
   VmMapping::MarkMergeable(ktl::move(mappings[0].ref));
   VmMapping::MarkMergeable(ktl::move(mappings[2].ref));
   for (int i = 0; i < 4; i++) {
-    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 16u));
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                   AttributionCounts{16u, 0u}));
     EXPECT_EQ(true, verify_mapping_page_attribution(mappings[i].ptr, mappings[i].expected_gen_count,
                                                     expected_vmo_gen_count,
                                                     mappings[i].expected_page_count));
@@ -873,7 +899,8 @@ static bool vm_mapping_attribution_merge_test() {
   ++mappings[2].expected_gen_count;
   mappings[2].expected_page_count += mappings[3].expected_page_count;
   for (int i = 0; i < 3; i++) {
-    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 16u));
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                   AttributionCounts{16u, 0u}));
     EXPECT_EQ(true, verify_mapping_page_attribution(mappings[i].ptr, mappings[i].expected_gen_count,
                                                     expected_vmo_gen_count,
                                                     mappings[i].expected_page_count));
@@ -886,7 +913,8 @@ static bool vm_mapping_attribution_merge_test() {
   ++mappings[0].expected_gen_count;
   mappings[0].expected_page_count += mappings[1].expected_page_count;
   mappings[0].expected_page_count += mappings[2].expected_page_count;
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 16u));
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count,
+                                                 AttributionCounts{16u, 0u}));
   EXPECT_EQ(true, verify_mapping_page_attribution(mappings[0].ptr, mappings[0].expected_gen_count,
                                                   expected_vmo_gen_count,
                                                   mappings[0].expected_page_count));

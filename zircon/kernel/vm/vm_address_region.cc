@@ -377,19 +377,19 @@ fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t 
   return fbl::RefPtr(subregions_.FindRegion(addr));
 }
 
-size_t VmAddressRegion::AllocatedPagesLocked() const {
+VmObject::AttributionCounts VmAddressRegion::AllocatedPagesLocked() const {
   canary_.Assert();
 
+  AttributionCounts page_counts;
   if (state_ != LifeCycleState::ALIVE) {
-    return 0;
+    return page_counts;
   }
 
-  size_t sum = 0;
   for (const auto& child : subregions_) {
     AssertHeld(child.lock_ref());
-    sum += child.AllocatedPagesLocked();
+    page_counts += child.AllocatedPagesLocked();
   }
-  return sum;
+  return page_counts;
 }
 
 zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, LazyPageRequest* page_request) {

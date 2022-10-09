@@ -69,11 +69,11 @@ fbl::RefPtr<VmObject> VmMapping::vmo() const {
   return vmo_locked();
 }
 
-size_t VmMapping::AllocatedPagesLocked() const {
+VmMapping::AttributionCounts VmMapping::AllocatedPagesLocked() const {
   canary_.Assert();
 
   if (state_ != LifeCycleState::ALIVE) {
-    return 0;
+    return AttributionCounts{};
   }
 
   vm_mapping_attribution_queries.Add(1);
@@ -92,20 +92,21 @@ size_t VmMapping::AllocatedPagesLocked() const {
   if (cached_page_attribution_.mapping_generation_count == mapping_gen_count &&
       cached_page_attribution_.vmo_generation_count == vmo_gen_count) {
     vm_mapping_attribution_cache_hits.Add(1);
-    return cached_page_attribution_.page_count;
+    return cached_page_attribution_.page_counts;
   }
 
   vm_mapping_attribution_cache_misses.Add(1);
 
-  size_t page_count = object_paged->AttributedPagesInRange(object_offset_locked(), size_);
+  AttributionCounts page_counts =
+      object_paged->AttributedPagesInRange(object_offset_locked(), size_);
 
   DEBUG_ASSERT(cached_page_attribution_.mapping_generation_count != mapping_gen_count ||
                cached_page_attribution_.vmo_generation_count != vmo_gen_count);
   cached_page_attribution_.mapping_generation_count = mapping_gen_count;
   cached_page_attribution_.vmo_generation_count = vmo_gen_count;
-  cached_page_attribution_.page_count = page_count;
+  cached_page_attribution_.page_counts = page_counts;
 
-  return page_count;
+  return page_counts;
 }
 
 void VmMapping::DumpLocked(uint depth, bool verbose) const {
@@ -127,10 +128,10 @@ void VmMapping::DumpLocked(uint depth, bool verbose) const {
   for (uint i = 0; i < depth + 1; ++i) {
     printf("  ");
   }
-  printf("vmo %p/k%" PRIu64 " off %#" PRIx64 " pages %zu ref %d '%s'\n", object_.get(),
-         object_->user_id(), object_offset_locked(),
-         object_->AttributedPagesInRange(object_offset_locked(), size_), ref_count_debug(),
-         vmo_name);
+  AttributionCounts page_counts = object_->AttributedPagesInRange(object_offset_locked(), size_);
+  printf("vmo %p/k%" PRIu64 " off %#" PRIx64 " pages (%zu/%zu) ref %d '%s'\n", object_.get(),
+         object_->user_id(), object_offset_locked(), page_counts.uncompressed,
+         page_counts.compressed, ref_count_debug(), vmo_name);
   if (verbose) {
     object_->Dump(depth + 1, false);
   }

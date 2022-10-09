@@ -210,7 +210,7 @@ class ProcessDispatcher final
   // The following two methods can be slow and inaccurate and should only be
   // called from diagnostics code.
   uint32_t ThreadCount() const;
-  size_t PageCount() const;
+  VmObject::AttributionCounts PageCount() const;
 
   // Look up a process given its koid.
   // Returns nullptr if not found.

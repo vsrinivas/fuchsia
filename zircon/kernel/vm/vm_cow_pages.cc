@@ -1182,24 +1182,26 @@ void VmCowPages::DumpLocked(uint depth, bool verbose) const {
   }
 }
 
-size_t VmCowPages::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const {
+VmCowPages::AttributionCounts VmCowPages::AttributedPagesInRangeLocked(uint64_t offset,
+                                                                       uint64_t len) const {
   canary_.Assert();
 
   if (is_hidden_locked()) {
-    return 0;
+    return AttributionCounts{};
   }
 
-  size_t page_count = 0;
+  VmCowPages::AttributionCounts page_counts;
   // TODO: Decide who pages should actually be attribtued to.
   page_list_.ForEveryPageAndGapInRange(
-      [&page_count](const auto* p, uint64_t off) {
-        // TODO(fxbug.dev/60238) Split attribution of different kinds of content.
-        if (p->IsPageOrRef()) {
-          page_count++;
+      [&page_counts](const auto* p, uint64_t off) {
+        if (p->IsPage()) {
+          page_counts.uncompressed++;
+        } else if (p->IsReference()) {
+          page_counts.compressed++;
         }
         return ZX_ERR_NEXT;
       },
-      [this, &page_count](uint64_t gap_start, uint64_t gap_end) {
+      [this, &page_counts](uint64_t gap_start, uint64_t gap_end) {
         AssertHeld(lock_);
 
         // If there's no parent, there's no pages to care about. If there is a non-hidden
@@ -1219,24 +1221,25 @@ size_t VmCowPages::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) c
         // pathologically become O(nd) where d is our depth in the vmo hierarchy.
         uint64_t off = gap_start;
         while (off < parent_limit_ && off < gap_end) {
-          uint64_t local_count = 0;
+          AttributionCounts local_count;
           uint64_t attributed =
               CountAttributedAncestorPagesLocked(off, gap_end - off, &local_count);
           // |CountAttributedAncestorPagesLocked| guarantees that it will make progress.
           DEBUG_ASSERT(attributed > 0);
           off += attributed;
-          page_count += local_count;
+          page_counts += local_count;
         }
 
         return ZX_ERR_NEXT;
       },
       offset, offset + len);
 
-  return page_count;
+  return page_counts;
 }
 
 uint64_t VmCowPages::CountAttributedAncestorPagesLocked(uint64_t offset, uint64_t size,
-                                                        uint64_t* count) const TA_REQ(lock_) {
+                                                        AttributionCounts* count) const
+    TA_REQ(lock_) {
   // We need to walk up the ancestor chain to see if there are any pages that should be attributed
   // to this vmo. We attempt operate on the entire range given to us but should we need to query
   // the next parent for a range we trim our operating range. Trimming the range is necessary as
@@ -1256,7 +1259,7 @@ uint64_t VmCowPages::CountAttributedAncestorPagesLocked(uint64_t offset, uint64_
   uint64_t cur_offset = offset;
   uint64_t cur_size = size;
   // Count of how many pages we attributed as being owned by this vmo.
-  uint64_t attributed_ours = 0;
+  AttributionCounts attributed_ours;
   // Count how much we've processed. This is needed to remember when we iterate up the parent list
   // at an offset.
   uint64_t attributed = 0;
@@ -1290,7 +1293,6 @@ uint64_t VmCowPages::CountAttributedAncestorPagesLocked(uint64_t offset, uint64_
           if (p->IsMarker()) {
             return ZX_ERR_NEXT;
           }
-          // TODO(fxbug.dev/60238) Split attribution of different kinds of content.
           if (
               // Page is explicitly owned by us
               (parent->page_attribution_user_id_ == cur->page_attribution_user_id_) ||
@@ -1303,7 +1305,11 @@ uint64_t VmCowPages::CountAttributedAncestorPagesLocked(uint64_t offset, uint64_
               // attribute the page to.
               !(sib.parent_offset_ + sib.parent_start_limit_ <= off &&
                 off < sib.parent_offset_ + sib.parent_limit_)) {
-            attributed_ours++;
+            if (p->IsPage()) {
+              attributed_ours.uncompressed++;
+            } else if (p->IsReference()) {
+              attributed_ours.compressed++;
+            }
           }
           return ZX_ERR_NEXT;
         },

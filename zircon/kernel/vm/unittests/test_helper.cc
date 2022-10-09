@@ -221,17 +221,29 @@ bool fill_and_test_user(user_inout_ptr<void> ptr, size_t len) {
 // Verifies that the current generation count is |vmo_gen| and the current page attribution count is
 // |pages|. Also verifies that the cached page attribution has the expected generation and page
 // counts after the call to AttributedPages().
-bool verify_object_page_attribution(VmObject* vmo, uint64_t vmo_gen, size_t pages) {
+bool verify_object_page_attribution(VmObject* vmo, uint64_t vmo_gen,
+                                    VmObject::AttributionCounts pages) {
   BEGIN_TEST;
 
   auto vmo_paged = static_cast<VmObjectPaged*>(vmo);
   EXPECT_EQ(vmo_gen, vmo_paged->GetHierarchyGenerationCount());
 
-  EXPECT_EQ(pages, vmo->AttributedPages());
+  // Test equality of both the fields and the structs. The former gives better error messages, but
+  // the latter is also done in case any additional fields are added.
+  {
+    VmObject::AttributionCounts attr = vmo->AttributedPages();
+    EXPECT_EQ(pages.uncompressed, attr.uncompressed);
+    EXPECT_EQ(pages.compressed, attr.compressed);
+    EXPECT_TRUE(pages == attr);
+  }
 
-  VmObjectPaged::CachedPageAttribution attr = vmo_paged->GetCachedPageAttribution();
-  EXPECT_EQ(vmo_gen, attr.generation_count);
-  EXPECT_EQ(pages, attr.page_count);
+  {
+    VmObjectPaged::CachedPageAttribution attr = vmo_paged->GetCachedPageAttribution();
+    EXPECT_EQ(vmo_gen, attr.generation_count);
+    EXPECT_EQ(pages.uncompressed, attr.page_counts.uncompressed);
+    EXPECT_EQ(pages.compressed, attr.page_counts.compressed);
+    EXPECT_TRUE(pages == attr.page_counts);
+  }
 
   END_TEST;
 }
@@ -242,17 +254,17 @@ bool verify_object_page_attribution(VmObject* vmo, uint64_t vmo_gen, size_t page
 // mapping generation count, |vmo_gen| as the VMO generation count and |pages| as the page count
 // after the call to AllocatedPages().
 bool verify_mapping_page_attribution(VmMapping* mapping, uint64_t mapping_gen, uint64_t vmo_gen,
-                                     size_t pages) {
+                                     VmObject::AttributionCounts pages) {
   BEGIN_TEST;
 
   EXPECT_EQ(mapping_gen, mapping->GetMappingGenerationCount());
 
-  EXPECT_EQ(pages, mapping->AllocatedPages());
+  EXPECT_TRUE(pages == mapping->AllocatedPages());
 
   VmMapping::CachedPageAttribution attr = mapping->GetCachedPageAttribution();
   EXPECT_EQ(mapping_gen, attr.mapping_generation_count);
   EXPECT_EQ(vmo_gen, attr.vmo_generation_count);
-  EXPECT_EQ(pages, attr.page_count);
+  EXPECT_TRUE(pages == attr.page_counts);
 
   END_TEST;
 }

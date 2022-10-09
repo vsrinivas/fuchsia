@@ -480,7 +480,8 @@ class VmCowPages final
   bool IsCowClonableLocked() const TA_REQ(lock_);
 
   // see VmObjectPaged::AttributedPagesInRange
-  size_t AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
+  using AttributionCounts = VmObject::AttributionCounts;
+  AttributionCounts AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
 
   // Scans this cow pages range for zero pages and frees them if |reclaim| is set to true. Returns
   // the number of pages freed or scanned.
@@ -813,8 +814,8 @@ class VmCowPages final
   // The return value is the length of the processed region, which will be <= |size| and is
   // guaranteed to be > 0. The |count| is the number of pages in this region that should be
   // attributed to this vmo, versus some other vmo.
-  uint64_t CountAttributedAncestorPagesLocked(uint64_t offset, uint64_t size, uint64_t* count) const
-      TA_REQ(lock_);
+  uint64_t CountAttributedAncestorPagesLocked(uint64_t offset, uint64_t size,
+                                              AttributionCounts* count) const TA_REQ(lock_);
 
   // Searches for the the initial content for |this| at |offset|. The result could be used to
   // initialize a commit, or compare an existing commit with the original. The initial content

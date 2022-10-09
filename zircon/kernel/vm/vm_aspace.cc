@@ -659,18 +659,6 @@ VmAspace* VmAspace::vaddr_to_aspace(uintptr_t address) {
   }
 }
 
-// TODO(dbort): Use GetMemoryUsage()
-size_t VmAspace::AllocatedPages() const {
-  canary_.Assert();
-
-  Guard<CriticalMutex> guard{&lock_};
-  if (!root_vmar_) {
-    return 0;
-  }
-  AssertHeld(root_vmar_->lock_ref());
-  return root_vmar_->AllocatedPagesLocked();
-}
-
 VmAspace::AslrConfig VmAspace::CreateAslrConfig(Type type) {
   // As documented in //docs/gen/boot-options.md.
   static constexpr uint8_t kMaxAslrEntropy = 36;

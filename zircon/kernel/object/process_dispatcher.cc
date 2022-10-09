@@ -792,19 +792,27 @@ uint32_t ProcessDispatcher::ThreadCount() const {
   return static_cast<uint32_t>(thread_list_.size_slow());
 }
 
-size_t ProcessDispatcher::PageCount() const {
+VmObject::AttributionCounts ProcessDispatcher::PageCount() const {
   canary_.Assert();
 
+  VmObject::AttributionCounts page_counts;
   Guard<CriticalMutex> guard{get_lock()};
   if (state_ != State::RUNNING) {
-    return 0;
+    return page_counts;
   }
 
-  size_t count = shared_state_->aspace()->AllocatedPages();
-  if (restricted_aspace_ != nullptr) {
-    count += restricted_aspace_->AllocatedPages();
+  auto root_vmar = shared_state_->aspace()->RootVmar();
+  if (root_vmar) {
+    page_counts += root_vmar->AllocatedPages();
   }
-  return count;
+
+  if (restricted_aspace_ != nullptr) {
+    root_vmar = restricted_aspace_->RootVmar();
+    if (root_vmar) {
+      page_counts += root_vmar->AllocatedPages();
+    };
+  }
+  return page_counts;
 }
 
 class FindProcessByKoid final : public JobEnumerator {

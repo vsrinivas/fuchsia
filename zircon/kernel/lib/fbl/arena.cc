@@ -235,7 +235,7 @@ void Arena::Pool::Push(void* p) {
 
 void Arena::Pool::Dump() const {
   printf("  pool '%s' slot size %zu, %zu pages committed:\n", name_, slot_size_,
-         mapping_->AllocatedPages());
+         mapping_->AllocatedPages().uncompressed);
   printf("  |     start 0x%p\n", start_);
   size_t nslots = static_cast<size_t>(top_ - start_) / slot_size_;
   printf("  |       top 0x%p (%zu slots popped)\n", top_, nslots);

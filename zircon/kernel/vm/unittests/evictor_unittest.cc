@@ -853,7 +853,7 @@ static bool evictor_dont_need_pager_backed_test() {
   EXPECT_GE(free_count, target.min_pages_to_free);
 
   // vmo1 should have no pages evicted from it.
-  EXPECT_EQ(kNumPages, vmo1->AttributedPages());
+  EXPECT_EQ(kNumPages, vmo1->AttributedPages().uncompressed);
 
   END_TEST;
 }
@@ -871,7 +871,7 @@ static bool evictor_evicted_pages_are_freed_test() {
   ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo, pages));
 
   // Verify that the vmo has committed pages.
-  EXPECT_EQ(kNumPages, vmo->AttributedPages());
+  EXPECT_EQ(kNumPages, vmo->AttributedPages().uncompressed);
 
   // Rotate page queues a few times so the newly committed pages above are eligible for eviction.
   for (int i = 0; i < 3; i++) {
@@ -916,7 +916,7 @@ static bool evictor_evicted_pages_are_freed_test() {
   EXPECT_EQ(free_count, counts.pager_backed);
 
   // Verify that the vmo has no committed pages remaining. Evicted pages are removed from the vmo.
-  EXPECT_EQ(0u, vmo->AttributedPages());
+  EXPECT_TRUE(VmObject::AttributionCounts{} == vmo->AttributedPages());
 
   // Verify free state for each page.
   for (auto page : pages) {

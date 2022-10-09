@@ -418,7 +418,10 @@ void DumpVmObject(const VmObject& vmo, pretty::SizeUnit format_unit, zx_handle_t
   FormattedBytes alloc_size;
   const char* alloc_str = "phys";
   if (vmo.is_paged()) {
-    alloc_size.SetSize(vmo.AttributedPages() * PAGE_SIZE, format_unit);
+    // TODO(fxb/60238): Handle compressed page counting.
+    VmObject::AttributionCounts page_counts = vmo.AttributedPages();
+    ASSERT(page_counts.compressed == 0);
+    alloc_size.SetSize(page_counts.uncompressed * PAGE_SIZE, format_unit);
     alloc_str = alloc_size.c_str();
   }
 
@@ -515,6 +518,7 @@ void DumpProcessVmObjects(zx_koid_t id, pretty::SizeUnit format_unit) {
   int count = 0;
   uint64_t total_size = 0;
   uint64_t total_alloc = 0;
+  uint64_t total_compressed = 0;
   pd->handle_table().ForEachHandle(
       [&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
         auto vmod = DownCastDispatcher<const VmObjectDispatcher>(disp);
@@ -530,12 +534,15 @@ void DumpProcessVmObjects(zx_koid_t id, pretty::SizeUnit format_unit) {
         total_size += vmo->size();
         // TODO: Doing this twice (here and in DumpVmObject) is a waste of
         // work, and can get out of sync.
-        total_alloc += vmo->AttributedPages() * PAGE_SIZE;
+        VmObject::AttributionCounts page_counts = vmo->AttributedPages();
+        total_alloc += page_counts.uncompressed * PAGE_SIZE;
+        total_compressed += page_counts.compressed * PAGE_SIZE;
         return ZX_OK;
       });
-  printf("  total: %d VMOs, size %s, alloc %s\n", count,
+  printf("  total: %d VMOs, size %s, alloc %s compressed %s\n", count,
          FormattedBytes(total_size, format_unit).c_str(),
-         FormattedBytes(total_alloc, format_unit).c_str());
+         FormattedBytes(total_alloc, format_unit).c_str(),
+         FormattedBytes(total_compressed, format_unit).c_str());
 
   // Call DumpVmObject() on all VMOs under the process's VmAspace.
   printf("Mapped VMOs:\n");
@@ -565,7 +572,11 @@ class VmCounter final : public VmEnumerator {
     usage.mapped_pages += map->size() / PAGE_SIZE;
 
     auto vmo = map->vmo_locked();
-    size_t committed_pages = vmo->AttributedPagesInRange(map->object_offset_locked(), map->size());
+    const VmObject::AttributionCounts page_counts =
+        vmo->AttributedPagesInRange(map->object_offset_locked(), map->size());
+    // TODO(fxb/60238): Handle compressed page counting.
+    DEBUG_ASSERT(page_counts.compressed == 0);
+    const size_t committed_pages = page_counts.uncompressed;
     uint32_t share_count = vmo->share_count();
     if (share_count == 1) {
       usage.private_pages += committed_pages;
@@ -827,7 +838,11 @@ class VmMapBuilder final : public RestartableVmEnumerator<zx_info_maps_t, VmMapB
     entry->type = ZX_INFO_MAPS_TYPE_MAPPING;
     zx_info_maps_mapping_t* u = &entry->u.mapping;
     u->mmu_flags = arch_mmu_flags_to_vm_flags(region_mmu_flags), u->vmo_koid = vmo->user_id();
-    u->committed_pages = vmo->AttributedPagesInRange(region_object_offset, region_size);
+    const VmObject::AttributionCounts page_counts =
+        vmo->AttributedPagesInRange(region_object_offset, region_size);
+    // TODO(fxb/60238): Handle compressed page counting.
+    DEBUG_ASSERT(page_counts.compressed == 0);
+    u->committed_pages = page_counts.uncompressed;
     u->vmo_offset = region_object_offset;
   }
 
@@ -1029,11 +1044,14 @@ int hwd_thread(void* arg) {
 
 void DumpProcessMemoryUsage(const char* prefix, size_t min_pages) {
   auto walker = MakeProcessWalker([&](ProcessDispatcher* process) {
-    size_t pages = process->PageCount();
-    if (pages >= min_pages) {
+    // TODO(fxb/60238): Report compressed content as well?
+    VmObject::AttributionCounts page_counts = process->PageCount();
+    ASSERT(page_counts.compressed == 0);
+    if (page_counts.uncompressed >= min_pages) {
       char pname[ZX_MAX_NAME_LEN];
       process->get_name(pname);
-      printf("%sproc %5" PRIu64 " %4zuM '%s'\n", prefix, process->get_koid(), pages / 256, pname);
+      printf("%sproc %5" PRIu64 " %4zuM '%s'\n", prefix, process->get_koid(),
+             page_counts.uncompressed / 256, pname);
     }
   });
   GetRootJobDispatcher()->EnumerateChildrenRecursive(&walker);

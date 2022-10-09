@@ -187,8 +187,11 @@ static bool count_committed_pages(vaddr_t start, vaddr_t end, size_t* committed,
     Guard<CriticalMutex> guard{mapping->lock()};
     mapping_offset = mapping->object_offset_locked();
   }
-  *committed =
+  const VmObject::AttributionCounts page_counts =
       mapping->vmo()->AttributedPagesInRange(start_off + mapping_offset, end_off - start_off);
+  // Our pages are mapped into the kernel, meaning they should always be real pinned pages.
+  ASSERT_EQ(page_counts.compressed, 0u);
+  *committed = page_counts.uncompressed;
   *uncommitted = (end_off - start_off) / PAGE_SIZE - *committed;
   END_TEST;
 }
