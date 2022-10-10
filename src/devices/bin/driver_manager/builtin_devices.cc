@@ -33,21 +33,17 @@ zx_status_t BuiltinDevVnode::GetAttributes(fs::VnodeAttributes* a) {
   return ZX_OK;
 }
 
-fs::VnodeProtocolSet BuiltinDevVnode::GetProtocols() const {
-  return fs::VnodeProtocol::kFile | fs::VnodeProtocol::kDirectory;
-}
+fs::VnodeProtocolSet BuiltinDevVnode::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
 zx_status_t BuiltinDevVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                                     fs::VnodeRepresentation* info) {
   switch (protocol) {
     case fs::VnodeProtocol::kConnector:
+    case fs::VnodeProtocol::kDirectory:
     case fs::VnodeProtocol::kTty:
       return ZX_ERR_NOT_SUPPORTED;
     case fs::VnodeProtocol::kFile:
       *info = fs::VnodeRepresentation::File{};
-      return ZX_OK;
-    case fs::VnodeProtocol::kDirectory:
-      *info = fs::VnodeRepresentation::Directory{};
       return ZX_OK;
   }
 }
