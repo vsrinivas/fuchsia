@@ -7,7 +7,9 @@ use {
         BlobEntry, MetaContents, MetaPackage, Package, PackageManifestError, PackageName,
         PackagePath, PackageVariant,
     },
+    anyhow::Result,
     fuchsia_hash::Hash,
+    fuchsia_url::{RepositoryUrl, UnpinnedAbsolutePackageUrl},
     serde::{Deserialize, Serialize},
     std::path::PathBuf,
     std::{
@@ -86,6 +88,14 @@ impl PackageManifest {
         match &self.0 {
             VersionedPackageManifest::Version1(manifest) => manifest.repository.as_deref(),
         }
+    }
+
+    pub fn package_url(&self) -> Result<Option<UnpinnedAbsolutePackageUrl>> {
+        if let Some(url) = self.repository() {
+            let repo = RepositoryUrl::parse_host(url.to_string())?;
+            return Ok(Some(UnpinnedAbsolutePackageUrl::new(repo, self.name().clone(), None)));
+        };
+        Ok(None)
     }
 
     /// Returns the merkle root of the meta.far.
