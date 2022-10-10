@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fdio/cpp/caller.h>
+#include <lib/async/cpp/task.h>
 #include <lib/stdcompat/span.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <stdlib.h>
@@ -18,11 +18,11 @@
 
 #include <iostream>
 #include <iterator>
+#include <unordered_set>
 
 #include <fbl/algorithm.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/zxtest.h>
 
@@ -31,58 +31,64 @@
 
 namespace {
 
-using device_watcher::RecursiveWaitForFile;
-
 bool IsDfv2Enabled() {
-  zx::status driver_dev_res = component::Connect<fuchsia_driver_development::DriverDevelopment>();
-  if (driver_dev_res.is_error()) {
-    printf("Failed to connect to DriverDevelopment: %s", driver_dev_res.status_string());
-    return false;
-  }
-  fidl::WireResult result = fidl::WireCall(driver_dev_res.value())->IsDfv2();
-  if (!result.ok()) {
-    printf("Failed to request if DFv2 is enabled: %s", result.status_string());
-    return false;
-  }
+  zx::status driver_development =
+      component::Connect<fuchsia_driver_development::DriverDevelopment>();
+  EXPECT_OK(driver_development.status_value());
 
-  return result->response;
+  const fidl::WireResult result = fidl::WireCall(driver_development.value())->IsDfv2();
+  EXPECT_OK(result.status());
+  return result.value().response;
 }
 
 // Asyncronously wait for a path to appear, and call `callback` when the path exists.
 // The `watchers` array is needed because each directory in the path needs to allocate a
 // DeviceWatcher, and they need to be stored somewhere that can be freed later.
-void RecursiveWaitFor(std::string full_path, size_t slash_index, fit::function<void()>* callback,
-                      std::vector<std::unique_ptr<fsl::DeviceWatcher>>* watchers) {
+void RecursiveWaitFor(const std::string& full_path, size_t slash_index,
+                      fit::function<void()> callback,
+                      std::vector<std::unique_ptr<fsl::DeviceWatcher>>& watchers,
+                      async_dispatcher_t* dispatcher) {
   if (slash_index == full_path.size()) {
     fprintf(stderr, "Found %s \n", full_path.c_str());
-    (*callback)();
+    callback();
     return;
   }
 
-  std::string dir_path = full_path.substr(0, slash_index);
-  size_t next_slash = full_path.find_first_of("/", slash_index + 1);
+  const std::string dir_path = full_path.substr(0, slash_index);
+  size_t next_slash = full_path.find('/', slash_index + 1);
   if (next_slash == std::string::npos) {
     next_slash = full_path.size();
   }
-  std::string file_name = full_path.substr(slash_index + 1, next_slash - (slash_index + 1));
+  const std::string file_name = full_path.substr(slash_index + 1, next_slash - (slash_index + 1));
 
-  watchers->push_back(fsl::DeviceWatcher::Create(
+  watchers.push_back(fsl::DeviceWatcher::Create(
       dir_path,
-      [file_name, full_path, next_slash, callback, watchers](int dir_fd, const std::string& name) {
-        if (name.compare(file_name) == 0) {
-          RecursiveWaitFor(full_path, next_slash, callback, watchers);
+      [file_name, full_path, next_slash, callback = std::move(callback), &watchers, dispatcher](
+          int dir_fd, const std::string& name) mutable {
+        if (name == file_name) {
+          RecursiveWaitFor(full_path, next_slash, std::move(callback), watchers, dispatcher);
         }
-      }));
+      },
+      dispatcher));
 }
 
 void WaitForOne(cpp20::span<const char*> device_paths) {
-  async::Loop loop = async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  async::TaskClosure task([device_paths]() {
+    // stdout doesn't show up in test logs.
+    fprintf(stderr, "still waiting for device paths:\n");
+    for (const char* path : device_paths) {
+      fprintf(stderr, " %s\n", path);
+    }
+  });
+  ASSERT_OK(task.PostDelayed(loop.dispatcher(), zx::min(1)));
 
   std::vector<std::unique_ptr<fsl::DeviceWatcher>> watchers;
-  auto callback = fit::function<void()>([&loop]() { loop.Shutdown(); });
-
   for (const char* path : device_paths) {
-    RecursiveWaitFor(std::string("/dev/") + path, 4, &callback, &watchers);
+    RecursiveWaitFor(
+        std::string("/dev/") + path, 4, [&loop]() { loop.Shutdown(); }, watchers,
+        loop.dispatcher());
   }
 
   loop.Run();
@@ -150,22 +156,39 @@ class DeviceEnumerationTest : public zxtest::Test {
   void SetUp() override { ASSERT_NO_FATAL_FAILURE(PrintAllDevices()); }
 
  protected:
-  void TestRunner(const char** device_paths, size_t paths_num) {
-    fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
-    ASSERT_TRUE(devfs_root);
+  static void TestRunner(const char** device_paths, size_t paths_num) {
+    async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
 
-    fbl::unique_fd fd;
+    std::unordered_set<const char*> device_paths_set;
     for (size_t i = 0; i < paths_num; ++i) {
-      // stderr helps diagnosibility, since stdout doesn't show up in test logs
-      fprintf(stderr, "Checking %s\n", device_paths[i]);
-      EXPECT_OK(RecursiveWaitForFile(devfs_root, device_paths[i], &fd), "%s", device_paths[i]);
-
-      // Check that we connected to a device, not a directory.
-      fdio_cpp::UnownedFdioCaller caller(fd);
-      EXPECT_OK(fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
-                    ->GetTopologicalPath()
-                    .status());
+      device_paths_set.emplace(device_paths[i]);
     }
+    std::vector<std::unique_ptr<fsl::DeviceWatcher>> watchers;
+    {
+      // Intentionally shadow.
+      std::unordered_set<const char*>& device_paths = device_paths_set;
+      async::TaskClosure task([&device_paths]() {
+        // stdout doesn't show up in test logs.
+        fprintf(stderr, "still waiting for device paths:\n");
+        for (const char* path : device_paths) {
+          fprintf(stderr, " %s\n", path);
+        }
+      });
+      ASSERT_OK(task.PostDelayed(loop.dispatcher(), zx::min(1)));
+
+      for (const char* path : device_paths) {
+        RecursiveWaitFor(
+            std::string("/dev/") + path, 4,
+            [&loop, &device_paths, path]() {
+              ASSERT_EQ(device_paths.erase(path), 1);
+              if (device_paths.empty()) {
+                loop.Shutdown();
+              }
+            },
+            watchers, loop.dispatcher());
+      }
+    }
+    loop.Run();
   }
 
  private:
