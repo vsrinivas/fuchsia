@@ -10,7 +10,10 @@ driver_bind_rules("aml_g12_pdm_bind") {
   header_output = "aml_g12_pdm_bind.h"
   bind_output = "aml-g12-pdm.bindbc"
   tests = "tests.json"
-  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
 }
 
 fuchsia_driver("aml-g12-pdm-driver") {
