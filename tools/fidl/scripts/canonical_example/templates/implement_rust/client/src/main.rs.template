@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    anyhow::{format_err, Context as _, Error},
+    config::Config,
+    fidl_examples_${series_flat_case}_${variant_flat_case}:: // TODO(${dns}): import generated types and traits.
+    fuchsia_component::client::connect_to_protocol,
+    futures::TryStreamExt,
+    std::{thread, time},
+};
+
+#[fuchsia::main]
+async fn main() -> Result<(), Error> {
+    println!("Started");
+
+    // Load the structured config values passed to this component at startup.
+    let config = Config::take_from_startup_handle();
+
+    // Use the Component Framework runtime to connect to the newly spun up server component. We wrap
+    // our retained client end in a proxy object that lets us asynchronously send ${protocol_pascal_case} requests
+    // across the channel.
+    let ${protocol_snake_case} = connect_to_protocol::<${protocol_pascal_case}Marker>()?;
+    println!("Outgoing connection enabled");
+
+    // TODO(${dns}): read the `config` to execute a scripted set of actions.
+
+    // TODO(fxbug.dev/76579): We need to sleep here to make sure all logs get drained. Once the
+    // referenced bug has been resolved, we can remove the sleep.
+    thread::sleep(time::Duration::from_secs(2));
+    Ok(())
+}

@@ -71,6 +71,7 @@ in the following forms. Note that the variant's FIDL may still have multiple
 protocols - this name only refers to the *first* contact point:
 
 - `protocol_pascal_case`: For instance, "MyProtocol".
+- `protocol_snake_case`: For instance, "my_protocol".
 
 #### Other
 

@@ -1,0 +1,51 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# The two definitions below are Fuchsia components, which will be wrapped into a package for
+# delivery to running devices.
+fuchsia_component("client") {
+  component_name = "${series_snake_case}_client"
+  manifest = "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/meta/client.cml"
+  deps = [ "client:bin" ]
+}
+fuchsia_component("server") {
+  component_name = "${series_snake_case}_server"
+  manifest = "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/meta/server.cml"
+  deps = [ "server:bin" ]
+}
+
+# The Fuchsia package, containing all of our child components in one neat artifact.
+fuchsia_package("examples_fidl_${series_snake_case}_${variant_snake_case}_rust") {
+  deps = [
+    ":client",
+    ":server",
+    "//examples/fidl/new/${series_snake_case}/${variant_snake_case}:client_config_values",
+  ]
+}
+
+# The following is an internal test harness for validating this example. It is not part of the
+# example itself, and exists as a validation method to ensure that the code does not go stale.
+fuchsia_component("test") {
+  testonly = true
+  manifest = "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/test/meta/runner.cml"
+  deps = [
+    "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/test:runner_bin",
+    "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/test/goldens:resources",
+  ]
+}
+fuchsia_test_package("examples_fidl_${series_snake_case}_${variant_snake_case}_rust_tests") {
+  deps = [
+    ":client",
+    ":server",
+    "//examples/fidl/new/${series_snake_case}/${variant_snake_case}:client_config_values",
+    "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/realm:realm",
+  ]
+  test_components = [ ":test" ]
+}
+group("tests") {
+  testonly = true
+  deps = [ ":examples_fidl_${series_snake_case}_${variant_snake_case}_rust_tests" ]
+}

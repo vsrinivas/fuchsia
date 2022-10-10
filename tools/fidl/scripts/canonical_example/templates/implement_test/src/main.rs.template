@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    anyhow::Error,
+    diagnostics_data::{Data, Logs},
+    example_tester::{assert_logs_eq_to_golden, run_test, Client, Server, TestKind},
+    fidl::prelude::*,
+    fidl_examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}Marker,
+    fuchsia_async as fasync,
+    fuchsia_component_test::{ChildRef, RealmBuilder},
+};
+
+// TODO(${dns}): Consider renaming the test to something more descriptive than "default".
+#[fasync::run_singlethreaded(test)]
+async fn test_default() -> Result<(), Error> {
+    let test_name = "test_default";
+    let client = Client::new(test_name, "#meta/${series_snake_case}_client.cm");
+    let server = Server::new(test_name, "#meta/${series_snake_case}_server.cm");
+
+
+    run_test(
+        ${protocol_pascal_case}Marker::PROTOCOL_NAME,
+        TestKind::ClientAndServer { client: &client, server: &server },
+        |builder: RealmBuilder, client: ChildRef| async move {
+            builder.init_mutable_config_to_empty(&client).await?;
+
+            // TODO(${dns}): Use the `builder` parameter to set the appropriate structured config for this test case.
+
+            Ok::<(RealmBuilder, ChildRef), Error>((builder, client))
+        },
+        |raw_logs: Vec<Data<Logs>>| {
+            assert_logs_eq_to_golden(&raw_logs, &client);
+            assert_logs_eq_to_golden(&raw_logs, &server);
+        },
+    )
+    .await
+}
+
+// TODO(${dns}): Maybe add more tests? Not all cases need them - for some, just the default is fine.

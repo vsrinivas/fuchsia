@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  output_name = "server_bin"
+  output_dir = target_out_dir + "/rust"
+  edition = "2021"
+  sources = [ "src/main.rs" ]
+  source_root = "src/main.rs"
+  deps = [
+    "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/fidl:examples.${series_flat_case}.${variant_flat_case}_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+}

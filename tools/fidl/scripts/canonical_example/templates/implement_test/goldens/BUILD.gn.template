@@ -1,0 +1,24 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+
+resource("test_default_client") {
+  sources = [ "test_default_client.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+resource("test_default_server") {
+  sources = [ "test_default_server.log.golden" ]
+  outputs = [ "data/goldens/{{source_file_part}}" ]
+}
+
+# These are files that are meant to be included with our test component. Each file represents a
+# golden from a single process for a single test.
+group("resources") {
+  deps = [
+    ":test_default_client",
+    ":test_default_server",
+  ]
+}

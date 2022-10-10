@@ -33,12 +33,19 @@ DOCUMENT_WIDGET_TEMPLATES_DIR = TEMPLATES_DIR / "document_widget"
 # Startup-compiled regexes.
 REGEX_IS_PASCAL_CASE = re.compile(r"^(?:[A-Z][a-z0-9]+)+$")
 REGEX_IS_SNAKE_CASE = re.compile(r"^[a-z][a-z0-9_]+$")
+REGEX_TO_SNAKE_CASE = re.compile(r"([A-Z]+)")
 REGEX_TO_TEXT_CASE = re.compile(r"_+")
 
 # Other important defaults.
 BASELINE = "baseline"
 DNS = "DO" + "NOT" + "SUBMIT"
 DNRC = "DO_NOT_REMOVE_COMMENT"
+BINDINGS = {
+    "cpp_natural": "main.cc",
+    "cpp_wire": "main.cc",
+    "hlcpp": "main.cc",
+    "rust": "src/main.rs",
+}
 
 
 # Custom exceptions.
@@ -66,23 +73,16 @@ def is_snake_case(input):
     return REGEX_IS_SNAKE_CASE.match(input)
 
 
-def to_camel_case(input):
-    """Converts a snake_case string to (lower) camelCase, ex "iAmCamelCase".
-    """
-    words = input.split('_')
-    return words[0] + "".join(word.capitalize() for word in words[1:])
-
-
 def to_flat_case(input):
     """Converts a snake_case string to (lower) camelCase, ex "iamflatcase".
     """
     return input.replace("_", "")
 
 
-def to_pascal_case(input):
-    """Converts a snake_case string to PascalCase, aka (upper) CamelCase, ex "IAmPascalCase".
+def to_snake_case(input):
+    """Converts a PascalCase string to snake_case, ex "i_am_snake_case".
     """
-    return to_camel_case(input).capitalize()
+    return re.sub(REGEX_TO_SNAKE_CASE, r"_\1", input).lower()
 
 
 def to_sentence_case(input):
@@ -109,11 +109,15 @@ def build_subs(series, variant, protocol, bug):
     if bug and not (isinstance(bug, int) and bug > 0):
         raise InputError("Expected bug '%s' to be an unsigned integer" % bug)
 
+    if not protocol:
+        protocol = ""
+
     # LINT.IfChange
     return {
         'bug': "%s" % bug if bug else "",
         'dns': DNS,
-        'protocol_pascal_case': protocol if protocol else "",
+        'protocol_pascal_case': protocol,
+        'protocol_snake_case': to_snake_case(protocol),
         'series_flat_case': to_flat_case(series),
         'series_sentence_case': to_sentence_case(series),
         'series_snake_case': series,
@@ -194,7 +198,7 @@ def lines_between_dnrc_tags(lines, src_path, identifier=""):
         "DO_NOT_REMOVE_COMMENT comment missing from '%s'" % src_path)
 
 
-def validate_does_not_exist(needle, files):
+def validate_entry_does_not_already_exist(needle, files):
     """Check to see if a canonical example series already exists anywhere we want to insert it.
 
     For each validated file, return a three-tuple containing all the lines of the file, the start,
@@ -216,6 +220,20 @@ def validate_does_not_exist(needle, files):
 
         ranges[path] = (lines, start, end)
     return ranges
+
+
+def validate_todo_md_still_exists(series, variant, subdir):
+    """Ensure that TODO.md for the implementation we are about to begin is still there.
+
+    This file being missing indicate corrupt state.
+    """
+    # Validate that the TODO.md file is still where we expect it - if not, this step may have
+    # already been completed.
+    todo_md_file_path = EXAMPLE_CODE_BASE_DIR / series / variant / subdir / "TODO.md"
+    if not os.path.exists(todo_md_file_path):
+        raise StepError(
+            "Cannot scaffold the %s implementation for '%s/%s' because the TODO.md is missing"
+            % (subdir, series, variant))
 
 
 def resolve_create_templates(subs, source_to_target_map):
@@ -286,14 +304,15 @@ def create_variant(series, variant, protocol, bug):
         raise StepError(
             "Cannot create variant '%s' because its series BUILD.gn file %s does not exist"
             % (variant, series_root_gn_file_path))
-    series_gn_lines = validate_does_not_exist(
-        "{#%s}" % variant, [series_root_gn_file_path])[series_root_gn_file_path]
+    series_gn_dnrc_lines = validate_entry_does_not_already_exist(
+        "%s:tests" % variant,
+        {series_root_gn_file_path: ''})[series_root_gn_file_path]
 
     if not os.path.exists(series_docs_readme_path):
         raise StepError(
             "Cannot create variant '%s' because its series README.md file %s does not exist"
             % (variant, series_docs_readme_path))
-    readme_dnrc_lines = validate_does_not_exist(
+    readme_dnrc_lines = validate_entry_does_not_already_exist(
         "{#%s}" % variant,
         {series_docs_readme_path: ''})[series_docs_readme_path]
 
@@ -332,11 +351,10 @@ def create_variant(series, variant, protocol, bug):
         with open(variant_fidl_file_path, "wt") as f:
             f.write(out_contents)
 
-    # Add an entry to the docs BUILD.gn file for this series, and update the dns count so the user
-    # is aware that they need to make further edits in this file.
+    # Add an entry to the root BUILD.gn file for this series.
     with open(series_root_gn_file_path, "wt") as f:
-        lines, start, end = series_gn_lines
-        lines.insert(end - 1, """    "%s:tests",\n""" % variant)
+        lines, start, end = series_gn_dnrc_lines
+        lines.insert(end, """    "%s:tests",\n""" % variant)
         f.write("".join(lines))
 
     # Add an entry to the root docs README.md file's example section for this series, and update the
@@ -364,7 +382,7 @@ def create_new(series, protocol, bug):
     subs = build_subs(series, BASELINE, protocol, bug)
 
     # Do a first pass through the files we'll be editing, to ensure that they are in a good state.
-    edit_ranges = validate_does_not_exist(
+    edit_ranges = validate_entry_does_not_already_exist(
         series, {
             DOCS_TOC_YAML_FILE: '',
             DOCS_ROOT_README_FILE: 'examples',
@@ -396,8 +414,7 @@ def create_new(series, protocol, bug):
     # Update /examples/fidl/new/BUILD.gn to support this series.
     with open(CODE_ROOT_BUILD_GN_FILE, "wt") as f:
         lines, start, end = edit_ranges[CODE_ROOT_BUILD_GN_FILE]
-        lines.insert(
-            end - 1, """    "%s:tests",\n""" % subs['series_snake_case'])
+        lines.insert(end, """    "%s:tests",\n""" % subs['series_snake_case'])
         f.write("".join(lines))
 
     # Copy over each doc template file, processing substitutions on both file names and contents as
@@ -453,7 +470,7 @@ def document(name, concepts):
 
     # Validate that the root docs README.md file exists, and that its concepts section is well
     # marked, since we will need to modify it.
-    readme_concepts_lines = validate_does_not_exist(
+    readme_concepts_lines = validate_entry_does_not_already_exist(
         "### %s" % variant,
         {DOCS_ROOT_README_FILE: 'concepts'})[DOCS_ROOT_README_FILE]
 
@@ -499,6 +516,137 @@ def document(name, concepts):
                 dns_counts[path_str] = count
             with open(path, "wt") as f:
                 f.write(replaced)
+
+    report_success(dns_counts)
+
+
+def maybe_implement_test(series, variant, subs):
+    """Implement the test implementation, and add a TODO to client.cml, if they do not yet exist.
+    """
+    dns_counts = {}
+
+    # Ensure that the to-be-replaced TODO.md still exists.
+    try:
+        validate_todo_md_still_exists(series, variant, "test")
+    except StepError:
+        return dns_counts
+
+    variant_code_root_path = EXAMPLE_CODE_BASE_DIR / series / variant
+    todo_md_file_path = variant_code_root_path / "test" / "TODO.md"
+    client_cml_path = variant_code_root_path / "meta/client.cml"
+
+    # Ensure that the BUILD.gn for this variant still exists.
+    variant_root_gn_file_path = variant_code_root_path / "BUILD.gn"
+    if not os.path.exists(variant_root_gn_file_path):
+        raise StepError(
+            "Cannot scaffold an implementation for '%s/%s' because variant's BUILD.gn is missing"
+            % (series, variant))
+
+    # Validate that the client.cml file is where we expect it to be.
+    if not os.path.exists(client_cml_path):
+        raise StepError(
+            "Cannot scaffold an implementation for '%s/%s' because the client.cml is missing"
+            % (series, variant))
+
+    # Update the client.cml file with a TODO telling the user to add some structured config.
+    with open(client_cml_path, "r") as f:
+        content = f.read()
+        dns_count = get_dns_count(content)
+        dns_counts[client_cml_path] = dns_count + 1
+        with open(client_cml_path, "wt") as f:
+            dns = textwrap.dedent(
+                """
+            // TODO(%s): Expand the structured config as necessary to set up this variant.
+            """ % DNS)
+            f.write(content + dns)
+
+    # Update the variant BUILD.gn file with a TODO telling the user to add structured config
+    # defaults to `client_config_values`.
+    with open(variant_root_gn_file_path, "r") as f:
+        content = f.read()
+        dns_count = get_dns_count(content)
+        dns_counts[variant_root_gn_file_path] = dns_count + 1
+        with open(variant_root_gn_file_path, "wt") as f:
+            dns = textwrap.dedent(
+                """
+            # TODO(%s): Add a `values` field to `client_config_values` after editing client.cml.
+            """ % DNS)
+            f.write(content + dns)
+
+    # Remove the TODO.md file, then generate the templates in its place.
+    os.remove(todo_md_file_path)
+    binding_templates_dir = TEMPLATES_DIR / "implement_test"
+    for path, count in apply_subs("test", subs, binding_templates_dir,
+                                  variant_code_root_path).items():
+        dns_counts[path] = count
+
+    return dns_counts
+
+
+def implement(name, binding, protocol, series):
+    """Implement the canonical example in a single binding language.
+    """
+    variant = BASELINE
+    if series:
+        variant = name
+    else:
+        series = name
+
+    tutorial_md_file_path = EXAMPLE_DOCS_BASE_DIR / series / (
+        "_%s_tutorial.md" % variant)
+    variant_code_root_path = EXAMPLE_CODE_BASE_DIR / series / variant
+    todo_md_file_path = variant_code_root_path / binding / "TODO.md"
+    variant_root_gn_file_path = variant_code_root_path / "BUILD.gn"
+
+    # Validate the presence of the tutorial markdown file.
+    if not (os.path.exists(tutorial_md_file_path) and
+            os.path.exists(variant_code_root_path)):
+        raise StepError(
+            "Cannot scaffold %s binding for '%s/%s' because this variant has not yet been created"
+            % (binding, series, variant))
+
+    # Ensure that the variant's BUILD.gn file exists.
+    if not os.path.exists(variant_root_gn_file_path):
+        raise StepError(
+            "Cannot scaffold %s binding for '%s/%s' because root BUILD.gn file %s does not exist"
+            % (binding, variant, variant_root_gn_file_path))
+
+    # Build the subs, and ensure that the to-be-replaced TODO.md still exists.
+    subs = build_subs(series, variant, protocol, None)
+    validate_todo_md_still_exists(series, variant, binding)
+
+    # If it doesn't exist yet, generate the test implementation as well.
+    dns_counts = maybe_implement_test(series, variant, subs)
+
+    # Load this file now, since it was just updated.
+    variant_gn_dnrc_lines = validate_entry_does_not_already_exist(
+        "%s:tests" % binding,
+        {variant_root_gn_file_path: ''})[variant_root_gn_file_path]
+
+    # Add an entry to the root BUILD.gn file for this variant.
+    with open(variant_root_gn_file_path, "wt") as f:
+        lines, start, end = variant_gn_dnrc_lines
+        lines.insert(end, """    "%s:tests",\n""" % binding)
+        f.write("".join(lines))
+
+    # Update the tutorial markdown file to no longer point to the TODO.md file, and instead point it
+    # at the actual client and server implementations.
+    with open(tutorial_md_file_path, "r") as f:
+        replaced_client_todo = f.read().replace(
+            """%s/TODO.md" region_tag="todo" """ % binding,
+            """client/%s" """ % BINDINGS[binding], 1)
+        replaced_both_todos = replaced_client_todo.replace(
+            """%s/TODO.md" region_tag="todo" """ % binding,
+            """server/%s" """ % BINDINGS[binding], 1)
+        with open(tutorial_md_file_path, "wt") as f:
+            f.write(replaced_both_todos)
+
+    # Remove the TODO.md file, then generate the templates in its place.
+    os.remove(todo_md_file_path)
+    binding_templates_dir = TEMPLATES_DIR / ("implement_%s" % binding)
+    for path, count in apply_subs(binding, subs, binding_templates_dir,
+                                  variant_code_root_path).items():
+        dns_counts[path] = count
 
     report_success(dns_counts)
 
@@ -567,6 +715,8 @@ def main(args):
         return create(args.name, args.protocol, args.bug, args.series)
     if args.command_used == "document":
         return document(args.name, args.concepts[0])
+    if args.command_used == "implement":
+        return implement(args.name, args.binding, args.protocol, args.series)
     raise argparse.ArgumentTypeError("Unknown command '%s'" % args.command_used)
 
 
@@ -578,8 +728,14 @@ if __name__ == '__main__':
         'document':
             """Document a canonical example variant, which enables writing all of the tutorial text
             that accompanies the variant.""",
+        'implement':
+            """Implement a canonical example variant in a single binding language. If this is the
+            first implementation of the canonical example variant, test scripts will need to be
+            filled in as well.""",
     }
     helps = {
+        'binding':
+            """The language binding being implemented.""",
         'bug':
             """The bug associated with this canonical example entry.""",
         'concepts':
@@ -628,6 +784,26 @@ if __name__ == '__main__':
         "name", metavar="name", type=snake_case, help=helps['name'])
     document_cmd.add_argument(
         "--concepts", nargs='+', type=snake_case_list, help=helps['concepts'])
+
+    # Specify the implement command.
+    implement_cmd = commands.add_parser("implement", help=details["implement"])
+    implement_cmd.add_argument(
+        "name", metavar="name", type=snake_case, help=helps['name'])
+    implement_cmd.add_argument(
+        "--binding",
+        type=snake_case,
+        choices=BINDINGS.keys(),
+        required=True,
+        help=helps['binding'])
+    implement_cmd.add_argument(
+        "--protocol", type=pascal_case, required=True, help=helps['protocol'])
+    implement_cmd_new_or_extend = implement_cmd.add_mutually_exclusive_group(
+        required=True)
+    implement_cmd_new_or_extend.add_argument(
+        "--from", dest="series", type=snake_case, help=helps['from'])
+    implement_cmd_new_or_extend.add_argument(
+        "--new", action='store_true', help=helps['new'])
+    implement_cmd_new_or_extend.set_defaults(new=True)
 
     # Parse arguments.
     main(args.parse_args())

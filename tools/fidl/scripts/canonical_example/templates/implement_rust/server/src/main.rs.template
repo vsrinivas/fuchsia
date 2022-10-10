@@ -1,0 +1,51 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    anyhow::{Context as _, Error},
+    fidl::endpoints::RequestStream as _,
+    fidl_examples_${series_flat_case}_${variant_flat_case}:: // TODO(${dns}): import generated types and traits.
+    fuchsia_component::server::ServiceFs,
+};
+
+/// Creates a new instance of the server, paired to a single client across a zircon channel.
+async fn run_server(stream: ${protocol_pascal_case}RequestStream) -> Result<(), Error> {
+    // Handle requests on the protocol sequentially - a new request is not handled until its
+    // predecessor has been processed.
+    stream.map(|result| result.context("failed request")).try_for_each(|request| async move {
+            // Match based on the method being invoked.
+            match request {
+                // TODO(${dns}): implement protocol `${protocol_pascal_case}` methods.
+            }
+            Ok(())
+        });
+}
+
+// A helper enum that allows us to treat a `${protocol_pascal_case}` service instance as a value.
+enum IncomingService {
+    ${protocol_pascal_case}(${protocol_pascal_case}RequestStream),
+}
+
+#[fuchsia::main]
+async fn main() -> Result<(), Error> {
+    println!("Started");
+
+    // Add a discoverable instance of our `${protocol_pascal_case}` protocol - this will allow the client to see
+    // the server and connect to it.
+    let mut fs = ServiceFs::new_local();
+    fs.dir("svc").add_fidl_service(IncomingService::${protocol_pascal_case});
+    fs.take_and_serve_directory_handle()?;
+    println!("Listening for incoming connections");
+
+    // The maximum number of concurrent clients that may be served by this process.
+    const MAX_CONCURRENT: usize = 10;
+
+    // Serve each connection simultaneously, up to the `MAX_CONCURRENT` limit.
+    fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::${protocol_pascal_case}(stream)| {
+        run_server(stream).unwrap_or_else(|e| println!("{:?}", e))
+    })
+    .await;
+
+    Ok(())
+}
