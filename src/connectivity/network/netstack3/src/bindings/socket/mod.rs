@@ -513,6 +513,7 @@ impl IntoErrno for UdpConnectListenerError {
         match self {
             Self::Ip(err) => err.into_errno(),
             Self::Zone(err) => err.into_errno(),
+            Self::AddressConflict => Errno::Eaddrinuse,
         }
     }
 }

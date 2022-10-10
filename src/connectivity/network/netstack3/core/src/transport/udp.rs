@@ -44,7 +44,7 @@ use crate::{
     error::{LocalAddressError, SocketError, ZonedAddressError},
     ip::{
         icmp::IcmpIpExt,
-        socket::{IpSockCreationError, IpSockSendError},
+        socket::{IpSockCreationError, IpSockSendError, IpSocketHandler as _},
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt,
         IpTransportContext, TransportIpContext, TransportReceiveError,
     },
@@ -54,8 +54,8 @@ use crate::{
         datagram::{
             self, ConnState, DatagramBoundId, DatagramSocketId, DatagramSocketStateSpec,
             DatagramSockets, DatagramStateContext, DatagramStateNonSyncContext, InUseError,
-            IpOptions, ListenerState, MulticastMembershipInterfaceSelector,
-            SetMulticastMembershipError, SocketHopLimits, UnboundSocketState,
+            ListenerState, MulticastMembershipInterfaceSelector, SetMulticastMembershipError,
+            SocketHopLimits, UnboundSocketState,
         },
         posix::{
             PosixAddrState, PosixAddrVecIter, PosixAddrVecTag, PosixConflictPolicy,
@@ -119,21 +119,19 @@ pub struct UdpSockets<I: Ip + IpExt, D: IpDeviceId> {
     lazy_port_alloc: Option<PortAlloc<UdpBoundSocketMap<I, D>>>,
 }
 
-impl<I: IpExt, D: IpDeviceId> UdpSockets<I, D> {
-    /// Helper function to allocate a local port.
-    ///
-    /// Attempts to allocate a new unused local port with the given flow identifier
-    /// `id`.
-    pub(crate) fn try_alloc_local_port<R: RngCore>(
-        &mut self,
-        rng: &mut R,
-        id: ProtocolFlowId<I::Addr>,
-    ) -> Option<NonZeroU16> {
-        let Self { lazy_port_alloc, sockets: DatagramSockets { bound, unbound: _ } } = self;
-        // Lazily init port_alloc if it hasn't been inited yet.
-        let port_alloc = lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(rng));
-        port_alloc.try_alloc(&id, bound).and_then(NonZeroU16::new)
-    }
+/// Helper function to allocate a local port.
+///
+/// Attempts to allocate a new unused local port with the given flow identifier
+/// `id`.
+fn try_alloc_local_port<R: RngCore, I: Ip + IpExt, D: IpDeviceId>(
+    lazy_port_alloc: &mut Option<PortAlloc<UdpBoundSocketMap<I, D>>>,
+    bound: &UdpBoundSocketMap<I, D>,
+    rng: &mut R,
+    id: ProtocolFlowId<I::Addr>,
+) -> Option<NonZeroU16> {
+    // Lazily init port_alloc if it hasn't been inited yet.
+    let port_alloc = lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(rng));
+    port_alloc.try_alloc(&id, bound).and_then(NonZeroU16::new)
 }
 
 /// The state associated with the UDP protocol.
@@ -1231,55 +1229,69 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         remote_ip: ZonedAddr<I::Addr, Self::DeviceId>,
         remote_port: NonZeroU16,
     ) -> Result<UdpConnId<I>, UdpSockCreationError> {
-        // First remove the unbound socket being promoted.
-        let (remote_ip, device, sharing, ip_options) = self
-            .with_sockets_mut(
-                |_sync_ctx,
-                 UdpSockets {
-                     sockets: DatagramSockets { bound: _, unbound },
-                     lazy_port_alloc: _,
-                 }| {
-                    let occupied = match unbound.entry(id.into()) {
-                        IdMapEntry::Vacant(_) => panic!("unbound socket {:?} not found", id),
-                        IdMapEntry::Occupied(o) => o,
-                    };
-                    let UnboundSocketState { device, sharing: _, ip_options: _ } = occupied.get();
+        self.with_sockets_mut(|sync_ctx, state| {
+            let UdpSockets { sockets: DatagramSockets { bound, unbound }, lazy_port_alloc } = state;
+            let occupied = match unbound.entry(id.into()) {
+                IdMapEntry::Vacant(_) => panic!("unbound socket {:?} not found", id),
+                IdMapEntry::Occupied(o) => o,
+            };
+            let UnboundSocketState { device, sharing, ip_options: _ } = occupied.get();
 
-                    let (remote_ip, socket_device) =
-                        datagram::resolve_addr_with_device(remote_ip, device.as_ref())?;
+            let (remote_ip, socket_device) =
+                datagram::resolve_addr_with_device(remote_ip, device.as_ref())
+                    .map_err(UdpSockCreationError::Zone)?;
 
-                    let UnboundSocketState { device: _, sharing, ip_options } = occupied.remove();
-                    Ok((remote_ip, socket_device, sharing, ip_options))
-                },
-            )
-            .map_err(UdpSockCreationError::Zone)?;
+            let device = socket_device.as_ref();
 
-        create_udp_conn(
-            self,
-            ctx,
-            None,
-            None,
-            device.as_ref(),
-            remote_ip,
-            remote_port,
-            sharing,
-            ip_options,
-            false,
-        )
-        .map_err(|(e, ip_options)| {
-            assert_matches::assert_matches!(
-                self.with_sockets_mut(|_sync_ctx, state| {
-                    let UdpSockets {
-                        sockets: DatagramSockets { unbound, bound: _ },
-                        lazy_port_alloc: _,
-                    } = state;
-                    unbound.insert(id.into(), UnboundSocketState { device, sharing, ip_options })
-                }),
+            let ip_sock = match sync_ctx.new_ip_socket(
+                ctx,
                 None,
-                "just-cleared-entry for {:?} is occupied",
-                id
-            );
-            e
+                None,
+                remote_ip,
+                IpProto::Udp.into(),
+                Default::default(),
+            ) {
+                Ok(ip_sock) => ip_sock,
+                Err((e, _ip_options)) => return Err(e.into()),
+            };
+
+            let local_ip = *ip_sock.local_ip();
+            let remote_ip = *ip_sock.remote_ip();
+
+            let local_port = {
+                match try_alloc_local_port(
+                    lazy_port_alloc,
+                    bound,
+                    ctx.rng_mut(),
+                    ProtocolFlowId::new(local_ip, remote_ip, remote_port),
+                ) {
+                    Some(port) => port,
+                    None => {
+                        return Err(UdpSockCreationError::CouldNotAllocateLocalPort);
+                    }
+                }
+            };
+
+            let c = ConnAddr {
+                ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
+                device: device.cloned(),
+            };
+            match bound.conns_mut().try_insert(
+                c,
+                ConnState { socket: ip_sock, clear_device_on_disconnect: false },
+                *sharing,
+            ) {
+                Ok(mut entry) => {
+                    let UnboundSocketState { device: _, sharing: _, ip_options } =
+                        occupied.remove();
+                    *entry.get_state_mut().socket.options_mut() = ip_options;
+                    Ok(entry.id())
+                }
+                Err(e) => {
+                    let _: (InsertError, ConnState<_, _>, PosixSharingOptions) = e;
+                    Err(UdpSockCreationError::SockAddrConflict)
+                }
+            }
         })
     }
 
@@ -1421,73 +1433,63 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         remote_ip: ZonedAddr<I::Addr, Self::DeviceId>,
         remote_port: NonZeroU16,
     ) -> Result<UdpConnId<I>, (UdpConnectListenerError, UdpListenerId<I>)> {
-        let (ip, remote_ip, device, original_addr, ip_options, sharing, clear_device_on_disconnect) =
-            self.with_sockets_mut(|_sync_ctx, state| {
-                let UdpSockets {
-                    sockets: DatagramSockets { bound, unbound: _ },
-                    lazy_port_alloc: _,
-                } = state;
-                let entry = bound.listeners_mut().entry(&id).expect("Invalid UDP listener ID");
-                let (_, _, ListenerAddr { ip, device }): &(
-                    ListenerState<_, _>,
-                    PosixSharingOptions,
-                    _,
-                ) = entry.get();
+        self.with_sockets_mut(|sync_ctx, state| {
+            let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
+                state;
+            let entry = bound.listeners_mut().entry(&id).expect("Invalid UDP listener ID");
+            let (_, _, ListenerAddr { ip, device }): &(
+                ListenerState<_, _>,
+                PosixSharingOptions,
+                _,
+            ) = entry.get();
 
-                let (remote_ip, socket_device) =
-                    datagram::resolve_addr_with_device(remote_ip, device.as_ref())?;
-                let clear_device_on_disconnect = device.is_none() && socket_device.is_some();
-                let ip = *ip;
-                let (ListenerState { ip_options }, sharing, original_addr) = entry.remove();
-                Ok((
-                    ip,
-                    remote_ip,
-                    socket_device,
-                    original_addr,
-                    ip_options,
-                    sharing,
-                    clear_device_on_disconnect,
-                ))
-            })
-            .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
+            let (remote_ip, socket_device) =
+                datagram::resolve_addr_with_device(remote_ip, device.as_ref())
+                    .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
 
-        let ListenerIpAddr { addr: local_ip, identifier: local_port } = ip;
+            let ListenerIpAddr { addr: local_ip, identifier: local_port } = *ip;
 
-        create_udp_conn(
-            self,
-            ctx,
-            local_ip,
-            Some(local_port),
-            device.as_ref(),
-            remote_ip,
-            remote_port,
-            sharing,
-            ip_options,
-            clear_device_on_disconnect,
-        )
-        .map_err(|(e, ip_options)| {
-            let e = match e {
-                UdpSockCreationError::CouldNotAllocateLocalPort => {
-                    unreachable!("local port is already provided")
-                }
-                UdpSockCreationError::SockAddrConflict => {
-                    unreachable!("the socket was just vacated")
-                }
-                UdpSockCreationError::Ip(ip) => ip.into(),
-                UdpSockCreationError::Zone(e) => UdpConnectListenerError::Zone(e),
+            let ip_sock = match sync_ctx.new_ip_socket(
+                ctx,
+                socket_device.as_ref(),
+                local_ip,
+                remote_ip,
+                IpProto::Udp.into(),
+                Default::default(),
+            ) {
+                Ok(ip_sock) => ip_sock,
+                Err((e, _ip_options)) => return Err((e.into(), id)),
             };
-            self.with_sockets_mut(|_sync_ctx, state| {
-                let UdpSockets {
-                    sockets: DatagramSockets { bound, unbound: _ },
-                    lazy_port_alloc: _,
-                } = state;
-                let listener = bound
-                    .listeners_mut()
-                    .try_insert(original_addr, ListenerState { ip_options }, sharing)
-                    .expect("reinserting just-removed listener failed")
-                    .id();
-                (e, listener)
-            })
+
+            let clear_device_on_disconnect = device.is_none() && socket_device.is_some();
+            let (ListenerState { ip_options }, sharing, original_addr) = entry.remove();
+
+            let local_ip = *ip_sock.local_ip();
+            let remote_ip = *ip_sock.remote_ip();
+
+            let c = ConnAddr {
+                ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
+                device: socket_device,
+            };
+            let insert_error = match bound.conns_mut().try_insert(
+                c,
+                ConnState { socket: ip_sock, clear_device_on_disconnect },
+                sharing,
+            ) {
+                Ok(mut entry) => {
+                    *entry.get_state_mut().socket.options_mut() = ip_options;
+                    return Ok(entry.id());
+                }
+                Err(e) => e,
+            };
+
+            let _: (InsertError, ConnState<_, _>, PosixSharingOptions) = insert_error;
+            let listener = bound
+                .listeners_mut()
+                .try_insert(original_addr, ListenerState { ip_options }, sharing)
+                .expect("reinserting just-removed listener failed")
+                .id();
+            Err((UdpConnectListenerError::AddressConflict, listener))
         })
     }
 
@@ -1502,72 +1504,69 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> UdpSocke
         remote_ip: ZonedAddr<I::Addr, Self::DeviceId>,
         remote_port: NonZeroU16,
     ) -> Result<UdpConnId<I>, (UdpConnectListenerError, UdpConnId<I>)> {
-        let ((local_ip, local_port), remote_ip, device, original_addr, conn_state, sharing) = self
-            .with_sockets_mut(|_sync_ctx, state| {
-                let UdpSockets {
-                    sockets: DatagramSockets { bound, unbound: _ },
-                    lazy_port_alloc: _,
-                } = state;
-                let entry = bound.conns_mut().entry(&id).expect("Invalid UDP conn ID");
-                let (_, _, ConnAddr { ip: ConnIpAddr { local, remote: _ }, device }): &(
-                    ConnState<_, _>,
-                    PosixSharingOptions,
-                    _,
-                ) = entry.get();
+        self.with_sockets_mut(|sync_ctx, state| {
+            let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
+                state;
+            let entry = bound.conns_mut().entry(&id).expect("Invalid UDP conn ID");
+            let (_, _, ConnAddr { ip: ConnIpAddr { local, remote: _ }, device }): &(
+                ConnState<_, _>,
+                PosixSharingOptions,
+                _,
+            ) = entry.get();
 
-                let (remote_ip, socket_device) =
-                    datagram::resolve_addr_with_device(remote_ip, device.as_ref())?;
-                let local = *local;
-                let (state, sharing, original_addr) = entry.remove();
-                Ok((local, remote_ip, socket_device, original_addr, state, sharing))
-            })
-            .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
-        let ConnState { mut socket, clear_device_on_disconnect } = conn_state;
-        let ip_options = socket.take_options();
+            let (remote_ip, socket_device) =
+                datagram::resolve_addr_with_device(remote_ip, device.as_ref())
+                    .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
 
-        create_udp_conn(
-            self,
-            ctx,
-            Some(local_ip),
-            Some(local_port),
-            device.as_ref(),
-            remote_ip,
-            remote_port,
-            sharing,
-            ip_options,
-            clear_device_on_disconnect,
-        )
-        .map_err(|(e, ip_options)| {
-            let e = match e {
-                UdpSockCreationError::CouldNotAllocateLocalPort => {
-                    unreachable!("local port is already provided")
-                }
-                UdpSockCreationError::SockAddrConflict => {
-                    unreachable!("the socket was just vacated")
-                }
-                UdpSockCreationError::Ip(ip) => ip.into(),
-                UdpSockCreationError::Zone(e) => UdpConnectListenerError::Zone(e),
+            let (local_ip, _) = local;
+            let ip_sock = match sync_ctx.new_ip_socket(
+                ctx,
+                socket_device.as_ref(),
+                Some(*local_ip),
+                remote_ip,
+                IpProto::Udp.into(),
+                Default::default(),
+            ) {
+                Ok(ip_sock) => ip_sock,
+                Err((e, _ip_options)) => return Err((e.into(), id)),
             };
-            let _: IpOptions<_, _> = socket.replace_options(ip_options);
+
+            let local = *local;
+            let (mut conn_state, sharing, original_addr) = entry.remove();
+            let ConnState { socket, clear_device_on_disconnect } = &mut conn_state;
+
+            let device = socket_device.as_ref();
+
+            let c = ConnAddr {
+                ip: ConnIpAddr { local, remote: (remote_ip, remote_port) },
+                device: device.cloned(),
+            };
+
+            let insert_error = match bound.conns_mut().try_insert(
+                c,
+                ConnState {
+                    socket: ip_sock,
+                    clear_device_on_disconnect: *clear_device_on_disconnect,
+                },
+                sharing,
+            ) {
+                Ok(mut entry) => {
+                    *entry.get_state_mut().socket.options_mut() = socket.take_options();
+                    return Ok(entry.id());
+                }
+                Err(e) => e,
+            };
+
+            let _: (InsertError, ConnState<_, _>, PosixSharingOptions) = insert_error;
             // Restore the original socket if creation of the new socket fails.
-            self.with_sockets_mut(|_sync_ctx, state| {
-                let UdpSockets {
-                    sockets: DatagramSockets { bound, unbound: _ },
-                    lazy_port_alloc: _,
-                } = state;
-                let conn = bound
-                    .conns_mut()
-                    .try_insert(
-                        original_addr,
-                        ConnState { socket, clear_device_on_disconnect },
-                        sharing,
-                    )
-                    .unwrap_or_else(|(e, _, _): (_, ConnState<_, _>, PosixSharingOptions)| {
-                        unreachable!("reinserting just-removed connected socket failed: {:?}", e)
-                    })
-                    .id();
-                (e, conn)
-            })
+            let id = bound
+                .conns_mut()
+                .try_insert(original_addr, conn_state, sharing)
+                .unwrap_or_else(|(e, _, _): (_, ConnState<_, _>, PosixSharingOptions)| {
+                    unreachable!("reinserting just-removed connected socket failed: {:?}", e)
+                })
+                .id();
+            Err((UdpConnectListenerError::AddressConflict, id))
         })
     }
 
@@ -2089,73 +2088,6 @@ pub fn connect_udp<I: IpExt, C: NonSyncContext>(
     .map_err(|IpInv(a)| a)
 }
 
-fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
-    local_ip: Option<SpecifiedAddr<I::Addr>>,
-    local_port: Option<NonZeroU16>,
-    device: Option<&SC::DeviceId>,
-    remote_ip: SpecifiedAddr<I::Addr>,
-    remote_port: NonZeroU16,
-    sharing: PosixSharingOptions,
-    ip_options: IpOptions<I::Addr, SC::DeviceId>,
-    clear_device_on_disconnect: bool,
-) -> Result<UdpConnId<I>, (UdpSockCreationError, IpOptions<I::Addr, SC::DeviceId>)> {
-    let ip_sock = match sync_ctx.new_ip_socket(
-        ctx,
-        None,
-        local_ip,
-        remote_ip,
-        IpProto::Udp.into(),
-        ip_options,
-    ) {
-        Ok(ip_sock) => ip_sock,
-        Err((e, ip_options)) => return Err((e.into(), ip_options)),
-    };
-
-    let local_ip = *ip_sock.local_ip();
-    let remote_ip = *ip_sock.remote_ip();
-
-    sync_ctx.with_sockets_mut(|_sync_ctx, state| {
-        let local_port = if let Some(local_port) = local_port {
-            local_port
-        } else {
-            match state.try_alloc_local_port(
-                ctx.rng_mut(),
-                ProtocolFlowId::new(local_ip, remote_ip, remote_port),
-            ) {
-                Some(port) => port,
-                None => {
-                    return Err((
-                        UdpSockCreationError::CouldNotAllocateLocalPort,
-                        ip_sock.into_options(),
-                    ));
-                }
-            }
-        };
-
-        let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
-            state;
-        let c = ConnAddr {
-            ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
-            device: device.cloned(),
-        };
-        bound
-            .conns_mut()
-            .try_insert(c, ConnState { socket: ip_sock, clear_device_on_disconnect }, sharing)
-            .map(|entry| entry.id())
-            .map_err(
-                |(_, ConnState { socket, clear_device_on_disconnect: _ }, _): (
-                    InsertError,
-                    _,
-                    PosixSharingOptions,
-                )| {
-                    (UdpSockCreationError::SockAddrConflict, socket.into_options())
-                },
-            )
-    })
-}
-
 /// Sets the device to be bound to for an unbound socket.
 ///
 /// # Panics
@@ -2453,6 +2385,9 @@ pub enum UdpConnectListenerError {
     /// There was a problem with the provided address relating to its zone.
     #[error("{}", _0)]
     Zone(#[from] ZonedAddressError),
+    /// The new socket conflicts with an existing one.
+    #[error("The address is already occupied")]
+    AddressConflict,
 }
 
 /// Connects an already existing UDP socket to a remote destination.
