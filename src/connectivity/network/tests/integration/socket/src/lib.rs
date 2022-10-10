@@ -775,12 +775,12 @@ async fn tcp_socket_send_recv<E: netemul::Endpoint, Client: Netstack, Server: Ne
 }
 
 #[variants_test]
-async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
+async fn test_tcp_socket<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let net = sandbox.create_network("net").await.expect("failed to create network");
 
     let client = sandbox
-        .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
+        .create_netstack_realm::<N, _>(format!("{}_client", name))
         .expect("failed to create client realm");
     let client_ep = client
         .join_network_with(
@@ -794,7 +794,7 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
     client_ep.add_address_and_subnet_route(CLIENT_SUBNET).await.expect("configure address");
 
     let server = sandbox
-        .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
+        .create_netstack_realm::<N, _>(format!("{}_server", name))
         .expect("failed to create server realm");
     let server_ep = server
         .join_network_with(
@@ -806,17 +806,6 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
         .await
         .expect("server failed to join network");
     server_ep.add_address_and_subnet_route(SERVER_SUBNET).await.expect("configure address");
-
-    // Add static ARP entries as we've observed flakes in CQ due to ARP timeouts
-    // and ARP resolution is immaterial to this test.
-    futures::stream::iter([
-        (&server, &server_ep, CLIENT_SUBNET.addr, CLIENT_MAC),
-        (&client, &client_ep, SERVER_SUBNET.addr, SERVER_MAC),
-    ])
-    .for_each_concurrent(None, |(realm, ep, addr, mac)| {
-        realm.add_neighbor_entry(ep.id(), addr, mac).map(|r| r.expect("add_neighbor_entry"))
-    })
-    .await;
 
     run_tcp_socket_test(&server, SERVER_SUBNET.addr, &client, CLIENT_SUBNET.addr).await
 }
