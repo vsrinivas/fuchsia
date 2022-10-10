@@ -425,7 +425,7 @@ func (d *Distribution) ResizeRawImage(imageName, hostPathFvmBinary string) (stri
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err != nil {
-				return resizedPath, err
+				return resizedPath, fmt.Errorf("error running %q: %w", cmd, err)
 			}
 		}
 		info, err := os.Stat(resizedPath)
@@ -439,7 +439,7 @@ func (d *Distribution) ResizeRawImage(imageName, hostPathFvmBinary string) (stri
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			if err := cmd.Run(); err != nil {
-				return resizedPath, err
+				return resizedPath, fmt.Errorf("error running %q: %w", cmd, err)
 			}
 		}
 		return resizedPath, nil
@@ -535,7 +535,7 @@ dm poweroff
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("error running %q: %w", cmd, err)
 		}
 	}
 
@@ -582,7 +582,7 @@ dm poweroff
 		// TODO(fxbug.dev/58804): Remove this.
 		cmd.Dir = "/"
 		if err := cmd.Run(); err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("error running %q: %w", cmd, err)
 		}
 	}
 
@@ -593,7 +593,7 @@ dm poweroff
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("error running %q: %w", cmd, err)
 		}
 	}
 	{
@@ -601,7 +601,7 @@ dm poweroff
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("error running %q: %w", cmd, err)
 		}
 	}
 
