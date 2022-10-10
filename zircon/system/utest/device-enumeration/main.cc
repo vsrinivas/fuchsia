@@ -147,6 +147,8 @@ fbl::String GetTestFilter() {
 }
 
 class DeviceEnumerationTest : public zxtest::Test {
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(PrintAllDevices()); }
+
  protected:
   void TestRunner(const char** device_paths, size_t paths_num) {
     fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
@@ -163,6 +165,51 @@ class DeviceEnumerationTest : public zxtest::Test {
       EXPECT_OK(fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
                     ->GetTopologicalPath()
                     .status());
+    }
+  }
+
+ private:
+  static void PrintAllDevices() {
+    // This uses the development API for its convenience over directory traversal. It would be more
+    // useful to log paths in devfs for the purposes of this test, but less convenient.
+    zx::status driver_development =
+        component::Connect<fuchsia_driver_development::DriverDevelopment>();
+    ASSERT_OK(driver_development.status_value());
+
+    const fidl::WireResult result = fidl::WireCall(driver_development.value())->IsDfv2();
+    ASSERT_OK(result.status());
+    const bool is_dfv2 = result.value().response;
+
+    {
+      zx::status endpoints =
+          fidl::CreateEndpoints<fuchsia_driver_development::DeviceInfoIterator>();
+      ASSERT_OK(endpoints.status_value());
+      auto& [client, server] = endpoints.value();
+
+      const fidl::WireResult result =
+          fidl::WireCall(driver_development.value())->GetDeviceInfo({}, std::move(server));
+      ASSERT_OK(result.status());
+
+      // NB: this uses iostream (rather than printf) because FIDL strings aren't null-terminated.
+      std::cout << "BEGIN printing all devices (paths in DFv1, monikers in DFv2):" << std::endl;
+      while (true) {
+        const fidl::WireResult result = fidl::WireCall(client)->GetNext();
+        ASSERT_OK(result.status());
+        const fidl::WireResponse response = result.value();
+        if (response.drivers.empty()) {
+          break;
+        }
+        for (const fuchsia_driver_development::wire::DeviceInfo& info : response.drivers) {
+          if (is_dfv2) {
+            ASSERT_TRUE(info.has_moniker());
+            std::cout << info.moniker().get() << std::endl;
+          } else {
+            ASSERT_TRUE(info.has_topological_path());
+            std::cout << info.topological_path().get() << std::endl;
+          }
+        }
+      }
+      std::cout << "END printing all devices (paths in DFv1, monikers in DFv2)." << std::endl;
     }
   }
 };
