@@ -5,10 +5,7 @@
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 config("magma_config") {
-  include_dirs = [
-    "magma",
-    ".",
-  ]
+  include_dirs = [ "." ]
 }
 
 source_set("magma") {
