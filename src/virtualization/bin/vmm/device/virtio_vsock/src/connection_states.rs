@@ -201,6 +201,10 @@ impl ClientInitiated {
 
                     let (client, device) = zx::Socket::create(zx::SocketOpts::STREAM)?;
                     let local_async = fasync::Socket::from_socket(device)?;
+
+                    // TODO(fxbug.dev/110903): Remove once flake is resolved.
+                    tracing::info!("Sending socket to client for {:?}", self.key);
+
                     self.responder.take().unwrap().send(&mut Ok(client))?;
                     Ok(local_async)
                 };

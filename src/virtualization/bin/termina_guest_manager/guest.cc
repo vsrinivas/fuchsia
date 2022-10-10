@@ -180,6 +180,9 @@ void Guest::OnGuestLaunched(fuchsia::virtualization::GuestManager& guest_manager
       TRACE_FLOW_BEGIN("termina_guest_manager", "TerminaBoot", vm_ready_nonce_);
     }
   });
+
+  socket_endpoint_.set_error_handler(
+      [](zx_status_t status) { FX_PLOGS(ERROR, status) << "Socket endpoint unexpectedly closed"; });
 }
 
 void Guest::MountReadOnlyFilesystem(const std::string& source, const std::string& target,
@@ -754,6 +757,7 @@ void Guest::InitiateGuestShutdown() {
 
   {
     TRACE_DURATION("termina_guest_manager", "ShutdownRPC");
+    socket_endpoint_.set_error_handler(nullptr);
     auto grpc_status = maitred_->Shutdown(&context, request, &response);
     FX_CHECK(grpc_status.ok()) << "Failed to initiate guest shutdown "
                                << grpc_status.error_message();
