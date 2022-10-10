@@ -16,6 +16,7 @@
 #include <fuchsia/hardware/sdio/cpp/banjo-mock.h>
 #include <string.h>
 
+#include <wlan/drivers/components/frame.h>
 #include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
@@ -51,6 +52,22 @@ constexpr uint32_t kSdioBlockSize = 256;
 struct SdioBusInfo {
   std::unique_ptr<SdioBus> bus;
   mlan_device mlan_dev;
+};
+
+template <size_t BufferSize>
+struct FrameBufferData {
+  FrameBufferData(uint8_t vmo_id, size_t headroom)
+      : frame(nullptr, vmo_id, 0, 0, data, static_cast<uint32_t>(sizeof(data)), 0),
+        buffer{.pdesc = &frame,
+               .pbuf = data,
+               .data_offset = static_cast<uint32_t>(headroom),
+               .data_len = static_cast<uint32_t>(sizeof(data) - headroom),
+               .use_count = 1} {
+    frame.ShrinkHead(static_cast<uint32_t>(headroom));
+  }
+  wlan::drivers::components::Frame frame;
+  mlan_buffer buffer;
+  uint8_t data[BufferSize];
 };
 
 // Create our own MockSdio class that override AckInBandIntr to make it a noop.
@@ -228,6 +245,38 @@ TEST_F(SdioBusTest, ReadDataSync) {
                                      bus.mlan_dev.pmoal_handle, &buffer, kPort, 0 /* timeout */));
 }
 
+TEST_F(SdioBusTest, ReadDataSyncNewTxn) {
+  SdioBusInfo bus;
+  CreateBus(&bus);
+
+  // Should have been populated when the SdioBus object was created.
+  ASSERT_NOT_NULL(bus.mlan_dev.callbacks.moal_read_data_sync);
+
+  constexpr uint32_t kPort = 0x87543;
+  constexpr uint32_t kVmoId = 9;
+  constexpr uint32_t kOffset = 4;
+  constexpr uint32_t kDataSize = 3 * kSdioBlockSize;
+  constexpr size_t kDataBufferSize = kDataSize + kOffset;
+
+  sdio_.mock_do_rw_txn_new().ExpectCallWithMatcher([&](sdio_rw_txn_new_t txn) {
+    EXPECT_EQ(kPort & 0xfffff, txn.addr);
+    EXPECT_EQ(1u, txn.buffers_count);
+    EXPECT_EQ(SDMMC_BUFFER_TYPE_VMO_ID, txn.buffers_list[0].type);
+    EXPECT_EQ(kVmoId, txn.buffers_list[0].buffer.vmo_id);
+    EXPECT_EQ(kDataSize, txn.buffers_list[0].size);
+    EXPECT_FALSE(txn.incr);
+    EXPECT_FALSE(txn.write);
+    EXPECT_EQ(kOffset, txn.buffers_list[0].offset);
+    return std::tuple<zx_status_t>(ZX_OK);
+  });
+
+  FrameBufferData<kDataBufferSize> buffer_data(kVmoId, kOffset);
+
+  ASSERT_EQ(MLAN_STATUS_SUCCESS,
+            bus.mlan_dev.callbacks.moal_read_data_sync(
+                bus.mlan_dev.pmoal_handle, &buffer_data.buffer, kPort, 0 /* timeout */));
+}
+
 TEST_F(SdioBusTest, WriteDataSync) {
   SdioBusInfo bus;
   CreateBus(&bus);
@@ -261,6 +310,38 @@ TEST_F(SdioBusTest, WriteDataSync) {
   };
   ASSERT_EQ(MLAN_STATUS_SUCCESS, bus.mlan_dev.callbacks.moal_write_data_sync(
                                      bus.mlan_dev.pmoal_handle, &buffer, kPort, 0 /* timeout */));
+}
+
+TEST_F(SdioBusTest, WriteDataSyncNewTxn) {
+  SdioBusInfo bus;
+  CreateBus(&bus);
+
+  // Should have been populated when the SdioBus object was created.
+  ASSERT_NOT_NULL(bus.mlan_dev.callbacks.moal_read_data_sync);
+
+  constexpr uint32_t kPort = 0x87543;
+  constexpr uint32_t kVmoId = 9;
+  constexpr uint32_t kOffset = 4;
+  constexpr uint32_t kDataSize = 3 * kSdioBlockSize;
+  constexpr size_t kDataBufferSize = kDataSize + kOffset;
+
+  sdio_.mock_do_rw_txn_new().ExpectCallWithMatcher([&](sdio_rw_txn_new_t txn) {
+    EXPECT_EQ(kPort & 0xfffff, txn.addr);
+    EXPECT_EQ(1u, txn.buffers_count);
+    EXPECT_EQ(SDMMC_BUFFER_TYPE_VMO_ID, txn.buffers_list[0].type);
+    EXPECT_EQ(kVmoId, txn.buffers_list[0].buffer.vmo_id);
+    EXPECT_EQ(kDataSize, txn.buffers_list[0].size);
+    EXPECT_FALSE(txn.incr);
+    EXPECT_TRUE(txn.write);
+    EXPECT_EQ(kOffset, txn.buffers_list[0].offset);
+    return std::tuple<zx_status_t>(ZX_OK);
+  });
+
+  FrameBufferData<kDataBufferSize> buffer_data(kVmoId, kOffset);
+
+  ASSERT_EQ(MLAN_STATUS_SUCCESS,
+            bus.mlan_dev.callbacks.moal_write_data_sync(
+                bus.mlan_dev.pmoal_handle, &buffer_data.buffer, kPort, 0 /* timeout */));
 }
 
 }  // namespace

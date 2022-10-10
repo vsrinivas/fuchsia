@@ -92,6 +92,8 @@ class SdioBus : public BusInterface {
   SdioContext sdio_context_ = {};
   async::Loop main_process_loop_{&kAsyncLoopConfigNeverAttachToThread};
   std::atomic<bool> main_process_queued_{false};
+
+  zx::vmo vmos_[MAX_VMOS];
 };
 
 }  // namespace wlan::nxpfmac

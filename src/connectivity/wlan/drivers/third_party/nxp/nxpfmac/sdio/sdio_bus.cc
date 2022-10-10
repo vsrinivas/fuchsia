@@ -185,20 +185,32 @@ zx_status_t SdioBus::PrepareVmo(uint8_t vmo_id, zx::vmo&& vmo, uint8_t* mapped_a
                                 size_t mapped_size) {
   std::lock_guard lock(func1_mutex_);
 
+  if (vmo_id >= std::size(vmos_)) {
+    NXPF_ERR("VMO ID %u exceeds maximum value of %zu", vmo_id, std::size(vmos_));
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (vmos_[vmo_id].is_valid()) {
+    NXPF_ERR("VMO ID %u already prepared");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // SDIO expects its own handle, keep a duplicate here for our needs.
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmos_[vmo_id]);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to duplicate VMO %u: %s", vmo_id, zx_status_get_string(status));
+    return status;
+  }
+
   uint64_t vmo_size = 0;
-  zx_status_t status = vmo.get_size(&vmo_size);
+  status = vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
     NXPF_ERR("Failed to get VMO size: %s", zx_status_get_string(status));
     return status;
   }
 
-  // This is not currently supported by the SDIO bus driver for as370, expect a not supported error.
   status = func1_.RegisterVmo(vmo_id, std::move(vmo), 0, vmo_size,
                               SDMMC_VMO_RIGHT_READ | SDMMC_VMO_RIGHT_WRITE);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    NXPF_WARN("VMO registration not supported yet");
-    return ZX_OK;
-  }
   if (status != ZX_OK) {
     NXPF_ERR("Failed to register VMO with SDIO bus: %s", zx_status_get_string(status));
     return status;
@@ -209,16 +221,22 @@ zx_status_t SdioBus::PrepareVmo(uint8_t vmo_id, zx::vmo&& vmo, uint8_t* mapped_a
 
 zx_status_t SdioBus::ReleaseVmo(uint8_t vmo_id) {
   std::lock_guard lock(func1_mutex_);
-  zx::vmo unregistered_vmo;
-  zx_status_t status = func1_.UnregisterVmo(vmo_id, &unregistered_vmo);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    NXPF_WARN("VMO unregister not supported yet");
-    return ZX_OK;
+  if (vmo_id >= std::size(vmos_)) {
+    NXPF_ERR("VMO ID %u exceeds maximum value %zu", vmo_id, std::size(vmos_));
+    return ZX_ERR_INVALID_ARGS;
   }
+  if (!vmos_[vmo_id].is_valid()) {
+    NXPF_ERR("Attempt to release invalid VMO ID %u", vmo_id);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx::vmo unregistered_vmo;
+  const zx_status_t status = func1_.UnregisterVmo(vmo_id, &unregistered_vmo);
   if (status != ZX_OK) {
     NXPF_ERR("Failed to unregister VMO from SDIO bus: %s", zx_status_get_string(status));
     return status;
   }
+  vmos_[vmo_id].reset();
   return ZX_OK;
 }
 
@@ -360,28 +378,80 @@ zx_status_t SdioBus::DoSyncRwTxn(pmlan_buffer pmbuf, t_u32 port, bool write) {
   const uint32_t block_count =
       use_block_mode ? (pmbuf->data_len / MLAN_SDIO_BLOCK_SIZE) : pmbuf->data_len;
   const uint32_t transfer_size = block_count * block_size;
-  uint32_t io_port = (port & MLAN_SDIO_IO_PORT_MASK);
+  const uint32_t io_port = (port & MLAN_SDIO_IO_PORT_MASK);
 
-  sdio_rw_txn_t txn{
-      .addr = io_port,
-      .data_size = transfer_size,
-      .incr = false,
-      .write = write,
-      .use_dma = false,
-      .virt_buffer = buffer,
-      .virt_size = transfer_size,
-      .buf_offset = 0,
-  };
+  if (pmbuf->pdesc) {
+    // Frame-backed buffer
+    auto frame = reinterpret_cast<wlan::drivers::components::Frame*>(pmbuf->pdesc);
 
-  std::lock_guard lock(func1_mutex_);
-  zx_status_t status = func1_.DoRwTxn(&txn);
-  if (status != ZX_OK) {
-    NXPF_ERR("SDIO %s failed: %s", write ? "write" : "read", zx_status_get_string(status));
-    zx_status_t abort_status = func1_.IoAbort();
-    if (abort_status != ZX_OK) {
-      NXPF_ERR("SDIO IO abort failed: %s", zx_status_get_string(abort_status));
+    // The VMO offset in the frame has not been modified by mlan, only the data_offset member of the
+    // buffer. Use it (as computed in buffer) to determine the additional offset needed.
+    const ptrdiff_t offset = buffer - frame->Data();
+
+    const sdmmc_buffer_region_t region{
+        .buffer{.vmo_id = frame->VmoId()},
+        .type = SDMMC_BUFFER_TYPE_VMO_ID,
+        .offset = frame->VmoOffset() + offset,
+        .size = transfer_size,
+    };
+
+    const sdio_rw_txn_new_t txn{.addr = io_port,
+                                .incr = false,
+                                .write = write,
+                                .buffers_list = &region,
+                                .buffers_count = 1};
+
+    // For write operations flush the cache to ensure that any modifications through mapped memory
+    // of this VMO will be available in main memory for the DMA controller.
+    // For read operations flush and invalidate the mapped memory location to prevent any cached
+    // writes from occurring during or after the DMA operation.
+    const uint32_t cache_op =
+        write ? ZX_CACHE_FLUSH_DATA : (ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+    zx_status_t result = zx_cache_flush(buffer, transfer_size, cache_op);
+    if (result != ZX_OK) {
+      NXPF_ERR("Failed to flush cache before SDIO transaction: %s", zx_status_get_string(result));
+      return result;
     }
-    return status;
+
+    {
+      std::lock_guard lock(func1_mutex_);
+      result = func1_.DoRwTxnNew(&txn);
+      if (result != ZX_OK) {
+        NXPF_ERR("SDIO transaction failed: %s", zx_status_get_string(result));
+        return result;
+      }
+    }
+
+    if (!write) {
+      // For reads we flush and invalidate the cache again to make sure that whatever the DMA
+      // controller read into physical memory is now available through our mapped memory location.
+      result =
+          zx_cache_flush(buffer, transfer_size, ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
+      if (result != ZX_OK) {
+        NXPF_ERR("Failed to flush cache when reading from SDIO: %s", zx_status_get_string(result));
+        return result;
+      }
+    }
+  } else {
+    sdio_rw_txn_t txn{.addr = io_port,
+                      .data_size = transfer_size,
+                      .incr = false,
+                      .write = write,
+                      .use_dma = false,
+                      .virt_buffer = buffer,
+                      .virt_size = transfer_size,
+                      .buf_offset = 0};
+
+    std::lock_guard lock(func1_mutex_);
+    zx_status_t status = func1_.DoRwTxn(&txn);
+    if (status != ZX_OK) {
+      NXPF_ERR("SDIO %s failed: %s", write ? "write" : "read", zx_status_get_string(status));
+      zx_status_t abort_status = func1_.IoAbort();
+      if (abort_status != ZX_OK) {
+        NXPF_ERR("SDIO IO abort failed: %s", zx_status_get_string(abort_status));
+      }
+      return status;
+    }
   }
 
   return ZX_OK;
