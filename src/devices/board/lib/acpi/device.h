@@ -126,6 +126,8 @@ class Device : public DeviceType,
   zx::status<> AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
                          cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags);
 
+  zx::status<zx::interrupt> GetInterrupt(size_t index) __TA_EXCLUDES(lock_);
+
   // FIDL impls
   void GetBusId(GetBusIdCompleter::Sync& completer) override;
   void EvaluateObject(EvaluateObjectRequestView request,

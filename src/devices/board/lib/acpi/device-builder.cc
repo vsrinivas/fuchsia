@@ -14,6 +14,7 @@
 #include "src/devices/board/lib/acpi/acpi.h"
 #ifdef __Fuchsia__
 #include "src/devices/board/lib/acpi/device.h"
+#include "src/devices/board/lib/acpi/irq-fragment.h"
 #else
 #include "src/devices/board/lib/acpi/device-for-host.h"
 #endif
@@ -45,8 +46,9 @@ zx::status<std::vector<uint8_t>> DoFidlEncode(T data) {
 
 }  // namespace
 
-acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyArena& allocator,
-                                            acpi::Manager* manager, InferBusTypeCallback callback) {
+acpi::status<> DeviceBuilder::GatherResources(acpi::Acpi* acpi, fidl::AnyArena& allocator,
+                                              acpi::Manager* manager,
+                                              GatherResourcesCallback callback) {
   if (!handle_ || !parent_) {
     // Skip the root device.
     return acpi::ok();
@@ -88,6 +90,8 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyArena& al
           bus_id_prop = BIND_I2C_BUS_ID;
           dev_props_.emplace_back(
               zx_device_prop_t{.id = BIND_I2C_ADDRESS, .value = result.value().address()});
+        } else if (resource_is_irq(res)) {
+          irq_count_++;
         }
 
         if (bus_parent) {
@@ -208,7 +212,20 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
            result.status_value());
     return result.take_error();
   }
-  zx_device_ = device.release()->zxdev();
+
+  auto* acpi_dev = device.release();
+  zx_device_ = acpi_dev->zxdev();
+
+  for (uint32_t i = 0; i < irq_count_; i++) {
+#ifdef __Fuchsia__
+    auto result = IrqFragment::Create(manager->fidl_dispatcher(), *acpi_dev, i, device_id_);
+    if (result.is_error()) {
+      zxlogf(ERROR, "Failed to construct IRQ fragment: %d", result.status_value());
+      return result.take_error();
+    }
+#endif
+  }
+
   auto status = BuildComposite(manager, str_props_for_ddkadd);
   if (status.is_error()) {
     zxlogf(WARNING, "failed to publish composite acpi device '%s-composite': %d", name(),
@@ -285,7 +302,7 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
     return zx::ok();
   }
 
-  size_t fragment_count = buses_.size() + 3;
+  size_t fragment_count = buses_.size() + irq_count_ + 3;
   // Bookkeeping.
   // We use fixed-size arrays here rather than std::vector because we don't want
   // pointers to array members to become invalidated when the vector resizes.
@@ -309,6 +326,33 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
 
     std::vector<zx_bind_inst_t> insns = parent->GetFragmentBindInsnsForChild(child_index);
     bind_insns[bus_index] = std::move(insns);
+    fragment_parts[bus_index] = device_fragment_part_t{
+        .instruction_count = static_cast<uint32_t>(bind_insns[bus_index].size()),
+        .match_program = bind_insns[bus_index].data(),
+    };
+    fragments[bus_index] = device_fragment_t{
+        .name = fragment_names[bus_index].data(),
+        .parts_count = 1,
+        .parts = &fragment_parts[bus_index],
+    };
+
+    bus_index++;
+  }
+
+  for (uint32_t i = 0; i < irq_count_; i++) {
+    fragment_names[bus_index] = fbl::StringPrintf("irq%03u", i);
+
+    // Make sure that the bind rules here stay in sync
+    // with the properties in irq-fragment.cc
+    // LINT.IfChange
+    std::vector<zx_bind_inst_t> insns{
+        BI_ABORT_IF(NE, BIND_ACPI_ID, device_id_),
+        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_INTERRUPT_ID, i + 1),
+        BI_MATCH(),
+    };
+    // LINT.ThenChange(irq-fragment.cc)
+    bind_insns[bus_index] = std::move(insns);
+
     fragment_parts[bus_index] = device_fragment_part_t{
         .instruction_count = static_cast<uint32_t>(bind_insns[bus_index].size()),
         .match_program = bind_insns[bus_index].data(),

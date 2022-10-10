@@ -14,6 +14,11 @@
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/status.h"
 
+struct DeviceResources {
+  std::vector<fuchsia_hardware_spi_businfo::wire::SpiChannel> spi;
+  std::vector<fuchsia_hardware_i2c_businfo::wire::I2CChannel> i2c;
+};
+
 enum resource_address_type {
   RESOURCE_ADDRESS_MEMORY,
   RESOURCE_ADDRESS_IO,

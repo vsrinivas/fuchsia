@@ -462,3 +462,46 @@ TEST_F(AcpiManagerTest, TestReferencePowerResources) {
   ASSERT_EQ(mock_power_resource1->sta(), 0);
   ASSERT_EQ(mock_power_resource2->sta(), 0);
 }
+
+TEST_F(AcpiManagerTest, TestInterruptsMakeFragments) {
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
+  auto device = std::make_unique<Device>("IRQT");
+
+  ACPI_RESOURCE irq_resource = {
+      .Type = ACPI_RESOURCE_TYPE_IRQ,
+      .Data =
+          {
+              .Irq =
+                  {
+                      .DescriptorLength = sizeof(ACPI_RESOURCE_IRQ),
+                      .Triggering = ACPI_EDGE_SENSITIVE,
+                      .Polarity = ACPI_ACTIVE_HIGH,
+                      .Shareable = 0,
+                      .WakeCapable = 0,
+                      .InterruptCount = 1,
+                      .Interrupts = {2},
+                  },
+          },
+  };
+  device->AddResource(irq_resource);
+  ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_", std::move(device)));
+  ASSERT_NO_FATAL_FAILURE(DiscoverConfigurePublish());
+
+  // Validate the device topology we created.
+  // We should have:
+  // <root> -> acpi-_SB_ -> acpi-IRQT -> acpi-IRQT-irq000, acpi-IRQT-passthrough
+  auto dev = mock_root_->GetLatestChild();
+  ASSERT_STREQ("acpi-_SB_", dev->name());
+  dev = dev->GetLatestChild();
+  ASSERT_STREQ("acpi-IRQT", dev->name());
+  ASSERT_EQ(2, dev->children().size());
+
+  std::unordered_set<std::string> expected{"acpi-IRQT-irq000", "acpi-IRQT-passthrough"};
+  for (auto& child : dev->children()) {
+    auto pos = expected.find(child->name());
+    ASSERT_NE(pos, expected.end(), "Child name %s not expected", child->name());
+    expected.erase(pos);
+  }
+
+  ASSERT_EQ(0, expected.size());
+}

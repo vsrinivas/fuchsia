@@ -132,15 +132,14 @@ class DeviceBuilder {
   bool built() { return zx_device_ != nullptr; }
   DeviceBuilder* parent() { return parent_; }
 
-  // Walk this device's resources, checking to see if any are a SerialBus type.
-  // If they are, calls |callback| with the handle to the bus, and the type of the bus, and a
-  // "DeviceChildEntry" representing this child. |callback| should return the index of the child
-  // device on the bus.
-  // InferBusTypes is called from |Manager::ConfigureDiscoveredDevice|, and is used to determine bus
-  // IDs and child indexes on the bus.
-  using InferBusTypeCallback = std::function<size_t(ACPI_HANDLE, BusType, DeviceChildEntry)>;
-  acpi::status<> InferBusTypes(acpi::Acpi* acpi, fidl::AnyArena& allocator, acpi::Manager* manager,
-                               InferBusTypeCallback callback);
+  // Walk this device's resources.
+  // For each SerialBus type, calls |callback| with the handle to the bus, and the type of the bus,
+  // and a "DeviceChildEntry" representing this child. |callback| should return the index of the
+  // child device on the bus. InferBusTypes is called from |Manager::ConfigureDiscoveredDevice|, and
+  // is used to determine bus IDs and child indexes on the bus.
+  using GatherResourcesCallback = std::function<size_t(ACPI_HANDLE, BusType, DeviceChildEntry)>;
+  acpi::status<> GatherResources(acpi::Acpi* acpi, fidl::AnyArena& allocator,
+                                 acpi::Manager* manager, GatherResourcesCallback callback);
 
   BusType GetBusType() { return bus_type_; }
   uint32_t GetBusId() { return bus_id_.value_or(UINT32_MAX); }
@@ -149,6 +148,8 @@ class DeviceBuilder {
   // For unit test use only.
   std::vector<zx_device_prop_t>& GetDevProps() { return dev_props_; }
   std::vector<OwnedStringProp>& GetStrProps() { return str_props_; }
+
+  uint32_t device_id() const { return device_id_; }
 
  private:
   // Special HID/CID value for using a device tree "compatible" property. See
@@ -202,6 +203,9 @@ class DeviceBuilder {
   // TODO(fxbug.dev/91510): remove device_id and use dynamic binding to bind against string props
   // once that is supported.
   uint32_t device_id_;
+
+  // Number of IRQs this device has, used to generate the interrupt fragments.
+  uint32_t irq_count_ = 0;
 };
 
 }  // namespace acpi

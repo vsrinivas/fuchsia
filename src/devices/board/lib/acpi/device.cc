@@ -745,22 +745,19 @@ void Device::EvaluateObject(EvaluateObjectRequestView request,
   }
 }
 
-void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter::Sync& completer) {
+zx::status<zx::interrupt> Device::GetInterrupt(size_t index) {
   std::scoped_lock guard{lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
     zxlogf(ERROR, "Internal error evaluating resources: %s", zx_status_get_string(st));
-    completer.ReplyError(ZX_ERR_INTERNAL);
-    return;
+    return zx::error(ZX_ERR_INTERNAL);
   }
 
-  uint64_t which_irq = request->index;
-  if (which_irq >= irqs_.size()) {
-    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
-    return;
+  if (index >= irqs_.size()) {
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  const DeviceIrqResource& irq = irqs_[which_irq];
+  const DeviceIrqResource& irq = irqs_[index];
   uint32_t mode;
   mode = ZX_INTERRUPT_MODE_DEFAULT;
   st = ZX_OK;
@@ -799,8 +796,7 @@ void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter
       break;
   }
   if (st != ZX_OK) {
-    completer.ReplyError(st);
-    return;
+    return zx::error(st);
   }
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx::interrupt out_irq;
@@ -808,11 +804,19 @@ void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter
                              ZX_INTERRUPT_REMAP_IRQ | mode, &out_irq);
   if (st != ZX_OK) {
     zxlogf(ERROR, "Internal error creating interrupt: %s", zx_status_get_string(st));
-    completer.ReplyError(ZX_ERR_INTERNAL);
-    return;
+    return zx::error(ZX_ERR_INTERNAL);
   }
 
-  completer.ReplySuccess(std::move(out_irq));
+  return zx::ok(std::move(out_irq));
+}
+
+void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter::Sync& completer) {
+  auto result = GetInterrupt(request->index);
+  if (result.is_error()) {
+    completer.ReplyError(result.error_value());
+  } else {
+    completer.ReplySuccess(std::move(*result));
+  }
 }
 
 void Device::GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer) {

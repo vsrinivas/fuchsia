@@ -27,6 +27,7 @@ shared_public_deps = [
 ]
 
 shared_fuchsia_public_deps = [
+  "//sdk/lib/sys/component/cpp",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/svc",
 ]
@@ -40,6 +41,7 @@ shared_deps = [
 shared_fuchsia_deps = [
   "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_cpp_wire",
+  "//sdk/fidl/fuchsia.hardware.interrupt:fuchsia.hardware.interrupt_cpp_wire",
   "//src/devices/lib/acpi",
   "//src/devices/pci/lib/pci",
   "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -72,6 +74,7 @@ source_set("acpi") {
     "event.cc",
     "fidl.cc",
     "global-lock.cc",
+    "irq-fragment.cc",
     "manager.cc",
     "power-resource.cc",
     "resources.cc",
@@ -111,6 +114,7 @@ test("acpi-test") {
     "fidl-test.cc",
     "fidl.cc",
     "global-lock.cc",
+    "irq-fragment.cc",
     "manager-test.cc",
     "manager.cc",
     "power-resource-test.cc",
