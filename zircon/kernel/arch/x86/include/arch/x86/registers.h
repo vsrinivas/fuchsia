@@ -112,6 +112,7 @@
 #define X86_MSR_PLATFORM_ENERGY_COUNTER 0x0000064d /* Platform energy counter */
 #define X86_MSR_PPERF 0x0000064e                   /* Productive performance count */
 #define X86_MSR_PERF_LIMIT_REASONS 0x0000064f      /* Clipping cause register */
+#define X86_MSR_GFX_PERF_LIMIT_REASONS 0x000006b0  /* Clipping cause register for graphics */
 #define X86_MSR_PLATFORM_POWER_LIMIT 0x0000065c    /* Platform power limit control */
 #define X86_MSR_AMD_F10_DE_CFG 0xc0011029          /* AMD Family 10h+ decode config */
 #define X86_MSR_AMD_F10_DE_CFG_LFENCE_SERIALIZE (1 << 1)

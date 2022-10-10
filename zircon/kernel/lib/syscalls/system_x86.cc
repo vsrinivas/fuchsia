@@ -53,6 +53,22 @@ static constexpr struct {
     {1 << 13, "Turbo transition attenuation"},
 };
 
+// Intel Volume 4 Table 2-39 "MSR_GRAPHICS_PERF_LIMIT_REASONS"
+static constexpr struct {
+  uint64_t bit;
+  const char* str;
+} kLimitReasonsGfx[] = {
+    {1 << 0, "PROCHOT"},
+    {1 << 1, "Thermal event"},
+    {1 << 5, "Running average thermal limit"},
+    {1 << 6, "Voltage regulator (VR) thermal alert"},
+    {1 << 7, "Voltage regulator (VR) thermal design current limit"},
+    {1 << 8, "Other"},
+    {1 << 10, "Package/platform-Level PL1"},
+    {1 << 11, "Package/platform-Level PL2"},
+    {1 << 12, "Inefficient operation"},
+};
+
 static constexpr uint64_t kLimitReasonsLogShift = 16;
 
 struct rapl_units {
@@ -197,7 +213,8 @@ void clear_limit_reason_log() {
   // Table 2-39.
   auto x86_microarch = x86_get_microarch_config()->x86_microarch;
   if ((x86_microarch != X86_MICROARCH_INTEL_SKYLAKE) &&
-      (x86_microarch != X86_MICROARCH_INTEL_CANNONLAKE)) {
+      (x86_microarch != X86_MICROARCH_INTEL_CANNONLAKE) &&
+      (x86_microarch != X86_MICROARCH_INTEL_TIGERLAKE)) {
     printf("Limit reasons msr not supported\n");
     return;
   }
@@ -205,6 +222,7 @@ void clear_limit_reason_log() {
   // The limit reason log is stored in bits 29:16 and can be cleared by writing zeros.
   MsrAccess msr;
   msr.write_msr(X86_MSR_PERF_LIMIT_REASONS, 0);
+  msr.write_msr(X86_MSR_GFX_PERF_LIMIT_REASONS, 0);
 }
 
 void print_limit_reasons(bool use_log) {
@@ -213,7 +231,8 @@ void print_limit_reasons(bool use_log) {
   // Table 2-39.
   auto x86_microarch = x86_get_microarch_config()->x86_microarch;
   if ((x86_microarch != X86_MICROARCH_INTEL_SKYLAKE) &&
-      (x86_microarch != X86_MICROARCH_INTEL_CANNONLAKE)) {
+      (x86_microarch != X86_MICROARCH_INTEL_CANNONLAKE) &&
+      (x86_microarch != X86_MICROARCH_INTEL_TIGERLAKE)) {
     printf("Limit reasons msr not supported\n");
     return;
   }
@@ -230,6 +249,24 @@ void print_limit_reasons(bool use_log) {
   bool is_limited = false;
   printf("perf limit reasons:\n");
   for (auto reason : kLimitReasons) {
+    if (!(limit_reasons & reason.bit)) {
+      continue;
+    }
+    printf("\t%s\n", reason.str);
+    is_limited = true;
+  }
+  if (!is_limited) {
+    printf("\tnone\n");
+  }
+
+  limit_reasons = msr.read_msr(X86_MSR_GFX_PERF_LIMIT_REASONS);
+  if (use_log) {
+    limit_reasons = limit_reasons >> kLimitReasonsLogShift;
+  }
+
+  printf("gfx perf limit reasons:\n");
+  is_limited = false;
+  for (auto reason : kLimitReasonsGfx) {
     if (!(limit_reasons & reason.bit)) {
       continue;
     }
