@@ -200,11 +200,13 @@ mod test {
             name: "fuchsia.auth".to_string(),
             link: "fuchsia.auth/README.md".to_string(),
             description: "Fuchsia Auth API".to_string(),
+            added: "7".to_string(),
         });
         table_of_contents.push(crate::TableOfContentsItem {
             name: "fuchsia.media".to_string(),
             link: "fuchsia.media/README.md".to_string(),
             description: "Fuchsia Media API".to_string(),
+            added: "".to_string(),
         });
 
         let fidl_config = json!(null);
@@ -234,11 +236,19 @@ mod test {
             name: "fuchsia.auth".to_string(),
             link: "fuchsia.auth/README.md".to_string(),
             description: "Fuchsia Auth API".to_string(),
+            added: "7".to_string(),
+        });
+        table_of_contents.push(crate::TableOfContentsItem {
+            name: "fuchsia.bluetooth".to_string(),
+            link: "fuchsia.bluetooth/README.md".to_string(),
+            description: "Fuchsia Bluetooth API".to_string(),
+            added: "HEAD".to_string(),
         });
         table_of_contents.push(crate::TableOfContentsItem {
             name: "fuchsia.media".to_string(),
             link: "fuchsia.media/README.md".to_string(),
             description: "Fuchsia Media API".to_string(),
+            added: "".to_string(),
         });
 
         let fidl_config = json!(null);

@@ -24,6 +24,8 @@ use templates::FidldocTemplate;
 
 static FIDLDOC_CONFIG_PATH: &str = "fidldoc.config.json";
 static ATTR_NAME_DOC: &'static str = "doc";
+static ATTR_NAME_AVAILABLE: &'static str = "available";
+static ATTR_NAME_ADDED: &'static str = "added";
 static ATTR_NAME_NO_DOC: &'static str = "no_doc";
 
 #[derive(Debug)]
@@ -318,6 +320,7 @@ fn create_toc(fidl_json_map: &HashMap<String, FidlJson>) -> Vec<TableOfContentsI
             name: package_name.clone(),
             link: format!("{name}/index", name = package_name),
             description: get_library_description(&fidl_json.maybe_attributes),
+            added: get_library_added(&fidl_json.maybe_attributes),
         })
         .collect();
     table_of_contents.sort_unstable_by(|a, b| a.name.cmp(&b.name));
@@ -330,6 +333,32 @@ fn get_library_description(maybe_attributes: &Vec<Value>) -> String {
             return get_attribute_standalone_arg_value(attribute)
                 .expect("Unable to retrieve string value for library description")
                 .to_string();
+        }
+    }
+    "".to_string()
+}
+
+// The toc.hbs template includes hardcoded values for library versions
+// Need to create a function that collects all library versions, sorts them,
+// and displays them in the template.
+fn get_library_added(maybe_attributes: &Vec<Value>) -> String {
+    for attribute in maybe_attributes {
+        if to_lower_snake_case(attribute["name"].as_str().unwrap_or("")) == ATTR_NAME_AVAILABLE {
+            if let Some(arguments) = attribute["arguments"].as_array() {
+                for argument in arguments {
+                    if to_lower_snake_case(argument["name"].as_str().unwrap_or(""))
+                        == ATTR_NAME_ADDED
+                    {
+                        if let Some(val) = argument["value"].as_object() {
+                            let mut vers = val["value"].as_str().unwrap_or("").to_string();
+                            if vers == u64::MAX.to_string() {
+                                vers = "HEAD".to_string();
+                            }
+                            return vers;
+                        }
+                    }
+                }
+            }
         }
     }
     "".to_string()

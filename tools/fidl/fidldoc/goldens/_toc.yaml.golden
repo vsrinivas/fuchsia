@@ -1,97 +1,148 @@
 toc:
+- versioning:
+    library_name: fidl
+    versions: ["7", "HEAD"]
+    selector_label: API Level
+    default_version: "7"
 - title: Overview
   path: /README.md
 - title: API
   section:
   - title: test.anonymous
     path: /test.anonymous
+    version_added: ""
   - title: test.arrays
     path: /test.arrays
+    version_added: ""
   - title: test.bindingsdenylist
     path: /test.bindingsdenylist
+    version_added: ""
   - title: test.bits
     path: /test.bits
+    version_added: ""
   - title: test.bitsconstants
     path: /test.bitsconstants
+    version_added: ""
   - title: test.byteandbytes
     path: /test.byteandbytes
+    version_added: ""
   - title: test.constants
     path: /test.constants
+    version_added: ""
   - title: test.consts
     path: /test.consts
+    version_added: ""
   - title: test.doccomments
     path: /test.doccomments
+    version_added: ""
   - title: test.driverhandle
     path: /test.driverhandle
+    version_added: ""
   - title: test.driveroneway
     path: /test.driveroneway
+    version_added: ""
   - title: test.driverservice
     path: /test.driverservice
+    version_added: ""
   - title: test.drivertwoway
     path: /test.drivertwoway
+    version_added: ""
   - title: test.emptystruct
     path: /test.emptystruct
+    version_added: ""
   - title: test.encapsulatedstructs
     path: /test.encapsulatedstructs
+    version_added: ""
   - title: test.enum
     path: /test.enum
+    version_added: ""
   - title: test.error
     path: /test.error
+    version_added: ""
   - title: test.errorsyntax
     path: /test.errorsyntax
+    version_added: ""
   - title: test.escaping
     path: /test.escaping
+    version_added: ""
   - title: test.experimentalmaybefromtypealias
     path: /test.experimentalmaybefromtypealias
+    version_added: ""
   - title: test.foreigntypeinresponseusedthroughcompose
     path: /test.foreigntypeinresponseusedthroughcompose
+    version_added: ""
   - title: test.handles
     path: /test.handles
+    version_added: ""
   - title: test.handlesintypes
     path: /test.handlesintypes
+    version_added: ""
   - title: test.importedconstvalues
     path: /test.importedconstvalues
+    version_added: ""
   - title: test.inheritance
     path: /test.inheritance
+    version_added: ""
   - title: test.inheritancewithrecursivedecl
     path: /test.inheritancewithrecursivedecl
+    version_added: ""
   - title: test.nullable
     path: /test.nullable
+    version_added: ""
   - title: test.padding
     path: /test.padding
+    version_added: ""
   - title: test.placementofattributes
     path: /test.placementofattributes
+    version_added: ""
   - title: test.protocollayouts
     path: /test.protocollayouts
+    version_added: ""
   - title: test.protocolpayloads
     path: /test.protocolpayloads
+    version_added: ""
   - title: test.protocolrequest
     path: /test.protocolrequest
+    version_added: ""
   - title: test.protocols
     path: /test.protocols
+    version_added: ""
   - title: test.requestflexibleenvelope
     path: /test.requestflexibleenvelope
+    version_added: ""
   - title: test.service
     path: /test.service
+    version_added: ""
   - title: test.struct
     path: /test.struct
+    version_added: ""
   - title: test.structdefaultvalueenumlibraryreference
     path: /test.structdefaultvalueenumlibraryreference
+    version_added: ""
   - title: test.table
     path: /test.table
+    version_added: ""
   - title: test.transitivedependencies
     path: /test.transitivedependencies
+    version_added: ""
   - title: test.transitivedependenciescompose
     path: /test.transitivedependenciescompose
+    version_added: ""
   - title: test.typealiases
     path: /test.typealiases
+    version_added: ""
   - title: test.union
     path: /test.union
+    version_added: ""
   - title: test.unionsandwich
     path: /test.unionsandwich
+    version_added: ""
   - title: test.unknowninteractions
     path: /test.unknowninteractions
+    version_added: ""
   - title: test.vectors
     path: /test.vectors
+    version_added: ""
   - title: test.versions
     path: /test.versions
+    version_added: "1"

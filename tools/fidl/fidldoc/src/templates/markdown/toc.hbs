@@ -1,4 +1,9 @@
 toc:
+- versioning:
+    library_name: fidl
+    versions: ["7", "HEAD"]
+    selector_label: API Level
+    default_version: "7"
 - title: Overview
   path: {{url_path}}README.md
 - title: API
@@ -6,4 +11,5 @@ toc:
 {{ #each table_of_contents }}
   - title: {{name}}
     path: {{@root.url_path}}{{name}}
+    version_added: "{{added}}"
 {{ /each}}

@@ -45,6 +45,7 @@ pub struct TableOfContentsItem {
     pub name: String,
     pub link: String,
     pub description: String,
+    pub added: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

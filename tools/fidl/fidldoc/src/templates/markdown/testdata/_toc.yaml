@@ -1,9 +1,19 @@
 toc:
+- versioning:
+    library_name: fidl
+    versions: ["7", "HEAD"]
+    selector_label: API Level
+    default_version: "7"
 - title: Overview
   path: /README.md
 - title: API
   section:
   - title: fuchsia.auth
     path: /fuchsia.auth
+    version_added: "7"
+  - title: fuchsia.bluetooth
+    path: /fuchsia.bluetooth
+    version_added: "HEAD"
   - title: fuchsia.media
     path: /fuchsia.media
+    version_added: ""
