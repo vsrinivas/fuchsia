@@ -123,6 +123,8 @@ group("dart_allowlist") {
     "//src/tests/fidl/dangerous_identifiers:*",
     "//src/tests/fidl/dart_bindings_test:*",
     "//src/tests/fidl/dart_bindings_test/fidl:*",
+    "//src/tests/fidl/server_suite/dart:*",
+    "//src/tests/fidl/server_suite/fidl:*",
     "//src/tests/fidl/source_compatibility/bits-flexible-strict:*",
     "//src/tests/fidl/source_compatibility/bits-member-add:*",
     "//src/tests/fidl/source_compatibility/bits-member-remove:*",

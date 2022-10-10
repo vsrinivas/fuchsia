@@ -1,0 +1,46 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/fidl/fidl.gni")
+
+dart_library("bin") {
+  package_name = "server"
+  package_root = "server"
+  sources = [ "main.dart" ]
+  deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
+    "//src/tests/fidl/server_suite/fidl:fidl.serversuite_dart",
+    "//zircon/vdso/zx:zx_dart",
+  ]
+}
+
+dart_component("dart_server") {
+  component_name = "server"
+  manifest = "meta/server.cml"
+  main_package = "server"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("harness_dart") {
+  testonly = true
+  component_name = "harness"
+  manifest = "meta/harness_dart.cml"
+  deps = [ "//src/tests/fidl/server_suite/harness:bin" ]
+}
+
+fuchsia_test_package("fidl-server-suite-dart-test") {
+  test_components = [ ":harness_dart" ]
+  deps = [ ":dart_server" ]
+}
+
+group("dart") {
+  testonly = true
+  deps = [ ":fidl-server-suite-dart-test" ]
+}

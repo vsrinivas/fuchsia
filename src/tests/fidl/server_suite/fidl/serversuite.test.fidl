@@ -224,6 +224,15 @@ type Test = flexible enum : uint32 {
     TWO_WAY_NO_PAYLOAD_WITH_ZERO_TXID = 10;
     UNKNOWN_ORDINAL_CAUSES_CLOSE = 11;
     BAD_MAGIC_NUMBER_CAUSES_CLOSE = 12;
+
+    // TODO(fxbug.dev/102339): Remove/change these cases, they are out of spec.
+    // Unrecognized flags *should* be ignored, and these cases are currently
+    // disabled on all bindings.
+    // See: https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format#transactional-messages
+    // Specifically: "uint8[3] flags, MUST NOT be checked by bindings." That
+    // still applies to the at-rest flags, and should likely also still apply to
+    // the dynamic flags. Rejecting unrecognized flags would make it difficult
+    // to use these flags for soft transitions as intended.
     BAD_AT_REST_FLAGS_CAUSES_CLOSE = 13;
     BAD_DYNAMIC_FLAGS_CAUSES_CLOSE = 14;
 
