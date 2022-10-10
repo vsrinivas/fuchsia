@@ -34,6 +34,7 @@ ctf_fuchsia_component("element-manager-test") {
 }
 
 ctf_fuchsia_test_package("fuchsia-element-tests") {
+  plasa_element = "fidl/fuchsia.element/Manager"
   package_name = "fuchsia-element-tests"
   test_components = [ ":fuchsia-element-test" ]
   deps = [

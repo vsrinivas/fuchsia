@@ -32,6 +32,7 @@ ctf_fuchsia_component("component") {
 }
 
 ctf_fuchsia_test_package("driver_test_realm_cts_test") {
+  plasa_element = "fidl/fuchsia.driver.test/Realm"
   package_name = "driver_test_realm_cts_test"
   test_components = [ ":component" ]
 }

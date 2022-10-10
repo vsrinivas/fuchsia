@@ -29,6 +29,10 @@ ctf_fuchsia_component("hwinfo-test") {
 }
 
 ctf_fuchsia_test_package("fuchsia-hwinfo-tests") {
+  # TODO(kjharland): This test should be split into three since it exercises
+  # fidl/fuchsia.hwinfo/Board, fidl/fuchsia.hwinfo/Product, and
+  # fidl/fuchsia.hwinfo/Device.
+  plasa_element = "fidl/fuchsia.hwinfo/Board"
   package_name = "fuchsia-hwinfo-tests"
   test_specs = {
     log_settings = {

@@ -26,6 +26,7 @@ ctf_fuchsia_component("settings_test") {
 }
 
 ctf_fuchsia_test_package("fuchsia_settings_test") {
+  plasa_element = "fidl/fuchsia.settings/Privacy"
   package_name = "fuchsia_settings_test"
   test_components = [ ":settings_test" ]
 }

@@ -61,6 +61,7 @@ ctf_fuchsia_component("inspect-publisher") {
 }
 
 ctf_fuchsia_test_package("fuchsia-diagnostics-tests") {
+  plasa_element = "fidl/fuchsia.diagnostics/ArchiveAccessor"
   package_name = "fuchsia-diagnostics-tests"
   test_components = [ ":diagnostics-test" ]
   deps = [ ":inspect-publisher" ]

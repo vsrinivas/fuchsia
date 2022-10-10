@@ -8,7 +8,7 @@ import("//sdk/ctf/build/ctf_element.gni")
 import("//sdk/ctf/build/ctf_version.gni")
 import("//sdk/ctf/build/write_ctf_file.gni")
 
-# Defines a Fuchsia package containing a test.
+# Defines a Fuchsia package containing a test
 #
 # An equivalent to fuchsia_test_package, but ensures dependencies and
 # test_components are allowed in CTF.
@@ -16,12 +16,27 @@ import("//sdk/ctf/build/write_ctf_file.gni")
 # Example:
 # ```
 # ctf_fuchsia_test_package("my-test-package") {
+#   plasa_element = "fidl/fuchsia.ui.composition/Flatland"
 #   package_name = "my-test-package"
 #   test_components = [ ":my-test-component" ]
 # }
 # ```
 #
 # Parameters
+#
+#   plasa_element (optional)
+#     The ID of the plasa element that is tested by this test. This should be
+#     unique among all CTF tests (although this is not checked) and follow the
+#     syntax: <api_kind>/<elem>. The API kind serves as a namespace for elem
+#     and clarifies which plasa element elem refers to. Defaults to the empty
+#     string.
+#
+#     If api_kind is "fidl", <elem> must be the name of a FIDL protocol member.
+#     For example: "fidl/fuchsia.diagnostics/ArchiveAccessor".
+#     TODO(kjharland): Explain the usage for shared libraries.
+#
+#     Type: string
+#
 #   uses_experimental_fidl (optional)
 #     Package contains a test component using an "experimental" sdk_category FIDL.
 #     Use this flag when writing tests while a FIDL interface is still under
@@ -87,6 +102,10 @@ template("ctf_fuchsia_test_package") {
           archive_name = target_name
           package = invoker.package_name
           component_name = _manifest_name
+          plasa_element = ""
+          if (defined(invoker.plasa_element)) {
+            plasa_element = invoker.plasa_element
+          }
         }
         if (defined(invoker.test_specs)) {
           _test_specs = invoker.test_specs

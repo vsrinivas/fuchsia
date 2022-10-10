@@ -26,6 +26,7 @@ ctf_fuchsia_component("intl-services-system-test-component") {
 }
 
 ctf_fuchsia_test_package("intl-services-system-test") {
+  plasa_element = "fidl/fuchsia.intl/PropertyProvider"
   package_name = "intl-services-system-test"
   test_components = [ ":intl-services-system-test-component" ]
 }
