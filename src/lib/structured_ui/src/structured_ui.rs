@@ -13,6 +13,7 @@
 
 use {
     anyhow::Result,
+    atty,
     serde::{Deserialize, Serialize},
     std::io::{Read, Write},
 };
@@ -280,24 +281,28 @@ impl<'a> TextUi<'a> {
     }
 
     fn present_progress(&mut self, progress: &Progress) -> Result<Response> {
-        // Move back to overwrite the previous progress rendering.
-        if !self.progress_needs_to_scroll {
-            cursor_move_up(self.output, 1 + progress.entries.len() * 2)?;
-        } else {
-            self.progress_needs_to_scroll = false;
-        }
-        write!(self.output, "Progress for \"{}\"{}\n", progress.title, CLEAR_TO_EOL)?;
-        for entry in &progress.entries {
-            write!(self.output, "  {}{}\n", entry.name, CLEAR_TO_EOL)?;
-            write!(
-                self.output,
-                "    {} of {} {} ({:.2}%){}\n",
-                entry.at,
-                entry.of,
-                entry.units,
-                progress_percentage(entry.at, entry.of),
-                CLEAR_TO_EOL
-            )?;
+        // We only print the progress text if it's going to a TTY terminal, since the shell
+        // control sequences don't make sense otherwise.
+        if atty::is(atty::Stream::Stdout) {
+            // Move back to overwrite the previous progress rendering.
+            if !self.progress_needs_to_scroll {
+                cursor_move_up(self.output, 1 + progress.entries.len() * 2)?;
+            } else {
+                self.progress_needs_to_scroll = false;
+            }
+            write!(self.output, "Progress for \"{}\"{}\n", progress.title, CLEAR_TO_EOL)?;
+            for entry in &progress.entries {
+                write!(self.output, "  {}{}\n", entry.name, CLEAR_TO_EOL)?;
+                write!(
+                    self.output,
+                    "    {} of {} {} ({:.2}%){}\n",
+                    entry.at,
+                    entry.of,
+                    entry.units,
+                    progress_percentage(entry.at, entry.of),
+                    CLEAR_TO_EOL
+                )?;
+            }
         }
         Ok(Response::Default)
     }
