@@ -8,5 +8,5 @@ mod message;
 
 use rand::rngs::OsRng;
 
-/// A CTAP device backed by a connection over FIDL to a HID device.
+/// A CTAP device backed by a connection over FIDL to a CTAPHID device.
 pub type CtapHidDevice = device::Device<connection::FidlConnection, OsRng>;

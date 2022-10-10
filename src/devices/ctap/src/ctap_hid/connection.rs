@@ -45,7 +45,7 @@ pub mod fidl {
         static ref READ_MESSAGE_TIMEOUT: zx::Duration = zx::Duration::from_millis(110);
     }
 
-    /// A connection to a HID device over the FIDL `Device` protocol.
+    /// A connection to a CTAPHID device over the FIDL `Device` protocol.
     #[derive(Debug)]
     pub struct FidlConnection {
         proxy: SecurityKeyDeviceProxy,
@@ -79,7 +79,7 @@ pub mod fidl {
                         ))
                     }
                 },
-                _ => return Err(format_err!("FIDL error on GetMessage")),
+                Err(e) => return Err(e),
             }
         }
 
@@ -94,14 +94,17 @@ pub mod fidl {
                 })
                 .await
             {
-                Ok(res) => match zx::Status::from_raw(res.err().unwrap()) {
-                    zx::Status::OK => Ok(()),
-                    status => {
-                        return Err(format_err!(
-                            "Received not-ok status sending message: {:?}",
-                            status
-                        ))
-                    }
+                Ok(res) => match res {
+                    Ok(()) => Ok(()),
+                    Err(e) => match zx::Status::from_raw(e) {
+                        zx::Status::OK => Ok(()),
+                        status => {
+                            return Err(format_err!(
+                                "Received not-ok status sending message: {:?}",
+                                status
+                            ))
+                        }
+                    },
                 },
                 Err(e) => return Err(e),
             }

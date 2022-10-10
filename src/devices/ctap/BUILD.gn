@@ -25,11 +25,17 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.fido.report:fuchsia.fido.report_rust",
     "//sdk/fidl/fuchsia.identity.ctap:fuchsia.identity.ctap_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
+    "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -40,9 +46,15 @@ rustc_binary("bin") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tracing",
   ]
+
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/storage/vfs/rust:vfs",
+  ]
 }
 
 fuchsia_component("ctap_agent") {
+  component_name = "ctap_agent"
   manifest = "meta/ctap_agent.cml"
   deps = [ ":bin" ]
 }

@@ -10,6 +10,7 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_identity_ctap as fidl_ctap, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::component,
     futures::prelude::*,
 };
 
@@ -54,16 +55,17 @@ enum IncomingService {
 }
 
 #[fasync::run_singlethreaded]
-#[fuchsia::main]
+#[fuchsia::main(logging = true)]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Authenticator);
     fs.take_and_serve_directory_handle()?;
 
-    let agent = CtapAgent::new();
+    inspect_runtime::serve(component::inspector(), &mut fs)?;
 
-    // TODO(fxb/108424): Add a device watcher to watch for usb ctap devices as they are connected,
-    // so that we don't need to check for them and get their capabilities once a request is made.
+    // Add a device watcher to watch for usb ctap devices as they are connected, so that we don't
+    // need to check for their capabilities once a request is made.
+    let agent = CtapAgent::new(component::inspector().root().create_child("ctap_agent_service"));
 
     // Listen for incoming requests to connect to Authenticator, and call run_server
     // on each one.

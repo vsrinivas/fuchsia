@@ -2,17 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/ctap_agent",
     },
     capabilities: [
-        { protocol: "fuchsia.identity.ctap.CtapAuthenticator" },
+        { protocol: "fuchsia.identity.ctap.Authenticator" },
+    ],
+    use: [
+        {
+            directory: "dev-class-ctap",
+            rights: [ "r*" ],
+            path: "/dev/class/ctap",
+        },
     ],
     expose: [
         {
-            protocol: "fuchsia.identity.ctap.CtapAuthenticator",
+            protocol: "fuchsia.identity.ctap.Authenticator",
             from: "self",
         },
     ],

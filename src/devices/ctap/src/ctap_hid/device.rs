@@ -6,29 +6,23 @@ use {
     crate::ctap_hid::connection::{Connection, FidlConnection},
     crate::ctap_hid::message::Message,
     crate::CtapDevice,
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{format_err, Context, Error},
     async_trait::async_trait,
     bitfield::bitfield,
     bytes::{Buf, BufMut, Bytes, BytesMut},
-    fdio::service_connect,
-    fidl::endpoints::create_proxy,
+    fidl::endpoints::Proxy,
     fidl_fuchsia_fido_report::{CtapHidCommand, SecurityKeyDeviceMarker},
+    fidl_fuchsia_io as fio,
     fuchsia_async::{Time, TimeoutExt},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::TryFutureExt,
     lazy_static::lazy_static,
     rand::{rngs::OsRng, Rng},
-    std::fs,
     std::io::Read,
     std::path::PathBuf,
     tracing::{info, warn},
 };
-
-lazy_static! {
-    /// The absolute path at which HID devices are exposed.
-    static ref HID_PATH: PathBuf = PathBuf::from("/dev/class/ctap/");
-}
 
 /// The broadcast channel to use for the initial init request, as defined in the CTAP HID spec.
 const INIT_CHANNEL: u32 = 0xffffffff;
@@ -312,54 +306,24 @@ impl<C: Connection, R: Rng> Device<C, R> {
     }
 }
 
-impl Device<FidlConnection, OsRng> {
-    /// Constructs a new `Device` by connecting to a FIDL service at the specified path.
-    ///
-    /// Returns Ok(None) for valid paths that do not represent a FIDO device, and Err(err) if
-    /// any errors are encountered.
-    pub async fn new(path: String) -> Result<Device<FidlConnection, OsRng>, Error> {
-        let (proxy, server) =
-            create_proxy::<SecurityKeyDeviceMarker>().context("Failed to create proxy")?;
-        service_connect(&path, server.into_channel()).context("Failed to connect to device")?;
-        Device::new_from_connection(path, FidlConnection::new(proxy), Default::default()).await
-    }
-}
-
 #[async_trait(?Send)]
 impl CtapDevice for Device<FidlConnection, OsRng> {
-    async fn device() -> Result<Self, Error> {
-        for entry in
-            fs::read_dir(&*HID_PATH).map_err(|err| format_err!("Error reading path {:?}", err))?
-        {
-            // Note: Errors reading individual devices lead to log messages but not to failure of
-            // the function.
-            let path_buf = match entry {
-                Ok(entry) => entry.path(),
-                Err(err) => {
-                    warn!("Error getting next path {:?}", err);
-                    continue;
-                }
-            };
-            let path = match path_buf.to_str() {
-                Some(path) => path,
-                None => {
-                    warn!("Non unicode path");
-                    continue;
-                }
-            };
-            match Device::new(path.to_string()).await {
-                Ok(device) => {
-                    // Return the first device that we find.
-                    info!(
-                        "Constructing CTAP device at {:?} set to channel {:08x?}",
-                        path, device.channel
-                    );
-                    return Ok(device);
-                }
-                Err(err) => warn!("Error reading device {:?}", err),
-            }
-        }
-        Err(format_err!("No devices connected"))
+    async fn device(dir_proxy: &fio::DirectoryProxy, entry_path: &PathBuf) -> Result<Self, Error> {
+        let device_path =
+            entry_path.to_str().context(format_err!("Failed to get entry path as a string."))?;
+        let (device_proxy, server) = fidl::endpoints::create_proxy::<SecurityKeyDeviceMarker>()?;
+        fdio::service_connect_at(
+            dir_proxy.as_channel().as_ref(),
+            &device_path,
+            server.into_channel(),
+        )
+        .context(format_err!("Failed to connect to CtapHidDevice."))?;
+        Device::new_from_connection(
+            device_path.to_string(),
+            FidlConnection::new(device_proxy),
+            Default::default(),
+        )
+        .await
     }
 }
 
