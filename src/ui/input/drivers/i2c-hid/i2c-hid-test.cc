@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/hidbus/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -14,7 +15,6 @@
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake-hidbus-ifc/fake-hidbus-ifc.h>
 #include <lib/fake-i2c/fake-i2c.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
@@ -35,6 +35,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/devices/lib/acpi/mock/mock-acpi.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace i2c_hid {
 
@@ -215,6 +216,8 @@ class I2cHidTest : public zxtest::Test {
  public:
   I2cHidTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   void SetUp() override {
+    parent_ = MockDevice::FakeRootParent();
+
     ASSERT_OK(loop_.StartThread("i2c-hid-test-thread"));
     acpi_device_.SetEvaluateObject(
         [](acpi::mock::Device::EvaluateObjectRequestView view,
@@ -246,7 +249,7 @@ class I2cHidTest : public zxtest::Test {
 
     auto client = acpi_device_.CreateClient(loop_.dispatcher());
     ASSERT_OK(client.status_value());
-    device_ = new I2cHidbus(fake_ddk::kFakeParent, std::move(client.value()));
+    device_ = new I2cHidbus(parent_.get(), std::move(client.value()));
 
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
     EXPECT_TRUE(endpoints.is_ok());
@@ -259,10 +262,8 @@ class I2cHidTest : public zxtest::Test {
 
   void TearDown() override {
     device_->DdkAsyncRemove();
-    EXPECT_TRUE(ddk_.Ok());
 
-    // This should delete the object, which means this test should not leak.
-    device_->DdkRelease();
+    EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(device_->zxdev()));
   }
 
   void StartHidBus() { device_->HidbusStart(fake_hid_bus_.GetProto()); }
@@ -270,7 +271,7 @@ class I2cHidTest : public zxtest::Test {
  protected:
   acpi::mock::Device acpi_device_;
   I2cHidbus* device_;
-  fake_ddk::Bind ddk_;
+  std::shared_ptr<MockDevice> parent_;
   FakeI2cHid fake_i2c_hid_;
   fake_hidbus_ifc::FakeHidbusIfc fake_hid_bus_;
   fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
@@ -280,13 +281,14 @@ class I2cHidTest : public zxtest::Test {
 
 TEST_F(I2cHidTest, HidTestBind) {
   ASSERT_OK(device_->Bind(std::move(i2c_)));
-  ASSERT_OK(ddk_.WaitUntilInitComplete());
-  EXPECT_TRUE(ddk_.init_reply().has_value());
-  EXPECT_OK(ddk_.init_reply().value());
+  device_->zxdev()->InitOp();
+  ASSERT_OK(device_->zxdev()->WaitUntilInitReplyCalled(zx::time::infinite()));
+  EXPECT_OK(device_->zxdev()->InitReplyCallStatus());
 }
 
 TEST_F(I2cHidTest, HidTestQuery) {
   ASSERT_OK(device_->Bind(std::move(i2c_)));
+  device_->zxdev()->InitOp();
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -309,6 +311,7 @@ TEST_F(I2cHidTest, HidTestReadReportDesc) {
 
   fake_i2c_hid_.SetReportDescriptor(report_desc);
   ASSERT_OK(device_->Bind(std::move(i2c_)));
+  device_->zxdev()->InitOp();
 
   ASSERT_OK(device_->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT, returned_report_desc,
                                          sizeof(returned_report_desc), &returned_report_desc_len));
@@ -320,7 +323,7 @@ TEST_F(I2cHidTest, HidTestReadReportDesc) {
 
 TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
   I2cHidbus* device_;
-  fake_ddk::Bind ddk_;
+  std::shared_ptr<MockDevice> parent = MockDevice::FakeRootParent();
   FakeI2cHid fake_i2c_hid_;
   fake_hidbus_ifc::FakeHidbusIfc fake_hid_bus_;
   ddk::I2cChannel channel_;
@@ -336,25 +339,27 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
   ASSERT_OK(endpoints.status_value());
   endpoints->server.reset();
-  device_ = new I2cHidbus(fake_ddk::kFakeParent,
+  device_ = new I2cHidbus(parent.get(),
                           acpi::Client::Create(fidl::WireSyncClient(std::move(endpoints->client))));
   channel_ = ddk::I2cChannel(std::move(i2c_endpoints->client));
 
   fake_i2c_hid_.SetHidDescriptorFailure(ZX_ERR_TIMED_OUT);
   ASSERT_OK(device_->Bind(std::move(channel_)));
 
-  EXPECT_OK(ddk_.WaitUntilRemove());
-  EXPECT_TRUE(ddk_.Ok());
-  EXPECT_TRUE(ddk_.init_reply().has_value());
-  EXPECT_NOT_OK(ddk_.init_reply().value());
+  device_->zxdev()->InitOp();
+
+  EXPECT_OK(device_->zxdev()->WaitUntilInitReplyCalled(zx::time::infinite()));
+  EXPECT_NOT_OK(device_->zxdev()->InitReplyCallStatus());
 
   loop.Shutdown();
 
-  device_->DdkRelease();
+  device_async_remove(parent.get());
+  mock_ddk::ReleaseFlaggedDevices(parent.get());
 }
 
 TEST_F(I2cHidTest, HidTestReadReport) {
   ASSERT_OK(device_->Bind(std::move(i2c_)));
+  device_->zxdev()->InitOp();
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -378,6 +383,7 @@ TEST_F(I2cHidTest, HidTestReadReport) {
 
 TEST_F(I2cHidTest, HidTestBadReportLen) {
   ASSERT_OK(device_->Bind(std::move(i2c_)));
+  device_->zxdev()->InitOp();
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -408,6 +414,7 @@ TEST_F(I2cHidTest, HidTestReadReportNoIrq) {
   irq_.reset();
 
   ASSERT_OK(device_->Bind(std::move(i2c_)));
+  device_->zxdev()->InitOp();
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -435,6 +442,7 @@ TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
   irq_.reset();
 
   ASSERT_OK(device_->Bind(std::move(i2c_)));
+  device_->zxdev()->InitOp();
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   StartHidBus();
@@ -503,6 +511,7 @@ TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
 
 TEST_F(I2cHidTest, HidTestSetReport) {
   ASSERT_OK(device_->Bind(std::move(i2c_)));
+  device_->zxdev()->InitOp();
   ASSERT_OK(fake_i2c_hid_.WaitUntilReset());
 
   // Any arbitrary values or vector length could be used here.
