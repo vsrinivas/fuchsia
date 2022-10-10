@@ -40,36 +40,84 @@ fx test -vo fidl-examples-domain-objects-cpp-test
 
 ## Add the C++ bindings of a FIDL library as a build dependency {#add-dep}
 
-<!-- TODO(fxbug.dev/98989): Talk about Bazel targets -->
+* {GN build}
 
-For each FIDL library declaration, such as the one in
-[Compiling FIDL][fidl-intro], the C++ bindings code for that library is
-generated under the original target name suffixed with `_cpp`:
+  For each FIDL library declaration, such as the one in
+  [Compiling FIDL][fidl-intro], the C++ bindings code for that library is
+  generated under the original target name suffixed with `_cpp`:
 
-```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/BUILD.gn" region_tag="binding-dep" adjust_indentation="auto" exclude_regexp="^$" %}
-```
+  ```gn
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/BUILD.gn" region_tag="binding-dep" adjust_indentation="auto" exclude_regexp="^$" %}
+  ```
 
-The `test` target looks like:
+  The `test` target looks like:
 
-```gn
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/BUILD.gn" region_tag="test" adjust_indentation="auto" highlight="9" %}
-```
+  ```gn
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/cpp/domain_objects/BUILD.gn" region_tag="test" adjust_indentation="auto" highlight="9" %}
+  ```
 
-Note the line which adds the dependency on the C++ bindings by referencing that
-`_cpp` target.
+  Note the line which adds the dependency on the C++ bindings by referencing that
+  `_cpp` target.
 
-(Optional) To view the generated bindings:
+  (Optional) To view the generated bindings:
 
-1. Build using `fx build`.
-2. Change to the generated files directory:
-   `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia.examples/cpp/fidl/fuchsia.examples/cpp`,
-   where the generated files are located. You may need to change `out/default`
-   if you have set a different build output directory. You can check your build
-   output directory with `cat .fx-build-dir`.
+  1. Build using `fx build`.
+  2. Change to the generated files directory:
+     `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia.examples/cpp/fidl/fuchsia.examples/cpp`,
+     where the generated files are located. You may need to change `out/default`
+     if you have set a different build output directory. You can check your build
+     output directory with `cat .fx-build-dir`.
 
-For more information on how to find generated bindings code, see
-[Viewing generated bindings code][generated-code].
+  For more information on how to find generated bindings code, see
+  [Viewing generated bindings code][generated-code].
+
+* {Bazel build}
+
+  <!-- TODO(fxbug.dev/111377): Link to real samples once those are ready.-->
+  <!-- TODO(fxbug.dev/98989): `llcpp` should be renamed to `cpp` -->
+
+  When depending on the FIDL library from the Bazel build, an extra build rule
+  is required if the FIDL library is not from the SDK:
+
+  ```bazel
+  # Given a FIDL library declaration like the following
+  fuchsia_fidl_library(
+      name = "fuchsia.examples",
+      srcs = [
+          "echo.test.fidl",
+          "types.test.fidl",
+      ],
+      library = "fuchsia.examples",
+      visibility = ["//visibility:public"],
+  )
+
+  # This rule describes the generated C++ bindings code for that library
+  fuchsia_fidl_llcpp_library(
+      name = "fuchsia.examples_llcpp_cc",
+      library = ":fuchsia.examples",
+      visibility = ["//visibility:public"],
+      deps = ["@fuchsia_sdk//pkg/fidl_cpp_v2"],
+  )
+  ```
+
+  If the FIDL library is from the Bazel SDK, the above step is not needed.
+
+  The C++ bindings code for a FIDL library is generated under the original
+  target name suffixed with `_llcpp_cc`:
+
+  ```bazel
+  deps = [
+    # Example when depending on an SDK library, `fuchsia.io`.
+    "@fuchsia_sdk//fidl/fuchsia.io:fuchsia.io_llcpp_cc",
+
+    # Example when depending on a local FIDL library, `fuchsia.examples`
+    # defined above.
+    # Suppose the library lives in the `//path/to/fidl/library` folder.
+    "//path/to/fidl/library:fuchsia.examples_llcpp_cc",
+
+    # ... other dependencies ...
+  ]
+  ```
 
 ## Include the bindings header into your code {#include-cpp-bindings}
 
