@@ -87,6 +87,7 @@
           ".gn",
           ".fx",
           ".gitignore",
+          ".ignore",
           ".jiri_root",
           ".jiri_manifest",
           ".style.yapf",
