@@ -67,10 +67,6 @@ class ServiceInstanceHandler final : public fidl::ServiceHandlerInterface {
   std::map<std::string, AnyHandler> handlers_ = {};
 };
 
-// Temporary alias until clients are migrated.
-// TODO(http://fxbug.dev/103207): Remove this.
-using ServiceHandler = ServiceInstanceHandler;
-
 }  // namespace component
 
 #endif  // LIB_SYS_COMPONENT_CPP_HANDLERS_H_

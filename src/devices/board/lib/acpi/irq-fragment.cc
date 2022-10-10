@@ -34,7 +34,7 @@ zx::status<> IrqFragment::Create(async_dispatcher_t* dispatcher, acpi::Device& p
 }
 
 zx::status<> IrqFragment::Init(uint32_t device_id) {
-  component::ServiceHandler handler;
+  component::ServiceInstanceHandler handler;
   fuchsia_hardware_interrupt::Service::Handler service(&handler);
 
   auto provider_handler = [this](fidl::ServerEnd<fuchsia_hardware_interrupt::Provider> request) {

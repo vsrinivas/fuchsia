@@ -26,7 +26,7 @@ void PlatformInterruptFragment::Get(GetCompleter::Sync& completer) {
 
 zx_status_t PlatformInterruptFragment::Add(const char* name, PlatformDevice* pdev,
                                            fuchsia_hardware_platform_bus::Irq& irq) {
-  component::ServiceHandler handler;
+  component::ServiceInstanceHandler handler;
   fuchsia_hardware_interrupt::Service::Handler service(&handler);
 
   auto provider_handler = [this](fidl::ServerEnd<fuchsia_hardware_interrupt::Provider> request) {

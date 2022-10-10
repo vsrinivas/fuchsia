@@ -38,7 +38,7 @@ class Device : public DeviceParent, public fidl::WireServer<fidl_examples_echo::
     auto* dispatcher = fdf::Dispatcher::GetCurrent()->async_dispatcher();
     auto device = std::make_unique<Device>(parent, dispatcher);
 
-    component::ServiceHandler handler;
+    component::ServiceInstanceHandler handler;
     fidl_examples_echo::EchoService::Handler service(&handler);
 
     auto echo_handler = fit::bind_member(device.get(), &Device::EchoHandler);

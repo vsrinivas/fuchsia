@@ -135,7 +135,8 @@ zx::status<> OutgoingDirectory::AddDirectoryAt(fidl::ClientEnd<fuchsia_io::Direc
   return zx::make_status(status);
 }
 
-zx::status<> OutgoingDirectory::AddService(ServiceHandler handler, cpp17::string_view service,
+zx::status<> OutgoingDirectory::AddService(ServiceInstanceHandler handler,
+                                           cpp17::string_view service,
                                            cpp17::string_view instance) {
   if (service.empty() || instance.empty()) {
     return zx::error_status(ZX_ERR_INVALID_ARGS);

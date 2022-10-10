@@ -138,9 +138,9 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
 
   // Service handler that is pre-populated. This is only used for tests that
   // want to test failure paths.
-  component::ServiceHandler CreateNonEmptyServiceHandler() {
+  component::ServiceInstanceHandler CreateNonEmptyServiceHandler() {
     // Setup service handler.
-    component::ServiceHandler service_handler;
+    component::ServiceInstanceHandler service_handler;
     fuchsia_examples::EchoService::Handler echo_service_handler(&service_handler);
 
     // First, install the regular Echo server in this service handler.
@@ -211,7 +211,7 @@ TEST_F(OutgoingDirectoryTest, AddProtocolNaturalServer) {
 // contains two `fuchsia.examples.Echo` member. One regular, and one reversed.
 TEST_F(OutgoingDirectoryTest, AddServiceServesAllMembers) {
   // Setup service handler.
-  component::ServiceHandler service_handler;
+  component::ServiceInstanceHandler service_handler;
   fuchsia_examples::EchoService::Handler echo_service_handler(&service_handler);
 
   // First, install the regular Echo server in this service handler.
@@ -525,7 +525,7 @@ TEST_F(OutgoingDirectoryTest, AddServiceFailsIfEntryExists) {
 
 TEST_F(OutgoingDirectoryTest, AddServiceFailsIfServiceHandlerEmpty) {
   EXPECT_EQ(GetOutgoingDirectory()
-                ->AddService<fuchsia_examples::EchoService>(component::ServiceHandler())
+                ->AddService<fuchsia_examples::EchoService>(component::ServiceInstanceHandler())
                 .status_value(),
             ZX_ERR_INVALID_ARGS);
 }
@@ -648,7 +648,7 @@ TEST_P(OutgoingDirectoryPathParameterizedFixture, BadServicePaths) {
   auto outgoing_directory = component::OutgoingDirectory::Create(loop.dispatcher());
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ZX_ASSERT(outgoing_directory.Serve(std::move(endpoints->server)).is_ok());
-  component::ServiceHandler service_handler;
+  component::ServiceInstanceHandler service_handler;
   fuchsia_examples::EchoService::Handler echo_service_handler(&service_handler);
   EchoImpl regular_impl(/*reversed=*/false);
   auto noop_handler = [](fidl::ServerEnd<fuchsia_examples::Echo> _request) -> void {};
@@ -656,7 +656,7 @@ TEST_P(OutgoingDirectoryPathParameterizedFixture, BadServicePaths) {
 
   auto service_and_instance_names = GetParam();
   EXPECT_EQ(outgoing_directory
-                .AddService(component::ServiceHandler(), service_and_instance_names.first,
+                .AddService(component::ServiceInstanceHandler(), service_and_instance_names.first,
                             service_and_instance_names.second)
                 .status_value(),
             ZX_ERR_INVALID_ARGS);

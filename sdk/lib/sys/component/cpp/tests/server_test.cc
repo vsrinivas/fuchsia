@@ -71,9 +71,9 @@ class ServerTest : public zxtest::Test {
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         outgoing_(component::OutgoingDirectory::Create(loop_.dispatcher())) {}
 
-  component::ServiceHandler SetUpInstance(fidl::WireServer<Echo>* foo_impl,
-                                          fidl::WireServer<Echo>* bar_impl) {
-    component::ServiceHandler handler;
+  component::ServiceInstanceHandler SetUpInstance(fidl::WireServer<Echo>* foo_impl,
+                                                  fidl::WireServer<Echo>* bar_impl) {
+    component::ServiceInstanceHandler handler;
     EchoService::Handler my_service(&handler);
 
     auto add_foo_result =

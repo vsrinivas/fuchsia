@@ -61,7 +61,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
 
-  component::ServiceHandler handler;
+  component::ServiceInstanceHandler handler;
   fuchsia_examples::EchoService::Handler my_service(&handler);
 
   auto add_regular_result =

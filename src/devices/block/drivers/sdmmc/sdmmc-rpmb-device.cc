@@ -22,7 +22,7 @@ zx_status_t RpmbDevice::Create(zx_device_t* parent, SdmmcBlockDevice* sdmmc,
   }
   device->outgoing_ = component::OutgoingDirectory::Create(device->loop_.dispatcher());
 
-  component::ServiceHandler handler;
+  component::ServiceInstanceHandler handler;
   fuchsia_hardware_rpmb::Service::Handler service(&handler);
 
   auto device_handler = [device =

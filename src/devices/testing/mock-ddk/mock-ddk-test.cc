@@ -599,7 +599,7 @@ TEST(MockDdk, SetFidlService) {
   EchoServer server;
 
   // So we add the necessary service to the parent:
-  component::ServiceHandler handler;
+  component::ServiceInstanceHandler handler;
   fidl_examples_echo::EchoService::Handler service(&handler);
 
   auto echo_handler = [&](fidl::ServerEnd<fidl_examples_echo::Echo> request) {

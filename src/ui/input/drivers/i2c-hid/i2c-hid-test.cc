@@ -239,7 +239,7 @@ class I2cHidTest : public zxtest::Test,
     ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &interrupt));
     fake_i2c_hid_.SetInterrupt(std::move(interrupt));
 
-    component::ServiceHandler handler;
+    component::ServiceInstanceHandler handler;
     fuchsia_hardware_interrupt::Service::Handler service(&handler);
 
     auto provider_handler = [this](fidl::ServerEnd<fuchsia_hardware_interrupt::Provider> request) {

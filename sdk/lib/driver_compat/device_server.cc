@@ -48,7 +48,7 @@ zx_status_t DeviceServer::GetMetadataSize(uint32_t type, size_t* out_size) {
 
 zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
                                 component::OutgoingDirectory* outgoing) {
-  component::ServiceHandler handler;
+  component::ServiceInstanceHandler handler;
   fuchsia_driver_compat::Service::Handler compat_service(&handler);
   auto device = [this, dispatcher](
                     fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> void {

@@ -176,7 +176,7 @@ class FakeRpmbService {
   ~FakeRpmbService() { loop_.Shutdown(); }
 
   fidl::ClientEnd<fuchsia_io::Directory> Connect() {
-    component::ServiceHandler handler;
+    component::ServiceInstanceHandler handler;
     fuchsia_hardware_rpmb::Service::Handler service(&handler);
 
     auto device_handler = [](fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> request) {};
