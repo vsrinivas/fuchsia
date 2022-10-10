@@ -64,14 +64,15 @@ class DriverBase {
  public:
   DriverBase(std::string_view name, DriverStartArgs start_args,
              fdf::UnownedDispatcher driver_dispatcher)
-      : start_args_(std::move(start_args)),
+      : name_(name),
+        start_args_(std::move(start_args)),
         driver_dispatcher_(std::move(driver_dispatcher)),
         dispatcher_(driver_dispatcher_->async_dispatcher()),
         driver_context_(driver_dispatcher_->get()) {
     auto ns = std::move(start_args_.ns());
     ZX_ASSERT(ns.has_value());
     Namespace incoming = Namespace::Create(ns.value()).value();
-    logger_ = Logger::Create(incoming, dispatcher_, name).value();
+    logger_ = Logger::Create(incoming, dispatcher_, name_).value();
 
     auto outgoing_request = std::move(start_args_.outgoing_dir());
     ZX_ASSERT(outgoing_request.has_value());
@@ -84,7 +85,7 @@ class DriverBase {
   virtual ~DriverBase() = default;
 
   // This method will be called by the factory to start the driver. This is when
-  // the driver should setup the outgoing directory through `context()->outgoing()->Add...` calls.
+  // the driver should setup the outgoing directory through `context().outgoing()->Add...` calls.
   // Do not call Serve, as it has already been called by the |DriverBase| constructor.
   // Child nodes can be created here synchronously or asynchronously as long as all of the
   // protocols being offered to the child has been added to the outgoing directory first.
@@ -121,6 +122,8 @@ class DriverBase {
     return StructuredConfig::TakeFromStartArgs(start_args_);
   }
 
+  std::string_view name() const { return name_; }
+
   DriverContext& context() { return driver_context_; }
   const DriverContext& context() const { return driver_context_; }
 
@@ -148,6 +151,7 @@ class DriverBase {
   }
 
  private:
+  std::string name_;
   DriverStartArgs start_args_;
   fdf::UnownedDispatcher driver_dispatcher_;
   async_dispatcher_t* dispatcher_;
