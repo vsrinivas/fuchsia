@@ -8,11 +8,11 @@
         binary: "bin/server_bin",
     },
     capabilities: [
-        { protocol: "examples.canvas.Instance" },
+        { protocol: "examples.canvas.baseline.Instance" },
     ],
     expose: [
         {
-            protocol: "examples.canvas.Instance",
+            protocol: "examples.canvas.baseline.Instance",
             from: "self",
         },
     ],

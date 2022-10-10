@@ -9,7 +9,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <unistd.h>
 
-#include <examples/canvas/cpp/fidl.h>
+#include <examples/canvas/baseline/cpp/fidl.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 
@@ -18,16 +18,16 @@
 struct CanvasState {
   // Tracks whether there has been a change since the last send, to prevent redundant updates.
   bool changed = true;
-  examples::canvas::BoundingBox bounding_box;
+  examples::canvas::baseline::BoundingBox bounding_box;
 };
 
 // An implementation of the |Instance| protocol.
-class InstanceImpl final : public examples::canvas::Instance {
+class InstanceImpl final : public examples::canvas::baseline::Instance {
  public:
   // Bind this implementation to an |InterfaceRequest|.
   InstanceImpl(async_dispatcher_t* dispatcher,
-               fidl::InterfaceRequest<examples::canvas::Instance> request)
-      : binding_(fidl::Binding<examples::canvas::Instance>(this)), weak_factory_(this) {
+               fidl::InterfaceRequest<examples::canvas::baseline::Instance> request)
+      : binding_(fidl::Binding<examples::canvas::baseline::Instance>(this)), weak_factory_(this) {
     binding_.Bind(std::move(request), dispatcher);
 
     // Gracefully handle abrupt shutdowns.
@@ -42,7 +42,7 @@ class InstanceImpl final : public examples::canvas::Instance {
     ScheduleOnDrawnEvent(dispatcher, zx::sec(1));
   }
 
-  void AddLine(::std::array<::examples::canvas::Point, 2> line) override {
+  void AddLine(::std::array<::examples::canvas::baseline::Point, 2> line) override {
     FX_LOGS(INFO) << "AddLine request received: [Point { x: " << line[1].x << ", y: " << line[1].y
                   << " }, Point { x: " << line[0].x << ", y: " << line[0].y << " }]";
 
@@ -105,7 +105,7 @@ class InstanceImpl final : public examples::canvas::Instance {
         after);
   }
 
-  fidl::Binding<examples::canvas::Instance> binding_;
+  fidl::Binding<examples::canvas::baseline::Instance> binding_;
   CanvasState state_ = CanvasState{};
 
   // Generates weak references to this object, which are appropriate to pass into asynchronous
@@ -133,12 +133,14 @@ int main(int argc, char** argv) {
   // provided to other components.
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  // Register a handler for components trying to connect to |examples.canvas.Instance|.
-  context->outgoing()->AddPublicService(fidl::InterfaceRequestHandler<examples::canvas::Instance>(
-      [dispatcher](fidl::InterfaceRequest<examples::canvas::Instance> request) {
-        // Create an instance of our |InstanceImpl| that destroys itself when the connection closes.
-        new InstanceImpl(dispatcher, std::move(request));
-      }));
+  // Register a handler for components trying to connect to |examples.canvas.baseline.Instance|.
+  context->outgoing()->AddPublicService(
+      fidl::InterfaceRequestHandler<examples::canvas::baseline::Instance>(
+          [dispatcher](fidl::InterfaceRequest<examples::canvas::baseline::Instance> request) {
+            // Create an instance of our |InstanceImpl| that destroys itself when the connection
+            // closes.
+            new InstanceImpl(dispatcher, std::move(request));
+          }));
 
   // Everything is wired up. Sit back and run the loop until an incoming connection wakes us up.
   FX_LOGS(INFO) << "Listening for incoming connections";

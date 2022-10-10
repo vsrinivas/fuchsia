@@ -11,7 +11,7 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
   source_root = "src/main.rs"
   deps = [
-    "//examples/fidl/new/key_value_store/baseline/fidl:examples.keyvaluestore_rust",
+    "//examples/fidl/new/key_value_store/baseline/fidl:examples.keyvaluestore.baseline_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

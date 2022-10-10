@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     config::Config,
-    fidl_examples_keyvaluestore::{Item, StoreMarker, StoreSynchronousProxy},
+    fidl_examples_keyvaluestore_baseline::{Item, StoreMarker, StoreSynchronousProxy},
     fuchsia_component::client::connect_channel_to_protocol,
     fuchsia_zircon as zx,
     std::{thread, time},

@@ -22,7 +22,7 @@ rustc_binary("bin") {
   source_root = "src/main.rs"
   deps = [
     ":config",
-    "//examples/fidl/new/canvas/baseline/fidl:examples.canvas_rust",
+    "//examples/fidl/new/canvas/baseline/fidl:examples.canvas.baseline_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

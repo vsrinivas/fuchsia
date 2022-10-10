@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     config::Config,
-    fidl_examples_canvas::{InstanceEvent, InstanceMarker, Point},
+    fidl_examples_canvas_baseline::{InstanceEvent, InstanceMarker, Point},
     fuchsia_component::client::connect_to_protocol,
     futures::TryStreamExt,
     std::{thread, time},

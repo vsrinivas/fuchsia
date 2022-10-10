@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/examples.canvas/cpp/fidl.h>
+#include <fidl/examples.canvas.baseline/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/wire/channel.h>
@@ -18,23 +18,24 @@
 struct CanvasState {
   // Tracks whether there has been a change since the last send, to prevent redundant updates.
   bool changed = true;
-  examples_canvas::BoundingBox bounding_box;
+  examples_canvas_baseline::BoundingBox bounding_box;
 };
 
 // An implementation of the |Instance| protocol.
-class InstanceImpl final : public fidl::Server<examples_canvas::Instance> {
+class InstanceImpl final : public fidl::Server<examples_canvas_baseline::Instance> {
  public:
   // Bind this implementation to a channel.
   InstanceImpl(async_dispatcher_t* dispatcher,
-               fidl::ServerEnd<examples_canvas::Instance> server_end)
-      : binding_(fidl::BindServer(dispatcher, std::move(server_end), this,
-                                  [this](InstanceImpl* impl, fidl::UnbindInfo info,
-                                         fidl::ServerEnd<examples_canvas::Instance> server_end) {
-                                    if (info.reason() != ::fidl::Reason::kPeerClosed) {
-                                      FX_LOGS(ERROR) << "Shutdown unexpectedly";
-                                    }
-                                    delete this;
-                                  })),
+               fidl::ServerEnd<examples_canvas_baseline::Instance> server_end)
+      : binding_(fidl::BindServer(
+            dispatcher, std::move(server_end), this,
+            [this](InstanceImpl* impl, fidl::UnbindInfo info,
+                   fidl::ServerEnd<examples_canvas_baseline::Instance> server_end) {
+              if (info.reason() != ::fidl::Reason::kPeerClosed) {
+                FX_LOGS(ERROR) << "Shutdown unexpectedly";
+              }
+              delete this;
+            })),
         weak_factory_(this) {
     // Start the update timer on startup. Our server sends one update per second
     ScheduleOnDrawnEvent(dispatcher, zx::sec(1));
@@ -109,7 +110,7 @@ class InstanceImpl final : public fidl::Server<examples_canvas::Instance> {
         after);
   }
 
-  fidl::ServerBindingRef<examples_canvas::Instance> binding_;
+  fidl::ServerBindingRef<examples_canvas_baseline::Instance> binding_;
   CanvasState state_ = CanvasState{};
 
   // Generates weak references to this object, which are appropriate to pass into asynchronous
@@ -143,9 +144,9 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  // Register a handler for components trying to connect to |examples.canvas.Instance|.
-  result = outgoing.AddProtocol<examples_canvas::Instance>(
-      [dispatcher](fidl::ServerEnd<examples_canvas::Instance> server_end) {
+  // Register a handler for components trying to connect to |examples.canvas.baseline.Instance|.
+  result = outgoing.AddProtocol<examples_canvas_baseline::Instance>(
+      [dispatcher](fidl::ServerEnd<examples_canvas_baseline::Instance> server_end) {
         // Create an instance of our InstanceImpl that destroys itself when the connection closes.
         new InstanceImpl(dispatcher, std::move(server_end));
       });

@@ -11,7 +11,7 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    "//examples/fidl/new/canvas/baseline/fidl:examples.canvas_cpp",
+    "//examples/fidl/new/canvas/baseline/fidl:examples.canvas.baseline_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",

@@ -12,7 +12,7 @@
         binary: "bin/client_bin",
     },
     use: [
-        { protocol: "examples.canvas.Instance" },
+        { protocol: "examples.canvas.baseline.Instance" },
     ],
     config: {
         // A script for the client to follow. Entries in the script may take one of two forms: a

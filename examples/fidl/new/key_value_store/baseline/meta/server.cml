@@ -8,11 +8,11 @@
         binary: "bin/server_bin",
     },
     capabilities: [
-        { protocol: "examples.keyvaluestore.Store" },
+        { protocol: "examples.keyvaluestore.baseline.Store" },
     ],
     expose: [
         {
-            protocol: "examples.keyvaluestore.Store",
+            protocol: "examples.keyvaluestore.baseline.Store",
             from: "self",
         },
     ],

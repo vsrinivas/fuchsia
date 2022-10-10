@@ -7,10 +7,10 @@ import("//build/fidl/fidl.gni")
 # Builds the FIDL library into a set of language specific bindings. Bindings for a given language
 # may be imported by depending on this target, followed by a language-specific underscore:
 #
-#   ":examples.keyvaluestore_rust"
-#   ":examples.keyvaluestore_cpp_wire"
+#   ":examples.keyvaluestore.baseline_rust"
+#   ":examples.keyvaluestore.baseline_cpp_wire"
 #   ...and so on
 #
-fidl("examples.keyvaluestore") {
+fidl("examples.keyvaluestore.baseline") {
   sources = [ "key_value_store.test.fidl" ]
 }

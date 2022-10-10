@@ -15,7 +15,7 @@
     offer: [
         // Route the protocol under test from the server to the client.
         {
-            protocol: "examples.canvas.Instance",
+            protocol: "examples.canvas.baseline.Instance",
             from: "#server",
             to: "#client",
         },

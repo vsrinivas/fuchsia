@@ -11,7 +11,7 @@ rustc_test("runner_bin") {
   sources = [ "src/main.rs" ]
   source_root = "src/main.rs"
   deps = [
-    "//examples/fidl/new/canvas/baseline/fidl:examples.canvas_rust",
+    "//examples/fidl/new/canvas/baseline/fidl:examples.canvas.baseline_rust",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

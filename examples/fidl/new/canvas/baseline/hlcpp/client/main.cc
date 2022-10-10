@@ -9,12 +9,12 @@
 
 #include <charconv>
 
-#include <examples/canvas/cpp/fidl.h>
+#include <examples/canvas/baseline/cpp/fidl.h>
 #include <examples/fidl/new/canvas/baseline/hlcpp/client/config.h>
 
 // A helper function that takes a coordinate in string form, like "123,-456", and parses it into a
 // a struct of the form |{ in64 x; int64 y; }|.
-::examples::canvas::Point ParsePoint(std::string_view input) {
+::examples::canvas::baseline::Point ParsePoint(std::string_view input) {
   int64_t x = 0;
   int64_t y = 0;
   size_t index = input.find(',');
@@ -22,12 +22,12 @@
     std::from_chars(input.data(), input.data() + index, x);
     std::from_chars(input.data() + index + 1, input.data() + input.length(), y);
   }
-  return ::examples::canvas::Point{.x = x, .y = y};
+  return ::examples::canvas::baseline::Point{.x = x, .y = y};
 }
 
 // A helper function that takes a coordinate pair in string form, like "1,2:-3,-4", and parses it
 // into an array of 2 |Point| structs.
-::std::array<::examples::canvas::Point, 2> ParseLine(const std::string& action) {
+::std::array<::examples::canvas::baseline::Point, 2> ParseLine(const std::string& action) {
   auto input = std::string_view(action);
   size_t index = input.find(':');
   if (index != std::string::npos) {
@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
 
   // Connect to the protocol inside the component's namespace, then create an asynchronous client
   // using the newly-established connection.
-  examples::canvas::InstancePtr instance_proxy;
+  examples::canvas::baseline::InstancePtr instance_proxy;
   auto context = sys::ComponentContext::Create();
   context->svc()->Connect(instance_proxy.NewRequest(dispatcher));
   FX_LOGS(INFO) << "Outgoing connection enabled";
@@ -59,8 +59,8 @@ int main(int argc, const char** argv) {
   });
 
   // Provide a lambda to handle incoming |OnDrawn| events asynchronously.
-  instance_proxy.events().OnDrawn = [&loop](::examples::canvas::Point top_left,
-                                            ::examples::canvas::Point bottom_right) {
+  instance_proxy.events().OnDrawn = [&loop](::examples::canvas::baseline::Point top_left,
+                                            ::examples::canvas::baseline::Point bottom_right) {
     FX_LOGS(INFO) << "OnDrawn event received: top_left: Point { x: " << top_left.x
                   << ", y: " << top_left.y << " }, bottom_right: Point { x: " << bottom_right.x
                   << ", y: " << bottom_right.y << " }";

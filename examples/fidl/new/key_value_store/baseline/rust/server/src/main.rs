@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl_examples_keyvaluestore::{Item, StoreRequest, StoreRequestStream, WriteError},
+    fidl_examples_keyvaluestore_baseline::{Item, StoreRequest, StoreRequestStream, WriteError},
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
     lazy_static::lazy_static,

@@ -7,7 +7,7 @@ use {
     diagnostics_data::{Data, Logs},
     example_tester::{assert_logs_eq_to_golden, run_test, Client, Server, TestKind},
     fidl::prelude::*,
-    fidl_examples_keyvaluestore::StoreMarker,
+    fidl_examples_keyvaluestore_baseline::StoreMarker,
     fuchsia_async as fasync,
     fuchsia_component_test::{ChildRef, RealmBuilder},
 };

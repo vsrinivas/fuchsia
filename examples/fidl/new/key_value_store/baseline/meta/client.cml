@@ -12,7 +12,7 @@
         binary: "bin/client_bin",
     },
     use: [
-        { protocol: "examples.keyvaluestore.Store" },
+        { protocol: "examples.keyvaluestore.baseline.Store" },
     ],
     config: {
         write_items: {

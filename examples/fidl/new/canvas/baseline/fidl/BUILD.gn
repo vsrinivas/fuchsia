@@ -7,10 +7,10 @@ import("//build/fidl/fidl.gni")
 # Builds the FIDL library into a set of language specific bindings. Bindings for a given language
 # may be imported by depending on this target, followed by a language-specific underscore:
 #
-#   ":examples.canvas_rust"
-#   ":examples.canvas_cpp_wire"
+#   ":examples.canvas.baseline_rust"
+#   ":examples.canvas.baseline_cpp_wire"
 #   ...and so on
 #
-fidl("examples.canvas") {
+fidl("examples.canvas.baseline") {
   sources = [ "canvas.test.fidl" ]
 }

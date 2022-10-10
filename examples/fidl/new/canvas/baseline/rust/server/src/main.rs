@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::RequestStream as _,
-    fidl_examples_canvas::{BoundingBox, InstanceRequest, InstanceRequestStream, Point},
+    fidl_examples_canvas_baseline::{BoundingBox, InstanceRequest, InstanceRequestStream, Point},
     fuchsia_async::{Time, Timer},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx},

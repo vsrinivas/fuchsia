@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/examples.canvas/cpp/wire.h>
+#include <fidl/examples.canvas.baseline/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
@@ -14,10 +14,10 @@
 
 // The |EventHandler| is a derived class that we pass into the |fidl::WireClient| to handle incoming
 // events asynchronously.
-class EventHandler : public fidl::WireAsyncEventHandler<examples_canvas::Instance> {
+class EventHandler : public fidl::WireAsyncEventHandler<examples_canvas_baseline::Instance> {
  public:
   // Handler for |OnDrawn| events sent from the server.
-  void OnDrawn(fidl::WireEvent<examples_canvas::Instance::OnDrawn>* event) override {
+  void OnDrawn(fidl::WireEvent<examples_canvas_baseline::Instance::OnDrawn>* event) override {
     auto top_left = event->top_left;
     auto bottom_right = event->bottom_right;
     FX_LOGS(INFO) << "OnDrawn event received: top_left: Point { x: " << top_left.x
@@ -36,7 +36,7 @@ class EventHandler : public fidl::WireAsyncEventHandler<examples_canvas::Instanc
 
 // A helper function that takes a coordinate in string form, like "123,-456", and parses it into a
 // a struct of the form |{ in64 x; int64 y; }|.
-::examples_canvas::wire::Point ParsePoint(std::string_view input) {
+::examples_canvas_baseline::wire::Point ParsePoint(std::string_view input) {
   int64_t x = 0;
   int64_t y = 0;
   size_t index = input.find(',');
@@ -44,12 +44,12 @@ class EventHandler : public fidl::WireAsyncEventHandler<examples_canvas::Instanc
     std::from_chars(input.data(), input.data() + index, x);
     std::from_chars(input.data() + index + 1, input.data() + input.length(), y);
   }
-  return ::examples_canvas::wire::Point{.x = x, .y = y};
+  return ::examples_canvas_baseline::wire::Point{.x = x, .y = y};
 }
 
 // A helper function that takes a coordinate pair in string form, like "1,2:-3,-4", and parses it
 // into an array of 2 |Point| structs.
-::fidl::Array<::examples_canvas::wire::Point, 2> ParseLine(const std::string& action) {
+::fidl::Array<::examples_canvas_baseline::wire::Point, 2> ParseLine(const std::string& action) {
   auto input = std::string_view(action);
   size_t index = input.find(':');
   if (index != std::string::npos) {
@@ -70,7 +70,7 @@ int main(int argc, const char** argv) {
 
   // Connect to the protocol inside the component's namespace. This can fail so it's wrapped in a
   // |zx::status| and it must be checked for errors.
-  zx::status client_end = component::Connect<examples_canvas::Instance>();
+  zx::status client_end = component::Connect<examples_canvas_baseline::Instance>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |Instance| protocol: "
                    << client_end.status_string();
