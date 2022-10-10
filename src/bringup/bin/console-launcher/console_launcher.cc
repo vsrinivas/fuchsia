@@ -18,21 +18,19 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include "src/lib/fxl/strings/join_strings.h"
-#include "src/lib/fxl/strings/split_string.h"
-
 namespace console_launcher {
 
 // Wait for the requested file.  Its parent directory must exist.
 zx::status<fbl::unique_fd> WaitForFile(const char* path, zx::time deadline) {
-  std::vector segments = fxl::SplitStringCopy(path, "/", fxl::kTrimWhitespace, fxl::kSplitWantAll);
-  std::string basename = std::move(segments.back());
-  segments.pop_back();
-
-  std::string dirname = fxl::JoinStrings(segments, "/");
+  std::string_view basename{path};
+  std::string_view dirname = "/";
+  if (const size_t slash = basename.rfind('/'); slash != std::string::npos) {
+    dirname = basename.substr(0, slash);
+    basename = basename.substr(slash + 1);
+  }
 
   auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
-    auto& basename = *static_cast<std::string*>(cookie);
+    const std::string_view basename = *static_cast<std::string_view*>(cookie);
     if (event != WATCH_EVENT_ADD_FILE) {
       return ZX_OK;
     }
@@ -42,7 +40,7 @@ zx::status<fbl::unique_fd> WaitForFile(const char* path, zx::time deadline) {
     return ZX_OK;
   };
 
-  fbl::unique_fd dirfd(open(dirname.c_str(), O_RDONLY | O_DIRECTORY));
+  fbl::unique_fd dirfd(open(std::string{dirname}.c_str(), O_RDONLY | O_DIRECTORY));
   if (!dirfd.is_valid()) {
     FX_LOGS(ERROR) << "failed to open directory '" << dirname << "': " << strerror(errno);
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -53,7 +51,7 @@ zx::status<fbl::unique_fd> WaitForFile(const char* path, zx::time deadline) {
     return zx::error(status);
   }
 
-  fbl::unique_fd fd(openat(dirfd.get(), basename.c_str(), O_RDWR));
+  fbl::unique_fd fd(openat(dirfd.get(), std::string{basename}.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     FX_LOGS(ERROR) << "failed to open file '" << basename << "': " << strerror(errno);
     return zx::error(ZX_ERR_INVALID_ARGS);

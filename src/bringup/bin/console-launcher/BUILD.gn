@@ -30,7 +30,6 @@ source_set("lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/zircon-internal",
   ]
