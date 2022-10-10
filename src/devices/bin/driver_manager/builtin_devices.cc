@@ -26,6 +26,8 @@ zx_status_t BuiltinDevVnode::Write(const void* data, size_t len, size_t off, siz
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t BuiltinDevVnode::Truncate(size_t len) { return ZX_OK; }
+
 zx_status_t BuiltinDevVnode::GetAttributes(fs::VnodeAttributes* a) {
   a->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
   a->content_size = 0;
