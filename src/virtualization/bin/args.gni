@@ -4,5 +4,5 @@
 
 declare_args() {
   # If true, uses the new Rust virtio-console device instead of the legacy C++ device.
-  rust_virtio_console = false
+  rust_virtio_console = true
 }
