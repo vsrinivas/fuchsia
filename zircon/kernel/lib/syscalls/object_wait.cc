@@ -39,7 +39,6 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
 
   zx_status_t result;
   WaitSignalObserver wait_signal_observer;
-  uint32_t koid;
 
   auto up = ProcessDispatcher::GetCurrent();
   {
@@ -54,11 +53,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
     result = wait_signal_observer.Begin(&event, handle, signals);
     if (result != ZX_OK)
       return result;
-
-    koid = static_cast<uint32_t>(handle->dispatcher()->get_koid());
   }
-
-  ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)deadline, (uint32_t)(deadline >> 32));
 
   const TimerSlack slack = up->GetTimerSlackPolicy();
   const Deadline slackDeadline(deadline, slack);
@@ -74,8 +69,6 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value, zx_signals_t signals, 
 
   // Regardless of wait outcome, we must call End().
   auto signals_state = wait_signal_observer.End();
-
-  ktrace(TAG_WAIT_ONE_DONE, koid, signals_state, result, 0);
 
   if (observed) {
     zx_status_t status = observed.copy_to_user(signals_state);

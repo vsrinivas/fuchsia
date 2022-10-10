@@ -127,9 +127,6 @@ KTRACE_DEF(0x130, 32B, CHANNEL_CREATE, IPC)  // id0, id1, flags
 KTRACE_DEF(0x131, 32B, CHANNEL_WRITE, IPC)   // id0, bytes, handles
 KTRACE_DEF(0x132, 32B, CHANNEL_READ, IPC)    // id1, bytes, handles
 
-KTRACE_DEF(0x150, 32B, WAIT_ONE, IPC)       // id, signals, timeoutlo, timeouthi
-KTRACE_DEF(0x151, 32B, WAIT_ONE_DONE, IPC)  // id, status, pending
-
 KTRACE_DEF(0x170, 32B, VCPU_ENTER, TASKS)
 KTRACE_DEF(0x171, 32B, VCPU_EXIT, TASKS)     // meta, exit_address_hi, exit_address_lo
 KTRACE_DEF(0x172, 32B, VCPU_BLOCK, TASKS)    // meta

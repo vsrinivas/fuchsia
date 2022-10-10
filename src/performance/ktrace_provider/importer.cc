@@ -375,11 +375,6 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
       return HandleChannelWrite(record->ts, record->tid, record->a, record->b, record->c);
     case KTRACE_EVENT(TAG_CHANNEL_READ):
       return HandleChannelRead(record->ts, record->tid, record->a, record->b, record->c);
-    case KTRACE_EVENT(TAG_WAIT_ONE):
-      return HandleWaitOne(record->ts, record->tid, record->a, record->b,
-                           ToUInt64(record->c, record->d));
-    case KTRACE_EVENT(TAG_WAIT_ONE_DONE):
-      return HandleWaitOneDone(record->ts, record->tid, record->a, record->b, record->c);
     case KTRACE_EVENT(TAG_VCPU_ENTER):
       return HandleVcpuEnter(record->ts, record->tid);
     case KTRACE_EVENT(TAG_VCPU_EXIT):
@@ -955,16 +950,6 @@ bool Importer::HandleChannelRead(trace_ticks_t event_time, zx_koid_t thread, zx_
                                             &channel_category_ref_, &channel_read_name_ref_,
                                             counter, args, std::size(args));
   return true;
-}
-
-bool Importer::HandleWaitOne(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t object,
-                             uint32_t signals, zx_time_t timeout) {
-  return false;
-}
-
-bool Importer::HandleWaitOneDone(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t object,
-                                 uint32_t status, uint32_t pending) {
-  return false;
 }
 
 bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,

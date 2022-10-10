@@ -106,10 +106,6 @@ class Importer {
                           uint32_t num_bytes, uint32_t num_handles);
   bool HandleChannelRead(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t channel,
                          uint32_t num_bytes, uint32_t num_handles);
-  bool HandleWaitOne(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t object, uint32_t signals,
-                     zx_time_t timeout);
-  bool HandleWaitOneDone(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t object,
-                         uint32_t status, uint32_t pending);
   bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                    bool cpu_trace);
   bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
