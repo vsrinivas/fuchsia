@@ -1,7 +1,7 @@
 <div>
   <devsite-expandable>
     <h4 class="showalways">
-      FIDL concept guide: Enum
+      FIDL recipe: Enum
     </h4>
 
 <!--

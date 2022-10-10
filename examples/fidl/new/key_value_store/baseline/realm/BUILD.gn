@@ -7,5 +7,5 @@ import("//build/components.gni")
 # Create a `realm` component, which may be invoked by an instance of the RealmBuilder to create a
 # new test realm at test runtime.
 fuchsia_component("realm") {
-  manifest = "//examples/fidl/new/canvas/baseline/realm/meta/realm.cml"
+  manifest = "//examples/fidl/new/key_value_store/baseline/realm/meta/realm.cml"
 }

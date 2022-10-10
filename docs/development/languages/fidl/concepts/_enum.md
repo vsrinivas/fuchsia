@@ -12,5 +12,5 @@ indicate that a search key could not be matched during a read attempt, while
 described. Note that this enum is marked `flexible`, allowing it to be easily
 evolved with new members in the future.
 
-<<../examples/key-value-store/_callout.md>>
-<<../examples/key-value-store/_add_read_item_tutorial.md>>
+<<../examples/key_value_store/_callout.md>>
+<<../examples/key_value_store/_add_read_item_tutorial.md>>

@@ -17,8 +17,8 @@ some improvement to extract optimal performance, especially under stress.
 
 Note: The source code for this example is located at
 [//examples/fidl/new/canvas/baseline](/examples/fidl/new/canvas/baseline).
-This directory includes tests exercising implementation in all supported
-languages, which may be run by exercised locally by running the following from
+This directory includes tests exercising the implementation in all supported
+languages, which may be run locally by executing the following from
 the command line: `fx set core.x64 --with=//examples/fidl/new:tests && fx test
 canvas_baseline`.
 
@@ -78,11 +78,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3>Client</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp-wire/client/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_wire/client/main.cc" %}</pre>
         </section>
         <section>
           <h3>Server</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp-wire/server/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_wire/server/main.cc" %}</pre>
         </section>
       </devsite-selector>
     </section>
@@ -92,11 +92,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3>Client</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp-natural/client/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_natural/client/main.cc" %}</pre>
         </section>
         <section>
           <h3>Server</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp-natural/server/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_natural/server/main.cc" %}</pre>
         </section>
       </devsite-selector>
     </section>

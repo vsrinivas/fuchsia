@@ -1,7 +1,7 @@
 # README
 
-This directory contains all of the example code for the "canvas" series of FIDL
-examples. See the associated [docs][docs] for more information.
+This directory contains all of the example code for the "key-value store" series
+of FIDL examples. See the associated [docs][docs] for more information.
 
 Each example should include the following:
 
@@ -14,7 +14,7 @@ Each example should include the following:
 * An [implementation][impl-hlcpp] of the client and server using the HLCPP bindings.
 * An [implementation][impl-rust] of the client and server using the Rust bindings.
 
-[docs]: /docs/development/languages/fidl/examples/canvas/README.md
+[docs]: /docs/development/languages/fidl/examples/key_value_store/README.md
 [impl-cml]: baseline/meta
 [impl-cpp-natural]: baseline/cpp-natural
 [impl-cpp-wire]: baseline/cpp-wire

@@ -16,5 +16,5 @@ a bespoke name, while also making clear to the reader that both the `key` value
 on the `Item` type and the `key` used in the `ReadItem` request struct are
 purposefully, and not merely coincidentally, the same thing.
 
-<<../examples/key-value-store/_callout.md>>
-<<../examples/key-value-store/_add_read_item_tutorial.md>>
+<<../examples/key_value_store/_callout.md>>
+<<../examples/key_value_store/_add_read_item_tutorial.md>>

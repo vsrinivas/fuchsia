@@ -1,7 +1,7 @@
 <div>
   <devsite-expandable>
     <h4 class="showalways">
-      FIDL concept guide: Alias
+      FIDL recipe: Alias
     </h4>
 
 <!--

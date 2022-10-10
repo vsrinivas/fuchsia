@@ -9,13 +9,13 @@ The following examples sequentially demonstrate useful FIDL concepts.
 
 ### Key-value store
 
-The [key-value store][example-key-value-store] example demonstrates how to build
+The [key-value store][example_key_value_store] example demonstrates how to build
 a simple key-value store using FIDL in order to learn about the various data
 types available in the language.
 
 ### Canvas
 
-The [canvas][example-canvas] example demonstrates how to build a simple 2D
+The [canvas][example_canvas] example demonstrates how to build a simple 2D
 line-rendering canvas using FIDL in order to learn about commonly used data flow
 patterns.
 
@@ -40,5 +40,5 @@ section.
 
 <<../concepts/_named_payload.md>>
 
-[example-canvas]: canvas/README.md
-[example-key-value-store]: key-value-store/README.md
+[example_canvas]: canvas/README.md
+[example_key_value_store]: key_value_store/README.md

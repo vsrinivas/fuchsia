@@ -86,4 +86,4 @@ toc:
   - title: "Canvas"
     path: /docs/development/languages/fidl/examples/canvas/README.md
   - title: "Key value store"
-    path: /docs/development/languages/fidl/examples/key-value-store/README.md
+    path: /docs/development/languages/fidl/examples/key_value_store/README.md

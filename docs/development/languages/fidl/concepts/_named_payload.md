@@ -7,6 +7,6 @@ In the following example, the added `ReadItem` method is notably different from
 the existing `WriteItem`, using an already existing named type as the payload,
 rather than a repetitive inline definition.
 
-<<../examples/key-value-store/_callout.md>>
-<<../examples/key-value-store/_add_read_item_tutorial.md>>
+<<../examples/key_value_store/_callout.md>>
+<<../examples/key_value_store/_add_read_item_tutorial.md>>
 
