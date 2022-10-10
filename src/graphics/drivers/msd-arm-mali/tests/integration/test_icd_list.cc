@@ -26,14 +26,22 @@ TEST(Mali, IcdList) {
   auto rsp =
       fidl::WireCall<fuchsia_gpu_magma::IcdLoaderDevice>(test_device.channel())->GetIcdList();
   EXPECT_TRUE(rsp.ok());
-  EXPECT_EQ(rsp.value().icd_list.count(), 2u);
-  auto& icd_item = rsp.value().icd_list[0];
-  EXPECT_TRUE(icd_item.has_flags());
-  EXPECT_TRUE(icd_item.flags() & fuchsia_gpu_magma::wire::IcdFlags::kSupportsVulkan);
-  std::string res_string(icd_item.component_url().get());
-  EXPECT_EQ(res_string.length(), icd_item.component_url().size());
-  EXPECT_EQ(0u, res_string.find("fuchsia-pkg://fuchsia.com/libvulkan_arm_mali_"));
-  EXPECT_THAT(res_string, testing::EndsWith("_test#meta/vulkan.cm"));
+  EXPECT_EQ(rsp.value().icd_list.count(), 3u);
+  {
+    auto& icd_item = rsp.value().icd_list[0];
+    EXPECT_TRUE(icd_item.has_flags());
+    EXPECT_TRUE(icd_item.flags() & fuchsia_gpu_magma::wire::IcdFlags::kSupportsVulkan);
+    std::string res_string(icd_item.component_url().get());
+    EXPECT_EQ(res_string.length(), icd_item.component_url().size());
+    EXPECT_EQ(0u, res_string.find("fuchsia-pkg://mali.fuchsia.com/libvulkan_arm_mali_"));
+    EXPECT_THAT(res_string, testing::EndsWith("_test#meta/vulkan.cm"));
+  }
+  {
+    auto& icd_item = rsp.value().icd_list[1];
+    std::string res_string(icd_item.component_url().get());
+    EXPECT_EQ(0u, res_string.find("fuchsia-pkg://fuchsia.com/libvulkan_arm_mali_"));
+    EXPECT_THAT(res_string, testing::EndsWith("_test#meta/vulkan.cm"));
+  }
 }
 
 }  // namespace

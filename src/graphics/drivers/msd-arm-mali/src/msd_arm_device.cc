@@ -1627,17 +1627,22 @@ void msd_device_set_memory_pressure_level(msd_device_t* device, MagmaMemoryPress
 
 magma_status_t msd_device_get_icd_list(struct msd_device_t* abi_device, uint64_t count,
                                        msd_icd_info_t* icd_info_out, uint64_t* actual_count_out) {
-  const char* kSuffixes[] = {"_test", ""};
-  if (icd_info_out && count < std::size(kSuffixes)) {
+  struct variant {
+    const char* suffix;
+    const char* url;
+  };
+  constexpr variant kVariants[] = {
+      {"_test", "mali.fuchsia.com"}, {"_test", "fuchsia.com"}, {"", "fuchsia.com"}};
+  if (icd_info_out && count < std::size(kVariants)) {
     return MAGMA_STATUS_INVALID_ARGS;
   }
-  *actual_count_out = std::size(kSuffixes);
+  *actual_count_out = std::size(kVariants);
   if (icd_info_out) {
     auto device = MsdArmDevice::cast(abi_device);
-    for (uint32_t i = 0; i < std::size(kSuffixes); i++) {
+    for (uint32_t i = 0; i < std::size(kVariants); i++) {
       strcpy(icd_info_out[i].component_url,
-             fbl::StringPrintf("fuchsia-pkg://fuchsia.com/libvulkan_arm_mali_%lx%s#meta/vulkan.cm",
-                               device->GpuId(), kSuffixes[i])
+             fbl::StringPrintf("fuchsia-pkg://%s/libvulkan_arm_mali_%lx%s#meta/vulkan.cm",
+                               kVariants[i].url, device->GpuId(), kVariants[i].suffix)
                  .c_str());
       icd_info_out[i].support_flags = ICD_SUPPORT_FLAG_VULKAN;
     }
