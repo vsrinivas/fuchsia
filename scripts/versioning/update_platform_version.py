@@ -87,7 +87,33 @@ Did you run this script from the root of the source tree?""".format(
         return False
 
 
-def update_compatibility_test_goldens(root_build_dir):
+def move_owners_file(root_build_dir, fuchsia_api_level):
+    """Helper function for copying golden files. It accomplishes the following:
+    1. Overrides //sdk/history/OWNERS in //sdk/history/N/ allowing a wider set of reviewers.
+    2. Reverts //sdk/history/N-1/  back to using //sdk/history/OWNERS, now that N-1 is a 
+       supported API level.
+
+    """
+    root = join_path(root_build_dir, "sdk", "history")
+    src = join_path(root, str(fuchsia_api_level-1), "OWNERS")
+    dst = join_path(root, str(fuchsia_api_level))
+
+    try:
+        os.mkdir(dst)
+    except Exception as e:
+        print(f"os.mkdir({dst}) failed: {e}")
+        return False
+
+    try:
+        print(f"copying {src} to {dst}")
+        shutil.copy2(src, dst)
+    except Exception as e:
+        print(f"shutil.copy2({src}, {dst}) failed: {e}")
+        return False   
+    return True
+
+
+def copy_compatibility_test_goldens(root_build_dir, fuchsia_api_level):
     """Updates the golden files used for compatibility testing".
 
     This assumes a clean build with:
@@ -95,26 +121,30 @@ def update_compatibility_test_goldens(root_build_dir):
 
     Any files that can't be copied are logged and must be updated manually.
     """
-    ret = 0
     goldens_manifest = os.path.join(
         root_build_dir, "compatibility_testing_goldens.json")
+
     with open(goldens_manifest) as f:
         for entry in json.load(f):
-            src = os.path.abspath(os.path.join(root_build_dir, entry["src"]))
-            dst = os.path.abspath(os.path.join(root_build_dir, entry["dst"]))
+            src = join_path(root_build_dir, entry["src"])
+            dst = join_path(root_build_dir, entry["dst"])
             try:
                 print("copying {} to {}".format(src, dst))
                 shutil.copyfile(src, dst)
             except Exception as e:
-                ret = 1
                 print(
                     "failed to copy {src} to {dst}: {reason}".format(
                         src=src,
                         dst=dst,
                         reason=e,
                     ))
+                return False
+    return True
 
-    return ret
+
+def join_path(root_dir, *paths):
+    """Returns absolute path """
+    return os.path.abspath(os.path.join(root_dir, *paths))
 
 
 def main():
@@ -131,10 +161,13 @@ def main():
         return 1
 
     if args.update_goldens:
-        if not update_compatibility_test_goldens(args.root_build_dir):
+        if not move_owners_file(root_build_dir, fuchsia_api_level):
+            return 1
+        if not copy_compatibility_test_goldens(args.root_build_dir, args.fuchsia_api_level):
             return 1
 
     return 0
+
 
 
 if __name__ == "__main__":

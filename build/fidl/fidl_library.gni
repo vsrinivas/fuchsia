@@ -238,6 +238,7 @@ template("fidl_library") {
 
     # policy_for_current_level is unused when regenerating golden files.
     not_needed([ "policy_for_current_level" ])
+
     api_levels = [ "$current_level" ]
 
     # Set api level to the next level if generate golden files tag is set to true.

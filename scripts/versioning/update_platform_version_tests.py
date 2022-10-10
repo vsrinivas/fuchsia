@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import filecmp
 import json
 import os
 import shutil
@@ -33,6 +34,8 @@ NEW_API_LEVEL = 2
 # when freezing an API level.
 NEW_SUPPORTED_API_LEVELS = OLD_SUPPORTED_API_LEVELS
 
+FAKE_SRC_FILE_CONTENT = "{ test }"
+EXPECTED_DST_FILE_CONTENT = "{ test }"
 
 class TestUpdatePlatformVersionMethods(unittest.TestCase):
 
@@ -52,6 +55,30 @@ class TestUpdatePlatformVersionMethods(unittest.TestCase):
             }
             json.dump(pv, f)
         update_platform_version.PLATFORM_VERSION_PATH = self.fake_milestone_version_file
+
+        self.test_src_dir = tempfile.mkdtemp()
+        self.fake_src_file = os.path.join(
+            self.test_src_dir, 'fuchsia_src.test.json')
+        with open(self.fake_src_file, 'w') as f:
+            f.write(FAKE_SRC_FILE_CONTENT)
+
+        self.test_dst_dir = tempfile.mkdtemp()
+        self.fake_dst_file = os.path.join(
+            self.test_dst_dir, 'fuchsia_dst.test.json')
+
+        self.test_dir = tempfile.mkdtemp()
+        self.fake_golden_file = os.path.join(
+            self.test_dir, 'compatibility_testing_goldens.json')
+
+
+        content = [
+            {
+            'dst': self.fake_dst_file,
+            'src': self.fake_src_file,
+            },
+        ]
+        with open(self.fake_golden_file, 'w') as f:
+            json.dump(content, f)
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)
@@ -88,6 +115,11 @@ class TestUpdatePlatformVersionMethods(unittest.TestCase):
         self.assertEqual(NEW_API_LEVEL, pv['in_development_api_level'])
         self.assertEqual(
             NEW_SUPPORTED_API_LEVELS, pv['supported_fuchsia_api_levels'])
+
+    def test_move_compatibility_test_goldens(self):
+        self.assertTrue(update_platform_version.copy_compatibility_test_goldens(self.test_dir, NEW_API_LEVEL))
+        self.assertTrue(filecmp.cmp(self.fake_src_file, self.fake_dst_file))
+
 
 
 if __name__ == '__main__':
