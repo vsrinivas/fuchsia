@@ -54,6 +54,12 @@ TEST(ConstsTests, GoodHexLiteralTest) {
   ASSERT_COMPILED(library);
 }
 
+TEST(ConstsTests, GoodOctLiteralTest) {
+  TestLibrary library;
+  library.AddFile("good/simple_oct_literal.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(ConstsTests, GoodConstTestBool) {
   TestLibrary library(R"FIDL(library example;
 

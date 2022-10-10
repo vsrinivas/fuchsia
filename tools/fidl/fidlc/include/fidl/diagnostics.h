@@ -17,7 +17,7 @@ constexpr UndocumentedErrorDef<1, std::string_view> ErrInvalidCharacter("invalid
 constexpr UndocumentedErrorDef<2> ErrUnexpectedLineBreak("unexpected line-break in string literal");
 constexpr UndocumentedErrorDef<3, std::string_view> ErrInvalidEscapeSequence(
     "invalid escape sequence '{}'");
-constexpr UndocumentedErrorDef<4, char> ErrInvalidHexDigit("invalid hex digit '{}'");
+constexpr ErrorDef<4, char> ErrInvalidHexDigit("invalid hex digit '{}'");
 constexpr ErrorDef<5, char> ErrInvalidOctDigit("invalid oct digit '{}'");
 constexpr UndocumentedErrorDef<6, std::string_view> ErrExpectedDeclaration(
     "invalid declaration type {}");

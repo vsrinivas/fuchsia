@@ -398,4 +398,10 @@ TEST(RecoverableParsingTests, InvalidHexDigit) {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidHexDigit);
 }
 
+TEST(RecoverableParsingTests, InvalidOctDigit) {
+  TestLibrary library;
+  library.AddFile("bad/invalid_oct_digit.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidOctDigit);
+}
+
 }  // namespace
