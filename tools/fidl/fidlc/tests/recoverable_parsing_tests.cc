@@ -392,4 +392,10 @@ World";
   }
 }
 
+TEST(RecoverableParsingTests, InvalidHexDigit) {
+  TestLibrary library;
+  library.AddFile("bad/invalid_hex_digit.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidHexDigit);
+}
+
 }  // namespace
