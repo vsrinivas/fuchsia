@@ -638,7 +638,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kConst:
     case flat::Decl::Kind::kResource:
     case flat::Decl::Kind::kService:
-    case flat::Decl::Kind::kTypeAlias:
+    case flat::Decl::Kind::kAlias:
       // Nothing to do.
       break;
   }

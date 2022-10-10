@@ -31,7 +31,7 @@ fn get_mock_out_param_types(m: &Method, ir: &FidlIr) -> Result<String, Error> {
                 .iter()
                 .map(|param| {
                     if let Some(arg_type) = get_base_type_from_alias(
-                        &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                        &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
                     ) {
                         return format!("{}", arg_type);
                     }
@@ -70,7 +70,7 @@ fn get_mock_params(m: &Method, ir: &FidlIr) -> Result<String, Error> {
         .chain(m.request_parameters(ir)?.as_ref().unwrap_or(&Vec::new()).iter().map(|param| {
             let name = &to_c_name(&param.name.0);
             if let Some(arg_type) = get_base_type_from_alias(
-                &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
             ) {
                 return format!("{} {}", arg_type, name);
             }
@@ -96,7 +96,7 @@ fn get_mock_params(m: &Method, ir: &FidlIr) -> Result<String, Error> {
                 .map(|param| {
                     let name = &to_c_name(&param.name.0);
                     if let Some(arg_type) = get_base_type_from_alias(
-                        &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                        &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
                     ) {
                         return format!("{} out_{}", arg_type, name);
                     }
@@ -161,7 +161,7 @@ fn get_mock_param_types(m: &Method, ir: &FidlIr) -> Result<String, Error> {
     Ok(iter::once(get_mock_out_param_types(m, ir)?)
         .chain(m.request_parameters(ir)?.as_ref().unwrap_or(&Vec::new()).iter().map(|param| {
             if let Some(arg_type) = get_base_type_from_alias(
-                &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
             ) {
                 return format!("{}", arg_type);
             }

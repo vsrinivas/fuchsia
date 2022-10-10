@@ -3019,7 +3019,7 @@
     }
   ],
   "union_declarations": [],
-  "type_alias_declarations": [],
+  "alias_declarations": [],
   "new_type_declarations": [],
   "declaration_order": [
     "test.table/TableWithAttributes",

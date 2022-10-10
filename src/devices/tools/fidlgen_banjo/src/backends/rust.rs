@@ -106,8 +106,8 @@ fn can_derive_partialeq(
                 }
                 // Union is never PartialEq.
                 Declaration::Union { .. } => Ok(false),
-                Declaration::TypeAlias { .. } => {
-                    let decl = ir.get_type_alias(type_id)?;
+                Declaration::Alias { .. } => {
+                    let decl = ir.get_alias(type_id)?;
                     let ident = CompoundIdentifier(decl.partial_type_ctor.name.clone());
                     can_derive_partialeq(
                         &Type::Identifier { identifier: ident, nullable: false },
@@ -406,7 +406,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                         partial_eq = false;
                     }
                     if let Some(arg_type) = get_base_type_from_alias(
-                        &field.experimental_maybe_from_type_alias.as_ref().map(|a| &a.name),
+                        &field.experimental_maybe_from_alias.as_ref().map(|a| &a.name),
                     ) {
                         field_str.push(format!(
                             "    pub {c_name}: {ty},",
@@ -491,7 +491,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                     .filter(|f| f._type != None)
                     .map(|field| {
                         let ty = if let Some(arg_type) = get_base_type_from_alias(
-                            &field.experimental_maybe_from_type_alias.as_ref().map(|a| &a.name),
+                            &field.experimental_maybe_from_alias.as_ref().map(|a| &a.name),
                         ) {
                             arg_type
                         } else {

@@ -26,7 +26,7 @@ Name Reference::Target::name() const {
     case Element::Kind::kService:
     case Element::Kind::kStruct:
     case Element::Kind::kTable:
-    case Element::Kind::kTypeAlias:
+    case Element::Kind::kAlias:
     case Element::Kind::kUnion:
       return target_->AsDecl()->name;
     case Element::Kind::kBitsMember:

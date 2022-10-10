@@ -129,7 +129,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
     case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
-    case Decl::Kind::kTypeAlias:
+    case Decl::Kind::kAlias:
       ZX_PANIC("unexpected kind");
   }
 
@@ -283,7 +283,7 @@ void VerifyHandleTransportCompatibilityStep::CheckHandleTransportUsages(
     case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
-    case Decl::Kind::kTypeAlias:
+    case Decl::Kind::kAlias:
     case Decl::Kind::kService:
       ZX_PANIC("unexpected kind");
 

@@ -124,7 +124,7 @@ std::string Display(flat::Element::Kind k) {
       return "table";
     case flat::Element::Kind::kTableMember:
       return "table member";
-    case flat::Element::Kind::kTypeAlias:
+    case flat::Element::Kind::kAlias:
       return "alias";
     case flat::Element::Kind::kUnion:
       return "union";
@@ -172,7 +172,7 @@ std::string Display(const flat::Element* e) {
     case flat::Element::Kind::kService:
     case flat::Element::Kind::kStruct:
     case flat::Element::Kind::kTable:
-    case flat::Element::Kind::kTypeAlias:
+    case flat::Element::Kind::kAlias:
     case flat::Element::Kind::kUnion:
       ss << static_cast<const flat::Decl*>(e)->name.decl_name();
       break;

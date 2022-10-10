@@ -1,0 +1,58 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zither.aliases;
+
+alias BoolAlias = bool;
+alias Int8Alias = int8;
+alias Int16Alias = int16;
+alias Int32Alias = int32;
+alias Int64Alias = int64;
+alias Uint8Alias = uint8;
+alias Uint16Alias = uint16;
+alias Uint32Alias = uint32;
+alias Uint64Alias = uint64;
+
+/// TODO(fxbug.dev/105758): The IR currently does not propagate enough
+/// information for bindings to express this type as an alias.
+const CONST_FROM_ALIAS Uint8Alias = 0xff;
+
+type Enum = enum : int16 {
+    MEMBER = 0;
+};
+
+alias EnumAlias = Enum;
+
+type Bits = enum : uint16 {
+    ONE = 1;
+};
+
+alias BitsAlias = Bits;
+
+type Struct = struct {
+    x uint64;
+    y uint64;
+};
+
+alias StructAlias = Struct;
+
+alias ArrayAlias = array<uint32, 4>;
+
+alias NestedArrayAlias = array<array<Struct, 8>, 4>;
+
+// TODO(fxbug.dev/105758, fxbug.dev/91360): Aliases are currently broken.
+// Exercise more complicated alias declarations when fixed:
+// * alias of alias
+// * array of aliases
+// * struct member of alias type
+
+/// Alias with a one-line comment.
+alias AliasWithOneLineComment = bool;
+
+/// Alias
+///     with
+///         a
+///           many-line
+///             comment.
+alias AliasWithManyLineComment = uint8;

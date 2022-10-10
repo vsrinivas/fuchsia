@@ -203,8 +203,8 @@ void CompileStep::CompileDecl(Decl* decl) {
     case Decl::Kind::kUnion:
       CompileUnion(static_cast<Union*>(decl));
       break;
-    case Decl::Kind::kTypeAlias:
-      CompileTypeAlias(static_cast<TypeAlias*>(decl));
+    case Decl::Kind::kAlias:
+      CompileAlias(static_cast<Alias*>(decl));
       break;
     case Decl::Kind::kNewType:
       CompileNewType(static_cast<NewType*>(decl));
@@ -1039,9 +1039,9 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
       case Decl::Kind::kUnion: {
         break;
       }
-      case Decl::Kind::kTypeAlias: {
-        const auto as_type_alias_decl = static_cast<const TypeAlias*>(decl);
-        const Type* aliased_type = as_type_alias_decl->partial_type_ctor->type;
+      case Decl::Kind::kAlias: {
+        const auto as_alias = static_cast<const Alias*>(decl);
+        const Type* aliased_type = as_alias->partial_type_ctor->type;
         switch (aliased_type->kind) {
           case Type::Kind::kIdentifier: {
             const auto as_identifier_type = static_cast<const IdentifierType*>(aliased_type);
@@ -1367,9 +1367,9 @@ void CompileStep::CompileUnion(Union* union_declaration) {
   }
 }
 
-void CompileStep::CompileTypeAlias(TypeAlias* type_alias) {
-  CompileAttributeList(type_alias->attributes.get());
-  CompileTypeConstructor(type_alias->partial_type_ctor.get());
+void CompileStep::CompileAlias(Alias* alias) {
+  CompileAttributeList(alias->attributes.get());
+  CompileTypeConstructor(alias->partial_type_ctor.get());
 }
 
 void CompileStep::CompileNewType(NewType* new_type) {

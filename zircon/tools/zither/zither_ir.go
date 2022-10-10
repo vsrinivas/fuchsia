@@ -58,7 +58,7 @@ var _ = []Element{
 	(*BitsMember)(nil),
 	(*Struct)(nil),
 	(*StructMember)(nil),
-	(*TypeAlias)(nil),
+	(*Alias)(nil),
 }
 
 // Decl represents a summarized FIDL declaration.
@@ -72,7 +72,7 @@ var _ = []Decl{
 	(*Enum)(nil),
 	(*Bits)(nil),
 	(*Struct)(nil),
-	(*TypeAlias)(nil),
+	(*Alias)(nil),
 }
 
 type decl struct {
@@ -179,13 +179,13 @@ func (decl DeclWrapper) AsStruct() Struct {
 	return *decl.value.(*Struct)
 }
 
-func (decl DeclWrapper) IsTypeAlias() bool {
-	_, ok := decl.value.(*TypeAlias)
+func (decl DeclWrapper) IsAlias() bool {
+	_, ok := decl.value.(*Alias)
 	return ok
 }
 
-func (decl DeclWrapper) AsTypeAlias() TypeAlias {
-	return *decl.value.(*TypeAlias)
+func (decl DeclWrapper) AsAlias() Alias {
+	return *decl.value.(*Alias)
 }
 
 // FileSummary is a summarized representation of a FIDL source file.
@@ -306,8 +306,8 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 			}
 		case *fidlgen.Struct:
 			decl, err = newStruct(*fidlDecl, processedDecls, typeKinds)
-		case *fidlgen.TypeAlias:
-			decl, err = newTypeAlias(*fidlDecl, processedDecls, typeKinds)
+		case *fidlgen.Alias:
+			decl, err = newAlias(*fidlDecl, processedDecls, typeKinds)
 		default:
 			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(fidlDecl))
 		}
@@ -710,8 +710,8 @@ func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struc
 
 }
 
-// TypeAlias represents a FIDL type alias declaratin.
-type TypeAlias struct {
+// Alias represents a FIDL type alias declaration.
+type Alias struct {
 	decl
 
 	// Value is the type under alias (i.e., the right-hand side of the
@@ -719,13 +719,13 @@ type TypeAlias struct {
 	Value TypeDescriptor
 }
 
-func newTypeAlias(alias fidlgen.TypeAlias, decls declMap, typeKinds map[TypeKind]struct{}) (*TypeAlias, error) {
+func newAlias(alias fidlgen.Alias, decls declMap, typeKinds map[TypeKind]struct{}) (*Alias, error) {
 	unresolved := fidlgenTypeCtor(alias.PartialTypeConstructor)
 	typ, err := resolveType(unresolved, decls, typeKinds)
 	if err != nil {
 		return nil, err
 	}
-	return &TypeAlias{
+	return &Alias{
 		decl:  newDecl(alias),
 		Value: *typ,
 	}, nil

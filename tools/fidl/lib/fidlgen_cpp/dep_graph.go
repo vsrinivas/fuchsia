@@ -197,8 +197,8 @@ func (g *DeclDepGraph) addDecl(decl fidlgen.Decl) {
 			if m.MaybeDefaultValue != nil {
 				g.addDepsFromConstant(node, *m.MaybeDefaultValue)
 			}
-			if m.MaybeTypeAlias != nil {
-				g.addDepsFromTypeCtor(node, *m.MaybeTypeAlias)
+			if m.MaybeAlias != nil {
+				g.addDepsFromTypeCtor(node, *m.MaybeAlias)
 			}
 		}
 	case *fidlgen.Table:
@@ -210,8 +210,8 @@ func (g *DeclDepGraph) addDecl(decl fidlgen.Decl) {
 			if m.MaybeDefaultValue != nil {
 				g.addDepsFromConstant(node, *m.MaybeDefaultValue)
 			}
-			if m.MaybeTypeAlias != nil {
-				g.addDepsFromTypeCtor(node, *m.MaybeTypeAlias)
+			if m.MaybeAlias != nil {
+				g.addDepsFromTypeCtor(node, *m.MaybeAlias)
 			}
 		}
 	case *fidlgen.Union:
@@ -220,11 +220,11 @@ func (g *DeclDepGraph) addDecl(decl fidlgen.Decl) {
 				continue
 			}
 			g.addDepsFromType(node, *m.Type)
-			if m.MaybeTypeAlias != nil {
-				g.addDepsFromTypeCtor(node, *m.MaybeTypeAlias)
+			if m.MaybeAlias != nil {
+				g.addDepsFromTypeCtor(node, *m.MaybeAlias)
 			}
 		}
-	case *fidlgen.TypeAlias:
+	case *fidlgen.Alias:
 		g.addDepsFromTypeCtor(node, decl.PartialTypeConstructor)
 	case *fidlgen.NewType:
 		if decl.Alias != nil {

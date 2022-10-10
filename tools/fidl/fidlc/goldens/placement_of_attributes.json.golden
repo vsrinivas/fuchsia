@@ -768,24 +768,24 @@
       }
     }
   ],
-  "type_alias_declarations": [
+  "alias_declarations": [
     {
-      "name": "test.placementofattributes/TypeAlias",
+      "name": "test.placementofattributes/Alias",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 42,
         "column": 7,
-        "length": 9
+        "length": 5
       },
       "maybe_attributes": [
         {
-          "name": "on_type_alias",
+          "name": "on_alias",
           "arguments": [],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "line": 41,
             "column": 1,
-            "length": 14
+            "length": 9
           }
         }
       ],
@@ -798,7 +798,6 @@
   ],
   "new_type_declarations": [],
   "declaration_order": [
-    "test.placementofattributes/TypeAlias",
     "test.placementofattributes/ExampleXUnion",
     "test.placementofattributes/ExampleUnion",
     "test.placementofattributes/ExampleTable",
@@ -807,7 +806,8 @@
     "test.placementofattributes/ExampleProtocol",
     "test.placementofattributes/ExampleEnum",
     "test.placementofattributes/ExampleBits",
-    "test.placementofattributes/EXAMPLE_CONST"
+    "test.placementofattributes/EXAMPLE_CONST",
+    "test.placementofattributes/Alias"
   ],
   "declarations": {
     "test.placementofattributes/ExampleBits": "bits",
@@ -819,6 +819,6 @@
     "test.placementofattributes/ExampleTable": "table",
     "test.placementofattributes/ExampleUnion": "union",
     "test.placementofattributes/ExampleXUnion": "union",
-    "test.placementofattributes/TypeAlias": "type_alias"
+    "test.placementofattributes/Alias": "alias"
   }
 }

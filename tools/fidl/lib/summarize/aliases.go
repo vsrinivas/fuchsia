@@ -23,11 +23,13 @@ func (a *alias) Serialize() ElementStr {
 }
 
 // addAliases adds the aliases from the declaration map.
+//
+// TODO(fxbug.dev/110289): Add aliases to summaries. This is currently unused.
 func (s *summarizer) addAliases(decls fidlgen.DeclMap) {
 	for d, t := range decls {
 		// Aliases only make an appearance in the decls section, where they are
-		// registered as "type_alias".
-		if t != "type_alias" {
+		// registered as "alias".
+		if t != "alias" {
 			continue
 		}
 		s.addElement(&alias{

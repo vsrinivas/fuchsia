@@ -96,8 +96,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "data": "ExampleUnion",
-        "start_offset": 675,
-        "end_offset": 687
+        "start_offset": 666,
+        "end_offset": 678
       },
       "members": [
         {
@@ -107,8 +107,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "data": "variant",
-            "start_offset": 733,
-            "end_offset": 740
+            "start_offset": 724,
+            "end_offset": 731
           },
           "type": {
             "kind": "primitive"
@@ -123,8 +123,8 @@
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "data": "ExampleXUnion",
-        "start_offset": 770,
-        "end_offset": 783
+        "start_offset": 761,
+        "end_offset": 774
       },
       "members": [
         {
@@ -134,8 +134,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
             "data": "variant",
-            "start_offset": 833,
-            "end_offset": 840
+            "start_offset": 824,
+            "end_offset": 831
           },
           "type": {
             "kind": "primitive"

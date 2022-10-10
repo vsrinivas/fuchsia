@@ -120,7 +120,7 @@
   "external_struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
-  "type_alias_declarations": [],
+  "alias_declarations": [],
   "new_type_declarations": [],
   "declaration_order": [
     "test.structdefaultvalueenumlibraryreference/Foo"

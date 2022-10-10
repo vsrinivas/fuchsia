@@ -347,17 +347,17 @@
             "patternProperties": {
                 ".*": {
                     "enum": [
+                        "alias",
                         "bits",
                         "const",
                         "enum",
+                        "experimental_resource",
+                        "new_type",
                         "protocol",
                         "service",
-                        "experimental_resource",
                         "struct",
                         "table",
-                        "union",
-                        "type_alias",
-                        "new_type"
+                        "union"
                     ],
                     "type": "string"
                 }
@@ -520,14 +520,14 @@
                             "properties": {
                                 "kind": {
                                     "enum": [
+                                        "alias",
                                         "bits",
                                         "const",
                                         "enum",
-                                        "protocol",
-                                        "service",
                                         "experimental_resource",
-                                        "type_alias",
-                                        "new_type"
+                                        "new_type",
+                                        "protocol",
+                                        "service"
                                     ],
                                     "type": "string"
                                 }
@@ -1679,9 +1679,9 @@
                 }
             ]
         },
-        "type-alias": {
+        "alias": {
             "additionalProperties": false,
-            "description": "Definition of a type alias",
+            "description": "Definition of an alias",
             "patternProperties": {
                 "^experimental_": {}
             },
@@ -1692,11 +1692,11 @@
                 },
                 "maybe_attributes": {
                     "$ref": "#/definitions/attributes-list",
-                    "description": "Optional list of type alias attributes"
+                    "description": "Optional list of alias attributes"
                 },
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
-                    "description": "Name of a type alias, i.e. the alias"
+                    "description": "Name of an alias"
                 },
                 "partial_type_ctor": {
                     "$ref": "#/definitions/partial-type-ctor",
@@ -1717,7 +1717,7 @@
                 "^experimental_": {}
             },
             "properties": {
-                "experimental_maybe_from_type_alias": {
+                "experimental_maybe_from_alias": {
                     "$ref": "#/definitions/partial-type-ctor",
                     "description": "If provided, an alias for the corresponding type used in the definition"
                 },
@@ -2052,10 +2052,10 @@
             },
             "type": "array"
         },
-        "type_alias_declarations": {
-            "description": "List of type aliases, sorted by fully qualified name",
+        "alias_declarations": {
+            "description": "List of aliases, sorted by fully qualified name",
             "items": {
-                "$ref": "#/definitions/type-alias"
+                "$ref": "#/definitions/alias"
             },
             "type": "array"
         },
@@ -2085,7 +2085,7 @@
         "struct_declarations",
         "table_declarations",
         "union_declarations",
-        "type_alias_declarations",
+        "alias_declarations",
         "declaration_order",
         "declarations",
         "library_dependencies"

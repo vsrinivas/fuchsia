@@ -79,40 +79,40 @@ std::string echo_service = R"({
           "kind": "experimental_resource"
         },
         "zx/status": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/time": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/duration": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/ticks": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/koid": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/vaddr": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/paddr": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/paddr32": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/gpaddr": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/off": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/procarg": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/signals": {
-          "kind": "type_alias"
+          "kind": "alias"
         }
       }
     }
@@ -850,7 +850,7 @@ std::string echo_service = R"({
   "external_struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
-  "type_alias_declarations": [],
+  "alias_declarations": [],
   "declaration_order": [
     "fidl.examples.echo/EchoEchoHandleTopResponse",
     "fidl.examples.echo/EchoEchoHandleRequest",

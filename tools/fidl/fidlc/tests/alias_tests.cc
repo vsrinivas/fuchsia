@@ -39,7 +39,7 @@ alias AliasOfDecl = TypeDecl;
   auto type_decl = library.LookupStruct("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
   EXPECT_EQ(type_decl->members.size(), 2);
-  ASSERT_NOT_NULL(library.LookupTypeAlias("AliasOfDecl"));
+  ASSERT_NOT_NULL(library.LookupAlias("AliasOfDecl"));
 }
 
 TEST(AliasTests, GoodPrimitive) {
@@ -64,15 +64,14 @@ alias alias_of_int16 = int16;
   ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt16);
 
   auto invocation = msg->members[0].type_ctor->resolved_params;
-  ASSERT_NOT_NULL(invocation.from_type_alias);
-  EXPECT_STREQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
-               "example/alias_of_int16");
+  ASSERT_NOT_NULL(invocation.from_alias);
+  EXPECT_STREQ(fidl::NameFlatName(invocation.from_alias->name).c_str(), "example/alias_of_int16");
   EXPECT_NULL(invocation.element_type_resolved);
   EXPECT_NULL(invocation.size_resolved);
   EXPECT_EQ(invocation.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(AliasTests, GoodPrimitiveTypeAliasBeforeUse) {
+TEST(AliasTests, GoodPrimitiveAliasBeforeUse) {
   TestLibrary library(R"FIDL(library example;
 
 alias alias_of_int16 = int16;
@@ -94,9 +93,8 @@ type Message = struct {
   ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt16);
 
   auto invocation = msg->members[0].type_ctor->resolved_params;
-  ASSERT_NOT_NULL(invocation.from_type_alias);
-  EXPECT_STREQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
-               "example/alias_of_int16");
+  ASSERT_NOT_NULL(invocation.from_alias);
+  EXPECT_STREQ(fidl::NameFlatName(invocation.from_alias->name).c_str(), "example/alias_of_int16");
   EXPECT_NULL(invocation.element_type_resolved);
   EXPECT_NULL(invocation.size_resolved);
   EXPECT_EQ(invocation.nullability, fidl::types::Nullability::kNonnullable);
@@ -178,8 +176,8 @@ alias alias_of_vector_of_string = vector<string>;
             static_cast<uint32_t>(fidl::flat::Size::Max()));
 
   auto invocation = msg->members[0].type_ctor->resolved_params;
-  ASSERT_NOT_NULL(invocation.from_type_alias);
-  EXPECT_STREQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
+  ASSERT_NOT_NULL(invocation.from_alias);
+  EXPECT_STREQ(fidl::NameFlatName(invocation.from_alias->name).c_str(),
                "example/alias_of_vector_of_string");
   EXPECT_NULL(invocation.element_type_resolved);
   EXPECT_NULL(invocation.size_resolved);
@@ -242,8 +240,8 @@ alias alias_of_vector_of_string = vector<string>;
   ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count), 8u);
 
   auto invocation = msg->members[0].type_ctor->resolved_params;
-  ASSERT_NOT_NULL(invocation.from_type_alias);
-  EXPECT_STREQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
+  ASSERT_NOT_NULL(invocation.from_alias);
+  EXPECT_STREQ(fidl::NameFlatName(invocation.from_alias->name).c_str(),
                "example/alias_of_vector_of_string");
   EXPECT_NULL(invocation.element_type_resolved);
   EXPECT_NOT_NULL(invocation.size_resolved);
@@ -282,8 +280,8 @@ alias alias_of_vector_of_string_nullable = vector<string>:optional;
             static_cast<uint32_t>(fidl::flat::Size::Max()));
 
   auto invocation = msg->members[0].type_ctor->resolved_params;
-  ASSERT_NOT_NULL(invocation.from_type_alias);
-  EXPECT_STREQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
+  ASSERT_NOT_NULL(invocation.from_alias);
+  EXPECT_STREQ(fidl::NameFlatName(invocation.from_alias->name).c_str(),
                "example/alias_of_vector_of_string_nullable");
   EXPECT_NULL(invocation.element_type_resolved);
   EXPECT_NULL(invocation.size_resolved);
@@ -314,8 +312,8 @@ alias alias_of_vector_of_string = vector<string>;
             static_cast<uint32_t>(fidl::flat::Size::Max()));
 
   auto invocation = msg->members[0].type_ctor->resolved_params;
-  ASSERT_NOT_NULL(invocation.from_type_alias);
-  EXPECT_STREQ(fidl::NameFlatName(invocation.from_type_alias->name).c_str(),
+  ASSERT_NOT_NULL(invocation.from_alias);
+  EXPECT_STREQ(fidl::NameFlatName(invocation.from_alias->name).c_str(),
                "example/alias_of_vector_of_string");
   EXPECT_NULL(invocation.element_type_resolved);
   EXPECT_NULL(invocation.size_resolved);

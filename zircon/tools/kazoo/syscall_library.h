@@ -132,7 +132,7 @@ class TypeVector {
   bool uint32_size_{false};
 };
 
-// A FIDL type alias pointing to one of the zircon "builtins". e.g. Futex, koid.
+// A FIDL alias pointing to one of the zircon "builtins". e.g. Futex, koid.
 // We want to implement special treatment for these types.
 class TypeZxBasicAlias {
  public:
@@ -416,7 +416,7 @@ class SyscallLibrary {
   const std::vector<std::unique_ptr<Enum>>& bits() const { return bits_; }
   const std::vector<std::unique_ptr<Enum>>& enums() const { return enums_; }
   const std::vector<std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
-  const std::vector<std::unique_ptr<Alias>>& type_aliases() const { return type_aliases_; }
+  const std::vector<std::unique_ptr<Alias>>& aliases() const { return aliases_; }
   const std::vector<std::unique_ptr<Table>>& tables() const { return tables_; }
 
   Type TypeFromIdentifier(const std::string& id) const;
@@ -432,7 +432,7 @@ class SyscallLibrary {
   std::vector<std::unique_ptr<Enum>> enums_;
   std::vector<std::unique_ptr<Struct>> structs_;
   std::vector<std::unique_ptr<Syscall>> syscalls_;
-  std::vector<std::unique_ptr<Alias>> type_aliases_;
+  std::vector<std::unique_ptr<Alias>> aliases_;
   std::vector<std::unique_ptr<Table>> tables_;
 
   DISALLOW_COPY_AND_ASSIGN(SyscallLibrary);
@@ -450,7 +450,7 @@ class SyscallLibraryLoader {
   static bool LoadBits(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadEnums(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadProtocols(const rapidjson::Document& document, SyscallLibrary* library);
-  static bool LoadTypeAliases(const rapidjson::Document& document, SyscallLibrary* library);
+  static bool LoadAliases(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadStructs(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadTables(const rapidjson::Document& document, SyscallLibrary* library);
 

@@ -61,6 +61,7 @@ std::string LibraryName(const std::vector<std::string_view>& components,
 
 struct Element {
   enum struct Kind {
+    kAlias,
     kBits,
     kBitsMember,
     kBuiltin,
@@ -80,7 +81,6 @@ struct Element {
     kStructMember,
     kTable,
     kTableMember,
-    kTypeAlias,
     kUnion,
     kUnionMember,
   };
@@ -109,6 +109,7 @@ struct Element {
 
 struct Decl : public Element {
   enum struct Kind {
+    kAlias,
     kBits,
     kBuiltin,
     kConst,
@@ -119,7 +120,6 @@ struct Decl : public Element {
     kService,
     kStruct,
     kTable,
-    kTypeAlias,
     kUnion,
   };
 
@@ -145,8 +145,8 @@ struct Decl : public Element {
         return Element::Kind::kStruct;
       case Kind::kTable:
         return Element::Kind::kTable;
-      case Kind::kTypeAlias:
-        return Element::Kind::kTypeAlias;
+      case Kind::kAlias:
+        return Element::Kind::kAlias;
       case Kind::kUnion:
         return Element::Kind::kUnion;
     }
@@ -234,7 +234,7 @@ struct TypeDecl : public Decl, public Object {
 };
 
 struct TypeConstructor;
-struct TypeAlias;
+struct Alias;
 struct Protocol;
 
 // This is a struct used to group together all data produced during compilation
@@ -249,8 +249,8 @@ struct Protocol;
 // resolved, i.e. Create (for layout parameters) and ApplyConstraints (for type
 // constraints)
 struct LayoutInvocation {
-  // set if this type constructor refers to a type alias
-  const TypeAlias* from_type_alias = nullptr;
+  // set if this type constructor refers to an alias
+  const Alias* from_alias = nullptr;
 
   // Parameter data below: if a foo_resolved form is set, then its corresponding
   // foo_raw form must be defined as well (and vice versa).
@@ -259,16 +259,16 @@ struct LayoutInvocation {
   const Type* element_type_resolved = nullptr;
   const Size* size_resolved = nullptr;
   // This has no users, probably because it's missing in the JSON IR (it is not
-  // yet generated for experimental_maybe_from_type_alias)
+  // yet generated for experimental_maybe_from_alias)
   std::optional<uint32_t> subtype_resolved = std::nullopt;
   // This has no users, probably because it's missing in the JSON IR (it is not
-  // yet generated for experimental_maybe_from_type_alias).
+  // yet generated for experimental_maybe_from_alias).
   const HandleRights* rights_resolved = nullptr;
   // This has no users, probably because it's missing in the JSON IR (it is not
-  // yet generated for experimental_maybe_from_type_alias).
+  // yet generated for experimental_maybe_from_alias).
   const Protocol* protocol_decl = nullptr;
   // This has no users, probably because it's missing in the JSON IR (it is not
-  // yet generated for experimental_maybe_from_type_alias).
+  // yet generated for experimental_maybe_from_alias).
   const Type* boxed_type_resolved = nullptr;
 
   // raw form of this type constructor's arguments
@@ -839,20 +839,20 @@ struct Resource final : public Decl {
   std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;
 };
 
-struct TypeAlias final : public Decl {
-  TypeAlias(std::unique_ptr<AttributeList> attributes, Name name,
-            std::unique_ptr<TypeConstructor> partial_type_ctor)
-      : Decl(Kind::kTypeAlias, std::move(attributes), std::move(name)),
+struct Alias final : public Decl {
+  Alias(std::unique_ptr<AttributeList> attributes, Name name,
+        std::unique_ptr<TypeConstructor> partial_type_ctor)
+      : Decl(Kind::kAlias, std::move(attributes), std::move(name)),
         partial_type_ctor(std::move(partial_type_ctor)) {}
 
   // The shape of this type constructor is more constrained than just being a
   // "partial" type constructor - it is either a normal type constructor
   // referring directly to a non-type-alias with all layout parameters fully
   // specified (e.g. alias foo = array<T, 3>), or it is a type constructor
-  // referring to another type alias that has no layout parameters (e.g. alias
+  // referring to another alias that has no layout parameters (e.g. alias
   // bar = foo).
-  // The constraints on the other hand are indeed "partial" - any type alias
-  // at any point in a "type alias chain" can specify a constraint, but any
+  // The constraints on the other hand are indeed "partial" - any alias
+  // at any point in an "alias chain" can specify a constraint, but any
   // constraint can only specified once. This behavior will change in
   // fxbug.dev/74193.
   std::unique_ptr<TypeConstructor> partial_type_ctor;
@@ -867,7 +867,7 @@ struct NewType final : public TypeDecl {
       : TypeDecl(Kind::kNewType, std::move(attributes), std::move(name)),
         type_ctor(std::move(type_ctor)) {}
 
-  // Note that unlike in TypeAlias, we are not calling this partial type constructor. Whether or
+  // Note that unlike in Alias, we are not calling this partial type constructor. Whether or
   // not all the constraints for this type are applied is irrelevant to us down the line - all we
   // care is that we have a type constructor to define a type.
   std::unique_ptr<TypeConstructor> type_ctor;
@@ -966,6 +966,7 @@ struct Library final : public Element {
     // Contains all the declarations owned by the vectors below.
     std::multimap<std::string_view, Decl*> all;
 
+    std::vector<std::unique_ptr<Alias>> aliases;
     std::vector<std::unique_ptr<Bits>> bits;
     std::vector<std::unique_ptr<Builtin>> builtins;
     std::vector<std::unique_ptr<Const>> consts;
@@ -976,7 +977,6 @@ struct Library final : public Element {
     std::vector<std::unique_ptr<Service>> services;
     std::vector<std::unique_ptr<Struct>> structs;
     std::vector<std::unique_ptr<Table>> tables;
-    std::vector<std::unique_ptr<TypeAlias>> type_aliases;
     std::vector<std::unique_ptr<Union>> unions;
   };
 

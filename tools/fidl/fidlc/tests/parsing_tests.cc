@@ -473,7 +473,7 @@ type Empty = struct {};
   ASSERT_COMPILED(library);
 }
 
-TEST(ParsingTests, BadErrorOnTypeAliasBeforeImports) {
+TEST(ParsingTests, BadErrorOnAliasBeforeImports) {
   SharedAmongstLibraries shared;
   TestLibrary dependency(&shared, "dependent.fidl", R"FIDL(library dependent;
 

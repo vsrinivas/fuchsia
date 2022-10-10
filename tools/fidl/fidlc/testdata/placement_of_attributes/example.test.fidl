@@ -38,8 +38,8 @@ type ExampleTable = table {
     1: member uint32;
 };
 
-@on_type_alias
-alias TypeAlias = uint32;
+@on_alias
+alias Alias = uint32;
 
 @on_union
 type ExampleUnion = strict union {

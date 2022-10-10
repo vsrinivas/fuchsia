@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("test.aliases") {
+  testonly = true
+  sources = [ "example.test.fidl" ]
+  experimental_flags = [ "output_index_json" ]
+  public_deps = [ ":test.someotherlibrary" ]
+  golden_fuzzer = true
+}
+
+fidl("test.someotherlibrary") {
+  testonly = true
+  sources = [ "someotherlibrary.test.fidl" ]
+  golden_fuzzer = true
+}

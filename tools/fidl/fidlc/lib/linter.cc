@@ -572,7 +572,7 @@ Linter::Linter()
                                   // TODO(fxbug.dev/109734): Remove these exemptions.
                                   std::string_view name = to_string_view(element.alias);
                                   if (!IsAliasCaseCheckExempt(linter.library_prefix_, name)) {
-                                    linter.CheckCase("type alias", element.alias,
+                                    linter.CheckCase("alias", element.alias,
                                                      linter.invalid_case_for_decl_name(),
                                                      linter.upper_camel_);
                                   }

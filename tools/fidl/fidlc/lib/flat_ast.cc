@@ -23,7 +23,7 @@ bool Element::IsDecl() const {
     case Kind::kService:
     case Kind::kStruct:
     case Kind::kTable:
-    case Kind::kTypeAlias:
+    case Kind::kAlias:
     case Kind::kUnion:
     case Kind::kNewType:
       return true;
@@ -256,7 +256,7 @@ void Decl::ForEachMember(const fit::function<void(Element*)>& fn) {
   switch (kind) {
     case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
-    case Decl::Kind::kTypeAlias:
+    case Decl::Kind::kAlias:
     case Decl::Kind::kNewType:
       break;
     case Decl::Kind::kBits:
@@ -337,8 +337,8 @@ Decl* Library::Declarations::Insert(std::unique_ptr<Decl> decl) {
       return StoreDecl(std::move(decl), &all, &structs);
     case Decl::Kind::kTable:
       return StoreDecl(std::move(decl), &all, &tables);
-    case Decl::Kind::kTypeAlias:
-      return StoreDecl(std::move(decl), &all, &type_aliases);
+    case Decl::Kind::kAlias:
+      return StoreDecl(std::move(decl), &all, &aliases);
     case Decl::Kind::kUnion:
       return StoreDecl(std::move(decl), &all, &unions);
     case Decl::Kind::kNewType:
@@ -474,8 +474,8 @@ std::unique_ptr<Decl> Resource::SplitImpl(VersionRange range) const {
                                     FilterMembers(properties, range));
 }
 
-std::unique_ptr<Decl> TypeAlias::SplitImpl(VersionRange range) const {
-  return std::make_unique<TypeAlias>(attributes->Clone(), name, partial_type_ctor->Clone());
+std::unique_ptr<Decl> Alias::SplitImpl(VersionRange range) const {
+  return std::make_unique<Alias>(attributes->Clone(), name, partial_type_ctor->Clone());
 }
 
 std::unique_ptr<Decl> NewType::SplitImpl(VersionRange range) const {

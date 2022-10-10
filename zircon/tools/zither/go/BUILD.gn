@@ -10,12 +10,12 @@ go_library("go") {
   name = "go.fuchsia.dev/fuchsia/zircon/tools/zither/golang"
   sources = [
     "go.go",
+    "templates/alias.tmpl",
     "templates/bits.tmpl",
     "templates/const.tmpl",
     "templates/enum.tmpl",
     "templates/file.tmpl",
     "templates/struct.tmpl",
-    "templates/type_alias.tmpl",
   ]
   deps = [
     "..:common",

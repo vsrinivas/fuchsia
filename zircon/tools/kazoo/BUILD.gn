@@ -158,10 +158,10 @@ zx_host_tool_action_foreach("test_files_fidl_to_json_zxio") {
   outputs = [ "$target_gen_dir/{{source_name_part}}.json" ]
 
   sources = [
+    "test_ulib_aliases.test.fidl",
     "test_ulib_bits.test.fidl",
     "test_ulib_enums.test.fidl",
     "test_ulib_tables.test.fidl",
-    "test_ulib_type_aliases.test.fidl",
   ]
 }
 

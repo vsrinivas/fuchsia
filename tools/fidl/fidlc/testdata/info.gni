@@ -210,8 +210,8 @@ fidl_testdata_info = [
     target = "//tools/fidl/fidlc/testdata:test.escaping"
   },
   {
-    name = "experimental_maybe_from_type_alias"
-    target = "//tools/fidl/fidlc/testdata:test.experimentalmaybefromtypealias"
+    name = "experimental_maybe_from_alias"
+    target = "//tools/fidl/fidlc/testdata:test.experimentalmaybefromalias"
     denylist = [
       # TODO(fxbug.dev/62533): Fix many issues.
       "fidlgen_hlcpp",
@@ -425,8 +425,8 @@ fidl_testdata_info = [
     ]
   },
   {
-    name = "type_aliases"
-    target = "//tools/fidl/fidlc/testdata/type_aliases:test.typealiases"
+    name = "aliases"
+    target = "//tools/fidl/fidlc/testdata/aliases:test.aliases"
   },
   {
     name = "union"

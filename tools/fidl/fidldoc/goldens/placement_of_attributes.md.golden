@@ -144,12 +144,12 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
-## **TYPE ALIASES**
+## **ALIASES**
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
-        <tr id="TypeAlias">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=42">TypeAlias</a></td>
+        <tr id="Alias">
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=42">Alias</a></td>
             <td>
                 <code>uint32</code></td>
             <td></td>

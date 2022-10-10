@@ -5,10 +5,10 @@
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/syscall_library.h"
 #include "tools/kazoo/test.h"
+#include "tools/kazoo/test_ir_test_ulib_aliases.test.h"
 #include "tools/kazoo/test_ir_test_ulib_bits.test.h"
 #include "tools/kazoo/test_ir_test_ulib_enums.test.h"
 #include "tools/kazoo/test_ir_test_ulib_tables.test.h"
-#include "tools/kazoo/test_ir_test_ulib_type_aliases.test.h"
 
 namespace {
 
@@ -98,9 +98,9 @@ typedef uint16_t zxio_uint16_enum_t;
 )" + std::string(kEpilogue));
 }
 
-TEST(CUlibHeaderOutput, TypeAliases) {
+TEST(CUlibHeaderOutput, Aliases) {
   SyscallLibrary library;
-  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_ulib_type_aliases, &library));
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_ulib_aliases, &library));
 
   Writer writer;
   ASSERT_TRUE(CUlibHeaderOutput(library, &writer));

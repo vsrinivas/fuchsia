@@ -1551,7 +1551,7 @@
       }
     }
   ],
-  "type_alias_declarations": [
+  "alias_declarations": [
     {
       "name": "test.versions/Alias",
       "location": {
@@ -1645,6 +1645,6 @@
     "test.versions/Struct": "struct",
     "test.versions/Table": "table",
     "test.versions/Union": "union",
-    "test.versions/Alias": "type_alias"
+    "test.versions/Alias": "alias"
   }
 }

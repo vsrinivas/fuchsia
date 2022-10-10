@@ -235,8 +235,8 @@ void ConsumeStep::ConsumeAliasDeclaration(
                               NamingContext::Create(alias_name), &type_ctor_))
     return;
 
-  RegisterDecl(std::make_unique<TypeAlias>(std::move(attributes), std::move(alias_name),
-                                           std::move(type_ctor_)));
+  RegisterDecl(
+      std::make_unique<Alias>(std::move(attributes), std::move(alias_name), std::move(type_ctor_)));
 }
 
 void ConsumeStep::ConsumeConstDeclaration(

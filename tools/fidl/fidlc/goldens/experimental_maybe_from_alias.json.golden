@@ -1,0 +1,2539 @@
+{
+  "name": "test.experimentalmaybefromalias",
+  "experiments": [
+    "no_optional_structs",
+    "output_index_json"
+  ],
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "protocol_declarations": [
+    {
+      "name": "test.experimentalmaybefromalias/MyProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 3,
+        "column": 10,
+        "length": 10
+      },
+      "composed_protocols": [],
+      "methods": []
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "test.experimentalmaybefromalias/Testing",
+      "naming_context": [
+        "Testing"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 14,
+        "column": 6,
+        "length": 7
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "experimental_maybe_from_alias": {
+            "name": "test.experimentalmaybefromalias/U64",
+            "args": [],
+            "nullable": false
+          },
+          "name": "u1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 15,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint64",
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/U64",
+              "args": [],
+              "nullable": false
+            },
+            "maybe_element_count": 1,
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "u2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 16,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 8,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint64",
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/U64",
+              "args": [],
+              "nullable": false
+            },
+            "element_count": 1,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "u3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 17,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 24,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 24,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "vector",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "experimental_maybe_from_alias": {
+                "name": "test.experimentalmaybefromalias/U64",
+                "args": [],
+                "nullable": false
+              },
+              "maybe_element_count": 1,
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 8,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 8,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "u4",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 18,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 32,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 32,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "array",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "experimental_maybe_from_alias": {
+                "name": "test.experimentalmaybefromalias/U64",
+                "args": [],
+                "nullable": false
+              },
+              "element_count": 1,
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "u5",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 19,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 48,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 48,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "vector",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "experimental_maybe_from_alias": {
+                "name": "test.experimentalmaybefromalias/U64",
+                "args": [],
+                "nullable": false
+              },
+              "maybe_element_count": 1,
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 8,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 8,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "element_count": 4,
+            "type_shape_v1": {
+              "inline_size": 64,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 32,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 64,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 32,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "u6",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 20,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 64,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 64,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "array",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "experimental_maybe_from_alias": {
+                "name": "test.experimentalmaybefromalias/U64",
+                "args": [],
+                "nullable": false
+              },
+              "element_count": 1,
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "element_count": 4,
+            "type_shape_v1": {
+              "inline_size": 32,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 32,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "u7",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 21,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 128,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 128,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint64",
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "nullable": true,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "experimental_maybe_from_alias": {
+            "name": "test.experimentalmaybefromalias/Vector",
+            "args": [],
+            "nullable": false
+          },
+          "name": "v1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 23,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 160,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 160,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "vector",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "nullable": true,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/Vector",
+              "args": [],
+              "nullable": false
+            },
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "v2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 24,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 176,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 176,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "vector",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "nullable": true,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/Vector",
+              "args": [],
+              "nullable": false
+            },
+            "element_count": 4,
+            "type_shape_v1": {
+              "inline_size": 64,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 64,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "v3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 25,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 192,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 192,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint64",
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "element_count": 1,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "experimental_maybe_from_alias": {
+            "name": "test.experimentalmaybefromalias/AliasOfArray",
+            "args": [],
+            "nullable": false
+          },
+          "name": "a1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 27,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 256,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 256,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "array",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "element_count": 1,
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfArray",
+              "args": [],
+              "nullable": false
+            },
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 28,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 264,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 264,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "array",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "element_count": 1,
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfArray",
+              "args": [],
+              "nullable": false
+            },
+            "element_count": 4,
+            "type_shape_v1": {
+              "inline_size": 32,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 32,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "a3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 29,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 280,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 280,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "request",
+            "subtype": "test.experimentalmaybefromalias/MyProtocol",
+            "nullable": true,
+            "protocol_transport": "Channel",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "experimental_maybe_from_alias": {
+            "name": "test.experimentalmaybefromalias/AliasOfRequest",
+            "args": [],
+            "nullable": false
+          },
+          "name": "r1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 31,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 312,
+            "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 312,
+            "padding": 4
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "request",
+              "subtype": "test.experimentalmaybefromalias/MyProtocol",
+              "nullable": true,
+              "protocol_transport": "Channel",
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 1,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 1,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfRequest",
+              "args": [],
+              "nullable": false
+            },
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 4294967295,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 4294967295,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "r2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 32,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 320,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 320,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "request",
+              "subtype": "test.experimentalmaybefromalias/MyProtocol",
+              "nullable": true,
+              "protocol_transport": "Channel",
+              "type_shape_v1": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 1,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 4,
+                "alignment": 4,
+                "depth": 0,
+                "max_handles": 1,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfRequest",
+              "args": [],
+              "nullable": false
+            },
+            "element_count": 4,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 4,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 4,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "r3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 33,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 336,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 336,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint8",
+              "type_shape_v1": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 1,
+                "alignment": 1,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "experimental_maybe_from_alias": {
+            "name": "test.experimentalmaybefromalias/AliasOfBytes",
+            "args": [],
+            "nullable": false
+          },
+          "name": "b1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 35,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 352,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 352,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "vector",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint8",
+                "type_shape_v1": {
+                  "inline_size": 1,
+                  "alignment": 1,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 1,
+                  "alignment": 1,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfBytes",
+              "args": [],
+              "nullable": false
+            },
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 36,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 368,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 368,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "vector",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint8",
+                "type_shape_v1": {
+                  "inline_size": 1,
+                  "alignment": 1,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 1,
+                  "alignment": 1,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfBytes",
+              "args": [],
+              "nullable": false
+            },
+            "element_count": 4,
+            "type_shape_v1": {
+              "inline_size": 64,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 64,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "b3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 37,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 384,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 384,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "string",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "experimental_maybe_from_alias": {
+            "name": "test.experimentalmaybefromalias/AliasOfString",
+            "args": [],
+            "nullable": false
+          },
+          "name": "s1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 39,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 448,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 448,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "string",
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfString",
+              "args": [],
+              "nullable": false
+            },
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "s2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 40,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 464,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 464,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "string",
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 4294967295,
+                "has_padding": true,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfString",
+              "args": [],
+              "nullable": false
+            },
+            "element_count": 4,
+            "type_shape_v1": {
+              "inline_size": 64,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 64,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "s3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 41,
+            "column": 5,
+            "length": 2
+          },
+          "field_shape_v1": {
+            "offset": 480,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 480,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint64",
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/U64",
+              "args": [],
+              "nullable": false
+            },
+            "maybe_element_count": 2,
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 16,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 16,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "experimental_maybe_from_alias": {
+            "name": "test.experimentalmaybefromalias/AliasOfVectorContainingAliasOfVector",
+            "args": [],
+            "nullable": false
+          },
+          "name": "vv1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 43,
+            "column": 5,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 544,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 544,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "vector",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "experimental_maybe_from_alias": {
+                "name": "test.experimentalmaybefromalias/U64",
+                "args": [],
+                "nullable": false
+              },
+              "maybe_element_count": 2,
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 16,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 16,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfVectorContainingAliasOfVector",
+              "args": [],
+              "nullable": false
+            },
+            "maybe_element_count": 3,
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 96,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 96,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "vv2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 44,
+            "column": 5,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 560,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 560,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "vector",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "experimental_maybe_from_alias": {
+                "name": "test.experimentalmaybefromalias/U64",
+                "args": [],
+                "nullable": false
+              },
+              "maybe_element_count": 2,
+              "nullable": false,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 16,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 1,
+                "max_handles": 0,
+                "max_out_of_line": 16,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfVectorContainingAliasOfVector",
+              "args": [],
+              "nullable": false
+            },
+            "element_count": 3,
+            "type_shape_v1": {
+              "inline_size": 48,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 48,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 48,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 48,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "vv3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 45,
+            "column": 5,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 576,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 576,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "primitive",
+              "subtype": "uint64",
+              "type_shape_v1": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 8,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/U64",
+              "args": [],
+              "nullable": false
+            },
+            "element_count": 2,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "experimental_maybe_from_alias": {
+            "name": "test.experimentalmaybefromalias/AliasOfArrayContainingAliasOfArray",
+            "args": [],
+            "nullable": false
+          },
+          "name": "aa1",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 47,
+            "column": 5,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 624,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 624,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "vector",
+            "element_type": {
+              "kind": "array",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "experimental_maybe_from_alias": {
+                "name": "test.experimentalmaybefromalias/U64",
+                "args": [],
+                "nullable": false
+              },
+              "element_count": 2,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfArrayContainingAliasOfArray",
+              "args": [],
+              "nullable": false
+            },
+            "maybe_element_count": 3,
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 48,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 48,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "aa2",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 48,
+            "column": 5,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 640,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 640,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "array",
+            "element_type": {
+              "kind": "array",
+              "element_type": {
+                "kind": "primitive",
+                "subtype": "uint64",
+                "type_shape_v1": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                },
+                "type_shape_v2": {
+                  "inline_size": 8,
+                  "alignment": 8,
+                  "depth": 0,
+                  "max_handles": 0,
+                  "max_out_of_line": 0,
+                  "has_padding": false,
+                  "has_envelope": false,
+                  "has_flexible_envelope": false
+                }
+              },
+              "experimental_maybe_from_alias": {
+                "name": "test.experimentalmaybefromalias/U64",
+                "args": [],
+                "nullable": false
+              },
+              "element_count": 2,
+              "type_shape_v1": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              },
+              "type_shape_v2": {
+                "inline_size": 16,
+                "alignment": 8,
+                "depth": 0,
+                "max_handles": 0,
+                "max_out_of_line": 0,
+                "has_padding": false,
+                "has_envelope": false,
+                "has_flexible_envelope": false
+              }
+            },
+            "experimental_maybe_from_alias": {
+              "name": "test.experimentalmaybefromalias/AliasOfArrayContainingAliasOfArray",
+              "args": [],
+              "nullable": false
+            },
+            "element_count": 3,
+            "type_shape_v1": {
+              "inline_size": 48,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 48,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_envelope": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "aa3",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+            "line": 49,
+            "column": 5,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 656,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 656,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 704,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 4294967295,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 704,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 4294967295,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_envelope": false,
+        "has_flexible_envelope": false
+      }
+    }
+  ],
+  "external_struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "alias_declarations": [
+    {
+      "name": "test.experimentalmaybefromalias/AliasOfArray",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 9,
+        "column": 7,
+        "length": 12
+      },
+      "partial_type_ctor": {
+        "name": "array",
+        "args": [
+          {
+            "name": "uint64",
+            "args": [],
+            "nullable": false
+          }
+        ],
+        "nullable": false,
+        "maybe_size": {
+          "kind": "literal",
+          "value": "1",
+          "expression": "1",
+          "literal": {
+            "kind": "numeric",
+            "value": "1",
+            "expression": "1"
+          }
+        }
+      }
+    },
+    {
+      "name": "test.experimentalmaybefromalias/AliasOfArrayContainingAliasOfArray",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 12,
+        "column": 7,
+        "length": 34
+      },
+      "partial_type_ctor": {
+        "name": "array",
+        "args": [
+          {
+            "name": "uint64",
+            "args": [],
+            "nullable": false
+          }
+        ],
+        "nullable": false,
+        "maybe_size": {
+          "kind": "literal",
+          "value": "2",
+          "expression": "2",
+          "literal": {
+            "kind": "numeric",
+            "value": "2",
+            "expression": "2"
+          }
+        }
+      }
+    },
+    {
+      "name": "test.experimentalmaybefromalias/AliasOfBytes",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 5,
+        "column": 7,
+        "length": 12
+      },
+      "partial_type_ctor": {
+        "name": "vector",
+        "args": [
+          {
+            "name": "uint8",
+            "args": [],
+            "nullable": false
+          }
+        ],
+        "nullable": false
+      }
+    },
+    {
+      "name": "test.experimentalmaybefromalias/AliasOfRequest",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 10,
+        "column": 7,
+        "length": 14
+      },
+      "partial_type_ctor": {
+        "name": "request",
+        "args": [
+          {
+            "name": "test.experimentalmaybefromalias/MyProtocol",
+            "args": [],
+            "nullable": false
+          }
+        ],
+        "nullable": true
+      }
+    },
+    {
+      "name": "test.experimentalmaybefromalias/AliasOfString",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 6,
+        "column": 7,
+        "length": 13
+      },
+      "partial_type_ctor": {
+        "name": "string",
+        "args": [],
+        "nullable": false
+      }
+    },
+    {
+      "name": "test.experimentalmaybefromalias/AliasOfVectorContainingAliasOfVector",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 11,
+        "column": 7,
+        "length": 36
+      },
+      "partial_type_ctor": {
+        "name": "vector",
+        "args": [
+          {
+            "name": "uint64",
+            "args": [],
+            "nullable": false
+          }
+        ],
+        "nullable": false,
+        "maybe_size": {
+          "kind": "literal",
+          "value": "2",
+          "expression": "2",
+          "literal": {
+            "kind": "numeric",
+            "value": "2",
+            "expression": "2"
+          }
+        }
+      }
+    },
+    {
+      "name": "test.experimentalmaybefromalias/U64",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 7,
+        "column": 7,
+        "length": 3
+      },
+      "partial_type_ctor": {
+        "name": "uint64",
+        "args": [],
+        "nullable": false
+      }
+    },
+    {
+      "name": "test.experimentalmaybefromalias/Vector",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl",
+        "line": 8,
+        "column": 7,
+        "length": 6
+      },
+      "partial_type_ctor": {
+        "name": "vector",
+        "args": [
+          {
+            "name": "uint64",
+            "args": [],
+            "nullable": false
+          }
+        ],
+        "nullable": true
+      }
+    }
+  ],
+  "new_type_declarations": [],
+  "declaration_order": [
+    "test.experimentalmaybefromalias/Vector",
+    "test.experimentalmaybefromalias/U64",
+    "test.experimentalmaybefromalias/AliasOfVectorContainingAliasOfVector",
+    "test.experimentalmaybefromalias/AliasOfArrayContainingAliasOfArray",
+    "test.experimentalmaybefromalias/MyProtocol",
+    "test.experimentalmaybefromalias/AliasOfString",
+    "test.experimentalmaybefromalias/AliasOfRequest",
+    "test.experimentalmaybefromalias/AliasOfBytes",
+    "test.experimentalmaybefromalias/AliasOfArray",
+    "test.experimentalmaybefromalias/Testing"
+  ],
+  "declarations": {
+    "test.experimentalmaybefromalias/MyProtocol": "protocol",
+    "test.experimentalmaybefromalias/Testing": "struct",
+    "test.experimentalmaybefromalias/AliasOfArray": "alias",
+    "test.experimentalmaybefromalias/AliasOfArrayContainingAliasOfArray": "alias",
+    "test.experimentalmaybefromalias/AliasOfBytes": "alias",
+    "test.experimentalmaybefromalias/AliasOfRequest": "alias",
+    "test.experimentalmaybefromalias/AliasOfString": "alias",
+    "test.experimentalmaybefromalias/AliasOfVectorContainingAliasOfVector": "alias",
+    "test.experimentalmaybefromalias/U64": "alias",
+    "test.experimentalmaybefromalias/Vector": "alias"
+  }
+}

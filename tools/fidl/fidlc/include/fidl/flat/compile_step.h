@@ -28,21 +28,21 @@ class CompileStep : public Compiler::Step {
   void RunImpl() override;
 
   // Compile methods
-  void CompileDecl(Decl* decl);
-  void CompileAttributeList(AttributeList* attributes);
+  void CompileAlias(Alias* alias);
   void CompileAttribute(Attribute* attribute, bool early = false);
+  void CompileAttributeList(AttributeList* attributes);
   void CompileBits(Bits* bits_declaration);
   void CompileConst(Const* const_declaration);
+  void CompileDecl(Decl* decl);
   void CompileEnum(Enum* enum_declaration);
+  void CompileNewType(NewType* new_type);
   void CompileProtocol(Protocol* protocol_declaration);
   void CompileResource(Resource* resource_declaration);
   void CompileService(Service* service_decl);
   void CompileStruct(Struct* struct_declaration);
   void CompileTable(Table* table_declaration);
-  void CompileUnion(Union* union_declaration);
-  void CompileTypeAlias(TypeAlias* type_alias);
-  void CompileNewType(NewType* new_type);
   void CompileTypeConstructor(TypeConstructor* type_ctor);
+  void CompileUnion(Union* union_declaration);
 
   // Resolve methods
   bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,

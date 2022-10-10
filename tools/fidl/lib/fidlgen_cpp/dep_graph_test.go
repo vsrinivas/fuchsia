@@ -391,7 +391,7 @@ func TestUnionDeps(t *testing.T) {
 }
 
 // TODO(fxbug.dev/105758): Test aliases of aliases too.
-func TestTypeAliasDeps(t *testing.T) {
+func TestAliasDeps(t *testing.T) {
 	ir := fidlgentest.EndToEndTest{T: t}.Single(`
 	library example;
 

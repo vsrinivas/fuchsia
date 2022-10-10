@@ -17,12 +17,12 @@ group("tests") {
     ":unittests($host_toolchain)",
 
     # golden testing
+    ":aliases",
     ":bits",
     ":constants",
     ":enums",
     ":multifile",
     ":structs",
-    ":type_aliases",
   ]
 }
 
@@ -412,20 +412,20 @@ zither_golden_test("multifile") {
   ]
 }
 
-# FIDL: testdata/type_aliases/
-# Goldens: testdata/type_aliases/goldens/${backend}/
-zither_golden_test("type_aliases") {
-  sources = [ "type_aliases.test.fidl" ]
+# FIDL: testdata/aliases/
+# Goldens: testdata/aliases/goldens/${backend}/
+zither_golden_test("aliases") {
+  sources = [ "aliases.test.fidl" ]
 
   cases = [
     {
       backend = "c"
-      files = [ "type_aliases.h" ]
+      files = [ "aliases.h" ]
     },
     {
       backend = "go"
       files = [
-        "type_aliases.go",
+        "aliases.go",
         "pkg_name.txt",
       ]
     },

@@ -334,10 +334,10 @@ class TestLibrary final : public SharedInterface {
     return nullptr;
   }
 
-  const fidl::flat::TypeAlias* LookupTypeAlias(std::string_view name) {
-    for (const auto& type_alias_decl : compilation_->declarations.type_aliases) {
-      if (type_alias_decl->GetName() == name) {
-        return type_alias_decl;
+  const fidl::flat::Alias* LookupAlias(std::string_view name) {
+    for (const auto& alias_decl : compilation_->declarations.aliases) {
+      if (alias_decl->GetName() == name) {
+        return alias_decl;
       }
     }
     return nullptr;

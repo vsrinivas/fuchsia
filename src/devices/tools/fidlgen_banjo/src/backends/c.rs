@@ -228,7 +228,7 @@ fn get_first_param(method: &Method, ir: &FidlIr) -> Result<(bool, String), Error
     if let Some(response) = &method.response_parameters(ir)? {
         if let Some(param) = response.get(0) {
             if let Some(arg_type) = get_base_type_from_alias(
-                &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
             ) {
                 return Ok((true, arg_type));
             }
@@ -248,7 +248,7 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
         .map(|param| {
             let c_name = to_c_name(&param.name.0);
             if let Some(arg_type) = get_base_type_from_alias(
-                &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
             ) {
                 return Ok(format!("{} {}", arg_type, c_name));
             }
@@ -339,7 +339,7 @@ fn get_out_params(name: &str, m: &Method, ir: &FidlIr) -> Result<(Vec<String>, S
                 .map(|param| {
                     let c_name = to_c_name(&param.name.0);
                     if let Some(arg_type) = get_base_type_from_alias(
-                        &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                        &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
                     ) {
                         return format!("{}* out_{}", arg_type, c_name);
                     }
@@ -618,7 +618,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                             &f.name.as_ref().unwrap(),
                             "    ",
                             false,
-                            &f.experimental_maybe_from_type_alias,
+                            &f.experimental_maybe_from_alias,
                             ir,
                         )),
                     }
@@ -663,7 +663,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     &f.name,
                     "    ",
                     preserve_names,
-                    &f.experimental_maybe_from_type_alias,
+                    &f.experimental_maybe_from_alias,
                     ir,
                 )
             })
@@ -926,7 +926,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         })
     }
 
-    fn codegen_alias_decl(&self, data: &TypeAlias, _ir: &FidlIr) -> Result<String, Error> {
+    fn codegen_alias_decl(&self, data: &Alias, _ir: &FidlIr) -> Result<String, Error> {
         match data.partial_type_ctor.name.as_str() {
             "array" | "string" | "vector" => Ok("".to_string()),
             _ => Ok(format!(
@@ -970,7 +970,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 Decl::Protocol { data } => Some(self.codegen_protocol_decl(data, &ir)),
                 Decl::Struct { data } => Some(self.codegen_struct_decl(data)),
                 Decl::Table { data } => Some(self.codegen_table_decl(data)),
-                Decl::TypeAlias { data } => Some(self.codegen_alias_decl(data, &ir)),
+                Decl::Alias { data } => Some(self.codegen_alias_decl(data, &ir)),
                 Decl::Union { data } => Some(self.codegen_union_decl(data)),
             })
             .collect::<Result<Vec<_>, Error>>()?

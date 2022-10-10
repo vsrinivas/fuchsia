@@ -23,8 +23,8 @@ package {{ PackageBasename .Library }}
 {{ else if .IsStruct }}
 {{ template "GenerateGoStruct" .AsStruct }}
 
-{{ else if .IsTypeAlias }}
-{{ template "GenerateGoTypeAlias" .AsTypeAlias }}
+{{ else if .IsAlias }}
+{{ template "GenerateGoAlias" .AsAlias }}
 
 {{ end }}
 {{ end }}

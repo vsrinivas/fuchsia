@@ -29,7 +29,7 @@ if (is_host) {
     "src/templates/markdown/partials/declarations/enums.hbs",
     "src/templates/markdown/partials/types/vector.hbs",
     "src/templates/markdown/partials/declarations/constants.hbs",
-    "src/templates/markdown/partials/declarations/type_aliases.hbs",
+    "src/templates/markdown/partials/declarations/aliases.hbs",
     "src/templates/markdown/partials/declarations/protocols.hbs",
     "src/templates/markdown/partials/types/doc.hbs",
     "src/templates/markdown/partials/declarations/bits.hbs",

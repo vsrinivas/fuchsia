@@ -890,7 +890,7 @@ var _ = []Element{
 	(*TableMember)(nil),
 	(*Union)(nil),
 	(*UnionMember)(nil),
-	(*TypeAlias)(nil),
+	(*Alias)(nil),
 	(*NewType)(nil),
 }
 
@@ -910,7 +910,7 @@ var _ = []Decl{
 	(*Struct)(nil),
 	(*Table)(nil),
 	(*Union)(nil),
-	(*TypeAlias)(nil),
+	(*Alias)(nil),
 	(*NewType)(nil),
 }
 
@@ -1080,8 +1080,8 @@ func (rl resourceableLayoutDecl) GetResourceness() Resourceness {
 	return rl.Resourceness
 }
 
-// TypeAlias represents the declaration of a FIDL type alias.
-type TypeAlias struct {
+// Alias represents the declaration of a FIDL alias.
+type Alias struct {
 	decl
 	PartialTypeConstructor PartialTypeConstructor `json:"partial_type_ctor"`
 }
@@ -1099,7 +1099,7 @@ type PartialTypeConstructor struct {
 type NewType struct {
 	decl
 	Type  Type                    `json:"type"`
-	Alias *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
+	Alias *PartialTypeConstructor `json:"experimental_maybe_from_alias,omitempty"`
 }
 
 // Union represents the declaration of a FIDL union.
@@ -1115,12 +1115,12 @@ type Union struct {
 // union.
 type UnionMember struct {
 	member
-	Reserved       bool                    `json:"reserved"`
-	Ordinal        int                     `json:"ordinal"`
-	Type           *Type                   `json:"type,omitempty"`
-	Offset         int                     `json:"offset"`
-	MaxOutOfLine   int                     `json:"max_out_of_line"`
-	MaybeTypeAlias *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
+	Reserved     bool                    `json:"reserved"`
+	Ordinal      int                     `json:"ordinal"`
+	Type         *Type                   `json:"type,omitempty"`
+	Offset       int                     `json:"offset"`
+	MaxOutOfLine int                     `json:"max_out_of_line"`
+	MaybeAlias   *PartialTypeConstructor `json:"experimental_maybe_from_alias,omitempty"`
 }
 
 // Table represents a declaration of a FIDL table.
@@ -1139,7 +1139,7 @@ type TableMember struct {
 	Type              *Type                   `json:"type,omitempty"`
 	Ordinal           int                     `json:"ordinal"`
 	MaybeDefaultValue *Constant               `json:"maybe_default_value,omitempty"`
-	MaybeTypeAlias    *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
+	MaybeAlias        *PartialTypeConstructor `json:"experimental_maybe_from_alias,omitempty"`
 	MaxOutOfLine      int                     `json:"max_out_of_line"`
 }
 
@@ -1185,7 +1185,7 @@ type StructMember struct {
 	member
 	Type              Type                    `json:"type"`
 	MaybeDefaultValue *Constant               `json:"maybe_default_value,omitempty"`
-	MaybeTypeAlias    *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
+	MaybeAlias        *PartialTypeConstructor `json:"experimental_maybe_from_alias,omitempty"`
 	FieldShapeV1      FieldShape              `json:"field_shape_v1"`
 	FieldShapeV2      FieldShape              `json:"field_shape_v2"`
 }
@@ -1552,17 +1552,17 @@ type DeclType string
 const (
 	LibraryDeclType DeclType = "library"
 
-	ConstDeclType     DeclType = "const"
-	BitsDeclType      DeclType = "bits"
-	EnumDeclType      DeclType = "enum"
-	ResourceDeclType  DeclType = "resource"
-	ProtocolDeclType  DeclType = "protocol"
-	ServiceDeclType   DeclType = "service"
-	StructDeclType    DeclType = "struct"
-	TableDeclType     DeclType = "table"
-	UnionDeclType     DeclType = "union"
-	TypeAliasDeclType DeclType = "type_alias"
-	NewTypeDeclType   DeclType = "new_type"
+	AliasDeclType    DeclType = "alias"
+	BitsDeclType     DeclType = "bits"
+	ConstDeclType    DeclType = "const"
+	EnumDeclType     DeclType = "enum"
+	NewTypeDeclType  DeclType = "new_type"
+	ProtocolDeclType DeclType = "protocol"
+	ResourceDeclType DeclType = "resource"
+	ServiceDeclType  DeclType = "service"
+	StructDeclType   DeclType = "struct"
+	TableDeclType    DeclType = "table"
+	UnionDeclType    DeclType = "union"
 )
 
 func GetDeclType(decl Decl) DeclType {
@@ -1585,8 +1585,8 @@ func GetDeclType(decl Decl) DeclType {
 		return TableDeclType
 	case *Union:
 		return UnionDeclType
-	case *TypeAlias:
-		return TypeAliasDeclType
+	case *Alias:
+		return AliasDeclType
 	case *NewType:
 		return NewTypeDeclType
 	}
@@ -1632,7 +1632,7 @@ type Root struct {
 	ExternalStructs []Struct                    `json:"external_struct_declarations"`
 	Tables          []Table                     `json:"table_declarations"`
 	Unions          []Union                     `json:"union_declarations"`
-	TypeAliases     []TypeAlias                 `json:"type_alias_declarations"`
+	Aliases         []Alias                     `json:"alias_declarations"`
 	NewTypes        []NewType                   `json:"new_type_declarations"`
 	DeclOrder       []EncodedCompoundIdentifier `json:"declaration_order"`
 	Decls           DeclMap                     `json:"declarations"`
@@ -1673,8 +1673,8 @@ func (r *Root) ForEachDecl(cb func(Decl)) {
 	for i := range r.Unions {
 		cb(&r.Unions[i])
 	}
-	for i := range r.TypeAliases {
-		cb(&r.TypeAliases[i])
+	for i := range r.Aliases {
+		cb(&r.Aliases[i])
 	}
 	for i := range r.NewTypes {
 		cb(&r.NewTypes[i])
@@ -1952,8 +1952,8 @@ func (r *Root) ForBindings(language string) Root {
 			}
 			res.Unions = append(res.Unions, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
-		case *TypeAlias:
-			res.TypeAliases = append(res.TypeAliases, *v)
+		case *Alias:
+			res.Aliases = append(res.Aliases, *v)
 			res.Decls[v.Name] = r.Decls[v.Name]
 		}
 	})

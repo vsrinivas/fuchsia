@@ -60,7 +60,7 @@
           "kind": "enum"
         },
         "test.dependent/aliased_string": {
-          "kind": "type_alias"
+          "kind": "alias"
         }
       }
     }
@@ -445,7 +445,7 @@
   "external_struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
-  "type_alias_declarations": [],
+  "alias_declarations": [],
   "new_type_declarations": [],
   "declaration_order": [
     "test.importedconstvalues/MyStruct",

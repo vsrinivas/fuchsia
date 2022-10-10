@@ -79,8 +79,8 @@ type ExampleTable = table {
     2: reserved;
 };
 
-@on_type_alias
-alias ExampleTypeAlias = uint32;
+@on_alias
+alias ExampleAlias = uint32;
 
 @on_union
 type ExampleUnion = union {
@@ -141,9 +141,9 @@ type ExampleUnion = union {
   EXPECT_TRUE(example_table->members.front().attributes->Get("on_table_member"));
   EXPECT_TRUE(example_table->members.back().attributes->Get("on_reserved_member"));
 
-  auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
-  ASSERT_NOT_NULL(example_type_alias);
-  EXPECT_TRUE(example_type_alias->attributes->Get("on_type_alias"));
+  auto example_alias = library.LookupAlias("ExampleAlias");
+  ASSERT_NOT_NULL(example_alias);
+  EXPECT_TRUE(example_alias->attributes->Get("on_alias"));
 
   auto example_union = library.LookupUnion("ExampleUnion");
   ASSERT_NOT_NULL(example_union);

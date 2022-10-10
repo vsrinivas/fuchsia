@@ -8,6 +8,9 @@ toc:
   path: /README.md
 - title: API
   section:
+  - title: test.aliases
+    path: /test.aliases
+    version_added: ""
   - title: test.anonymous
     path: /test.anonymous
     version_added: ""
@@ -65,8 +68,8 @@ toc:
   - title: test.escaping
     path: /test.escaping
     version_added: ""
-  - title: test.experimentalmaybefromtypealias
-    path: /test.experimentalmaybefromtypealias
+  - title: test.experimentalmaybefromalias
+    path: /test.experimentalmaybefromalias
     version_added: ""
   - title: test.foreigntypeinresponseusedthroughcompose
     path: /test.foreigntypeinresponseusedthroughcompose
@@ -127,9 +130,6 @@ toc:
     version_added: ""
   - title: test.transitivedependenciescompose
     path: /test.transitivedependenciescompose
-    version_added: ""
-  - title: test.typealiases
-    path: /test.typealiases
     version_added: ""
   - title: test.union
     path: /test.union

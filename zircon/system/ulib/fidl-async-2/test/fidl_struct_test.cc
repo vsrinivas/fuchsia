@@ -115,7 +115,7 @@ TEST(FidlStruct, EmptyStruct) {
 }
 
 // If this builds, it passes.
-TEST(FidlStruct, TypeAliases) {
+TEST(FidlStruct, Aliases) {
   using Struct = FidlStruct<fidl_types_test_EmptyStruct, wire::EmptyStruct>;
   static_assert(std::is_same<Struct::c_type, fidl_types_test_EmptyStruct>::value);
   static_assert(std::is_same<Struct::llcpp_type, wire::EmptyStruct>::value);

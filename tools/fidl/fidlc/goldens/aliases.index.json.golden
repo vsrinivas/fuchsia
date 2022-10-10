@@ -1,0 +1,212 @@
+{
+  "name": "test.aliases",
+  "lib_declarations": [
+    {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+      "data": "test.aliases",
+      "start_offset": 8,
+      "end_offset": 20
+    }
+  ],
+  "using_declarations": [
+    {
+      "library_name": "test.someotherlibrary",
+      "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+        "data": "test.someotherlibrary",
+        "start_offset": 29,
+        "end_offset": 50
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "library_name": "test.someotherlibrary",
+      "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/aliases/someotherlibrary.test.fidl",
+        "data": "library test.someotherlibrary",
+        "start_offset": 0,
+        "end_offset": 29
+      }
+    }
+  ],
+  "dependency_identifiers": [
+    {
+      "identifier": "test.someotherlibrary/ReferenceMe",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/aliases/someotherlibrary.test.fidl",
+        "data": "ReferenceMe",
+        "start_offset": 37,
+        "end_offset": 48
+      }
+    }
+  ],
+  "consts": [],
+  "enums": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.aliases/obj_type",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+        "data": "obj_type",
+        "start_offset": 225,
+        "end_offset": 233
+      },
+      "members": [
+        {
+          "name": "NONE",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "NONE",
+            "start_offset": 263,
+            "end_offset": 267
+          },
+          "value": {
+            "type": "literal"
+          }
+        },
+        {
+          "name": "CHANNEL",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "CHANNEL",
+            "start_offset": 277,
+            "end_offset": 284
+          },
+          "value": {
+            "type": "literal"
+          }
+        }
+      ]
+    }
+  ],
+  "unions": [],
+  "tables": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.aliases/ExampleOfUseOfAliases",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+        "data": "ExampleOfUseOfAliases",
+        "start_offset": 568,
+        "end_offset": 589
+      },
+      "members": [
+        {
+          "name": "field_of_u32",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "field_of_u32",
+            "start_offset": 614,
+            "end_offset": 626
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "field_of_vec_of_strings",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "field_of_vec_of_strings",
+            "start_offset": 636,
+            "end_offset": 659
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "field_of_vec_of_strings_at_most_nine",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "field_of_vec_of_strings_at_most_nine",
+            "start_offset": 680,
+            "end_offset": 716
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "field_of_vec_of_strings_at_most_5",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "field_of_vec_of_strings_at_most_5",
+            "start_offset": 739,
+            "end_offset": 772
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "field_of_vec_of_ref_me_at_most_5",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "field_of_vec_of_ref_me_at_most_5",
+            "start_offset": 803,
+            "end_offset": 835
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "field_of_channel",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "field_of_channel",
+            "start_offset": 885,
+            "end_offset": 901
+          },
+          "type": {
+            "kind": "handle"
+          }
+        },
+        {
+          "name": "field_of_client_end",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "field_of_client_end",
+            "start_offset": 915,
+            "end_offset": 934
+          },
+          "type": {
+            "kind": "handle"
+          }
+        },
+        {
+          "name": "field_of_nullable_client_end",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/aliases/example.test.fidl",
+            "data": "field_of_nullable_client_end",
+            "start_offset": 957,
+            "end_offset": 985
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": []
+}

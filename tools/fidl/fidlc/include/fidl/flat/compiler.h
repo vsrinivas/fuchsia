@@ -154,6 +154,7 @@ class Libraries : private ReporterMixin {
 struct Compilation {
   // Like Library::Declarations, but with const pointers rather than unique_ptr.
   struct Declarations {
+    std::vector<const Alias*> aliases;
     std::vector<const Bits*> bits;
     std::vector<const Builtin*> builtins;
     std::vector<const Const*> consts;
@@ -164,7 +165,6 @@ struct Compilation {
     std::vector<const Service*> services;
     std::vector<const Struct*> structs;
     std::vector<const Table*> tables;
-    std::vector<const TypeAlias*> type_aliases;
     std::vector<const Union*> unions;
   };
 

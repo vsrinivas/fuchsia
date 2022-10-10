@@ -555,7 +555,7 @@
   "external_struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
-  "type_alias_declarations": [
+  "alias_declarations": [
     {
       "name": "test.experimentalzxctypes/AliasOfUchar",
       "location": {
@@ -637,9 +637,9 @@
     "test.experimentalzxctypes/USIZE_CONST": "const",
     "test.experimentalzxctypes/Struct": "struct",
     "test.experimentalzxctypes/StructOfExperimentalZxCTypes": "struct",
-    "test.experimentalzxctypes/AliasOfUchar": "type_alias",
-    "test.experimentalzxctypes/AliasOfUint32Pointer": "type_alias",
-    "test.experimentalzxctypes/AliasOfUintptr": "type_alias",
-    "test.experimentalzxctypes/AliasOfUsize": "type_alias"
+    "test.experimentalzxctypes/AliasOfUchar": "alias",
+    "test.experimentalzxctypes/AliasOfUint32Pointer": "alias",
+    "test.experimentalzxctypes/AliasOfUintptr": "alias",
+    "test.experimentalzxctypes/AliasOfUsize": "alias"
   }
 }

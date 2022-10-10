@@ -1,5 +1,5 @@
-{{#if experimental_maybe_from_type_alias ~}}
-    {{~ pl experimental_maybe_from_type_alias.name @root.name ~}}
+{{#if experimental_maybe_from_alias ~}}
+    {{~ pl experimental_maybe_from_alias.name @root.name ~}}
 {{~ else ~}}
 {{#if (eq type.kind "vector") ~}}
     {{~ #with type ~}}

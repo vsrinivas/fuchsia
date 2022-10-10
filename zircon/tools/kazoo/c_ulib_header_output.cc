@@ -272,7 +272,7 @@ __BEGIN_CDECLS
     writer->Puts("\n");
   }
 
-  for (const auto& alias : library.type_aliases()) {
+  for (const auto& alias : library.aliases()) {
     Type workaround_type;
     if (AliasWorkaround(alias->original_name(), library, &workaround_type)) {
       // Hide workaround types

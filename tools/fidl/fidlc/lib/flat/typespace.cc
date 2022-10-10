@@ -130,7 +130,7 @@ class Typespace::Creator : private ReporterMixin {
   const Type* CreateHandleType(Resource* resource);
   const Type* CreateTransportSideType(TransportSide end);
   const Type* CreateIdentifierType(TypeDecl* type_decl);
-  const Type* CreateTypeAliasType(TypeAlias* type_alias);
+  const Type* CreateAliasType(Alias* alias);
   const Type* CreateZxExperimentalPointerType();
 
   Typespace* typespace_;
@@ -163,8 +163,8 @@ const Type* Typespace::Creator::Create() {
       return CreateIdentifierType(static_cast<TypeDecl*>(target));
     case Decl::Kind::kResource:
       return CreateHandleType(static_cast<Resource*>(target));
-    case Decl::Kind::kTypeAlias:
-      return CreateTypeAliasType(static_cast<TypeAlias*>(target));
+    case Decl::Kind::kAlias:
+      return CreateAliasType(static_cast<Alias*>(target));
     case Decl::Kind::kBuiltin:
       // Handled below.
       break;
@@ -351,22 +351,22 @@ const Type* Typespace::Creator::CreateIdentifierType(TypeDecl* type_decl) {
   return typespace_->Intern(std::move(constrained_type));
 }
 
-const Type* Typespace::Creator::CreateTypeAliasType(TypeAlias* type_alias) {
-  if (auto cycle = resolver_->GetDeclCycle(type_alias); cycle) {
-    Fail(ErrIncludeCycle, type_alias->name.span().value(), cycle.value());
+const Type* Typespace::Creator::CreateAliasType(Alias* alias) {
+  if (auto cycle = resolver_->GetDeclCycle(alias); cycle) {
+    Fail(ErrIncludeCycle, alias->name.span().value(), cycle.value());
     return nullptr;
   }
-  resolver_->CompileDecl(type_alias);
+  resolver_->CompileDecl(alias);
 
   if (!EnsureNumberOfLayoutParams(0))
     return nullptr;
 
   // Compilation failed while trying to resolve something farther up the chain;
   // exit early
-  if (type_alias->partial_type_ctor->type == nullptr)
+  if (alias->partial_type_ctor->type == nullptr)
     return nullptr;
-  const auto& aliased_type = type_alias->partial_type_ctor->type;
-  out_params_->from_type_alias = type_alias;
+  const auto& aliased_type = alias->partial_type_ctor->type;
+  out_params_->from_alias = alias;
   std::unique_ptr<Type> constrained_type;
   aliased_type->ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));

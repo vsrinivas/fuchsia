@@ -61,9 +61,9 @@ impl<'a> MarkdownTemplate<'a> {
                 "Failed to include constants",
             ),
             (
-                "type_aliases",
-                include_str!("partials/declarations/type_aliases.hbs"),
-                "Failed to include type_aliases",
+                "aliases",
+                include_str!("partials/declarations/aliases.hbs"),
+                "Failed to include aliases",
             ),
         ] {
             handlebars.register_template_string(name, template).expect(expect);

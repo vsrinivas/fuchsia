@@ -48,40 +48,40 @@
           "kind": "experimental_resource"
         },
         "zx/duration": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/gpaddr": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/koid": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/off": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/paddr": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/paddr32": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/procarg": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/signals": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/status": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/ticks": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/time": {
-          "kind": "type_alias"
+          "kind": "alias"
         },
         "zx/vaddr": {
-          "kind": "type_alias"
+          "kind": "alias"
         }
       }
     }
@@ -1096,7 +1096,7 @@
   "external_struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
-  "type_alias_declarations": [],
+  "alias_declarations": [],
   "new_type_declarations": [],
   "declaration_order": [
     "test.consts/ZX_RIGHTS_VAL",

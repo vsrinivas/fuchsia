@@ -447,7 +447,7 @@ std::string NameFlatCType(const flat::Type* type) {
           case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kService:
-          case flat::Decl::Kind::kTypeAlias:
+          case flat::Decl::Kind::kAlias:
             ZX_PANIC("no C name");
         }
         break;

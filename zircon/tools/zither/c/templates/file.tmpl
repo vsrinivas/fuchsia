@@ -43,8 +43,8 @@ extern "C" {
 {{ else if .IsStruct }}
 {{ template "GenerateCStruct" .AsStruct }}
 
-{{ else if .IsTypeAlias }}
-{{ template "GenerateCTypeAlias" .AsTypeAlias }}
+{{ else if .IsAlias }}
+{{ template "GenerateCAlias" .AsAlias }}
 
 {{ end }}
 {{ end }}

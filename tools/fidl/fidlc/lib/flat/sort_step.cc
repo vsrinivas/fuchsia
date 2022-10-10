@@ -77,9 +77,9 @@ void CalcDependencies::VisitConstant(const Constant* constant) {
 
 void CalcDependencies::VisitTypeConstructor(const TypeConstructor* type_ctor) {
   const auto& invocation = type_ctor->resolved_params;
-  if (invocation.from_type_alias) {
+  if (invocation.from_alias) {
     ZX_ASSERT_MSG(!invocation.element_type_resolved, "partial aliases should be disallowed");
-    AddDependency(invocation.from_type_alias);
+    AddDependency(invocation.from_alias);
     return;
   }
 
@@ -211,9 +211,9 @@ CalcDependencies::CalcDependencies(const Decl* decl) : library_(decl->name.libra
       }
       break;
     }
-    case Decl::Kind::kTypeAlias: {
-      auto type_alias_decl = static_cast<const TypeAlias*>(decl);
-      VisitTypeConstructor(type_alias_decl->partial_type_ctor.get());
+    case Decl::Kind::kAlias: {
+      auto alias_decl = static_cast<const Alias*>(decl);
+      VisitTypeConstructor(alias_decl->partial_type_ctor.get());
       break;
     }
     case Decl::Kind::kNewType: {

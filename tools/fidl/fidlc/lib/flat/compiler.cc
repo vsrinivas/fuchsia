@@ -344,8 +344,8 @@ class CalcDepedencies {
         }
         break;
       }
-      case Decl::Kind::kTypeAlias: {
-        auto alias_decl = static_cast<const TypeAlias*>(decl);
+      case Decl::Kind::kAlias: {
+        auto alias_decl = static_cast<const Alias*>(decl);
         VisitTypeConstructor(alias_decl->partial_type_ctor.get());
         break;
       }
@@ -438,7 +438,7 @@ std::unique_ptr<Compilation> Libraries::Filter(const VersionSelection* version_s
     filter(&dst->services, src.services);
     filter(&dst->structs, src.structs);
     filter(&dst->tables, src.tables);
-    filter(&dst->type_aliases, src.type_aliases);
+    filter(&dst->aliases, src.aliases);
     filter(&dst->unions, src.unions);
   };
 

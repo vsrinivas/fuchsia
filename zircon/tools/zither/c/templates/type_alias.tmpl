@@ -1,8 +1,0 @@
-{{- define "GenerateCTypeAlias" -}}
-{{ range .Comments }}
-//{{ . }}
-{{- end }}
-{{- $name := TypeName . }}
-{{- $info := DescribeType .Value }}
-typedef {{ $info.Type }} {{ Append $name $info.ArraySuffix }};
-{{ end }}

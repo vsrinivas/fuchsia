@@ -1,6 +1,0 @@
-{{- define "GenerateGoTypeAlias" -}}
-{{ range .Comments }}
-//{{ . }}
-{{- end }}
-type {{ Name . }} = {{ DescribeType .Value }}
-{{ end }}

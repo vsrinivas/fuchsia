@@ -313,7 +313,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(value.subtype_ctor.get());
+    GenerateTypeAndFromAlias(value.subtype_ctor.get());
     // TODO(fxbug.dev/7660): When all numbers are wrapped as string, we can simply
     // call GenerateObjectMember directly.
     GenerateObjectPunctuation(Position::kSubsequent);
@@ -340,7 +340,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(value.type_ctor.get());
+    GenerateTypeAndFromAlias(value.type_ctor.get());
     GenerateObjectMember("value", value.value);
   });
 }
@@ -353,9 +353,9 @@ void JSONGenerator::Generate(const flat::Enum& value) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     // TODO(fxbug.dev/7660): Due to legacy reasons, the 'type' of enums is actually
     // the primitive subtype, and therefore cannot use
-    // GenerateTypeAndFromTypeAlias here.
+    // GenerateTypeAndFromAlias here.
     GenerateObjectMember("type", value.type->name);
-    GenerateExperimentalMaybeFromTypeAlias(value.subtype_ctor->resolved_params);
+    GenerateExperimentalMaybeFromAlias(value.subtype_ctor->resolved_params);
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness);
     if (value.strictness == types::Strictness::kFlexible) {
@@ -413,13 +413,13 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.maybe_request) {
-      GenerateTypeAndFromTypeAlias(TypeKind::kRequestPayload, value.maybe_request.get(),
-                                   Position::kSubsequent);
+      GenerateTypeAndFromAlias(TypeKind::kRequestPayload, value.maybe_request.get(),
+                               Position::kSubsequent);
     }
     GenerateObjectMember("has_response", value.has_response);
     if (value.maybe_response) {
-      GenerateTypeAndFromTypeAlias(TypeKind::kResponsePayload, value.maybe_response.get(),
-                                   Position::kSubsequent);
+      GenerateTypeAndFromAlias(TypeKind::kResponsePayload, value.maybe_response.get(),
+                               Position::kSubsequent);
     }
     GenerateObjectMember("is_composed", method_with_info.is_composed);
     GenerateObjectMember("has_error", value.has_error);
@@ -440,12 +440,12 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
   });
 }
 
-void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor* value,
-                                                 Position position) {
-  GenerateTypeAndFromTypeAlias(TypeKind::kConcrete, value, position);
+void JSONGenerator::GenerateTypeAndFromAlias(const flat::TypeConstructor* value,
+                                             Position position) {
+  GenerateTypeAndFromAlias(TypeKind::kConcrete, value, position);
 }
 
-bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
+bool ShouldExposeAliasOfParametrizedType(const flat::Type& type) {
   bool is_server_end = false;
   if (type.kind == flat::Type::Kind::kTransportSide) {
     const auto* transport_side = static_cast<const flat::TransportSideType*>(&type);
@@ -455,19 +455,19 @@ bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
          is_server_end;
 }
 
-void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,
-                                                 const flat::TypeConstructor* value,
-                                                 Position position) {
+void JSONGenerator::GenerateTypeAndFromAlias(TypeKind parent_type_kind,
+                                             const flat::TypeConstructor* value,
+                                             Position position) {
   const auto* type = value->type;
   const auto& invocation = value->resolved_params;
-  if (fidl::ShouldExposeTypeAliasOfParametrizedType(*type)) {
-    if (invocation.from_type_alias) {
+  if (fidl::ShouldExposeAliasOfParametrizedType(*type)) {
+    if (invocation.from_alias) {
       GenerateParameterizedType(parent_type_kind, type,
-                                invocation.from_type_alias->partial_type_ctor.get(), position);
+                                invocation.from_alias->partial_type_ctor.get(), position);
     } else {
       GenerateParameterizedType(parent_type_kind, type, value, position);
     }
-    GenerateExperimentalMaybeFromTypeAlias(invocation);
+    GenerateExperimentalMaybeFromAlias(invocation);
     return;
   }
 
@@ -492,13 +492,12 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,
   }
 
   GenerateObjectMember(key, type, position);
-  GenerateExperimentalMaybeFromTypeAlias(invocation);
+  GenerateExperimentalMaybeFromAlias(invocation);
 }
 
-void JSONGenerator::GenerateExperimentalMaybeFromTypeAlias(
-    const flat::LayoutInvocation& invocation) {
-  if (invocation.from_type_alias)
-    GenerateObjectMember("experimental_maybe_from_type_alias", invocation);
+void JSONGenerator::GenerateExperimentalMaybeFromAlias(const flat::LayoutInvocation& invocation) {
+  if (invocation.from_alias)
+    GenerateObjectMember("experimental_maybe_from_alias", invocation);
 }
 
 void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const flat::Type* type,
@@ -515,13 +514,13 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
     switch (type->kind) {
       case flat::Type::Kind::kArray: {
         const auto* array_type = static_cast<const flat::ArrayType*>(type);
-        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, invocation.element_type_raw);
+        GenerateTypeAndFromAlias(TypeKind::kParameterized, invocation.element_type_raw);
         GenerateObjectMember("element_count", array_type->element_count->value);
         break;
       }
       case flat::Type::Kind::kVector: {
         const auto* vector_type = static_cast<const flat::VectorType*>(type);
-        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, invocation.element_type_raw);
+        GenerateTypeAndFromAlias(TypeKind::kParameterized, invocation.element_type_raw);
         if (*vector_type->element_count < flat::Size::Max())
           GenerateObjectMember("maybe_element_count", vector_type->element_count->value);
         GenerateObjectMember("nullable", vector_type->nullability);
@@ -533,16 +532,16 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
         // path is colocated with the identifier type code for protocols.
         ZX_ASSERT(server_end->end == flat::TransportSide::kServer);
         GenerateObjectMember("subtype", server_end->protocol_decl->name);
-        // We don't need to call GenerateExperimentalMaybeFromTypeAlias here like we
+        // We don't need to call GenerateExperimentalMaybeFromAlias here like we
         // do above because we're guaranteed that the protocol constraint didn't come
-        // from a type alias: in the new syntax, protocols aren't types, and therefore
+        // from an alias: in the new syntax, protocols aren't types, and therefore
         // `alias Foo = MyProtocol;` is not allowed.
         GenerateObjectMember("nullable", server_end->nullability);
         GenerateObjectMember("protocol_transport", server_end->protocol_transport);
         break;
       }
       case flat::Type::Kind::kZxExperimentalPointer: {
-        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, invocation.element_type_raw);
+        GenerateTypeAndFromAlias(TypeKind::kParameterized, invocation.element_type_raw);
         break;
       }
       case flat::Type::Kind::kIdentifier:
@@ -567,7 +566,7 @@ void JSONGenerator::Generate(const flat::Resource::Property& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
-    GenerateTypeAndFromTypeAlias(value.type_ctor.get());
+    GenerateTypeAndFromAlias(value.type_ctor.get());
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
   });
@@ -579,7 +578,7 @@ void JSONGenerator::Generate(const flat::Resource& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(value.subtype_ctor.get());
+    GenerateTypeAndFromAlias(value.subtype_ctor.get());
     GenerateObjectMember("properties", value.properties);
   });
 }
@@ -596,7 +595,7 @@ void JSONGenerator::Generate(const flat::Service& value) {
 
 void JSONGenerator::Generate(const flat::Service::Member& value) {
   GenerateObject([&]() {
-    GenerateTypeAndFromTypeAlias(value.type_ctor.get(), Position::kFirst);
+    GenerateTypeAndFromAlias(value.type_ctor.get(), Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     if (!value.attributes->Empty())
@@ -619,7 +618,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
 
 void JSONGenerator::Generate(const flat::Struct::Member& value) {
   GenerateObject([&]() {
-    GenerateTypeAndFromTypeAlias(value.type_ctor.get(), Position::kFirst);
+    GenerateTypeAndFromAlias(value.type_ctor.get(), Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     if (!value.attributes->Empty())
@@ -649,7 +648,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
     if (value.maybe_used) {
       ZX_ASSERT(!value.span);
       GenerateObjectMember("reserved", false);
-      GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor.get());
+      GenerateTypeAndFromAlias(value.maybe_used->type_ctor.get());
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       // TODO(fxbug.dev/7932): Support defaults on tables.
@@ -705,7 +704,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
       ZX_ASSERT(!value.span);
       GenerateObjectMember("reserved", false);
       GenerateObjectMember("name", value.maybe_used->name);
-      GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor.get());
+      GenerateTypeAndFromAlias(value.maybe_used->type_ctor.get());
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
     } else {
       GenerateObjectMember("reserved", true);
@@ -720,7 +719,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
 
 void JSONGenerator::Generate(const flat::LayoutInvocation& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.from_type_alias->name, Position::kFirst);
+    GenerateObjectMember("name", value.from_alias->name, Position::kFirst);
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("args");
 
@@ -823,7 +822,7 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
   });
 }
 
-void JSONGenerator::Generate(const flat::TypeAlias& value) {
+void JSONGenerator::Generate(const flat::Alias& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
@@ -839,7 +838,7 @@ void JSONGenerator::Generate(const flat::NewType& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(value.type_ctor.get());
+    GenerateTypeAndFromAlias(value.type_ctor.get());
   });
 }
 
@@ -908,8 +907,8 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Compilation::Declarat
     for (const auto& decl : declarations.unions)
       GenerateDeclarationsEntry(count++, decl->name, "union");
 
-    for (const auto& decl : declarations.type_aliases)
-      GenerateDeclarationsEntry(count++, decl->name, "type_alias");
+    for (const auto& decl : declarations.aliases)
+      GenerateDeclarationsEntry(count++, decl->name, "alias");
 
     for (const auto& decl : declarations.new_types)
       GenerateDeclarationsEntry(count++, decl->name, "new_type");
@@ -967,8 +966,8 @@ void JSONGenerator::GenerateExternalDeclarationsMember(
     for (const auto& decl : declarations.unions)
       GenerateExternalDeclarationsEntry(count++, decl->name, "union", decl->resourceness);
 
-    for (const auto& decl : declarations.type_aliases)
-      GenerateExternalDeclarationsEntry(count++, decl->name, "type_alias", std::nullopt);
+    for (const auto& decl : declarations.aliases)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "alias", std::nullopt);
 
     for (const auto& decl : declarations.new_types)
       GenerateExternalDeclarationsEntry(count++, decl->name, "new_type", std::nullopt);
@@ -1009,7 +1008,7 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObjectMember("external_struct_declarations", compilation_->external_structs);
     GenerateObjectMember("table_declarations", compilation_->declarations.tables);
     GenerateObjectMember("union_declarations", compilation_->declarations.unions);
-    GenerateObjectMember("type_alias_declarations", compilation_->declarations.type_aliases);
+    GenerateObjectMember("alias_declarations", compilation_->declarations.aliases);
     GenerateObjectMember("new_type_declarations", compilation_->declarations.new_types);
 
     std::vector<std::string> declaration_order;

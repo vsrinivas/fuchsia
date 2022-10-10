@@ -70,13 +70,11 @@ class TypeResolver : private ReporterMixin {
                              const HandleRights** out_rights);
   bool ResolveAsProtocol(const Constant* size_constant, const Protocol** out_decl);
 
-  // Used specifically in TypeAliasTypeTemplates to recursively compile the next
-  // type alias.
+  // Used in Typespace::Creator::Create{Identifier,Alias}Type to recursively
+  // compile the right-hand side.
   void CompileDecl(Decl* decl);
 
-  // Use in TypeAliasTypeTemplates to check for decl cycles before trying to
-  // compile the next type alias and to get the cycle to use in the error
-  // report.
+  // Use in Typespace::Creator::CreateAliasType to check for cycles.
   std::optional<std::vector<const Decl*>> GetDeclCycle(const Decl* decl);
 
  private:

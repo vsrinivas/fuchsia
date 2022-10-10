@@ -173,7 +173,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
-          case flat::Decl::Kind::kTypeAlias:
+          case flat::Decl::Kind::kAlias:
             ZX_PANIC("UnalignedSize(flat::IdentifierType&) called on invalid nullable kind");
         }
       case types::Nullability::kNonnullable: {
@@ -297,7 +297,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
-          case flat::Decl::Kind::kTypeAlias:
+          case flat::Decl::Kind::kAlias:
             ZX_PANIC("Alignment(flat::IdentifierType&) called on invalid nullable kind");
         }
       case types::Nullability::kNonnullable:
@@ -421,7 +421,7 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
-          case flat::Decl::Kind::kTypeAlias:
+          case flat::Decl::Kind::kAlias:
             ZX_PANIC("Depth(flat::IdentifierType&) called on invalid nullable kind");
         }
       case types::Nullability::kNonnullable:
@@ -436,7 +436,7 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kTable:
-          case flat::Decl::Kind::kTypeAlias:
+          case flat::Decl::Kind::kAlias:
           case flat::Decl::Kind::kUnion:
             return Depth(object.type_decl);
           case flat::Decl::Kind::kBuiltin:
@@ -754,7 +754,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
-          case flat::Decl::Kind::kTypeAlias:
+          case flat::Decl::Kind::kAlias:
             ZX_PANIC("MaxOutOfLine(flat::IdentifierType&) called on invalid nullable kind");
         }
       }
@@ -938,7 +938,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
           case flat::Decl::Kind::kNewType:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kTable:
-          case flat::Decl::Kind::kTypeAlias:
+          case flat::Decl::Kind::kAlias:
             ZX_PANIC("HasPadding(flat::IdentifierType&) called on invalid nullable kind");
         }
       case types::Nullability::kNonnullable:

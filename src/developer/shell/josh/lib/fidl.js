@@ -35,7 +35,7 @@ class Library {
       table: this.ir.table_declarations,
       union: this.ir.union_declarations,
       xunion: this.ir.xunion_declarations,
-      type_alias: this.ir.type_alias_declarations,
+      alias: this.ir.alias_declarations,
     }
 
     let findPayloadDeclaration = (payload) => {

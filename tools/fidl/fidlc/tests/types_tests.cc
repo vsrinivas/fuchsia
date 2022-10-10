@@ -272,7 +272,7 @@ TEST(NewSyntaxTests, GoodLayoutMemberConstraints) {
   TestLibrary library(R"FIDL(
 library example;
 
-alias TypeAlias = vector<uint8>;
+alias Alias = vector<uint8>;
 type t1 = resource struct {
   u0 union { 1: b bool; };
   u1 union { 1: b bool; }:optional;
@@ -303,7 +303,7 @@ TEST(NewSyntaxTests, GoodConstraintsOnVectors) {
   TestLibrary library(R"FIDL(
 library example;
 
-alias TypeAlias = vector<uint8>;
+alias Alias = vector<uint8>;
 type TypeDecl= struct {
   v0 vector<bool>;
   v1 vector<bool>:16;
@@ -317,10 +317,10 @@ type TypeDecl= struct {
   s9 string:16;
   s10 string:optional;
   s11 string:<16,optional>;
-  a12 TypeAlias;
-  a13 TypeAlias:16;
-  a14 TypeAlias:optional;
-  a15 TypeAlias:<16,optional>;
+  a12 Alias;
+  a13 Alias:16;
+  a14 Alias:optional;
+  a15 Alias:<16,optional>;
 };
 )FIDL");
 

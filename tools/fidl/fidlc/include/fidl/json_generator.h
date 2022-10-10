@@ -111,7 +111,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(const flat::Union::Member& value);
   void Generate(const flat::LayoutInvocation& value);
   void Generate(const flat::TypeConstructor& value);
-  void Generate(const flat::TypeAlias& value);
+  void Generate(const flat::Alias& value);
   void Generate(const flat::Compilation::Dependency& dependency);
 
  private:
@@ -121,10 +121,10 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
     kRequestPayload,
     kResponsePayload,
   };
-  void GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind, const flat::TypeConstructor* value,
-                                    Position position = Position::kSubsequent);
-  void GenerateTypeAndFromTypeAlias(const flat::TypeConstructor* value,
-                                    Position position = Position::kSubsequent);
+  void GenerateTypeAndFromAlias(TypeKind parent_type_kind, const flat::TypeConstructor* value,
+                                Position position = Position::kSubsequent);
+  void GenerateTypeAndFromAlias(const flat::TypeConstructor* value,
+                                Position position = Position::kSubsequent);
 
   // This is a generator for the builtin generics: array, vector, and request.
   // The "type" argument is the resolved type of the parameterized type to be
@@ -143,7 +143,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void GenerateParameterizedType(TypeKind parent_type_kind, const flat::Type* type,
                                  const flat::TypeConstructor* type_ctor,
                                  Position position = Position::kSubsequent);
-  void GenerateExperimentalMaybeFromTypeAlias(const flat::LayoutInvocation& invocation);
+  void GenerateExperimentalMaybeFromAlias(const flat::LayoutInvocation& invocation);
   void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl_kind);
   void GenerateDeclarationsMember(const flat::Compilation::Declarations& declarations,
                                   Position position = Position::kSubsequent);

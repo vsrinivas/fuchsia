@@ -96,8 +96,8 @@ void ResolveStep::VisitElement(Element* element, Context context) {
     }
   }
   switch (element->kind) {
-    case Element::Kind::kTypeAlias: {
-      auto alias_decl = static_cast<TypeAlias*>(element);
+    case Element::Kind::kAlias: {
+      auto alias_decl = static_cast<Alias*>(element);
       VisitTypeConstructor(alias_decl->partial_type_ctor.get(), context);
       break;
     }

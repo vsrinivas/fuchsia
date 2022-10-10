@@ -59,7 +59,7 @@ pub struct FidlJson {
     pub enum_declarations: Vec<Value>,
     pub protocol_declarations: Vec<Value>,
     pub table_declarations: Vec<Value>,
-    pub type_alias_declarations: Vec<Value>,
+    pub alias_declarations: Vec<Value>,
     pub struct_declarations: Vec<Value>,
     pub external_struct_declarations: Vec<Value>,
     pub union_declarations: Vec<Value>,
@@ -203,7 +203,7 @@ impl FidlJson {
             enum_declarations,
             protocol_declarations,
             table_declarations,
-            type_alias_declarations,
+            alias_declarations,
             struct_declarations,
             external_struct_declarations: _,
             union_declarations,
@@ -218,7 +218,7 @@ impl FidlJson {
             protocol["methods"].as_array_mut().unwrap().sort_unstable_by(cmp_name);
         }
         table_declarations.sort_unstable_by(cmp_name);
-        type_alias_declarations.sort_unstable_by(cmp_name);
+        alias_declarations.sort_unstable_by(cmp_name);
         struct_declarations.sort_unstable_by(cmp_name);
         union_declarations.sort_unstable_by(cmp_name);
     }
@@ -250,9 +250,7 @@ impl FidlJsonPackageData {
                     .append(&mut fidl_json.protocol_declarations);
                 package_fidl_json.struct_declarations.append(&mut fidl_json.struct_declarations);
                 package_fidl_json.table_declarations.append(&mut fidl_json.table_declarations);
-                package_fidl_json
-                    .type_alias_declarations
-                    .append(&mut fidl_json.type_alias_declarations);
+                package_fidl_json.alias_declarations.append(&mut fidl_json.alias_declarations);
                 package_fidl_json.union_declarations.append(&mut fidl_json.union_declarations);
                 package_fidl_json.declaration_order.append(&mut fidl_json.declaration_order);
             })
@@ -283,7 +281,7 @@ mod test {
             enum_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/Enum\"},{\"name\": \"fuchsia.test/Third\"},{\"name\": \"fuchsia.test/Second\"}]").unwrap(),
             protocol_declarations: serde_json::from_str("[{\"name\": \"Protocol1\",\"methods\": [{\"name\": \"Method 2\"},{\"name\": \"Method 1\"}]},{\"name\": \"AnotherProtocol\",\"methods\": [{\"name\": \"AMethod\"},{\"name\": \"BMethod\"}]}]").unwrap(),
             table_declarations: serde_json::from_str("[{\"name\": \"4\"},{\"name\": \"2A\"},{\"name\": \"11\"},{\"name\": \"zzz\"}]").unwrap(),
-            type_alias_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/type\"},{\"name\": \"fuchsia.test/alias\"}]").unwrap(),
+            alias_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/type\"},{\"name\": \"fuchsia.test/alias\"}]").unwrap(),
             struct_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/SomeLongAnonymousPrefix1\"},{\"name\": \"fuchsia.test/Struct\"},{\"name\": \"fuchsia.test/SomeLongAnonymousPrefix0\"}]").unwrap(),
             external_struct_declarations: serde_json::from_str("[{\"name\": \"fuchsia.external/SomeLongAnonymousPrefix2\"}]").unwrap(),
             union_declarations: serde_json::from_str("[{\"name\": \"union1\"},{\"name\": \"Union1\"},{\"name\": \"UnIoN1\"}]").unwrap(),
@@ -309,8 +307,8 @@ mod test {
         assert_eq!(&f.table_declarations[2]["name"], "4");
         assert_eq!(&f.table_declarations[3]["name"], "zzz");
 
-        assert_eq!(&f.type_alias_declarations[0]["name"], "fuchsia.test/alias");
-        assert_eq!(&f.type_alias_declarations[1]["name"], "fuchsia.test/type");
+        assert_eq!(&f.alias_declarations[0]["name"], "fuchsia.test/alias");
+        assert_eq!(&f.alias_declarations[1]["name"], "fuchsia.test/type");
 
         assert_eq!(&f.struct_declarations[0]["name"], "fuchsia.test/SomeLongAnonymousPrefix0");
         assert_eq!(&f.struct_declarations[1]["name"], "fuchsia.test/SomeLongAnonymousPrefix1");

@@ -143,14 +143,14 @@ std::optional<Type> PrimitiveTypeFromName(std::string subtype) {
 }
 
 Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
-                  const rapidjson::Value* type_alias) {
-  if (type_alias) {
-    // If the "experimental_maybe_from_type_alias" field is non-null, then the source-level has used
+                  const rapidjson::Value* alias) {
+  if (alias) {
+    // If the "experimental_maybe_from_alias" field is non-null, then the source-level has used
     // a type that's declared as "using x = y;". Here, treat various "x"s as special types. This
     // is likely mostly (?) temporary until there's 1) a more nailed down alias implementation in
     // the front end (fidlc) and 2) we move various parts of zx.fidl from being built-in to fidlc to
     // actual source level fidl and shared between the syscall definitions and normal FIDL.
-    const std::string full_name((*type_alias)["name"].GetString());
+    const std::string full_name((*alias)["name"].GetString());
     if (full_name.substr(0, 3) == "zx/") {
       const std::string name = full_name.substr(3);
       if (name == "duration" || name == "Futex" || name == "koid" || name == "paddr" ||
@@ -407,7 +407,7 @@ Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
     }
   }
 
-  for (const auto& alias : type_aliases_) {
+  for (const auto& alias : aliases_) {
     if (alias->id() == id) {
       return Type(TypeAlias(alias.get()));
     }
@@ -478,7 +478,7 @@ bool SyscallLibraryLoader::FromJson(const std::string& json_ir, SyscallLibrary* 
     return false;
   }
 
-  if (!LoadTypeAliases(document, library)) {
+  if (!LoadAliases(document, library)) {
     return false;
   }
 
@@ -553,11 +553,11 @@ bool SyscallLibraryLoader::ExtractPayload(Struct& payload, const std::string& ty
       if (struct_name == type_name) {
         for (const auto& arg : struct_json["members"].GetArray()) {
           Struct* strukt = &payload;
-          const auto* type_alias = arg.HasMember("experimental_maybe_from_type_alias")
-                                       ? &arg["experimental_maybe_from_type_alias"]
-                                       : nullptr;
+          const auto* alias = arg.HasMember("experimental_maybe_from_alias")
+                                  ? &arg["experimental_maybe_from_alias"]
+                                  : nullptr;
           strukt->members_.emplace_back(arg["name"].GetString(),
-                                        TypeFromJson(*library, arg["type"], type_alias),
+                                        TypeFromJson(*library, arg["type"], alias),
                                         std::map<std::string, std::string>{});
           if (arg.HasMember("maybe_attributes")) {
             for (const auto& attrib : arg["maybe_attributes"].GetArray()) {
@@ -674,21 +674,21 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
 }
 
 // static
-bool SyscallLibraryLoader::LoadTypeAliases(const rapidjson::Document& document,
-                                           SyscallLibrary* library) {
-  for (const auto& type_alias_json : document["type_alias_declarations"].GetArray()) {
+bool SyscallLibraryLoader::LoadAliases(const rapidjson::Document& document,
+                                       SyscallLibrary* library) {
+  for (const auto& alias_json : document["alias_declarations"].GetArray()) {
     auto obj = std::make_unique<Alias>();
-    std::string full_name = type_alias_json["name"].GetString();
+    std::string full_name = alias_json["name"].GetString();
     obj->id_ = full_name;
     std::string stripped = StripLibraryName(full_name);
     obj->original_name_ = stripped;
     obj->base_name_ = CamelToSnake(stripped);
-    const rapidjson::Value& partial_type_ctor = type_alias_json["partial_type_ctor"];
+    const rapidjson::Value& partial_type_ctor = alias_json["partial_type_ctor"];
     ZX_ASSERT(partial_type_ctor.IsObject());
     obj->partial_type_ctor_ = partial_type_ctor["name"].GetString();
-    std::string doc_attribute = GetDocAttribute(type_alias_json);
+    std::string doc_attribute = GetDocAttribute(alias_json);
     obj->description_ = GetCleanDocAttribute(doc_attribute);
-    library->type_aliases_.push_back(std::move(obj));
+    library->aliases_.push_back(std::move(obj));
   }
   return true;
 }
@@ -728,10 +728,10 @@ bool SyscallLibraryLoader::LoadTables(const rapidjson::Document& document,
     std::vector<TableMember> members;
     for (const auto& member : json["members"].GetArray()) {
       std::string name = member["name"].GetString();
-      const auto* type_alias = member.HasMember("experimental_maybe_from_type_alias")
-                                   ? &member["experimental_maybe_from_type_alias"]
-                                   : nullptr;
-      Type type = TypeFromJson(*library, member["type"], type_alias);
+      const auto* alias = member.HasMember("experimental_maybe_from_alias")
+                              ? &member["experimental_maybe_from_alias"]
+                              : nullptr;
+      Type type = TypeFromJson(*library, member["type"], alias);
       Required required = GetRequiredAttribute(member);
       std::string doc_attribute = GetDocAttribute(member);
       std::vector<std::string> description = GetCleanDocAttribute(doc_attribute);

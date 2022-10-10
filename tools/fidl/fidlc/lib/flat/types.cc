@@ -385,10 +385,10 @@ bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstrai
       }
       break;
 
-    // These types have one allowed constraint (`optional`). For type aliases,
+    // These types have one allowed constraint (`optional`). For aliases,
     // we need to allow the possibility that the concrete type does allow `optional`,
     // if it doesn't the Type itself will catch the error.
-    case Decl::Kind::kTypeAlias:
+    case Decl::Kind::kAlias:
     case Decl::Kind::kUnion:
       if (num_constraints > 1) {
         return resolver->Fail(ErrTooManyConstraints, constraints.span.value(),
@@ -605,7 +605,7 @@ types::Resourceness Type::Resourceness() const {
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
     case Decl::Kind::kService:
-    case Decl::Kind::kTypeAlias:
+    case Decl::Kind::kAlias:
       ZX_PANIC("unexpected kind");
   }
 }

@@ -123,7 +123,7 @@ pub enum Declaration {
     Struct,
     Table,
     Union,
-    TypeAlias,
+    Alias,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -142,7 +142,7 @@ pub enum ExternalDeclaration {
     Struct { resource: bool },
     Table { resource: bool },
     Union { resource: bool },
-    TypeAlias,
+    Alias,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -443,7 +443,7 @@ pub struct MethodParameter<'a> {
     pub _type: Type,
     pub name: &'a Identifier,
     pub location: &'a Option<Location>,
-    pub experimental_maybe_from_type_alias: Option<&'a TypeConstructor>,
+    pub experimental_maybe_from_alias: Option<&'a TypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -493,7 +493,7 @@ pub struct StructMember {
     pub field_shape_v1: FieldShape,
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub maybe_default_value: Option<Constant>,
-    pub experimental_maybe_from_type_alias: Option<TypeConstructor>,
+    pub experimental_maybe_from_alias: Option<TypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -555,7 +555,7 @@ pub struct UnionMember {
     pub max_out_of_line: Option<Count>,
     pub offset: Option<Count>,
     pub maybe_attributes: Option<Vec<Attribute>>,
-    pub experimental_maybe_from_type_alias: Option<TypeConstructor>,
+    pub experimental_maybe_from_alias: Option<TypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -581,7 +581,7 @@ pub struct TypeConstructor {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TypeAlias {
+pub struct Alias {
     pub name: CompoundIdentifier,
     pub location: Location,
     pub partial_type_ctor: TypeConstructor,
@@ -601,7 +601,7 @@ pub struct FidlIr {
     pub external_struct_declarations: Vec<Struct>,
     pub table_declarations: Vec<Table>,
     pub union_declarations: Vec<Union>,
-    pub type_alias_declarations: Vec<TypeAlias>,
+    pub alias_declarations: Vec<Alias>,
     pub declaration_order: Vec<CompoundIdentifier>,
     pub declarations: DeclarationsMap,
     pub library_dependencies: Vec<Library>,
@@ -660,7 +660,7 @@ impl FidlIr {
                         ExternalDeclaration::Struct { .. } => &Declaration::Struct,
                         ExternalDeclaration::Table { .. } => &Declaration::Table,
                         ExternalDeclaration::Union { .. } => &Declaration::Union,
-                        ExternalDeclaration::TypeAlias => &Declaration::TypeAlias,
+                        ExternalDeclaration::Alias => &Declaration::Alias,
                     })
             },
         )
@@ -689,8 +689,8 @@ impl FidlIr {
         fetch_declaration!(self, const_declarations, identifier)
     }
 
-    pub fn get_type_alias(&self, identifier: &CompoundIdentifier) -> Result<&TypeAlias, Error> {
-        fetch_declaration!(self, type_alias_declarations, identifier)
+    pub fn get_alias(&self, identifier: &CompoundIdentifier) -> Result<&Alias, Error> {
+        fetch_declaration!(self, alias_declarations, identifier)
     }
 
     pub fn get_bits(&self, identifier: &CompoundIdentifier) -> Result<&Bits, Error> {
@@ -816,9 +816,7 @@ fn get_payload_parameters<'a>(
                     name: &member.name,
                     location: &member.location,
                     field_shape_v1: offset_field_shape,
-                    experimental_maybe_from_type_alias: member
-                        .experimental_maybe_from_type_alias
-                        .as_ref(),
+                    experimental_maybe_from_alias: member.experimental_maybe_from_alias.as_ref(),
                 });
             }
             Ok(Some(out))
@@ -836,7 +834,7 @@ fn get_payload_parameters<'a>(
                 name: &UNFLATTENED_PARAMETER_NAME,
                 location: &union_decl.location,
                 field_shape_v1: EMPTY_FIELD_SHAPE.clone(),
-                experimental_maybe_from_type_alias: None,
+                experimental_maybe_from_alias: None,
             });
             Ok(Some(out))
         }

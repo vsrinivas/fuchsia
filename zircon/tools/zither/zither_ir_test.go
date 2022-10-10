@@ -26,7 +26,7 @@ var cmpOpt = cmp.AllowUnexported(
 	BitsMember{},
 	Struct{},
 	StructMember{},
-	TypeAlias{},
+	Alias{},
 )
 
 func TestGeneratedFileCount(t *testing.T) {
@@ -796,7 +796,7 @@ type StructWithArrayMembers = struct {
 	}
 }
 
-func TestCanSummarizeTypeAliases(t *testing.T) {
+func TestCanSummarizeAliases(t *testing.T) {
 	ir := fidlgentest.EndToEndTest{T: t}.Single(`
 library example;
 
@@ -812,7 +812,7 @@ type Struct = struct {
 	value uint64;
 };
 
-/// This is a type alias.
+/// This is an alias.
 alias Uint8Alias = uint8;
 
 alias EnumAlias = Enum;
@@ -825,7 +825,7 @@ alias ArrayAlias = array<uint32, 4>;
 
 alias NestedArrayAlias = array<array<Struct, 8>, 4>;
 
-// TODO(fxbug.dev/105758, fxbug.dev/91360): Type aliases are currently broken.
+// TODO(fxbug.dev/105758, fxbug.dev/91360): Aliases are currently broken.
 // Exercise more complicated aliases (e.g., aliases of aliases) when fixed.
 
 `)
@@ -834,10 +834,10 @@ alias NestedArrayAlias = array<array<Struct, 8>, 4>;
 		t.Fatal(err)
 	}
 
-	var actual []TypeAlias
+	var actual []Alias
 	for _, decl := range summaries[0].Decls {
-		if decl.IsTypeAlias() {
-			actual = append(actual, decl.AsTypeAlias())
+		if decl.IsAlias() {
+			actual = append(actual, decl.AsAlias())
 		}
 	}
 
@@ -879,11 +879,11 @@ alias NestedArrayAlias = array<array<Struct, 8>, 4>;
 	}
 
 	four, eight := 4, 8
-	expected := []TypeAlias{
+	expected := []Alias{
 		{
 			decl: decl{
 				Name:     fidlgen.MustReadName("example/Uint8Alias"),
-				Comments: []string{" This is a type alias."},
+				Comments: []string{" This is an alias."},
 			},
 			Value: TypeDescriptor{
 				Type: "uint8",

@@ -22,7 +22,7 @@ standalone_libraries = [
   "driver_service.test.fidl",
   "error.test.fidl",
   "escaping.test.fidl",
-  "experimental_maybe_from_type_alias.test.fidl",
+  "experimental_maybe_from_alias.test.fidl",
   "experimental_zx_c_types.test.fidl",
   "handles.test.fidl",
   "handles_in_types.test.fidl",

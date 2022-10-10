@@ -21,7 +21,7 @@ pub enum Decl<'a> {
     Protocol { data: &'a fidl::Protocol },
     Struct { data: &'a fidl::Struct },
     Table { data: &'a fidl::Table },
-    TypeAlias { data: &'a fidl::TypeAlias },
+    Alias { data: &'a fidl::Alias },
     Union { data: &'a fidl::Union },
 }
 
@@ -62,8 +62,8 @@ pub fn get_declarations<'b>(ir: &'b FidlIr) -> Result<Vec<Decl<'b>>, Error> {
             Declaration::Table => Some(Ok(Decl::Table {
                 data: ir.table_declarations.iter().filter(|e| e.name == *ident).next()?,
             })),
-            Declaration::TypeAlias => Some(Ok(Decl::TypeAlias {
-                data: ir.type_alias_declarations.iter().filter(|e| e.name == *ident).next()?,
+            Declaration::Alias => Some(Ok(Decl::Alias {
+                data: ir.alias_declarations.iter().filter(|e| e.name == *ident).next()?,
             })),
             Declaration::Union => Some(Ok(Decl::Union {
                 data: ir.union_declarations.iter().filter(|e| e.name == *ident).next()?,
@@ -434,7 +434,7 @@ pub fn get_first_param(method: &Method, ir: &FidlIr) -> Result<(bool, String), E
     if let Some(response) = &method.response_parameters(ir)? {
         if let Some(param) = response.get(0) {
             if let Some(arg_type) = get_base_type_from_alias(
-                &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
             ) {
                 return Ok((true, arg_type));
             }
@@ -463,7 +463,7 @@ pub fn get_in_params(
         .map(|param| {
             let name = to_c_name(&param.name.0);
             if let Some(arg_type) = get_base_type_from_alias(
-                &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+                &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
             ) {
                 return Ok(format!("{} {}", arg_type, name));
             }
@@ -554,7 +554,7 @@ pub fn get_out_params(
     Ok((m.response_parameters(ir)?.as_ref().map_or(Vec::new(), |response| { response.iter().skip(skip_amt).map(|param| {
         let name = to_c_name(&param.name.0);
         if let Some(arg_type) = get_base_type_from_alias(
-            &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
+            &param.experimental_maybe_from_alias.as_ref().map(|t| &t.name),
         ) {
             return format!("{}* out_{}", arg_type, name);
         }
