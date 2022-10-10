@@ -3,13 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/bazel/assembly/bazel_assembled_system.gni")
-import("//build/bazel/assembly/bazel_assembly_input_bundle.gni")
+import("//build/bazel/bazel_inputs.gni")
 import("//build/images/args.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/fvm.gni")
 import("//build/product.gni")
 
-bazel_assembly_input_bundle("bazel_platform_aibs") {
+bazel_input_resource_directory("bazel_platform_aibs") {
   testonly = true
   source_dir = get_label_info("//bundles/assembly", "target_out_dir")
   dest_dir = "fuchsia_platform_aibs"

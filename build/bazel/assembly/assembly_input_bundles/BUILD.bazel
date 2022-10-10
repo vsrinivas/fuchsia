@@ -8,18 +8,18 @@ package(default_visibility = ["//build/bazel/assembly:__pkg__"])
 
 assembly_bundle(
     name = "platform",
+    dir = "@legacy_ninja_build_outputs//:fuchsia_platform_aibs",
     files = "@legacy_ninja_build_outputs//:bazel_platform_aibs",
-    root = "@legacy_ninja_build_outputs//:fuchsia_platform_aibs/root",
 )
 
 assembly_bundle(
     name = "legacy_fuchsia",
+    dir = "@legacy_ninja_build_outputs//:obj/build/images/fuchsia/fuchsia/fuchsia.bazel_legacy_aib",
     files = "@legacy_ninja_build_outputs//:fuchsia.bazel_legacy_aib",
-    root = "@legacy_ninja_build_outputs//:obj/build/images/fuchsia/fuchsia/fuchsia.bazel_legacy_aib/root",
 )
 
 assembly_bundle(
     name = "legacy_bringup",
+    dir = "@legacy_ninja_build_outputs//:obj/build/images/bringup/bringup/bringup.bazel_legacy_aib",
     files = "@legacy_ninja_build_outputs//:bringup.bazel_legacy_aib",
-    root = "@legacy_ninja_build_outputs//:obj/build/images/bringup/bringup/bringup.bazel_legacy_aib/root",
 )

@@ -8,7 +8,7 @@ import("//build/assembly/generated_images_config.gni")
 import("//build/assembly/hermetic_inputs_for_image_assembly.gni")
 import("//build/assembly/legacy_assembly_input_bundle.gni")
 import("//build/bazel/assembly/bazel_assembly_images_config_inputs.gni")
-import("//build/bazel/assembly/bazel_assembly_input_bundle.gni")
+import("//build/bazel/bazel_inputs.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
@@ -1144,7 +1144,7 @@ template("assembled_system") {
                "route_sources_config",
              ])
 
-  bazel_assembly_input_bundle(labels.bazel_legacy_aib) {
+  bazel_input_resource_directory(labels.bazel_legacy_aib) {
     forward_variables_from(invoker, [ "testonly" ])
     source_dir = "${files.legacy_assembly_input_bundle_dir}"
     dest_dir = rebase_path("${files.outdir}/${labels.bazel_legacy_aib}",

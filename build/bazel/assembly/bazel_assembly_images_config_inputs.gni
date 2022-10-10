@@ -97,6 +97,9 @@ template("bazel_assembly_images_config_inputs") {
   }
 
   bazel_input_resource_directory(target_name) {
+    # Use a different Bazel target name to avoid potential conflict with
+    # top-level exported directory name.
+    name = "${target_name}_label"
     forward_variables_from(invoker,
                            [
                              "testonly",

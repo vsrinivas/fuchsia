@@ -38,7 +38,7 @@ exports_files(
     glob(
       ["**"],
       exclude=["ninja_output"],
-      exclude_directories=1,
+      exclude_directories=0,
     )
 )
 
