@@ -72,6 +72,7 @@ zx_status_t IsDirectory(const char* path, bool* result) {
 
   if (host) {
     if (stat(path, &s) < 0) {
+      fprintf(stderr, "error: cannot stat path '%s': %s\n", path, strerror(errno));
       return ZX_ERR_IO;
     }
   } else {
@@ -81,6 +82,7 @@ zx_status_t IsDirectory(const char* path, bool* result) {
     }
 
     if (emu_stat(path, &s) < 0) {
+      fprintf(stderr, "error: cannot stat path '%s': %s\n", path, strerror(errno));
       return ZX_ERR_IO;
     }
   }
@@ -479,6 +481,7 @@ zx_status_t MinfsCreator::Ls() {
 
   DIR* d = emu_opendir(path);
   if (!d) {
+    fprintf(stderr, "error: cannot open directory '%s'\n", path);
     return ZX_ERR_IO;
   }
 
@@ -515,6 +518,7 @@ zx_status_t MinfsCreator::ProcessEntityAndChildren(char* src, char* dst) {
 
   DirWrapper current_dir;
   if (DirWrapper::Open(src, &current_dir)) {
+    fprintf(stderr, "error: cannot open directory '%s'\n", src);
     return ZX_ERR_IO;
   }
 

@@ -54,6 +54,7 @@ zx::status<> WriteCompressedBlob(const std::string& path, const blobfs::BlobInfo
              static_cast<std::streamsize>(blob.GetData().size()));
   file.close();
   if (file.fail()) {
+    fprintf(stderr, "Writing to %s failed\n", path.c_str());
     return zx::error(ZX_ERR_IO);
   }
   return zx::ok();

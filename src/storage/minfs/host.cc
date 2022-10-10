@@ -434,7 +434,7 @@ int emu_stat(const char* fn, struct stat* s) {
     fbl::RefPtr<fs::Vnode> vn_fs;
     zx_status_t status = cur->Lookup(std::string_view(fn, len), &vn_fs);
     if (status != ZX_OK) {
-      return -ENOENT;
+      FAIL(ENOENT);
     }
     vn = fbl::RefPtr<fs::Vnode>::Downcast(vn_fs);
     cur = vn;

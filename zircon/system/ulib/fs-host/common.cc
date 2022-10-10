@@ -427,8 +427,8 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
       if ((status = ProcessManifest(argv[1])) != ZX_OK) {
         return status;
       }
-    } else if (ProcessCustom(argc, argv, &processed) != ZX_OK) {
-      fprintf(stderr, "ProcessCustom failed\n");
+    } else if ((status = ProcessCustom(argc, argv, &processed)) != ZX_OK) {
+      fprintf(stderr, "ProcessCustom failed: %d\n", status);
       return Usage();
     }
 
