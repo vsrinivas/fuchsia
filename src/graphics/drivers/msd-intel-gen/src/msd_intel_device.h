@@ -133,7 +133,13 @@ class MsdIntelDevice : public msd_device_t,
   }
 
   std::vector<EngineCommandStreamer*> engine_command_streamers() {
-    return {render_engine_cs(), video_command_streamer()};
+    std::vector<EngineCommandStreamer*> engines{render_engine_cs()};
+
+    if (video_command_streamer()) {
+      engines.push_back(video_command_streamer());
+    }
+
+    return engines;
   }
 
   // MsdIntelConnection::Owner
@@ -146,6 +152,7 @@ class MsdIntelDevice : public msd_device_t,
   void Destroy();
 
   bool BaseInit(void* device_handle);
+  bool CreateEngineCommandStreamers();
   void CheckEngines();
   void InitEngine(EngineCommandStreamer* engine);
   void EnableInterrupts(EngineCommandStreamer* engine, bool enable);

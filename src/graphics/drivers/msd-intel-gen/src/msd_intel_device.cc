@@ -158,8 +158,9 @@ bool MsdIntelDevice::Init(void* device_handle) {
   if (!BaseInit(device_handle))
     return DRETF(false, "BaseInit failed");
 
-  InitEngine(render_engine_cs());
-  InitEngine(video_command_streamer());
+  for (auto* engine : engine_command_streamers()) {
+    InitEngine(engine);
+  }
 
   if (DeviceId::is_gen12(device_id())) {
     if (!CacheConfig::InitCacheConfigGen12(register_io()))
@@ -238,23 +239,7 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   constexpr uint32_t kFirstSequenceNumber = 0x1000;
   sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
 
-  {
-    auto mapping =
-        AddressSpace::MapBufferGpu(gtt_, MsdIntelBuffer::Create(magma::page_size(), "RCS HWSP"));
-    if (!mapping)
-      return DRETF(false, "MapBufferGpu failed for RCS HWSP");
-
-    render_engine_cs_ = std::make_unique<RenderEngineCommandStreamer>(this, std::move(mapping));
-  }
-
-  {
-    auto mapping =
-        AddressSpace::MapBufferGpu(gtt_, MsdIntelBuffer::Create(magma::page_size(), "VCS HWSP"));
-    if (!mapping)
-      return DRETF(false, "MapBufferGpu failed for VCS HWSP");
-
-    video_command_streamer_ = std::make_unique<VideoCommandStreamer>(this, std::move(mapping));
-  }
+  CreateEngineCommandStreamers();
 
   global_context_ = std::shared_ptr<MsdIntelContext>(new MsdIntelContext(gtt_));
 
@@ -268,6 +253,32 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
   CheckEngines();
+
+  return true;
+}
+
+bool MsdIntelDevice::CreateEngineCommandStreamers() {
+  constexpr bool kCreateVideoEngineCs = true;
+
+  DASSERT(gtt_);
+
+  {
+    auto mapping =
+        AddressSpace::MapBufferGpu(gtt_, MsdIntelBuffer::Create(magma::page_size(), "RCS HWSP"));
+    if (!mapping)
+      return DRETF(false, "MapBufferGpu failed for RCS HWSP");
+
+    render_engine_cs_ = std::make_unique<RenderEngineCommandStreamer>(this, std::move(mapping));
+  }
+
+  if (kCreateVideoEngineCs) {
+    auto mapping =
+        AddressSpace::MapBufferGpu(gtt_, MsdIntelBuffer::Create(magma::page_size(), "VCS HWSP"));
+    if (!mapping)
+      return DRETF(false, "MapBufferGpu failed for VCS HWSP");
+
+    video_command_streamer_ = std::make_unique<VideoCommandStreamer>(this, std::move(mapping));
+  }
 
   return true;
 }
@@ -830,14 +841,16 @@ magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
 
   switch (batch->get_command_streamer()) {
     case RENDER_COMMAND_STREAMER:
-      command_streamer = render_engine_cs_.get();
+      command_streamer = render_engine_cs();
       break;
     case VIDEO_COMMAND_STREAMER:
-      command_streamer = video_command_streamer_.get();
+      command_streamer = video_command_streamer();
       break;
   }
 
-  DASSERT(command_streamer);
+  if (!command_streamer)
+    return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "Engine command streamer %d not supported",
+                    batch->get_command_streamer());
 
   if (!context->IsInitializedForEngine(command_streamer->id())) {
     if (!InitContextForEngine(context.get(), command_streamer))
