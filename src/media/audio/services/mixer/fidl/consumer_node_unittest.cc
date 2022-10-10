@@ -170,8 +170,12 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
 
   // Start the consumer.
   h.consumer_node->Start({
-      .start_presentation_time = zx::time(0),
-      .start_frame = 0,
+      .start_time =
+          StartStopControl::RealTime{
+              .clock = StartStopControl::WhichClock::Reference,
+              .time = zx::time(0),
+          },
+      .start_frame = Fixed(0),
   });
 
   // Feed data into the source, including data for the second mix job -- later, we'll verify we

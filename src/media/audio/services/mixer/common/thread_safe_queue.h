@@ -43,13 +43,6 @@ class ThreadSafeQueue {
     return item;
   }
 
-  // Returns a copy of the item on the front of the queue without popping it.
-  // T must be copyable.
-  std::optional<T> peek() {
-    std::lock_guard<std::mutex> guard(mutex_);
-    return queue_.empty() ? std::nullopt : std::optional<T>(queue_.front());
-  }
-
  private:
   std::mutex mutex_;
   std::deque<T> queue_ TA_GUARDED(mutex_);

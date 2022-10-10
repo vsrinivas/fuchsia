@@ -20,6 +20,8 @@
 namespace media_audio {
 namespace {
 
+using RealTime = StartStopControl::RealTime;
+using WhichClock = StartStopControl::WhichClock;
 using ::testing::ElementsAre;
 
 const Format kFormat = Format::CreateOrDie({fuchsia_audio::SampleType::kFloat32, 2, 48000});
@@ -67,6 +69,11 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
   auto q = graph.global_task_queue();
 
   const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
+  ClockSnapshots clock_snapshots;
+  clock_snapshots.AddClock(clock);
+  clock_snapshots.Update(zx::clock::get_monotonic());
+  MixJobContext ctx(clock_snapshots);
+
   auto stream_sink = MakeStreamSink();
   auto producer = ProducerNode::Create({
       .pipeline_direction = PipelineDirection::kInput,
@@ -101,7 +108,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
 
   // Start the producer's internal frame timeline.
   producer->Start(ProducerStage::StartCommand{
-      .start_presentation_time = zx::time(0),
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
       .start_frame = Fixed(0),
   });
 
@@ -124,7 +131,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
 
   // Verify those commands were received by the ProducerStage.
   {
-    const auto packet = producer->pipeline_stage()->Read(DefaultCtx(), Fixed(0), 20);
+    const auto packet = producer->pipeline_stage()->Read(ctx, Fixed(0), 20);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start(), 0);
     EXPECT_EQ(packet->length(), 10);
@@ -152,10 +159,15 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
   auto q = graph.global_task_queue();
 
   const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
-  constexpr int64_t kRingBufferFrames = 10;
+  ClockSnapshots clock_snapshots;
+  clock_snapshots.AddClock(clock);
+  clock_snapshots.Update(zx::clock::get_monotonic());
+  MixJobContext ctx(clock_snapshots);
 
+  constexpr int64_t kRingBufferFrames = 10;
   auto buffer =
       MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
+
   auto ring_buffer = RingBuffer::Create({
       .format = kFormat,
       .reference_clock = UnreadableClock(clock),
@@ -191,7 +203,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
 
   // Start the producer's internal frame timeline.
   producer->Start({
-      .start_presentation_time = zx::time(0),
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
       .start_frame = Fixed(0),
   });
 
@@ -206,7 +218,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
 
   // Verify that packet was received by the producer stage.
   {
-    const auto packet = producer->pipeline_stage()->Read(DefaultCtx(), Fixed(0), 5);
+    const auto packet = producer->pipeline_stage()->Read(ctx, Fixed(0), 5);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start(), 0);
     EXPECT_EQ(packet->length(), 5);

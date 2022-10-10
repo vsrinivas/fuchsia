@@ -25,6 +25,8 @@
 namespace media_audio {
 namespace {
 
+using RealTime = StartStopControl::RealTime;
+using WhichClock = StartStopControl::WhichClock;
 using ::fuchsia_audio::SampleType;
 using ::testing::ElementsAre;
 
@@ -65,19 +67,16 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
         SimplePacketQueueProducerStage::ClearCommand{.fence = std::move(fence)});
   }
 
-  void SendStartCommand(zx::time start_presentation_time, Fixed start_frame,
-                        std::function<void()> callback = nullptr) {
+  void SendStartCommand(zx::time start_presentation_time, Fixed start_frame) {
     start_stop_command_queue_->push(ProducerStage::StartCommand{
-        .start_presentation_time = start_presentation_time,
+        .start_time = RealTime{.clock = WhichClock::Reference, .time = start_presentation_time},
         .start_frame = start_frame,
-        .callback = std::move(callback),
     });
   }
 
-  void SendStopCommand(Fixed stop_frame, std::function<void()> callback = nullptr) {
+  void SendStopCommand(Fixed stop_frame) {
     start_stop_command_queue_->push(ProducerStage::StopCommand{
-        .stop_frame = stop_frame,
-        .callback = std::move(callback),
+        .when = stop_frame,
     });
   }
 
@@ -323,6 +322,7 @@ TEST_F(ProducerStageTestWithPacketQueue, StopAfterRead) {
   // Start the Producer at t=0.
   // The internal and downstream frame timelines are identical.
   SendStartCommand(zx::time(0), Fixed(0));
+  producer.Advance(DefaultCtx(), Fixed(0));
 
   // Push a packet and a stop command. When reading the packet, we should
   // get just the first 50 frames since the Producer stops at frame 50.
@@ -339,71 +339,6 @@ TEST_F(ProducerStageTestWithPacketQueue, StopAfterRead) {
 
   // Nothing released because the packet was not fully consumed.
   EXPECT_TRUE(released_packets().empty());
-}
-
-TEST_F(ProducerStageTestWithPacketQueue, StartAndStopAfterRead) {
-  ProducerStage& producer = producer_stage();
-  EXPECT_TRUE(released_packets().empty());
-
-  // Start the Producer at t=1ms. For this test case, we want the internal
-  // and downstream frame timelines to be identical, so start the internal
-  // frames at 48 (1ms at 48kHz) so that t=0 corresponds to frame 0.
-  SendStartCommand(zx::time(0) + zx::msec(1), Fixed(48));
-
-  // Push a packet and a stop command. Since the Producer starts at frame 48,
-  // but stops again at frame 50, we should read just 2 frames.
-  SendPushPacketCommand(0, 0, 100);
-  SendStopCommand(Fixed(50));
-  EXPECT_TRUE(released_packets().empty());
-  {
-    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 100);
-    ASSERT_TRUE(buffer);
-    EXPECT_EQ(48, buffer->start());
-    EXPECT_EQ(2, buffer->length());
-    EXPECT_EQ(50, buffer->end());
-  }
-
-  // Nothing released because the packet was not fully consumed.
-  EXPECT_TRUE(released_packets().empty());
-}
-
-TEST_F(ProducerStageTestWithPacketQueue, StartStopCallbacks) {
-  ProducerStage& producer = producer_stage();
-  EXPECT_TRUE(released_packets().empty());
-
-  bool done1 = false;
-  bool done2 = false;
-  bool done3 = false;
-  bool done4 = false;
-
-  // Sequence of:
-  //   start @ 0
-  //   stop  @ 5
-  //   start @ 48 (= 1ms @ 48kHz)
-  //   stop  @ 100
-  //
-  // Throughout this test, the internal and downstream frame timelines are identical.
-  SendStartCommand(zx::time(0), Fixed(0), [&done1]() mutable { done1 = true; });
-  SendStopCommand(Fixed(5), [&done1, &done2]() mutable {
-    EXPECT_TRUE(done1);
-    done2 = true;
-  });
-
-  SendStartCommand(zx::time(0) + zx::msec(1), Fixed(48), [&done3]() mutable { done3 = true; });
-  SendStopCommand(Fixed(100), [&done4]() mutable { done4 = true; });
-
-  // Advancing to frame 10 should Start and Stop.
-  producer.Advance(DefaultCtx(), Fixed(10));
-  EXPECT_TRUE(done1);
-  EXPECT_TRUE(done2);
-
-  // Advancing to frame 48 should Start.
-  producer.Advance(DefaultCtx(), Fixed(48));
-  EXPECT_TRUE(done3);
-
-  // Advancing to frame 100 should Stop.
-  producer.Advance(DefaultCtx(), Fixed(100));
-  EXPECT_TRUE(done4);
 }
 
 TEST_F(ProducerStageTestWithPacketQueue, InternalFramesOffsetBehind) {
@@ -559,19 +494,16 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
     producer_stage_.UpdatePresentationTimeToFracFrame(DefaultPresentationTimeToFracFrame(kFormat));
   }
 
-  void SendStartCommand(zx::time start_presentation_time, Fixed start_frame,
-                        std::function<void()> callback = nullptr) {
+  void SendStartCommand(zx::time start_presentation_time, Fixed start_frame) {
     start_stop_command_queue_->push(ProducerStage::StartCommand{
-        .start_presentation_time = start_presentation_time,
+        .start_time = RealTime{.clock = WhichClock::Reference, .time = start_presentation_time},
         .start_frame = start_frame,
-        .callback = std::move(callback),
     });
   }
 
-  void SendStopCommand(Fixed stop_frame, std::function<void()> callback = nullptr) {
+  void SendStopCommand(Fixed stop_frame) {
     start_stop_command_queue_->push(ProducerStage::StopCommand{
-        .stop_frame = stop_frame,
-        .callback = std::move(callback),
+        .when = stop_frame,
     });
   }
 
@@ -621,18 +553,18 @@ TEST_F(ProducerStageTestWithRingBuffer, ReadWhileStarted) {
   }
 }
 
-TEST_F(ProducerStageTestWithRingBuffer, StartAndStopAfterRead) {
+TEST_F(ProducerStageTestWithRingBuffer, StartAfterRead) {
   ProducerStage& producer = producer_stage();
 
   // Start the Producer at t=1ms. For this test case, we want the internal
   // and downstream frame timelines to be identical, so start the internal
   // frames at 48 (1ms at 48kHz) so that t=0 corresponds to frame 0.
   SendStartCommand(zx::time(0) + zx::msec(1), Fixed(48));
-  SendStopCommand(Fixed(50));
 
-  // Since the Producer starts at frame 48, but stops at frame 50, we should read just 2 frames.
+  // Push and read a packet. Since the Producer starts at frame 48, the
+  // first 48 frames should be ignored.
   {
-    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 100);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 50);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(buffer->start(), 48);
     EXPECT_EQ(buffer->length(), 2);

@@ -17,6 +17,7 @@
 #include "src/media/audio/services/mixer/common/thread_safe_queue.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
+#include "src/media/audio/services/mixer/mix/start_stop_control.h"
 
 namespace media_audio {
 
@@ -26,36 +27,8 @@ namespace media_audio {
 // instead of Fixed.
 class ConsumerStage : public PipelineStage {
  public:
-  struct StartCommand {
-    // Reference timestamp at which the consumer should be started.
-    zx::time start_presentation_time;
-    // The first frame to consume at `start_presentation_time`.
-    int64_t start_frame;
-    // Callback invoked after the consumer has started.
-    // Optional: can be nullptr.
-    // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
-    std::function<void()> callback;
-  };
-
-  struct StopCommand {
-    // The frame just after the last frame to consume before stopping. This must be `> start_frame`
-    // of the prior StartCommand and it must be integral. See comment below for an ordering
-    // discussion.
-    int64_t stop_frame;
-    // Callback invoked after the consumer has stopped.
-    // Optional: can be nullptr.
-    // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
-    std::function<void()> callback;
-  };
-
-  // Start and Stop commands must arrive in an alternating sequence, with Start arriving first.
-  // Subsequent Stop and Start commands must have monotonically increasing frame numbers and
-  // presentation times. For Stop, the effective presentation time is computed relative to the prior
-  // Start command:
-  //
-  // ```
-  // stop_presentation_time = start_presentation_time + ns_per_frame * (stop_frame - start_frame)
-  // ```
+  using StartCommand = StartStopControl::StartCommand;
+  using StopCommand = StartStopControl::StopCommand;
   using Command = std::variant<StartCommand, StopCommand>;
   using CommandQueue = ThreadSafeQueue<Command>;
 
@@ -98,6 +71,10 @@ class ConsumerStage : public PipelineStage {
     UnreadableClock reference_clock;
 
     // Message queue for pending commands. Will be drained by each call to RunMixJob.
+    //
+    // TODO(fxbug.dev/87651): since the latest command overrides the pending command (if any), this
+    // doesn't need to be a full queue; instead it could be a single optional value with a `swap`
+    // operation to update the current value, and `pop` to extract the current value.
     std::shared_ptr<CommandQueue> command_queue;
 
     // How to write all consumed packets.
@@ -165,9 +142,7 @@ class ConsumerStage : public PipelineStage {
   void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) final;
 
  private:
-  void FlushPendingCommandsUntil(zx::time now);
-  bool ApplyStartCommand(const StartCommand& cmd, zx::time now);
-  bool ApplyStopCommand(const StopCommand& cmd, zx::time now);
+  void UpdateStatus(const MixJobContext& ctx, zx::time mix_job_current_presentation_time);
 
   // For output pipelines, this reports the presentation delay downstream of this consumer.
   zx::duration downstream_delay() const {
@@ -196,6 +171,7 @@ class ConsumerStage : public PipelineStage {
   const zx::duration presentation_delay_;  // downstream or upstream delay
   const std::shared_ptr<Writer> writer_;   // how to write consumed packets
   const std::shared_ptr<CommandQueue> pending_commands_;
+  StartStopControl start_stop_control_;
 
   // Source stream, if any.
   PipelineStagePtr source_;
@@ -206,31 +182,17 @@ class ConsumerStage : public PipelineStage {
   // See topological_order().
   int64_t max_downstream_consumers_ = 0;
 
-  // Internal versions of StartCommand and StopCommand that drop the callback.
-  struct InternalStartCommand {
-    zx::time start_presentation_time;
-    int64_t start_frame;
-  };
-  struct InternalStopCommand {
-    zx::time stop_presentation_time;
-    int64_t stop_frame;
-  };
-
-  // InternalStatus is like Status, but InternalStatus operates on presentation times while Status
-  // operates on raw reference times (before applying `consume_offset` -- see code in RunMixJob).
-  // We begin in a "stopped" state.
+  // Current status: either started or stopped, with the (reference clock) presentation time of the
+  // next transition to a different state.
   struct InternalStartedStatus {
-    InternalStartCommand prior_cmd;
-    std::optional<zx::time> next_stop_presentation_time;  // for the next pending StopCommand
+    std::optional<zx::time> next_stop_presentation_time;
   };
   struct InternalStoppedStatus {
-    std::optional<InternalStopCommand> prior_cmd;
-    std::optional<zx::time> next_start_presentation_time;  // for the next pending StartCommand
+    std::optional<zx::time> next_start_presentation_time;
   };
   using InternalStatus = std::variant<InternalStartedStatus, InternalStoppedStatus>;
   static Status ToStatus(const InternalStatus& internal_status, zx::duration consume_offset);
-
-  InternalStatus internal_status_{InternalStoppedStatus{}};
+  InternalStatus internal_status_ = InternalStoppedStatus{};
 };
 
 }  // namespace media_audio

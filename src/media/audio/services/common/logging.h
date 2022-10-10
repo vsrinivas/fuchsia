@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include <ffl/string.h>
+
 namespace media_audio {
 
 // A macro that can be used whenever code is unreachable. This is equivalent to `FX_CHECK(false)`

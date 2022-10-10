@@ -16,27 +16,20 @@
 namespace media_audio {
 
 ProducerStage::ProducerStage(Args args)
-    : PipelineStage(args.name, args.format, std::move(args.reference_clock)),
+    : PipelineStage(args.name, args.format, args.reference_clock),
       internal_source_(std::move(args.internal_source)),
-      pending_commands_(std::move(args.command_queue)) {
+      pending_commands_(std::move(args.command_queue)),
+      start_stop_control_(args.format, args.reference_clock) {
   FX_CHECK(internal_source_);
   FX_CHECK(internal_source_->format() == format());
   FX_CHECK(internal_source_->reference_clock() == reference_clock());
   FX_CHECK(pending_commands_);
 }
 
-void ProducerStage::AdvanceSelfImpl(Fixed frame) {
-  // Apply all Start and Stop commands through `frame`.
-  for (;;) {
-    auto cmd = NextCommand();
-    if (!cmd || cmd->downstream_frame > frame) {
-      break;
-    }
-    ApplyNextCommand(*cmd);
-  }
-}
-
 void ProducerStage::AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {
+  FlushCommandQueue();
+  AdvanceStartStopControlTo(ctx, *DownstreamFrameToPresentationTime(frame));
+
   // Advance the internal frame timeline if it is started.
   if (internal_frame_offset_) {
     internal_source_->Advance(ctx, frame + *internal_frame_offset_);
@@ -45,6 +38,9 @@ void ProducerStage::AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {
 
 std::optional<PipelineStage::Packet> ProducerStage::ReadImpl(MixJobContext& ctx, Fixed start_frame,
                                                              int64_t frame_count) {
+  FlushCommandQueue();
+  AdvanceStartStopControlTo(ctx, *DownstreamFrameToPresentationTime(start_frame));
+
   Fixed end_frame = start_frame + Fixed(frame_count);
 
   // Shrink the request to ignore instants when this producer's internal frame timeline is stopped.
@@ -53,20 +49,19 @@ std::optional<PipelineStage::Packet> ProducerStage::ReadImpl(MixJobContext& ctx,
   if (presentation_time_to_internal_frac_frame_) {
     // The producer is currently started. Shrink the request if the producer stops before
     // `end_frame`.
-    if (auto cmd = NextCommand(); cmd && !cmd->is_start && cmd->downstream_frame < end_frame) {
+    if (auto cmd = NextCommand(ctx); cmd && !cmd->is_start && cmd->downstream_frame < end_frame) {
       end_frame = cmd->downstream_frame;
     }
   } else {
     // The producer is currently stopped. If the producer starts before `end_frame`, advance to that
     // starting frame.
-    if (auto cmd = NextCommand(); cmd && cmd->is_start && cmd->downstream_frame < end_frame) {
+    if (auto cmd = NextCommand(ctx); cmd && cmd->is_start && cmd->downstream_frame < end_frame) {
       start_frame = cmd->downstream_frame;
-      ApplyNextCommand(*cmd);
-
-      // Shrink the request if the Producer stops (again) before `end_frame`.
-      if (auto cmd = NextCommand(); cmd && !cmd->is_start && cmd->downstream_frame < end_frame) {
-        end_frame = cmd->downstream_frame;
-      }
+      AdvanceStartStopControlTo(ctx, cmd->presentation_time);
+      FX_CHECK(start_stop_control_.is_started());
+      // The client might want to stop before `end_frame`, but with our current APIs, this is
+      // impossible: there can be at most one pending StartCommand or StopCommand, and since we just
+      // applied a pending StartCommand, there cannot be a pending StopCommand queued after that.
     } else {
       // The producer is stopped for the entire request.
       return std::nullopt;
@@ -87,95 +82,50 @@ std::optional<PipelineStage::Packet> ProducerStage::ReadImpl(MixJobContext& ctx,
   return ForwardPacket(std::move(packet), packet->start() - *internal_frame_offset_);
 }
 
-std::optional<ProducerStage::CommandSummary> ProducerStage::NextCommand() {
+std::optional<ProducerStage::CommandSummary> ProducerStage::NextCommand(const MixJobContext& ctx) {
   // Cannot be called while the downstream timeline is stopped.
   FX_CHECK(presentation_time_to_frac_frame());
 
-  auto cmd_or_null = pending_commands_->peek();
-  if (!cmd_or_null) {
+  auto pending = start_stop_control_.PendingCommand(ctx.clocks());
+  if (!pending) {
     return std::nullopt;
   }
 
-  if (auto* cmd = std::get_if<StartCommand>(&*cmd_or_null); cmd) {
-    // Sanity check ordering requirements.
-    if (last_command_) {
-      FX_CHECK(!last_command_->is_start &&
-               cmd->start_presentation_time > last_command_->presentation_time)
-          << ffl::String::DecRational << "Start command arrived out-of-order: "
-          << "prior command is {"
-          << " start=" << last_command_->is_start          //
-          << " time=" << last_command_->presentation_time  //
-          << " frame=" << last_command_->internal_frame << " },"
-          << "new command is {"
-          << " start_time=" << cmd->start_presentation_time  //
-          << " start_frame=" << cmd->start_frame << " }";
+  return CommandSummary{
+      .is_start = pending->second,
+      .presentation_time = pending->first.reference_time,
+      .internal_frame = pending->first.frame,
+      .downstream_frame = *PresentationTimeToDownstreamFrame(pending->first.reference_time),
+  };
+}
+
+void ProducerStage::FlushCommandQueue() {
+  for (;;) {
+    auto cmd_or_null = pending_commands_->pop();
+    if (!cmd_or_null) {
+      return;
     }
 
-    return CommandSummary{
-        .is_start = true,
-        .presentation_time = cmd->start_presentation_time,
-        .internal_frame = cmd->start_frame,
-        .downstream_frame = *PresentationTimeToDownstreamFrame(cmd->start_presentation_time),
-    };
-
-  } else if (auto* cmd = std::get_if<StopCommand>(&*cmd_or_null); cmd) {
-    // Sanity check ordering requirements.
-    FX_CHECK(last_command_) << ffl::String::DecRational
-                            << "Stop command arrived without a preceding Start: "
-                            << "new command is { stop_frame = " << cmd->stop_frame << " }";
-    FX_CHECK(last_command_->is_start && cmd->stop_frame > last_command_->internal_frame)
-        << ffl::String::DecRational << "Stop command arrived out-of-order: "
-        << "prior command is {"
-        << " start=" << last_command_->is_start          //
-        << " time=" << last_command_->presentation_time  //
-        << " frame=" << last_command_->internal_frame << " },"
-        << "new command is { stop_frame=" << cmd->stop_frame << " }";
-
-    const Fixed frames_after_start = cmd->stop_frame - last_command_->internal_frame;
-
-    const zx::time presentation_time =
-        last_command_->presentation_time +
-        zx::duration(format().frac_frames_per_ns().Inverse().Scale(
-            frames_after_start.raw_value(), TimelineRate::RoundingMode::Ceiling));
-
-    return CommandSummary{
-        .is_start = false,
-        .presentation_time = presentation_time,
-        .internal_frame = cmd->stop_frame,
-        .downstream_frame = *PresentationTimeToDownstreamFrame(presentation_time),
-    };
-
-  } else {
-    UNREACHABLE << "unhandled Command variant";
+    if (std::holds_alternative<StartCommand>(*cmd_or_null)) {
+      start_stop_control_.Start(std::move(std::get<StartCommand>(*cmd_or_null)));
+    } else {
+      start_stop_control_.Stop(std::move(std::get<StopCommand>(*cmd_or_null)));
+    }
   }
 }
 
-// Applies `cmd`, which must be a summary of the first command in `pending_commands_`, then pops the
-// command from `pending_commands_`.
-void ProducerStage::ApplyNextCommand(const CommandSummary& cmd) {
-  if (cmd.is_start) {
-    presentation_time_to_internal_frac_frame_ = TimelineFunction(
-        cmd.internal_frame.raw_value(), cmd.presentation_time.get(), format().frac_frames_per_ns());
-    internal_frame_offset_ = cmd.internal_frame - cmd.downstream_frame;
-  } else {
-    presentation_time_to_internal_frac_frame_ = std::nullopt;
-    internal_frame_offset_ = std::nullopt;
-  }
+void ProducerStage::AdvanceStartStopControlTo(const MixJobContext& ctx,
+                                              zx::time presentation_time) {
+  start_stop_control_.AdvanceTo(ctx.clocks(), presentation_time);
 
-  auto popped_cmd = pending_commands_->pop();
-  FX_CHECK(popped_cmd);
-  if (cmd.is_start) {
-    if (auto start = std::get<StartCommand>(*popped_cmd); start.callback) {
-      start.callback();
-    }
-  } else {
-    if (auto stop = std::get<StopCommand>(*popped_cmd); stop.callback) {
-      stop.callback();
-    }
+  // Recompute the translation between internal and downstream timeline, if needed.
+  // Additional updates when the timeline changes.
+  if (auto f = start_stop_control_.presentation_time_to_frac_frame();
+      f != presentation_time_to_internal_frac_frame_) {
+    presentation_time_to_internal_frac_frame_ = f;
+    internal_source_->UpdatePresentationTimeToFracFrame(f);
+    RecomputeInternalFrameOffset();
   }
-
-  internal_source_->UpdatePresentationTimeToFracFrame(presentation_time_to_internal_frac_frame_);
-  last_command_ = cmd;
 }
 
 void ProducerStage::UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) {
@@ -229,6 +179,13 @@ std::optional<Fixed> ProducerStage::PresentationTimeToDownstreamFrame(zx::time t
     return std::nullopt;
   }
   return Fixed::FromRaw(presentation_time_to_frac_frame()->Apply(t.get()));
+}
+
+std::optional<zx::time> ProducerStage::DownstreamFrameToPresentationTime(Fixed downstream_frame) {
+  if (!presentation_time_to_frac_frame()) {
+    return std::nullopt;
+  }
+  return zx::time(presentation_time_to_frac_frame()->ApplyInverse(downstream_frame.raw_value()));
 }
 
 }  // namespace media_audio

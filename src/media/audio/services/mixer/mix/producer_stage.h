@@ -19,6 +19,7 @@
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
+#include "src/media/audio/services/mixer/mix/start_stop_control.h"
 
 namespace media_audio {
 
@@ -36,16 +37,15 @@ namespace media_audio {
 //
 // * A *downstream* frame timeline. This is the same frame timeline used by our downstream
 //   PipelineStage. Public methods (Read, Advance, presentation_time_to_frac_frame) use the
-//   downstream frame timeline. Then, within AdvanceSelfImpl and ReadImpl, we translate downstream
-//   frames to internal frames on-the-fly.
+//   downstream frame timeline. Then, within AdvanceSourcesImpl and ReadImpl, we translate
+//   downstream frames to internal frames on-the-fly.
 //
 // This design makes it simpler to implement Start and Stop with frame accuracy. For example,
-// suppose we receive Stop and Start commands that are separated by a very short duration, shorter
-// than one full mix job. To implement these commands accurately, the translation from downstream
-// to internal frames needs to use one function for all frames before the Stop and a second
-// function for all frames after the Start. It's best to do this translation internally rather
-// than force it on our downstream PipelineStage. See additional discussion in
-// ../docs/timelines.md.
+// suppose we receive Start command that is scheduled to happen in the middle of a mix job. To
+// implement this accurately, the translation from downstream to internal frames needs to use one
+// function for all frames before the Start and a second function for all frames after the Start.
+// It's best to do this translation internally rather than force it on our downstream PipelineStage.
+// See additional discussion in ../docs/timelines.md.
 //
 // The translation between downstream frame and presentation time is stored in
 // `presentation_time_to_frac_frame()`.
@@ -62,36 +62,8 @@ namespace media_audio {
 // PipelineStage runs on internal frame time and is responsible for actually producing data.
 class ProducerStage : public PipelineStage {
  public:
-  struct StartCommand {
-    // Reference timestamp at which the producer should be started.
-    zx::time start_presentation_time;
-    // The first frame to start producing at `start_presentation_time`.
-    Fixed start_frame;
-    // Callback invoked after the producer has started.
-    // Optional: can be nullptr.
-    // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
-    std::function<void()> callback;
-  };
-
-  struct StopCommand {
-    // The frame just after the last frame to produce before stopping. This must be `> start_frame`
-    // of the prior StartCommand and it must be aligned with frame boundaries defined by the prior
-    // StartCommand. See comment below for discussion of ordering.
-    Fixed stop_frame;
-    // Callback invoked after the producer has stopped.
-    // Optional: can be nullptr.
-    // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
-    std::function<void()> callback;
-  };
-
-  // Start and Stop commands must arrive in an alternating sequence, with Start arriving first.
-  // Subsequent Stop and Start commands must have monotonically increasing frame numbers and
-  // presentation times. For Stop, the effective presentation time is computed relative to the prior
-  // Start command:
-  //
-  // ```
-  // stop_presentation_time = start_presentation_time + ns_per_frame * (stop_frame - start_frame)
-  // ```
+  using StartCommand = StartStopControl::StartCommand;
+  using StopCommand = StartStopControl::StopCommand;
   using Command = std::variant<StartCommand, StopCommand>;
   using CommandQueue = ThreadSafeQueue<Command>;
 
@@ -106,6 +78,10 @@ class ProducerStage : public PipelineStage {
     UnreadableClock reference_clock;
 
     // Message queue for pending commands. Will be drained by each call to Advance or Read.
+    //
+    // TODO(fxbug.dev/87651): since the latest command overrides the pending command (if any), this
+    // doesn't need to be a full queue; instead it could be a single optional value with a `swap`
+    // operation to update the current value, and `pop` to extract the current value.
     std::shared_ptr<CommandQueue> command_queue;
 
     // Internal stage which actually produces the data. This must be specified and must have the
@@ -126,7 +102,7 @@ class ProducerStage : public PipelineStage {
 
  protected:
   // Implements `PipelineStage`.
-  void AdvanceSelfImpl(Fixed frame) final;
+  void AdvanceSelfImpl(Fixed frame) final {}
   void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) final;
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
 
@@ -140,13 +116,16 @@ class ProducerStage : public PipelineStage {
     Fixed downstream_frame;
   };
 
-  std::optional<CommandSummary> NextCommand();
-  void ApplyNextCommand(const CommandSummary& cmd);
+  std::optional<CommandSummary> NextCommand(const MixJobContext& ctx);
+  void FlushCommandQueue();
+  void AdvanceStartStopControlTo(const MixJobContext& ctx, zx::time presentation_time);
   void RecomputeInternalFrameOffset();
   std::optional<Fixed> PresentationTimeToDownstreamFrame(zx::time t);
+  std::optional<zx::time> DownstreamFrameToPresentationTime(Fixed downstream_frame);
 
   const PipelineStagePtr internal_source_;  // uses internal frame time
   const std::shared_ptr<CommandQueue> pending_commands_;
+  StartStopControl start_stop_control_;
 
   // The translation between internal frame and presentation time.
   std::optional<TimelineFunction> presentation_time_to_internal_frac_frame_;
@@ -155,9 +134,6 @@ class ProducerStage : public PipelineStage {
   // `f_internal = f_downstream + internal_frame_offset_`. This is `std::nullopt` iff either the
   // downstream or internal frame timeline is stopped.
   std::optional<Fixed> internal_frame_offset_;
-
-  // Last StartCommand or StopCommand applied.
-  std::optional<CommandSummary> last_command_;
 };
 
 }  // namespace media_audio

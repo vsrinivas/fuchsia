@@ -18,6 +18,8 @@ namespace {
 
 using StartCommand = ConsumerStage::StartCommand;
 using StopCommand = ConsumerStage::StopCommand;
+using RealTime = StartStopControl::RealTime;
+using WhichClock = StartStopControl::WhichClock;
 using ::fuchsia_audio::SampleType;
 using ::fuchsia_audio_mixer::PipelineDirection;
 using ::testing::ElementsAre;
@@ -72,7 +74,10 @@ TEST_F(PipelineMixThreadRunMixJobsTest, RunAfterDeadline) {
   const auto pt0 = zx::time(0) + kPeriod;
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
                          UnreadableClock(mono_clock()));
-  c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
+  c.command_queue->push(StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0},
+      .start_frame = Fixed(0),
+  });
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(mono_clock());
@@ -117,8 +122,8 @@ TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStartCommandQueued) {
 
   // The consumer starts after the first mix job.
   c.command_queue->push(StartCommand{
-      .start_presentation_time = pt0 + 3 * kPeriod,
-      .start_frame = 3 * kPeriodFrames,
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0 + 3 * kPeriod},
+      .start_frame = Fixed(3 * kPeriodFrames),
   });
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
@@ -154,7 +159,10 @@ TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStarted) {
   const auto pt0 = zx::time(0) + kPeriod;
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
                          UnreadableClock(mono_clock()));
-  c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
+  c.command_queue->push(StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0},
+      .start_frame = Fixed(0),
+  });
   auto payload0 = c.PushPacket(Fixed(0), kPeriodFrames);
   auto payload1 = c.PushPacket(Fixed(kPeriodFrames), kPeriodFrames);
   thread().AddConsumer(c.consumer);
@@ -195,7 +203,10 @@ TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStartedNonMonotonicClock) {
   const auto pt0 = zx::time(0) + kConsumerPeriod;
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
                          UnreadableClock(clock));
-  c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
+  c.command_queue->push(StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0},
+      .start_frame = Fixed(0),
+  });
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(clock);
@@ -232,16 +243,25 @@ TEST_F(PipelineMixThreadRunMixJobsTest, OneConsumerStopsDuringJob) {
   const auto pt0 = zx::time(0) + kPeriod;
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
                          UnreadableClock(mono_clock()));
-  c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
-  c.command_queue->push(StopCommand{.stop_frame = 1});
+  c.command_queue->push(StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0},
+      .start_frame = Fixed(0),
+  });
   thread().AddConsumer(c.consumer);
   thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(mono_clock());
 
-  // First job writes 1 frame then stops.
+  // Run the first job, but ignore the results.
   realm().AdvanceTo(zx::time(0));
+  EXPECT_EQ(RunMixJobs(realm().now(), realm().now()), zx::time(0) + kPeriod);
+  c.writer->packets().clear();
+
+  // Second job writes 1 frame then stops.
+  c.command_queue->push(StopCommand{.when = kPeriodFrames + Fixed(1)});
+  realm().AdvanceBy(kPeriod);
   EXPECT_EQ(RunMixJobs(realm().now(), realm().now()), zx::time::infinite());
-  EXPECT_THAT(c.writer->packets(), ElementsAre(FieldsAre(/*is_silent=*/true, 0, 1, nullptr)));
+  EXPECT_THAT(c.writer->packets(),
+              ElementsAre(FieldsAre(/*is_silent=*/true, kPeriodFrames, 1, nullptr)));
 }
 
 TEST_F(PipelineMixThreadRunMixJobsTest, MultipleConsumers) {
@@ -258,9 +278,18 @@ TEST_F(PipelineMixThreadRunMixJobsTest, MultipleConsumers) {
   ConsumerStageWrapper c2(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
                           UnreadableClock(mono_clock()));
 
-  c0.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
-  c1.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
-  c2.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
+  c0.command_queue->push(StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0},
+      .start_frame = Fixed(0),
+  });
+  c1.command_queue->push(StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0},
+      .start_frame = Fixed(0),
+  });
+  c2.command_queue->push(StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0},
+      .start_frame = Fixed(0),
+  });
 
   std::vector<int> write_order;
   c0.writer->SetOnWriteSilence([&write_order](auto, auto) { write_order.push_back(0); });
@@ -329,18 +358,16 @@ TEST_F(PipelineMixThreadRunLoopTest, AddStartedConsumers) {
   ConsumerStageWrapper c1(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
                           UnreadableClock(mono_clock()));
 
-  // Queue start and stop commands for both consumers. Since these are queued before we call
-  // AddConsumer, we shouldn't need to call NotifyConsumerStarting.
+  // Queue start commands for both consumers. Since these are queued before we call AddConsumer, we
+  // shouldn't need to call NotifyConsumerStarting.
   c0.command_queue->push(StartCommand{
-      .start_presentation_time = pt0 + 2 * kPeriod,
-      .start_frame = 2 * kPeriodFrames,
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0 + 1 * kPeriod},
+      .start_frame = Fixed(1 * kPeriodFrames),
   });
   c1.command_queue->push(StartCommand{
-      .start_presentation_time = pt0 + 5 * kPeriod,
-      .start_frame = 5 * kPeriodFrames,
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0 + 3 * kPeriod},
+      .start_frame = Fixed(3 * kPeriodFrames),
   });
-  c0.command_queue->push(StopCommand{.stop_frame = 2 * kPeriodFrames + 10});
-  c1.command_queue->push(StopCommand{.stop_frame = 5 * kPeriodFrames + 10});
 
   // Add both consumers.
   task_queue().Push(thread().id(), [this, &c0, &c1] {
@@ -355,18 +382,21 @@ TEST_F(PipelineMixThreadRunLoopTest, AddStartedConsumers) {
   EXPECT_THAT(c0.writer->packets(), ElementsAre());
   EXPECT_THAT(c1.writer->packets(), ElementsAre());
 
-  // Advance to the third period, which should produce a packet from c0 but not c1.
-  realm().AdvanceTo(zx::time(0) + 2 * kPeriod);
-  EXPECT_THAT(c0.writer->packets(),
-              ElementsAre(FieldsAre(/*is_silent=*/true, 2 * kPeriodFrames, 10, nullptr)));
+  // Advance to the second period, which should produce a packet from c0 but not c1.
+  realm().AdvanceTo(zx::time(0) + 1 * kPeriod);
+  EXPECT_THAT(c0.writer->packets(), ElementsAre(FieldsAre(/*is_silent=*/true, 1 * kPeriodFrames,
+                                                          kPeriodFrames, nullptr)));
   EXPECT_THAT(c1.writer->packets(), ElementsAre());
   c0.writer->packets().clear();
 
+  // Stop the first consumer.
+  c0.command_queue->push(StopCommand{.when = Fixed(2 * kPeriodFrames)});
+
   // Advance to the sixth period, which should produce a packet from c1 but not c2.
-  realm().AdvanceTo(zx::time(0) + 5 * kPeriod);
+  realm().AdvanceTo(zx::time(0) + 3 * kPeriod);
   EXPECT_THAT(c0.writer->packets(), ElementsAre());
-  EXPECT_THAT(c1.writer->packets(),
-              ElementsAre(FieldsAre(/*is_silent=*/true, 5 * kPeriodFrames, 10, nullptr)));
+  EXPECT_THAT(c1.writer->packets(), ElementsAre(FieldsAre(/*is_silent=*/true, 3 * kPeriodFrames,
+                                                          kPeriodFrames, nullptr)));
 }
 
 TEST_F(PipelineMixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
@@ -392,8 +422,8 @@ TEST_F(PipelineMixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
 
   // Start the consumer then advance through the second mix job. This should produce a packet.
   c0.command_queue->push(StartCommand{
-      .start_presentation_time = pt0 + kPeriod,
-      .start_frame = kPeriodFrames,
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0 + kPeriod},
+      .start_frame = Fixed(kPeriodFrames),
   });
   task_queue().Push(thread().id(), [this, &c0] {
     ScopedThreadChecker checker(thread().checker());
@@ -425,8 +455,8 @@ TEST_F(PipelineMixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
 
   // Start the consumer then advance through the fourth mix job. This should produce a packet.
   c1.command_queue->push(StartCommand{
-      .start_presentation_time = pt0 + 3 * kPeriod,
-      .start_frame = 3 * kPeriodFrames,
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = pt0 + 3 * kPeriod},
+      .start_frame = Fixed(3 * kPeriodFrames),
   });
   task_queue().Push(thread().id(), [this, &c1] {
     ScopedThreadChecker checker(thread().checker());

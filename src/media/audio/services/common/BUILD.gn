@@ -29,6 +29,7 @@ source_set("common") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-loop/testing:async-loop-testing",
+    "//zircon/system/ulib/ffl",
     "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zircon-internal",

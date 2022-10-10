@@ -16,11 +16,12 @@
 namespace media_audio {
 
 ConsumerStage::ConsumerStage(Args args)
-    : PipelineStage(args.name, args.format, std::move(args.reference_clock)),
+    : PipelineStage(args.name, args.format, args.reference_clock),
       pipeline_direction_(args.pipeline_direction),
       presentation_delay_(args.presentation_delay),
       writer_(std::move(args.writer)),
-      pending_commands_(std::move(args.command_queue)) {}
+      pending_commands_(std::move(args.command_queue)),
+      start_stop_control_(args.format, args.reference_clock) {}
 
 ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
                                                const zx::time mix_job_start_time,
@@ -49,7 +50,7 @@ ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
   auto t = start_consume_time;
   for (;;) {
     FX_CHECK(t <= end_consume_time) << t << " > " << end_consume_time;
-    FlushPendingCommandsUntil(t);
+    UpdateStatus(ctx, t);
 
     if (t == end_consume_time) {
       return ToStatus(internal_status_, consume_offset);
@@ -67,9 +68,6 @@ ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
 
     // We must be started at t. Clamp early if we stop before `end_consume_time`.
     auto& status = std::get<InternalStartedStatus>(internal_status_);
-    FX_CHECK(t >= status.prior_cmd.start_presentation_time)
-        << t << " < " << status.prior_cmd.start_presentation_time;
-
     auto end = end_consume_time;
     if (status.next_stop_presentation_time) {
       end = std::min(end, *status.next_stop_presentation_time);
@@ -125,121 +123,48 @@ void ConsumerStage::UpdatePresentationTimeToFracFrame(std::optional<TimelineFunc
   }
 }
 
-void ConsumerStage::FlushPendingCommandsUntil(zx::time now) {
+void ConsumerStage::UpdateStatus(const MixJobContext& ctx,
+                                 zx::time mix_job_current_presentation_time) {
+  // Flush all commands from the queue.
   for (;;) {
-    auto cmd_or_null = pending_commands_->peek();
+    auto cmd_or_null = pending_commands_->pop();
     if (!cmd_or_null) {
-      return;
+      break;
     }
 
-    if (auto* cmd = std::get_if<StartCommand>(&*cmd_or_null); cmd) {
-      if (!ApplyStartCommand(*cmd, now)) {
-        return;
-      }
-    } else if (auto* cmd = std::get_if<StopCommand>(&*cmd_or_null); cmd) {
-      if (!ApplyStopCommand(*cmd, now)) {
-        return;
-      }
+    if (std::holds_alternative<StartCommand>(*cmd_or_null)) {
+      start_stop_control_.Start(std::move(std::get<StartCommand>(*cmd_or_null)));
     } else {
-      FX_LOGS(FATAL) << "unhandled Command variant";
+      start_stop_control_.Stop(std::move(std::get<StopCommand>(*cmd_or_null)));
     }
-
-    pending_commands_->pop();
   }
-}
 
-bool ConsumerStage::ApplyStartCommand(const StartCommand& cmd, zx::time now) {
-  // Sanity check ordering requirements.
-  if (auto* status = std::get_if<InternalStartedStatus>(&internal_status_); status) {
-    auto& prior_cmd = status->prior_cmd;
-    FX_LOGS(FATAL) << "Duplicate start commands: "
-                   << "prior command is {"
-                   << " start_time=" << prior_cmd.start_presentation_time
-                   << " start_frame=" << prior_cmd.start_frame << " },"
-                   << "new command is {"
-                   << " start_time=" << cmd.start_presentation_time
-                   << " start_frame=" << cmd.start_frame << " }";
+  // Advance to the current consume position and update our status.
+  start_stop_control_.AdvanceTo(ctx.clocks(), mix_job_current_presentation_time);
+  auto pending = start_stop_control_.PendingCommand(ctx.clocks());
+
+  if (start_stop_control_.is_started()) {
+    internal_status_ = InternalStartedStatus{
+        .next_stop_presentation_time = pending && !pending->second
+                                           ? std::optional(pending->first.reference_time)
+                                           : std::nullopt,
+    };
   } else {
-    auto& prior_cmd = std::get<InternalStoppedStatus>(internal_status_).prior_cmd;
-    FX_CHECK(!prior_cmd || cmd.start_presentation_time > prior_cmd->stop_presentation_time)
-        << ffl::String::DecRational << "Start command out-of-ourder: "
-        << "prior command is {"
-        << " stop_time=" << prior_cmd->stop_presentation_time
-        << " stop_frame=" << prior_cmd->stop_frame << " },"
-        << "new command is {"
-        << " start_time=" << cmd.start_presentation_time << " start_frame=" << cmd.start_frame
-        << " }";
+    internal_status_ = InternalStoppedStatus{
+        .next_start_presentation_time = pending && pending->second
+                                            ? std::optional(pending->first.reference_time)
+                                            : std::nullopt,
+    };
   }
 
-  // If this command is in the future, just update our next start time.
-  if (cmd.start_presentation_time > now) {
-    std::get<InternalStoppedStatus>(internal_status_).next_start_presentation_time =
-        cmd.start_presentation_time;
-    return false;
-  }
-
-  internal_status_ = InternalStartedStatus{
-      .prior_cmd =
-          {
-              .start_presentation_time = cmd.start_presentation_time,
-              .start_frame = cmd.start_frame,
-          },
-  };
-  UpdatePresentationTimeToFracFrame(TimelineFunction(Fixed(cmd.start_frame).raw_value(),
-                                                     cmd.start_presentation_time.get(),
-                                                     format().frac_frames_per_ns()));
-  if (cmd.callback) {
-    cmd.callback();
-  }
-  return true;
-}
-
-bool ConsumerStage::ApplyStopCommand(const StopCommand& cmd, zx::time now) {
-  // Sanity check ordering requirements.
-  if (auto* status = std::get_if<InternalStoppedStatus>(&internal_status_); status) {
-    if (auto& prior_cmd = status->prior_cmd; prior_cmd) {
-      FX_LOGS(FATAL) << ffl::String::DecRational << "Duplicate stop commands: "
-                     << "prior command is { stop_frame=" << prior_cmd->stop_frame << " },"
-                     << "new command is { stop_frame=" << cmd.stop_frame << " }";
-    } else {
-      FX_LOGS(FATAL) << ffl::String::DecRational << "Stop command without preceding start: "
-                     << "command is { stop_frame=" << cmd.stop_frame << " }";
+  // Additional updates when the timeline changes.
+  if (auto f = start_stop_control_.presentation_time_to_frac_frame();
+      f != presentation_time_to_frac_frame()) {
+    UpdatePresentationTimeToFracFrame(f);
+    if (!start_stop_control_.is_started()) {
+      writer_->End();
     }
   }
-
-  auto& current_status = std::get<InternalStartedStatus>(internal_status_);
-  auto& prior_cmd = current_status.prior_cmd;
-  FX_CHECK(cmd.stop_frame > prior_cmd.start_frame)
-      << ffl::String::DecRational << "Stop command out-of-order: "
-      << "prior command is { start_frame=" << prior_cmd.start_frame << " },"
-      << "new command is { stop_frame=" << cmd.stop_frame << " }";
-
-  // Compute the effective presentation time based on the last StartCommand.
-  const int64_t frames_after_start = cmd.stop_frame - prior_cmd.start_frame;
-  const zx::time stop_presentation_time =
-      prior_cmd.start_presentation_time +
-      zx::duration(format().frames_per_ns().Inverse().Scale(frames_after_start,
-                                                            TimelineRate::RoundingMode::Ceiling));
-
-  // If this command is in the future, just update our next stop time.
-  if (stop_presentation_time > now) {
-    current_status.next_stop_presentation_time = stop_presentation_time;
-    return false;
-  }
-
-  internal_status_ = InternalStoppedStatus{
-      .prior_cmd =
-          InternalStopCommand{
-              .stop_presentation_time = stop_presentation_time,
-              .stop_frame = cmd.stop_frame,
-          },
-  };
-  UpdatePresentationTimeToFracFrame(std::nullopt);
-  writer_->End();
-  if (cmd.callback) {
-    cmd.callback();
-  }
-  return true;
 }
 
 // static
