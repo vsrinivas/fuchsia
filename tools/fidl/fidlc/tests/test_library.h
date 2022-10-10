@@ -7,6 +7,7 @@
 
 #include <zircon/assert.h>
 
+#include <cstring>
 #include <fstream>
 
 #include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
@@ -162,6 +163,9 @@ class TestLibrary final : public SharedInterface {
   // Read the source from an associated external file.
   void AddFile(const std::filesystem::path& path) {
     const std::ifstream reader("host_x64/fidlc-tests/" + path.string());
+    if (!reader) {
+      ZX_PANIC("AddFile failed to read %s: errno = %s\n", path.string().c_str(), strerror(errno));
+    }
     std::stringstream buffer;
     buffer << reader.rdbuf();
     AddSource(path.filename(), buffer.str());

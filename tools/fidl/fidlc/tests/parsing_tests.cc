@@ -442,7 +442,10 @@ type test_ = struct {
 
 class LocaleSwapper {
  public:
-  explicit LocaleSwapper(const char* new_locale) { old_locale_ = setlocale(LC_ALL, new_locale); }
+  explicit LocaleSwapper(const char* new_locale) {
+    old_locale_ = setlocale(LC_ALL, nullptr);
+    setlocale(LC_ALL, new_locale);
+  }
   ~LocaleSwapper() { setlocale(LC_ALL, old_locale_); }
 
  private:
