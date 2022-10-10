@@ -40,7 +40,7 @@ class BalloonGuestTest : public GuestTest<T> {
 using GuestTypes = ::testing::Types<DebianEnclosedGuest, TerminaEnclosedGuest>;
 TYPED_TEST_SUITE(BalloonGuestTest, GuestTypes, GuestTestNameGenerator);
 
-TYPED_TEST(BalloonGuestTest, ConnectDisconnect) {
+TYPED_TEST(BalloonGuestTest, InflateDeflate) {
   std::string result;
   EXPECT_EQ(this->Execute({"echo", "test"}, &result), ZX_OK);
   EXPECT_EQ(result, "test\n");
