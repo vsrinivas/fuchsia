@@ -158,7 +158,7 @@ zx::status<bool> FuchsiaVfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_
                                           fs::VnodeConnectionOptions options, uint32_t mode,
                                           Rights parent_rights) {
   zx::status result = Vfs::EnsureExists(vndir, path, out_vn, options, mode, parent_rights);
-  if (result.is_ok()) {
+  if (result.is_ok() && result.value()) {
     vndir->Notify(path, fio::wire::WatchEvent::kAdded);
   }
   return result;
