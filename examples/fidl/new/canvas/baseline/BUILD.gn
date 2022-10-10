@@ -30,6 +30,7 @@ group("tests") {
   deps = [
     "cpp-natural:tests",
     "cpp-wire:tests",
+    "hlcpp:tests",
     "rust:tests",
   ]
 }

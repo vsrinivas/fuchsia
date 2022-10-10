@@ -1,0 +1,32 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+fuchsia_component_manifest("manifest") {
+  component_name = "client"
+  manifest = "//examples/fidl/new/canvas/baseline/meta/client.cml"
+}
+
+fuchsia_structured_config_cpp_elf_lib("config") {
+  cm_label = ":manifest"
+}
+
+executable("bin") {
+  output_name = "client_bin"
+  output_dir = target_out_dir + "/hlcpp"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":config",
+    "//examples/fidl/new/canvas/baseline/fidl:examples.canvas_hlcpp",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
