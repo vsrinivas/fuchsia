@@ -207,26 +207,7 @@ void Device::DdkInit(ddk::InitTxn txn) {
     }
   }
 
-  if (metadata_.empty() || !passthrough_dev_) {
-    txn.Reply(ZX_OK);
-    return;
-  }
-
-  result = ZX_OK;
-  switch (bus_type_) {
-    case BusType::kSpi:
-      result = device_add_metadata(passthrough_dev_, DEVICE_METADATA_SPI_CHANNELS, metadata_.data(),
-                                   metadata_.size());
-      break;
-    case BusType::kI2c:
-      result = device_add_metadata(passthrough_dev_, DEVICE_METADATA_I2C_CHANNELS, metadata_.data(),
-                                   metadata_.size());
-      break;
-    default:
-      break;
-  }
-
-  txn.Reply(result);
+  txn.Reply(ZX_OK);
 }
 
 void Device::DdkUnbind(ddk::UnbindTxn txn) {
@@ -691,6 +672,26 @@ zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> p
 
   static const zx_protocol_device_t passthrough_proto = {
       .version = DEVICE_OPS_VERSION,
+      .init =
+          [](void* ctx) {
+            Device* dev = static_cast<Device*>(ctx);
+            zx_status_t result = ZX_OK;
+            switch (dev->bus_type_) {
+              case BusType::kSpi:
+                result = device_add_metadata(dev->passthrough_dev_, DEVICE_METADATA_SPI_CHANNELS,
+                                             dev->metadata_.data(), dev->metadata_.size());
+                break;
+              case BusType::kI2c:
+                result = device_add_metadata(dev->passthrough_dev_, DEVICE_METADATA_I2C_CHANNELS,
+                                             dev->metadata_.data(), dev->metadata_.size());
+                break;
+              default:
+                break;
+            }
+
+            device_init_reply_args_t args{};
+            device_init_reply(dev->passthrough_dev_, result, &args);
+          },
       .release = [](void* dev) {},
   };
 
