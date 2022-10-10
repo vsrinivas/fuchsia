@@ -8,11 +8,13 @@ using fuchsia.synaptics.platform;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS;
 
 if fuchsia.BIND_COMPOSITE == 1 {
-  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.VS680_SDHCI1;
+  accept fuchsia.BIND_PLATFORM_DEV_DID {
+    fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.AS370_SDHCI1,
+    fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.VS680_SDHCI1,
+  }
 } else if fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE {
   accept fuchsia.BIND_PLATFORM_DEV_DID {
     fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.AS370_SDHCI0,
-    fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.AS370_SDHCI1,
     fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.VS680_SDHCI0,
   }
 } else {

@@ -4,7 +4,9 @@
 
 #include "as370-sdhci.h"
 
+#include <fidl/fuchsia.hardware.registers/cpp/wire.h>
 #include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c-channel.h>
@@ -15,6 +17,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <hwreg/bitfields.h>
+#include <soc/as370/as370-reset.h>
 
 #include "src/devices/block/drivers/as370-sdhci/as370-sdhci-bind.h"
 
@@ -66,43 +69,87 @@ zx_status_t SetExpanderGpioHigh(ddk::I2cChannel& expander, uint8_t bit) {
   return ZX_OK;
 }
 
+zx_status_t InitGpioExpanders(zx_device_t* parent) {
+  // TODO(bradenkell): The GPIO expander code will likely be specific to the EVK board. Remove it
+  //                   when we get new hardware.
+  ddk::I2cChannel expander2(parent, "i2c-expander-2");
+  if (!expander2.is_valid()) {
+    zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  ddk::I2cChannel expander3(parent, "i2c-expander-3");
+  if (!expander3.is_valid()) {
+    zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  zx_status_t status;
+  if ((status = SetExpanderGpioHigh(expander2, kExpander2SdioOutputEnablePin)) != ZX_OK ||
+      (status = SetExpanderGpioHigh(expander3, kExpander3SdSlotPowerOnPin)) != ZX_OK) {
+    return status;
+  }
+
+  // The SDIO core clock defaults to 100 MHz on VS680, even though the SDHCI capabilities register
+  // says it is 200 MHz. Correct it so that the bus clock can be set properly.
+  ddk::ClockProtocolClient clock(parent, "clock-sd-0");
+  if (clock.is_valid() && (status = clock.SetRate(kVs680CoreClockFreqHz)) != ZX_OK) {
+    zxlogf(WARNING, "%s: Failed to set core clock frequency: %d", __FILE__, status);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t ResetAs370Emmc(const ddk::RegistersProtocolClient& reset) {
+  zx::channel reset_server;
+  fidl::ClientEnd<fuchsia_hardware_registers::Device> reset_client;
+  zx_status_t status = zx::channel::create(0, &reset_server, &reset_client.channel());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to create reset register channel: %d", status);
+    return status;
+  }
+
+  reset.Connect(std::move(reset_server));
+  const fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_fidl_client(
+      std::move(reset_client));
+
+  // Ideally this would be done in SdhciHwReset() as part of the SDMMC init process, however that
+  // seems to make the device hang. Resetting here is effectively the same since SdhciHwReset() is
+  // only called once, so keep this behavior until we get serial on Pinecrest and can figure out
+  // what the problem is. Also note that the eMMC IP must be reset this way in order for commands
+  // using the data bus to work.
+  // TODO(fxbug.dev/110592): Move this to SdhciHwReset().
+
+  {
+    auto result = reset_fidl_client->WriteRegister32(as370::kGblPerifReset, as370::kEmmcSyncReset,
+                                                     as370::kEmmcSyncReset);
+    if (!result.ok()) {
+      zxlogf(ERROR, "Failed to assert eMMC reset: %s", result.status_string());
+    }
+  }
+
+  // No guidance for this value in the datasheet, just picked something that works.
+  zx::nanosleep(zx::deadline_after(zx::msec(1)));
+
+  {
+    auto result =
+        reset_fidl_client->WriteRegister32(as370::kGblPerifReset, as370::kEmmcSyncReset, 0);
+    if (!result.ok()) {
+      zxlogf(ERROR, "Failed to deassert eMMC reset: %s", result.status_string());
+      return result.status();
+    }
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace
 
 namespace sdhci {
 
 zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
-  ddk::PDev pdev;
-  zx_status_t status;
-
-  if (device_get_fragment_count(parent) > 0) {
-    pdev = ddk::PDev::FromFragment(parent);
-
-    // TODO(bradenkell): The GPIO expander code will likely be specific to the EVK board. Remove it
-    //                   when we get new hardware.
-    ddk::I2cChannel expander2(parent, "i2c-expander-2");
-    if (!expander2.is_valid()) {
-      zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
-      return ZX_ERR_NO_RESOURCES;
-    }
-
-    ddk::I2cChannel expander3(parent, "i2c-expander-3");
-    if (!expander3.is_valid()) {
-      zxlogf(ERROR, "%s: Could not get I2C fragment", __FILE__);
-      return ZX_ERR_NO_RESOURCES;
-    }
-
-    if ((status = SetExpanderGpioHigh(expander2, kExpander2SdioOutputEnablePin)) != ZX_OK ||
-        (status = SetExpanderGpioHigh(expander3, kExpander3SdSlotPowerOnPin)) != ZX_OK) {
-      return status;
-    }
-
-    // The SDIO core clock defaults to 100 MHz on VS680, even though the SDHCI capabilities register
-    // says it is 200 MHz. Correct it so that the bus clock can be set properly.
-    ddk::ClockProtocolClient clock(parent, "clock-sd-0");
-    if (clock.is_valid() && (status = clock.SetRate(kVs680CoreClockFreqHz)) != ZX_OK) {
-      zxlogf(WARNING, "%s: Failed to set core clock frequency: %d", __FILE__, status);
-    }
-  } else {
+  ddk::PDev pdev = ddk::PDev::FromFragment(parent);
+  if (!pdev.is_valid()) {
     pdev = ddk::PDev(parent);
   }
 
@@ -115,6 +162,7 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
 
   std::optional<ddk::MmioBuffer> core_mmio;
 
+  zx_status_t status;
   if ((status = pdev.MapMmio(0, &core_mmio)) != ZX_OK) {
     zxlogf(ERROR, "%s: MapMmio failed", __FILE__);
     return status;
@@ -138,11 +186,25 @@ zx_status_t As370Sdhci::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  std::optional<ddk::MmioBuffer> reset_mmio;
-  if (device_info.did == PDEV_DID_VS680_SDHCI1 &&
-      (status = pdev.MapMmio(1, &reset_mmio)) == ZX_OK) {
-    // Set the (active low) reset bit for the SDIO phy on VS680.
-    reset_mmio->SetBit<uint32_t>(kSdioPhyRstNBit, kPerifStickyResetNAddress);
+  if (device_info.did == PDEV_DID_VS680_SDHCI1) {
+    if ((status = InitGpioExpanders(parent)) != ZX_OK) {
+      return status;
+    }
+
+    std::optional<ddk::MmioBuffer> reset_mmio;
+    if (pdev.MapMmio(1, &reset_mmio) == ZX_OK) {
+      // Set the (active low) reset bit for the SDIO phy on VS680.
+      reset_mmio->SetBit<uint32_t>(kSdioPhyRstNBit, kPerifStickyResetNAddress);
+    }
+  } else if (device_info.did == PDEV_DID_AS370_SDHCI1) {
+    ddk::RegistersProtocolClient reset(parent, "reset");
+    if (!reset.is_valid()) {
+      zxlogf(ERROR, "Could not get registers protocol");
+      return ZX_ERR_NO_RESOURCES;
+    }
+    if ((status = ResetAs370Emmc(reset)) != ZX_OK) {
+      return status;
+    }
   }
 
   fbl::AllocChecker ac;

@@ -12,6 +12,9 @@ namespace as370 {
 constexpr uint32_t kResetBase = 0xf7ea0000;
 constexpr uint32_t kResetSize = 0x10000;
 
+constexpr uint32_t kGblPerifReset = 0x049c;
+constexpr uint32_t kEmmcSyncReset = 1 << 11;
+
 class GblPerifStickyResetN : public hwreg::RegisterBase<GblPerifStickyResetN, uint32_t> {
  public:
   DEF_BIT(6, pcie1PhyRstn);
