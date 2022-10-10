@@ -120,6 +120,8 @@ tables_generator_tests_*.txt
 !/third_party/pigweed
 /third_party/pigweed/src
 !/third_party/gvisor_syscall_tests
+!/third_party/fmtlib
+/third_party/fmtlib/src
 
 /tmp/
 /vendor/

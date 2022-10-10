@@ -1,0 +1,8 @@
+config("fmtlib_config") {
+  include_dirs = [ "src/include" ]
+}
+
+source_set("fmtlib") {
+  public_configs = [ ":fmtlib_config" ]
+  sources = [ "src/src/os.cc" ]
+}
