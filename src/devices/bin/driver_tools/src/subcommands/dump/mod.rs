@@ -5,10 +5,10 @@
 pub mod args;
 
 use {
-    crate::common::{self, DFv1Device, DFv2Node, Device},
     anyhow::{format_err, Result},
     args::DumpCommand,
     fidl_fuchsia_driver_development as fdd,
+    fuchsia_driver_dev::{self, DFv1Device, DFv2Node, Device},
     std::collections::{BTreeMap, VecDeque},
     std::io::Write,
 };
@@ -148,7 +148,7 @@ pub async fn dump(
     writer: &mut impl Write,
     driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
-    let devices: Vec<Device> = common::get_device_info(&driver_development_proxy, &[])
+    let devices: Vec<Device> = fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[])
         .await?
         .into_iter()
         .map(|device| device.into())

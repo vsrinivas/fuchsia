@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("lib") {
+  edition = "2021"
+  name = "fuchsia_driver_dev"
+  with_unit_tests = true
+  deps = [
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:anyhow",
+  ]
+  sources = [ "src/lib.rs" ]
+}

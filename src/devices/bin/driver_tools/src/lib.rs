@@ -6,7 +6,6 @@
 extern crate lazy_static;
 
 pub mod args;
-mod common;
 mod subcommands;
 
 use {

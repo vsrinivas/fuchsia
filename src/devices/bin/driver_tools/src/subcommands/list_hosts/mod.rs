@@ -5,10 +5,9 @@
 pub mod args;
 
 use {
-    crate::common,
     anyhow::{format_err, Result},
     args::ListHostsCommand,
-    fidl_fuchsia_driver_development as fdd,
+    fidl_fuchsia_driver_development as fdd, fuchsia_driver_dev,
     std::collections::{BTreeMap, BTreeSet},
 };
 
@@ -16,7 +15,7 @@ pub async fn list_hosts(
     _cmd: ListHostsCommand,
     driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
-    let device_info = common::get_device_info(&driver_development_proxy, &[]).await?;
+    let device_info = fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[]).await?;
 
     let mut driver_hosts = BTreeMap::new();
 

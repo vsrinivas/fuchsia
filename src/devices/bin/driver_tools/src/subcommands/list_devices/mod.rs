@@ -5,11 +5,11 @@
 pub mod args;
 
 use {
-    crate::common::{self, DFv1Device, DFv2Node, Device},
     anyhow::Result,
     args::ListDevicesCommand,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_device_manager as fdm,
     fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
+    fuchsia_driver_dev::{self, DFv1Device, DFv2Node, Device},
 };
 
 trait DevicePrinter {
@@ -180,8 +180,10 @@ pub async fn list_devices(
     driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
     let devices: Vec<Device> = match cmd.device {
-        Some(device) => common::get_device_info(&driver_development_proxy, &[device]).await?,
-        None => common::get_device_info(&driver_development_proxy, &[]).await?,
+        Some(device) => {
+            fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[device]).await?
+        }
+        None => fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[]).await?,
     }
     .into_iter()
     .map(|device_info| Device::from(device_info))

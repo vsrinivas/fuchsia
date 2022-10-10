@@ -16,6 +16,7 @@ rustc_library("lib") {
   name = "driver_tools"
   with_unit_tests = true
   deps = [
+    "common:lib",
     "connector:lib",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
@@ -63,7 +64,6 @@ rustc_library("lib") {
   ]
   sources = [
     "src/args.rs",
-    "src/common.rs",
     "src/lib.rs",
     "src/subcommands/debug_bind/args.rs",
     "src/subcommands/debug_bind/mod.rs",

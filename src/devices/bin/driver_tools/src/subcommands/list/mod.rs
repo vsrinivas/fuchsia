@@ -5,11 +5,11 @@
 pub mod args;
 
 use {
-    crate::common::{self, Device},
     anyhow::{Context, Result},
     args::ListCommand,
     bind::debugger::debug_dump::dump_bind_rules,
     fidl_fuchsia_driver_development as fdd,
+    fuchsia_driver_dev::{self, Device},
     futures::join,
     std::{collections::HashSet, fmt::Write as OtherWrite, io::Write, iter::FromIterator},
 };
@@ -20,11 +20,11 @@ pub async fn list(
     driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
     let empty: [String; 0] = [];
-    let driver_info = common::get_driver_info(&driver_development_proxy, &empty);
+    let driver_info = fuchsia_driver_dev::get_driver_info(&driver_development_proxy, &empty);
 
     let driver_info = if cmd.loaded {
         // Query devices and create a hash set of loaded drivers.
-        let device_info = common::get_device_info(&driver_development_proxy, &empty);
+        let device_info = fuchsia_driver_dev::get_device_info(&driver_development_proxy, &empty);
 
         // Await the futures concurrently.
         let (driver_info, device_info) = join!(driver_info, device_info);

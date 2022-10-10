@@ -5,14 +5,13 @@
 pub mod args;
 
 use {
-    crate::common,
     anyhow::{format_err, Result},
     args::DebugBindCommand,
     bind::{
         bytecode_encoder::encode_v1::RawInstruction, compiler::instruction::DeviceProperty,
         debugger,
     },
-    fidl_fuchsia_driver_development as fdd,
+    fidl_fuchsia_driver_development as fdd, fuchsia_driver_dev,
     std::io::Write,
 };
 
@@ -22,7 +21,7 @@ pub async fn debug_bind(
     driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
     let driver_info =
-        common::get_driver_info(&driver_development_proxy, &[cmd.driver_path]).await?;
+        fuchsia_driver_dev::get_driver_info(&driver_development_proxy, &[cmd.driver_path]).await?;
 
     if driver_info.len() != 1 {
         return Err(format_err!(
@@ -40,7 +39,7 @@ pub async fn debug_bind(
         };
 
     let mut device_info =
-        common::get_device_info(&driver_development_proxy, &[cmd.device_path]).await?;
+        fuchsia_driver_dev::get_device_info(&driver_development_proxy, &[cmd.device_path]).await?;
 
     if device_info.len() != 1 {
         return Err(format_err!(
