@@ -6,19 +6,17 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
-#include <fuchsia/sysinfo/c/fidl.h>
+#include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/stdcompat/span.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/status.h>
 
+#include <iostream>
 #include <iterator>
 
 #include <fbl/algorithm.h>
@@ -91,63 +89,57 @@ void WaitForOne(cpp20::span<const char*> device_paths) {
 }
 
 fbl::String GetTestFilter() {
-  constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
-  fbl::unique_fd sysinfo(open(kSysInfoPath, O_RDONLY));
-  if (!sysinfo) {
+  zx::status sys_info = component::Connect<fuchsia_sysinfo::SysInfo>();
+  if (sys_info.is_error()) {
     return "Unknown";
   }
 
-  zx::channel channel;
-  if (fdio_get_service_handle(sysinfo.release(), channel.reset_and_get_address()) != ZX_OK) {
+  const fidl::WireResult result = fidl::WireCall(sys_info.value())->GetBoardName();
+  if (!result.ok()) {
     return "Unknown";
   }
-
-  char board_name[fuchsia_sysinfo_BOARD_NAME_LEN + 1];
-  zx_status_t status;
-  size_t actual_size;
-  zx_status_t fidl_status = fuchsia_sysinfo_SysInfoGetBoardName(channel.get(), &status, board_name,
-                                                                sizeof(board_name), &actual_size);
-  if (fidl_status != ZX_OK || status != ZX_OK) {
+  const fidl::WireResponse response = result.value();
+  if (response.status != ZX_OK) {
     return "Unknown";
   }
-  board_name[actual_size] = '\0';
+  const std::string_view board_name = response.name.get();
 
-  printf("Found board %s\n", board_name);
+  std::cout << "Found board " << board_name << std::endl;
 
-  if (!strcmp(board_name, "qemu")) {
+  if (board_name == "qemu") {
     return "*QemuArm64*";
-  } else if (!strcmp(board_name, "vim3")) {
+  } else if (board_name == "vim3") {
     return "*Vim3*";
-  } else if (!strcmp(board_name, "astro")) {
+  } else if (board_name == "astro") {
     return "*Astro*";
-  } else if (!strcmp(board_name, "sherlock")) {
+  } else if (board_name == "sherlock") {
     return "*Sherlock*";
-  } else if (!strcmp(board_name, "msm8x53-som")) {
+  } else if (board_name == "msm8x53-som") {
     return "*Msm8x53Som*";
-  } else if (!strcmp(board_name, "as370") || !strcmp(board_name, "visalia")) {
+  } else if (board_name == "as370" || board_name == "visalia") {
     return "*Visalia*";
-  } else if (!strcmp(board_name, "Nocturne")) {
+  } else if (board_name == "Nocturne") {
     return "*Nocturne*";
-  } else if (!strcmp(board_name, "nelson")) {
+  } else if (board_name == "nelson") {
     return "*Nelson*";
-  } else if (!strcmp(board_name, "luis")) {
+  } else if (board_name == "luis") {
     return "*Luis*";
-  } else if (!strcmp(board_name, "Eve")) {
+  } else if (board_name == "Eve") {
     return "*Eve*";
-  } else if (!strcmp(board_name, "NUC7i5DNB")) {
+  } else if (board_name == "NUC7i5DNB") {
     return "*Nuc*";
-  } else if (!strcmp(board_name, "Atlas")) {
+  } else if (board_name == "Atlas") {
     return "*Atlas*";
-  } else if (!strcmp(board_name, "Standard PC (Q35 + ICH9, 2009)")) {
+  } else if (board_name == "Standard PC (Q35 + ICH9, 2009)") {
     // QEMU and AEMU with emulated Q35 boards have this board name.
     return "*QemuX64Q35*";
-  } else if (!strcmp(board_name, "av400")) {
+  } else if (board_name == "av400") {
     return "*Av400*";
-  } else if (!strcmp(board_name, "Google Compute Engine")) {
+  } else if (board_name == "Google Compute Engine") {
 #ifdef __aarch64__
     return "*GceArm64*";
 #endif
-  } else if (!strcmp(board_name, "arm64") || !strcmp(board_name, "x64")) {
+  } else if (board_name == "arm64" || board_name == "x64") {
     return "*GenericShouldFail*";
   }
 

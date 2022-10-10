@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <lib/fdio/fdio.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <unistd.h>
@@ -46,7 +46,7 @@ bool FindPattern(const fbl::Array<T>& haystack, const fbl::Array<T>& needle) {
 }
 
 // Fetch raw data for a table.
-zx_status_t FetchTable(const zx::channel& channel, const TableInfo& table,
+zx_status_t FetchTable(const fidl::ClientEnd<Acpi>& channel, const TableInfo& table,
                        fbl::Array<uint8_t>* data) {
   // Allocate a VMO for the read.
   zx::vmo vmo;
@@ -82,11 +82,11 @@ zx_status_t FetchTable(const zx::channel& channel, const TableInfo& table,
 //
 // Returns false if it cannot access the ACPI data, or none of the ACPI
 // tables with name |table_name| has the keyword.
-bool AcpiTableHasKeyword(const zx::channel& acpi_channel, std::string_view table_name,
+bool AcpiTableHasKeyword(const fidl::ClientEnd<Acpi>& acpi_channel, std::string_view table_name,
                          const fbl::Array<uint8_t>& keyword) {
   // List ACPI entries.
   fidl::WireResult<Acpi::ListTableEntries> result =
-      fidl::WireCall<Acpi>(zx::unowned_channel(acpi_channel))->ListTableEntries();
+      fidl::WireCall(acpi_channel)->ListTableEntries();
   if (!result.ok()) {
     fprintf(stderr, "Could not list ACPI table entries: %s.\n",
             zx_status_get_string(result.status()));
@@ -132,13 +132,8 @@ bool AcpiTableHasKeyword(const zx::channel& acpi_channel, std::string_view table
 // device can be found if and only if it's an AEMU board.
 bool IsAemuBoard() {
   // Open up channel to ACPI device.
-  fbl::unique_fd fd(open(kAcpiDevicePath, O_RDWR));
-  if (!fd.is_valid()) {
-    return false;
-  }
-
-  zx::channel channel;
-  if (fdio_get_service_handle(fd.release(), channel.reset_and_get_address()) != ZX_OK) {
+  zx::status channel = component::Connect<Acpi>(kAcpiDevicePath);
+  if (channel.is_error()) {
     return false;
   }
 
@@ -148,7 +143,7 @@ bool IsAemuBoard() {
   fbl::Array<uint8_t> aemu_acpi_keyword(new uint8_t[kAemuAcpiKeywordLen], kAemuAcpiKeywordLen);
   memcpy(aemu_acpi_keyword.data(), kAemuAcpiKeyword, kAemuAcpiKeywordLen);
 
-  return AcpiTableHasKeyword(channel, kAcpiDsdtTableName, aemu_acpi_keyword);
+  return AcpiTableHasKeyword(channel.value(), kAcpiDsdtTableName, aemu_acpi_keyword);
 }
 
 }  // namespace device_enumeration

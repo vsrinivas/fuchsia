@@ -195,7 +195,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//zircon/system/ulib/test-utils",
     "//zircon/system/ulib/usb-peripheral-utils",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
-    "//zircon/system/utest/device-enumeration",
     "//zircon/system/utest/dlfcn",
     "//zircon/system/utest/miscsvc",
     "//zircon/system/utest/svchost",
