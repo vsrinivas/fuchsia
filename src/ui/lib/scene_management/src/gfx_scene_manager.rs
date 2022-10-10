@@ -174,7 +174,7 @@ impl SceneManager for GfxSceneManager {
         view_ref: Option<ui_views::ViewRef>,
     ) -> Result<(), Error> {
         if self.client_root_view_holder_node.is_some() {
-            panic!("GFX set_root_view doesn't support replacing the current root view");
+            warn!("GFX set_root_view is replacing the current root view");
         };
 
         let view_holder_token = match viewport_token {
@@ -202,7 +202,7 @@ impl SceneManager for GfxSceneManager {
         view_provider: ui_app::ViewProviderProxy,
     ) -> Result<ui_views::ViewRef, Error> {
         if self.client_root_view_holder_node.is_some() {
-            panic!("GFX set_root_view doesn't support replacing the current root view");
+            warn!("GFX set_root_view is replacing the current root view");
         };
 
         let token_pair = scenic::ViewTokenPair::new()?;
