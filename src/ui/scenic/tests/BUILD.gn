@@ -260,6 +260,21 @@ fuchsia_test_component("flatland_focus_integration_test") {
   deps = [ ":flatland_focus_integration_test_bin" ]
 }
 
+executable("flatland_view_ref_installed_integration_test_bin") {
+  testonly = true
+  sources = [ "flatland_integration_tests/flatland_view_ref_installed_integration_test.cc" ]
+  deps = [
+    ":common_deps_cts",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
+  ]
+}
+
+fuchsia_test_component("flatland_view_ref_installed_integration_test") {
+  component_name = "flatland_view_ref_installed_integration_test"
+  manifest = "meta/flatland_view_ref_installed_integration_test.cml"
+  deps = [ ":flatland_view_ref_installed_integration_test_bin" ]
+}
+
 executable("observer_registry_integration_test_bin") {
   testonly = true
   sources =
@@ -407,6 +422,7 @@ fuchsia_test_package("flatland_integration_tests") {
     ":flatland_mouse_integration_test",
     ":screen_capture_integration_test",
     ":screen_capture2_integration_test",
+    ":flatland_view_ref_installed_integration_test",
   ]
   test_specs = {
     environments = vulkan_envs
