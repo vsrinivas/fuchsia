@@ -42,7 +42,7 @@ import 'package:zircon/zircon.dart' as $zircon;
 
 class Empty extends $fidl.Struct {
   const Empty({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   Empty.clone(
     Empty $orig, {

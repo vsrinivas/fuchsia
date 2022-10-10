@@ -43,7 +43,7 @@ import 'package:zircon/zircon.dart' as $zircon;
 /// "pleaseescapethisdocommentproperly"
 class DocCommentWithQuotes extends $fidl.Struct {
   const DocCommentWithQuotes({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   DocCommentWithQuotes.clone(
     DocCommentWithQuotes $orig, {

@@ -2085,7 +2085,7 @@ const $fidl.NullableUnionType<XUnionContainingEmptyStruct>
 
 class Empty extends $fidl.Struct {
   const Empty({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   Empty.clone(
     Empty $orig, {

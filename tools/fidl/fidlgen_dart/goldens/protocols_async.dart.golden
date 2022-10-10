@@ -633,7 +633,7 @@ const $fidl.StructType<ProtocolEnds> kProtocolEnds_Type =
 
 class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
   const WithErrorSyntaxErrorAsEnumResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   WithErrorSyntaxErrorAsEnumResponse.clone(
     WithErrorSyntaxErrorAsEnumResponse $orig, {
@@ -690,7 +690,7 @@ const $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>
 
 class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
   const WithErrorSyntaxErrorAsPrimitiveResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   WithErrorSyntaxErrorAsPrimitiveResponse.clone(
     WithErrorSyntaxErrorAsPrimitiveResponse $orig, {

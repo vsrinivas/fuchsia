@@ -47,7 +47,7 @@ const lib$test_dependent.MyEnum enumMember = lib$test_dependent.MyEnum.member;
 
 class MyStruct extends $fidl.Struct {
   const MyStruct({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   MyStruct.clone(
     MyStruct $orig, {

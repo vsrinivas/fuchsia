@@ -8590,7 +8590,7 @@ const $fidl.NullableUnionType<
 class UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse.clone(
     UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse $orig, {
@@ -8714,7 +8714,7 @@ const $fidl.StructType<
 class UnknownInteractionsAjarProtocolFlexibleEventErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsAjarProtocolFlexibleEventErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsAjarProtocolFlexibleEventErrResponse.clone(
     UnknownInteractionsAjarProtocolFlexibleEventErrResponse $orig, {
@@ -8834,7 +8834,7 @@ const $fidl.StructType<
 class UnknownInteractionsAjarProtocolStrictEventErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsAjarProtocolStrictEventErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsAjarProtocolStrictEventErrResponse.clone(
     UnknownInteractionsAjarProtocolStrictEventErrResponse $orig, {
@@ -8954,7 +8954,7 @@ const $fidl
 class UnknownInteractionsAjarProtocolStrictTwoWayErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsAjarProtocolStrictTwoWayErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsAjarProtocolStrictTwoWayErrResponse.clone(
     UnknownInteractionsAjarProtocolStrictTwoWayErrResponse $orig, {
@@ -9074,7 +9074,7 @@ const $fidl.StructType<
 class UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse.clone(
     UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse $orig, {
@@ -9199,7 +9199,7 @@ const $fidl.StructType<
 class UnknownInteractionsClosedProtocolStrictEventErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsClosedProtocolStrictEventErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsClosedProtocolStrictEventErrResponse.clone(
     UnknownInteractionsClosedProtocolStrictEventErrResponse $orig, {
@@ -9319,7 +9319,7 @@ const $fidl.StructType<
 class UnknownInteractionsClosedProtocolStrictTwoWayErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsClosedProtocolStrictTwoWayErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsClosedProtocolStrictTwoWayErrResponse.clone(
     UnknownInteractionsClosedProtocolStrictTwoWayErrResponse $orig, {
@@ -9439,7 +9439,7 @@ const $fidl.StructType<
 class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse.clone(
     UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse $orig, {
@@ -9622,7 +9622,7 @@ const $fidl.StructType<
 class UnknownInteractionsDriverProtocolFlexibleTwoWayResponse
     extends $fidl.Struct {
   const UnknownInteractionsDriverProtocolFlexibleTwoWayResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsDriverProtocolFlexibleTwoWayResponse.clone(
     UnknownInteractionsDriverProtocolFlexibleTwoWayResponse $orig, {
@@ -9681,7 +9681,7 @@ const $fidl.StructType<UnknownInteractionsDriverProtocolFlexibleTwoWayResponse>
 class UnknownInteractionsDriverProtocolStrictTwoWayErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsDriverProtocolStrictTwoWayErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsDriverProtocolStrictTwoWayErrResponse.clone(
     UnknownInteractionsDriverProtocolStrictTwoWayErrResponse $orig, {
@@ -9800,7 +9800,7 @@ const $fidl.StructType<
 
 class UnknownInteractionsProtocolFlexibleEventErrResponse extends $fidl.Struct {
   const UnknownInteractionsProtocolFlexibleEventErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsProtocolFlexibleEventErrResponse.clone(
     UnknownInteractionsProtocolFlexibleEventErrResponse $orig, {
@@ -9918,7 +9918,7 @@ const $fidl
 class UnknownInteractionsProtocolFlexibleTwoWayErrResponse
     extends $fidl.Struct {
   const UnknownInteractionsProtocolFlexibleTwoWayErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsProtocolFlexibleTwoWayErrResponse.clone(
     UnknownInteractionsProtocolFlexibleTwoWayErrResponse $orig, {
@@ -10094,7 +10094,7 @@ const $fidl.StructType<UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse>
 
 class UnknownInteractionsProtocolFlexibleTwoWayResponse extends $fidl.Struct {
   const UnknownInteractionsProtocolFlexibleTwoWayResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsProtocolFlexibleTwoWayResponse.clone(
     UnknownInteractionsProtocolFlexibleTwoWayResponse $orig, {
@@ -10152,7 +10152,7 @@ const $fidl.StructType<UnknownInteractionsProtocolFlexibleTwoWayResponse>
 
 class UnknownInteractionsProtocolStrictEventErrResponse extends $fidl.Struct {
   const UnknownInteractionsProtocolStrictEventErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsProtocolStrictEventErrResponse.clone(
     UnknownInteractionsProtocolStrictEventErrResponse $orig, {
@@ -10268,7 +10268,7 @@ const $fidl.StructType<UnknownInteractionsProtocolStrictEventFieldsErrResponse>
 
 class UnknownInteractionsProtocolStrictTwoWayErrResponse extends $fidl.Struct {
   const UnknownInteractionsProtocolStrictTwoWayErrResponse({
-    this.reserved: 0x0,
+    this.reserved = 0x0,
   });
   UnknownInteractionsProtocolStrictTwoWayErrResponse.clone(
     UnknownInteractionsProtocolStrictTwoWayErrResponse $orig, {
