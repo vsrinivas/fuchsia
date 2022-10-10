@@ -1865,6 +1865,7 @@ zx_status_t UsbXhci::HciFinalize() {
     }
   }
 
+  zx_status_t status;
   is_32bit_ = !hcc_.AC64();
   params_ = hcsparams1;
   CONFIG::Get(cap_length_)
@@ -1874,11 +1875,13 @@ zx_status_t UsbXhci::HciFinalize() {
   {
     zx::bti bti;
     if (pci_.is_valid()) {
-      if (pci_.GetBti(0, &bti) != ZX_OK) {
+      if (status = pci_.GetBti(0, &bti); status != ZX_OK) {
+        zxlogf(ERROR, "pci_.GetBti(): %s", zx_status_get_string(status));
         return ZX_ERR_INTERNAL;
       }
     } else {
-      if (pdev_.GetBti(0, &bti) != ZX_OK) {
+      if (status = pdev_.GetBti(0, &bti); status != ZX_OK) {
+        zxlogf(ERROR, "pdev_.GetBti(): %s", zx_status_get_string(status));
         return ZX_ERR_INTERNAL;
       }
     }
@@ -1889,14 +1892,18 @@ zx_status_t UsbXhci::HciFinalize() {
   // TODO (bbosak): Correct this to use variable alignment when we get kernel
   // support for this.
   if (page_size != zx_system_get_page_size()) {
+    zxlogf(ERROR, "xHC page size differs from platform page size");
     return ZX_ERR_INTERNAL;
   }
   uint32_t align_log2 = 0;
-  if (buffer_factory_->CreatePaged(bti_, zx_system_get_page_size(), false, &dcbaa_buffer_) !=
-      ZX_OK) {
+
+  status = buffer_factory_->CreatePaged(bti_, zx_system_get_page_size(), false, &dcbaa_buffer_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "buffer_factory_->CreatePaged(): %s", zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
   }
   if (is_32bit_ && (dcbaa_buffer_->phys()[0] >= UINT32_MAX)) {
+    zxlogf(ERROR, "xHC using 32bit mode but dcbaa buffer address overflows 32bits");
     return ZX_ERR_INTERNAL;
   }
   dcbaa_ = static_cast<uint64_t*>(dcbaa_buffer_->virt());
@@ -1911,28 +1918,36 @@ zx_status_t UsbXhci::HciFinalize() {
                      ((hcsparams2.MAX_SCRATCHPAD_BUFFERS_HIGH() << 5) + 1);
   scratchpad_buffers_ = fbl::MakeArray<std::unique_ptr<dma_buffer::ContiguousBuffer>>(&ac, buffers);
   if (!ac.check()) {
+    zxlogf(ERROR, "fbl::MakeArray<std::unique_ptr<dma_buffer::ContiguousBuffer>> allocation fails");
     return ZX_ERR_NO_MEMORY;
   }
   if (fbl::round_up(buffers * sizeof(uint64_t), zx_system_get_page_size()) >
       zx_system_get_page_size()) {
     // We can't create multi-page contiguously physical uncached buffers.
     // This is presently not supported in the kernel.
+    zxlogf(ERROR, "physically-contiguous buffer exceeds system pagesize");
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (buffer_factory_->CreatePaged(bti_, zx_system_get_page_size(), false,
                                    &scratchpad_buffer_array_) != ZX_OK) {
+    zxlogf(ERROR, "buffer_factory_->CreateContiguous(buffer[0]): %s", zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
   }
   if (is_32bit_ && (scratchpad_buffer_array_->phys()[0] >= UINT32_MAX)) {
+    zxlogf(ERROR, "xHC using 32bit mode but scratchpad buffer[0] address overflows 32bits");
     return ZX_ERR_INTERNAL;
   }
   uint64_t* scratchpad_buffer_array = static_cast<uint64_t*>(scratchpad_buffer_array_->virt());
   for (size_t i = 0; i < buffers - 1; i++) {
-    if (buffer_factory_->CreateContiguous(bti_, page_size, align_log2, &scratchpad_buffers_[i]) !=
-        ZX_OK) {
+    status = buffer_factory_->CreateContiguous(
+        bti_, page_size, align_log2, &scratchpad_buffers_[i]);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "buffer_factory_->CreateContiguous(buffer[%zu]): %s", i,
+             zx_status_get_string(status));
       return ZX_ERR_INTERNAL;
     }
     if (is_32bit_ && (scratchpad_buffers_[i]->phys() >= UINT32_MAX)) {
+      zxlogf(ERROR, "xHC using 32bit mode but scratchpad buffer[%zu] address overflows 32bits", i);
       return ZX_ERR_INTERNAL;
     }
     scratchpad_buffer_array[i] = scratchpad_buffers_[i]->phys();
@@ -1942,10 +1957,12 @@ zx_status_t UsbXhci::HciFinalize() {
   slot_size_bytes_ = hcc_.CSZ() == 1 ? 64 : 32;
   device_state_ = fbl::MakeArray<DeviceState>(&ac, max_slots_);
   if (!ac.check()) {
+    zxlogf(ERROR, "fbl::MakeArray<DeviceState> allocation fails");
     return ZX_ERR_NO_MEMORY;
   }
   port_state_ = fbl::MakeArray<PortState>(&ac, hcsparams1.MaxPorts());
   if (!ac.check()) {
+    zxlogf(ERROR, "fbl::MakeArray<PortState> allocation fails");
     return ZX_ERR_NO_MEMORY;
   }
   hw_mb();
@@ -1955,13 +1972,17 @@ zx_status_t UsbXhci::HciFinalize() {
   // Interrupt moderation interval == 30 microseconds (optimal value derived from scheduler trace)
   // TODO: Change this based on P state (performance states) for power management
   for (uint16_t i = 0; i < irq_count_; i++) {
-    if (interrupter(i).Init(i, page_size, &mmio_.value(), offset, 1 << hcsparams2.ERST_MAX(),
-                            doorbell_offset_, this, hcc_, dcbaa_) != ZX_OK) {
+    status = interrupter(i).Init(i, page_size, &mmio_.value(), offset, 1 << hcsparams2.ERST_MAX(),
+                                 doorbell_offset_, this, hcc_, dcbaa_);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "interrupter(%d).Init(): %s", i, zx_status_get_string(status));
       return ZX_ERR_INTERNAL;
     }
   }
-  if (command_ring_.Init(page_size, &bti_, &interrupter(0).ring(), is_32bit_, &mmio_.value(),
-                         this) != ZX_OK) {
+  status = command_ring_.Init(page_size, &bti_, &interrupter(0).ring(), is_32bit_,
+                              &mmio_.value(), this);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "command_ring_.Init(): %s", zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
   }
   CRCR cr = command_ring_.phys(cap_length_);
@@ -1971,7 +1992,8 @@ zx_status_t UsbXhci::HciFinalize() {
   // TODO: For optimization, we could demand allocate interrupters and not start all interrupters in
   // the beginning.
   for (uint16_t i = 0; i < irq_count_; i++) {
-    if (interrupter(i).Start(offset, mmio_.value().View(0)) != ZX_OK) {
+    if (status = interrupter(i).Start(offset, mmio_.value().View(0)); status != ZX_OK) {
+      zxlogf(ERROR, "interrupter(%d).Start(): %s", i, zx_status_get_string(status));
       return ZX_ERR_INTERNAL;
     }
   }
