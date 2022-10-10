@@ -416,7 +416,10 @@ void Dispatcher::ShutdownAsync() {
     // callbacks triggered.
     auto waits = std::move(waits_);
     for (auto wait = waits.pop_front(); wait; wait = waits.pop_front()) {
-      if (wait->Cancel()) {
+      // It's possible that the wait has already been cancelled but not yet pulled
+      // from the |waits_| list, in which case the user may have already freed
+      // the handle they were waiting on, so we should not try to cancel it again.
+      if (!wait->is_pending_cancellation() && wait->Cancel()) {
         // We were successful. Lets queue this up to be processed by |CompleteDestroy|.
         shutdown_queue_.push_back(std::move(wait));
       } else {
@@ -970,6 +973,8 @@ void Dispatcher::QueueWait(Dispatcher::AsyncWait* wait, zx_status_t status) {
   if (wait->is_pending_cancellation()) {
     // Wait was cancelled so we return immediately without invoking the callback.
     waits_.erase(*wait);
+    // In case this is the last wait that shutdown is waiting on.
+    IdleCheckLocked();
     return;
   }
 
