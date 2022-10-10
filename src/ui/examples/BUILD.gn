@@ -21,6 +21,7 @@ fuchsia_package("flatland-examples") {
   deps = [
     "flatland-view-provider",
     "flatland-view-provider:flatland-view-provider-v1",
+    "flatland-view-provider:flatland-view-provider-vulkan",
     "screen_recording:screen_recording_component",
     "simplest-app-flatland",
     "simplest_sysmem:simplest_sysmem_component",

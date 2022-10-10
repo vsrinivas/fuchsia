@@ -317,9 +317,12 @@ bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata,
   // Check to see if the buffers are allocated and return false if not.
   zx_status_t allocation_status = ZX_OK;
   zx_status_t status = collection_itr->second.collection->CheckBuffersAllocated(&allocation_status);
-  if (status != ZX_OK || allocation_status != ZX_OK) {
-    FX_LOGS(WARNING) << "Collection was not allocated: " << zx_status_get_string(status)
-                     << " ;alloc: " << zx_status_get_string(allocation_status);
+  if (status != ZX_OK) {
+    FX_LOGS(WARNING) << "Collection was not allocated (FIDL status: "
+                     << zx_status_get_string(status) << ").";
+  } else if (allocation_status != ZX_OK) {
+    FX_LOGS(WARNING) << "Collection was not allocated (allocation status: "
+                     << zx_status_get_string(status) << ").";
     return false;
   }
 

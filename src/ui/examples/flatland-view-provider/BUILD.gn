@@ -12,9 +12,15 @@ rustc_binary("bin") {
   edition = "2021"
   source_root = "src/main.rs"
   sources = [
+    "src/ash_extensions/fuchsia/buffer_collection.rs",
+    "src/ash_extensions/fuchsia/mod.rs",
+    "src/ash_extensions/mod.rs",
     "src/internal_message.rs",
     "src/main.rs",
     "src/mouse.rs",
+    "src/render.rs",
+    "src/render_cpu.rs",
+    "src/render_vk.rs",
     "src/touch.rs",
   ]
 
@@ -31,28 +37,44 @@ rustc_binary("bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/mapped-vmo",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
     "//src/lib/ui/flatland-frame-scheduling:flatland-frame-scheduling-lib",
     "//src/lib/ui/fuchsia-framebuffer",
     "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/vulkan",
+    "//src/lib/vulkan:vulkan_validation_layers",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:ash",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
   ]
-  test_deps = [ "//third_party/rust_crates:anyhow" ]
-}
 
-fuchsia_component("flatland-view-provider-v1") {
-  component_name = "flatland-view-provider-example"
-  manifest = "meta/flatland-view-provider-example.cmx"
-  deps = [ ":bin" ]
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:anyhow",
+  ]
 }
 
 fuchsia_component("flatland-view-provider") {
   component_name = "flatland-view-provider"
   manifest = "meta/flatland-view-provider.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("flatland-view-provider-vulkan") {
+  component_name = "flatland-view-provider-vulkan"
+  manifest = "meta/flatland-view-provider-vulkan.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("flatland-view-provider-v1") {
+  component_name = "flatland-view-provider-example"
+  manifest = "meta/flatland-view-provider-example.cmx"
   deps = [ ":bin" ]
 }
 
