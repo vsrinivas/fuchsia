@@ -2,17 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 
-#include "fuchsia/logger/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static constexpr uint16_t kNumQueues = 2;
-static constexpr uint16_t kQueueSize = 16;
+namespace {
 
-class VirtioConsoleTest : public TestWithDevice {
+constexpr uint16_t kNumQueues = 2;
+constexpr uint16_t kQueueSize = 16;
+
+constexpr auto kCppComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
+constexpr auto kRustComponentUrl =
+    "fuchsia-pkg://fuchsia.com/virtio_console_rs#meta/virtio_console_rs.cm";
+constexpr auto kComponentName = "virtio_console";
+
+struct VirtioConsoleTestParam {
+  std::string test_name;
+  std::string component_url;
+};
+
+class VirtioConsoleTest : public TestWithDevice,
+                          public ::testing::WithParamInterface<VirtioConsoleTestParam> {
  protected:
   VirtioConsoleTest()
       : rx_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
@@ -26,12 +39,8 @@ class VirtioConsoleTest : public TestWithDevice {
     using component_testing::RealmRoot;
     using component_testing::Route;
 
-    constexpr auto kComponentUrl =
-        "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
-    constexpr auto kComponentName = "virtio_console";
-
     auto realm_builder = RealmBuilder::Create();
-    realm_builder.AddChild(kComponentName, kComponentUrl);
+    realm_builder.AddChild(kComponentName, GetParam().component_url);
 
     realm_builder
         .AddRoute(Route{.capabilities =
@@ -86,7 +95,14 @@ class VirtioConsoleTest : public TestWithDevice {
   std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
-TEST_F(VirtioConsoleTest, Receive) {
+INSTANTIATE_TEST_SUITE_P(VirtioConsoleTestInstantiation, VirtioConsoleTest,
+                         ::testing::Values(VirtioConsoleTestParam{"cpp", kCppComponentUrl},
+                                           VirtioConsoleTestParam{"rust", kRustComponentUrl}),
+                         [](const ::testing::TestParamInfo<VirtioConsoleTestParam>& info) {
+                           return info.param.test_name;
+                         });
+
+TEST_P(VirtioConsoleTest, Receive) {
   void* data_1;
   void* data_2;
   zx_status_t status = DescriptorChainBuilder(rx_queue_)
@@ -110,7 +126,7 @@ TEST_F(VirtioConsoleTest, Receive) {
   EXPECT_STREQ("world", static_cast<char*>(data_2));
 }
 
-TEST_F(VirtioConsoleTest, Transmit) {
+TEST_P(VirtioConsoleTest, Transmit) {
   zx_status_t status = DescriptorChainBuilder(tx_queue_)
                            .AppendReadableDescriptor("hello ", sizeof("hello ") - 1)
                            .AppendReadableDescriptor("world", sizeof("world"))
@@ -130,3 +146,5 @@ TEST_F(VirtioConsoleTest, Transmit) {
   EXPECT_EQ(sizeof(output), actual);
   EXPECT_STREQ(output, buf);
 }
+
+}  // namespace
