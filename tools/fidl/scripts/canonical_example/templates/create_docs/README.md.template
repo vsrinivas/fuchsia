@@ -1,0 +1,13 @@
+# FIDL example: ${series_sentence_case}
+
+<!-- TODO(fxbug.dev/${bug}): Add documentation -->
+
+## Getting started {#${variant_snake_case}}
+
+<<_${variant_snake_case}_tutorial.md>>
+
+## Improving the design {#variants}
+
+<!-- DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
+
+<!-- /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->

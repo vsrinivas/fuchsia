@@ -1,0 +1,5 @@
+<!-- TODO(fxbug.dev/${bug}): Remove this file once this impl is done. -->
+
+[START todo]
+// TODO(fxbug.dev/${bug}): C++ (Wire) implementation.
+[END todo]

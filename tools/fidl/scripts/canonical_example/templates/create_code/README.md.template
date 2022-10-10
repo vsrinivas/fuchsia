@@ -1,0 +1,25 @@
+# README
+
+This directory contains all of the example code for the "${series_text_case}"
+series of FIDL examples. See the associated [docs][docs] for more information.
+
+Each example should include the following:
+
+* The [FIDL][impl-fidl] definition.
+* The [CML][impl-cml] definitions for the client and server.
+* The [realm][impl-realm] definition for performing end-to-end testing.
+* An [implementation][impl-cpp-natural] of the client and server using the C++ (Natural) bindings.
+* An [implementation][impl-cpp-wire] of the client and server using the C++ (Wire) bindings.
+* An [implementation][impl-dart] of the client and server using the Dart bindings.
+* An [implementation][impl-hlcpp] of the client and server using the HLCPP bindings.
+* An [implementation][impl-rust] of the client and server using the Rust bindings.
+
+[docs]: /docs/development/languages/fidl/examples/${series_snake_case}/README.md
+[impl-cml]: ${variant_snake_case}/meta
+[impl-cpp-natural]: ${variant_snake_case}/cpp-natural
+[impl-cpp-wire]: ${variant_snake_case}/cpp-wire
+[impl-dart]: ${variant_snake_case}/dart
+[impl-fidl]: ${variant_snake_case}/fidl
+[impl-hlcpp]: ${variant_snake_case}/hlcpp
+[impl-rust]: ${variant_snake_case}/rust
+[impl-realm]: ${variant_snake_case}/realm

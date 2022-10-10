@@ -7,6 +7,8 @@ simplified implementations of real software workflows.
 
 The following examples sequentially demonstrate useful FIDL concepts.
 
+<!-- DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
+
 ### Key-value store
 
 The [key-value store][example_key_value_store] example demonstrates how to build
@@ -18,6 +20,8 @@ types available in the language.
 The [canvas][example_canvas] example demonstrates how to build a simple 2D
 line-rendering canvas using FIDL in order to learn about commonly used data flow
 patterns.
+
+<!-- /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
 ## Concept index
 

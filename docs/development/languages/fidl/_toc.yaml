@@ -83,7 +83,9 @@ toc:
   section:
   - title: "Overview"
     path: /docs/development/languages/fidl/examples/README.md
+  # DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
   - title: "Canvas"
     path: /docs/development/languages/fidl/examples/canvas/README.md
   - title: "Key value store"
     path: /docs/development/languages/fidl/examples/key_value_store/README.md
+  # /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
