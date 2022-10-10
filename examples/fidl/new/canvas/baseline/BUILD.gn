@@ -28,9 +28,12 @@ group("tests") {
 
   # TODO(fxbug.dev/111273): Add per-binding `:tests` target after building out each implementation.
   deps = [
+    # DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
     "cpp_natural:tests",
     "cpp_wire:tests",
     "hlcpp:tests",
     "rust:tests",
+
+    # /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
   ]
 }

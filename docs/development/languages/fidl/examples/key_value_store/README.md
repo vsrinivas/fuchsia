@@ -15,6 +15,10 @@ on the original design. Rather than building on one another sequentially, each
 presents an independent way in which the base case presented above may be
 modified or improved.
 
+<!-- DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
+
 ### Adding support for reading from the store {#add_read_item}
 
 <<_add_read_item_tutorial.md>>
+
+<!-- /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->

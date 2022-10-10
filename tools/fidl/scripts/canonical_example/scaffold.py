@@ -22,15 +22,17 @@ CODE_ROOT_BUILD_GN_FILE = EXAMPLE_CODE_BASE_DIR / "BUILD.gn"
 
 # Template source paths.
 TEMPLATES_DIR = FUCHSIA_DIR / "tools/fidl/scripts/canonical_example/templates"
-CREATE_CODE_TEMPLATES_DIR = TEMPLATES_DIR / "create_code"
-CREATE_DOCS_TEMPLATES_DIR = TEMPLATES_DIR / "create_docs"
+CREATE_CODE_NEW_TEMPLATES_DIR = TEMPLATES_DIR / "create_code_new"
+CREATE_CODE_VARIANT_TEMPLATES_DIR = TEMPLATES_DIR / "create_code_variant"
+CREATE_DOCS_NEW_TEMPLATES_DIR = TEMPLATES_DIR / "create_docs_new"
+CREATE_DOCS_VARIANT_TEMPLATES_DIR = TEMPLATES_DIR / "create_docs_variant"
 
 # Startup-compiled regexes.
 REGEX_IS_PASCAL_CASE = re.compile(r"^(?:[A-Z][a-z0-9]+)+$")
 REGEX_IS_SNAKE_CASE = re.compile(r"^[a-z][a-z0-9_]+$")
 REGEX_TO_TEXT_CASE = re.compile(r"_+")
-REGEX_OPEN_DNCR = re.compile(r"\sDO_NOT_REMOVE_COMMENT")
-REGEX_CLOSE_DNCR = re.compile(r"\s/DO_NOT_REMOVE_COMMENT")
+REGEX_OPEN_DNRC = re.compile(r"\sDO_NOT_REMOVE_COMMENT")
+REGEX_CLOSE_DNRC = re.compile(r"\s/DO_NOT_REMOVE_COMMENT")
 
 # Other important defaults.
 BASELINE = "baseline"
@@ -44,6 +46,10 @@ class AlreadyExistsError(Exception):
 
 
 class InputError(Exception):
+    pass
+
+
+class StepError(Exception):
     pass
 
 
@@ -117,6 +123,12 @@ def build_subs(series, variant, protocol, bug):
     # LINT.ThenChange(/tools/fidl/scripts/canonical_example/README.md)
 
 
+def get_dns_count(input):
+    """Count `TODO(DNS)` occurrences.
+    """
+    return input.count("TODO(%s)" % DNS)
+
+
 def apply_subs(series, subs, source, target):
     """Apply substitutions to templates located in the source dir, and write them to the target dir.
 
@@ -139,8 +151,7 @@ def apply_subs(series, subs, source, target):
                 out_contents = Template(f.read()).substitute(subs)
 
             # Count DNS occurrences.
-            dns_count = out_contents.count("TODO(%s)" % DNS)
-            dns_counts[str(out_path)] = dns_count
+            dns_counts[str(out_path)] = get_dns_count(out_contents)
 
             # Do the actual file writes.
             os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -150,17 +161,17 @@ def apply_subs(series, subs, source, target):
     return dns_counts
 
 
-def lines_between_dncr_tags(lines, src_path):
-    """Take a list of lines, and return the sub-list between the DNCR tags.
+def lines_between_dnrc_tags(lines, src_path):
+    """Take a list of lines, and return the sub-list between the DNRC tags.
 
     Returns the selected lines, plus the index at which they are located in the source file.
     """
     opened = -1
     for line_num, line in enumerate(lines):
         if opened >= 0:
-            if REGEX_CLOSE_DNCR.search(line):
+            if REGEX_CLOSE_DNRC.search(line):
                 return opened + 1, line_num
-        elif REGEX_OPEN_DNCR.search(line):
+        elif REGEX_OPEN_DNRC.search(line):
             opened = line_num
 
     if opened < 0:
@@ -183,7 +194,7 @@ def validate_does_not_exist(needle, files):
         lines = []
         with open(path, 'r') as f:
             lines = f.readlines()
-            start, end = lines_between_dncr_tags(lines, path)
+            start, end = lines_between_dnrc_tags(lines, path)
 
         # Does the needle appear anywhere in between those bounds?
         for line in lines:
@@ -195,15 +206,135 @@ def validate_does_not_exist(needle, files):
     return ranges
 
 
-def create_new(name, protocol, bug):
-    """Create a new canonical example series.
+def resolve_create_templates(subs, source_to_target_map):
+    """Do all of the raw copying necessary to create a canonical example variant.
+
+    Returns a dict of paths to numbers, wih the number representing the count of outstanding DNS
+    TODOs in the file.
+    """
+    # Copy over each doc template file, processing substitutions on both file names and contents as
+    # we go.
+    dns_counts = {}
+    for source, target in source_to_target_map.items():
+        for path, count in apply_subs(subs['series_snake_case'], subs, source,
+                                      target).items():
+            dns_counts[path] = count
+    return dns_counts
+
+
+def create_variant(series, variant, protocol, bug):
+    """Create a canonical example series variant.
+
+    Returns a dict of paths to numbers, wih the number representing the count of outstanding DNS
+    TODOs in the file.
     """
     # Build the substitution dictionary.
-    subs = build_subs(name, BASELINE, protocol, bug)
+    subs = build_subs(series, variant, protocol, bug)
+
+    # Make sure the baseline case exists. Also specifically validate that the baseline FIDL
+    # definition and top-level docs README both exist, as we will need to modify them directly.
+    series_root_gn_file_path = EXAMPLE_CODE_BASE_DIR / series / "BUILD.gn"
+    baseline_code_dir_path = EXAMPLE_CODE_BASE_DIR / series / "baseline"
+    series_docs_dir_path = EXAMPLE_DOCS_BASE_DIR / series
+    baseline_fidl_file_path = baseline_code_dir_path / "fidl" / (
+        "%s.test.fidl" % series)
+    series_docs_readme_path = series_docs_dir_path / "README.md"
+    if not os.path.exists(baseline_code_dir_path):
+        raise StepError(
+            "Cannot create variant '%s' because its baseline source directory %s does not exist"
+            % (variant, baseline_code_dir_path))
+    if not os.path.exists(series_docs_dir_path):
+        raise StepError(
+            "Cannot create variant '%s' because its series example docs directory %s does not exist"
+            % (variant, series_docs_dir_path))
+    if not os.path.exists(baseline_fidl_file_path):
+        raise StepError(
+            "Cannot create variant '%s' because its baseline FIDL file %s does not exist"
+            % (variant, baseline_fidl_file_path))
+
+    if not os.path.exists(series_root_gn_file_path):
+        raise StepError(
+            "Cannot create variant '%s' because its series BUILD.gn file %s does not exist"
+            % (variant, series_root_gn_file_path))
+    series_gn_lines = validate_does_not_exist(
+        "{#%s}" % variant, [series_root_gn_file_path])[series_root_gn_file_path]
+
+    if not os.path.exists(series_docs_readme_path):
+        raise StepError(
+            "Cannot create variant '%s' because its series README.md file %s does not exist"
+            % (variant, series_docs_readme_path))
+    readme_dnrc_lines = validate_does_not_exist(
+        "{#%s}" % variant, [series_docs_readme_path])[series_docs_readme_path]
+
+    # Create the raw variant. We'll follow this up by replacing the "raw" FIDL file with a copy
+    # of the one from the baseline case.
+    dns_counts = resolve_create_templates(
+        subs, {
+            CREATE_DOCS_VARIANT_TEMPLATES_DIR: EXAMPLE_DOCS_BASE_DIR,
+            CREATE_CODE_VARIANT_TEMPLATES_DIR: EXAMPLE_CODE_BASE_DIR,
+        })
+
+    # Copy the FIDL definition from the baseline case, and update the dns count so the user is aware
+    # that they need to make further edits.
+    variant_fidl_file_path = EXAMPLE_CODE_BASE_DIR / series / variant / "fidl" / (
+        "%s.test.fidl" % series)
+    with open(baseline_fidl_file_path, "r") as f:
+        # Replace the ".baseline" library name suffix with this variant's name.
+        lines = f.readlines()
+        for i in range(len(lines)):
+            if lines[i].startswith("library"):
+                lines[i] = lines[i].replace(
+                    BASELINE, subs['variant_flat_case'], 1)
+                break
+
+        # Add a DNS to the end of the file.
+        lines.append(
+            textwrap.dedent(
+                """
+                // TODO(%s): Modify this FIDL to reflect the changes explored by this variant.
+                """ % DNS))
+
+        # Overwrite the raw FIDL file with this transformed baseline version, and update the dns
+        # count so the user is aware that they need to make further edits in this file.
+        out_contents = "".join(lines)
+        dns_counts[str(variant_fidl_file_path)] = get_dns_count(out_contents)
+        with open(variant_fidl_file_path, "wt") as f:
+            f.write(out_contents)
+
+    # Add an entry to the docs BUILD.gn file for this series, and update the dns count so the user
+    # is aware that they need to make further edits in this file.
+    with open(series_root_gn_file_path, "wt") as f:
+        lines, start, end = series_gn_lines
+        lines.insert(end - 1, """    "%s:tests",\n""" % variant)
+        f.write("".join(lines))
+
+    # Add an entry to the docs README.md file for this series, and update the dns count so the user
+    # is aware that they need to make further edits in this file.
+    with open(series_docs_readme_path, "wt") as f:
+        lines, start, end = readme_dnrc_lines
+        lines.insert(end, """<<_%s_tutorial.md>>\n\n""" % variant)
+        lines.insert(
+            end,
+            """### <!-- TODO(%s): Add title -->{#%s}\n\n""" % (DNS, variant))
+        out_contents = "".join(lines)
+        dns_counts[str(series_docs_readme_path)] = get_dns_count(out_contents)
+        f.write(out_contents)
+
+    return dns_counts
+
+
+def create_new(series, protocol, bug):
+    """Create a new canonical example series.
+
+    Returns a dict of paths to numbers, wih the number representing the count of outstanding DNS
+    TODOs in the file.
+    """
+    # Build the substitution dictionary.
+    subs = build_subs(series, BASELINE, protocol, bug)
 
     # Do a first pass through the files we'll be editing, to ensure that they are in a good state.
     edit_ranges = validate_does_not_exist(
-        name, [
+        series, [
             DOCS_TOC_YAML_FILE,
             DOCS_ROOT_README_FILE,
             CODE_ROOT_BUILD_GN_FILE,
@@ -215,7 +346,7 @@ def create_new(name, protocol, bug):
         lines.insert(
             end,
             """    path: /docs/development/languages/fidl/examples/%s/README.md\n"""
-            % name)
+            % series)
         lines.insert(
             end, """  - title: "%s"\n""" % subs['series_sentence_case'])
         f.write("".join(lines))
@@ -238,11 +369,27 @@ def create_new(name, protocol, bug):
 
     # Copy over each doc template file, processing substitutions on both file names and contents as
     # we go.
+    dns_counts = resolve_create_templates(
+        subs, {
+            CREATE_DOCS_NEW_TEMPLATES_DIR: EXAMPLE_DOCS_BASE_DIR,
+            CREATE_DOCS_VARIANT_TEMPLATES_DIR: EXAMPLE_DOCS_BASE_DIR,
+            CREATE_CODE_NEW_TEMPLATES_DIR: EXAMPLE_CODE_BASE_DIR,
+            CREATE_CODE_VARIANT_TEMPLATES_DIR: EXAMPLE_CODE_BASE_DIR,
+        })
+
+    return dns_counts
+
+
+def create(name, protocol, bug, series):
+    """Create a new variant in a canonical example series.
+
+    Can create an entirely new series or simply extend an existing one.
+    """
     dns_counts = {}
-    for source, target in [(CREATE_DOCS_TEMPLATES_DIR, EXAMPLE_DOCS_BASE_DIR),
-                           (CREATE_CODE_TEMPLATES_DIR, EXAMPLE_CODE_BASE_DIR)]:
-        for path, count in apply_subs(name, subs, source, target).items():
-            dns_counts[path] = count
+    if series:
+        dns_counts = create_variant(series, name, protocol, bug)
+    else:
+        dns_counts = create_new(name, protocol, bug)
 
     # Print the DNS counts, so that that the user may act on them.
     if len(dns_counts):
@@ -251,25 +398,13 @@ def create_new(name, protocol, bug):
                 """
             Success!
 
-            Several generated files have comments of the form "TODO(%s)" in them. Please replace
-            those with the appropriate content, as specified by the comments:
+            Several generated files contain comments of the form "TODO(%s)".
+            Please replace them with the appropriate content, as specified by in their descriptions:
         """ % DNS))
         for path, count in dns_counts.items():
             if count > 0:
                 print("    * %d occurrences in %s" % (count, path))
         print()
-
-
-def create(name, protocol, bug, series):
-    """Create a new variant in a canonical example series.
-    """
-    if not series:
-        return create_new(name, protocol, bug)
-
-    # TODO(fxbug.dev/111614): Add support for extending existing series.
-    raise argparse.ArgumentTypeError(
-        "Adding variants to existing series not yet supported: https://fxbug.dev/111614"
-    )
 
 
 def pascal_case(arg):
