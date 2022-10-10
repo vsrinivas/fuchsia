@@ -98,20 +98,38 @@ zx_status_t process_subshell(union node* n, const char* const* envp,
     }
     argv[argc] = NULL;
 
-    fdio_spawn_action_t actions[] = {
-        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = fds ? fds[0] : 0, .target_fd = 0}},
-        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = fds ? fds[1] : 1, .target_fd = 1}},
-        {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = fds ? fds[2] : 2, .target_fd = 2}},
-        {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = PA_HND(PA_USER0, 0), .handle = ast_vmo}},
-    };
-
     // TODO(abarth): Including FDIO_SPAWN_DEFAULT_LDSVC doesn't fully make sense.
     // We should find a library loader that's appropriate for this program
     // rather than cloning the library loader used by the shell.
     uint32_t flags = FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE |
-                     FDIO_SPAWN_CLONE_UTC_CLOCK;
-    return fdio_spawn_etc(job, flags, orig_arg0, argv, envp,
-                          countof(actions), actions, process, err_msg);
+                     FDIO_SPAWN_CLONE_STDIO | FDIO_SPAWN_CLONE_UTC_CLOCK;
+    fdio_spawn_action_t actions[4] = {
+        {
+            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+            .h =
+                {
+                    .id = PA_HND(PA_USER0, 0),
+                    .handle = ast_vmo,
+                },
+        },
+    };
+    size_t num_actions = 1;
+    if (fds) {
+        for (int i = 0; i < 3; i++) {
+          if (fds[i] != i) {
+            actions[num_actions++] = (fdio_spawn_action_t){
+                .action = FDIO_SPAWN_ACTION_CLONE_FD,
+                .fd =
+                    {
+                        .local_fd = fds[i],
+                        .target_fd = i,
+                    },
+            };
+          }
+        }
+    }
+    return fdio_spawn_etc(job, flags, orig_arg0, argv, envp, num_actions, actions, process,
+                          err_msg);
 }
 
 int process_launch(const char* const* argv, const char* path, int index,

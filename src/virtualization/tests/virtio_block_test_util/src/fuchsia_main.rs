@@ -38,7 +38,7 @@ enum Command {
 // look up their corresponding topological path to see if it corresponds to the
 // device we're looking for.
 async fn get_class_path_from_topological(
-    topological_path: String,
+    topological_path_suffix: &str,
 ) -> Result<PathBuf, anyhow::Error> {
     // Scan current files in the directory and watch for new ones in case we
     // don't find the block device we're looking for. There's a slim possibility
@@ -57,7 +57,7 @@ async fn get_class_path_from_topological(
                     let block_path = PathBuf::from(BLOCK_CLASS_PATH).join(filename);
                     let block_dev = File::open(&block_path)?;
                     let topo_path = fdio::device_get_topo_path(&block_dev)?;
-                    Ok((topo_path == topological_path).then(|| block_path))
+                    Ok(topo_path.ends_with(topological_path_suffix).then(|| block_path))
                 }
                 _ => Ok(None),
             })())
@@ -71,9 +71,10 @@ async fn get_class_path_from_topological(
 async fn open_block_device(pci_bus: u8, pci_device: u8) -> Result<File, anyhow::Error> {
     // The filename is in the format pci-<bus>:<device>.<function>. The function
     // is always zero for virtio block devices.
-    let topo_path = format!("/dev/pci-{:02}:{:02}.0-fidl/virtio-block/block", pci_bus, pci_device);
+    let topo_path_suffix =
+        format!("/pci-{:02}:{:02}.0-fidl/virtio-block/block", pci_bus, pci_device);
 
-    let class_path = get_class_path_from_topological(topo_path).await?;
+    let class_path = get_class_path_from_topological(&topo_path_suffix).await?;
     let file = OpenOptions::new().read(true).write(true).open(&class_path)?;
 
     Ok(file)

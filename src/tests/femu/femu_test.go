@@ -69,5 +69,5 @@ func TestFemuWithDisk(t *testing.T) {
 
 	// Check that the emulated disk is there.
 	i.RunCommand("lsblk")
-	i.WaitForLogMessage("/dev/pci-00:03.0-fidl/virtio-block/block")
+	i.WaitForLogMessage("/pci-00:03.0-fidl/virtio-block/block")
 }

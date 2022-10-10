@@ -518,8 +518,8 @@ func (d *Distribution) runNonInteractive(
 ) (string, string, error) {
 	// Write runcmds that mounts the results disk, runs the requested command, and
 	// shuts down.
-	script := `waitfor class=block topo=/dev/pci-00:06.0-fidl/virtio-block/block timeout=60000
-mount /dev/pci-00:06.0-fidl/virtio-block/block /mnt/testdata-fs
+	script := `DEV=$(waitfor class=block topo=/pci-00:06.0-fidl/virtio-block/block timeout=60000 print)
+mount "$DEV" /mnt/testdata-fs
 ` + toRun + ` 2>/mnt/testdata-fs/err.txt >/mnt/testdata-fs/log.txt
 umount /mnt/testdata-fs
 dm poweroff

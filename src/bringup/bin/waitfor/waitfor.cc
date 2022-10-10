@@ -27,7 +27,7 @@ void usage(void) {
           "\n"
           "expr:  class=<name>           device class <name>   (required)\n"
           "\n"
-          "       topo=<path>            topological path starts with <path>\n"
+          "       topo=<path>            topological path contains <path>\n"
           "       part.guid=<guid>       block device GUID matches <guid>\n"
           "       part.type.guid=<guid>  partition type GUID matches <guid>\n"
           "       part.name=<name>       partition name matches <name>\n"
@@ -132,13 +132,12 @@ zx_status_t expr_topo(const char* arg, int fd) {
     return status;
   }
   const std::string_view got = res->value()->path.get();
-  // Take off one from arg so we don't include the null terminator.
-  const std::string_view expected(arg, strlen(arg) - 1);
+  const std::string_view expected(arg);
   if (verbose) {
     fprintf(stderr, "waitfor: topological path='%s'\n", std::string(got).c_str());
   }
-  // Check if the topo path starts with our prefix.
-  if (got.rfind(expected, 0) == 0) {
+  // Check if the topo path contains our needle.
+  if (got.find(expected) != std::string::npos) {
     return ZX_OK;
   }
   return ZX_ERR_NEXT;
