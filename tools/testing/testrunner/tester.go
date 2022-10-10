@@ -1179,8 +1179,7 @@ type socketConn interface {
 
 // FuchsiaSerialTester executes fuchsia tests over serial.
 type FuchsiaSerialTester struct {
-	socket         socketConn
-	localOutputDir string
+	socket socketConn
 }
 
 // NewFuchsiaSerialTester creates a tester that runs tests over serial.
