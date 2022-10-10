@@ -17,8 +17,8 @@ use {
     fidl_fuchsia_developer_ffx_ext::{RepositoryConfig, RepositoryError, RepositorySpec},
     fuchsia_url::RepositoryUrl,
     pbms::{
-        get_product_data, is_pb_ready, product_bundle_urls, select_product_bundle,
-        update_metadata_all, ListingMode,
+        get_product_data, is_locally_built, is_pb_ready, product_bundle_urls,
+        select_product_bundle, update_metadata_all, ListingMode,
     },
     std::{
         convert::TryInto,
@@ -86,21 +86,29 @@ where
     } else {
         // We use the default matching functionality.
         let should_print = true;
-        let url = select_product_bundle(
+        match select_product_bundle(
             &cmd.product_bundle_name,
             ListingMode::ReadyBundlesOnly,
             should_print,
         )
         .await
-        .context("Problem retrieving product bundle information.")?;
-        if url.scheme() != "file" && is_pb_ready(&url).await? {
-            pbs_to_remove.push(url);
+        {
+            Ok(url) => {
+                if !is_locally_built(&url) && is_pb_ready(&url).await? {
+                    pbs_to_remove.push(url);
+                }
+            }
+            Err(e) => {
+                println!("Couldn't determine which bundle to remove: {:?}", e);
+                return Ok(());
+            }
         }
     }
     if pbs_to_remove.len() > 0 {
         pb_remove_all(reader, pbs_to_remove, cmd.force, repos).await
     } else {
         // Nothing to remove.
+        println!("There are no product bundles to remove.");
         Ok(())
     }
 }

@@ -253,6 +253,15 @@ where
     Ok(url)
 }
 
+/// Determine if a product bundle url refers to a locally-built bundle.
+///
+/// Note that this is a heuristic for PBv1 only. It assumes that only a locally-built bundle
+/// will be have a source URL with a "file" scheme. The implementation will likely change with
+/// PBv2.
+pub fn is_locally_built(product_url: &url::Url) -> bool {
+    product_url.scheme() == "file"
+}
+
 /// Find a product bundle url and name for `product_url`.
 ///
 /// If product_url is
