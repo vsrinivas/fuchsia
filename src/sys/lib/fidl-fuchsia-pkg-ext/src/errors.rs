@@ -35,42 +35,45 @@ pub enum ResolveError {
 
     #[error("the `package_url` provided to resolver is invalid")]
     InvalidUrl,
+
+    #[error("the `context` provided to resolver is invalid")]
+    InvalidContext,
 }
 
 impl From<fidl_fuchsia_pkg::ResolveError> for ResolveError {
     fn from(e: fidl_fuchsia_pkg::ResolveError) -> Self {
+        use {fidl_fuchsia_pkg::ResolveError as ferror, ResolveError::*};
         match e {
-            fidl_fuchsia_pkg::ResolveError::Internal => ResolveError::Internal,
-            fidl_fuchsia_pkg::ResolveError::AccessDenied => ResolveError::AccessDenied,
-            fidl_fuchsia_pkg::ResolveError::Io => ResolveError::Io,
-            fidl_fuchsia_pkg::ResolveError::BlobNotFound => ResolveError::BlobNotFound,
-            fidl_fuchsia_pkg::ResolveError::PackageNotFound => ResolveError::PackageNotFound,
-            fidl_fuchsia_pkg::ResolveError::RepoNotFound => ResolveError::RepoNotFound,
-            fidl_fuchsia_pkg::ResolveError::NoSpace => ResolveError::NoSpace,
-            fidl_fuchsia_pkg::ResolveError::UnavailableBlob => ResolveError::UnavailableBlob,
-            fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata => {
-                ResolveError::UnavailableRepoMetadata
-            }
-            fidl_fuchsia_pkg::ResolveError::InvalidUrl => ResolveError::InvalidUrl,
+            ferror::Internal => Internal,
+            ferror::AccessDenied => AccessDenied,
+            ferror::Io => Io,
+            ferror::BlobNotFound => BlobNotFound,
+            ferror::PackageNotFound => PackageNotFound,
+            ferror::RepoNotFound => RepoNotFound,
+            ferror::NoSpace => NoSpace,
+            ferror::UnavailableBlob => UnavailableBlob,
+            ferror::UnavailableRepoMetadata => UnavailableRepoMetadata,
+            ferror::InvalidUrl => InvalidUrl,
+            ferror::InvalidContext => InvalidContext,
         }
     }
 }
 
 impl From<ResolveError> for fidl_fuchsia_pkg::ResolveError {
     fn from(e: ResolveError) -> Self {
+        use {fidl_fuchsia_pkg::ResolveError as ferror, ResolveError::*};
         match e {
-            ResolveError::Internal => fidl_fuchsia_pkg::ResolveError::Internal,
-            ResolveError::AccessDenied => fidl_fuchsia_pkg::ResolveError::AccessDenied,
-            ResolveError::Io => fidl_fuchsia_pkg::ResolveError::Io,
-            ResolveError::BlobNotFound => fidl_fuchsia_pkg::ResolveError::BlobNotFound,
-            ResolveError::PackageNotFound => fidl_fuchsia_pkg::ResolveError::PackageNotFound,
-            ResolveError::RepoNotFound => fidl_fuchsia_pkg::ResolveError::RepoNotFound,
-            ResolveError::NoSpace => fidl_fuchsia_pkg::ResolveError::NoSpace,
-            ResolveError::UnavailableBlob => fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
-            ResolveError::UnavailableRepoMetadata => {
-                fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata
-            }
-            ResolveError::InvalidUrl => fidl_fuchsia_pkg::ResolveError::InvalidUrl,
+            Internal => ferror::Internal,
+            AccessDenied => ferror::AccessDenied,
+            Io => ferror::Io,
+            BlobNotFound => ferror::BlobNotFound,
+            PackageNotFound => ferror::PackageNotFound,
+            RepoNotFound => ferror::RepoNotFound,
+            NoSpace => ferror::NoSpace,
+            UnavailableBlob => ferror::UnavailableBlob,
+            UnavailableRepoMetadata => ferror::UnavailableRepoMetadata,
+            InvalidUrl => ferror::InvalidUrl,
+            InvalidContext => ferror::InvalidContext,
         }
     }
 }

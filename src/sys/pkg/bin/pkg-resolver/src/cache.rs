@@ -275,18 +275,15 @@ pub(crate) trait ToResolveStatus {
 }
 impl ToResolveStatus for pkg::ResolveError {
     fn to_resolve_status(&self) -> Status {
+        use pkg::ResolveError::*;
         match *self {
-            pkg::ResolveError::AccessDenied => Status::ACCESS_DENIED,
-            pkg::ResolveError::Io => Status::IO,
-            pkg::ResolveError::PackageNotFound
-            | pkg::ResolveError::RepoNotFound
-            | pkg::ResolveError::BlobNotFound => Status::NOT_FOUND,
-            pkg::ResolveError::NoSpace => Status::NO_SPACE,
-            pkg::ResolveError::UnavailableBlob | pkg::ResolveError::UnavailableRepoMetadata => {
-                Status::UNAVAILABLE
-            }
-            pkg::ResolveError::InvalidUrl => Status::INVALID_ARGS,
-            pkg::ResolveError::Internal => Status::INTERNAL,
+            AccessDenied => Status::ACCESS_DENIED,
+            Io => Status::IO,
+            PackageNotFound | RepoNotFound | BlobNotFound => Status::NOT_FOUND,
+            NoSpace => Status::NO_SPACE,
+            UnavailableBlob | UnavailableRepoMetadata => Status::UNAVAILABLE,
+            InvalidUrl | InvalidContext => Status::INVALID_ARGS,
+            Internal => Status::INTERNAL,
         }
     }
 }

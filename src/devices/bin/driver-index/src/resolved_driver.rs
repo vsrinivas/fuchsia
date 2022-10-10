@@ -394,5 +394,6 @@ fn map_resolve_err_to_zx_status(
             fuchsia_zircon::Status::UNAVAILABLE
         }
         fidl_fuchsia_pkg::ResolveError::InvalidUrl => fuchsia_zircon::Status::INVALID_ARGS,
+        fidl_fuchsia_pkg::ResolveError::InvalidContext => fuchsia_zircon::Status::INVALID_ARGS,
     }
 }

@@ -7,7 +7,7 @@ using fuchsia.io;
 using zx;
 
 /// Error codes for PackageResolver operations.
-// TODO(fxb/46003): Use this instead of zx.status for `Resolve` and `GetHash`
+// TODO(fxb/46003): Use this instead of zx.status for `GetHash`
 type ResolveError = strict enum : int32 {
     /// The resolver encountered an otherwise unspecified error while handling the request.
     INTERNAL = 1;
@@ -38,6 +38,9 @@ type ResolveError = strict enum : int32 {
 
     /// The `package_url` provided to resolver is invalid.
     INVALID_URL = 10;
+
+    /// The `context` provided to resolver is invalid.
+    INVALID_CONTEXT = 11;
 };
 
 /// This resolves packages from a repository.

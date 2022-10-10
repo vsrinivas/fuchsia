@@ -876,6 +876,7 @@ fn resolve_result_to_resolve_status_code(
         Err(pkg::ResolveError::UnavailableBlob) => EventCodes::UnavailableBlob,
         Err(pkg::ResolveError::UnavailableRepoMetadata) => EventCodes::UnavailableRepoMetadata,
         Err(pkg::ResolveError::InvalidUrl) => EventCodes::InvalidUrl,
+        Err(pkg::ResolveError::InvalidContext) => EventCodes::InvalidContext,
     }
 }
 
