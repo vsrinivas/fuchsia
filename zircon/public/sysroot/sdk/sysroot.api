@@ -198,7 +198,6 @@
   "include/zircon/hw/gpt.h": "161c346998845e9ee9d51ec1dfd07621",
   "include/zircon/hw/pci.h": "76a29114bd88e6767cb5dbdd697b096e",
   "include/zircon/hw/usb.h": "76c23c6a3d2e8151b05718a6186a804d",
-  "include/zircon/hw/usb/cdc.h": "b9bdb2898f2faf65e5080dbd70f8d4f7",
   "include/zircon/limits.h": "564b9d2902c5e1992e2c75cca156ef30",
   "include/zircon/listnode.h": "adc44cc353c4b9b7de4f20c250ddd299",
   "include/zircon/lookup.h": "053d29f711949d3d47b7a6b97b62d735",

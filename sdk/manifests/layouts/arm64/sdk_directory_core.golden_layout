@@ -227,7 +227,6 @@ arch/arm64/sysroot/include/zircon/hw/debug/x86.h
 arch/arm64/sysroot/include/zircon/hw/gpt.h
 arch/arm64/sysroot/include/zircon/hw/pci.h
 arch/arm64/sysroot/include/zircon/hw/usb.h
-arch/arm64/sysroot/include/zircon/hw/usb/cdc.h
 arch/arm64/sysroot/include/zircon/limits.h
 arch/arm64/sysroot/include/zircon/listnode.h
 arch/arm64/sysroot/include/zircon/lookup.h
