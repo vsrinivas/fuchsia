@@ -80,9 +80,7 @@ template("rust_proto_library") {
   out_dir = rebase_path(target_crate_root, root_build_dir)
 
   protoc_label = "//third_party/protobuf:protoc($host_toolchain)"
-  protoc_path =
-      rebase_path(get_label_info(protoc_label, "root_out_dir") + "/protoc",
-                  root_build_dir)
+  protoc_path = get_label_info(protoc_label, "root_out_dir") + "/protoc"
 
   include_args = []
   foreach(dir, proto_include_dirs) {
@@ -103,11 +101,12 @@ template("rust_proto_library") {
   compiled_action("gen_${target_name}") {
     tool = "//tools/protobuf/rust_proto:prost_build_standalone"
     deps = [ protoc_label ]
+    inputs = [ protoc_path ]
     sources = invoker.sources
     outputs = [ "${target_crate_root}/lib.rs" ] + expected_outputs
     args = [
              "--protoc",
-             protoc_path,
+             rebase_path(protoc_path, root_build_dir),
              "--out-dir",
              out_dir,
            ] + include_args + proto_args
