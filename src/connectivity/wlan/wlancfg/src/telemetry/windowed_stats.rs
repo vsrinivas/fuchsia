@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use log::error;
 use num_traits::SaturatingAdd;
 use std::collections::VecDeque;
 use std::default::Default;
@@ -30,9 +31,11 @@ impl<T: Default + SaturatingAdd> WindowedStats<T> {
     }
 
     pub fn saturating_add(&mut self, addition: &T) {
-        // Safe to unwrap because `self.stats` should always have at least one entry.
-        let latest = self.stats.back_mut().unwrap();
-        *latest = latest.saturating_add(addition);
+        if let Some(latest) = self.stats.back_mut() {
+            *latest = latest.saturating_add(addition);
+        } else {
+            error!("self.stats should always contain at least one entry, but does not")
+        }
     }
 
     pub fn slide_window(&mut self) {

@@ -54,7 +54,7 @@ impl EwmaPseudoDecibel {
 pub fn calculate_pseudodecibel_velocity(
     historical_pdb: Vec<PseudoDecibel>,
 ) -> Result<PseudoDecibel, Error> {
-    let n = i32::try_from(historical_pdb.len()).expect("overflow");
+    let n = i32::try_from(historical_pdb.len())?;
     if n < 2 {
         return Err(format_err!("At least two data points required to calculate velocity"));
     }

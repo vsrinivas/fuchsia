@@ -40,6 +40,8 @@ pub enum PhyManagerError {
     IfaceCreateFailure,
     #[error("unable to destroy iface")]
     IfaceDestroyFailure,
+    #[error("internal state has become inconsistent")]
+    InternalError,
 }
 
 /// There are a variety of reasons why the calling code may want to create client interfaces.  The
@@ -208,7 +210,10 @@ impl PhyManager {
 
         // The phy_id is guaranteed to exist at this point because it was either previously
         // accounted for or was just added above.
-        Ok(self.phys.get_mut(&phy_id).unwrap())
+        Ok(self.phys.get_mut(&phy_id).ok_or_else(|| {
+            error!("Phy ID did not exist in self.phys");
+            PhyManagerError::InternalError
+        }))?
     }
 
     /// Queries the information associated with the given iface ID.

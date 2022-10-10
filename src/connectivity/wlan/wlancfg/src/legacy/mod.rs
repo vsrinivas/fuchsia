@@ -41,6 +41,10 @@ impl IfaceRef {
         }
     }
     pub fn get(&self) -> Result<Iface, Error> {
-        self.0.lock().unwrap().clone().ok_or_else(|| format_err!("no available client interfaces"))
+        self.0
+            .lock()
+            .map_err(|e| format_err!("unable to lock IfaceRef: {:?}", e))?
+            .clone()
+            .ok_or_else(|| format_err!("no available client interfaces"))
     }
 }

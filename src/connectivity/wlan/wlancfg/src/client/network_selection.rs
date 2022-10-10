@@ -469,10 +469,19 @@ fn select_best_connection_candidate<'a>(
     // Log the candidates into Inspect
     inspect_log!(inspect_node.get_mut(), candidates: InspectList(&bss_list), selected?: selected);
 
-    selected.map(|bss| {
+    if let Some(bss) = selected {
         info!("Selected BSS:");
         info!("{}", bss.to_string_without_pii());
-        (
+
+        let mutual_security_protocols = match bss.scanned_bss.compatibility.as_ref() {
+            Some(compatibility) => compatibility.mutual_security_protocols().clone(),
+            None => {
+                error!("The selected BSS lacks compatibility information");
+                return None;
+            }
+        };
+
+        Some((
             types::ConnectionCandidate {
                 network: bss.saved_network_info.network_id.clone(),
                 credential: bss.saved_network_info.credential.clone(),
@@ -480,19 +489,15 @@ fn select_best_connection_candidate<'a>(
                     bss_description: bss.scanned_bss.bss_description.clone(),
                     observation: bss.scanned_bss.observation,
                     has_multiple_bss_candidates: bss.multiple_bss_candidates,
-                    mutual_security_protocols: bss
-                        .scanned_bss
-                        .compatibility
-                        .as_ref()
-                        .expect("compatible BSS has no compatibility data")
-                        .mutual_security_protocols()
-                        .clone(),
+                    mutual_security_protocols,
                 }),
             },
             bss.scanned_bss.channel,
             bss.scanned_bss.bssid,
-        )
-    })
+        ))
+    } else {
+        None
+    }
 }
 
 /// If a BSS was discovered via a passive scan, we need to perform an active scan on it to discover
