@@ -14,7 +14,6 @@
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
-#include <zircon/hw/usb.h>
 
 #include <atomic>
 
@@ -22,6 +21,7 @@
 #include <fbl/mutex.h>
 #include <usb/dwc2/metadata.h>
 #include <usb/request-cpp.h>
+#include <usb/usb.h>
 
 #include "usb_dwc_regs.h"
 

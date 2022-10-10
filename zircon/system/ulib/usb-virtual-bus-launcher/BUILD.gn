@@ -27,6 +27,7 @@ zx_library("usb-virtual-bus-launcher") {
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
     "//sdk/lib/fdio",
     "//src/devices/testing/driver-integration-test-shim",
+    "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",

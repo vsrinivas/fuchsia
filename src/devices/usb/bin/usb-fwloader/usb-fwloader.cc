@@ -21,13 +21,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <zircon/hw/usb.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <variant>
 
 #include <fbl/unique_fd.h>
+#include <usb/usb.h>
 
 namespace {
 

@@ -10,10 +10,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
-#include <zircon/hw/usb.h>
 
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
+#include <usb/usb.h>
 
 #include "src/devices/usb/drivers/usb-bus/usb-bus.h"
 #include "src/lib/utf_conversion/utf_conversion.h"

@@ -10,7 +10,6 @@
 #include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/compiler.h>
-#include <zircon/hw/usb.h>
 
 #include <ddktl/device.h>
 #include <fbl/mutex.h>

@@ -21,7 +21,6 @@
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
-#include <zircon/hw/usb.h>
 #include <zircon/status.h>
 
 #include <memory>

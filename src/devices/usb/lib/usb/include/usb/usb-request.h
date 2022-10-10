@@ -12,8 +12,9 @@
 #include <sys/types.h>
 #include <threads.h>
 #include <zircon/compiler.h>
-#include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
+
+#include <usb/usb.h>
 
 __BEGIN_CDECLS
 

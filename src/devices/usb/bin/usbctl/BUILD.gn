@@ -10,6 +10,7 @@ executable("usbctl") {
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_c",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
+    "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb:cdc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

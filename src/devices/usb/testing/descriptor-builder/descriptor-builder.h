@@ -4,10 +4,10 @@
 
 #ifndef SRC_DEVICES_USB_TESTING_DESCRIPTOR_BUILDER_DESCRIPTOR_BUILDER_H_
 #define SRC_DEVICES_USB_TESTING_DESCRIPTOR_BUILDER_DESCRIPTOR_BUILDER_H_
-#include <zircon/hw/usb.h>
-
 #include <cstdint>
 #include <vector>
+
+#include <usb/usb.h>
 
 namespace usb {
 static void VectorAppend(std::vector<uint8_t>& vector, const void* data, size_t size) {

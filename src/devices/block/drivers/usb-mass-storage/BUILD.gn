@@ -115,6 +115,7 @@ test("ums-integration") {
     "//sdk/fidl/fuchsia.hardware.usb.peripheral.block:fuchsia.hardware.usb.peripheral.block_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
     "//sdk/lib/fdio",
+    "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/storage/block_client/cpp",
     "//zircon/system/ulib/fbl",

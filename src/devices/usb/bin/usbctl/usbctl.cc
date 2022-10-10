@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <endian.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
 #include <fuchsia/hardware/usb/modeswitch/c/banjo.h>
@@ -20,11 +21,11 @@
 #include <unistd.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/fidl.h>
-#include <zircon/hw/usb.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <usb/cdc.h>
+#include <usb/usb.h>
 
 #define DEV_USB_PERIPHERAL_DIR "/dev/class/usb-peripheral"
 

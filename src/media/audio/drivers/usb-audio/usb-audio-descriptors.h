@@ -8,12 +8,12 @@
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <sys/types.h>
 #include <threads.h>
-#include <zircon/hw/usb.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <usb/usb.h>
 
 namespace audio {
 namespace usb {

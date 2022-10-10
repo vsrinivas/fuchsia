@@ -6,7 +6,6 @@
 
 #include <lib/fit/defer.h>
 #include <zircon/errors.h>
-#include <zircon/hw/usb.h>
 
 #include "fuchsia/hardware/usb/descriptor/c/banjo.h"
 #include "usb/usb.h"

@@ -8,7 +8,6 @@
 #include <fuchsia/camera/cpp/fidl.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <lib/zx/status.h>
-#include <zircon/hw/usb.h>
 
 #include <vector>
 

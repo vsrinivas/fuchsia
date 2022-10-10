@@ -6,11 +6,11 @@
 #define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_HUB_H_
 
 #include <fuchsia/hardware/usb/descriptor/cpp/banjo.h>
-#include <zircon/hw/usb.h>
 
 #include <optional>
 
 #include <fbl/slab_allocator.h>
+#include <usb/usb.h>
 
 namespace usb_xhci {
 

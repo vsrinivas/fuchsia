@@ -113,7 +113,7 @@ static void ums_cbw_complete(void* ctx, usb_request_t* req);
 static void ums_data_complete(void* ctx, usb_request_t* req);
 static void ums_csw_complete(void* ctx, usb_request_t* req);
 
-static void usb_request_queue(void* ctx, usb_function_protocol_t* function, usb_request_t* req,
+static void ums_request_queue(void* ctx, usb_function_protocol_t* function, usb_request_t* req,
                               const usb_request_complete_callback_t* completion) {
   usb_ums_t* ums = (usb_ums_t*)ctx;
   atomic_fetch_add(&ums->pending_request_count, 1);
@@ -144,7 +144,7 @@ static void ums_function_queue_data(usb_ums_t* ums, usb_request_t* req) {
       .callback = ums_completion_callback,
       .ctx = ums,
   };
-  usb_request_queue(ums, &ums->function, req, &complete);
+  ums_request_queue(ums, &ums->function, req, &complete);
 }
 
 static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
@@ -153,7 +153,7 @@ static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
       .callback = ums_completion_callback,
       .ctx = ums,
   };
-  usb_request_queue(ums, &ums->function, ums->cbw_req, &cbw_complete);
+  ums_request_queue(ums, &ums->function, ums->cbw_req, &cbw_complete);
 
   usb_request_t* req = ums->csw_req;
   ums_csw_t* csw;
@@ -170,7 +170,7 @@ static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
       .callback = ums_completion_callback,
       .ctx = ums,
   };
-  usb_request_queue(ums, &ums->function, ums->csw_req, &csw_complete);
+  ums_request_queue(ums, &ums->function, ums->csw_req, &csw_complete);
 }
 
 static void ums_continue_transfer(usb_ums_t* ums) {
@@ -531,7 +531,7 @@ static zx_status_t ums_set_configured(void* ctx, bool configured, usb_speed_t sp
         .callback = ums_completion_callback,
         .ctx = ums,
     };
-    usb_request_queue(ums, &ums->function, ums->cbw_req, &cbw_complete);
+    ums_request_queue(ums, &ums->function, ums->cbw_req, &cbw_complete);
   }
   return status;
 }

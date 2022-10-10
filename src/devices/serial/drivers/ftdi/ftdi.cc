@@ -16,7 +16,6 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-#include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
 #include <ddktl/device.h>

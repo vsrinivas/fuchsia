@@ -11,7 +11,6 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 #include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb.h>
 #include <zircon/status.h>
 
 #include <ddk/usb-peripheral-config.h>
@@ -19,6 +18,7 @@
 #include <soc/aml-common/aml-registers.h>
 #include <usb/cdc.h>
 #include <usb/dwc2/metadata.h>
+#include <usb/usb.h>
 
 #include "src/devices/board/drivers/av400/av400.h"
 #include "src/devices/board/drivers/av400/udc-phy-bind.h"

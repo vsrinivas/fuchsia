@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/serial/c/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
-#include <zircon/hw/usb.h>
 
 #include <fbl/alloc_checker.h>
 #include <usb/cdc.h>

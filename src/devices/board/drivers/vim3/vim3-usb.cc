@@ -12,7 +12,6 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 #include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb.h>
 #include <zircon/status.h>
 
 #include <cstring>
@@ -22,6 +21,7 @@
 #include <soc/aml-meson/g12b-clk.h>
 #include <usb/cdc.h>
 #include <usb/dwc2/metadata.h>
+#include <usb/usb.h>
 
 #include "src/devices/board/drivers/vim3/vim3-gpios.h"
 #include "src/devices/board/drivers/vim3/vim3.h"

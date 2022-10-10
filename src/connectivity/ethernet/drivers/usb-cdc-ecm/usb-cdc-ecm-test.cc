@@ -16,7 +16,6 @@
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <zircon/device/ethernet.h>
-#include <zircon/hw/usb.h>
 #include <zircon/syscalls.h>
 
 #include <vector>
@@ -24,6 +23,7 @@
 #include <fbl/string.h>
 #include <hid/boot.h>
 #include <usb/cdc.h>
+#include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
 namespace usb_virtual_bus {

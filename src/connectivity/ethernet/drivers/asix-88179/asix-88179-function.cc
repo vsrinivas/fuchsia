@@ -11,7 +11,6 @@
 #include <lib/ddk/driver.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb.h>
 
 #include <algorithm>
 #include <memory>

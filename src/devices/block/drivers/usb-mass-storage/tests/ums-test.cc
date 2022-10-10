@@ -20,13 +20,13 @@
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/hw/usb.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
 
 #include <fbl/string.h>
+#include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"

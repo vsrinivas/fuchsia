@@ -8,7 +8,6 @@
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
 #include <zircon/errors.h>
-#include <zircon/hw/usb.h>
 
 #include <atomic>
 #include <list>
@@ -18,6 +17,7 @@
 #include <fake-dma-buffer/fake-dma-buffer.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <fbl/algorithm.h>
+#include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
 #include "usb-xhci.h"

@@ -9,13 +9,13 @@
 #include <lib/mmio/mmio.h>
 #include <lib/synchronous-executor/executor.h>
 #include <lib/zx/bti.h>
-#include <zircon/hw/usb.h>
 
 #include <variant>
 
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
+#include <usb/usb.h>
 
 #include "xhci-context.h"
 #include "xhci-hub.h"

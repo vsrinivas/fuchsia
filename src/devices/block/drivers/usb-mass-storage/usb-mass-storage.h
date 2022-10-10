@@ -17,7 +17,6 @@
 #include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/assert.h>
-#include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
 #include <atomic>

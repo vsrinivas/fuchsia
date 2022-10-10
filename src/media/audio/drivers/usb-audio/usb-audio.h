@@ -7,7 +7,6 @@
 
 #include <lib/ddk/device.h>
 #include <zircon/compiler.h>
-#include <zircon/hw/usb.h>
 
 #include <fbl/array.h>
 #include <usb/audio.h>

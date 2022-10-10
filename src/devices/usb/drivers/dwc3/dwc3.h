@@ -10,7 +10,6 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
-#include <zircon/hw/usb.h>
 
 #include <array>
 
@@ -19,6 +18,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <usb/request-cpp.h>
+#include <usb/usb.h>
 
 #include "dwc3-types.h"
 #include "fuchsia/hardware/usb/dci/cpp/banjo.h"

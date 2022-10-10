@@ -12,6 +12,7 @@ executable("usb-fwloader") {
     "//sdk/fidl/fuchsia.hardware.usb.tester:fuchsia.hardware.usb.tester_c",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_c",
     "//sdk/lib/fdio",
+    "//src/devices/usb/lib/usb",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zx",

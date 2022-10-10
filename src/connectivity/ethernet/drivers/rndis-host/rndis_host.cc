@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-#include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
 #include <fbl/alloc_checker.h>

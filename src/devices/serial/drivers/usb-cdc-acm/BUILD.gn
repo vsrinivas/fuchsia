@@ -103,6 +103,7 @@ test("usb-cdc-acm-integration") {
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
     "//sdk/lib/fdio",
+    "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb:cdc",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",

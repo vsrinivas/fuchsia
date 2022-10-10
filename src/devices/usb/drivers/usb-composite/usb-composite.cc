@@ -4,6 +4,7 @@
 
 #include "usb-composite.h"
 
+#include <endian.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>
 

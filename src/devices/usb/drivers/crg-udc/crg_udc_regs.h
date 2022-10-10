@@ -5,9 +5,8 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_CRG_UDC_CRG_UDC_REGS_H_
 #define SRC_DEVICES_USB_DRIVERS_CRG_UDC_CRG_UDC_REGS_H_
 
-#include <zircon/hw/usb.h>
-
 #include <hwreg/bitfields.h>
+#include <usb/usb.h>
 
 // clang-format off
 // transfer

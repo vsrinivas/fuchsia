@@ -4,6 +4,7 @@
 
 #include "src/camera/drivers/usb_video/descriptors.h"
 
+#include <endian.h>
 #include <lib/affine/ratio.h>
 #include <lib/ddk/debug.h>
 #include <stdlib.h>

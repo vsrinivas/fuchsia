@@ -15,7 +15,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 

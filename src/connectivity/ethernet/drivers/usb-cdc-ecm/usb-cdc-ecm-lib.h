@@ -14,7 +14,6 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
 #include <threads.h>
-#include <zircon/hw/usb.h>
 
 #include <memory>
 

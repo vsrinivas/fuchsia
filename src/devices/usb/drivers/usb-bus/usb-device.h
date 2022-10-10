@@ -12,7 +12,6 @@
 #include <fuchsia/hardware/usb/hub/cpp/banjo.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
-#include <zircon/hw/usb.h>
 
 #include <optional>
 
@@ -23,6 +22,7 @@
 #include <fbl/ref_ptr.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
+#include <usb/usb.h>
 
 namespace usb_bus {
 

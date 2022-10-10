@@ -5,9 +5,8 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_DWC2_USB_DWC_REGS_H_
 #define SRC_DEVICES_USB_DRIVERS_DWC2_USB_DWC_REGS_H_
 
-#include <zircon/hw/usb.h>
-
 #include <hwreg/bitfields.h>
+#include <usb/usb.h>
 
 constexpr uint32_t MAX_EPS_CHANNELS = 16;
 constexpr uint32_t DWC_MAX_EPS = 32;

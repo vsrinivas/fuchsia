@@ -17,10 +17,10 @@
 #include <lib/usb-peripheral-utils/event-watcher.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/hw/usb.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
 namespace usb_virtual_bus_base {

@@ -15,7 +15,6 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/errors.h>
-#include <zircon/hw/usb.h>
 #include <zircon/syscalls.h>
 
 #include <cstring>
@@ -25,6 +24,7 @@
 
 #include <ddk/usb-peripheral-config.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
+#include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
 #include "usb-function.h"

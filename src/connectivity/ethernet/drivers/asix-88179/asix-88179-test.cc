@@ -13,9 +13,9 @@
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <lib/zx/clock.h>
 #include <zircon/device/ethernet.h>
-#include <zircon/hw/usb.h>
 
 #include <usb/cdc.h>
+#include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
 #include "asix-88179-regs.h"
