@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.interrupt/cpp/wire.h>
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/debug.h>
@@ -17,6 +18,7 @@
 #include <lib/fake-i2c/fake-i2c.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
 #include <stdbool.h>
@@ -212,7 +214,8 @@ class FakeI2cHid : public fake_i2c::FakeI2c {
   size_t report_len_ __TA_GUARDED(report_read_lock_) = 0;
 };
 
-class I2cHidTest : public zxtest::Test {
+class I2cHidTest : public zxtest::Test,
+                   public fidl::WireServer<fuchsia_hardware_interrupt::Provider> {
  public:
   I2cHidTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   void SetUp() override {
@@ -235,17 +238,26 @@ class I2cHidTest : public zxtest::Test {
     zx::interrupt interrupt;
     ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &interrupt));
     fake_i2c_hid_.SetInterrupt(std::move(interrupt));
-    acpi_device_.SetMapInterrupt(
-        [this](acpi::mock::Device::MapInterruptRequestView view,
-               acpi::mock::Device::MapInterruptCompleter::Sync& completer) {
-          if (!irq_.is_valid()) {
-            completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-            return;
-          }
-          zx::interrupt duplicate;
-          ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));
-          completer.ReplySuccess(std::move(duplicate));
-        });
+
+    component::ServiceHandler handler;
+    fuchsia_hardware_interrupt::Service::Handler service(&handler);
+
+    auto provider_handler = [this](fidl::ServerEnd<fuchsia_hardware_interrupt::Provider> request) {
+      fidl::BindServer(loop_.dispatcher(), std::move(request), this);
+    };
+
+    ASSERT_OK(service.add_provider(std::move(provider_handler)).status_value());
+
+    ASSERT_OK(outgoing_.AddService<fuchsia_hardware_interrupt::Service>(std::move(handler))
+                  .status_value());
+
+    auto io_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_OK(io_endpoints.status_value());
+
+    ASSERT_OK(outgoing_.Serve(std::move(io_endpoints->server)).status_value());
+
+    parent_->AddFidlService(fuchsia_hardware_interrupt::Service::Name,
+                            std::move(io_endpoints->client), "irq001");
 
     auto client = acpi_device_.CreateClient(loop_.dispatcher());
     ASSERT_OK(client.status_value());
@@ -258,6 +270,12 @@ class I2cHidTest : public zxtest::Test {
 
     i2c_ = std::move(endpoints->client);
     // Each test is responsible for calling Bind().
+  }
+
+  void Get(GetCompleter::Sync& completer) override {
+    zx::interrupt clone;
+    ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &clone));
+    completer.ReplySuccess(std::move(clone));
   }
 
   void TearDown() override {
@@ -277,6 +295,7 @@ class I2cHidTest : public zxtest::Test {
   fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
   zx::interrupt irq_;
   async::Loop loop_;
+  component::OutgoingDirectory outgoing_ = component::OutgoingDirectory::Create(loop_.dispatcher());
 };
 
 TEST_F(I2cHidTest, HidTestBind) {

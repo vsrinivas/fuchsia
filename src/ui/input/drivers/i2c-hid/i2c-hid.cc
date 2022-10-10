@@ -24,6 +24,7 @@
 #include <fbl/auto_lock.h>
 
 #include "src/devices/lib/acpi/client.h"
+#include "src/devices/lib/fragment-irq/dfv1/fragment-irq.h"
 
 namespace i2c_hid {
 
@@ -511,13 +512,11 @@ zx_status_t I2cHidbus::Bind(ddk::I2cChannel i2c) {
     fbl::AutoLock lock(&i2c_lock_);
     i2c_ = std::move(i2c);
   }
-  auto irq_result = acpi_client_.borrow()->MapInterrupt(0);
-  if (irq_result.ok() && irq_result->is_ok()) {
-    irq_ = std::move(irq_result->value()->irq);
+  auto irq_result = fragment_irq::GetInterrupt(parent_, 0u);
+  if (irq_result.is_ok()) {
+    irq_ = std::move(*irq_result);
   } else {
-    zxlogf(WARNING, "Failed to map IRQ: %s",
-           irq_result.ok() ? zx_status_get_string(irq_result->error_value())
-                           : irq_result.FormatDescription().data());
+    zxlogf(WARNING, "Failed to map IRQ: %s", irq_result.status_string());
   }
 
   status = DdkAdd("i2c-hid");
