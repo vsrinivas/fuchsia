@@ -17,6 +17,7 @@ core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
 
 # Include sysmgr.
 # TODO(fxbug.dev/108016, fxbug.dev/100732): Remove once tiles is migrated.
+legacy_base_package_labels += [ "//src/sys/appmgr" ]
 legacy_base_package_labels -= [ "//src/sys/appmgr" ]
 legacy_base_package_labels += [
   "//src/sys/appmgr:appmgr_with_sysmgr",

@@ -80,7 +80,8 @@ core_realm_shards +=
     [ "//src/sys/test_manager:test_manager_cmx_support_core_shard" ]
 legacy_base_package_labels += [
   "//src/security/policy:appmgr_policy_eng",
-  "//src/sys/appmgr",
+  "//src/sys/appmgr:appmgr_with_sysmgr",
+  "//src/sys/sysmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
 
   # All v1 components are allowed to use isolated-persistent-storage, even if
