@@ -191,6 +191,16 @@ impl<'a, N: DriverNotify> Queue<'a, N> {
     }
 }
 
+/// Descriptor type
+///
+/// May be an indirect descriptor type ( see virtio spec 2.7.5.3 ) or a regular aka
+///  direct descriptor type.
+/// Regular descriptor wraps up [`ring::DescAccess`]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DescType {
+    Direct(ring::DescAccess),
+    Indirect,
+}
 /// Reference to descriptor data.
 ///
 /// Provides a higher level representation of a descriptors payload, compared to what
@@ -200,7 +210,7 @@ impl<'a, N: DriverNotify> Queue<'a, N> {
 /// Is provided as a [`DriverRange`] as the [`DescChain`] and its [iterator](DescChainIter) have no
 /// way to translate a [`DriverRange`] and this responsibility is offloaded to the caller.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Desc(pub ring::DescAccess, pub DriverRange);
+pub struct Desc(pub DescType, pub DriverRange);
 
 impl TryFrom<ring::Desc> for Desc {
     type Error = DescError;
@@ -209,7 +219,13 @@ impl TryFrom<ring::Desc> for Desc {
         let range = desc.data();
         TryInto::<DriverRange>::try_into(range)
             .map_err(|()| DescError::BadRange(range.0, range.1))
-            .map(|range| Desc(desc.access_type(), range))
+            .map(|range| {
+                if desc.is_indirect() {
+                    Desc(DescType::Indirect, range)
+                } else {
+                    Desc(DescType::Direct(desc.access_type()), range)
+                }
+            })
     }
 }
 
@@ -404,7 +420,9 @@ mod tests {
                 .unwrap()
                 .iter()
                 .map(|desc| match desc {
-                    Ok(Desc(access, range)) => (access, range.0.start as u64, range.0.len() as u32),
+                    Ok(Desc(DescType::Direct(access), range)) =>
+                        (access, range.0.start as u64, range.0.len() as u32),
+                    Ok(Desc(DescType::Indirect, _)) => (DescAccess::DeviceRead, 0, 0),
                     Err(_) => (DescAccess::DeviceRead, 0, 0),
                 })
                 .eq(chain.iter().cloned()));
@@ -428,12 +446,15 @@ mod tests {
         let mut iter = chain.iter();
         assert_eq!(
             iter.next().unwrap(),
-            Ok(Desc(DescAccess::DeviceRead, (100, 42).try_into().unwrap()))
+            Ok(Desc(DescType::Direct(DescAccess::DeviceRead), (100, 42).try_into().unwrap()))
         );
         assert_eq!(iter.next().unwrap(), Err(DescError::BadRange(u64::MAX - 10, 20)));
         assert_eq!(
             iter.next().unwrap(),
-            Ok(Desc(DescAccess::DeviceRead, (u64::MAX - 20, 5).try_into().unwrap()))
+            Ok(Desc(
+                DescType::Direct(DescAccess::DeviceRead),
+                (u64::MAX - 20, 5).try_into().unwrap()
+            ))
         );
         assert_eq!(iter.next(), None);
     }
@@ -453,7 +474,7 @@ mod tests {
         let mut iter = chain.iter();
         assert_eq!(
             iter.next().unwrap(),
-            Ok(Desc(DescAccess::DeviceRead, (100, 42).try_into().unwrap()))
+            Ok(Desc(DescType::Direct(DescAccess::DeviceRead), (100, 42).try_into().unwrap()))
         );
         assert_eq!(iter.next().unwrap(), Err(DescError::InvalidIndex(33)));
         assert_eq!(iter.next(), None);

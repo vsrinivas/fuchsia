@@ -22,7 +22,7 @@ use {
     crate::{
         mem::{DeviceRange, DriverRange},
         queue::{Queue, QueueMemory},
-        ring::{self, DescAccess},
+        ring::{self, DescAccess, VRING_DESC_F_INDIRECT},
         util::NotificationCounter,
     },
     parking_lot::Mutex,
@@ -224,6 +224,54 @@ impl<'a> FakeQueue<'a> {
         })
     }
 
+    pub fn publish_indirect(
+        &mut self,
+        chain: Chain,
+        mem: &IdentityDriverMem,
+    ) -> Option<(u16, u16)> {
+        if chain.descriptors.len() == 0 {
+            return None;
+        }
+
+        let indirect_range =
+            mem.new_range(chain.descriptors.len() * std::mem::size_of::<ring::Desc>())?;
+
+        let mut iter = chain.descriptors.iter().enumerate().peekable();
+        while let Some((index, desc)) = iter.next() {
+            let has_next = iter.peek().is_some();
+
+            let write_flags =
+                if desc.access == DescAccess::DeviceWrite { ring::VRING_DESC_F_WRITE } else { 0 };
+            let next_flags = if has_next { ring::VRING_DESC_F_NEXT } else { 0 };
+            let next_desc = if has_next { index as u16 + 1 } else { 0 };
+            let ring_desc = ring::as_driver::make_desc(
+                desc.data_addr,
+                desc.data_len,
+                write_flags | next_flags,
+                next_desc,
+            );
+
+            let ptr = indirect_range.try_mut_ptr::<ring::Desc>()?;
+            unsafe {
+                std::ptr::copy_nonoverlapping::<ring::Desc>(
+                    &ring_desc as *const ring::Desc,
+                    ptr.add(index as usize),
+                    1,
+                )
+            };
+        }
+        self.driver.write_desc(
+            self.next_desc,
+            ring::as_driver::make_desc(
+                indirect_range.get().start as u64,
+                indirect_range.len() as u32,
+                VRING_DESC_F_INDIRECT,
+                0,
+            ),
+        );
+        self.update_index(chain, 1)
+    }
+
     /// Attempt to publish a [`Chain`] into the ring.
     ///
     /// This returns a `None` if the chain is of zero length, or there are not enough available
@@ -269,7 +317,10 @@ impl<'a> FakeQueue<'a> {
                 ),
             );
         }
+        self.update_index(chain, desc_count)
+    }
 
+    fn update_index(&mut self, chain: Chain, desc_count: u16) -> Option<(u16, u16)> {
         // Mark the start of the descriptor chain.
         let first_desc = self.next_desc % self.queue_size;
         let avail_index = self.next_avail;

@@ -33,7 +33,8 @@
 use {
     crate::{
         mem::{DeviceRange, DriverMem, DriverRange},
-        queue::{Desc, DescChain, DescChainIter, DescError, DriverNotify},
+        queue::{Desc, DescChain, DescChainIter, DescError, DescType, DriverNotify},
+        ring::Desc as RingDesc,
         ring::DescAccess,
     },
     thiserror::Error,
@@ -48,11 +49,42 @@ pub enum ChainError {
     ReadableAfterWritable,
     #[error("Failed to translate descriptors driver range {0:?} into a device range")]
     TranslateFailed(DriverRange),
+    #[error("Nested indirect chain is not supported by the virtio spec")]
+    InvalidNestedIndirectChain,
 }
 
 impl From<ChainError> for std::io::Error {
     fn from(error: ChainError) -> Self {
         std::io::Error::new(std::io::ErrorKind::Other, error)
+    }
+}
+
+#[derive(Debug, Clone)]
+struct IndirectDescChain<'a> {
+    range: DeviceRange<'a>,
+    next: Option<u16>,
+}
+
+impl<'a> IndirectDescChain<'a> {
+    fn new(range: DeviceRange<'a>) -> Self {
+        IndirectDescChain { range: range, next: Some(0) }
+    }
+
+    pub fn next(&mut self) -> Option<Result<Desc, DescError>> {
+        let index = self.next?;
+        match self.range.split_at(index as usize * std::mem::size_of::<RingDesc>()) {
+            None => Some(Err(DescError::InvalidIndex(index))),
+            Some((_, range)) => match range.try_ptr::<RingDesc>() {
+                None => Some(Err(DescError::InvalidIndex(index))),
+                Some(ptr) => {
+                    // * SAFETY
+                    // try_ptr guarantees that returned Some(ptr) is valid for read
+                    let desc = unsafe { ptr.read_volatile() };
+                    self.next = desc.next();
+                    Some(desc.try_into())
+                }
+            },
+        }
     }
 }
 
@@ -65,6 +97,7 @@ struct State<'a, 'b, N: DriverNotify, M, const E: bool> {
     iter: DescChainIter<'a, 'b, N>,
     current: Option<Desc>,
     mem: &'a M,
+    indirect_chain: Option<IndirectDescChain<'a>>,
 }
 
 impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E> {
@@ -77,18 +110,67 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E
         }
     }
 
-    fn next_with_limit(&mut self, limit: usize) -> Option<Result<DeviceRange<'a>, ChainError>> {
-        // Get any remaining range from a previous walk, or get a new one from the iterator.
-        let Desc(access, range) = match self.current.take() {
-            None => match self.iter.next()? {
-                Ok(desc) => desc,
-                Err(e) => {
-                    return Some(Err(e.into()));
-                }
-            },
-            Some(desc) => desc,
-        };
+    fn next_desc(&mut self) -> Option<Result<Desc, ChainError>> {
+        fn into_desc(desc: Result<Desc, DescError>) -> Option<Result<Desc, ChainError>> {
+            match desc {
+                Ok(desc) => Some(Ok(desc)),
+                Err(e) => Some(Err(e.into())),
+            }
+        }
 
+        match self.current.take() {
+            None => {
+                // Nothing in the current, time to read a new descriptor
+                // Let's see if we have an active indirect chain
+                if let Some(indirect_chain) = &mut self.indirect_chain {
+                    // Keep processing the indirect chain
+                    match indirect_chain.next() {
+                        None => {
+                            // Indirect chain has been fully processed
+                            self.indirect_chain = None;
+                            // Read from the normal chain
+                            into_desc(self.iter.next()?)
+                        }
+                        // Read from the indirect chain
+                        Some(desc_res) => into_desc(desc_res),
+                    }
+                } else {
+                    // Read from the normal chain
+                    into_desc(self.iter.next()?)
+                }
+            }
+            // Read the remains of the self.current
+            Some(desc) => Some(Ok(desc)),
+        }
+    }
+
+    fn next_into_indirect(
+        &mut self,
+        range: DriverRange,
+        limit: usize,
+    ) -> Option<Result<DeviceRange<'a>, ChainError>> {
+        assert!(self.current.is_none());
+        if self.indirect_chain.is_some() {
+            // Supplying the nested indirect chain violates the virtio spec
+            // Either our processing is wrong or guest driver has a bug
+            return Some(Err(ChainError::InvalidNestedIndirectChain));
+        }
+
+        match self.mem.translate(range.clone()) {
+            Some(range) => {
+                self.indirect_chain = Some(IndirectDescChain::new(range));
+                self.next_with_limit(limit)
+            }
+            None => Some(Err(ChainError::TranslateFailed(range))),
+        }
+    }
+
+    fn into_device_range(
+        &mut self,
+        access: DescAccess,
+        range: DriverRange,
+        limit: usize,
+    ) -> Option<Result<DeviceRange<'a>, ChainError>> {
         match (Self::expected_access(), access) {
             // If descriptor we found matches what we expected then we return as much as we can
             // based on the requested limit.
@@ -98,7 +180,7 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E
                     // If we could split the range, and there is non-zero remaining, then stash the
                     // remaining portion for later and return the range that was split.
                     if rest.len() > 0 {
-                        self.current = Some(Desc(access, rest));
+                        self.current = Some(Desc(DescType::Direct(access), rest));
                     }
                     range
                 } else {
@@ -118,9 +200,19 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E
             }
             (DescAccess::DeviceRead, DescAccess::DeviceWrite) => {
                 // Put the descriptor back as we might want to walk the writable section later.
-                self.current = Some(Desc(access, range));
+                self.current = Some(Desc(DescType::Direct(access), range));
                 None
             }
+        }
+    }
+
+    fn next_with_limit(&mut self, limit: usize) -> Option<Result<DeviceRange<'a>, ChainError>> {
+        match self.next_desc()? {
+            Ok(Desc(desc_type, range)) => match desc_type {
+                DescType::Direct(access) => self.into_device_range(access, range, limit),
+                DescType::Indirect => self.next_into_indirect(range, limit),
+            },
+            Err(e) => Some(Err(e.into())),
         }
     }
 
@@ -130,6 +222,7 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E
             mem: self.mem,
             iter: self.iter.clone(),
             current: self.current.clone(),
+            indirect_chain: self.indirect_chain.clone(),
         };
         let mut total = 0;
         while let Some(v) = state.next_with_limit(usize::MAX) {
@@ -142,7 +235,13 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E
 // Allow easily transforming a read chain into a write.
 impl<'a, 'b, N: DriverNotify, M> From<State<'a, 'b, N, M, false>> for State<'a, 'b, N, M, true> {
     fn from(state: State<'a, 'b, N, M, false>) -> State<'a, 'b, N, M, true> {
-        State { chain: state.chain, iter: state.iter, current: state.current, mem: state.mem }
+        State {
+            chain: state.chain,
+            iter: state.iter,
+            current: state.current,
+            mem: state.mem,
+            indirect_chain: state.indirect_chain,
+        }
     }
 }
 
@@ -181,7 +280,9 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem> ReadableChain<'a, 'b, N, M> {
     /// [`DeviceRange`].
     pub fn new(chain: DescChain<'a, 'b, N>, mem: &'a M) -> Self {
         let iter = chain.iter();
-        ReadableChain { state: State { chain: Some(chain), mem, iter, current: None } }
+        ReadableChain {
+            state: State { chain: Some(chain), mem, iter, current: None, indirect_chain: None },
+        }
     }
 
     /// Immediately return a fully consumed chain.
@@ -476,20 +577,9 @@ mod tests {
             .copy_from_slice(data);
     }
 
-    #[test]
-    fn test_smoke_test() {
-        let driver_mem = IdentityDriverMem::new();
-        let mut state = TestQueue::new(32, &driver_mem);
-        assert!(state
-            .fake_queue
-            .publish(Chain::with_data::<u8>(
-                &[&[1, 2, 3, 4], &[5, 6, 7, 8], &[9, 10, 11, 12]],
-                &[4, 4],
-                &driver_mem
-            ))
-            .is_some());
+    fn test_smoke_test_body<'a>(state: &mut TestQueue<'a>, driver_mem: &'a IdentityDriverMem) {
         {
-            let mut readable = ReadableChain::new(state.queue.next_chain().unwrap(), &driver_mem);
+            let mut readable = ReadableChain::new(state.queue.next_chain().unwrap(), driver_mem);
             assert_eq!(readable.remaining(), Ok(12));
             check_read(readable.next(), &[1, 2, 3, 4]);
             assert_eq!(readable.remaining(), Ok(8));
@@ -518,7 +608,7 @@ mod tests {
     }
 
     #[test]
-    fn test_io() {
+    fn test_smoke_test() {
         let driver_mem = IdentityDriverMem::new();
         let mut state = TestQueue::new(32, &driver_mem);
         assert!(state
@@ -529,8 +619,31 @@ mod tests {
                 &driver_mem
             ))
             .is_some());
+        test_smoke_test_body(&mut state, &driver_mem);
+    }
+
+    #[test]
+    fn test_smoke_test_indirect_chain() {
+        let driver_mem = IdentityDriverMem::new();
+        let mut state = TestQueue::new(32, &driver_mem);
+        assert!(state
+            .fake_queue
+            .publish_indirect(
+                Chain::with_data::<u8>(
+                    &[&[1, 2, 3, 4], &[5, 6, 7, 8], &[9, 10, 11, 12]],
+                    &[4, 4],
+                    &driver_mem
+                ),
+                &driver_mem
+            )
+            .is_some());
+
+        test_smoke_test_body(&mut state, &driver_mem)
+    }
+
+    fn test_io_body<'a>(state: &mut TestQueue<'a>, driver_mem: &'a IdentityDriverMem) {
         {
-            let mut readable = ReadableChain::new(state.queue.next_chain().unwrap(), &driver_mem);
+            let mut readable = ReadableChain::new(state.queue.next_chain().unwrap(), driver_mem);
             let mut buffer: [u8; 2] = [0; 2];
             assert!(readable.read_exact(&mut buffer).is_ok());
             assert_eq!(&buffer, &[1, 2]);
@@ -554,6 +667,39 @@ mod tests {
         check_returned(iter.next(), &[1, 2, 3, 4]);
         check_returned(iter.next(), &[5, 6, 7, 8]);
         assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn test_io() {
+        let driver_mem = IdentityDriverMem::new();
+        let mut state = TestQueue::new(32, &driver_mem);
+        assert!(state
+            .fake_queue
+            .publish(Chain::with_data::<u8>(
+                &[&[1, 2, 3, 4], &[5, 6, 7, 8], &[9, 10, 11, 12]],
+                &[4, 4],
+                &driver_mem
+            ))
+            .is_some());
+        test_io_body(&mut state, &driver_mem)
+    }
+
+    #[test]
+    fn test_io_indirect_chain() {
+        let driver_mem = IdentityDriverMem::new();
+        let mut state = TestQueue::new(32, &driver_mem);
+        assert!(state
+            .fake_queue
+            .publish_indirect(
+                Chain::with_data::<u8>(
+                    &[&[1, 2, 3, 4], &[5, 6, 7, 8], &[9, 10, 11, 12]],
+                    &[4, 4],
+                    &driver_mem
+                ),
+                &driver_mem
+            )
+            .is_some());
+        test_io_body(&mut state, &driver_mem)
     }
 
     #[test]
