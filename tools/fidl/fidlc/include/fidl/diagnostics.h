@@ -181,7 +181,7 @@ constexpr UndocumentedErrorDef<75, const flat::Type *> ErrInvalidParameterListTy
     "invalid request/response type '{}'; must use a struct, table, or union");
 constexpr UndocumentedErrorDef<76, SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
-constexpr UndocumentedErrorDef<77, std::string_view> ErrEmptyPayloadStructs(
+constexpr ErrorDef<77, std::string_view> ErrEmptyPayloadStructs(
     "method '{}' cannot have an empty struct as a payload, prefer omitting the payload altogether");
 constexpr UndocumentedErrorDef<78, std::string_view, SourceSpan> ErrDuplicateMethodName(
     "multiple protocol methods named '{}'; previous was at {}");

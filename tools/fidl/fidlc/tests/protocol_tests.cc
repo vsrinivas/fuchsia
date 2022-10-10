@@ -888,15 +888,28 @@ protocol MyProtocol {
 }
 
 TEST(ProtocolTests, BadMethodEmptyPayloadStruct) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-  MyMethod(struct {}) -> (struct {});
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/method_empty_struct_payload.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs,
                                       fidl::ErrEmptyPayloadStructs);
+}
+
+TEST(ProtocolTests, GoodMethodAbsentPayloadStruct) {
+  TestLibrary library;
+  library.AddFile("good/method_absent_payload.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, BadEventEmptyPayloadStruct) {
+  TestLibrary library;
+  library.AddFile("bad/event_empty_struct_payload.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
+}
+
+TEST(ProtocolTests, GoodEventAbsentPayloadStruct) {
+  TestLibrary library;
+  library.AddFile("good/event_absent_payload.test.fidl");
+  ASSERT_COMPILED(library);
 }
 
 TEST(ProtocolTests, BadMethodEnumLayout) {
