@@ -164,13 +164,16 @@ pub struct SocatListenArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Create virtual shell for a guest or connect via virtual shell. Usage: guest vsh [guest-type[port]] [--args <arg>]
+/// Create virtual shell for a guest or connect via virtual shell.
 #[argh(subcommand, name = "vsh")]
 pub struct VshArgs {
     #[argh(option)]
-    /// positional port of a vsh socket to connect to.
+    /// port of a vsh socket to connect to.
     pub port: Option<u32>,
-    #[argh(option)]
+    #[argh(switch, short = 'c')]
+    /// connect to the container within the VM
+    pub container: bool,
+    #[argh(positional)]
     /// list of arguments to run non-interactively on launch.
     pub args: Vec<String>,
 }

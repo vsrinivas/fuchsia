@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//third_party/protobuf/proto_library.gni")
+import("//tools/protobuf/rust_proto_library.gni")
 
 proto_library("vm_cc_proto") {
   visibility = [ "//src/virtualization/*" ]
@@ -37,4 +38,10 @@ proto_library("vsh_cc_proto") {
   import_protobuf_full = true
 
   deps = [ "//third_party/protobuf:protobuf_full" ]
+}
+
+rust_proto_library("vsh_rust_proto") {
+  sources = [ "vsh.proto" ]
+  packages = [ "vm_tools.vsh" ]
+  deps = [ "//third_party/rust_crates:prost" ]
 }

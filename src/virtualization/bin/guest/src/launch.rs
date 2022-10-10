@@ -76,7 +76,7 @@ impl GuestLaunch {
         // See services.rs for proper usage of these methods. This usage is
         // valid as it only calls these methods once (ie a safe usage)
         unsafe {
-            let stdout = services::get_evented_stdout();
+            let stdout = services::get_evented_stdio(services::Stdio::Stdout);
 
             let serial_output = async {
                 futures::io::copy(guest_serial_sock, &mut &stdout)
@@ -87,7 +87,7 @@ impl GuestLaunch {
 
             futures::future::try_join(
                 serial_output,
-                console.run(&services::get_evented_stdin(), &stdout),
+                console.run(&services::get_evented_stdio(services::Stdio::Stdin), &stdout),
             )
             .await
             .map(|_| ())

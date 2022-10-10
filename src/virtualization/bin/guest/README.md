@@ -149,47 +149,41 @@ takes this socket and begins an interactive session over serial only, similar to
 
 ### Vsh (Virtual Shell)
 
-The `vsh` command allows for creating a virtual shell to a guest.
+The `vsh` command allows for creating a virtual shell to a termina guest.
 
 #### Arguments
-`guest vsh [guest-type] [--args <arg>]`
+`guest vsh [--port <port>] [-c] [--] [<args...>]`
 
-**Example**: `guest vsh termina --args penguin`
-
-**Positional Arguments**
-- `guest-type: string`: String that identifies the VM is currently running. See `list` for how
-    to find this value.
-- `port: u32`: Port for where a currently running virtual shell is running on.
+**Example**: `guest vsh echo hello world`
+**Example**: `guest vsh -- uname -a`
 
 **Optional Arguments**
-- `args: String`: Argument to provide to the argv of virtual shell. This argument is repeatable to
-    add additional arguments. Leave blank for default shell.
+- `--port: u32`: Port that vshd is listening on.
+- `-c | --container`: Connect to the debian container directly.
+
+**Positional Arguments**
+- `args: Vec<String>`: Positional arguments are forwarded as the argv for remote execution.
+    Leave blank for default login shell.
 
 #### Structure
 
 _**It is important to note** that this command requires a `vshd` server is run in the Guest prior_
 _to use, which as of writing is currently only true for `termina`._
 
-The `vsh` command is the primary way of interacting with guests over a virtual shell. The end user
-provides `guest` with optional values for the environment, context, and port that identify a
-vsock connection for `vsh` to create a new virtual shell on, with defaults provided in their
-absence. These defaults are described below:
+The `vsh` command is the primary way of interacting with termina guests via a remote shell.
+The end user provides `guest` with optional values for the port that identifies the vsock connection
+for `vsh` to create a new virtual shell on (defaults to 9001 if no port given), and whether to
+connect to the outer VM (the default) or the inner container.
 
-- `guest-type`: Defaults to Linux environment, if available, else the first environment in the VMM's
-    list.
-- `port`: Defaults to 9001 if no port given.
+The positional arguments are used as argv for some executable to run in the guest. Note that `--`
+can be used to disambiguate the guest's command line flags from vsh's own.
 
-Regardless of if these values are specified or not, the `guest` tool will attempt to create a
-new virtual shell in the specified VM that contains a Guest running a `vshd` server. Upon successful
-location of such a VM, `guest` will launch a new virtual shell to allow interaction with the
-Guest. Default arguments are provided to the virtual shell if none are specified through `--args`.
+If termina is not already launched vsh will attempt to launch it, printing out its progress to the
+terminal. If no args are supplied the user will be taken to the default login shell of the VM or the
+container (if `-c` was specified).
 
-If arguments _are_ specified via `--args`, additional functionality is executed by `guest`;
-namely, the `guest` tool will wait for the Linux environment to be ready before continuing to
-connect to the Guest as described above. This process is displayed to the end user until either the
-`LinuxManager` (a separate manager from the Guest Manager) reports success or failure; on failure,
-the user is prompted if they would like to try again (failure may occur for a few reasons, most
-notably internet connection issues).
+On failure to start termina the user is prompted if they would like to try again (failure may occur
+for a few reasons, most notably internet connection issues).
 
 ![vsh_diagram](doc/vsh.png)
 

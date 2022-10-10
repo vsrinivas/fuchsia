@@ -5,7 +5,6 @@ use {
     crate::arguments::*,
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_virtualization::LinuxManagerMarker,
-    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
 };
 
@@ -17,10 +16,11 @@ mod serial;
 mod services;
 mod socat;
 mod stop;
+mod vsh;
 mod vsockperf;
 mod wipe;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["guest"])]
 async fn main() -> Result<(), Error> {
     let options: GuestOptions = argh::from_env();
 
@@ -79,6 +79,28 @@ async fn main() -> Result<(), Error> {
                 socat::connect_to_vsock_endpoint(socat_listen_args.guest_type).await?;
             socat::handle_socat_listen(vsock_endpoint, socat_listen_args.host_port).await
         }
-        _ => unimplemented!(), // TODO(fxbug.dev/89427): Implement guest tool
+        SubCommands::Vsh(vsh_args) => {
+            // SAFETY: These unsafe helpers should only be called once as they take ownership of the
+            // Stdin and Stdout file descriptors (and also assume that these FDs exceed the lifetime
+            // of the returned object). An additional consequence is that those FDs will be closed
+            // on drop, so we call this as early as possible.
+            let mut stdin = unsafe { services::get_evented_stdio(services::Stdio::Stdin) };
+            let mut stdout = unsafe { services::get_evented_stdio(services::Stdio::Stdout) };
+            let mut stderr = unsafe { services::get_evented_stdio(services::Stdio::Stderr) };
+
+            let termina_manager = services::connect_to_manager(arguments::GuestType::Termina)?;
+
+            vsh::handle_vsh(
+                &mut stdin,
+                &mut stdout,
+                &mut stderr,
+                termina_manager,
+                vsh_args.port,
+                vsh_args.container,
+                vsh_args.args,
+            )
+            .await
+            .map(|exit_code| std::process::exit(exit_code))
+        }
     }
 }
