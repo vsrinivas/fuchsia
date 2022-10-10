@@ -13,6 +13,8 @@
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
+#include <sstream>
+
 namespace libdriver_integration_test {
 
 async::Loop IntegrationTest::loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
@@ -194,145 +196,171 @@ namespace {
 
 class AsyncWatcher {
  public:
-  AsyncWatcher(std::string path, fidl::InterfaceHandle<fuchsia::io::DirectoryWatcher> watcher,
-               fidl::InterfacePtr<fuchsia::io::Node> node)
+  AsyncWatcher(std::string path, fidl::InterfaceHandle<fuchsia::io::DirectoryWatcher> watcher)
       : path_(std::move(path)),
         watcher_(std::move(watcher)),
-        connections_{std::move(node), {}},
-        wait_(watcher_.channel().get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0,
-              fit::bind_member(this, &AsyncWatcher::WatcherChanged)) {}
+        wait_(this, watcher_.channel().get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0) {}
 
-  void WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
-                      const zx_packet_signal_t* signal);
-
-  zx_status_t Begin(async_dispatcher_t* dispatcher,
-                    fpromise::completer<void, IntegrationTest::Error> completer) {
-    completer_ = std::move(completer);
-    return wait_.Begin(dispatcher);
-  }
-
-  // Directory handle to keep alive for the lifetime of the AsyncWatcher, if
-  // necessary.
-  struct Connections {
-    fidl::InterfacePtr<fuchsia::io::Node> node;
-    fidl::InterfacePtr<fuchsia::io::Directory> directory;
-  };
-
-  Connections& connections() { return connections_; }
-
- private:
-  std::string path_;
-  fidl::InterfaceHandle<fuchsia::io::DirectoryWatcher> watcher_;
-  Connections connections_;
-
-  async::Wait wait_;
-  fpromise::completer<void, IntegrationTest::Error> completer_;
-};
-
-void AsyncWatcher::WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* wait,
-                                  zx_status_t status, const zx_packet_signal_t* signal) {
-  auto error = [&](const char* msg) {
-    completer_.complete_error(msg);
-    delete this;
-  };
-  if (status != ZX_OK) {
-    return error("watcher error");
-  }
-  if (signal->observed & ZX_CHANNEL_READABLE) {
-    char buf[fuchsia::io::MAX_BUF + 1];
-    uint32_t bytes_read;
-    status = watcher_.channel().read(0, buf, nullptr, sizeof(buf) - 1, 0, &bytes_read, nullptr);
+  void WatcherChanged(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                      const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
-      return error("watcher read error");
-    }
-
-    size_t bytes_processed = 0;
-    while (bytes_processed + 2 < bytes_read) {
-      char* msg = &buf[bytes_processed];
-      uint8_t name_length = msg[1];
-
-      if (bytes_processed + 2 + name_length > bytes_read) {
-        return error("watcher read error");
-      }
-
-      char* filename = &msg[2];
-      uint8_t tmp = filename[name_length];
-      filename[name_length] = 0;
-      if (!strcmp(path_.c_str(), filename)) {
-        completer_.complete_ok();
-        delete this;
-        return;
-      }
-      filename[name_length] = tmp;
-      bytes_processed += 2 + name_length;
-    }
-
-    wait->Begin(dispatcher);
-  } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    return error("watcher closed");
-  }
-}
-
-void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
-                 async_dispatcher_t* dispatcher, const std::string& path,
-                 fpromise::completer<void, IntegrationTest::Error> completer) {
-  fidl::InterfaceHandle<fuchsia::io::DirectoryWatcher> watcher;
-
-  fidl::InterfacePtr<fuchsia::io::Node> last_dir;
-  std::string filename;
-
-  size_t last_slash = path.find_last_of('/');
-  if (last_slash != std::string::npos) {
-    std::string prefix(path, 0, last_slash);
-
-    dir->Open(fuchsia::io::OpenFlags::DIRECTORY | fuchsia::io::OpenFlags::DESCRIBE |
-                  fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-              0, prefix, last_dir.NewRequest(dispatcher));
-    filename = path.substr(last_slash + 1);
-  } else {
-    dir->Clone(fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS | fuchsia::io::OpenFlags::DESCRIBE,
-               last_dir.NewRequest(dispatcher));
-    filename = path;
-  }
-
-  fidl::InterfaceRequest<fuchsia::io::DirectoryWatcher> request = watcher.NewRequest();
-  auto async_watcher =
-      std::make_unique<AsyncWatcher>(std::move(filename), std::move(watcher), std::move(last_dir));
-  auto& events = async_watcher->connections().node.events();
-  events.OnOpen = [dispatcher, async_watcher = std::move(async_watcher),
-                   completer = std::move(completer), request = std::move(request)](
-                      zx_status_t status,
-                      std::unique_ptr<fuchsia::io::NodeInfoDeprecated> info) mutable {
-    if (status != ZX_OK) {
-      completer.complete_error("Failed to open directory");
+      std::ostringstream os;
+      os << "watcher callback error: " << zx_status_get_string(status);
+      cb_(fit::error(os.str()));
       return;
     }
+    if (signal->observed & ZX_CHANNEL_READABLE) {
+      char buf[fuchsia::io::MAX_BUF + 1];
+      uint32_t bytes_read;
+      zx_status_t status =
+          watcher_.channel().read(0, buf, nullptr, sizeof(buf) - 1, 0, &bytes_read, nullptr);
+      if (status != ZX_OK) {
+        std::ostringstream os;
+        os << "watcher read error: " << zx_status_get_string(status);
+        cb_(fit::error(os.str()));
+        return;
+      }
 
-    auto& dir = async_watcher->connections().directory;
-    dir.Bind(async_watcher->connections().node.Unbind().TakeChannel(), dispatcher);
+      size_t bytes_processed = 0;
+      while (bytes_read - bytes_processed > 2) {
+        __UNUSED uint8_t event = buf[bytes_processed++];
+        uint8_t name_length = buf[bytes_processed++];
 
-    dir->Watch(fuchsia::io::WatchMask::ADDED | fuchsia::io::WatchMask::EXISTING, 0,
-               std::move(request),
-               [dispatcher, async_watcher = std::move(async_watcher),
-                completer = std::move(completer)](zx_status_t status) mutable {
-                 if (status != ZX_OK) {
-                   completer.complete_error("watcher failed");
-                   return;
-                 }
-                 status = async_watcher->Begin(dispatcher, std::move(completer));
-                 if (status == ZX_OK) {
-                   // The async_watcher will clean this up
-                   __UNUSED auto ptr = async_watcher.release();
-                 }
-               });
-  };
+        if (size_t remaining = bytes_read - bytes_processed; remaining < name_length) {
+          std::ostringstream os;
+          os << "watcher read error: name length (" << name_length << ") > remaining (" << remaining
+             << ")";
+          cb_(fit::error(os.str()));
+          return;
+        }
+
+        const std::string_view filename{&buf[bytes_processed], name_length};
+        if (filename == path_) {
+          cb_(fit::ok());
+          return;
+        }
+        bytes_processed += name_length;
+      }
+
+      wait->Begin(dispatcher);
+    } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
+      std::ostringstream os;
+      os << "watcher read error: " << zx_status_get_string(status);
+      cb_(fit::error(os.str()));
+      return;
+    }
+  }
+
+  void Begin(async_dispatcher_t* dispatcher,
+             fit::callback<void(fit::result<IntegrationTest::Error>)> cb) {
+    cb_ = std::move(cb);
+    if (const zx_status_t status = wait_.Begin(dispatcher); status != ZX_OK) {
+      std::ostringstream os;
+      os << "watcher error: " << zx_status_get_string(status);
+      cb_(fit::error(os.str()));
+    }
+  }
+
+  const std::string& path() const { return path_; }
+
+ private:
+  const std::string path_;
+  const fidl::InterfaceHandle<fuchsia::io::DirectoryWatcher> watcher_;
+
+  fit::callback<void(fit::result<IntegrationTest::Error>)> cb_;
+  async::WaitMethod<AsyncWatcher, &AsyncWatcher::WatcherChanged> wait_;
+};
+
+void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
+                 async_dispatcher_t* dispatcher, std::string path,
+                 fit::callback<void(fit::result<IntegrationTest::Error>)> cb) {
+  fidl::InterfaceHandle<fuchsia::io::DirectoryWatcher> watcher;
+  fidl::InterfaceRequest<fuchsia::io::DirectoryWatcher> request = watcher.NewRequest();
+
+  std::optional<std::string> next_path;
+  const size_t slash = path.find('/');
+  if (slash != std::string::npos) {
+    next_path = path.substr(slash + 1);
+    path = path.substr(0, slash);
+  }
+
+  dir->Watch(
+      fuchsia::io::WatchMask::ADDED | fuchsia::io::WatchMask::EXISTING, 0, std::move(request),
+      [dispatcher, path = std::move(path), watcher = std::move(watcher), &dir,
+       next_path = std::move(next_path), cb = std::move(cb)](zx_status_t status) mutable {
+        if (status != ZX_OK) {
+          std::ostringstream os;
+          os << "watcher error: " << zx_status_get_string(status);
+          cb(fit::error(os.str()));
+          return;
+        }
+        std::unique_ptr async_watcher =
+            std::make_unique<AsyncWatcher>(std::move(path), std::move(watcher));
+        async_watcher->Begin(
+            dispatcher, [dispatcher, next_path = std::move(next_path), cb = std::move(cb),
+                         watcher = std::move(async_watcher),
+                         &dir](fit::result<IntegrationTest::Error> result) mutable {
+              if (result.is_error()) {
+                cb(result.take_error());
+                return;
+              }
+              if (!next_path.has_value()) {
+                cb(fit::ok());
+                return;
+              }
+              fidl::InterfaceHandle<fuchsia::io::Node> node;
+              fidl::InterfaceRequest<fuchsia::io::Node> request = node.NewRequest();
+              fidl::InterfacePtr<fuchsia::io::Directory> subdir;
+              if (const zx_status_t status = subdir.Bind(node.TakeChannel(), dispatcher);
+                  status != ZX_OK) {
+                std::ostringstream os;
+                os << "bind: " << zx_status_get_string(status);
+                cb(fit::error(os.str()));
+                return;
+              }
+              std::string dirname = watcher->path();
+              auto& events = subdir.events();
+              events.OnOpen = [dispatcher, subdir = std::move(subdir),
+                               path = std::move(next_path.value()), cb = std::move(cb), dirname](
+                                  zx_status_t status,
+                                  std::unique_ptr<fuchsia::io::NodeInfoDeprecated> info) mutable {
+                if (status != ZX_OK) {
+                  std::ostringstream os;
+                  os << "Open(" << dirname << ").OnOpen: " << zx_status_get_string(status);
+                  cb(fit::error(os.str()));
+                  return;
+                }
+                std::unique_ptr pinned_subdir =
+                    std::make_unique<fidl::InterfacePtr<fuchsia::io::Directory>>(std::move(subdir));
+                WaitForPath(*pinned_subdir, dispatcher, std::move(path),
+                            [pinned_subdir = std::move(pinned_subdir), cb = std::move(cb)](
+                                fit::result<IntegrationTest::Error> result) mutable {
+                              cb(std::move(result));
+                            });
+              };
+
+              dir->Open(fuchsia::io::OpenFlags::DIRECTORY | fuchsia::io::OpenFlags::DESCRIBE |
+                            fuchsia::io::OpenFlags::RIGHT_READABLE,
+                        0, std::move(dirname), std::move(request));
+            });
+      });
 }
 
 }  // namespace
 
 IntegrationTest::Promise<void> IntegrationTest::DoWaitForPath(const std::string& path) {
   fpromise::bridge<void, Error> bridge;
-  WaitForPath(devfs_, IntegrationTest::loop_.dispatcher(), path, std::move(bridge.completer));
+
+  WaitForPath(devfs_, loop_.dispatcher(), path,
+              [completer = std::move(bridge.completer)](
+                  fit::result<IntegrationTest::Error> result) mutable {
+                if (result.is_error()) {
+                  completer.complete_error(result.error_value());
+                } else {
+                  completer.complete_ok();
+                }
+              });
+
   return bridge.consumer.promise_or(::fpromise::error("WaitForPath abandoned"));
 }
 
