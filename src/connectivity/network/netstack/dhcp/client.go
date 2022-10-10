@@ -20,6 +20,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/bufferv2"
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/checksum"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/packet"
@@ -925,7 +926,7 @@ func (c *Client) send(
 		Length:  length,
 	})
 	xsum := header.PseudoHeaderChecksum(header.UDPProtocolNumber, info.Assigned.Address, writeTo.Addr, length)
-	xsum = header.Checksum(dhcpPayload, xsum)
+	xsum = checksum.Checksum(dhcpPayload, xsum)
 	udp.SetChecksum(^udp.CalculateChecksum(xsum))
 
 	// Initialize the IP header.
@@ -1110,7 +1111,7 @@ func (c *Client) recv(
 		}
 		payload := udp.Payload()
 		if xsum := udp.Checksum(); xsum != 0 {
-			if !udp.IsChecksumValid(ip.SourceAddress(), ip.DestinationAddress(), header.Checksum(payload, 0)) {
+			if !udp.IsChecksumValid(ip.SourceAddress(), ip.DestinationAddress(), checksum.Checksum(payload, 0)) {
 				_ = syslog.WarnTf(
 					tag,
 					"%s: received damaged UDP frame (%s@%s -> %s); discarding %d bytes",

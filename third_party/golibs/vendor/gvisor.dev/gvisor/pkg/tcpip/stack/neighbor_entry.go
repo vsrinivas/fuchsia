@@ -232,6 +232,8 @@ func (e *neighborEntry) cancelTimerLocked() {
 func (e *neighborEntry) removeLocked() {
 	e.mu.neigh.UpdatedAt = e.cache.nic.stack.clock.NowMonotonic()
 	e.dispatchRemoveEventLocked()
+	// Set state to unknown to invalidate this entry if it's cached in a Route.
+	e.setStateLocked(Unknown)
 	e.cancelTimerLocked()
 	// TODO(https://gvisor.dev/issues/5583): test the case where this function is
 	// called during resolution; that can happen in at least these scenarios:
@@ -504,6 +506,7 @@ func (e *neighborEntry) handleConfirmationLocked(linkAddr tcpip.LinkAddress, fla
 			// "If the link layer has addresses and no Target Link-Layer Address
 			// option is included, the receiving node SHOULD silently discard the
 			// received advertisement." - RFC 4861 section 7.2.5
+			e.cache.nic.stats.neighbor.droppedInvalidLinkAddressConfirmations.Increment()
 			break
 		}
 
@@ -586,24 +589,59 @@ func (e *neighborEntry) handleConfirmationLocked(linkAddr tcpip.LinkAddress, fla
 	}
 }
 
-// handleUpperLevelConfirmationLocked processes an incoming upper-level protocol
+// handleUpperLevelConfirmation processes an incoming upper-level protocol
 // (e.g. TCP acknowledgements) reachability confirmation.
-//
-// Precondition: e.mu MUST be locked.
-func (e *neighborEntry) handleUpperLevelConfirmationLocked() {
-	switch e.mu.neigh.State {
-	case Stale, Delay, Probe:
+func (e *neighborEntry) handleUpperLevelConfirmation() {
+	tryHandleConfirmation := func() bool {
+		switch e.mu.neigh.State {
+		case Stale, Delay, Probe:
+			return true
+		case Reachable:
+			// Avoid setStateLocked; Timer.Reset is cheaper.
+			//
+			// Note that setting the timer does not need to be protected by the
+			// entry's write lock since we do not modify the timer pointer, but the
+			// time the timer should fire. The timer should have internal locks to
+			// synchronize timer resets changes with the clock.
+			e.mu.timer.timer.Reset(e.nudState.ReachableTime())
+			return false
+		case Unknown, Incomplete, Unreachable, Static:
+			// Do nothing
+			return false
+		default:
+			panic(fmt.Sprintf("Invalid cache entry state: %s", e.mu.neigh.State))
+		}
+	}
+
+	e.mu.RLock()
+	needsTransition := tryHandleConfirmation()
+	e.mu.RUnlock()
+	if !needsTransition {
+		return
+	}
+
+	// We need to transition the neighbor to Reachable so take the write lock and
+	// perform the transition, but only if we still need the transition since the
+	// state could have changed since we dropped the read lock above.
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if needsTransition := tryHandleConfirmation(); needsTransition {
 		e.setStateLocked(Reachable)
 		e.dispatchChangeEventLocked()
+	}
+}
 
-	case Reachable:
-		// Avoid setStateLocked; Timer.Reset is cheaper.
-		e.mu.timer.timer.Reset(e.nudState.ReachableTime())
-
-	case Unknown, Incomplete, Unreachable, Static:
-		// Do nothing
-
+// getRemoteLinkAddress returns the entry's link address and whether that link
+// address is valid.
+func (e *neighborEntry) getRemoteLinkAddress() (tcpip.LinkAddress, bool) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	switch e.mu.neigh.State {
+	case Reachable, Static, Delay, Probe:
+		return e.mu.neigh.LinkAddr, true
+	case Unknown, Incomplete, Unreachable, Stale:
+		return "", false
 	default:
-		panic(fmt.Sprintf("Invalid cache entry state: %s", e.mu.neigh.State))
+		panic(fmt.Sprintf("invalid state for neighbor entry %v: %v", e.mu.neigh, e.mu.neigh.State))
 	}
 }

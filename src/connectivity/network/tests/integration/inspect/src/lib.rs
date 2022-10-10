@@ -239,6 +239,8 @@ async fn inspect_nic() {
                     Packets: 0u64,
                 },
                 Neighbor: {
+                    DroppedConfirmationForNoninitiatedNeighbor: 0u64,
+                    DroppedInvalidLinkAddressConfirmations: 0u64,
                     UnreachableEntryLookups: 0u64,
                 },
                 MalformedL4RcvdPackets: 0u64,
@@ -290,6 +292,8 @@ async fn inspect_nic() {
                     Packets: AnyProperty,
                 },
                 Neighbor: {
+                    DroppedConfirmationForNoninitiatedNeighbor: AnyProperty,
+                    DroppedInvalidLinkAddressConfirmations: AnyProperty,
                     UnreachableEntryLookups: AnyProperty,
                 },
                 MalformedL4RcvdPackets: 0u64,
@@ -362,6 +366,8 @@ async fn inspect_nic() {
                     Packets: AnyProperty,
                 },
                 Neighbor: {
+                    DroppedConfirmationForNoninitiatedNeighbor: AnyProperty,
+                    DroppedInvalidLinkAddressConfirmations: AnyProperty,
                     UnreachableEntryLookups: AnyProperty,
                 },
                 MalformedL4RcvdPackets: 0u64,
@@ -858,6 +864,8 @@ async fn inspect_stat_counters() {
                 Packets: AnyProperty,
             },
             Neighbor: {
+                DroppedConfirmationForNoninitiatedNeighbor: AnyProperty,
+                DroppedInvalidLinkAddressConfirmations: AnyProperty,
                 UnreachableEntryLookups: AnyProperty,
             },
             Rx: {

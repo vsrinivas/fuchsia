@@ -95,7 +95,7 @@ func writePCAPHeader(w io.Writer, maxLen uint32) error {
 	if err != nil {
 		return err
 	}
-	return binary.Write(w, binary.BigEndian, pcapHeader{
+	return binary.Write(w, binary.LittleEndian, pcapHeader{
 		// From https://wiki.wireshark.org/Development/LibpcapFileFormat
 		MagicNumber: 0xa1b2c3d4,
 
@@ -133,12 +133,12 @@ func NewWithWriter(lower stack.LinkEndpoint, writer io.Writer, snapLen uint32) (
 // DeliverNetworkPacket implements the stack.NetworkDispatcher interface. It is
 // called by the link-layer endpoint being wrapped when a packet arrives, and
 // logs the packet before forwarding to the actual dispatcher.
-func (e *endpoint) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+func (e *endpoint) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBufferPtr) {
 	e.dumpPacket(DirectionRecv, protocol, pkt)
 	e.Endpoint.DeliverNetworkPacket(protocol, pkt)
 }
 
-func (e *endpoint) dumpPacket(dir Direction, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+func (e *endpoint) dumpPacket(dir Direction, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBufferPtr) {
 	writer := e.writer
 	if writer == nil && LogPackets.Load() == 1 {
 		LogPacket(e.logPrefix, dir, protocol, pkt)
@@ -170,7 +170,7 @@ func (e *endpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) 
 }
 
 // LogPacket logs a packet to stdout.
-func LogPacket(prefix string, dir Direction, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+func LogPacket(prefix string, dir Direction, protocol tcpip.NetworkProtocolNumber, pkt stack.PacketBufferPtr) {
 	// Figure out the network layer info.
 	var transProto uint8
 	src := tcpip.Address("unknown")
@@ -190,17 +190,7 @@ func LogPacket(prefix string, dir Direction, protocol tcpip.NetworkProtocolNumbe
 		panic(fmt.Sprintf("unrecognized direction: %d", dir))
 	}
 
-	// Clone the packet buffer to not modify the original.
-	//
-	// We don't clone the original packet buffer so that the new packet buffer
-	// does not have any of its headers set.
-	//
-	// We trim the link headers from the cloned buffer as the sniffer doesn't
-	// handle link headers.
-	buf := pkt.ToBuffer()
-	buf.TrimFront(int64(len(pkt.VirtioNetHeader().Slice())))
-	buf.TrimFront(int64(len(pkt.LinkHeader().Slice())))
-	pkt = stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: buf})
+	pkt = trimmedClone(pkt)
 	defer pkt.DecRef()
 	switch protocol {
 	case header.IPv4ProtocolNumber:
@@ -386,4 +376,18 @@ func LogPacket(prefix string, dir Direction, protocol tcpip.NetworkProtocolNumbe
 	}
 
 	log.Infof("%s%s %s %s:%d -> %s:%d len:%d id:%04x %s", prefix, directionPrefix, transName, src, srcPort, dst, dstPort, size, id, details)
+}
+
+// trimmedClone clones the packet buffer to not modify the original. It trims
+// anything before the network header.
+func trimmedClone(pkt stack.PacketBufferPtr) stack.PacketBufferPtr {
+	// We don't clone the original packet buffer so that the new packet buffer
+	// does not have any of its headers set.
+	//
+	// We trim the link headers from the cloned buffer as the sniffer doesn't
+	// handle link headers.
+	buf := pkt.ToBuffer()
+	buf.TrimFront(int64(len(pkt.VirtioNetHeader().Slice())))
+	buf.TrimFront(int64(len(pkt.LinkHeader().Slice())))
+	return stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: buf})
 }
