@@ -23,44 +23,39 @@ type EventType = strict enum {
     /// payload carries the request channel.
     CAPABILITY_REQUESTED = 1;
 
-    /// A capability is being requested by a component and its routing
-    /// has also been determined.
-    /// The event propagation system is used to supply the capability being requested.
-    CAPABILITY_ROUTED = 2;
-
     /// A directory exposed to the framework by a component is available.
-    DIRECTORY_READY = 3;
+    DIRECTORY_READY = 2;
 
     /// A component instance was discovered. This is the first stage in the lifecycle
     /// of components. Dispatched for dynamic children when they're created, for static
     /// children when their parent is resolved, and for the root when the component manager
     /// starts.
-    DISCOVERED = 4;
+    DISCOVERED = 3;
 
     /// The instance is destroyed and no longer exists.
-    DESTROYED = 5;
+    DESTROYED = 4;
 
     /// An instance's declaration was resolved successfully for the first time.
-    RESOLVED = 6;
+    RESOLVED = 5;
 
     /// This instance has started, according to component manager. However, if this is an
     /// executable component, the runner has further work to do to launch the component.
-    STARTED = 7;
+    STARTED = 6;
 
     /// An instance was stopped successfully.
-    STOPPED = 8;
+    STOPPED = 7;
 
     /// If requested, this event is dispatched on subscription and indicates
     /// that the instance has already started and is still running.
-    RUNNING = 9;
+    RUNNING = 8;
 
     /// Similar to STARTED, except the payload will carry an eventpair that the subscriber
     /// could use to defer the launch of the component. This allows, e.g., a debugger to
     /// perform some setup before any processes are created.
-    DEBUG_STARTED = 10;
+    DEBUG_STARTED = 9;
 
     /// An instance was unresolved successfully.
-    UNRESOLVED = 11;
+    UNRESOLVED = 10;
 };
 
 /// Describes the result of a state transition.
@@ -90,38 +85,35 @@ type EventErrorPayload = flexible union {
     /// Payload for CapabilityRequested events
     1: capability_requested CapabilityRequestedError;
 
-    /// Payload for CapabilityRouted events
-    2: capability_routed CapabilityRoutedError;
-
     /// Payload for Purged events.
-    3: purged PurgedError;
+    2: purged PurgedError;
 
     /// Payload for DirectoryReady events
-    4: directory_ready DirectoryReadyError;
+    3: directory_ready DirectoryReadyError;
 
     /// Payload for Discovered events.
-    5: discovered DiscoveredError;
+    4: discovered DiscoveredError;
 
     /// Payload for Destroyed events.
-    6: destroyed DestroyedError;
+    5: destroyed DestroyedError;
 
     /// Payload for Resolved events
-    7: resolved ResolvedError;
+    6: resolved ResolvedError;
 
     /// Payload for Running events
-    8: running RunningError;
+    7: running RunningError;
 
     /// Payload for Started events
-    9: started StartedError;
+    8: started StartedError;
 
     /// Payload for Stopped events
-   10: stopped StoppedError;
+    9: stopped StoppedError;
 
     /// Payload for DebugStarted events
-   11: debug_started DebugStartedError;
+   10: debug_started DebugStartedError;
 
     /// Payload for Unresolved events.
-   12: unresolved UnresolvedError;
+   11: unresolved UnresolvedError;
 };
 
 /// Error payload for DirectoryReady events
@@ -133,12 +125,6 @@ type DirectoryReadyError = table {
 /// Error payload for CapabilityRequested events
 type CapabilityRequestedError = table {
     /// The name of the capability being requested.
-    1: name fuchsia.component.name;
-};
-
-/// Error payload for CapabilityRouted events
-type CapabilityRoutedError = table {
-    /// Name of the capability being requested.
     1: name fuchsia.component.name;
 };
 
@@ -177,38 +163,35 @@ type EventPayload = flexible resource union {
     /// Payload for CapabilityRequested events
     1: capability_requested CapabilityRequestedPayload;
 
-    /// Payload for CapabilityRouted events
-    2: capability_routed CapabilityRoutedPayload;
-
     /// Payload for Purged events.
-    3: purged PurgedPayload;
+    2: purged PurgedPayload;
 
     /// Payload for DirectoryReady events
-    4: directory_ready DirectoryReadyPayload;
+    3: directory_ready DirectoryReadyPayload;
 
     /// Payload for Discovered events.
-    5: discovered DiscoveredPayload;
+    4: discovered DiscoveredPayload;
 
     /// Payload for Destroyed events.
-    6: destroyed DestroyedPayload;
+    5: destroyed DestroyedPayload;
 
     /// Payload for Resolved events
-    7: resolved ResolvedPayload;
+    6: resolved ResolvedPayload;
 
     /// Payload for Running events
-    8: running RunningPayload;
+    7: running RunningPayload;
 
     /// Payload for Started events
-    9: started StartedPayload;
+    8: started StartedPayload;
 
     /// Payload for Stopped events
-   10: stopped StoppedPayload;
+    9: stopped StoppedPayload;
 
     /// Payload for DebugStarted events
-   11: debug_started DebugStartedPayload;
+   10: debug_started DebugStartedPayload;
 
     /// Payload for Unresolved events
-   12: unresolved UnresolvedPayload;
+   11: unresolved UnresolvedPayload;
 };
 
 /// Payload for DirectoryReady events
@@ -228,12 +211,6 @@ type CapabilityRequestedPayload = resource table {
     /// A handle to the server end of the channel to host
     /// capability.
     2: capability zx.handle:CHANNEL;
-};
-
-/// Payload for CapabilityRouted events
-type CapabilityRoutedPayload = resource table {
-    /// Name of capability being requested.
-    1: name fuchsia.component.name;
 };
 
 /// Payload for Purged events.

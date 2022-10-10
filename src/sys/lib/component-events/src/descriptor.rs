@@ -27,9 +27,6 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
             Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
                 fsys::CapabilityRequestedPayload { name, .. },
             ))) => name.clone(),
-            Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(
-                fsys::CapabilityRoutedPayload { name, .. },
-            ))) => name.clone(),
             Some(fsys::EventResult::Error(fsys::EventError {
                 error_payload:
                     Some(fsys::EventErrorPayload::DirectoryReady(fsys::DirectoryReadyError {
@@ -41,14 +38,6 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
             Some(fsys::EventResult::Error(fsys::EventError {
                 error_payload:
                     Some(fsys::EventErrorPayload::CapabilityRequested(fsys::CapabilityRequestedError {
-                        name,
-                        ..
-                    })),
-                ..
-            })) => name.clone(),
-            Some(fsys::EventResult::Error(fsys::EventError {
-                error_payload:
-                    Some(fsys::EventErrorPayload::CapabilityRouted(fsys::CapabilityRoutedError {
                         name,
                         ..
                     })),

@@ -78,26 +78,6 @@ macro_rules! events {
             }
         }
 
-        impl Into<fsys::EventType> for EventType {
-            fn into(self) -> fsys::EventType {
-                match self {
-                    $(
-                        EventType::$name => fsys::EventType::$name,
-                    )*
-                }
-            }
-        }
-
-        impl From<fsys::EventType> for EventType {
-            fn from(fidl_event_type: fsys::EventType) -> Self {
-                match fidl_event_type {
-                    $(
-                        fsys::EventType::$name => EventType::$name,
-                    )*
-                }
-            }
-        }
-
         impl EventType {
             /// Returns all available event types.
             pub fn values() -> Vec<EventType> {
@@ -140,6 +120,34 @@ macro_rules! events {
     };
 }
 
+macro_rules! external_events {
+    ($($name:ident),*) => {
+
+        impl From<fsys::EventType> for EventType {
+            fn from(fidl_event_type: fsys::EventType) -> Self {
+                match fidl_event_type {
+                    $(
+                        fsys::EventType::$name => EventType::$name,
+                    )*
+                }
+            }
+        }
+
+        impl TryInto<fsys::EventType> for EventType {
+            type Error = anyhow::Error;
+            fn try_into(self) -> Result<fsys::EventType, anyhow::Error> {
+                match self {
+                    $(
+                        EventType::$name => Ok(fsys::EventType::$name),
+                    )*
+                    EventType::CapabilityRouted =>
+                        Err(format_err!("can't serve capability routed")),
+                }
+            }
+        }
+    }
+}
+
 impl EventType {
     pub fn synthesized_only() -> Vec<Self> {
         vec![EventType::Running]
@@ -177,6 +185,19 @@ events!([
     /// A component instance was unresolved.
     (Unresolved, unresolved),
 ]);
+
+external_events!(
+    CapabilityRequested,
+    DirectoryReady,
+    Discovered,
+    Destroyed,
+    Resolved,
+    Started,
+    Stopped,
+    Running,
+    DebugStarted,
+    Unresolved
+);
 
 impl Into<CapabilityName> for EventType {
     fn into(self) -> CapabilityName {

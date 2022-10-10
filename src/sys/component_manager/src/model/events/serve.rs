@@ -3,18 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        capability::CapabilitySource,
-        model::{
-            events::{
-                event::Event,
-                registry::{ComponentEventRoute, EventSubscription},
-                source::EventSource,
-                stream::EventStream,
-            },
-            hooks::{
-                EventError, EventErrorPayload, EventPayload, EventResult, EventType, HasEventType,
-            },
+    crate::model::{
+        events::{
+            event::Event,
+            registry::{ComponentEventRoute, EventSubscription},
+            source::EventSource,
+            stream::EventStream,
+        },
+        hooks::{
+            EventError, EventErrorPayload, EventPayload, EventResult, EventType, HasEventType,
         },
     },
     cm_rust::{CapabilityName, EventMode},
@@ -401,8 +398,9 @@ async fn maybe_create_event_result(
         Ok(EventPayload::CapabilityRequested { name, capability, .. }) => Ok(Some(
             create_capability_requested_payload(name.to_string(), capability.clone()).await,
         )),
-        Ok(EventPayload::CapabilityRouted { source, .. }) => {
-            Ok(Some(create_capability_routed_payload(source)))
+        Ok(EventPayload::CapabilityRouted { .. }) => {
+            // Capability routed events cannot be exposed externally. This should be unreachable.
+            Ok(None)
         }
         Ok(EventPayload::Running { started_timestamp }) => Ok(Some(fsys::EventResult::Payload(
             fsys::EventPayload::Running(fsys::RunningPayload {
@@ -514,12 +512,6 @@ async fn create_capability_requested_payload(
     }
 }
 
-fn create_capability_routed_payload(source: &CapabilitySource) -> fsys::EventResult {
-    let name = source.source_name().map(|n| n.to_string());
-    let payload = fsys::CapabilityRoutedPayload { name, ..fsys::CapabilityRoutedPayload::EMPTY };
-    fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(payload))
-}
-
 fn create_debug_started_payload(
     runtime_dir: &Option<fio::DirectoryProxy>,
     break_on_start: &Arc<zx::EventPair>,
@@ -576,7 +568,7 @@ fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventRes
 }
 
 /// Creates the basic FIDL Event object
-async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
+async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, anyhow::Error> {
     let moniker_string = match (&event.event.target_moniker, &event.scope_moniker) {
         (moniker @ ExtendedMoniker::ComponentManager, _) => moniker.to_string(),
         (ExtendedMoniker::ComponentInstance(target), ExtendedMoniker::ComponentManager) => {
@@ -591,7 +583,7 @@ async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Err
         }
     };
     let header = Some(fsys::EventHeader {
-        event_type: Some(event.event.event_type().into()),
+        event_type: Some(event.event.event_type().try_into()?),
         moniker: Some(moniker_string),
         component_url: Some(event.event.component_url.clone()),
         timestamp: Some(event.event.timestamp.into_nanos()),

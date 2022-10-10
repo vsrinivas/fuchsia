@@ -24,7 +24,6 @@ lazy_static! {
 pub fn event_name(event_type: &fsys::EventType) -> String {
     match event_type {
         fsys::EventType::CapabilityRequested => "capability_requested",
-        fsys::EventType::CapabilityRouted => "capability_routed",
         fsys::EventType::DirectoryReady => "directory_ready",
         fsys::EventType::Discovered => "discovered",
         fsys::EventType::Destroyed => "destroyed",
