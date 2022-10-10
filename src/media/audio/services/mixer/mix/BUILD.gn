@@ -55,6 +55,8 @@ source_set("mix") {
     "simple_packet_queue_producer_stage.h",
     "simple_ring_buffer_producer_stage.cc",
     "simple_ring_buffer_producer_stage.h",
+    "start_stop_control.cc",
+    "start_stop_control.h",
     "stream_sink_consumer_writer.cc",
     "stream_sink_consumer_writer.h",
   ]
@@ -100,6 +102,7 @@ executable("mix_unittests") {
     "silence_padding_stage_unittest.cc",
     "simple_packet_queue_producer_stage_unittest.cc",
     "simple_ring_buffer_producer_stage_unittest.cc",
+    "start_stop_control_unittest.cc",
     "stream_sink_consumer_writer_unittest.cc",
   ]
 
