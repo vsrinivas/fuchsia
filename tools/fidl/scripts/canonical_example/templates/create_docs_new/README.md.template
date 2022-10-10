@@ -1,6 +1,6 @@
 # FIDL example: ${series_sentence_case}
 
-<!-- TODO(fxbug.dev/${bug}): Add documentation -->
+<!-- TODO(fxbug.dev/${bug}): DOCUMENT[${series_snake_case}/${variant_snake_case}] 1-paragraph description -->
 
 ## Getting started {#${variant_snake_case}}
 

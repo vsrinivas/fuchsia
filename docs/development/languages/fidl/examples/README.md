@@ -7,7 +7,7 @@ simplified implementations of real software workflows.
 
 The following examples sequentially demonstrate useful FIDL concepts.
 
-<!-- DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
+<!-- DO_NOT_REMOVE_COMMENT:examples (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
 ### Key-value store
 
@@ -21,7 +21,7 @@ The [canvas][example_canvas] example demonstrates how to build a simple 2D
 line-rendering canvas using FIDL in order to learn about commonly used data flow
 patterns.
 
-<!-- /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
+<!-- /DO_NOT_REMOVE_COMMENT:examples (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
 ## Concept index
 
@@ -30,19 +30,21 @@ examples listed in the preceding section. A quick reference of each such
 concept, as well as its example implementations, is listed in the following
 section.
 
-### Data types
+<!-- DO_NOT_REMOVE_COMMENT:concepts (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
-#### Alias
+### Alias
 
 <<../concepts/_alias.md>>
 
-#### Enum
+### Enum
 
 <<../concepts/_enum.md>>
 
-#### Named method payload
+### Named method payload
 
 <<../concepts/_named_payload.md>>
+
+<!-- /DO_NOT_REMOVE_COMMENT:concepts (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
 [example_canvas]: canvas/README.md
 [example_key_value_store]: key_value_store/README.md

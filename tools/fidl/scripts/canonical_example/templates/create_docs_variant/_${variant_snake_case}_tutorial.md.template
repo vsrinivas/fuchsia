@@ -1,4 +1,4 @@
-<!-- TODO(fxbug.dev/${bug}): Add documentation (no header) -->
+<!-- TODO(fxbug.dev/${bug}): DOCUMENT[${series_snake_case}/${variant_snake_case}] no need for a header, just a brief description -->
 
 Note: The source code for this example is located at
 [//examples/fidl/new/${series_snake_case}/${variant_snake_case}](/examples/fidl/new/${series_snake_case}/${variant_snake_case}).

@@ -1,0 +1,4 @@
+<!-- TODO(${dns}): no headers, just text, to briefly describe this concept -->
+
+<<../examples/${series_snake_case}/_callout.md>>
+<<../examples/${series_snake_case}/_${variant_snake_case}_tutorial.md>>

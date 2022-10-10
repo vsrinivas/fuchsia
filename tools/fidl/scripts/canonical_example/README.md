@@ -10,6 +10,10 @@ without saying, but please don't remove these comments. The scaffold script uses
 them to properly place certain text spans when generating new canonical
 examples.
 
+If there are multiple such ranges in a single file, both the start and end tags
+of each range may be suffixed with a colon followed by the same identifier tag:
+`// DO_NOT_REMOVE_COMMENT:tag` and `// /DO_NOT_REMOVE_COMMENT:tag`.
+
 ## Templating
 
 The scaffolder basically takes one or more of the directory templates

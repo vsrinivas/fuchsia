@@ -9,4 +9,3 @@ rather than a repetitive inline definition.
 
 <<../examples/key_value_store/_callout.md>>
 <<../examples/key_value_store/_add_read_item_tutorial.md>>
-
