@@ -300,13 +300,12 @@ class CompositeAddOrderTestCase : public CompositeTestCase {
 class CompositeAddOrderSharedFragmentTestCase : public CompositeAddOrderTestCase {
  public:
   void ExecuteSharedFragmentTest(AddLocation dev1_add, AddLocation dev2_add) {
-    size_t device_indexes[3];
     uint32_t protocol_id[] = {
         ZX_PROTOCOL_GPIO,
         ZX_PROTOCOL_I2C,
         ZX_PROTOCOL_ETHERNET,
     };
-    static_assert(std::size(protocol_id) == std::size(device_indexes));
+    size_t device_indexes[std::size(protocol_id)];
 
     const char* kCompositeDev1Name = "composite-dev1";
     const char* kCompositeDev2Name = "composite-dev2";
@@ -357,13 +356,12 @@ class CompositeAddOrderSharedFragmentTestCase : public CompositeAddOrderTestCase
 };
 
 void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
-  size_t device_indexes[3];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
       ZX_PROTOCOL_ETHERNET,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const char* kCompositeDevName = "composite-dev";
   auto do_add = [&]() {
@@ -430,13 +428,12 @@ TEST_F(CompositeAddOrderSharedFragmentTestCase, DefineDevice1AfterDevice2After) 
 }
 
 TEST_F(CompositeTestCase, AddMultipleSharedFragmentCompositeDevices) {
-  size_t device_indexes[2];
   zx_status_t status = ZX_OK;
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   for (size_t i = 0; i < std::size(device_indexes); ++i) {
     char name[32];
@@ -477,12 +474,11 @@ TEST_F(CompositeTestCase, AddMultipleSharedFragmentCompositeDevices) {
 }
 
 TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
-  size_t device_indexes[2];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const char* kCompositeDev1Name = "composite-dev-1";
   const char* kCompositeDev2Name = "composite-dev-2";
@@ -608,12 +604,11 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
 }
 
 TEST_F(CompositeTestCase, FragmentUnbinds) {
-  size_t device_indexes[2];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const char* kCompositeDevName = "composite-dev";
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
@@ -697,12 +692,11 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
 }
 
 TEST_F(CompositeTestCase, SuspendOrder) {
-  size_t device_indexes[2];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const char* kCompositeDevName = "composite-dev";
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
@@ -761,12 +755,11 @@ TEST_F(CompositeTestCase, SuspendOrder) {
 }
 
 TEST_F(CompositeTestCase, ResumeOrder) {
-  size_t device_indexes[2];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const char* kCompositeDevName = "composite-dev";
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
@@ -844,12 +837,11 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
                                              std::move(server.value())));
   }
 
-  size_t device_indexes[2];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const char* kCompositeDevName = "composite-dev";
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
@@ -880,12 +872,11 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
 
 // Make sure the path returned by GetTopologicalPath is accurate
 TEST_F(CompositeTestCase, Topology) {
-  size_t device_indexes[2];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const char* kCompositeDevName = "composite-dev";
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
@@ -948,13 +939,12 @@ class CompositeMetadataTestCase : public CompositeTestCase {
 };
 
 void CompositeMetadataTestCase::AddCompositeDevice(AddLocation add) {
-  size_t device_indexes[3];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
       ZX_PROTOCOL_ETHERNET,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const device_metadata_t metadata[] = {
       {
@@ -1060,14 +1050,12 @@ TEST_F(CompositeMetadataTestCase, GetMetadataFromChild) {
 TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
   char buf[32] = "";
   size_t len = 0;
-  size_t device_indexes[3];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
       ZX_PROTOCOL_ETHERNET,
   };
-
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const device_metadata_t metadata[] = {
       {
@@ -1169,12 +1157,11 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
 
 // Tests that a composite is not created until the fragment devices finish initializing.
 TEST_F(CompositeTestCase, FragmentDeviceInit) {
-  size_t device_indexes[2];
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
   };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+  size_t device_indexes[std::size(protocol_id)];
 
   const char* kCompositeDevName = "composite-dev";
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
