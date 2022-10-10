@@ -156,10 +156,15 @@ zx_status_t MvmSta::SetKey(const fuchsia_wlan_softmac::wire::WlanKeyConfig* key_
 
   unique_free_ptr<struct ieee80211_key_conf> key_conf(reinterpret_cast<struct ieee80211_key_conf*>(
       calloc(1, sizeof(ieee80211_key_conf) + key_config->key().count())));
+  key_conf->key_type = key_type;
   key_conf->cipher = key_config->cipher_type();
   key_conf->keyidx = key_config->key_idx();
   key_conf->keylen = key_config->key().count();
   key_conf->rx_seq = key_config->rsc();
+
+  IWL_INFO(mvm, "Setting a new crypto key (type: %d, cipher: %d) request.\n",
+           key_conf->key_type,  // WLAN_KEY_TYPE_*
+           key_conf->cipher);   // CIPHER_SUITE_TYPE_*
 
   if (key_conf->cipher == CIPHER_SUITE_TYPE_TKIP) {
     // A special trick for TKIP group key: Swap the latest 2 8-byte (MIC-KEY-TX and MIC-KEY-RX).
