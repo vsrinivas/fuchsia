@@ -66,8 +66,8 @@ TEST_F(SingletonDisplayIntegrationTest, GetMetrics) {
   ASSERT_TRUE(metrics->has_extent_in_mm());
   ASSERT_TRUE(metrics->has_recommended_device_pixel_ratio());
 
-  EXPECT_EQ(1024, metrics->extent_in_px().width);
-  EXPECT_EQ(600, metrics->extent_in_px().height);
+  EXPECT_EQ(1280, metrics->extent_in_px().width);
+  EXPECT_EQ(800, metrics->extent_in_px().height);
   EXPECT_EQ(160, metrics->extent_in_mm().width);
   EXPECT_EQ(90, metrics->extent_in_mm().height);
   EXPECT_EQ(1.f, metrics->recommended_device_pixel_ratio().x);

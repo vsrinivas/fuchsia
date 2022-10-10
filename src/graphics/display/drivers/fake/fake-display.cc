@@ -42,9 +42,9 @@ namespace {
 // List of supported pixel formats
 zx_pixel_format_t kSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_ARGB_8888,
                                               ZX_PIXEL_FORMAT_BGR_888x, ZX_PIXEL_FORMAT_ABGR_8888};
-// Arbitrary dimensions - the same as astro.
-constexpr uint32_t kWidth = 1024;
-constexpr uint32_t kHeight = 600;
+// Arbitrary dimensions - the same as sherlock.
+constexpr uint32_t kWidth = 1280;
+constexpr uint32_t kHeight = 800;
 
 constexpr uint64_t kDisplayId = 1;
 

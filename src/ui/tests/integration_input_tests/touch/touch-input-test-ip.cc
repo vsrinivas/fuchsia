@@ -142,8 +142,9 @@ constexpr auto kMoveEventCount = 5;
 // between any two tap events present in the response to a swipe event.
 // Note: These values are currently hard coded in the fake display and should be changed
 // accordingly.
-constexpr auto kDisplayWidth = 1024;
-constexpr auto kDisplayHeight = 600;
+// TODO(fxb/111483): Remove the dependency of the tests on these hard coded values.
+constexpr auto kDisplayWidth = 1280;
+constexpr auto kDisplayHeight = 800;
 
 // The type used to measure UTC time. The integer value here does not matter so
 // long as it differs from the ZX_CLOCK_MONOTONIC=0 defined by Zircon.
