@@ -178,7 +178,14 @@ TEST(LeakSanitizerTest, NoLeaks) {
   EXPECT_FALSE(LsanDetectsLeaks());
 }
 
+// TODO(fxbug.dev/111351): This test has been pretty flaky for bringup.x64-lto
+// but I have not been able to reproduce this locally on 1000+ runs. Re-enable
+// this once we are able to reproduce locally and fix the underlying issue.
+#ifdef DISABLE_FOR_LTO
+TEST_F(LeakSanitizerTest, DISABLED_Leak) {
+#else
 TEST_F(LeakSanitizerTest, Leak) {
+#endif
   // Make a known "leaked" allocation.  The pointer is obfuscated so the
   // LSan sweep should declare it leaked.  But the LeakedAllocation dtor
   // actually de-obfuscates and cleans it up afterwards.
