@@ -13,8 +13,8 @@ properly qualified.
 <span class="kwd">namespace</span> myns {
 
 <span class="kwd">enum </span> <span class="typ">EnumInsideNamespace</span> {
-  kValue1,
-  kValue2,
+  kValue1, <span class="com">// = 0</span>
+  kValue2, <span class="com">// = 1</span>
 };
 
 }  <span class="com">// namespace myns</span>

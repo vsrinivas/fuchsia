@@ -164,14 +164,27 @@ type Reference struct {
 	IsInGlobalNamespace bool   `yaml:"IsInGlobalNamespace"`
 }
 
+// Like ReturnType, this is a struct which clang-doc doesn't have but it inserts another layer of
+// indirection in the YAML file which is modeled with this struct.
+type BaseType struct {
+	Type Type `yaml:"Type"`
+}
+
+type EnumValueInfo struct {
+	Name  string `yaml:"Name"`
+	Value string `yaml:"Value"`
+	Expr  string `yaml:"Expr"`
+}
+
 type EnumInfo struct {
-	USR         string        `yaml:"USR"`
-	Name        string        `yaml:"Name"`
-	Namespace   []Reference   `yaml:"Namespace"`
-	DefLocation Location      `yaml:"DefLocation"`
-	Description []CommentInfo `yaml:"Description"`
-	Scoped      bool          `yaml:"Scoped"` // True for an enum class.
-	Members     []string      `yaml:"Members"`
+	USR         string          `yaml:"USR"`
+	Name        string          `yaml:"Name"`
+	Namespace   []Reference     `yaml:"Namespace"`
+	DefLocation Location        `yaml:"DefLocation"`
+	Description []CommentInfo   `yaml:"Description"`
+	Scoped      bool            `yaml:"Scoped"`   // True for an enum class.
+	BaseType    BaseType        `yaml:"BaseType"` // Defined for explicitly typed enums.
+	Members     []EnumValueInfo `yaml:"Members"`
 }
 
 type RecordInfo struct {

@@ -46,7 +46,7 @@ enum MySimpleEnum {
 // title for the docstring.
 enum class MyFancyEnum : char {
   kValue1 = 1,
-  kValue2 = 2,
+  kValue2 = 1 + 1,
 };
 
 // This is an extern global value.

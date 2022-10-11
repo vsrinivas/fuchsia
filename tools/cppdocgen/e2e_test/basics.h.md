@@ -33,8 +33,8 @@ Documentation for the API flag.
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">enum </span> <span class="typ">MySimpleEnum</span> {
-  kValue1,
-  kValue2,
+  kValue1, <span class="com">// = 0</span>
+  kValue2, <span class="com">// = 1</span>
 };
 </pre>
 
@@ -46,9 +46,9 @@ Here is a regular enum with everything implicit.
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#47)
 
 <pre class="devsite-disable-click-to-copy">
-<span class="kwd">enum class</span> <span class="typ">MyFancyEnum</span> {
-  kValue1,
-  kValue2,
+<span class="kwd">enum class</span> <span class="typ">MyFancyEnum</span> : <span class="typ">char</span> {
+  kValue1 = 1,
+  kValue2 = 1 + 1, <span class="com">// = 2</span>
 };
 </pre>
 
