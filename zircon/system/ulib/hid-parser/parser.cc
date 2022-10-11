@@ -20,6 +20,12 @@ namespace {
 // See http://fxbug.dev/64791.
 constexpr size_t kMaxTotalDescriptorByteCount = 1 << 30;  // 1GB
 
+// The maximum number of reports that we support for a single device. This
+// prevents malformed descriptors from using up useful memory, and should be
+// generous enough to handle most devices.
+// See http://fxbug.dev/106491
+constexpr size_t kMaxReports = 10000;
+
 #define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
 
 // Temporary structure to keep report id data.
@@ -170,6 +176,12 @@ class ParseState {
       report_ids_.erase(0);
     }
     size_t report_count = report_ids_.size();
+
+    // Too many reports.
+    if (report_count >= kMaxReports) {
+      // Sorry, not sorry.
+      return kParseNoMemory;
+    }
 
     size_t device_sz;
     if (!CheckAdd(sizeof(DeviceDescriptor), CheckMul(report_count, sizeof(ReportDescriptor)))

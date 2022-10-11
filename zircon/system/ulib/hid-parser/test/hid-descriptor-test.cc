@@ -362,3 +362,413 @@ TEST(HidDescriptorTest, LimitLargeReportAllocations) {
 
   FreeDeviceDescriptor(desc);
 }
+
+// This fuzzer-discovered descriptor allocates too many reports.
+TEST(HidDescriptorTest, LimitManyReportAllocations) {
+  const uint8_t report_desc[] = {
+      0x96, 0xA5, 0xDF,  // Report Count (-8283)
+      0x08,              // Usage
+      0xA1, 0x01,        // Collection (Application)
+      0x08,              //   Usage
+      0xA0,              //   Collection
+      0x08,              //     Usage
+      0xA0,              //     Collection
+      0x08,              //       Usage
+      0xA0,              //       Collection
+      0x08,              //         Usage
+      0xA1, 0x01,        //         Collection (Application)
+      0xA0,              //           Collection
+      0x08,              //             Usage
+      0x90,              //             Output
+      0x08,              //             Usage
+      0x90,              //             Output
+      0x08,              //             Usage
+      0xA0,              //             Collection
+      0x08,              //               Usage
+      0xA0,              //               Collection
+      0x08,              //                 Usage
+      0x90,              //                 Output
+      0x08,              //                 Usage
+      0xA1, 0x01,        //                 Collection (Application)
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0x36, 0x36, 0xA5,  //                   Physical Minimum (-23242)
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0x44,              //                   Physical Maximum
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xB0,              //                   Feature
+      0xA4,              //                   Push
+      0x90,              //                     Output
+      0x08,              //                     Usage
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0x44,              //                     Physical Maximum
+      0xA0,              //                     Collection
+      0x08,              //                       Usage
+      0xA0,              //                       Collection
+      0x08,              //                         Usage
+      0xA1, 0x01,        //                         Collection (Application)
+      0xA0,              //                           Collection
+      0x08,              //                             Usage
+      0x90,              //                             Output
+      0x08,              //                             Usage
+      0x90,              //                             Output
+      0x08,              //                             Usage
+      0xA0,              //                             Collection
+      0x08,              //                               Usage
+      0xA0,              //                               Collection
+      0x08,              //                                 Usage
+      0x90,              //                                 Output
+      0x08,              //                                 Usage
+      0xA1, 0x01,        //                                 Collection (Application)
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0x36, 0x36, 0xB0,  //                                   Physical Minimum (-20426)
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xB0,              //                                   Feature
+      0xA4,              //                                   Push
+      0x90,              //                                     Output
+      0x08,              //                                     Usage
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+      0x44,              //                                     Physical Maximum
+
+      // 407 bytes
+  };
+
+  hid::DeviceDescriptor* desc = nullptr;
+  hid::ParseResult res = hid::ParseReportDescriptor(report_desc, sizeof(report_desc), &desc);
+  ASSERT_EQ(hid::ParseResult::kParseNoMemory, res);
+
+  FreeDeviceDescriptor(desc);
+}
