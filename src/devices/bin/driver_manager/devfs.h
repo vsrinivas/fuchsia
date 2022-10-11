@@ -147,7 +147,10 @@ class PseudoDir : public fs::PseudoDir {
   fbl::DoublyLinkedList<Devnode*> unpublished;
 
  private:
+  PseudoDir() : fs::PseudoDir(nullptr, false) {}
   bool IsSkipRightsEnforcementDevfsOnlyDoNotUse() const final { return true; }
+
+  friend fbl::internal::MakeRefCountedHelper<PseudoDir>;
 };
 
 // Represents an entry in the /dev/class directory. A thin wrapper around
