@@ -34,8 +34,8 @@ struct ResolveableComponent {
     /// values provided as replacements.
     config_override_policy: ConfigOverridePolicy,
 
-    /// Any configuration values provided by the caller. If `use_packaged_config` is false, must
-    /// provide a value for every field in the component's schema.
+    /// Any configuration values provided by the caller. If `config_override_policy` is
+    /// `RequireAllValuesFromBuilder`, must provide a value for every field in the component's schema.
     config_value_replacements: HashMap<usize, cm_rust::ValueSpec>,
 }
 
