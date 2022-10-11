@@ -201,7 +201,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/recovery/factory_reset:factory_reset_unittests",
     "//src/security/zxcrypt:zxcrypt-client",
     "//src/security/zxcrypt:zxcrypt-fdio",
-    "//src/security/zxcrypt/tests:zxcrypt",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/dd",
     "//src/storage/bin/factoryfs",

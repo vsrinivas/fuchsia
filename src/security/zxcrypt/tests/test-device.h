@@ -5,6 +5,9 @@
 #ifndef SRC_SECURITY_ZXCRYPT_TESTS_TEST_DEVICE_H_
 #define SRC_SECURITY_ZXCRYPT_TESTS_TEST_DEVICE_H_
 
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
@@ -97,13 +100,28 @@ class TestDevice final {
   fbl::unique_fd zxcrypt() const { return zxcrypt_.duplicate(); }
 
   // Returns a connection to the parent device.
-  const zx::unowned_channel parent_channel() const {
-    return zx::unowned_channel(parent_caller_.borrow_channel());
+  fidl::UnownedClientEnd<fuchsia_device::Controller> parent_controller() const {
+    return parent_caller_.borrow_as<fuchsia_device::Controller>();
+  }
+
+  // Returns a connection to the parent device.
+  fidl::UnownedClientEnd<fuchsia_hardware_block::Block> parent_block() const {
+    return parent_caller_.borrow_as<fuchsia_hardware_block::Block>();
+  }
+
+  // Returns a connection to the parent device.
+  fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> parent_volume() const {
+    return parent_caller_.borrow_as<fuchsia_hardware_block_volume::Volume>();
   }
 
   // Returns a connection to the zxcrypt device.
-  const zx::unowned_channel zxcrypt_channel() const {
-    return zx::unowned_channel(zxcrypt_caller_.borrow_channel());
+  fidl::UnownedClientEnd<fuchsia_hardware_block::Block> zxcrypt_block() const {
+    return zxcrypt_caller_.borrow_as<fuchsia_hardware_block::Block>();
+  }
+
+  // Returns a connection to the zxcrypt device.
+  fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> zxcrypt_volume() const {
+    return zxcrypt_caller_.borrow_as<fuchsia_hardware_block_volume::Volume>();
   }
 
   // Returns the block size of the zxcrypt device.

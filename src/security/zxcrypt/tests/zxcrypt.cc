@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -19,11 +17,8 @@
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-#include "src/security/fcrypto/bytes.h"
-#include "src/security/fcrypto/cipher.h"
 #include "src/security/zxcrypt/tests/test-device.h"
 #include "src/security/zxcrypt/volume.h"
-#include "src/storage/fvm/format.h"
 
 namespace zxcrypt {
 namespace testing {
@@ -66,20 +61,19 @@ void TestBlockGetInfo(Volume::Version version, bool fvm) {
   ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
   ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
 
-  fuchsia_hardware_block_BlockInfo parent_blk, zxcrypt_blk;
-  zx_status_t status;
-  EXPECT_EQ(
-      fuchsia_hardware_block_BlockGetInfo(device.parent_channel()->get(), &status, &parent_blk),
-      ZX_OK);
-  EXPECT_EQ(status, ZX_OK);
+  const fidl::WireResult parent_result = fidl::WireCall(device.parent_block())->GetInfo();
+  ASSERT_OK(parent_result.status());
+  const fidl::WireResponse parent_response = parent_result.value();
+  ASSERT_OK(parent_response.status);
 
-  EXPECT_EQ(
-      fuchsia_hardware_block_BlockGetInfo(device.zxcrypt_channel()->get(), &status, &zxcrypt_blk),
-      ZX_OK);
-  EXPECT_EQ(status, ZX_OK);
+  const fidl::WireResult zxcrypt_result = fidl::WireCall(device.zxcrypt_block())->GetInfo();
+  ASSERT_OK(zxcrypt_result.status());
+  const fidl::WireResponse zxcrypt_response = zxcrypt_result.value();
+  ASSERT_OK(zxcrypt_response.status);
 
-  EXPECT_EQ(parent_blk.block_size, zxcrypt_blk.block_size);
-  EXPECT_GE(parent_blk.block_count, zxcrypt_blk.block_count + device.reserved_blocks());
+  EXPECT_EQ(parent_response.info->block_size, zxcrypt_response.info->block_size);
+  EXPECT_GE(parent_response.info->block_count,
+            zxcrypt_response.info->block_count + device.reserved_blocks());
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestBlockGetInfo)
 
@@ -87,76 +81,73 @@ void TestBlockFvmQuery(Volume::Version version, bool fvm) {
   TestDevice device;
   ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
   ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
-  auto parent = device.parent_channel();
-  auto zxcrypt = device.zxcrypt_channel();
 
-  zx_status_t status;
-  fuchsia_hardware_block_volume_VolumeManagerInfo parent_fvm, zxcrypt_fvm;
-  fuchsia_hardware_block_volume_VolumeInfo parent_volume, zxcrypt_volume;
   if (!fvm) {
     // Send FVM query to non-FVM device.
-    EXPECT_EQ(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(zxcrypt->get(), &status,
-                                                                &zxcrypt_fvm, &zxcrypt_volume),
-              ZX_OK);
-    EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+    const fidl::WireResult result = fidl::WireCall(device.zxcrypt_volume())->GetVolumeInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_STATUS(response.status, ZX_ERR_NOT_SUPPORTED);
   } else {
     // Get the zxcrypt info.
-    EXPECT_EQ(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(parent->get(), &status, &parent_fvm,
-                                                                &parent_volume),
-              ZX_OK);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(zxcrypt->get(), &status,
-                                                                &zxcrypt_fvm, &parent_volume),
-              ZX_OK);
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_EQ(parent_fvm.slice_size, zxcrypt_fvm.slice_size);
-    EXPECT_EQ(parent_fvm.slice_count, zxcrypt_fvm.slice_count + device.reserved_slices());
+    const fidl::WireResult parent_result = fidl::WireCall(device.parent_volume())->GetVolumeInfo();
+    ASSERT_OK(parent_result.status());
+    const fidl::WireResponse parent_response = parent_result.value();
+    ASSERT_OK(parent_response.status);
+
+    const fidl::WireResult zxcrypt_result =
+        fidl::WireCall(device.zxcrypt_volume())->GetVolumeInfo();
+    ASSERT_OK(zxcrypt_result.status());
+    const fidl::WireResponse zxcrypt_response = zxcrypt_result.value();
+    ASSERT_OK(zxcrypt_response.status);
+
+    EXPECT_EQ(parent_response.manager->slice_size, zxcrypt_response.manager->slice_size);
+    EXPECT_EQ(parent_response.manager->slice_count,
+              zxcrypt_response.manager->slice_count + device.reserved_slices());
   }
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestBlockFvmQuery)
 
 void QueryLeadingFvmSlice(const TestDevice& device, bool fvm) {
-  auto parent = device.parent_channel();
-  auto zxcrypt = device.zxcrypt_channel();
+  uint64_t start_slices[] = {
+      0,
+  };
 
-  uint64_t start_slices[1];
-  start_slices[0] = 0;
+  const fidl::WireResult parent_result =
+      fidl::WireCall(device.parent_volume())
+          ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(start_slices));
 
-  fuchsia_hardware_block_volume_VsliceRange
-      parent_ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-  fuchsia_hardware_block_volume_VsliceRange
-      zxcrypt_ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-  size_t actual_parent_ranges_count, actual_zxcrypt_ranges_count;
-  zx_status_t parent_io_status, zxcrypt_io_status, parent_status, zxcrypt_status;
-  parent_io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(
-      parent->get(), start_slices, std::size(start_slices), &parent_status, parent_ranges,
-      &actual_parent_ranges_count);
-  zxcrypt_io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(
-      zxcrypt->get(), start_slices, std::size(start_slices), &zxcrypt_status, zxcrypt_ranges,
-      &actual_zxcrypt_ranges_count);
+  const fidl::WireResult zxcrypt_result =
+      fidl::WireCall(device.zxcrypt_volume())
+          ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(start_slices));
 
   if (fvm) {
-    ASSERT_EQ(parent_io_status, ZX_OK);
-    ASSERT_EQ(parent_status, ZX_OK);
-    ASSERT_EQ(zxcrypt_io_status, ZX_OK);
-    ASSERT_EQ(zxcrypt_status, ZX_OK);
+    ASSERT_OK(parent_result.status());
+    const fidl::WireResponse parent_response = parent_result.value();
+    ASSERT_OK(parent_response.status);
+
+    ASSERT_OK(zxcrypt_result.status());
+    const fidl::WireResponse zxcrypt_response = zxcrypt_result.value();
+    ASSERT_OK(zxcrypt_response.status);
 
     // Query zxcrypt about the slices, which should omit those reserved.
-    ASSERT_EQ(actual_parent_ranges_count, 1U);
-    EXPECT_TRUE(parent_ranges[0].allocated);
+    ASSERT_EQ(parent_response.response_count, 1);
+    EXPECT_TRUE(parent_response.response[0].allocated);
 
-    ASSERT_EQ(actual_zxcrypt_ranges_count, 1U);
-    EXPECT_TRUE(zxcrypt_ranges[0].allocated);
+    ASSERT_EQ(zxcrypt_response.response_count, 1);
+    EXPECT_TRUE(zxcrypt_response.response[0].allocated);
 
-    EXPECT_EQ(parent_ranges[0].count, zxcrypt_ranges[0].count + device.reserved_slices());
+    EXPECT_EQ(parent_response.response[0].count,
+              zxcrypt_response.response[0].count + device.reserved_slices());
   } else {
     // Non-FVM parent devices will close the connection upon receiving FVM requests.
-    ASSERT_EQ(parent_io_status, ZX_ERR_PEER_CLOSED);
+    ASSERT_STATUS(parent_result.status(), ZX_ERR_PEER_CLOSED);
 
     // zxcrypt always supports the FVM protocol, but returns ERR_NOT_SUPPORTED if not
     // sitting atop an FVM driver.
-    ASSERT_EQ(zxcrypt_io_status, ZX_OK);
-    ASSERT_EQ(zxcrypt_status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_OK(zxcrypt_result.status());
+    const fidl::WireResponse zxcrypt_response = zxcrypt_result.value();
+    ASSERT_STATUS(zxcrypt_response.status, ZX_ERR_NOT_SUPPORTED);
   }
 }
 
@@ -172,32 +163,26 @@ void TestBlockFvmShrinkAndExtend(Volume::Version version, bool fvm) {
   TestDevice device;
   ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
   ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
-  auto zxcrypt = device.zxcrypt_channel();
 
-  uint64_t offset = 1;
-  uint64_t length = 1;
-  zx_status_t status;
+  const uint64_t offset = 1;
+  const uint64_t length = 1;
+
+  const fidl::WireResult shrink_result =
+      fidl::WireCall(device.zxcrypt_volume())->Shrink(offset, length);
+  ASSERT_OK(shrink_result.status());
+  const fidl::WireResponse shrink_response = shrink_result.value();
+
+  const fidl::WireResult extend_result =
+      fidl::WireCall(device.zxcrypt_volume())->Extend(offset, length);
+  ASSERT_OK(extend_result.status());
+  const fidl::WireResponse extend_response = extend_result.value();
 
   if (!fvm) {
-    // Send FVM message to non-FVM device.
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(zxcrypt->get(), offset, length, &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(zxcrypt->get(), offset, length, &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_STATUS(shrink_response.status, ZX_ERR_NOT_SUPPORTED);
+    ASSERT_STATUS(extend_response.status, ZX_ERR_NOT_SUPPORTED);
   } else {
-    // Shrink the FVM partition and make sure the change in size is reflected
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeShrink(zxcrypt->get(), offset, length, &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_NO_FATAL_FAILURE(QueryLeadingFvmSlice(device, fvm));
-
-    // Extend the FVM partition and make sure the change in size is reflected
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(zxcrypt->get(), offset, length, &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_NO_FATAL_FAILURE(QueryLeadingFvmSlice(device, fvm));
+    ASSERT_OK(shrink_response.status);
+    ASSERT_OK(extend_response.status);
   }
 }
 DEFINE_EACH_DEVICE(ZxcryptTest, TestBlockFvmShrinkAndExtend)
@@ -450,14 +435,16 @@ void DISABLED_TestVmoStall(Volume::Version version, bool fvm) {
   TestDevice device;
   ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
   ASSERT_NO_FATAL_FAILURE(device.Bind(version, fvm));
-  auto zxcrypt = device.zxcrypt_channel();
 
   // The device can have up to 4 * max_transfer_size bytes in flight before it begins queuing them
   // internally.
-  fuchsia_hardware_block_BlockInfo zxcrypt_blk;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(zxcrypt->get(), &status, &zxcrypt_blk), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  //
+  // TODO(https://fxbug.dev/31974): the result of this call is unused. Why?
+  const fidl::WireResult result = fidl::WireCall(device.zxcrypt_block())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+
   size_t blks_per_req = 4;
   size_t max = Volume::kBufferSize / (device.block_size() * blks_per_req);
   size_t num = max + 1;
@@ -481,7 +468,6 @@ void TestWriteAfterFvmExtend(Volume::Version version) {
   TestDevice device;
   ASSERT_NO_FATAL_FAILURE(device.SetupDevmgr());
   ASSERT_NO_FATAL_FAILURE(device.Bind(version, true));
-  auto zxcrypt = device.zxcrypt_channel();
 
   size_t n = device.size();
   ssize_t n_s = static_cast<ssize_t>(n);
@@ -492,20 +478,21 @@ void TestWriteAfterFvmExtend(Volume::Version version) {
   EXPECT_EQ(device.lseek(n), n_s);
   EXPECT_NE(device.write(n, one), one_s);
 
-  zx_status_t status;
-  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
-  fuchsia_hardware_block_volume_VolumeInfo volume_info;
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeGetVolumeInfo(zxcrypt->get(), &status,
-                                                              &manager_info, &volume_info),
-            ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  const fidl::WireResult result = fidl::WireCall(device.zxcrypt_volume())->GetVolumeInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
 
-  uint64_t offset = device.size() / manager_info.slice_size;
+  uint64_t offset = device.size() / response.manager->slice_size;
   uint64_t length = 1;
 
-  ASSERT_EQ(fuchsia_hardware_block_volume_VolumeExtend(zxcrypt->get(), offset, length, &status),
-            ZX_OK);
-  EXPECT_EQ(status, ZX_OK);
+  {
+    const fidl::WireResult result = fidl::WireCall(device.zxcrypt_volume())->Extend(offset, length);
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+  }
+
   EXPECT_EQ(device.lseek(n), n_s);
   EXPECT_EQ(device.write(n, one), one_s);
 }

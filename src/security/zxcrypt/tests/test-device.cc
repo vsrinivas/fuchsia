@@ -7,10 +7,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fidl/fuchsia.device/cpp/wire.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <fidl/fuchsia.hardware.ramdisk/cpp/wire.h>
 #include <inttypes.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
@@ -38,8 +37,8 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
+#include "lib/stdcompat/string_view.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
-#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/security/zxcrypt/fdio-volume.h"
 #include "src/security/zxcrypt/volume.h"
@@ -130,15 +129,12 @@ void TestDevice::Bind(Volume::Version version, bool fvm) {
 
 void TestDevice::BindFvmDriver() {
   // Binds the FVM driver to the active ramdisk_.
-  fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
-  ASSERT_NOT_NULL(io);
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(
-                  zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                  ->Bind(fidl::StringView::FromExternal(kFvmDriver));
-  zx_status_t status = resp.status();
-  fdio_unsafe_release(io);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_TRUE(resp->is_ok());
+  const fdio_cpp::UnownedFdioCaller caller(ramdisk_get_block_fd(ramdisk_));
+  const fidl::WireResult result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                                      ->Bind(fidl::StringView::FromExternal(kFvmDriver));
+  ASSERT_OK(result.status());
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
 }
 
 void TestDevice::Rebind() {
@@ -153,20 +149,13 @@ void TestDevice::Rebind() {
     // We need to explicitly rebind FVM here, since now that we're not
     // relying on the system-wide block-watcher, the driver won't rebind by
     // itself.
-    fdio_t* io = fdio_unsafe_fd_to_io(ramdisk_get_block_fd(ramdisk_));
-    ASSERT_NOT_NULL(io);
-    zx_status_t call_status = ZX_OK;
-    ;
-    auto resp = fidl::WireCall<fuchsia_device::Controller>(
-                    zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                    ->Rebind(fidl::StringView::FromExternal(kFvmDriver));
-    zx_status_t status = resp.status();
-    if (resp->is_error()) {
-      call_status = resp->error_value();
-    }
-    fdio_unsafe_release(io);
-    ASSERT_OK(status);
-    ASSERT_OK(call_status);
+    const fdio_cpp::UnownedFdioCaller caller(ramdisk_get_block_fd(ramdisk_));
+    const fidl::WireResult result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                                        ->Rebind(fidl::StringView::FromExternal(kFvmDriver));
+    ASSERT_OK(result.status());
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+
     fbl::unique_fd dev_root = devfs_root();
     ASSERT_EQ(device_watcher::RecursiveWaitForFile(dev_root, fvm_part_path_, &fvm_part_), ZX_OK);
     parent_caller_.reset(fvm_part_.get());
@@ -186,7 +175,8 @@ void TestDevice::SleepUntil(uint64_t num, bool deferred) {
   ASSERT_EQ(thrd_create(&tid_, TestDevice::WakeThread, this), thrd_success);
   need_join_ = true;
   if (deferred) {
-    uint32_t flags = fuchsia_hardware_ramdisk_RAMDISK_FLAG_RESUME_ON_WAKE;
+    uint32_t flags =
+        static_cast<uint32_t>(fuchsia_hardware_ramdisk::wire::kRamdiskFlagResumeOnWake);
     ASSERT_OK(ramdisk_set_flags(ramdisk_, flags));
   }
   uint64_t sleep_after = 0;
@@ -346,40 +336,25 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   // Save the topological path for rebinding.  The topological path will be
   // consistent after rebinding the ramdisk, whereas the
   // /dev/class/block/[NNN] will issue a new number.
-  size_t out_len;
-  zx_status_t status;
-  zx_status_t call_status;
-  auto resp =
-      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(parent_channel()->get()))
-          ->GetTopologicalPath();
-  status = resp.status();
-
-  if (resp->is_error()) {
-    call_status = resp->error_value();
-  } else {
-    call_status = ZX_OK;
-    auto& r = *resp->value();
-    out_len = r.path.size();
-    memcpy(fvm_part_path_, r.path.data(), r.path.size());
-  }
-
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(call_status, ZX_OK);
+  const fidl::WireResult result = fidl::WireCall(parent_controller())->GetTopologicalPath();
+  ASSERT_OK(result.status());
+  const fit::result response = result.value();
+  ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+  std::string_view topological_path = response.value()->path.get();
   // Strip off the leading /dev/; because we use an isolated devmgr, we need
   // relative paths, but ControllerGetTopologicalPath returns an absolute path
   // with the assumption that devfs is rooted at /dev.
-  static constexpr std::string_view kHeader = "/dev/";
-  ASSERT_TRUE(out_len > kHeader.size());
-  ASSERT_TRUE(kHeader ==
-              std::string_view(fvm_part_path_, std::min(kHeader.size(), strlen(fvm_part_path_))));
-  memmove(fvm_part_path_, fvm_part_path_ + kHeader.size(), out_len - kHeader.size());
-  fvm_part_path_[out_len - kHeader.size()] = 0;
+  constexpr std::string_view kHeader = "/dev/";
+  ASSERT_TRUE(cpp20::starts_with(topological_path, kHeader));
+  topological_path = topological_path.substr(kHeader.size());
+  memcpy(fvm_part_path_, topological_path.data(), topological_path.size());
+  fvm_part_path_[topological_path.size()] = 0;
 }
 
 void TestDevice::Connect() {
   ZX_DEBUG_ASSERT(!zxcrypt_);
 
-  volume_manager_.reset(new zxcrypt::VolumeManager(parent(), devfs_root()));
+  volume_manager_ = std::make_unique<zxcrypt::VolumeManager>(parent(), devfs_root());
   zx::channel zxc_client_chan;
   ASSERT_OK(volume_manager_->OpenClient(kTimeout, zxc_client_chan));
 
@@ -393,30 +368,35 @@ void TestDevice::Connect() {
   ASSERT_OK(volume_manager_->OpenInnerBlockDevice(kTimeout, &zxcrypt_));
   zxcrypt_caller_.reset(zxcrypt_.get());
 
-  fuchsia_hardware_block_BlockInfo block_info;
-  zx_status_t status;
-  ASSERT_OK(fuchsia_hardware_block_BlockGetInfo(zxcrypt_channel()->get(), &status, &block_info));
-  ASSERT_OK(status);
-  block_size_ = block_info.block_size;
-  block_count_ = block_info.block_count;
+  {
+    const fidl::WireResult result = fidl::WireCall(zxcrypt_block())->GetInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    block_size_ = response.info->block_size;
+    block_count_ = response.info->block_count;
+  }
 
-  zx::fifo fifo;
-  ASSERT_OK(fuchsia_hardware_block_BlockGetFifo(zxcrypt_channel()->get(), &status,
-                                                fifo.reset_and_get_address()));
-  ASSERT_OK(status);
+  {
+    fidl::WireResult result = fidl::WireCall(zxcrypt_block())->GetFifo();
+    ASSERT_OK(result.status());
+    auto& response = result.value();
+    ASSERT_OK(response.status);
+    client_ = std::make_unique<block_client::Client>(std::move(response.fifo));
+  }
+
   req_.group = 0;
-
-  client_ = std::make_unique<block_client::Client>(std::move(fifo));
 
   // Create the vmo and get a transferable handle to give to the block server
   ASSERT_OK(zx::vmo::create(size(), 0, &vmo_));
   zx::vmo xfer_vmo;
-  ASSERT_EQ(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-  fuchsia_hardware_block_VmoId vmoid;
-  ASSERT_OK(fuchsia_hardware_block_BlockAttachVmo(zxcrypt_channel()->get(), xfer_vmo.release(),
-                                                  &status, &vmoid));
-  ASSERT_OK(status);
-  req_.vmoid = vmoid.id;
+  ASSERT_OK(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &xfer_vmo));
+
+  const fidl::WireResult result = fidl::WireCall(zxcrypt_block())->AttachVmo(std::move(xfer_vmo));
+  ASSERT_OK(result.status());
+  const auto& response = result.value();
+  ASSERT_OK(response.status);
+  req_.vmoid = response.vmoid.get()->id;
 }
 
 void TestDevice::Disconnect() {
@@ -430,8 +410,15 @@ void TestDevice::Disconnect() {
   }
 
   if (client_) {
-    zx_status_t status;
-    fuchsia_hardware_block_BlockCloseFifo(zxcrypt_channel()->get(), &status);
+    const fidl::WireResult result = fidl::WireCall(zxcrypt_block())->CloseFifo();
+    // VolumeTest.TestShredThroughDriver{Fvm,Raw} produce ZX_ERR_PEER_CLOSED here for reasons I
+    // don't understand. This error was previously entirely unchecked, so it must not be very
+    // important.
+    if (!result.is_peer_closed()) {
+      ASSERT_OK(result.status());
+      const auto& response = result.value();
+      ASSERT_OK(response.status);
+    }
     memset(&req_, 0, sizeof(req_));
     client_ = nullptr;
   }
