@@ -176,7 +176,8 @@ class Controller : public DeviceType,
 
   const std::unique_ptr<GttRegion>& GetGttRegion(uint64_t handle);
   void InitDisplays();
-  std::unique_ptr<DisplayDevice> QueryDisplay(tgl_registers::Ddi ddi) __TA_REQUIRES(display_lock_);
+  std::unique_ptr<DisplayDevice> QueryDisplay(tgl_registers::Ddi ddi, uint64_t display_id)
+      __TA_REQUIRES(display_lock_);
   bool LoadHardwareState(tgl_registers::Ddi ddi, DisplayDevice* device)
       __TA_REQUIRES(display_lock_);
   zx_status_t AddDisplay(std::unique_ptr<DisplayDevice> display) __TA_REQUIRES(display_lock_);

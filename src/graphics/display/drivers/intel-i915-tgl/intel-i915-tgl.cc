@@ -193,7 +193,7 @@ void Controller::HandleHotplug(tgl_registers::Ddi ddi, bool long_pulse) {
     display_removed = device->id();
     RemoveDisplay(std::move(device));
   } else {  // New device was plugged in
-    std::unique_ptr<DisplayDevice> device = QueryDisplay(ddi);
+    std::unique_ptr<DisplayDevice> device = QueryDisplay(ddi, next_id_);
     if (!device || !device->Init()) {
       zxlogf(INFO, "failed to init hotplug display");
     } else {
@@ -511,7 +511,8 @@ uint64_t Controller::SetupGttImage(const image_t* image, uint32_t rotation) {
   return region->base();
 }
 
-std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi) {
+std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi,
+                                                        uint64_t display_id) {
   fbl::AllocChecker ac;
   if (!igd_opregion_.HasDdi(ddi)) {
     zxlogf(INFO, "ddi %d not available.", ddi);
@@ -520,7 +521,7 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi) 
 
   if (igd_opregion_.SupportsDp(ddi)) {
     zxlogf(DEBUG, "Checking for DisplayPort monitor at DDI %d", ddi);
-    auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, &dp_auxs_[ddi],
+    auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, display_id, ddi, &dp_auxs_[ddi],
                                                        &pch_engine_.value(), &root_node_);
     if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Query()) {
       return dp_disp;
@@ -528,7 +529,7 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi) 
   }
   if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
     zxlogf(DEBUG, "Checking for HDMI monitor at DDI %d", ddi);
-    auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, next_id_, ddi);
+    auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, display_id, ddi);
     if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Query()) {
       return hdmi_disp;
     }
@@ -565,7 +566,7 @@ void Controller::InitDisplays() {
   BringUpDisplayEngine(false);
 
   for (const auto ddi : ddis_) {
-    auto disp_device = QueryDisplay(ddi);
+    auto disp_device = QueryDisplay(ddi, next_id_);
     if (disp_device) {
       AddDisplay(std::move(disp_device));
     }
@@ -593,13 +594,21 @@ void Controller::InitDisplays() {
     if (device == nullptr) {
       ddi_trans_needs_reset.emplace_back(ddi, std::nullopt);
     } else {
-      if (!LoadHardwareState(ddi, device) || is_tgl(device_id_)) {
+      if (!LoadHardwareState(ddi, device)) {
         auto transcoder_maybe = device->pipe()
                                     ? std::make_optional(device->pipe()->connected_transcoder_id())
                                     : std::nullopt;
         ddi_trans_needs_reset.emplace_back(ddi, transcoder_maybe);
         device_needs_init.push_back(device);
       } else {
+        // On Tiger Lake, if a display device is already initialized by BIOS,
+        // the pipe / transcoder / DDI should be all reset and reinitialized.
+        // By doing this we can keep the display state fully controlled by the
+        // driver.
+        // TODO(fxbug.dev/111746): Consider doing this on all platforms.
+        if (is_tgl(device_id())) {
+          device_needs_init.push_back(device);
+        }
         device->InitBacklight();
       }
     }
@@ -616,12 +625,26 @@ void Controller::InitDisplays() {
 
   for (auto* device : device_needs_init) {
     ZX_ASSERT_MSG(device, "device_needs_init incorrectly populated above");
-    if (!device->Init()) {
-      for (unsigned i = 0; i < display_devices_.size(); i++) {
-        if (display_devices_[i].get() == device) {
-          display_devices_.erase(i);
-          break;
+    for (unsigned i = 0; i < display_devices_.size(); i++) {
+      if (display_devices_[i].get() == device) {
+        if (is_tgl(device_id())) {
+          // On Tiger Lake, devices pre-initialized by the BIOS must be reset
+          // and reinitialized by the driver.
+          // TODO(fxbug.dev/111747): We should fix the device reset logic so
+          // that we don't need to delete the old device.
+          const tgl_registers::Ddi ddi_id = device->ddi();
+          const uint64_t display_id = device->id();
+          display_devices_[i].reset();
+          display_devices_[i] = QueryDisplay(ddi_id, display_id);
+          if (!device || !device->Init()) {
+            display_devices_.erase(i);
+          }
+        } else {
+          if (!device->Init()) {
+            display_devices_.erase(i);
+          }
         }
+        break;
       }
     }
   }
