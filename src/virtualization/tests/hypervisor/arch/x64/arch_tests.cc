@@ -25,6 +25,7 @@ constexpr uint32_t kNmiVector = 2u;
 constexpr uint32_t kGpFaultVector = 13u;
 constexpr uint32_t kExceptionVector = 16u;
 
+DECLARE_TEST_FUNCTION(cpuid_features)
 DECLARE_TEST_FUNCTION(vcpu_read_write_state)
 DECLARE_TEST_FUNCTION(vcpu_interrupt)
 DECLARE_TEST_FUNCTION(vcpu_ipi)
@@ -451,6 +452,12 @@ TEST(Guest, GuestSetTrapWithIo) {
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
   EXPECT_EQ(packet.guest_io.port, TRAP_PORT);
 
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
+}
+
+TEST(Guest, CpuidFeatures) {
+  TestCase test;
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, cpuid_features_start, cpuid_features_end));
   ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 

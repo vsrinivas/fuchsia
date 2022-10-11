@@ -184,6 +184,8 @@ zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& 
           guest_state.rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
           // Enable the x2APIC bit.
           guest_state.rcx |= 1u << X86_FEATURE_X2APIC.bit;
+          // Always enable TSC deadline (this doesn't depend on the host feature).
+          guest_state.rcx |= 1u << X86_FEATURE_TSC_DEADLINE.bit;
           // Disable the VMX bit.
           guest_state.rcx &= ~(1u << X86_FEATURE_VMX.bit);
           // Disable the PDCM bit.

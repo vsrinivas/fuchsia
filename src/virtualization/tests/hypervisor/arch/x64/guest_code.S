@@ -22,6 +22,20 @@
 #define CODE_16_SELECTOR          (8<<3)
 #define INVALID_HYPERCALL         0xffffffff
 
+#define CPUID_FEATURES_LEAF             1
+// ECX
+#define CPUID_FEATURE_MON_BIT           3
+#define CPUID_FEATURE_VMX_BIT           5
+#define CPUID_FEATURE_TM2_BIT           8
+#define CPUID_FEATURE_PDCM_BIT          15
+#define CPUID_FEATURE_X2APIC_BIT        21
+#define CPUID_FEATURE_TSC_DEADLINE_BIT  24
+#define CPUID_FEATURE_HYPERVISOR_BIT    31
+// EDX
+#define CPUID_FEATURE_TM_BIT            29
+#define CPUID_FEATURE_ACPI_BIT          22
+#define CPUID_FEATURE_SEP_BIT           11
+
 // x2APIC constants
 //
 // See Intel Volume 3, Section 10.12.9: ICR Operation in x2APIC Mode
@@ -564,3 +578,34 @@ FUNCTION vcpu_ipi
     movq $0, (EXIT_TEST_ADDR)
 END_FUNCTION
 
+
+FUNCTION cpuid_features
+    mov $CPUID_FEATURES_LEAF, %eax
+    cpuid
+
+.macro expect_feature_set reg, bit
+    bt \bit, \reg
+    jnc .Lcpuid_features_failure
+.endm
+.macro expect_feature_clr reg, bit
+    bt \bit, \reg
+    jc .Lcpuid_features_failure
+.endm
+
+    expect_feature_set %ecx, $CPUID_FEATURE_X2APIC_BIT
+    expect_feature_set %ecx, $CPUID_FEATURE_TSC_DEADLINE_BIT
+    expect_feature_set %ecx, $CPUID_FEATURE_HYPERVISOR_BIT
+    expect_feature_clr %ecx, $CPUID_FEATURE_VMX_BIT
+    expect_feature_clr %ecx, $CPUID_FEATURE_PDCM_BIT
+    expect_feature_clr %ecx, $CPUID_FEATURE_MON_BIT
+    expect_feature_clr %ecx, $CPUID_FEATURE_TM2_BIT
+
+    expect_feature_set %edx, $CPUID_FEATURE_SEP_BIT
+    expect_feature_clr %edx, $CPUID_FEATURE_TM_BIT
+    expect_feature_clr %edx, $CPUID_FEATURE_ACPI_BIT
+
+    // success
+    movq $0, (EXIT_TEST_ADDR)
+.Lcpuid_features_failure:
+    movq $0, (EXIT_TEST_FAILURE_ADDR)
+END_FUNCTION
