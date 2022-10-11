@@ -207,12 +207,13 @@ zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
 
   zx_status_t status = mipi_device->InitPdev(parent);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: mipi_device->InitPdev failed %d", __func__, status);
     return status;
   }
 
   status = mipi_device->DdkAdd(ddk::DeviceAddArgs("aml-mipi"));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-mipi driver failed to get added");
+    zxlogf(ERROR, "%s: mipi_device->DdkAdd failed %d", __func__, status);
     return status;
   }
   zxlogf(INFO, "aml-mipi driver added");
