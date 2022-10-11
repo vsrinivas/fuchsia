@@ -6,19 +6,6 @@
 {
     // [START_EXCLUDE]
     include: [
-        "//sdk/lib/sys/testing/hermetic-tier-2-test.shard.cml",
-
-        // TODO(fxbug.dev/102193): The hermetic-tier-2-test is currently
-        // required in order to resolve subpackages. The default hermetic test
-        // tier only allows component dependencies bundled in the same package.
-        // But tests with subpackages are also expected to be "hermetic".
-        // Subpackages may be preferred over, if not replace, embedding
-        // components in a single package; if so, the test shard configuration
-        // for tests with subpackages should become the default.
-        //
-        // In the near term, there should probably be a new test shard for tests
-        // that depend on subpackaged components only, and not on components
-        // from absolute package URLs.
         "//src/sys/test_runners/gtest/default.shard.cml",
         "syslog/client.shard.cml",
     ],
