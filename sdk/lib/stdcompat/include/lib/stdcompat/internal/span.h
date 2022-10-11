@@ -6,6 +6,7 @@
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_INTERNAL_SPAN_H_
 
 #include <array>
+#include <cstddef>
 #include <limits>
 #include <type_traits>
 
@@ -23,26 +24,26 @@ namespace internal {
 #if defined(__cpp_inline_variables) && __cpp_inline_variables >= 201606L && \
     !defined(LIB_STDCOMPAT_NO_INLINE_VARIABLES)
 
-static constexpr inline size_t dynamic_extent = std::numeric_limits<size_t>::max();
+static constexpr inline std::size_t dynamic_extent = std::numeric_limits<std::size_t>::max();
 
 #else
 
 struct dynamic_extent_tag {};
 
 // define dynamic extent.
-static constexpr const size_t& dynamic_extent =
-    cpp17::internal::inline_storage<dynamic_extent_tag, size_t,
-                                    std::numeric_limits<size_t>::max()>::storage;
+static constexpr const std::size_t& dynamic_extent =
+    cpp17::internal::inline_storage<dynamic_extent_tag, std::size_t,
+                                    std::numeric_limits<std::size_t>::max()>::storage;
 
 #endif
 
 // Specialization for different extent types, simplifies span implementation and duplication.
-template <typename T, size_t Extent>
+template <typename T, std::size_t Extent>
 class extent {
  public:
-  explicit constexpr extent(T* data, size_t) : data_(data) {}
+  explicit constexpr extent(T* data, std::size_t) : data_(data) {}
   constexpr T* data() const { return data_; }
-  constexpr size_t size() const { return Extent; }
+  constexpr std::size_t size() const { return Extent; }
 
  private:
   T* data_;
@@ -51,13 +52,13 @@ class extent {
 template <typename T>
 class extent<T, dynamic_extent> {
  public:
-  explicit constexpr extent(T* data, size_t size) : data_(data), size_(size) {}
+  explicit constexpr extent(T* data, std::size_t size) : data_(data), size_(size) {}
   constexpr T* data() const { return data_; }
-  constexpr size_t size() const { return size_; }
+  constexpr std::size_t size() const { return size_; }
 
  private:
   T* data_;
-  size_t size_;
+  std::size_t size_;
 };
 
 }  // namespace internal
@@ -68,7 +69,7 @@ using std::span;
 
 #else  // Provide forward declaration for traits below
 
-template <typename T, size_t Extent>
+template <typename T, std::size_t Extent>
 class span;
 
 #endif  // __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
@@ -78,7 +79,7 @@ namespace internal {
 template <class T>
 struct is_span_internal : std::false_type {};
 
-template <class T, size_t Extent>
+template <class T, std::size_t Extent>
 struct is_span_internal<span<T, Extent>> : std::true_type {};
 
 template <class T>
@@ -87,7 +88,7 @@ struct is_span : is_span_internal<std::remove_cv_t<T>> {};
 template <class T>
 struct is_array_internal : std::is_array<T> {};
 
-template <class T, size_t S>
+template <class T, std::size_t S>
 struct is_array_internal<std::array<T, S>> : std::true_type {};
 
 template <typename T, typename U>
@@ -118,9 +119,10 @@ struct subspan_extent
                                             std::integral_constant<SizeType, Extent - Offset>,
                                             std::integral_constant<SizeType, dynamic_extent>>> {};
 
-template <typename T, size_t Extent>
+template <typename T, std::size_t Extent>
 using byte_span_size =
-    std::integral_constant<size_t, Extent == dynamic_extent ? dynamic_extent : Extent * sizeof(T)>;
+    std::integral_constant<std::size_t,
+                           Extent == dynamic_extent ? dynamic_extent : Extent * sizeof(T)>;
 
 }  // namespace internal
 }  // namespace cpp20

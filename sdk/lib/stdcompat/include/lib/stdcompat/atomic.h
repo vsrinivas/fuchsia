@@ -8,6 +8,7 @@
 #include <assert.h>
 
 #include <atomic>
+#include <cstddef>
 
 #include "internal/atomic.h"
 #include "internal/linkage.h"
@@ -38,7 +39,8 @@ class atomic_ref : public atomic_internal::atomic_ops<atomic_ref<T>, T>,
   static constexpr bool is_always_lockfree =
       __atomic_always_lock_free(sizeof(T), static_cast<T*>(nullptr));
 
-  static constexpr size_t required_alignment = atomic_internal::alignment<T>::required_alignment;
+  static constexpr std::size_t required_alignment =
+      atomic_internal::alignment<T>::required_alignment;
 
   atomic_ref() = delete;
   LIB_STDCOMPAT_INLINE_LINKAGE explicit atomic_ref(T& obj) : ptr_(cpp17::addressof(obj)) {

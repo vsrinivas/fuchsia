@@ -5,6 +5,7 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_INTERNAL_FUNCTIONAL_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_INTERNAL_FUNCTIONAL_H_
 
+#include <cstddef>
 #include <functional>
 
 #include "../type_traits.h"
@@ -66,7 +67,7 @@ constexpr auto invoke(F&& f, Args&&... args)
 namespace cpp20 {
 namespace internal {
 
-template <typename Invocable, typename BoundTuple, size_t... Is, typename... CallArgs>
+template <typename Invocable, typename BoundTuple, std::size_t... Is, typename... CallArgs>
 constexpr decltype(auto) invoke_with_bound(Invocable&& invocable, BoundTuple&& bound_args,
                                            std::index_sequence<Is...>, CallArgs&&... call_args) {
   return ::cpp17::internal::invoke(std::forward<Invocable>(invocable),

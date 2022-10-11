@@ -5,6 +5,7 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VARIANT_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VARIANT_H_
 
+#include <cstddef>
 #include <limits>
 #include <type_traits>
 #include <utility>
@@ -63,14 +64,14 @@ template <typename... Ts>
 class variant;
 
 // Gets the type of a variant alternative with the given index.
-template <size_t Index, typename Variant>
+template <std::size_t Index, typename Variant>
 struct variant_alternative;
 
-template <size_t Index, typename... Ts>
+template <std::size_t Index, typename... Ts>
 struct variant_alternative<Index, variant<Ts...>>
     : ::cpp17::internal::variant_alternative<Index, ::cpp17::internal::variant_list<Ts...>> {};
 
-template <size_t index, typename Variant>
+template <std::size_t index, typename Variant>
 using variant_alternative_t = typename variant_alternative<index, Variant>::type;
 
 // Gets the number of alternatives in a variant as a compile-time constant
@@ -79,7 +80,7 @@ template <typename T>
 struct variant_size;
 
 template <typename... Ts>
-struct variant_size<variant<Ts...>> : std::integral_constant<size_t, sizeof...(Ts)> {};
+struct variant_size<variant<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts)> {};
 
 template <typename T>
 struct variant_size<const T> : variant_size<T> {};
@@ -92,15 +93,15 @@ struct variant_size<const volatile T> : variant_size<T> {};
     !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 template <typename T>
-inline constexpr size_t variant_size_v = variant_size<T>::value;
+inline constexpr std::size_t variant_size_v = variant_size<T>::value;
 
-inline constexpr size_t variant_npos = internal::empty_index;
+inline constexpr std::size_t variant_npos = internal::empty_index;
 
 #else  // Provide storage for static class variable.
 
 template <typename T>
-static constexpr const size_t& variant_size_v =
-    internal::inline_storage<T, size_t, variant_size<T>::value>::storage;
+static constexpr const std::size_t& variant_size_v =
+    internal::inline_storage<T, std::size_t, variant_size<T>::value>::storage;
 
 namespace internal {
 // Unique type for providing static storage for variant npos.
@@ -108,7 +109,7 @@ struct variant_npos_storage {};
 }  // namespace internal
 
 static constexpr auto& variant_npos =
-    internal::inline_storage<internal::variant_npos_storage, size_t,
+    internal::inline_storage<internal::variant_npos_storage, std::size_t,
                              internal::empty_index>::storage;
 
 #endif  // __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
@@ -153,7 +154,7 @@ struct check_narrow {
 //
 // The specializations below match the element Ti that passes the conversion
 // checks.
-template <size_t Index, typename T, typename Ti,
+template <std::size_t Index, typename T, typename Ti,
           bool IsBool = std::is_same<bool, std::remove_cv_t<Ti>>::value, typename = void>
 struct check_valid_option {
   // Non-static so that check_valid_option<...>::check is always a valid
@@ -163,17 +164,17 @@ struct check_valid_option {
 };
 
 // Checks that Ti x[] = {std::forward<T>()} is well formed.
-template <size_t Index, typename T, typename Ti>
+template <std::size_t Index, typename T, typename Ti>
 struct check_valid_option<Index, T, Ti, false,
                           void_t<decltype(check_narrow<Ti>{{std::declval<T>()}})>> {
-  static std::integral_constant<size_t, Index> check(Ti);
+  static std::integral_constant<std::size_t, Index> check(Ti);
 };
 
 // Checks that remove_cvref_t<T> is bool when Ti is cv bool.
-template <size_t Index, typename T, typename Ti>
+template <std::size_t Index, typename T, typename Ti>
 struct check_valid_option<Index, T, Ti, true,
                           std::enable_if_t<std::is_same<bool, ::cpp20::remove_cvref_t<T>>::value>> {
-  static std::integral_constant<size_t, Index> check(Ti);
+  static std::integral_constant<std::size_t, Index> check(Ti);
 };
 
 // Mixes in instantiations of check_valid_option for each element in
@@ -190,7 +191,7 @@ struct find_valid_option {
 
 // Recursive case. This would be simpler with C++17 pack expansion in using
 // directives, but this must function in C++14.
-template <typename T, typename Ti, size_t Index, typename... Ts, size_t... Is>
+template <typename T, typename Ti, std::size_t Index, typename... Ts, std::size_t... Is>
 struct find_valid_option<T, variant_list<Ti, Ts...>, std::index_sequence<Index, Is...>>
     : check_valid_option<Index, T, Ti>,
       find_valid_option<T, variant_list<Ts...>, std::index_sequence<Is...>> {
@@ -211,7 +212,7 @@ using valid_option_index = decltype(find_valid_option<T, VariantList>::check(std
 // Evaluates to the index of the valid target Ti that converts from T or the
 // reserved empty index when no uniquely suitable option is available.
 template <typename T, typename Variant, typename = void>
-struct selected_index : std::integral_constant<size_t, ::cpp17::internal::empty_index> {};
+struct selected_index : std::integral_constant<std::size_t, ::cpp17::internal::empty_index> {};
 
 template <typename T, typename... Ts>
 struct selected_index<T, variant<Ts...>, void_t<valid_option_index<T, variant_list<Ts...>>>>
@@ -238,7 +239,7 @@ class variant
 
   template <typename T>
   using type_tag = ::cpp17::internal::type_tag<T>;
-  template <size_t Index>
+  template <std::size_t Index>
   using index_tag = ::cpp17::internal::index_tag<Index>;
 
   template <typename T>
@@ -264,16 +265,17 @@ class variant
                         std::is_constructible<T, Args...>::value),
                        std::add_lvalue_reference_t<T>>;
 
-  template <size_t Index, typename = std::enable_if_t<(Index < sizeof...(Ts))>>
+  template <std::size_t Index, typename = std::enable_if_t<(Index < sizeof...(Ts))>>
   using alternative_t = variant_alternative_t<Index, variant>;
 
-  template <size_t Index, typename... Args>
+  template <std::size_t Index, typename... Args>
   using emplace_constructible_by_index =
       std::enable_if_t<std::is_constructible<alternative_t<Index>, Args...>::value,
                        std::add_lvalue_reference_t<alternative_t<Index>>>;
 
   template <typename T>
-  static constexpr size_t selected_index = ::cpp17::internal::selected_index<T, variant>::value;
+  static constexpr std::size_t selected_index =
+      ::cpp17::internal::selected_index<T, variant>::value;
 
   template <typename T, typename = std::enable_if<not_self_type<T>::value>>
   using selected_t = alternative_t<selected_index<T>>;
@@ -312,12 +314,12 @@ class variant
   explicit constexpr variant(in_place_type_t<T>, std::initializer_list<U> init_list, Args&&... args)
       : storage_(type_tag<T>{}, init_list, std::forward<Args>(args)...) {}
 
-  template <size_t Index, typename... Args,
+  template <std::size_t Index, typename... Args,
             requires_conditions<std::is_constructible<alternative_t<Index>, Args...>> = true>
   explicit constexpr variant(in_place_index_t<Index>, Args&&... args)
       : storage_(index_tag<Index>{}, std::forward<Args>(args)...) {}
 
-  template <size_t Index, typename U, typename... Args,
+  template <std::size_t Index, typename U, typename... Args,
             requires_conditions<std::is_constructible<alternative_t<Index>,
                                                       std::initializer_list<U>&, Args...>> = true>
   explicit constexpr variant(in_place_index_t<Index>, std::initializer_list<U> init_list,
@@ -362,7 +364,7 @@ class variant
     return *this;
   }
 
-  constexpr size_t index() const noexcept { return storage_.index(); }
+  constexpr std::size_t index() const noexcept { return storage_.index(); }
 
   // Emplacement.
 
@@ -381,14 +383,14 @@ class variant
     return storage_.get(type_tag<T>{});
   }
 
-  template <size_t Index, typename... Args>
+  template <std::size_t Index, typename... Args>
   constexpr emplace_constructible_by_index<Index, Args&&...> emplace(Args&&... args) {
     storage_.reset();
     storage_.construct(index_tag<Index>{}, std::forward<Args>(args)...);
     return storage_.get(index_tag<Index>{});
   }
 
-  template <size_t Index, typename U, typename... Args>
+  template <std::size_t Index, typename U, typename... Args>
   constexpr emplace_constructible_by_index<Index, std::initializer_list<U>&, Args&&...> emplace(
       std::initializer_list<U> init_list, Args&&... args) {
     storage_.reset();
@@ -507,19 +509,19 @@ class variant
   ::cpp17::internal::storage_type<Ts...> storage_;
 
   // Friend for cpp17::get.
-  template <size_t Index, typename... Args>
+  template <std::size_t Index, typename... Args>
   friend constexpr cpp17::variant_alternative_t<Index, variant<Args...>>& get(
       variant<Args...>& value);
 
-  template <size_t Index, typename... Args>
+  template <std::size_t Index, typename... Args>
   friend constexpr const cpp17::variant_alternative_t<Index, variant<Args...>>& get(
       const variant<Args...>& value);
 
-  template <size_t Index, typename... Args>
+  template <std::size_t Index, typename... Args>
   friend constexpr cpp17::variant_alternative_t<Index, variant<Args...>>&& get(
       variant<Args...>&& value);
 
-  template <size_t Index, typename... Args>
+  template <std::size_t Index, typename... Args>
   friend constexpr const cpp17::variant_alternative_t<Index, variant<Args...>>&& get(
       const variant<Args...>&& value);
 
@@ -545,7 +547,7 @@ void swap(variant<Ts...>& a, variant<Ts...>& b) {
 }
 
 // Accesses the variant by zero-based index.
-template <size_t Index, typename... Ts>
+template <std::size_t Index, typename... Ts>
 constexpr cpp17::variant_alternative_t<Index, variant<Ts...>>& get(variant<Ts...>& value) {
   if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
     return value.storage_.get(::cpp17::internal::index_tag<Index>{});
@@ -553,14 +555,14 @@ constexpr cpp17::variant_alternative_t<Index, variant<Ts...>>& get(variant<Ts...
   value.exception_invalid_index();
 }
 
-template <size_t Index, typename... Ts>
+template <std::size_t Index, typename... Ts>
 constexpr cpp17::variant_alternative_t<Index, variant<Ts...>>&& get(variant<Ts...>&& value) {
   if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
     return value.storage_.get(::cpp17::internal::index_tag<Index>{});
   }
   value.exception_invalid_index();
 }
-template <size_t Index, typename... Ts>
+template <std::size_t Index, typename... Ts>
 constexpr const cpp17::variant_alternative_t<Index, variant<Ts...>>& get(
     const variant<Ts...>& value) {
   if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
@@ -568,7 +570,7 @@ constexpr const cpp17::variant_alternative_t<Index, variant<Ts...>>& get(
   }
   value.exception_invalid_index();
 }
-template <size_t Index, typename... Ts>
+template <std::size_t Index, typename... Ts>
 constexpr const cpp17::variant_alternative_t<Index, variant<Ts...>>&& get(
     const variant<Ts...>&& value) {
   if (value.storage_.has_value(::cpp17::internal::index_tag<Index>{})) {
@@ -619,7 +621,7 @@ namespace internal {
 struct dispatcher_container {
   // Creates a compile dispatcher that calls |visitor| with the right set of
   // active alternatives each variant.
-  template <size_t... Indexes>
+  template <std::size_t... Indexes>
   struct dispatcher {
     template <typename Visitor, typename... Variants>
     static constexpr decltype(auto) dispatch(Visitor visitor, Variants... variants) {

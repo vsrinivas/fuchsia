@@ -5,6 +5,7 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_STRING_VIEW_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_STRING_VIEW_H_
 
+#include <cstddef>
 #include <stdexcept>
 
 #include "version.h"

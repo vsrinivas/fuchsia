@@ -6,6 +6,7 @@
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_INTERNAL_ARRAY_H_
 
 #include <array>
+#include <cstddef>
 
 namespace cpp20 {
 namespace internal {
@@ -16,7 +17,7 @@ constexpr std::array<std::remove_cv_t<T>, N> to_array(T (&a)[N], std::index_sequ
 }
 
 template <class T, std::size_t N, std::size_t... I>
-constexpr std::array<std::remove_cv_t<T>, N> to_array(T(&&a)[N], std::index_sequence<I...>) {
+constexpr std::array<std::remove_cv_t<T>, N> to_array(T (&&a)[N], std::index_sequence<I...>) {
   return {{std::move(a[I])...}};
 }
 

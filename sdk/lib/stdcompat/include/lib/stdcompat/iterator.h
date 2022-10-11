@@ -5,6 +5,7 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_ITERATOR_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_ITERATOR_H_
 
+#include <cstddef>
 #include <initializer_list>
 #include <iterator>
 
@@ -30,7 +31,7 @@ constexpr auto data(const C& c) -> decltype(c.data()) {
   return c.data();
 }
 
-template <typename T, size_t N>
+template <typename T, std::size_t N>
 constexpr T* data(T (&array)[N]) {
   return array;
 }
@@ -45,8 +46,8 @@ constexpr auto size(const C& c) -> decltype(c.size()) {
   return c.size();
 }
 
-template <typename T, size_t N>
-constexpr size_t size(const T (&array)[N]) {
+template <typename T, std::size_t N>
+constexpr std::size_t size(const T (&array)[N]) {
   return N;
 }
 

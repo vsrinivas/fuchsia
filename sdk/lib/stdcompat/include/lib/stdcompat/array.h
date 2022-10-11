@@ -6,6 +6,7 @@
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_ARRAY_H_
 
 #include <array>
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 

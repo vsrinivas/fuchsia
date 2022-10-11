@@ -5,6 +5,7 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_TUPLE_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_TUPLE_H_
 
+#include <cstddef>
 #include <tuple>
 
 #include "internal/tuple.h"
@@ -19,7 +20,7 @@ using std::tuple_size_v;
 #else
 
 template <typename T>
-static constexpr size_t tuple_size_v = std::tuple_size<T>::value;
+static constexpr std::size_t tuple_size_v = std::tuple_size<T>::value;
 
 #endif  // __cpp_lib_type_trait_variable_templates >= 201510L &&
         // !defined(LIB_STDCOMPAT_USE_POLYFILLS)

@@ -36,13 +36,14 @@ template <typename T>
 struct variant_list_size;
 
 template <typename... Ts>
-struct variant_list_size<variant_list<Ts...>> : std::integral_constant<size_t, sizeof...(Ts)> {};
+struct variant_list_size<variant_list<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts)> {
+};
 
 // Helper to get the type of a variant_list alternative with the given index.
-template <size_t Index, typename VariantList>
+template <std::size_t Index, typename VariantList>
 struct variant_alternative;
 
-template <size_t Index, typename T0, typename... Ts>
+template <std::size_t Index, typename T0, typename... Ts>
 struct variant_alternative<Index, variant_list<T0, Ts...>>
     : variant_alternative<Index - 1, variant_list<Ts...>> {};
 
@@ -59,8 +60,8 @@ struct visit_index {
     return element;
   }
 
-  template <typename T, size_t N, typename... Indexes>
-  static constexpr auto&& at(const std::array<T, N>& matrix, size_t index, Indexes... is) {
+  template <typename T, std::size_t N, typename... Indexes>
+  static constexpr auto&& at(const std::array<T, N>& matrix, std::size_t index, Indexes... is) {
     return at(matrix[index], is...);
   }
 };
@@ -76,7 +77,7 @@ struct visit_matrix : public visit_index {
 
   // Creates a flat array, whose entry corresponds to a functor doing the
   // dispatch.
-  template <typename DispatcherContainer, size_t... Active>
+  template <typename DispatcherContainer, std::size_t... Active>
   static constexpr auto make_dispatcher_array(std::index_sequence<Active...> active) {
     return DispatcherContainer::template dispatcher<Active...>::template dispatch<Visitor,
                                                                                   Variants...>;
@@ -87,7 +88,8 @@ struct visit_matrix : public visit_index {
   // current variant. Remaining is the set of index sequences for each variant.
   // Essentially this is creating a nested |sizeof...(Variants)|-dimensional
   // array,
-  template <typename DipatcherContainer, size_t... Active, size_t... Current, typename... Remaining>
+  template <typename DipatcherContainer, std::size_t... Active, std::size_t... Current,
+            typename... Remaining>
   static constexpr auto make_dispatcher_array(std::index_sequence<Active...> active,
                                               std::index_sequence<Current...> current,
                                               Remaining... remaining) {
