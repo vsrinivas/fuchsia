@@ -23,7 +23,11 @@ const TARGET_LIFETIME: Duration = Duration::from_secs(120);
 /// Equivalent to a call to `ffx target add`. This adds a target at `127.0.0.1:ssh_port`.
 /// At this time, this is restricted to IPV4 only, as QEMU's DHCP server gets in the way of port
 /// mapping on IPV6.
-pub async fn add_target(proxy: &ffx::TargetCollectionProxy, ssh_port: u16) -> Result<()> {
+pub async fn add_target(
+    proxy: &ffx::TargetCollectionProxy,
+    ssh_port: u16,
+    lifetime: Duration,
+) -> Result<()> {
     let mut addr = ffx::TargetAddrInfo::IpPort(ffx::TargetIpPort {
         ip: net::IpAddress::Ipv4(net::Ipv4Address {
             addr: "127.0.0.1".parse::<std::net::Ipv4Addr>().unwrap().octets().into(),
@@ -32,7 +36,13 @@ pub async fn add_target(proxy: &ffx::TargetCollectionProxy, ssh_port: u16) -> Re
         scope_id: 0,
     });
 
-    proxy.add_ephemeral_target(&mut addr, TARGET_LIFETIME.as_secs()).await?;
+    let expiration = if lifetime.is_zero() {
+        // A target with zero lifetime doesn't make sense, so we revert to the default.
+        TARGET_LIFETIME
+    } else {
+        lifetime
+    };
+    proxy.add_ephemeral_target(&mut addr, expiration.as_secs()).await?;
     tracing::debug!("[emulator] Added target {:?}", &addr);
     Ok(())
 }
@@ -175,7 +185,7 @@ mod test {
                 }),
             )
         });
-        add_target(&server, ssh_port).await.unwrap();
+        add_target(&server, ssh_port, TARGET_LIFETIME).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

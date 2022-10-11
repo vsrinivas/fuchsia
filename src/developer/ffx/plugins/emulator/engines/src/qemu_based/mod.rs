@@ -325,8 +325,9 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         let ssh_port = if let Some(ssh) = ssh { ssh.host } else { None };
         if self.emu_config().host.networking == NetworkingMode::User {
             // We only need to do this if we're running in user net mode.
+            let timeout = self.emu_config().runtime.startup_timeout;
             if let Some(ssh_port) = ssh_port {
-                add_target(proxy, ssh_port)
+                add_target(proxy, ssh_port, timeout)
                     .await
                     .context("Failed to add the emulator to the ffx target collection.")?;
             }
