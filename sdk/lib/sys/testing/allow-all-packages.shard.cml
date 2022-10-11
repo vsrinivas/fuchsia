@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//sdk/lib/sys/testing/allow-all-packages.shard.cml" ],
     facets: {
-        // TODO(fxbug.dev/110576): Delete this realm.
-        "fuchsia.test": { type: "hermetic-tier-2" },
+        "fuchsia.test": { "deprecated-allowed-all-packages": "true" },
     },
 }
