@@ -69,7 +69,6 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/validate_product",
     "//src/lib/assembly/vbmeta",
     "//src/lib/assembly/zbi",
-    "//src/lib/fuchsia-url",
     "//src/sys/pkg/lib/epoch",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",

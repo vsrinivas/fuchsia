@@ -10,7 +10,7 @@ use assembly_config_schema::{
         AssemblyInputBundle, DriverDetails, ProductConfigData, ProductPackageDetails,
         ProductPackagesConfig, ShellCommands,
     },
-    FileEntry, PartialImageAssemblyConfig,
+    FileEntry,
 };
 use assembly_driver_manifest::DriverManifestBuilder;
 use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf};
@@ -19,7 +19,6 @@ use assembly_shell_commands::ShellCommandsBuilder;
 use assembly_structured_config::Repackager;
 use assembly_util::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 use fuchsia_pkg::PackageManifest;
-use fuchsia_url::UnpinnedAbsolutePackageUrl;
 use std::path::Path;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -65,25 +64,6 @@ pub struct ImageAssemblyConfigBuilder {
 
     qemu_kernel: Option<PathBuf>,
     shell_commands: ShellCommands,
-
-    /// A set of all unique packageUrls across all AIBs passed to the builder
-    package_urls: BTreeSet<UnpinnedAbsolutePackageUrl>,
-}
-
-/// An enum representing unique identifiers for the 4 types of supported package sets in the
-/// ImageAssemblyConfigBuilder. Used to dereference PackageSet fields on the builder by name
-#[derive(Debug)]
-enum PackageSets {
-    BASE,
-    CACHE,
-    SYSTEM,
-    BOOTFS,
-}
-
-impl PackageSets {
-    fn list_all() -> Vec<PackageSets> {
-        vec![Self::BASE, Self::CACHE, Self::BOOTFS, Self::SYSTEM]
-    }
 }
 
 impl Default for ImageAssemblyConfigBuilder {
@@ -110,7 +90,6 @@ impl ImageAssemblyConfigBuilder {
             kernel_args: BTreeSet::default(),
             kernel_clock_backstop: None,
             qemu_kernel: None,
-            package_urls: BTreeSet::default(),
         }
     }
 
@@ -148,13 +127,16 @@ impl ImageAssemblyConfigBuilder {
             shell_commands,
         } = bundle;
 
-        self.add_bundle_packages(bundle_path, &bundle)?;
+        Self::add_bundle_packages(bundle_path, &bundle.base, &mut self.base)?;
+        Self::add_bundle_packages(bundle_path, &bundle.cache, &mut self.cache)?;
+        Self::add_bundle_packages(bundle_path, &bundle.system, &mut self.system)?;
+        Self::add_bundle_packages(bundle_path, &bundle.bootfs_packages, &mut self.bootfs_packages)?;
 
         // Base drivers are added to the base packages
         for driver_details in base_drivers {
-            let driver_package_path = &bundle_path.join(&driver_details.package);
-            self.add_unique_package_from_path(driver_package_path, &PackageSets::BASE)?;
-
+            Self::add_bundle_package(bundle_path, &driver_details.package, &mut self.base)
+                .context("Adding driver {}")?;
+            let driver_package_path = bundle_path.join(&driver_details.package);
             let package_url = DriverManifestBuilder::get_base_package_url(driver_package_path)?;
             self.base_drivers.try_insert_unique(package_url, driver_details)?;
         }
@@ -206,64 +188,28 @@ impl ImageAssemblyConfigBuilder {
         Ok(())
     }
 
-    fn add_unique_package_from_path(
-        &mut self,
-        path: impl AsRef<Path>,
-        to_package_set: &PackageSets,
+    /// Add a packages from a bundle, resolving each path to a package
+    /// manifest from the bundle's path to locate it.
+    fn add_bundle_package(
+        bundle_path: impl AsRef<Path>,
+        package_path: impl AsRef<Path>,
+        package_set: &mut PackageSet,
     ) -> Result<()> {
-        // Create PackageEntry
-        let package_entry = PackageEntry::parse_from(path.as_ref().to_owned())?;
-
-        self.add_unique_package_entry(package_entry, to_package_set)
-    }
-
-    /// Adds a package via PackageEntry to the package set, only if it is unique across all other
-    /// packages in the builder
-    fn add_unique_package_entry(
-        &mut self,
-        package_entry: PackageEntry,
-        to_package_set: &PackageSets,
-    ) -> Result<()> {
-        let package_set = match to_package_set.to_owned() {
-            PackageSets::BASE => &mut self.base,
-            PackageSets::CACHE => &mut self.cache,
-            PackageSets::SYSTEM => &mut self.system,
-            PackageSets::BOOTFS => &mut self.bootfs_packages,
-        };
-
-        let package_url = package_entry
-            .manifest
-            .package_url()?
-            .ok_or(anyhow::anyhow!("Something happened when trying to get the package_url"))?;
-        self.package_urls.try_insert_unique(package_url).map_err(|e| {
-            anyhow::anyhow!("duplicate package {} found in {}", e, package_set.name)
-        })?;
-        package_set.add_package(package_entry)?;
-
+        let path = bundle_path.as_ref().join(package_path);
+        package_set.add_package_from_path(path)?;
         Ok(())
     }
 
     /// Add a set of packages from a bundle, resolving each path to a package
     /// manifest from the bundle's path to locate it.
     fn add_bundle_packages(
-        &mut self,
         bundle_path: impl AsRef<Path>,
-        bundle: &PartialImageAssemblyConfig,
+        bundle_package_paths: &[impl AsRef<Path>],
+        package_set: &mut PackageSet,
     ) -> Result<()> {
-        for package_set in PackageSets::list_all() {
-            let bundle_package_paths = match package_set {
-                PackageSets::BASE => &bundle.base,
-                PackageSets::CACHE => &bundle.cache,
-                PackageSets::SYSTEM => &bundle.system,
-                PackageSets::BOOTFS => &bundle.bootfs_packages,
-            };
-
-            for path in bundle_package_paths {
-                let manifest_path = bundle_path.as_ref().join(path);
-                self.add_unique_package_from_path(manifest_path, &package_set)?;
-            }
+        for path in bundle_package_paths {
+            Self::add_bundle_package(bundle_path.as_ref(), path, package_set)?;
         }
-
         Ok(())
     }
 
@@ -286,34 +232,34 @@ impl ImageAssemblyConfigBuilder {
     /// so that any packages that are in conflict with the platform bundles are
     /// flagged as being the issue (and not the platform being the issue).
     pub fn add_product_packages(&mut self, packages: ProductPackagesConfig) -> Result<()> {
-        let mut add_package =
-            |entries: Vec<ProductPackageDetails>, to_package_set: PackageSets| -> Result<()> {
-                for entry in entries {
-                    // Parse the package_manifest.json into a PackageManifest, returning
-                    // both along with any config_data entries defined for the package.
-                    let (manifest_path, pkg_manifest, config_data) =
-                        Self::parse_product_package_entry(entry)?;
-                    let package_manifest_name = pkg_manifest.name().to_string();
-                    let package_entry = PackageEntry {
-                        path: manifest_path.into_std_path_buf(),
-                        manifest: pkg_manifest,
-                    };
-                    self.add_unique_package_entry(package_entry, &to_package_set)?;
-                    // Add the config data entries to the map
-                    if !config_data.is_empty() {
-                        self.config_data
-                            .entry(package_manifest_name)
-                            .or_default()
-                            .add_all(config_data)?;
-                    };
+        // This closure provides us with a way to write this once, but also get
+        // around the multiple mutable borrows of self that are needed.
+        let add_to_package_set = |builder_pkg_set: &mut PackageSet,
+                                  builder_config_data: &mut ConfigDataMap,
+                                  product_pkg_set|
+         -> Result<()> {
+            for entry in product_pkg_set {
+                // Parse the package_manifest.json into a PackageManifest, returning
+                // both along with any config_data entries defined for the package.
+                let (path, manifest, config_data) = Self::parse_product_package_entry(entry)?;
+
+                // Add the config data entries to the map
+                if !config_data.is_empty() {
+                    builder_config_data
+                        .entry(manifest.name().to_string())
+                        .or_default()
+                        .add_all(config_data)?;
                 }
-                Ok(())
-            };
 
-        // Add the config data entries to the map
-        add_package(packages.base, PackageSets::BASE)?;
-        add_package(packages.cache, PackageSets::CACHE)?;
+                // Now add it to the builder's package set.
+                builder_pkg_set
+                    .add_package(PackageEntry { path: path.into_std_path_buf(), manifest })?;
+            }
+            Ok(())
+        };
 
+        add_to_package_set(&mut self.base, &mut self.config_data, packages.base)?;
+        add_to_package_set(&mut self.cache, &mut self.config_data, packages.cache)?;
         Ok(())
     }
 
@@ -329,7 +275,7 @@ impl ImageAssemblyConfigBuilder {
         for driver_details in drivers {
             let manifest =
                 PackageManifest::try_load_from(&driver_details.package).with_context(|| {
-                    format!("parsing {} as a package manifest", driver_details.package)
+                    format!("parsing {} as a package manifest", &driver_details.package)
                 })?;
             self.base
                 .add_package(PackageEntry {
@@ -443,7 +389,6 @@ impl ImageAssemblyConfigBuilder {
             kernel_clock_backstop,
             qemu_kernel,
             shell_commands,
-            package_urls: _,
         } = self;
 
         // add structured config value files to bootfs
@@ -586,7 +531,7 @@ impl PackageEntry {
     fn parse_from(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_owned();
         let manifest = PackageManifest::try_load_from(&path)
-            .with_context(|| format!("parsing {} as a package manifest", path.display()))?;
+            .context(format!("parsing {} as a package manifest", path.display()))?;
         Ok(Self { path, manifest })
     }
 
@@ -748,27 +693,18 @@ mod tests {
         }
     }
 
-    fn write_empty_pkg(
-        path: impl AsRef<Path>,
-        name: &str,
-        repo: Option<&str>,
-    ) -> PackageManifestPathBuf {
+    fn write_empty_pkg(path: impl AsRef<Path>, name: &str) -> PackageManifestPathBuf {
         let path = path.as_ref();
         let mut builder = PackageBuilder::new(name);
         let manifest_path = path.join(name);
         builder.manifest_path(&manifest_path);
-        if let Some(repo_name) = repo {
-            builder.repository(repo_name);
-        } else {
-            builder.repository("fuchsia.com");
-        }
         builder.build(path, path.join(format!("{}_meta.far", name))).unwrap();
         Utf8PathBuf::from_path_buf(manifest_path).unwrap().into()
     }
 
     fn make_test_assembly_bundle(bundle_path: &Path) -> AssemblyInputBundle {
         let write_empty_bundle_pkg =
-            |name: &str| write_empty_pkg(bundle_path, name, None).clone().into_std_path_buf();
+            |name: &str| write_empty_pkg(bundle_path, name).clone().into_std_path_buf();
         AssemblyInputBundle {
             image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
                 base: vec![write_empty_bundle_pkg("base_package0")],
@@ -823,9 +759,7 @@ mod tests {
             image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
                 base: package_names
                     .iter()
-                    .map(|package_name| {
-                        write_empty_pkg(&outdir, package_name, None).into_std_path_buf()
-                    })
+                    .map(|package_name| write_empty_pkg(&outdir, package_name).into_std_path_buf())
                     .collect(),
                 kernel: Some(assembly_config_schema::PartialKernelConfig {
                     path: Some("kernel/path".into()),
@@ -993,13 +927,13 @@ mod tests {
 
         let packages = ProductPackagesConfig {
             base: vec![
-                write_empty_pkg(&outdir, "base_a", None).into(),
+                write_empty_pkg(&outdir, "base_a").into(),
                 ProductPackageDetails {
-                    manifest: write_empty_pkg(&outdir, "base_b", None).into(),
+                    manifest: write_empty_pkg(&outdir, "base_b").into(),
                     config_data: Vec::default(),
                 },
                 ProductPackageDetails {
-                    manifest: write_empty_pkg(&outdir, "base_c", None).into(),
+                    manifest: write_empty_pkg(&outdir, "base_c").into(),
                     config_data: vec![
                         ProductConfigData {
                             destination: "dest/path/cfg.txt".into(),
@@ -1014,8 +948,8 @@ mod tests {
                 .into(),
             ],
             cache: vec![
-                write_empty_pkg(&outdir, "cache_a", None).into(),
-                write_empty_pkg(&outdir, "cache_b", None).into(),
+                write_empty_pkg(&outdir, "cache_a").into(),
+                write_empty_pkg(&outdir, "cache_b").into(),
             ],
         };
 
@@ -1117,7 +1051,7 @@ mod tests {
     fn test_builder_with_product_packages_catches_duplicates() -> Result<()> {
         let outdir = TempDir::new().unwrap();
         let packages = ProductPackagesConfig {
-            base: vec![write_empty_pkg(&outdir, "base_a", None).into()],
+            base: vec![write_empty_pkg(&outdir, "base_a").into()],
             ..ProductPackagesConfig::default()
         };
         let mut builder = get_minimum_config_builder(&outdir, vec!["base_a".to_owned()]);
@@ -1226,122 +1160,6 @@ mod tests {
     #[test]
     fn test_builder_catches_dupe_bootfs_files_across_aibs() {
         test_duplicates_across_aibs_impl(|a| &mut a.image_assembly.bootfs_files);
-    }
-
-    fn assert_two_pkgs_same_name_diff_path_errors() {
-        let outdir = TempDir::new().unwrap();
-        let tmp_path1 = TempDir::new_in(&outdir).unwrap();
-        let tmp_path2 = TempDir::new_in(&outdir).unwrap();
-        let aib = AssemblyInputBundle {
-            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
-                base: vec![
-                    write_empty_pkg(tmp_path1.path(), "base_package2", None).into_std_path_buf(),
-                    write_empty_pkg(tmp_path2.path(), "base_package2", None).into_std_path_buf(),
-                ],
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let mut builder = ImageAssemblyConfigBuilder::default();
-        assert!(builder.add_parsed_bundle(outdir.path(), aib).is_err());
-    }
-
-    #[test]
-    /// Asserts that attempting to add a package to the base package set with the same
-    /// PackageName but a different package manifest path will result in an error if coming
-    /// from the same AIB
-    fn test_builder_catches_same_name_diff_path_one_aib() {
-        assert_two_pkgs_same_name_diff_path_errors();
-    }
-
-    fn assert_two_pkgs_same_name_diff_path_across_aibs_errors() {
-        let outdir = TempDir::new().unwrap();
-        let tmp_path1 = TempDir::new_in(&outdir).unwrap();
-        let tmp_path2 = TempDir::new_in(&outdir).unwrap();
-        let aib = AssemblyInputBundle {
-            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
-                base: vec![
-                    write_empty_pkg(tmp_path1.path(), "base_package2", None).into_std_path_buf()
-                ],
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let aib2 = AssemblyInputBundle {
-            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
-                base: vec![
-                    write_empty_pkg(tmp_path2.path(), "base_package2", None).into_std_path_buf()
-                ],
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let mut builder = ImageAssemblyConfigBuilder::default();
-        builder.add_parsed_bundle(outdir.path(), aib).ok();
-        builder.add_parsed_bundle(outdir.path(), aib2).ok();
-        assert!(builder.build(outdir.path()).is_err());
-    }
-    /// Asserts that attempting to add a package to the base package set with the same
-    /// PackageName but a different package manifest path will result in an error if coming
-    /// from DIFFERENT AIBs
-    #[test]
-    fn test_builder_catches_same_name_diff_path_multi_aib() {
-        assert_two_pkgs_same_name_diff_path_across_aibs_errors();
-    }
-
-    #[test]
-    fn test_builder_catches_dupes_across_package_sets() {
-        let outdir = TempDir::new().unwrap();
-        let tmp_path1 = TempDir::new_in(&outdir).unwrap();
-        let tmp_path2 = TempDir::new_in(&outdir).unwrap();
-        let aib = AssemblyInputBundle {
-            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
-                base: vec![write_empty_pkg(tmp_path1.path(), "foo", None).into_std_path_buf()],
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let aib2 = AssemblyInputBundle {
-            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
-                cache: vec![write_empty_pkg(tmp_path2.path(), "foo", None).into_std_path_buf()],
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-        let mut builder = ImageAssemblyConfigBuilder::default();
-        builder.add_parsed_bundle(outdir.path(), aib).ok();
-        assert!(builder.add_parsed_bundle(outdir.path(), aib2).is_err());
-    }
-
-    #[test]
-    fn test_builder_allows_dupes_assuming_different_package_url() {
-        let outdir = TempDir::new().unwrap();
-        let tmp_path1 = TempDir::new_in(&outdir).unwrap();
-        let tmp_path2 = TempDir::new_in(&outdir).unwrap();
-        let aib = AssemblyInputBundle {
-            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
-                base: vec![write_empty_pkg(tmp_path1.path(), "foo", Some("fuchsia.com"))
-                    .into_std_path_buf()],
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let aib2 = AssemblyInputBundle {
-            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
-                cache: vec![write_empty_pkg(tmp_path2.path(), "foo", Some("google.com"))
-                    .into_std_path_buf()],
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let mut builder = ImageAssemblyConfigBuilder::default();
-        builder.add_parsed_bundle(outdir.path(), aib).ok();
-        builder.add_parsed_bundle(outdir.path(), aib2).unwrap();
     }
 
     #[test]
