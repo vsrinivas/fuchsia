@@ -1254,6 +1254,7 @@ pkg/sync/meta.json
 pkg/sys/component/realm_builder_absolute.shard.cml
 pkg/sys/component/realm_builder_base.shard.cml
 pkg/sys/component/realm_builder_shard_sdk.json
+pkg/sys/testing/allow-all-packages.shard.cml
 pkg/sys/testing/coverage.shard.cml
 pkg/sys/testing/elf_test_runner.shard.cml
 pkg/sys/testing/hermetic-tier-2-test.shard.cml

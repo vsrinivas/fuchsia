@@ -11,6 +11,7 @@ sdk_component_manifests("testing_sdk") {
     "hermetic-tier-2-test.shard.cml",
     "system-test.shard.cml",
     "coverage.shard.cml",
+    "allow-all-packages.shard.cml",
   ]
   category = "partner"
 }

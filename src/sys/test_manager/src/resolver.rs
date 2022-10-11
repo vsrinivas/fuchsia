@@ -15,8 +15,12 @@ use {
     tracing::{error, warn},
 };
 
+// Flag to enforce hermetic resolution. If false, default AllowedPackages value would be 'All'.
+// This flag helps us easily revert the changes if there is a problem.
+pub(crate) const ENFORCE_HERMETIC_RESOLUTION: bool = false;
+
 // Enum donating the list of non-hermetic packages allowed to resolved by a test.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum AllowedPackages {
     // Temporary enum for transition which will allow all packages.
     All,
@@ -26,8 +30,22 @@ pub enum AllowedPackages {
 }
 
 impl AllowedPackages {
+    pub fn default() -> Self {
+        match ENFORCE_HERMETIC_RESOLUTION {
+            false => Self::All,
+            true => Self::zero_allowed_pkgs(),
+        }
+    }
+
     pub fn zero_allowed_pkgs() -> Self {
         Self::List(Arc::new(HashSet::new()))
+    }
+
+    pub fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = String>,
+    {
+        Self::List(Arc::new(HashSet::from_iter(iter)))
     }
 }
 
