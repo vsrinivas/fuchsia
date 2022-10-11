@@ -112,11 +112,9 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
         // Obtain the backing vmo.
         let vmo = match file_proxy.get_backing_memory(fio::VmoFlags::READ).await {
             Ok(vmo) => vmo,
-            Err(err) => {
-                error!(
-                    file = %entry.name, ?err,
-                    "unexpected error calling GetBackingMemory",
-                );
+            Err(_err) => {
+                // It should be ok to not be able to read a file. The file might be closed by the
+                // time we get here.
                 continue;
             }
         };
