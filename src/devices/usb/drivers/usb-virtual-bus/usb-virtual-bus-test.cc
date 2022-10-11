@@ -13,6 +13,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>
@@ -44,11 +45,13 @@ zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) 
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
   }
-  fbl::unique_fd dev_fd(openat(dirfd, name, O_RDWR));
-  zx::channel channel;
-  fdio_get_service_handle(dev_fd.release(), channel.reset_and_get_address());
-  auto* client = static_cast<fidl::WireSyncClient<virtualbustest::BusTest>*>(cookie);
-  *client = fidl::WireSyncClient<virtualbustest::BusTest>(std::move(channel));
+  const fdio_cpp::UnownedFdioCaller caller{dirfd};
+  zx::status channel = component::ConnectAt<virtualbustest::BusTest>(caller.directory(), name);
+  if (channel.is_error()) {
+    return channel.status_value();
+  }
+  static_cast<fidl::WireSyncClient<virtualbustest::BusTest>*>(cookie)->Bind(
+      std::move(channel.value()));
   return ZX_ERR_STOP;
 }
 
