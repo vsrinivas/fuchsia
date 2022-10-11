@@ -1101,7 +1101,10 @@ type noopNicRemovedHandler struct{}
 func (*noopNicRemovedHandler) RemovedNIC(tcpip.NICID) {}
 
 type netstackTestOptions struct {
-	nicRemovedHandler  NICRemovedHandler
+	nicRemovedHandler NICRemovedHandler
+	// TODO(https://fxbug.dev/104820): Tests which pass a NDPDispatcher impl
+	// and runs a goroutine should have the goroutine joined in addition to
+	// being cancelled.
 	ndpDisp            ipv6.NDPDispatcher
 	interfaceEventChan chan<- interfaceEvent
 }
@@ -1130,7 +1133,6 @@ func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketim
 		stk.Wait()
 	})
 
-	interfaceEventChan := options.interfaceEventChan
 	ns := &Netstack{
 		stack: stk,
 		// Required initialization because adding/removing interfaces interacts with
@@ -1143,7 +1145,7 @@ func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketim
 			return &noopNicRemovedHandler{}
 
 		}()},
-		interfaceEventChan: interfaceEventChan,
+		interfaceEventChan: options.interfaceEventChan,
 	}
 	if ndpDisp, ok := options.ndpDisp.(*ndpDispatcher); ok {
 		ndpDisp.ns = ns

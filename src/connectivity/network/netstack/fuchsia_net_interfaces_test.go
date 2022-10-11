@@ -59,6 +59,31 @@ func testProperties() interfaces.Properties {
 	return properties
 }
 
+// Starts the interface watcher event loop.
+//
+// Note that this function registers a cleanup function to stop the event
+// loop, so tests which need newNetstack to construct a netstack must
+// call this function first as the netstack cleanup tasks rely on the
+// interface watcher event loop to still be running.
+func startEventLoop(t *testing.T) (chan interfaceEvent, chan interfaceWatcherRequest) {
+	eventChan := make(chan interfaceEvent)
+	watcherChan := make(chan interfaceWatcherRequest)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	t.Cleanup(func() {
+		cancel()
+		wg.Wait()
+	})
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		interfaceWatcherEventLoop(ctx, eventChan, watcherChan, &fidlInterfaceWatcherStats{})
+	}()
+
+	return eventChan, watcherChan
+}
+
 func assertWatchResult(gotEvent interfaces.Event, gotErr error, wantEvent interfaces.Event) error {
 	if gotErr != nil {
 		return fmt.Errorf("Watch failed: %w", gotErr)
@@ -123,10 +148,8 @@ func (w *watcherHelper) blockingWatch(t *testing.T, ch chan watchResult) {
 
 func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
 	addGoleakCheck(t)
-	eventChan := make(chan interfaceEvent)
-	watcherChan := make(chan interfaceWatcherRequest)
 
-	go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
+	_, watcherChan := startEventLoop(t)
 	si := &interfaceStateImpl{watcherChan: watcherChan}
 
 	watcher := initWatcher(t, si, optionsWithFullInterest())
@@ -152,10 +175,7 @@ func TestInterfacesWatcherDisallowMultiplePending(t *testing.T) {
 func TestInterfacesWatcherExisting(t *testing.T) {
 	addGoleakCheck(t)
 
-	eventChan := make(chan interfaceEvent)
-	watcherChan := make(chan interfaceWatcherRequest)
-
-	go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
+	eventChan, watcherChan := startEventLoop(t)
 	ns, _ := newNetstack(t, netstackTestOptions{interfaceEventChan: eventChan})
 	si := &interfaceStateImpl{watcherChan: watcherChan}
 
@@ -178,11 +198,15 @@ func TestInterfacesWatcherExisting(t *testing.T) {
 func TestInterfacesWatcher(t *testing.T) {
 	addGoleakCheck(t)
 
-	eventChan := make(chan interfaceEvent)
-	watcherChan := make(chan interfaceWatcherRequest)
-
-	go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
-	ns, _ := newNetstack(t, netstackTestOptions{interfaceEventChan: eventChan})
+	eventChan, watcherChan := startEventLoop(t)
+	ndpDisp := newNDPDispatcher()
+	ns, _ := newNetstack(t, netstackTestOptions{
+		interfaceEventChan: eventChan,
+		ndpDisp:            ndpDisp,
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ndpDisp.start(ctx)
 	si := &interfaceStateImpl{watcherChan: watcherChan}
 
 	// The first watcher will always block, while the second watcher should never block.
@@ -378,9 +402,7 @@ func TestInterfacesWatcher(t *testing.T) {
 }
 
 func TestInterfacesWatcherDuplicateAddress(t *testing.T) {
-	eventChan := make(chan interfaceEvent)
-	watcherChan := make(chan interfaceWatcherRequest)
-	go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
+	eventChan, watcherChan := startEventLoop(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -478,10 +500,7 @@ func TestInterfacesWatcherDeepCopyAddresses(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			eventChan := make(chan interfaceEvent)
-			watcherChan := make(chan interfaceWatcherRequest)
-
-			go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
+			eventChan, watcherChan := startEventLoop(t)
 			si := &interfaceStateImpl{watcherChan: watcherChan}
 
 			var watcher watcherHelper
@@ -560,10 +579,7 @@ func TestInterfacesWatcherDeepCopyAddresses(t *testing.T) {
 func TestInterfacesWatcherInterest(t *testing.T) {
 	addGoleakCheck(t)
 
-	eventChan := make(chan interfaceEvent)
-	watcherChan := make(chan interfaceWatcherRequest)
-
-	go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
+	eventChan, watcherChan := startEventLoop(t)
 	ns, _ := newNetstack(t, netstackTestOptions{interfaceEventChan: eventChan})
 	si := &interfaceStateImpl{watcherChan: watcherChan}
 

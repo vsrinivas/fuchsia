@@ -287,6 +287,7 @@ type fidlInterfaceWatcherStats struct {
 }
 
 func interfaceWatcherEventLoop(
+	ctx context.Context,
 	eventChan <-chan interfaceEvent,
 	watcherChan <-chan interfaceWatcherRequest,
 	fidlInterfaceWatcherStats *fidlInterfaceWatcherStats,
@@ -294,9 +295,23 @@ func interfaceWatcherEventLoop(
 	watchers := make(map[*interfaceWatcherImpl]struct{})
 	propertiesMap := make(map[tcpip.NICID]interfaces.Properties)
 	watcherClosedChan := make(chan *interfaceWatcherImpl)
+	watcherClosedFn := func(closedWatcher *interfaceWatcherImpl) {
+		delete(watchers, closedWatcher)
+		fidlInterfaceWatcherStats.count.Add(-1)
+	}
 
 	for {
 		select {
+		case <-ctx.Done():
+			_ = syslog.InfoTf(watcherProtocolName, "stopping interface watcher event loop")
+
+			// Wait for all watchers to close so that it is guaranteed that no
+			// goroutines serving the interface watcher API are still running once
+			// this function returns.
+			for len(watchers) > 0 {
+				watcherClosedFn(<-watcherClosedChan)
+			}
+			return
 		case e := <-eventChan:
 			switch event := e.(type) {
 			case interfaceAdded:
@@ -467,7 +482,7 @@ func interfaceWatcherEventLoop(
 				}
 			}
 		case watcher := <-watcherChan:
-			ctx, cancel := context.WithCancel(context.Background())
+			watcherCtx, cancel := context.WithCancel(ctx)
 			impl := interfaceWatcherImpl{
 				ready:        make(chan struct{}, 1),
 				cancelServe:  cancel,
@@ -489,7 +504,7 @@ func interfaceWatcherEventLoop(
 
 			go func() {
 				defer cancel()
-				component.Serve(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.req.Channel, component.ServeOptions{
+				component.Serve(watcherCtx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.req.Channel, component.ServeOptions{
 					Concurrent: true,
 					OnError: func(err error) {
 						_ = syslog.WarnTf(watcherProtocolName, "%s", err)
@@ -499,8 +514,7 @@ func interfaceWatcherEventLoop(
 				watcherClosedChan <- &impl
 			}()
 		case watcherClosed := <-watcherClosedChan:
-			delete(watchers, watcherClosed)
-			fidlInterfaceWatcherStats.count.Add(-1)
+			watcherClosedFn(watcherClosed)
 		}
 	}
 }

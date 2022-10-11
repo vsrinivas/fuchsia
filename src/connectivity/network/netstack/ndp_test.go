@@ -96,9 +96,7 @@ func TestInterfacesChangeEvent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	eventChan := make(chan interfaceEvent)
-	watcherChan := make(chan interfaceWatcherRequest)
-	go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
+	eventChan, watcherChan := startEventLoop(t)
 	si := &interfaceStateImpl{watcherChan: watcherChan}
 
 	ndpDisp := newNDPDispatcherForTest()

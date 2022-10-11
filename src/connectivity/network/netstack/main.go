@@ -405,7 +405,7 @@ func Main() {
 	interfaceEventChan := make(chan interfaceEvent)
 	watcherChan := make(chan interfaceWatcherRequest)
 	fidlInterfaceWatcherStats := &fidlInterfaceWatcherStats{}
-	go interfaceWatcherEventLoop(interfaceEventChan, watcherChan, fidlInterfaceWatcherStats)
+	go interfaceWatcherEventLoop(ctx, interfaceEventChan, watcherChan, fidlInterfaceWatcherStats)
 	ns := &Netstack{
 		interfaceEventChan: interfaceEventChan,
 		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
