@@ -43,6 +43,10 @@ class DisplayRotationPixelTestBase : public gtest::RealLoopFixture {
     ui_testing::UITestRealm::Config config;
     config.scene_owner = scene_owner_;
     config.display_rotation = rotation_;
+
+    // This will result in DPR 1.
+    config.display_pixel_density = 4.1668f;
+    config.display_usage = "near";
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
@@ -81,7 +85,8 @@ class DisplayRotationPixelTestBase : public gtest::RealLoopFixture {
 
   // Validates that the content present in |screenshot| matches the content of
   // |ui_testing::TestView::ContentType::COORDINATE_GRID|.
-  static void AssertScreenshot(const ui_testing::Screenshot& screenshot) {
+  static void AssertScreenshot(const ui_testing::Screenshot& screenshot, uint64_t width,
+                               uint64_t height) {
     // Check pixel content at all four corners.
     EXPECT_EQ(screenshot.GetPixelAt(0, 0), ui_testing::Screenshot::kBlack);  // Top left
     EXPECT_EQ(screenshot.GetPixelAt(0, screenshot.height() - 1),
@@ -102,6 +107,27 @@ class DisplayRotationPixelTestBase : public gtest::RealLoopFixture {
               ui_testing::Screenshot::kMagenta);  // Bottom right
     EXPECT_EQ(screenshot.GetPixelAt(screenshot.width() / 2, screenshot.height() / 2),
               ui_testing::Screenshot::kGreen);  // Center
+
+    // Width and height of the rectangle in the center is |width|/4 and
+    // |height|/4.
+    const auto expected_green_pixels = (height / 4) * (width / 4);
+
+    // The number of pixels inside each quadrant would be |width|/2 * |height|/2.
+    // Since the central rectangle would cover equal areas in each quadrant, we subtract
+    // |expected_green_pixels|/4 from each quadrants to get the pixel for the quadrant's color.
+    const auto expected_black_pixels = (height / 2) * (width / 2) - (expected_green_pixels / 4);
+
+    const auto expected_blue_pixels = expected_black_pixels,
+               expected_red_pixels = expected_black_pixels,
+               expected_magenta_pixels = expected_black_pixels;
+
+    auto histogram = screenshot.Histogram();
+
+    EXPECT_EQ(histogram[ui_testing::Screenshot::kBlack], expected_black_pixels);
+    EXPECT_EQ(histogram[ui_testing::Screenshot::kBlue], expected_blue_pixels);
+    EXPECT_EQ(histogram[ui_testing::Screenshot::kRed], expected_red_pixels);
+    EXPECT_EQ(histogram[ui_testing::Screenshot::kMagenta], expected_magenta_pixels);
+    EXPECT_EQ(histogram[ui_testing::Screenshot::kGreen], expected_green_pixels);
   }
 
   float ClientViewScaleFactor() { return ui_test_manager_->ClientViewScaleFactor(); }
@@ -168,7 +194,7 @@ TEST_P(LandscapeModeTest, ValidContentTest) {
             static_cast<uint64_t>(static_cast<float>(data.height()) / scale_factor));
 
   // The content of the screenshot should be independent of the display's orientation.
-  AssertScreenshot(data);
+  AssertScreenshot(data, display_width_, display_height_);
 }
 
 class PortraitModeTest : public DisplayRotationPixelTestBase,
@@ -225,7 +251,7 @@ TEST_P(PortraitModeTest, ValidContentTest) {
             static_cast<uint64_t>(static_cast<float>(data.height()) / scale_factor));
 
   // The content of the screenshot should be independent of the display's orientation.
-  AssertScreenshot(data);
+  AssertScreenshot(data, display_height_, display_width_);
 }
 
 }  // namespace integration_tests

@@ -25,6 +25,13 @@ namespace {
 constexpr auto kViewProvider = "view-provider";
 constexpr float kEpsilon = 0.005f;
 
+constexpr float kAstroDisplayPixelDensity = 4.1668f;
+constexpr float kAstroExpectedScale = 1.f;
+constexpr float kSherlockDisplayPixelDensity = 5.2011f;
+constexpr float kSherlockExpectedScale = 1.f / 1.25f;
+constexpr float kTestPixelScaleDensity = 2 * kAstroDisplayPixelDensity;
+constexpr float kTestExpectedScale = 1.f / 2 * kAstroExpectedScale;
+
 struct DisplayProperties {
   // Arbitrarily-chosen value.
   float display_pixel_density = 0.f;
@@ -37,19 +44,6 @@ struct DisplayProperties {
   DisplayProperties(float display_pixel_density, float expected_scale)
       : display_pixel_density(display_pixel_density), expected_scale(expected_scale) {}
 };
-
-// Returns a list of display pixel densities with its corresponding expected scale value.
-static std::vector<DisplayProperties> GetPixelDensityToScaleValues() {
-  const float kAstroDisplayPixelDensity = 4.1668f;
-  const float kAstroExpectedScale = 1.2549f;
-  const float kSherlockDisplayPixelDensity = 5.2011f;
-  const float kSherlockExpectedScale = 1.f;
-
-  std::vector<DisplayProperties> pixel_density;
-  pixel_density.emplace_back(kAstroDisplayPixelDensity, kAstroExpectedScale);
-  pixel_density.emplace_back(kSherlockDisplayPixelDensity, kSherlockExpectedScale);
-  return pixel_density;
-}
 
 }  // namespace
 
@@ -66,6 +60,16 @@ class DisplayPixelRatioTest
     : public gtest::RealLoopFixture,
       public ::testing::WithParamInterface<
           std::tuple<ui_testing::UITestRealm::SceneOwnerType, DisplayProperties>> {
+ public:
+  // Returns a list of display pixel densities with its corresponding expected scale value.
+  static std::vector<DisplayProperties> GetPixelDensityToScaleValues() {
+    std::vector<DisplayProperties> pixel_density;
+    pixel_density.emplace_back(kAstroDisplayPixelDensity, kAstroExpectedScale);
+    pixel_density.emplace_back(kSherlockDisplayPixelDensity, kSherlockExpectedScale);
+    pixel_density.emplace_back(kTestPixelScaleDensity, kTestExpectedScale);
+    return pixel_density;
+  }
+
  protected:
   // |testing::Test|
   void SetUp() override {
@@ -73,7 +77,7 @@ class DisplayPixelRatioTest
     config.scene_owner = std::get<0>(GetParam());  // scene owner.
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
     config.display_pixel_density = std::get<1>(GetParam()).display_pixel_density;
-    config.display_usage = "close";
+    config.display_usage = "near";
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
     // Build realm.
@@ -126,7 +130,7 @@ INSTANTIATE_TEST_SUITE_P(
     DisplayPixelRatioTestWithParams, DisplayPixelRatioTest,
     testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
                                        ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
-                     testing::ValuesIn(GetPixelDensityToScaleValues())));
+                     testing::ValuesIn(DisplayPixelRatioTest::GetPixelDensityToScaleValues())));
 
 // This test leverage the coordinate test view to ensure that display pixel ratio is working
 // properly.
@@ -167,6 +171,51 @@ TEST_P(DisplayPixelRatioTest, TestScale) {
             ui_testing::Screenshot::kMagenta);  // Bottom right
   EXPECT_EQ(data.GetPixelAt(data.width() / 2, data.height() / 2),
             ui_testing::Screenshot::kGreen);  // Center
+}
+
+class HistogramDataTest : public DisplayPixelRatioTest {
+ public:
+  static std::vector<DisplayProperties> GetPixelDensityToScaleValues() {
+    std::vector<DisplayProperties> pixel_density;
+    pixel_density.emplace_back(kAstroDisplayPixelDensity, kAstroExpectedScale);
+    pixel_density.emplace_back(kTestPixelScaleDensity, kTestExpectedScale);
+    return pixel_density;
+  }
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    HistogramDataTestWithParams, HistogramDataTest,
+    testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                       ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
+                     testing::ValuesIn(HistogramDataTest::GetPixelDensityToScaleValues())));
+
+// TODO(fxb/111297): Add the histogram test for sherlock when better display pixel scale values are
+// provided by scene manager. Currently the pixel scale value for sherlock results in an odd value
+// for logical size (1024 is not divisible by 1.25) which will make assertion on pixel count
+// difficult.
+TEST_P(HistogramDataTest, AstroValidContentTest) {
+  auto data = TakeScreenshot();
+
+  // Width and height of the rectangle in the center is |display_width_|/4 and |display_height_|/4.
+  const auto expected_green_pixels = (display_height_ / 4) * (display_width_ / 4);
+
+  // The number of pixels inside each quadrant would be |display_width_|/2 * |display_height_|/2.
+  // Since the central rectangle would cover equal areas in each quadrant, we subtract
+  // |expected_green_pixels|/4 from each quadrants to get the pixel for the quadrant's color.
+  const auto expected_black_pixels =
+      (display_height_ / 2) * (display_width_ / 2) - (expected_green_pixels / 4);
+
+  const auto expected_blue_pixels = expected_black_pixels,
+             expected_red_pixels = expected_black_pixels,
+             expected_magenta_pixels = expected_black_pixels;
+
+  auto histogram = data.Histogram();
+
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kBlack], expected_black_pixels);
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kBlue], expected_blue_pixels);
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kRed], expected_red_pixels);
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kMagenta], expected_magenta_pixels);
+  EXPECT_EQ(histogram[ui_testing::Screenshot::kGreen], expected_green_pixels);
 }
 
 }  // namespace integration_tests
