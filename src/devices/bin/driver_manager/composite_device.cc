@@ -123,12 +123,11 @@ zx_status_t CompositeDevice::Create(std::string_view name,
 }
 
 std::unique_ptr<CompositeDevice> CompositeDevice::CreateFromDriverIndex(
-    MatchedCompositeDriverInfo driver) {
+    MatchedCompositeDriverInfo driver, fbl::Array<std::unique_ptr<Metadata>> metadata) {
   fbl::String name(driver.composite.name);
   auto dev = std::make_unique<CompositeDevice>(
       std::move(name), fbl::Array<const zx_device_prop_t>(), fbl::Array<const StrProperty>(),
-      driver.composite.num_nodes, 0, driver.driver_info.colocate,
-      fbl::Array<std::unique_ptr<Metadata>>(), true);
+      driver.composite.num_nodes, 0, driver.driver_info.colocate, std::move(metadata), true);
 
   for (uint32_t i = 0; i < driver.composite.num_nodes; ++i) {
     std::string name = driver.composite.node_names[i];

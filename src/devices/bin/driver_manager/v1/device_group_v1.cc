@@ -8,8 +8,38 @@
 
 namespace device_group {
 
-DeviceGroupV1::DeviceGroupV1(DeviceGroupCreateInfo create_info, DriverLoader* driver_loader)
-    : DeviceGroup(std::move(create_info)), driver_loader_(driver_loader) {
+zx::status<std::unique_ptr<DeviceGroupV1>> DeviceGroupV1::Create(
+    DeviceGroupCreateInfo create_info,
+    fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc, DriverLoader* driver_loader) {
+  ZX_ASSERT(driver_loader);
+
+  fbl::Array<std::unique_ptr<Metadata>> metadata(
+      new std::unique_ptr<Metadata>[group_desc.metadata.count()], group_desc.metadata.count());
+  for (size_t i = 0; i < group_desc.metadata.count(); i++) {
+    std::unique_ptr<Metadata> md;
+    auto status = Metadata::Create(group_desc.metadata[i].data.count(), &md);
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to create metadata %s", zx_status_get_string(status));
+      return zx::error(status);
+    }
+
+    md->type = group_desc.metadata[i].key;
+    md->length = group_desc.metadata[i].data.count();
+    memcpy(md->Data(), group_desc.metadata[i].data.data(), md->length);
+    metadata[i] = std::move(md);
+  }
+
+  return zx::ok(std::make_unique<DeviceGroupV1>(std::move(create_info), std::move(metadata),
+                                                group_desc.spawn_colocated, driver_loader));
+}
+
+DeviceGroupV1::DeviceGroupV1(DeviceGroupCreateInfo create_info,
+                             fbl::Array<std::unique_ptr<Metadata>> metadata, bool spawn_colocated,
+                             DriverLoader* driver_loader)
+    : DeviceGroup(std::move(create_info)),
+      metadata_(std::move(metadata)),
+      spawn_colocated_(spawn_colocated),
+      driver_loader_(driver_loader) {
   ZX_ASSERT(driver_loader_);
 }
 
@@ -60,11 +90,13 @@ void DeviceGroupV1::SetCompositeDevice(fuchsia_driver_index::wire::MatchedDevice
   auto fidl_driver_info = info.composite().driver_info();
   MatchedDriverInfo matched_driver_info = {
       .driver = driver_loader_->LoadDriverUrl(std::string(fidl_driver_info.driver_url().get())),
-      .colocate = fidl_driver_info.has_colocate() && fidl_driver_info.colocate(),
+      .colocate = spawn_colocated_,
   };
 
   composite_device_ = CompositeDevice::CreateFromDriverIndex(
-      MatchedCompositeDriverInfo{.composite = composite_info, .driver_info = matched_driver_info});
+      MatchedCompositeDriverInfo{.composite = composite_info, .driver_info = matched_driver_info},
+      std::move(metadata_));
+  metadata_ = fbl::Array<std::unique_ptr<Metadata>>();
 }
 
 }  // namespace device_group

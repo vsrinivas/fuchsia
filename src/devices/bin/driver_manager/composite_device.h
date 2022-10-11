@@ -123,7 +123,8 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
                             fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc,
                             std::unique_ptr<CompositeDevice>* out);
 
-  static std::unique_ptr<CompositeDevice> CreateFromDriverIndex(MatchedCompositeDriverInfo driver);
+  static std::unique_ptr<CompositeDevice> CreateFromDriverIndex(
+      MatchedCompositeDriverInfo driver, fbl::Array<std::unique_ptr<Metadata>> metadata);
 
   const fbl::String& name() const { return name_; }
   const fbl::Array<const zx_device_prop_t>& properties() const { return properties_; }

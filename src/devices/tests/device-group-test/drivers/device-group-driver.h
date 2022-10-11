@@ -13,6 +13,8 @@ class DeviceGroupDriver;
 
 using DeviceType = ddk::Device<DeviceGroupDriver>;
 
+constexpr char kMetadataStr[] = "device-group-metadata";
+
 class DeviceGroupDriver : public DeviceType {
  public:
   explicit DeviceGroupDriver(zx_device_t* parent) : DeviceType(parent) {}

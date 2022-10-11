@@ -22,7 +22,12 @@ namespace device_group {
 // CompositeDevice object underneath the interface.
 class DeviceGroupV1 : public DeviceGroup {
  public:
-  DeviceGroupV1(DeviceGroupCreateInfo create_info, DriverLoader* driver_loader);
+  static zx::status<std::unique_ptr<DeviceGroupV1>> Create(
+      DeviceGroupCreateInfo create_info,
+      fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc, DriverLoader* driver_loader);
+
+  DeviceGroupV1(DeviceGroupCreateInfo create_info, fbl::Array<std::unique_ptr<Metadata>> metadata,
+                bool spawn_colocated, DriverLoader* driver_loader);
 
  private:
   // DeviceGroup interface:
@@ -33,6 +38,14 @@ class DeviceGroupV1 : public DeviceGroup {
   // Should only be called when |composite_device_| is null.
   void SetCompositeDevice(fuchsia_driver_index::wire::MatchedDeviceGroupInfo info);
 
+  // Used to create |composite_device_|. Set to empty once |composite_device_| is created.
+  fbl::Array<std::unique_ptr<Metadata>> metadata_;
+
+  // Used to create |composite_device_|. The value is received from a DeviceGroupDescriptor,
+  // not the driver index.
+  bool spawn_colocated_;
+
+  // Set by SetCompositeDevice() after the first BindNodeImpl() call.
   std::unique_ptr<CompositeDevice> composite_device_;
 
   // Must outlive DeviceGroupV1.

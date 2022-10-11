@@ -4,6 +4,9 @@
 
 #include "src/devices/tests/device-group-test/drivers/leaf-driver.h"
 
+#include <lib/ddk/metadata.h>
+
+#include "src/devices/tests/device-group-test/drivers/device-group-driver.h"
 #include "src/devices/tests/device-group-test/drivers/leaf-driver-bind.h"
 
 namespace leaf_driver {
@@ -39,9 +42,18 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
       ddk::BindPropertyInt(BIND_PROTOCOL, 20),
   };
 
+  const device_metadata_t metadata[] = {
+      {
+          .type = DEVICE_METADATA_PRIVATE,
+          .data = const_cast<char*>(device_group_driver::kMetadataStr),
+          .length = strlen(device_group_driver::kMetadataStr) + 1,
+      },
+  };
+
   status = dev->DdkAddDeviceGroup("device_group",
                                   ddk::DeviceGroupDesc(node_1_bind_rules, node_1_bind_properties)
                                       .AddNode(node_2_bind_rules, node_2_bind_properties)
+                                      .set_metadata(metadata)
                                       .set_spawn_colocated(true));
   if (status != ZX_OK) {
     return status;

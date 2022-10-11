@@ -877,19 +877,25 @@ zx_status_t Coordinator::AddDeviceGroup(
   std::string topological_path = "/";
   topological_path.append(name);
 
-  auto device_group = std::make_unique<device_group::DeviceGroupV1>(
+  auto device_group_result = device_group::DeviceGroupV1::Create(
       DeviceGroupCreateInfo{
           .topological_path = topological_path,
           .size = group_desc.nodes.count(),
       },
-      &driver_loader_);
+      group_desc, &driver_loader_);
+  if (!device_group_result.is_ok()) {
+    LOGF(ERROR, "Failed to create device group");
+    return device_group_result.status_value();
+  }
 
   fidl::Arena allocator;
-  auto fidl_group = fdf::wire::DeviceGroup::Builder(allocator)
-                        .topological_path(fidl::StringView(allocator, topological_path))
-                        .nodes(std::move(group_desc.nodes))
-                        .Build();
-  auto result = device_group_manager_->AddDeviceGroup(fidl_group, std::move(device_group));
+  auto fidl_device_group = fdf::wire::DeviceGroup::Builder(allocator)
+                               .topological_path(fidl::StringView(allocator, topological_path))
+                               .nodes(std::move(group_desc.nodes))
+                               .Build();
+
+  auto result = device_group_manager_->AddDeviceGroup(fidl_device_group,
+                                                      std::move(device_group_result.value()));
   if (!result.is_ok()) {
     LOGF(ERROR, "Failed to add device group to the device group manager: %d.",
          result.error_value());
