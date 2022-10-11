@@ -29,7 +29,6 @@ assembled_system("guest") {
   generate_fvm = !bootfs_only
   base_packages = [
     ":core",
-    "//src/sys/tools/run",
     "//src/performance/trace",
     "//src/diagnostics/log-stats:package",
     "//src/security/root_ssl_certificates",

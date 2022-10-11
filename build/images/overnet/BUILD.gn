@@ -29,7 +29,6 @@ assembled_system("overnet") {
 
   base_packages = [
     ":core",
-    "//src/sys/tools/run",
     "//src/connectivity/overnet/overnetstack",
     "//src/connectivity/overnet/tools/debug-serial",
     "//src/sys/pkg/bin/system-updater",

@@ -159,9 +159,6 @@ if (is_fuchsia) {
         # So recovery can read board name and version info:
         "//src/developer/build_info:build-info-service",
 
-        # So components can be launched:
-        "//src/sys/tools/run",
-
         # Use eng allowlists:
         "//src/security/policy:appmgr_policy_eng",
 
