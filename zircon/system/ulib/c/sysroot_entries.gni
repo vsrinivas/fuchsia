@@ -61,7 +61,6 @@ sysroot_uninstrumented_libc_entries = [
         "zircon/hw/debug/x86.h",
         "zircon/hw/gpt.h",
         "zircon/hw/pci.h",
-        "zircon/hw/usb.h",
         "zircon/limits.h",
         "zircon/listnode.h",
         "zircon/pixelformat.h",
