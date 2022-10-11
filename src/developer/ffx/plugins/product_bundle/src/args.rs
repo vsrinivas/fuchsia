@@ -39,6 +39,10 @@ pub struct GetCommand {
     #[argh(switch)]
     pub cached: bool,
 
+    /// force a download even if the bundle is already stored locally.
+    #[argh(switch)]
+    pub force: bool,
+
     /// get (and cache) data for specific product bundle.
     #[argh(positional)]
     pub product_bundle_name: Option<String>,

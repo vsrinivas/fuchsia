@@ -12,6 +12,7 @@ use {
     ffx_product_bundle_args::{
         CreateCommand, GetCommand, ListCommand, ProductBundleCommand, RemoveCommand, SubCommand,
     },
+    ffx_writer::Writer,
     fidl,
     fidl_fuchsia_developer_ffx::{RepositoryIteratorMarker, RepositoryRegistryProxy},
     fidl_fuchsia_developer_ffx_ext::{RepositoryConfig, RepositoryError, RepositorySpec},
@@ -36,17 +37,19 @@ mod create;
 #[ffx_plugin(RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn product_bundle(
     cmd: ProductBundleCommand,
+    writer: Writer,
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
     let mut input = stdin();
     let mut output = stdout();
     let mut err_out = stderr();
     let mut ui = structured_ui::TextUi::new(&mut input, &mut output, &mut err_out);
-    product_bundle_plugin_impl(cmd, &mut stdin().lock(), &mut ui, repos).await
+    product_bundle_plugin_impl(writer, cmd, &mut stdin().lock(), &mut ui, repos).await
 }
 
 /// Dispatch to a sub-command.
 pub async fn product_bundle_plugin_impl<R, I>(
+    writer: Writer,
     command: ProductBundleCommand,
     reader: &mut R,
     ui: &mut I,
@@ -57,12 +60,11 @@ where
     I: structured_ui::Interface + Sync,
 {
     match &command.sub {
-        SubCommand::List(cmd) => pb_list(ui, &cmd).await?,
-        SubCommand::Get(cmd) => pb_get(ui, &cmd, repos).await?,
-        SubCommand::Create(cmd) => pb_create(&cmd).await?,
-        SubCommand::Remove(cmd) => pb_remove(reader, &cmd, repos).await?,
+        SubCommand::List(cmd) => pb_list(ui, &cmd).await,
+        SubCommand::Get(cmd) => pb_get(writer, ui, &cmd, repos).await,
+        SubCommand::Create(cmd) => pb_create(&cmd).await,
+        SubCommand::Remove(cmd) => pb_remove(reader, &cmd, repos).await,
     }
-    Ok(())
 }
 
 /// `ffx product-bundle remove` sub-command.
@@ -225,7 +227,12 @@ where
 }
 
 /// `ffx product-bundle get` sub-command.
-async fn pb_get<I>(ui: &mut I, cmd: &GetCommand, repos: RepositoryRegistryProxy) -> Result<()>
+async fn pb_get<I>(
+    writer: Writer,
+    ui: &mut I,
+    cmd: &GetCommand,
+    repos: RepositoryRegistryProxy,
+) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
 {
@@ -273,7 +280,9 @@ where
     }
 
     // Go ahead and download the product images.
-    get_product_data(&product_url, &output_dir, ui).await?;
+    if !get_product_data(writer, &product_url, &output_dir, ui, cmd.force).await? {
+        return Ok(());
+    }
 
     // Register a repository with the daemon if we downloaded any packaging artifacts.
     if let Ok(repo_path) = pbms::get_packages_dir(&product_url).await {

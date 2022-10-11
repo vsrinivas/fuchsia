@@ -31,11 +31,15 @@ use {
     ::gcs::client::ProgressResponse,
     anyhow::{bail, Context, Result},
     ffx_config::sdk,
+    ffx_writer::Writer,
     fms::Entries,
     futures::TryStreamExt as _,
     itertools::Itertools as _,
     sdk_metadata::ProductBundle,
-    std::path::{Path, PathBuf},
+    std::{
+        io::Write,
+        path::{Path, PathBuf},
+    },
 };
 
 pub use crate::pbms::{fetch_data_for_product_bundle_v1, get_product_dir, get_storage_dir};
@@ -334,24 +338,33 @@ pub async fn is_pb_ready(product_url: &url::Url) -> Result<bool> {
 ///
 /// `writer` is used to output user messages.
 pub async fn get_product_data<I>(
+    mut writer: Writer,
     product_url: &url::Url,
     output_dir: &std::path::Path,
     ui: &mut I,
-) -> Result<()>
+    force: bool,
+) -> Result<bool>
 where
     I: structured_ui::Interface + Sync,
 {
     tracing::debug!("get_product_data {:?} to {:?}", product_url, output_dir);
     if product_url.scheme() == "file" {
-        tracing::info!("There's no data download necessary for local products.");
-        return Ok(());
+        writeln!(writer, "There's no data download necessary for local products.")?;
+        return Ok(false);
+    }
+    let path = get_images_dir(product_url).await;
+    if path.is_ok() && path.unwrap().exists() && !force {
+        writeln!(writer, "This product bundle is already downloaded. Use --force to replace it.")?;
+        return Ok(false);
     }
     if product_url.scheme() != GS_SCHEME {
-        tracing::info!("Only GCS downloads are supported at this time.");
-        return Ok(());
+        writeln!(writer, "Only GCS downloads are supported at this time.")?;
+        return Ok(false);
     }
-    get_product_data_from_gcs(product_url, output_dir, ui).await.context("reading pbms entries")?;
-    Ok(())
+    get_product_data_from_gcs(product_url, output_dir, ui)
+        .await
+        .context("reading pbms entries")
+        .map(|_| true)
 }
 
 /// Determine the path to the product images data.
