@@ -48,20 +48,26 @@ TEST(ElfldltlContainerTests, ForwardArgs) {
   EXPECT_EQ(diag.errors() + diag.warnings(), 0);
 }
 
-TEST(ElfldltlContainerTests, TemplateArgs) {
-  static bool called = false;
-  struct Allocator : public std::allocator<int> {
-    int *allocate(size_t size) {
-      called = true;
-      return std::allocator<int>::allocate(size);
-    }
-  };
+template <typename T>
+struct Allocator : std::allocator<T> {
+  static inline bool called;
+  T *allocate(size_t size) {
+    called = true;
+    return std::allocator<T>::allocate(size);
+  }
 
-  ASSERT_FALSE(called);
-  elfldltl::StdContainer<std::vector, Allocator>::Container<int> list;
+  template <typename U>
+  struct rebind {
+    using other = Allocator<U>;
+  };
+};
+
+TEST(ElfldltlContainerTests, TemplateArgs) {
+  ASSERT_FALSE(Allocator<int>::called);
+  elfldltl::StdContainer<std::vector, Allocator<int>>::Container<int> list;
   list.reserve(10);
 
-  EXPECT_TRUE(called);
+  EXPECT_TRUE(Allocator<int>::called);
 }
 
 template <typename List>
