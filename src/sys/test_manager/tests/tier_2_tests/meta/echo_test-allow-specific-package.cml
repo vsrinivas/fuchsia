@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Test that we can include components from other packages in
-// hermetic tier 2 realm.
+// Test that we can include components from other packages
 {
     include: [
         "//src/sys/test_runners/rust/default.shard.cml",
-        "sys/testing/hermetic-tier-2-test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
@@ -32,4 +30,9 @@
             to: "#echo_server",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "tier_2_echo_server" ],
+        },
+    },
 }

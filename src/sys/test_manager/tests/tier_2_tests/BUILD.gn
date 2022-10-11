@@ -18,14 +18,21 @@ rustc_test("echo_test_bin") {
   sources = [ "echo_test.rs" ]
 }
 
-fuchsia_test_component("echo_test") {
-  component_name = "echo_test"
+fuchsia_test_component("echo_test_all_packages") {
   deps = [ ":echo_test_bin" ]
-  manifest = "meta/echo_test.cml"
+  manifest = "meta/echo_test-allow-all-packages.cml"
+}
+
+fuchsia_test_component("echo_test_specific_package") {
+  deps = [ ":echo_test_bin" ]
+  manifest = "meta/echo_test-allow-specific-package.cml"
 }
 
 fuchsia_test_package("tier_2_test") {
-  test_components = [ ":echo_test" ]
+  test_components = [
+    ":echo_test_all_packages",
+    ":echo_test_specific_package",
+  ]
 }
 
 fuchsia_package("tier_2_echo_server") {
