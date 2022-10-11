@@ -23,7 +23,9 @@ const TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY: &'static str =
 #[derive(Debug)]
 pub(crate) struct SuiteFacets {
     pub collection: &'static str,
+    #[allow(dead_code)]
     pub deprecated_allowed_packages: Option<Vec<String>>,
+    #[allow(dead_code)]
     pub deprecated_allowed_all_packages: Option<bool>,
 }
 
