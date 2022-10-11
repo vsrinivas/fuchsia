@@ -208,6 +208,8 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             .arg(src)
             .arg("-e")
             .arg(replace_str)
+            .arg("--type=entropy:64")
+            .arg("/dev/urandom")
             .output()?;
 
         if !auth_keys_output.status.success() {
