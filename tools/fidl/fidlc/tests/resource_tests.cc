@@ -15,18 +15,8 @@
 namespace {
 
 TEST(ResourceTests, GoodValid) {
-  TestLibrary library(R"FIDL(library example;
-
-type MyEnum = strict enum : uint32 {
-    NONE = 0;
-};
-
-resource_definition SomeResource : uint32 {
-    properties {
-        subtype MyEnum;
-    };
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("good/simple_resource_definition.test.fidl");
   ASSERT_COMPILED(library);
 
   auto resource = library.LookupResource("SomeResource");
@@ -88,15 +78,8 @@ resource_definition SomeResource : uint32 {
 }
 
 TEST(ResourceTests, BadNoProperties) {
-  TestLibrary library(R"FIDL(
-library example;
-
-resource_definition SomeResource : uint32 {
-  properties {
-  };
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/resource_definition_no_properties.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneProperty);
 }
 

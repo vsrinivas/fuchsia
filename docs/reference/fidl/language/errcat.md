@@ -28,6 +28,8 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<error-catalog/_fi-0028.md>>
 
+<<error-catalog/_fi-0029.md>>
+
 <<error-catalog/_fi-0033.md>>
 
 <<error-catalog/_fi-0040.md>>

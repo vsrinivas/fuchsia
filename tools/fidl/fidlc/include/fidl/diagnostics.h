@@ -58,7 +58,7 @@ constexpr WarningDef<27> WarnBlankLinesWithinDocCommentBlock(
     "cannot have blank lines within doc comment block");
 constexpr WarningDef<28> WarnDocCommentMustBeFollowedByDeclaration(
     "doc comment must be followed by a declaration");
-constexpr UndocumentedErrorDef<29> ErrMustHaveOneProperty("must have at least one property");
+constexpr ErrorDef<29> ErrMustHaveOneProperty("must have at least one property");
 constexpr UndocumentedErrorDef<30, Token::KindAndSubkind, Token::KindAndSubkind>
     ErrCannotSpecifyModifier("cannot specify modifier {} for {}");
 constexpr UndocumentedErrorDef<31, Token::KindAndSubkind> ErrCannotSpecifySubtype(
