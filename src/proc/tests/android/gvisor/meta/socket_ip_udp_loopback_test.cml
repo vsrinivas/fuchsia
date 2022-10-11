@@ -1,0 +1,12 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
+    program: {
+        binary: "data/tests/socket_ip_udp_loopback_test",
+
+        // Many of these need SO_RCVTIMEO/SO_SNDTIMEO.
+        args: [ "--gunit_filter=-*.RecvTimeoutUsecTooLarge/*:*.SendTimeoutUsecTooLarge/*:*.SetGetRecvTimeoutLargerArg/*:*.SetSocketRecvBufForceAboveMax/*:*.PayloadTooBig/*:*.SetAndGetReceiveOrigDstAddr/*:*.RecvTimeoutUsecNeg/*:*.SendTimeoutUsecNeg/*:*.RecvTimeoutReadSucceeds/*:*.RecvTimeoutNegSecRead/*:*.GetSetSocketRcvlowatOption/*:*.SetGetSendTimeoutLargerArg/*:*.SetAndGetBooleanSocketOptions/*:*.RecvmsgMsghdrFlagMsgTrunc/*:*.ReceiveOrigDstAddrDefault/*:*.SendMsgTooLarge/*" ],
+    },
+}

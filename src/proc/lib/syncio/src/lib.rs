@@ -11,7 +11,7 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, HandleBased};
 use linux_uapi::x86_64::__kernel_sockaddr_storage as sockaddr_storage;
-use zxio::{sockaddr, socklen_t, ZXIO_SHUTDOWN_OPTIONS_READ, ZXIO_SHUTDOWN_OPTIONS_WRITE};
+use zxio::{msghdr, sockaddr, socklen_t, ZXIO_SHUTDOWN_OPTIONS_READ, ZXIO_SHUTDOWN_OPTIONS_WRITE};
 
 pub mod zxio;
 
@@ -131,6 +131,13 @@ impl ZxioErrorCode {
     pub fn raw(&self) -> i16 {
         self.0
     }
+}
+
+pub struct RecvMessageInfo {
+    pub address: Vec<u8>,
+    pub message: Vec<u8>,
+    pub message_length: usize,
+    pub flags: i32,
 }
 
 #[derive(Default)]
@@ -455,6 +462,93 @@ impl Zxio {
         zx::ok(status)?;
         match out_code {
             0 => Ok(Ok(())),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
+    }
+
+    pub fn sendmsg(
+        &self,
+        mut addr: Vec<u8>,
+        mut buffer: Vec<u8>,
+        mut cmsg: Vec<u8>,
+        flags: u32,
+    ) -> Result<Result<usize, ZxioErrorCode>, zx::Status> {
+        let mut msg = zxio::msghdr::default();
+        msg.msg_name = match addr.len() {
+            0 => std::ptr::null_mut() as *mut std::os::raw::c_void,
+            _ => addr.as_mut_ptr() as *mut std::os::raw::c_void,
+        };
+        msg.msg_namelen = addr.len() as u32;
+
+        let mut iov = zxio::iovec {
+            iov_base: buffer.as_mut_ptr() as *mut std::os::raw::c_void,
+            iov_len: buffer.len(),
+        };
+        msg.msg_iov = &mut iov;
+        msg.msg_iovlen = 1;
+
+        msg.msg_control = cmsg.as_mut_ptr() as *mut std::os::raw::c_void;
+        msg.msg_controllen = cmsg.len();
+
+        let mut out_code = 0;
+        let mut out_actual = 0;
+
+        let status = unsafe {
+            zxio::zxio_sendmsg(
+                self.as_ptr(),
+                &msg,
+                flags as std::os::raw::c_int,
+                &mut out_actual,
+                &mut out_code,
+            )
+        };
+
+        zx::ok(status)?;
+        match out_code {
+            0 => Ok(Ok(out_actual)),
+            _ => Ok(Err(ZxioErrorCode(out_code))),
+        }
+    }
+
+    pub fn recvmsg(
+        &self,
+        iovec_length: usize,
+        flags: u32,
+    ) -> Result<Result<RecvMessageInfo, ZxioErrorCode>, zx::Status> {
+        let mut msg = msghdr::default();
+        let mut addr = vec![0u8; std::mem::size_of::<sockaddr_storage>()];
+        msg.msg_name = addr.as_mut_ptr() as *mut std::os::raw::c_void;
+        msg.msg_namelen = addr.len() as u32;
+
+        let mut iov_buf = vec![0u8; iovec_length];
+        let mut iov = zxio::iovec {
+            iov_base: iov_buf.as_mut_ptr() as *mut std::os::raw::c_void,
+            iov_len: iovec_length,
+        };
+        msg.msg_iov = &mut iov;
+        msg.msg_iovlen = 1;
+
+        let mut out_code = 0;
+        let mut out_actual = 0;
+        let status = unsafe {
+            zxio::zxio_recvmsg(
+                self.as_ptr(),
+                &mut msg,
+                flags as std::os::raw::c_int,
+                &mut out_actual,
+                &mut out_code,
+            )
+        };
+        zx::ok(status)?;
+
+        let min_buf_len = std::cmp::min(iov_buf.len(), out_actual);
+        match out_code {
+            0 => Ok(Ok(RecvMessageInfo {
+                address: addr[..msg.msg_namelen as usize].to_vec(),
+                message: iov_buf[..min_buf_len].to_vec(),
+                message_length: out_actual,
+                flags: msg.msg_flags,
+            })),
             _ => Ok(Err(ZxioErrorCode(out_code))),
         }
     }

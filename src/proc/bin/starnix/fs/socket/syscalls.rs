@@ -649,7 +649,7 @@ pub fn sys_sendmmsg(
     current_task: &CurrentTask,
     fd: FdNumber,
     user_mmsgvec: UserRef<mmsghdr>,
-    vlen: u32,
+    mut vlen: u32,
     flags: u32,
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
@@ -657,8 +657,9 @@ pub fn sys_sendmmsg(
         return error!(ENOTSOCK);
     }
 
+    // vlen is capped at UIO_MAXIOV.
     if vlen > UIO_MAXIOV {
-        return error!(EINVAL);
+        vlen = UIO_MAXIOV;
     }
 
     let mut index = 0usize;

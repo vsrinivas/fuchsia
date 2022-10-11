@@ -16,7 +16,7 @@ use fuchsia_zircon::sys::{ZX_ERR_INTERNAL, ZX_ERR_NO_MEMORY, ZX_OK};
 use fuchsia_zircon::HandleBased;
 use std::sync::Arc;
 use syncio::zxio::{zx_handle_t, zx_status_t, zxio_object_type_t, zxio_socket, zxio_storage_t};
-use syncio::Zxio;
+use syncio::{RecvMessageInfo, Zxio};
 
 /// Connects to `fuchsia_posix_socket::Provider`.
 ///
@@ -97,6 +97,38 @@ impl InetSocket {
 
         Ok(InetSocket { zxio: Arc::new(zxio) })
     }
+
+    pub fn sendmsg(
+        &self,
+        addr: &Option<SocketAddress>,
+        buf: Vec<u8>,
+        cmsg: Vec<u8>,
+        flags: SocketMessageFlags,
+    ) -> Result<usize, Errno> {
+        let addr = match addr {
+            Some(sockaddr) => match sockaddr {
+                SocketAddress::Inet(sockaddr) | SocketAddress::Inet6(sockaddr) => sockaddr.clone(),
+                _ => return error!(EINVAL),
+            },
+            None => vec![],
+        };
+
+        self.zxio
+            .sendmsg(addr, buf, cmsg, flags.bits())
+            .map_err(|status| from_status_like_fdio!(status))?
+            .map_err(|out_code| errno_from_zxio_code!(out_code))
+    }
+
+    pub fn recvmsg(
+        &self,
+        iovec_length: usize,
+        flags: SocketMessageFlags,
+    ) -> Result<RecvMessageInfo, Errno> {
+        self.zxio
+            .recvmsg(iovec_length, flags.bits())
+            .map_err(|status| from_status_like_fdio!(status))?
+            .map_err(|out_code| errno_from_zxio_code!(out_code))
+    }
 }
 
 impl SocketOps for InetSocket {
@@ -157,22 +189,46 @@ impl SocketOps for InetSocket {
     fn read(
         &self,
         _socket: &Socket,
-        _current_task: &CurrentTask,
-        _user_buffers: &mut UserBufferIterator<'_>,
-        _flags: SocketMessageFlags,
+        current_task: &CurrentTask,
+        user_buffers: &mut UserBufferIterator<'_>,
+        flags: SocketMessageFlags,
     ) -> Result<MessageReadInfo, Errno> {
-        error!(ENOSYS)
+        let buffers = user_buffers.drain_to_vec();
+        let iovec_length = UserBuffer::get_total_length(&buffers)?;
+        let info = self.recvmsg(iovec_length, flags)?;
+
+        current_task.mm.write_all(&buffers, &info.message)?;
+
+        let address = match info.address.len() {
+            0 => None,
+            _ => Some(SocketAddress::bytes_into_inet(info.address)?),
+        };
+
+        // TODO: Handle ancillary_data.
+        Ok(MessageReadInfo {
+            bytes_read: info.message.len(),
+            message_length: info.message_length,
+            address,
+            ancillary_data: vec![],
+        })
     }
 
     fn write(
         &self,
         _socket: &Socket,
-        _current_task: &CurrentTask,
-        _user_buffers: &mut UserBufferIterator<'_>,
-        _dest_address: &mut Option<SocketAddress>,
+        current_task: &CurrentTask,
+        user_buffers: &mut UserBufferIterator<'_>,
+        dest_address: &mut Option<SocketAddress>,
         _ancillary_data: &mut Vec<AncillaryData>,
     ) -> Result<usize, Errno> {
-        error!(ENOSYS)
+        let buffers = user_buffers.drain_to_vec();
+
+        let iovec_length = UserBuffer::get_total_length(&buffers)?;
+        let mut data = vec![0u8; iovec_length];
+        current_task.mm.read_all(&buffers, &mut data)?;
+
+        // TODO: Handle ancillary_data.
+        self.sendmsg(dest_address, data, vec![], SocketMessageFlags::empty())
     }
 
     fn wait_async(

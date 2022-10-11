@@ -205,4 +205,20 @@ impl SocketAddress {
             _ => false,
         }
     }
+
+    pub fn bytes_into_inet(addr: Vec<u8>) -> Result<SocketAddress, Errno> {
+        if addr.len() < SA_FAMILY_SIZE {
+            return Ok(SocketAddress::default_for_domain(SocketDomain::Inet));
+        }
+
+        let mut family_bytes = [0u8; SA_FAMILY_SIZE];
+        family_bytes[..SA_FAMILY_SIZE].copy_from_slice(&addr[..SA_FAMILY_SIZE]);
+        let family = uapi::__kernel_sa_family_t::from_ne_bytes(family_bytes);
+
+        match family {
+            AF_INET => Ok(SocketAddress::Inet(addr)),
+            AF_INET6 => Ok(SocketAddress::Inet6(addr)),
+            _ => error!(EINVAL),
+        }
+    }
 }

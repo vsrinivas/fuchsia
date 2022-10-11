@@ -125,7 +125,7 @@ gvisor_tests = [
   # "packet_socket_test",
   # "partial_bad_buffer_test",
   # "pause_test",
-  # "ping_socket_test",
+  "ping_socket_test",
   "pipe_test",
 
   # "pivot_root_test",
@@ -196,11 +196,13 @@ gvisor_tests = [
   # "socket_filesystem_test",
   # "socket_inet_loopback_isolated_test",
   # "socket_inet_loopback_nogotsan_test",
-  # "socket_ip_tcp_loopback_non_blocking_test",
+  "socket_ip_tcp_loopback_non_blocking_test",
+
   # "socket_ip_tcp_loopback_test",
   # "socket_ip_tcp_udp_generic_loopback_test",
-  # "socket_ip_udp_loopback_non_blocking_test",
-  # "socket_ip_udp_loopback_test",
+  "socket_ip_udp_loopback_non_blocking_test",
+  "socket_ip_udp_loopback_test",
+
   # "socket_ip_unbound_netlink_test",
   "socket_ip_unbound_test",
   "socket_ipv4_datagram_based_socket_unbound_loopback_test",
@@ -223,7 +225,8 @@ gvisor_tests = [
   # "socket_stream_blocking_local_test",
   # "socket_stream_blocking_tcp_test",
   # "socket_stream_local_test",
-  # "socket_stream_nonblock_local_test",
+  "socket_stream_nonblock_local_test",
+
   # "socket_stress_test",
   "socket_test",
   "socket_unix_dgram_local_test",
@@ -261,7 +264,7 @@ gvisor_tests = [
   # "truncate_test",
   # "tuntap_hostinet_test",
   # "tuntap_test",
-  # "udp_bind_test",
+  "udp_bind_test",
   "uidgid_test",
 
   # "uname_test",
