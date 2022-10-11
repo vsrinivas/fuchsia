@@ -926,15 +926,16 @@ protocol MyProtocol {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "enum");
 }
 
-TEST(ProtocolTests, BadMethodEmptyResponseWithError) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-  MyMethod() -> () error uint32;
-};
-)FIDL");
+TEST(ProtocolTests, BadMethodAbsentResponseWithError) {
+  TestLibrary library;
+  library.AddFile("bad/error_method_absent_response.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
+}
+
+TEST(ProtocolTests, GoodMethodEmptyStructResponseWithError) {
+  TestLibrary library;
+  library.AddFile("good/error_method_empty_struct_response.test.fidl");
+  ASSERT_COMPILED(library);
 }
 
 TEST(ProtocolTests, GoodMethodNamedTypeRequest) {
