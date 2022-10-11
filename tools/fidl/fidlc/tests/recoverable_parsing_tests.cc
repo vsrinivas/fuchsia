@@ -162,10 +162,10 @@ protocol P {
   // any real behavior change
   ASSERT_EQ(errors.size(), 8);
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[1], fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERR(errors[1], fidl::ErrInvalidProtocolMember);
   ASSERT_ERR(errors[2], fidl::ErrUnexpectedTokenOfKind);
   ASSERT_ERR(errors[3], fidl::ErrUnexpectedTokenOfKind);
-  ASSERT_ERR(errors[4], fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERR(errors[4], fidl::ErrInvalidProtocolMember);
   ASSERT_ERR(errors[5], fidl::ErrUnexpectedTokenOfKind);
   ASSERT_ERR(errors[6], fidl::ErrUnexpectedTokenOfKind);
   ASSERT_ERR(errors[7], fidl::ErrUnexpectedTokenOfKind);

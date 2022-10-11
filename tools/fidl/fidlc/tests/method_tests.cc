@@ -462,7 +462,7 @@ protocol BadMethod {
 
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -490,7 +490,7 @@ protocol HasMethod {
     strict compose();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -501,7 +501,7 @@ protocol HasMethod {
     flexible compose();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -529,7 +529,7 @@ protocol HasMethod {
     strict strict();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -540,7 +540,7 @@ protocol HasMethod {
     flexible strict();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -568,7 +568,7 @@ protocol HasMethod {
     strict flexible();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -579,7 +579,7 @@ protocol HasMethod {
     flexible flexible();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -604,7 +604,7 @@ protocol HasMethod {
     strict MyMethod();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -615,7 +615,7 @@ protocol HasMethod {
     flexible MyMethod();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -643,7 +643,7 @@ protocol HasEvent {
     strict -> OnSomething();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -654,7 +654,7 @@ protocol HasEvent {
     flexible -> OnSomething();
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(MethodTests, GoodValidEmptyStructPayloadWhenErrorOrFlexible) {

@@ -799,13 +799,13 @@ void Parser::ParseProtocolMember(
                 return;
               }
               if (Peek().kind() != Token::Kind::kLeftParen) {
-                Fail(ErrUnrecognizedProtocolMember);
+                Fail(ErrInvalidProtocolMember);
                 return;
               }
               break;
             }
             default:
-              Fail(ErrExpectedProtocolMember);
+              Fail(ErrInvalidProtocolMember);
               return;
           }
         }
@@ -816,7 +816,7 @@ void Parser::ParseProtocolMember(
           return;
         }
         if (Peek().kind() != Token::Kind::kLeftParen) {
-          Fail(ErrUnrecognizedProtocolMember);
+          Fail(ErrInvalidProtocolMember);
           return;
         }
       }
@@ -828,7 +828,7 @@ void Parser::ParseProtocolMember(
       return;
     }
     default:
-      Fail(ErrExpectedProtocolMember);
+      Fail(ErrInvalidProtocolMember);
       return;
   }
 }

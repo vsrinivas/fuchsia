@@ -196,7 +196,7 @@ protocol Example {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, GoodValidProtocolComposition) {
@@ -343,7 +343,7 @@ protocol B {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -359,7 +359,7 @@ protocol B {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -373,7 +373,7 @@ protocol Example {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 // TODO(fxb/88366): remove checks for behavior with unknown interactions turned
@@ -387,7 +387,7 @@ protocol Example {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, BadModifierStrictOnCompose) {
@@ -402,7 +402,7 @@ protocol B {
 
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, BadModifierFlexibleOnCompose) {
@@ -417,7 +417,7 @@ protocol B {
 
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, BadModifierStrictOnInvalidMember) {
@@ -430,7 +430,7 @@ protocol Example {
 
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, BadModifierFlexibleOnInvalidMember) {
@@ -443,7 +443,7 @@ protocol Example {
 
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, BadColonNotSupported) {
@@ -467,7 +467,7 @@ protocol WellDocumented {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, GoodAttachAttributesToCompose) {
@@ -585,7 +585,7 @@ protocol NoMoreOrdinals {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, BadEmptyNamedItem) {
@@ -597,7 +597,7 @@ protocol NoMoreOrdinals {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, BadNoOtherPragmaThanCompose) {
@@ -609,7 +609,7 @@ protocol Wrong {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnrecognizedProtocolMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 
 TEST(ProtocolTests, BadComposedProtocolsHaveClashingNames) {
