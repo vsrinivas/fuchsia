@@ -16,6 +16,7 @@
         {
             protocol: [
                 "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.perfetto.ProducerConnector",
                 "fuchsia.tracing.provider.Registry",
             ],
         },
@@ -25,6 +26,7 @@
         {
             protocol: [
                 "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.perfetto.ProducerConnector",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "#trace_manager",
