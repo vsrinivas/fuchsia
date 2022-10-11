@@ -160,7 +160,7 @@ impl SynthesisTask {
         info: EventSynthesisInfo,
     ) -> Result<(), ModelError> {
         let mut visited_components = HashSet::new();
-        for scope in info.scopes {
+        for scope in &info.scopes {
             // If the scope is component manager, synthesize the builtin events first and then
             // proceed to synthesize from the root and down.
             let scope_moniker = match scope.moniker {
@@ -183,19 +183,24 @@ impl SynthesisTask {
             };
             let root = model.look_up(&scope_moniker).await?;
             let mut component_stream = get_subcomponents(root, visited_components.clone());
+            let mut tasks = vec![];
             while let Some(component) = component_stream.next().await {
                 visited_components.insert(component.abs_moniker.clone());
-                if let Err(_) = Self::send_events(
-                    &info.provider,
-                    &scope,
-                    ExtendedComponent::ComponentInstance(component),
-                    &mut sender,
-                )
-                .await
-                {
-                    return Ok(());
-                }
+                let provider = info.provider.clone();
+                let scope = scope.clone();
+                let component = component.clone();
+                let mut sender = sender.clone();
+                tasks.push(fuchsia_async::Task::spawn(async move {
+                    let _ = Self::send_events(
+                        &provider,
+                        &scope,
+                        ExtendedComponent::ComponentInstance(component),
+                        &mut sender,
+                    )
+                    .await;
+                }));
             }
+            futures::future::join_all(tasks).await;
         }
         Ok(())
     }
