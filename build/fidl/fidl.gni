@@ -104,9 +104,6 @@ template("fidl") {
          "All FIDL dependencies are inherently " +
              "public, use 'public_deps' instead of 'deps'.")
 
-  #  TODO(fxbug.dev/109904): Remove.
-  not_needed(invoker, [ "vendor_use_new_api_summary" ])
-
   extra_parameters = {
     library_name = target_name
     if (defined(invoker.name)) {
@@ -138,7 +135,6 @@ template("fidl") {
     "goldens_dir",
     "non_fidl_deps",
     "should_lint",
-    "vendor_use_new_api_summary",
   ]
   if (current_toolchain == fidl_toolchain) {
     fidl_library(target_name) {
