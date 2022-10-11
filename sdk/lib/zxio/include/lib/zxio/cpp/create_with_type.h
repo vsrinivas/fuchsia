@@ -6,10 +6,6 @@
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_CREATE_WITH_TYPE_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
-#include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
-#include <fidl/fuchsia.posix.socket/cpp/wire.h>
-#include <lib/zx/eventpair.h>
 #include <lib/zx/stream.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/zxio.h>

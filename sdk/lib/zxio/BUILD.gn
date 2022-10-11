@@ -25,11 +25,8 @@ library_headers("create_with_type") {
   headers = [ "lib/zxio/cpp/create_with_type.h" ]
 
   public_deps = [
-    ":zxio",
+    ":headers",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
-    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_cpp_wire",
-    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_cpp_wire",
     "//zircon/system/ulib/zx",
   ]
 }
