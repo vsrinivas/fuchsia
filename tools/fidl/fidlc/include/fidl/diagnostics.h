@@ -30,7 +30,7 @@ constexpr UndocumentedErrorDef<10, std::string_view> ErrInvalidIdentifier(
     "invalid identifier '{}'");
 constexpr UndocumentedErrorDef<11, std::string_view> ErrInvalidLibraryNameComponent(
     "Invalid library name component {}");
-constexpr UndocumentedErrorDef<12> ErrInvalidLayoutClass(
+constexpr ErrorDef<12> ErrInvalidLayoutClass(
     "layouts must be of the class: bits, enum, struct, table, or union.");
 constexpr UndocumentedErrorDef<13> ErrInvalidWrappedType(
     "wrapped type for bits/enum must be an identifier");

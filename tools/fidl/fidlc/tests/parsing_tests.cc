@@ -469,10 +469,8 @@ type ß = struct {
 }
 
 TEST(ParsingTests, GoodEmptyStructTest) {
-  TestLibrary library(R"FIDL(library fidl.test.emptystruct;
-
-type Empty = struct {};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("good/empty_struct.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -738,11 +736,8 @@ type Foo = struct : uint32 {};
 }
 
 TEST(ParsingTests, BadLayoutClass) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = foobar {};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/invalid_layout.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLayoutClass);
 }
 
