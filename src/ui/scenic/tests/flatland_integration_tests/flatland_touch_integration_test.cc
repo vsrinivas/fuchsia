@@ -954,7 +954,14 @@ TEST_F(FlatlandTouchIntegrationTest, PartialScreenOverlappingViews) {
   InjectionHelper(points, child_A_events, -A_x_min, -A_y_min);
 
   // Ensure parent also received events, but not the below sibling.
-  EXPECT_EQ(parent_events.size(), 6u);  // 5 events + TouchInteractionResult
+  RunLoopUntil([&parent_events] {
+    return !parent_events.empty() && parent_events.back().has_interaction_result();
+  });
+  RunLoopUntil([&child_A_events] {
+    return !child_A_events.empty() && child_A_events.back().has_interaction_result();
+  });
+  EXPECT_EQ(parent_events.size(), 6u);   // 5 events + TouchInteractionResult
+  EXPECT_EQ(child_A_events.size(), 6u);  // 5 events + TouchInteractionResult
   EXPECT_EQ(child_B_events.size(), 0u);
 
   // Reset vectors for the next stream.
@@ -979,7 +986,14 @@ TEST_F(FlatlandTouchIntegrationTest, PartialScreenOverlappingViews) {
   InjectionHelper(points, child_B_events, -B_x_min, -B_y_min);
 
   // Ensure parent also received events, but not the above sibling.
-  EXPECT_EQ(parent_events.size(), 6u);  // 5 events + TouchInteractionResult
+  RunLoopUntil([&parent_events] {
+    return !parent_events.empty() && parent_events.back().has_interaction_result();
+  });
+  RunLoopUntil([&child_B_events] {
+    return !child_B_events.empty() && child_B_events.back().has_interaction_result();
+  });
+  EXPECT_EQ(parent_events.size(), 6u);   // 5 events + TouchInteractionResult
+  EXPECT_EQ(child_B_events.size(), 6u);  // 5 events + TouchInteractionResult
   EXPECT_EQ(child_A_events.size(), 0u);
 
   // Reset vectors for the next stream.
