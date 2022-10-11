@@ -16,13 +16,7 @@ fx-config-read
 
 set -ex
 
-cd "${FUCHSIA_DIR}"
-
-fx-gn args "$FUCHSIA_BUILD_DIR" "$@"
-
-if [[ -f "${FUCHSIA_BUILD_DIR}/rust-project.json" ]]; then
-  ln -f -s "${FUCHSIA_BUILD_DIR}/rust-project.json" "${FUCHSIA_DIR}/rust-project.json"
-fi
+fx-gn-args "$@"
 
 # Check for RBE requirements if enabled.
 fx-check-rbe-setup

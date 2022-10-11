@@ -128,18 +128,30 @@ function fx-is-bringup {
   grep '^[^#]*import("//products/bringup.gni")' "${FUCHSIA_BUILD_DIR}/args.gn" >/dev/null 2>&1
 }
 
-function fx-gen {
+function fx-gen-internal {
+  # which of `gn gen` and `gn args` we're doing
+  local -r subcommand="$1"
+  shift
+
   # If a user executes gen from a symlinked directory that is not a
   # subdirectory $FUCHSIA_DIR then dotgn search may fail, so execute
   # the gen from the $FUCHSIA_DIR.
   (
     cd "${FUCHSIA_DIR}" && \
-    fx-gn gen --fail-on-unused-args --check=system --export-rust-project --ninja-executable="${PREBUILT_NINJA}" "${FUCHSIA_BUILD_DIR}" "$@"
+    fx-gn "${subcommand}" --fail-on-unused-args --check=system --export-rust-project --ninja-executable="${PREBUILT_NINJA}" "${FUCHSIA_BUILD_DIR}" "$@"
   ) || return $?
   # symlink rust-project.json to root of project
   if [[ -f "${FUCHSIA_BUILD_DIR}/rust-project.json" ]]; then
     ln -f -s "${FUCHSIA_BUILD_DIR}/rust-project.json" "${FUCHSIA_DIR}/rust-project.json"
   fi
+}
+
+function fx-gen {
+  fx-gen-internal gen "$@"
+}
+
+function fx-gn-args {
+  fx-gen-internal args "$@"
 }
 
 function fx-build-config-load {
