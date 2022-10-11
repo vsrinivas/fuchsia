@@ -1,0 +1,32 @@
+<!-- Copyright 2021 The Fuchsia Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file. -->
+
+<html>
+
+<head>
+    <title>Audio Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<script>
+    function playAudio() {
+        var audio = document.getElementById("audio");
+        audio.volume = 1.0;
+        audio.load();
+        audio.play();
+    }
+</script>
+<body>
+    <audio id="audio" controls>
+        <source src="sample_audio.mp3" type="audio/mpeg">
+        Audio is not supported.
+    </audio>
+    <button id="play" onclick="playAudio()">PLAY</button>
+</body>
+
+</html>

@@ -1,0 +1,25 @@
+{
+  "@@locale": "he",
+  "appTitle": "אפליקציה מתורגמת לשפה מקומית",
+  "@appTitle": {
+    "description": "Title of the demo application. \"Mod\" is short for \"module\" (can also be translated as \"app\").",
+    "type": "text",
+    "placeholders": {}
+  },
+  "bodyText": "{itemCount, plural, =0 {אין הודעות.} =1 {יש הודעה אחת.} other {יש {itemCount} הודעות.}}",
+  "@bodyText": {
+    "description": "How many messages are in the list.",
+    "type": "text",
+    "placeholders": {
+      "itemCount": {
+        "example": "42"
+      }
+    }
+  },
+  "footer": "בקרוב: קריאת ההודעות האלה!",
+  "@footer": {
+    "description": "Footer text of the demo application. Implies that messages cannot currently be read.",
+    "type": "text",
+    "placeholders": {}
+  }
+}

@@ -1,0 +1,47 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/appkit_lib_test",
+    },
+    children: [
+        {
+            name: "test-ui-stack",
+            url: "#meta/test-ui-stack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.session.scene.Manager",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.test.input.Registry",
+                "fuchsia.ui.test.scene.Controller",
+            ],
+            from: "#test-ui-stack",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#test-ui-stack",
+        },
+    ],
+}

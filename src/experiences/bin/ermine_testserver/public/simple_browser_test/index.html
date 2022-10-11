@@ -1,0 +1,29 @@
+<!-- Copyright 2021 The Fuchsia Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file. -->
+
+<html>
+    <head>
+        <title>Localhost</title>
+        <link rel="stylesheet" type="text/css" href="style.css">
+    </head>
+    <body>
+        <div class="container style-normal">
+            <a href="next.html">Next</a>
+            <a href="popup.html" target="_blank">Popup</a>
+            <div>
+                <a id="target" href="#">0</a>
+                <button id="increase" onclick="add()">+</button>
+            </div>
+
+        </div>
+    </body>
+    <script>
+        function add() {
+            let target = document.getElementById('target');
+            let number = parseInt(target.innerHTML, 10);
+            number++;
+            target.innerHTML = number;
+        }
+    </script>
+</html>

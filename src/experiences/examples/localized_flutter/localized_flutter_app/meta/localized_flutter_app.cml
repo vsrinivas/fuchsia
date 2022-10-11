@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // Enable system logging.
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        data: "data/localized_flutter_app",
+    },
+    capabilities: [
+        {
+            protocol: [
+                // A Flutter app starts running only after it is asked for its View.
+                "fuchsia.ui.app.ViewProvider",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "self",
+        },
+    ],
+}

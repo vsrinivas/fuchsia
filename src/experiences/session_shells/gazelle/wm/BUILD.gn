@@ -1,0 +1,73 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/lib/vulkan/vulkan.gni")
+
+rustc_binary("bin") {
+  output_name = "wm"
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  source_root = "src/main.rs"
+  sources = [
+    "src/main.rs",
+    "src/wm.rs",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.element:fuchsia.element_rust",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/ui/fuchsia-scenic",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  test_deps = [
+    "//sdk/fidl/fuchsia.ui.test.scene:fuchsia.ui.test.scene_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+  ]
+}
+
+fuchsia_unittest_package("wm-tests") {
+  manifest = "meta/wm_test.cml"
+  deps = [
+    ":bin_test",
+    "//src/ui/testing/test_ui_stack:flatland_scene_manager_config",
+    "//src/ui/testing/test_ui_stack:test-ui-stack-component",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+
+    # Ensure the device has Vulkan.
+    environments = vulkan_envs
+  }
+}
+
+fuchsia_component("component") {
+  component_name = "wm"
+  manifest = "meta/wm.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("wm") {
+  deps = [ ":component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":wm-tests" ]
+}

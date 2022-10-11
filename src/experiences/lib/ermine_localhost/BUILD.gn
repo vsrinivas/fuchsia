@@ -1,0 +1,47 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/test.gni")
+
+dart_library("ermine_localhost") {
+  package_name = "ermine_localhost"
+  null_safe = true
+  sources = [
+    "localhost.dart",
+    "src/localhost.dart",
+  ]
+  deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//third_party/dart-pkg/pub/mime",
+  ]
+}
+
+resource("testdata") {
+  sources = [
+    "test/testdata/test.css",
+    "test/testdata/test.html",
+    "test/testdata/test.json",
+    "test/testdata/test.txt",
+  ]
+  outputs = [ "testdata/{{source_file_part}}" ]
+}
+
+resource("testdata_another") {
+  sources = [ "test/testdata/another/test.txt" ]
+  outputs = [ "testdata/another/{{source_file_part}}" ]
+}
+
+dart_test("ermine_localhost_unittests") {
+  null_safe = true
+  sources = [ "localhost_test.dart" ]
+
+  deps = [
+    ":ermine_localhost",
+    ":testdata",
+    ":testdata_another",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}

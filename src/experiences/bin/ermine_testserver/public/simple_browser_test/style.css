@@ -1,0 +1,47 @@
+/* Copyright 2021 The Fuchsia Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file. */
+
+* {
+    margin: 0;
+    padding: 0;
+
+    font-family: Helvetica, sans-serif;
+}
+body {
+    background-color: black;
+    width: 100%;
+    height: 100vh;
+}
+.container {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+a {
+    margin-bottom: 32px;
+    font-size: 40px;
+    font-weight: 800;
+}
+.style-normal a {
+    color: white;
+}
+.style-popup a {
+    color: fuchsia;
+}
+button {
+    display: inline-block;
+    padding: 4px 8px;
+    margin-left: 24px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 100%;
+}

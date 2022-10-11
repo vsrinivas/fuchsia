@@ -1,0 +1,67 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+
+dart_library("lib") {
+  package_name = "workstation_session"
+  source_dir = "lib"
+  null_safe = true
+  sources = [ "main.dart" ]
+  deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/fuchsia_vfs",
+    "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_dart",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_dart",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_dart",
+    "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene_dart",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_dart",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_dart",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_dart",
+  ]
+}
+
+dart_component("session_component") {
+  component_name = "workstation_session"
+  manifest = "meta/workstation_session.cml"
+  deps = [ ":lib" ]
+}
+
+fuchsia_component("workstation_routing") {
+  assert(
+      dart_default_build_cfg.is_aot == flutter_default_build_cfg.is_aot &&
+          dart_default_build_cfg.is_product ==
+              flutter_default_build_cfg.is_product,
+      "workstation_routing requires dart and flutter runtimes use the same build configuration. Make sure 'fx set ... --args=(dart|flutter)_force_product=<bool>' flags are omitted, or match, for both dart and flutter.")
+  if (!dart_default_build_cfg.is_aot && !dart_default_build_cfg.is_product) {
+    manifest = "meta/workstation_routing_jit.cml"
+  } else if (!dart_default_build_cfg.is_aot &&
+             dart_default_build_cfg.is_product) {
+    manifest = "meta/workstation_routing_jit_product.cml"
+  } else if (dart_default_build_cfg.is_aot &&
+             !dart_default_build_cfg.is_product) {
+    manifest = "meta/workstation_routing_aot.cml"
+  } else if (dart_default_build_cfg.is_aot &&
+             dart_default_build_cfg.is_product) {
+    manifest = "meta/workstation_routing_aot_product.cml"
+  }
+}
+
+fuchsia_package("workstation_session_pkg") {
+  package_name = "workstation_session"
+  deps = [
+    ":session_component",
+    ":workstation_routing",
+  ]
+}
+
+group("session") {
+  public_deps = [ ":workstation_session_pkg" ]
+}

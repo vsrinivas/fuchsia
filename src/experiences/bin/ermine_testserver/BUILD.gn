@@ -1,0 +1,58 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/test.gni")
+import("//build/flutter/flutter_component.gni")
+
+dart_library("lib") {
+  package_name = "ermine_testserver"
+  source_dir = "lib"
+  null_safe = true
+
+  sources = [
+    "main.dart",
+    "src/app.dart",
+  ]
+  deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/mime",
+  ]
+}
+
+resource("browser_test_files") {
+  sources = [
+    "public/simple_browser_test/audio.html",
+    "public/simple_browser_test/blue.html",
+    "public/simple_browser_test/green.html",
+    "public/simple_browser_test/index.html",
+    "public/simple_browser_test/input.html",
+    "public/simple_browser_test/next.html",
+    "public/simple_browser_test/pink.html",
+    "public/simple_browser_test/popup.html",
+    "public/simple_browser_test/red.html",
+    "public/simple_browser_test/sample_audio.mp3",
+    "public/simple_browser_test/sample_video.mp4",
+    "public/simple_browser_test/style.css",
+    "public/simple_browser_test/video.html",
+    "public/simple_browser_test/yellow.html",
+  ]
+  outputs = [ "data/simple_browser_test/{{source_file_part}}" ]
+}
+
+flutter_component("component") {
+  main_dart = "main.dart"
+  component_name = "ermine_testserver"
+  manifest = "meta/ermine_testserver.cml"
+  deps = [
+    ":browser_test_files",
+    ":lib",
+  ]
+}
+
+fuchsia_package("ermine_testserver") {
+  deps = [ ":component" ]
+}

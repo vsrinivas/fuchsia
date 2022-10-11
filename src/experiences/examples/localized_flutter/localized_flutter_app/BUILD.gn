@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
+import("//build/flutter/test.gni")
+
+group("localized_flutter_app") {
+  testonly = true
+  deps = [
+    ":localized-flutter-app",
+    ":tests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":localized_flutter_app_unittests" ]
+}
+
+dart_library("lib") {
+  package_name = "localized_flutter_app"
+  sources = [
+    "localized_mod_localizations_delegate.dart",
+    "localized_mod_strings.dart",
+    "main.dart",
+    "provider.dart",
+    "supported_locales.dart",
+  ]
+  deps = [
+    "//src/experiences/examples/localized_flutter/localized_flutter_localization:localized-flutter-localization",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
+    "//third_party/dart-pkg/pub/intl",
+  ]
+}
+
+flutter_component("component") {
+  component_name = "localized-flutter-app"
+  manifest = "meta/localized_flutter_app.cml"
+  deps = [ ":lib" ]
+}
+
+fuchsia_package("localized-flutter-app") {
+  deps = [ ":component" ]
+}
+
+flutter_test("localized_flutter_app_unittests") {
+  sources = [ "sample_test.dart" ]
+
+  deps = [ "//third_party/dart-pkg/pub/test" ]
+}

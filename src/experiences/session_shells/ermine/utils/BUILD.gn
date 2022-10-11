@@ -1,0 +1,41 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/flutter/test.gni")
+
+dart_library("ermine_utils") {
+  package_name = "ermine_utils"
+  null_safe = true
+  sources = [
+    "ermine_utils.dart",
+    "src/crash.dart",
+    "src/dialogs/checkbox_prompt.dart",
+    "src/dialogs/dialog.dart",
+    "src/dialogs/dialogs.dart",
+    "src/dialogs/password_prompt.dart",
+    "src/markdown_rich_text.dart",
+    "src/mobx_disposable.dart",
+    "src/mobx_extensions.dart",
+    "src/scale_widget.dart",
+    "src/themes.dart",
+    "src/view_handle.dart",
+    "src/widget_extension.dart",
+    "src/widget_factory.dart",
+  ]
+  deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic_flutter",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_dart",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_dart",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_dart",
+    "//src/experiences/session_shells/ermine/internationalization",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/flutter_mobx",
+    "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/mobx",
+  ]
+}

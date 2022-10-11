@@ -1,0 +1,7 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+name: ermine_localhost
+description: The library for serving a local http website. It is mainly for simple browser's E2E test.
+
+flutter:

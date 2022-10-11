@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "erminectl"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//src/experiences/session_shells/ermine/fidl:ermine.tools_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_shell_package("erminectl") {
+  manifest = "meta/erminectl.cml"
+  deps = [ ":bin" ]
+}

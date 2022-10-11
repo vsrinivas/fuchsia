@@ -1,0 +1,11 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+name: login
+
+environment:
+  sdk: '>=2.12.0 <3.0.0'
+
+flutter:
+  assets:
+    - images/Fuchsia-logo-2x.png

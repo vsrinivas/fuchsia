@@ -1,0 +1,254 @@
+{
+  "brightness": "HELDERHEID",
+  "@brightness": {
+    "description": "The label for the screen brightness settings widget (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "cancel": "Annuleren",
+  "@cancel": {
+    "description": "The label for canceling an offered command",
+    "type": "text",
+    "placeholders": {}
+  },
+  "done": "Klaar",
+  "@done": {
+    "description": "The label for saying we are done with a command",
+    "type": "text",
+    "placeholders": {}
+  },
+  "sleep": "SLAAP",
+  "@sleep": {
+    "description": "The label for the sleep settings widget (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "restart": "HERSTARTEN",
+  "@restart": {
+    "description": "The label for the restart button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "powerOff": "UITSCHAKELEN",
+  "@powerOff": {
+    "description": "The label for the restart button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "settings": "INSTELLINGEN",
+  "@settings": {
+    "description": "The label for the settings button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "volume": "GELUID",
+  "@volume": {
+    "description": "The label for the settings button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "min": "MIN",
+  "@min": {
+    "description": "The short label for \"minimal\" label for the volume button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "max": "MAX",
+  "@max": {
+    "description": "The shortened label for \"maximal\" label for the volume button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "music": "MUZIEK",
+  "@music": {
+    "description": "The label used for the music button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "back": "TERUG",
+  "@back": {
+    "description": "The label for the \"Back\" button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "pause": "PAUZE",
+  "@pause": {
+    "description": "The label for the \"Pause\" button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "skip": "OVERSLAAN",
+  "@skip": {
+    "description": "The label for the \"Skip\" button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "topProcesses": "TOP PROCESSEN",
+  "@topProcesses": {
+    "description": "The label for the \"Top processes\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "memory": "GEHEUGEN",
+  "@memory": {
+    "description": "The label for the \"memory\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "cpu": "CPU",
+  "@cpu": {
+    "description": "The short name for the \"Central Processing Unit\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "tasks": "TAKEN",
+  "@tasks": {
+    "description": "The short name for the \"Tasks\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "weather": "WEER",
+  "@weather": {
+    "description": "The short name for the \"Weather\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "date": "DATUM",
+  "@date": {
+    "description": "The short name for the \"date\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "network": "NETWERK",
+  "@network": {
+    "description": "The short name for the \"network\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "fps": "FPS",
+  "@fps": {
+    "description": "The short name for the \"Frames per Second\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "batt": "BATT",
+  "@batt": {
+    "description": "The short name for the \"Battery level\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "battery": "Batterij",
+  "@battery": {
+    "description": "The long name for the \"Battery level\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "wireless": "DRAADLOZE",
+  "@wireless": {
+    "description": "The short name for the \"Wireless network\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "signalStrong": "STERK SIGNAAL",
+  "@signalStrong": {
+    "description": "The short name for the \"Strong signal\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "sunny": "ZONNIG",
+  "@sunny": {
+    "description": "The short name for the \"Weather is sunny\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "runningTasks": "{numTasks, plural, =0 {{numTasks} LOPENDE} =1 {{numTasks} LOPEND} other {{numTasks} LOPENDE}}",
+  "@runningTasks": {
+    "description": "How many tasks are currently running",
+    "type": "text",
+    "placeholders": {
+      "numTasks": {
+        "example": "42"
+      }
+    }
+  },
+  "totalTasks": "{numTasks, plural, =0 {{numTasks}} =1 {{numTasks}} other {{numTasks}}}",
+  "@totalTasks": {
+    "description": "How many tasks are currently running",
+    "type": "text",
+    "placeholders": {
+      "numTasks": {
+        "example": "42"
+      }
+    }
+  },
+  "numThreads": "{numThreads, plural, =0 {{numThreads} DRAA} =1 {{numThreads} DRAA} other {{numThreads} DRAA}}",
+  "@numThreads": {
+    "description": "How many threads are currently there, short label",
+    "type": "text",
+    "placeholders": {
+      "numThreads": {
+        "example": "42"
+      }
+    }
+  },
+  "name": "Naam",
+  "@name": {
+    "description": "A generic label for a name, sentence case.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "ask": "ZOEKT",
+  "@ask": {
+    "description": "A generic short label for \"query\", sentence case.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "typeToAsk": "ZOEKT EN GIJ ZAL SPINAZIE ETEN",
+  "@typeToAsk": {
+    "description": "Shown in the ask text entry box in Ermine shell",
+    "type": "text",
+    "placeholders": {}
+  },
+  "overview": "Overzicht",
+  "@overview": {
+    "description": "Shown in top bar on the Ermine shell",
+    "type": "text",
+    "placeholders": {}
+  },
+  "recents": "Onlangs",
+  "@recents": {
+    "description": "A list of recent apps",
+    "type": "text",
+    "placeholders": {}
+  },
+  "browser": "Browser",
+  "@browser": {
+    "description": "A button to invoke a browser with",
+    "type": "text",
+    "placeholders": {}
+  },
+  "auto": "Auto",
+  "@auto": {
+    "description": "A shorthand for \"automatic\" setting.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "shutdown": "Uitschakelen",
+  "@shutdown": {
+    "description": "The label for the \"System shutdown\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "mockWirelessNetwork": "Draadlooz_Netwerk",
+  "@mockWirelessNetwork": {
+    "description": "A mock label for a wireless network name that the device is connected to",
+    "type": "text",
+    "placeholders": {}
+  },
+  "nameThisStory": "Noem dit verhaal",
+  "@nameThisStory": {
+    "description": "A hint appearing in a window for naming a story. This text should not include padding, but now it does.",
+    "type": "text",
+    "placeholders": {}
+  }
+}

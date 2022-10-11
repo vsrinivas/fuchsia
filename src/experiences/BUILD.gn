@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("experiences") {
+  testonly = true
+  deps = [
+    ":tests",
+    "bin",
+    "examples",
+    "session_shells",
+  ]
+}
+
+# All of the tests to run for the experiences repo
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":dart_unittests",
+    ":rust_unittests",
+  ]
+}
+
+# Dart unit tests which can run on the host or target
+group("dart_unittests") {
+  testonly = true
+  deps = [
+    "examples:dart_unittests",
+    "lib:dart_unittests",
+    "session_shells:dart_unittests",
+  ]
+}
+
+group("rust_unittests") {
+  testonly = true
+  deps = [ "session_shells:rust_unittests" ]
+}

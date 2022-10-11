@@ -1,0 +1,11 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+name: ermine_ui
+description: The library for visual languages and UI components commonly used across Ermine.
+
+flutter:
+  fonts:
+    - family:  ErmineIcons
+      fonts:
+        - asset: fonts/ErmineIcons-Regular.ttf

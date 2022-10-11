@@ -1,0 +1,71 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/element_router",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.element.Manager-chrome",
+                "fuchsia.element.Manager-default",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+            from: "self",
+        },
+    ],
+    config: {
+        // A list of mappings from component URL to capability name. The URL and
+        // capability are separated by a | character.
+        //
+        // For instance, one entry might be:
+        //     "fuchsia-pkg://chromium.org/chrome#meta/chrome.cm|fuchsia.element.Manager-chrome"
+        url_to_backend: {
+            type: "vector",
+            max_count: 100,
+            element: {
+                type: "string",
+                max_size: 512,
+            },
+        },
+
+        // A list of mappings from component URL scheme to capability name. The
+        // scheme and capability are separated by a | character.
+        //
+        // For instance, one entry might be:
+        //     "https|fuchsia.element.Manager-chrome"
+        //
+        // If a URL matches both an exact match and a scheme, the exact match
+        // takes precedence.
+        scheme_to_backend: {
+            type: "vector",
+            max_count: 100,
+            element: {
+                type: "string",
+                max_size: 512,
+            },
+        },
+
+        // The default capability to use when a component URL does not match a
+        // rule in `url_to_backend` or `scheme_to_backend`.
+        default_backend: {
+            type: "string",
+            max_size: 512,
+        },
+    },
+}

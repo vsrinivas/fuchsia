@@ -1,0 +1,254 @@
+{
+  "brightness": "ОСВЕТЉАЈ",
+  "@brightness": {
+    "description": "The label for the screen brightness settings widget (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "cancel": "Откажи",
+  "@cancel": {
+    "description": "The label for canceling an offered command",
+    "type": "text",
+    "placeholders": {}
+  },
+  "done": "Готово",
+  "@done": {
+    "description": "The label for saying we are done with a command",
+    "type": "text",
+    "placeholders": {}
+  },
+  "sleep": "СПАВАЊЕ",
+  "@sleep": {
+    "description": "The label for the sleep settings widget (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "restart": "РЕСТАРТ",
+  "@restart": {
+    "description": "The label for the restart button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "powerOff": "ИСКЉУЧИ",
+  "@powerOff": {
+    "description": "The label for the restart button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "settings": "ПОДЕШАВАЊА",
+  "@settings": {
+    "description": "The label for the settings button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "volume": "ЈАЧИНА",
+  "@volume": {
+    "description": "The label for the settings button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "min": "МИН",
+  "@min": {
+    "description": "The short label for \"minimal\" label for the volume button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "max": "МАКС",
+  "@max": {
+    "description": "The shortened label for \"maximal\" label for the volume button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "music": "МУЗИКА",
+  "@music": {
+    "description": "The label used for the music button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "back": "НАЗАД",
+  "@back": {
+    "description": "The label for the \"Back\" button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "pause": "ПАУЗА",
+  "@pause": {
+    "description": "The label for the \"Pause\" button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "skip": "ПРЕСКОЧИ",
+  "@skip": {
+    "description": "The label for the \"Skip\" button (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "topProcesses": "ВРШНИ ПРОЦЕСИ",
+  "@topProcesses": {
+    "description": "The label for the \"Top processes\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "memory": "МЕМОРИЈА",
+  "@memory": {
+    "description": "The label for the \"memory\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "cpu": "ПРОЦ",
+  "@cpu": {
+    "description": "The short name for the \"Central Processing Unit\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "tasks": "ЗАДАЦИ",
+  "@tasks": {
+    "description": "The short name for the \"Tasks\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "weather": "ВРЕМЕ",
+  "@weather": {
+    "description": "The short name for the \"Weather\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "date": "ДАТУМ",
+  "@date": {
+    "description": "The short name for the \"date\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "network": "МРЕЖА",
+  "@network": {
+    "description": "The short name for the \"network\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "fps": "СЛ/СЕК",
+  "@fps": {
+    "description": "The short name for the \"Frames per Second\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "batt": "БАТ",
+  "@batt": {
+    "description": "The short name for the \"Battery level\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "battery": "Батерија",
+  "@battery": {
+    "description": "The long name for the \"Battery level\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "wireless": "БЕЖИЧНА",
+  "@wireless": {
+    "description": "The short name for the \"Wireless network\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "signalStrong": "ЈАК СИГНАЛ",
+  "@signalStrong": {
+    "description": "The short name for the \"Strong signal\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "sunny": "СУНЧАНО",
+  "@sunny": {
+    "description": "The short name for the \"Weather is sunny\" label (ALL CAPS)",
+    "type": "text",
+    "placeholders": {}
+  },
+  "runningTasks": "{numTasks, plural, =0 {{numTasks} ЗАДАТАКА} =1 {{numTasks} ЗАДАТАК} other {{numTasks} ЗАДАТАКА}}",
+  "@runningTasks": {
+    "description": "How many tasks are currently running",
+    "type": "text",
+    "placeholders": {
+      "numTasks": {
+        "example": "42"
+      }
+    }
+  },
+  "totalTasks": "{numTasks, plural, =0 {{numTasks}} =1 {{numTasks}} other {{numTasks}}}",
+  "@totalTasks": {
+    "description": "How many tasks are currently running",
+    "type": "text",
+    "placeholders": {
+      "numTasks": {
+        "example": "42"
+      }
+    }
+  },
+  "numThreads": "{numThreads, plural, =0 {{numThreads} НИТИ} =1 {{numThreads} НИТ} other {{numThreads} НИТИ}}",
+  "@numThreads": {
+    "description": "How many threads are currently there, short label",
+    "type": "text",
+    "placeholders": {
+      "numThreads": {
+        "example": "42"
+      }
+    }
+  },
+  "name": "ИМЕ",
+  "@name": {
+    "description": "A generic label for a name, sentence case.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "ask": "УПИТ",
+  "@ask": {
+    "description": "A generic short label for \"query\", sentence case.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "typeToAsk": "УНЕСИТЕ УПИТ",
+  "@typeToAsk": {
+    "description": "Shown in the ask text entry box in Ermine shell",
+    "type": "text",
+    "placeholders": {}
+  },
+  "overview": "Преглед",
+  "@overview": {
+    "description": "Shown in top bar on the Ermine shell",
+    "type": "text",
+    "placeholders": {}
+  },
+  "recents": "Историјат",
+  "@recents": {
+    "description": "A list of recent apps",
+    "type": "text",
+    "placeholders": {}
+  },
+  "browser": "Прегледач",
+  "@browser": {
+    "description": "A button to invoke a browser with",
+    "type": "text",
+    "placeholders": {}
+  },
+  "auto": "Ауто",
+  "@auto": {
+    "description": "A shorthand for \"automatic\" setting.",
+    "type": "text",
+    "placeholders": {}
+  },
+  "shutdown": "Искључи",
+  "@shutdown": {
+    "description": "The label for the \"System shutdown\" label",
+    "type": "text",
+    "placeholders": {}
+  },
+  "mockWirelessNetwork": "Бежична_мрежа",
+  "@mockWirelessNetwork": {
+    "description": "A mock label for a wireless network name that the device is connected to",
+    "type": "text",
+    "placeholders": {}
+  },
+  "nameThisStory": "Именуј ову причу",
+  "@nameThisStory": {
+    "description": "A hint appearing in a window for naming a story. This text should not include padding, but now it does.",
+    "type": "text",
+    "placeholders": {}
+  }
+}

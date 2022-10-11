@@ -1,0 +1,244 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+
+        // Enable system logging.
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        args: [ "--expose_dirs=hosted_directories" ],
+        data: "data/login",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "ermine.tools.OobeAutomator",
+                "fuchsia.ui.app.ViewProvider",
+            ],
+        },
+        {
+            directory: "account_data_dir",
+            rights: [ "rw*" ],
+            path: "/hosted_directories/account_data",
+        },
+        {
+            directory: "account_cache_dir",
+            rights: [ "rw*" ],
+            path: "/hosted_directories/account_cache",
+        },
+        {
+            directory: "account_tmp_dir",
+            rights: [ "rw*" ],
+            path: "/hosted_directories/account_tmp",
+        },
+        {
+            storage: "account",
+            from: "self",
+            backing_dir: "account_data_dir",
+            storage_id: "static_instance_id_or_moniker",
+        },
+        {
+            storage: "account_cache",
+            from: "self",
+            backing_dir: "account_cache_dir",
+            storage_id: "static_instance_id_or_moniker",
+        },
+        {
+            storage: "account_tmp",
+            from: "self",
+            backing_dir: "account_tmp_dir",
+            storage_id: "static_instance_id_or_moniker",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.fonts.Provider",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.identity.account.AccountManager",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.recovery.FactoryReset",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Privacy",
+                "fuchsia.ssh.AuthorizedKeys",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.update.channelcontrol.ChannelControl",
+            ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.camera3.DeviceWatcher",
+                "fuchsia.element.Manager",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.fonts.Provider",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.power.battery.BatteryManager",
+                "fuchsia.power.button.Monitor",
+                "fuchsia.process.Launcher",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
+                "fuchsia.settings.Privacy",
+                "fuchsia.ssh.AuthorizedKeys",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.brightness.Control",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.shortcut.Registry",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+                "fuchsia.vulkan.loader.Loader",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+            from: "parent",
+            to: [ "#ermine_shell" ],
+        },
+        {
+            directory: [
+                "config-data",
+                "root-ssl-certificates",
+            ],
+            from: "parent",
+            to: [ "#ermine_shell" ],
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#ermine_shell` are only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection
+            // of `#ermine_shell`, and if/when there is a way to route
+            // capabilities to specific descendents (and specific collection
+            // members), these protocols should be routed only to
+            // terminal.
+            //
+            // Other (current and future) children of `#ermine_shell` should not
+            // `use` these protocols without first getting a security policy
+            // review.
+            protocol: [
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.bluetooth.sys.Pairing",
+                "fuchsia.device.NameProvider",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.logger.Log",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.process.Resolver",
+                "fuchsia.space.Manager",
+                "fuchsia.starnix.developer.Manager",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
+                "fuchsia.virtualization.TerminaGuestManager",
+                "fuchsia.virtualization.ZirconGuestManager",
+            ],
+            from: "parent",
+            to: [ "#ermine_shell" ],
+            availability: "same_as_target",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `directory` offers to
+            // `#ermine_shell` are only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection
+            // of `#ermine_shell`, and if/when there is a way to route
+            // capabilities to specific descendents (and specific collection
+            // members), these directories should be routed only to
+            // terminal.
+            //
+            // Other (current and future) children of `#ermine_shell` should not
+            // `use` these directories without first getting a security policy
+            // review.
+            directory: [
+                "bin",
+                "boot-bin",
+                "pkgfs-packages",
+            ],
+            from: "parent",
+            to: [ "#ermine_shell" ],
+        },
+        {
+            // TODO(fxbug.dev/89628): This cache does not currently have any
+            // process deleting files when it gets full, meaning all clients
+            // need to place constraints on their usage. This is part of a wider
+            // question on cache policy management discussed in fxb/89628.
+            storage: [
+                "account",
+                "account_cache",
+                "account_tmp",
+            ],
+            from: "self",
+            to: "#ermine_shell",
+        },
+        {
+            resolver: "full-resolver",
+            from: "parent",
+            to: "#ermine_shell",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "ermine.tools.OobeAutomator",
+                "fuchsia.ui.app.ViewProvider",
+            ],
+            from: "self",
+        },
+        {
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.element.Manager",
+            ],
+            from: "#ermine_shell",
+        },
+    ],
+}

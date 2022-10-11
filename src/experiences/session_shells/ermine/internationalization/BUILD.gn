@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+
+dart_library("internationalization") {
+  package_name = "internationalization"
+  null_safe = true
+
+  # Disabling analysis for the time being, this is mostly generated code to begin
+  # with, and there are issues like this one that make things harder than necessary:
+  # https://github.com/dart-lang/sdk/issues/38598.
+  disable_analysis = true
+
+  sources = [
+    "localization/messages_all.dart",
+    "localization/messages_messages.dart",
+    "localization/messages_nl.dart",
+    "localization/messages_sr.dart",
+    "localizations_delegate.dart",
+    "strings.dart",
+    "supported_locales.dart",
+  ]
+
+  deps = [
+    "//sdk/dart/fuchsia_internationalization_flutter",
+    "//sdk/dart/fuchsia_logger",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
+    "//third_party/dart-pkg/pub/intl",
+  ]
+}

@@ -1,0 +1,40 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
+
+dart_library("lib") {
+  package_name = "license_settings"
+  null_safe = true
+  sources = [
+    "main.dart",
+    "src/license.dart",
+  ]
+  deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//src/experiences/session_shells/ermine/internationalization",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+  ]
+}
+
+resource("license-text") {
+  sources = [ "assets/license.html" ]
+  outputs = [ "data/license.html" ]
+}
+
+flutter_component("component") {
+  main_dart = "main.dart"
+  component_name = "license_settings"
+  manifest = "meta/license_settings.cml"
+  deps = [
+    ":lib",
+    ":license-text",
+  ]
+}
+
+fuchsia_package("license_settings") {
+  deps = [ ":component" ]
+}

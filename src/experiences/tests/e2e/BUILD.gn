@@ -1,0 +1,165 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/testing/environments.gni")
+
+# E2E product test runtime dependencies specific to end to end product tests for
+# products in src/experiences.
+#
+# This is pulled from workstation.gni.
+group("end_to_end_deps") {
+  testonly = true
+  deps = [ "//src/experiences/bin/ermine_testserver" ]
+}
+
+if (is_host) {
+  host_test_data("scuba_goldens") {
+    sources = [
+      "//src/experiences/tests/e2e/test/scuba_goldens/simple_browser_rearranging_tab_after.png",
+      "//src/experiences/tests/e2e/test/scuba_goldens/simple_browser_rearranging_tab_before.png",
+    ]
+    outputs = [ "$root_out_dir/scuba_goldens/{{source_file_part}}" ]
+  }
+}
+
+dart_test("experiences_ermine_session_shell_e2e_test") {
+  null_safe = true
+  sources = [
+    "ermine_intl_test.dart",
+    "ermine_spinning_square_view_test.dart",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_dart",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_dart",
+    "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//src/experiences/tests:ermine_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "AEMU"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Atlas"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+  ]
+}
+
+dart_test("experiences_ermine_terminal_e2e_test") {
+  null_safe = true
+  sources = [ "ermine_terminal_test.dart" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_dart",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_dart",
+    "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//src/experiences/tests:ermine_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "AEMU"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Atlas"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+  ]
+}
+
+dart_test("experiences_ermine_smoke_e2e_test") {
+  null_safe = true
+  sources = [ "ermine_smoke_test.dart" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_dart",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_dart",
+    "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//src/experiences/tests:ermine_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+
+      # TODO(fxbug.dev/79921): De-flake and re-enable this test.
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Atlas"
+      }
+
+      # TODO(fxbug.dev/650923): De-flake and re-enable this test.
+      tags = [ "e2e-fyi" ]
+    },
+  ]
+}
+
+copy("runtime_deps") {
+  _data_dir = "$target_gen_dir/runtime_deps"
+
+  sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
+
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
+
+  metadata = {
+    test_runtime_deps = [ "$_data_dir/chromedriver" ]
+  }
+}
+
+group("test") {
+  testonly = true
+  if (is_host && is_linux) {
+    # Chromedriver prebuilt is only available for linux-x64
+    deps = [
+      ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
+      ":experiences_ermine_smoke_e2e_test($host_toolchain)",
+
+      # TODO(fxbug.dev/110585): Re-enable once terminal is supported.
+      # ":experiences_ermine_terminal_e2e_test($host_toolchain)",
+    ]
+  }
+}

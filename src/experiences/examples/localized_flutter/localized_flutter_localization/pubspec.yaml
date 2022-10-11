@@ -1,0 +1,10 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+name:
+  localized_flutter_localization
+
+dependencies:
+  intl: ^0.15.7
+  intl_translation: ^0.17.2

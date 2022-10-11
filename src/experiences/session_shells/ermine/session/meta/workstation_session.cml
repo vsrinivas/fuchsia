@@ -1,0 +1,198 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        data: "data/workstation_session",
+    },
+    children: [
+        {
+            name: "login_shell",
+            url: "fuchsia-pkg://fuchsia.com/ermine#meta/login.cm",
+            startup: "eager",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.keyboard.focus.Controller",
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "parent",
+        },
+        {
+            protocol: [ "fuchsia.session.scene.Manager" ],
+            from: "parent",
+            availability: "optional",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.camera3.DeviceWatcher",
+                "fuchsia.element.Manager",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.fonts.Provider",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.identity.account.AccountManager",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.power.battery.BatteryManager",
+                "fuchsia.power.button.Monitor",
+                "fuchsia.process.Launcher",
+                "fuchsia.recovery.FactoryReset",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
+                "fuchsia.settings.Privacy",
+                "fuchsia.ssh.AuthorizedKeys",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.brightness.Control",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.keyboard.focus.Controller",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.shortcut.Registry",
+                "fuchsia.ui.views.ViewRefInstalled",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+                "fuchsia.vulkan.loader.Loader",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+            from: "parent",
+            to: [ "#login_shell" ],
+        },
+        {
+            directory: [
+                "config-data",
+                "root-ssl-certificates",
+            ],
+            from: "parent",
+            to: [ "#login_shell" ],
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#login_shell` are only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection
+            // of `#ermine_shell` (a descendent of `#login_shell`). If/when
+            // there is a way to route capabilities to specific descendents
+            // (and specific collection members), these protocols should be
+            // routed only to terminal.
+            //
+            // Other (current and future) children of `#login_shell` should not
+            // `use` these protocols without first getting a security policy
+            // review.
+            protocol: [
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.bluetooth.sys.Pairing",
+                "fuchsia.device.NameProvider",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.logger.Log",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.process.Resolver",
+                "fuchsia.space.Manager",
+                "fuchsia.starnix.developer.Manager",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
+                "fuchsia.virtualization.TerminaGuestManager",
+                "fuchsia.virtualization.ZirconGuestManager",
+            ],
+            from: "parent",
+            to: [ "#login_shell" ],
+            availability: "same_as_target",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `directory` offers to
+            // `#login_shell` are only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection
+            // of `#ermine_shell` (a descendent of `#login_shell`). If/when
+            // there is a way to route capabilities to specific descendents
+            // (and specific collection members), these directories should be
+            // routed only to terminal.
+            //
+            // Other (current and future) children of `#login_shell` should not
+            // `use` these directories without first getting a security policy
+            // review.
+            directory: [
+                "bin",
+                "boot-bin",
+                "pkgfs-packages",
+            ],
+            from: "parent",
+            to: [ "#login_shell" ],
+        },
+        {
+            storage: [
+                "cache",
+                "tmp",
+            ],
+            from: "parent",
+            to: "#login_shell",
+        },
+        {
+            resolver: "full-resolver",
+            from: "parent",
+            to: "#login_shell",
+        },
+
+        // Note: The "data" storage capability used to store
+        // device data is not passed to login_shell, components
+        // inside the session should use the "account" storage
+        // capability intended for storaging account data. The
+        // account storage capability is encrypted using the
+        // account's authentication factors.
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.element.Manager",
+            ],
+            from: "#login_shell",
+        },
+    ],
+}

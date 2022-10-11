@@ -1,0 +1,24 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("lib") {
+  deps = [
+    "ermine_localhost:ermine_localhost",
+    "ermine_ui:ermine_ui",
+  ]
+}
+
+group("dart_unittests") {
+  testonly = true
+
+  _flutter_tester_tests = []
+  if (host_os != "mac") {
+    _flutter_tester_tests += [
+      "ermine_localhost:ermine_localhost_unittests($host_toolchain)",
+      "ermine_ui:ermine_ui_unittests($host_toolchain)",
+    ]
+  }
+
+  deps = _flutter_tester_tests
+}

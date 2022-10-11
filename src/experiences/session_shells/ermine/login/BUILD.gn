@@ -1,0 +1,156 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/dart/dart_library.gni")
+import("//build/fidl/fidl.gni")
+import("//build/flutter/flutter_component.gni")
+import("//build/testing/flutter_driver.gni")
+import("//src/experiences/session_shells/development_flags.gni")
+
+declare_args() {
+  # Whether or not to provide the data sharing consent step in OOBE
+  data_sharing_oobe_enabled = false
+}
+
+dart_library("lib") {
+  package_name = "login"
+  null_safe = true
+
+  entrypoints = [
+    "main.dart",
+    "test_main.dart",
+  ]
+
+  services = [
+    "src/services/auth_service.dart",
+    "src/services/automator_service.dart",
+    "src/services/channel_service.dart",
+    "src/services/device_service.dart",
+    "src/services/privacy_consent_service.dart",
+    "src/services/shell_service.dart",
+    "src/services/ssh_keys_service.dart",
+  ]
+
+  states = [
+    "src/states/oobe_state.dart",
+    "src/states/oobe_state_impl.dart",
+  ]
+
+  widgets = [
+    "src/widgets/app.dart",
+    "src/widgets/ermine.dart",
+    "src/widgets/header.dart",
+    "src/widgets/oobe.dart",
+    "src/widgets/channels.dart",
+    "src/widgets/data_sharing.dart",
+    "src/widgets/details.dart",
+    "src/widgets/login.dart",
+    "src/widgets/password.dart",
+    "src/widgets/ready.dart",
+    "src/widgets/ssh_keys.dart",
+  ]
+
+  sources = entrypoints + services + states + widgets
+
+  deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_internationalization_flutter",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic_flutter",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/fuchsia_vfs",
+    "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_dart",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_dart",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_dart",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_dart",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_dart",
+    "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_dart",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_dart",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_dart",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_dart",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_dart",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_dart",
+    "//sdk/fidl/fuchsia.ssh:fuchsia.ssh_dart",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys_dart",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_dart",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_dart",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_dart",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_dart",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol_dart",
+    "//src/experiences/session_shells/ermine/fidl",
+    "//src/experiences/session_shells/ermine/internationalization",
+    "//src/experiences/session_shells/ermine/utils:ermine_utils",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/flutter_mobx",
+    "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/mobx",
+  ]
+}
+
+flutter_component("component") {
+  if (flutter_driver_enabled) {
+    main_dart = "test_main.dart"
+  } else {
+    main_dart = "main.dart"
+  }
+
+  component_name = "login"
+
+  # TODO(fxbug.dev/100284): Make Ermine/Gazelle a dynamic child, rather than
+  # requiring these separate variants.
+  if (application_shell == "ermine") {
+    manifest = "meta/login_ermine.cml"
+  } else if (application_shell == "gazelle") {
+    manifest = "meta/login_gazelle.cml"
+  }
+
+  deps = [
+    ":default_config",
+    ":images",
+    ":lib",
+    ":resources",
+  ]
+
+  if (data_sharing_oobe_enabled) {
+    deps += [ ":enable_data_sharing_oobe" ]
+  }
+}
+
+resource("resources") {
+  sources = [ rebase_path(
+          "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf") ]
+
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+# With this JSON, data sharing setup step will be provided in OOBE.
+resource("enable_data_sharing_oobe") {
+  sources = [ "config/enable_data_sharing_oobe" ]
+  outputs = [ "config/enable_data_sharing_oobe" ]
+}
+
+# With the default config, OOBE will be skipped on startup.
+config_data("default_config") {
+  for_pkg = "ermine"
+
+  sources = [
+    "//src/experiences/session_shells/ermine/login/config/default_config.json",
+  ]
+  outputs = [ "startup_config.json" ]
+}
+
+config_data("images") {
+  for_pkg = "ermine"
+
+  sources = rebase_path([ "images/Fuchsia-logo-2x.png" ])
+
+  outputs = [ "{{source_file_part}}" ]
+}

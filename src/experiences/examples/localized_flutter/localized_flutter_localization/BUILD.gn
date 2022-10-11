@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+
+dart_library("localized-flutter-localization") {
+  package_name = "localized_flutter_localization"
+
+  disable_analysis = true
+
+  sources = [
+    "messages_all.dart",
+    "messages_ar-XB.dart",
+    "messages_en-XA.dart",
+    "messages_en-XC.dart",
+    "messages_he.dart",
+    "messages_nl.dart",
+    "messages_sr-Latn.dart",
+    "messages_sr.dart",
+  ]
+
+  deps = [ "//third_party/dart-pkg/pub/intl" ]
+}

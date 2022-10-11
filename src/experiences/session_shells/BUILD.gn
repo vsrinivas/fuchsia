@@ -1,0 +1,29 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("session_shells") {
+  testonly = true
+  public_deps = [ "ermine" ]
+}
+
+group("dart_unittests") {
+  testonly = true
+
+  # TODO(fxb/41505): Temporarily disable flutter_tester tests on mac hosts.
+  _flutter_tester_tests = []
+  if (host_os != "mac") {
+    _flutter_tester_tests += [
+      "ermine/shell:ermine_unittests($host_toolchain)",
+      "ermine/keyboard_shortcuts:keyboard_shortcuts_unittests($host_toolchain)",
+    ]
+  }
+
+  deps = _flutter_tester_tests
+}
+
+group("rust_unittests") {
+  testonly = true
+
+  deps = [ "gazelle:tests" ]
+}

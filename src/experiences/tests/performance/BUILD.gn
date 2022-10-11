@@ -1,0 +1,89 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/testing/environments.gni")
+
+# Performance test runtime dependencies specific to performance tests for
+# products in src/experiences.
+#
+# This is pulled from workstation.gni.
+group("performance_deps") {
+  testonly = true
+  public_deps = [ "//src/experiences/bin/ermine_testserver" ]
+}
+
+_service_account =
+    "fuchsia-e2e-auth@fuchsia-cloud-api-for-test.iam.gserviceaccount.com"
+
+dart_test("experiences_ermine_session_shell_performance_test") {
+  null_safe = true
+  sources = [ "workstation_performance_navigation_test.dart" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_dart",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_dart",
+    "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//src/experiences/tests:ermine_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/test",
+    "//third_party/dart-pkg/pub/webdriver",
+  ]
+
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "AEMU"
+      }
+      service_account = _service_account
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      service_account = _service_account
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Atlas"
+      }
+      service_account = _service_account
+      tags = [ "e2e-fyi" ]
+    },
+  ]
+}
+
+if (is_host) {
+  host_test_data("runtime_deps") {
+    sources = [
+      "$root_out_dir/catapult_converter",
+      "$root_out_dir/trace2json",
+      "//prebuilt/third_party/chromedriver/linux-x64/chromedriver",
+    ]
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
+
+    deps = [
+      "//src/performance/trace2json:bin",
+      "//src/testing/catapult_converter:converter_bin",
+    ]
+  }
+}
+
+group("test") {
+  testonly = true
+  if (is_host && is_linux) {
+    # Chromedriver prebuilt is only available for linux-x64
+    deps = [
+      # TODO(fxb/71419): Uncomment once performance tests are working.
+      # ":experiences_ermine_session_shell_performance_test($host_toolchain)",
+    ]
+  }
+}

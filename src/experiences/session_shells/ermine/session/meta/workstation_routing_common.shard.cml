@@ -1,0 +1,183 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "workstation_session",
+            url: "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_session.cm",
+            startup: "eager",
+            environment: "#workstation_session_env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.camera3.DeviceWatcher",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.fonts.Provider",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.identity.account.AccountManager",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.power.battery.BatteryManager",
+                "fuchsia.power.button.Monitor",
+                "fuchsia.process.Launcher",
+                "fuchsia.recovery.FactoryReset",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
+                "fuchsia.settings.Privacy",
+                "fuchsia.ssh.AuthorizedKeys",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.brightness.Control",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.keyboard.focus.Controller",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.shortcut.Registry",
+                "fuchsia.ui.views.ViewRefInstalled",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+                "fuchsia.vulkan.loader.Loader",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+            from: "parent",
+            to: [ "#workstation_session" ],
+        },
+        {
+            protocol: [ "fuchsia.session.scene.Manager" ],
+            from: "parent",
+            to: [ "#workstation_session" ],
+            availability: "optional",
+        },
+        {
+            // Protocols used by element_manager
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "parent",
+            to: [ "#workstation_session" ],
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: [ "#workstation_session" ],
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#workstation_session` are only required by the `terminal`
+            // component. `terminal` is launched as a member of the `elements`
+            // collection of `#ermine_shell` (a descendent of
+            // `#workstation_session`). If/when there is a way to route
+            // capabilities to specific descendents (and specific collection
+            // members), these protocols should be routed only to terminal.
+            //
+            // Other (current and future) children of `#workstation_session`
+            // should not `use` these protocols without first getting a security
+            // policy review.
+            protocol: [
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.bluetooth.sys.Pairing",
+                "fuchsia.device.NameProvider",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.logger.Log",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.process.Resolver",
+                "fuchsia.space.Manager",
+                "fuchsia.starnix.developer.Manager",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
+                "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
+                "fuchsia.virtualization.TerminaGuestManager",
+                "fuchsia.virtualization.ZirconGuestManager",
+            ],
+            from: "parent",
+            to: [ "#workstation_session" ],
+            availability: "same_as_target",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `directory` offers to
+            // `#workstation_session` are only required by the `terminal`
+            // component. `terminal` is launched as a member of the `elements`
+            // collection of `#ermine_shell` (a descendent of
+            // `#workstation_session`). If/when there is a way to route
+            // capabilities to specific descendents (and specific collection
+            // members), these directories should be routed only to terminal.
+            //
+            // Other (current and future) children of `#workstation_session`
+            // should not `use` these directories without first getting a
+            // security policy review.
+            directory: [
+                "bin",
+                "boot-bin",
+                "pkgfs-packages",
+            ],
+            from: "parent",
+            to: [ "#workstation_session" ],
+        },
+        {
+            storage: [
+                "cache",
+                "data",
+                "tmp",
+            ],
+            from: "parent",
+            to: "#workstation_session",
+        },
+        {
+            resolver: "full-resolver",
+            from: "parent",
+            to: "#workstation_session",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+        {
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.element.Manager",
+            ],
+            from: "#workstation_session",
+        },
+    ],
+}

@@ -1,0 +1,76 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/experiences/session_shells/ermine/session/meta/workstation_routing_common.shard.cml" ],
+    children: [
+        {
+            name: "dart_jit_product_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_jit_product_runner#meta/dart_jit_product_runner.cm",
+            startup: "lazy",
+        },
+        {
+            name: "flutter_jit_product_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_jit_product_runner#meta/flutter_jit_product_runner.cm",
+            startup: "lazy",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [
+                "#dart_jit_product_runner",
+                "#flutter_jit_product_runner",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.fonts.Provider",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.settings.Intl",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#flutter_jit_product_runner" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [
+                "#dart_jit_product_runner",
+                "#flutter_jit_product_runner",
+                "#workstation_session",
+            ],
+        },
+    ],
+    environments: [
+        {
+            name: "workstation_session_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "dart_jit_product_runner",
+                    from: "#dart_jit_product_runner",
+                },
+                {
+                    runner: "flutter_jit_product_runner",
+                    from: "#flutter_jit_product_runner",
+                },
+            ],
+        },
+    ],
+}

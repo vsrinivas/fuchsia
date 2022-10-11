@@ -1,0 +1,18 @@
+[
+    {
+        "element_manager_name": "fuchsia.element.Manager-chrome",
+        "icon": "images/Chromium-icon-2x.png",
+        "title": "Chromium",
+        "url": "fuchsia-pkg://chromium.org/chrome#meta/chrome.cm"
+    },
+    {
+        "icon": "images/SpinningSquare-icon-2x.png",
+        "title": "Spinning Square",
+        "url": "fuchsia-pkg://fuchsia.com/spinning-square-rs#meta/spinning-square-rs.cm"
+    },
+    {
+        "icon": "images/Terminal-icon-2x.png",
+        "title": "Terminal",
+        "url": "fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cm"
+    }
+]

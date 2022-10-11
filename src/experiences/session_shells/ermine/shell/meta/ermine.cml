@@ -1,0 +1,301 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+
+        // Enable system logging.
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        data: "data/ermine",
+    },
+    children: [
+        {
+            name: "element_manager",
+            url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
+        },
+        {
+            name: "chrome",
+            url: "fuchsia-pkg://chromium.org/chrome#meta/chrome.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    collections: [
+        {
+            name: "elements",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [
+                "ermine.tools.ShellAutomator",
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.ui.app.ViewProvider",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.fonts.Provider",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.media",
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
+                "fuchsia.memory.Monitor",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.power.battery.BatteryManager",
+                "fuchsia.power.button.Monitor",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
+                "fuchsia.settings.Privacy",
+                "fuchsia.ssh.AuthorizedKeys",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.brightness.Control",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.shortcut.Registry",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "account",
+            path: "/data",
+        },
+        {
+            protocol: "fuchsia.element.Manager",
+            from: "#element_manager",
+            path: "/svc/fuchsia.element.Manager",
+        },
+        {
+            protocol: "fuchsia.element.Manager",
+            from: "#chrome",
+            path: "/svc/fuchsia.element.Manager-chrome",
+            dependency: "weak",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.element.GraphicalPresenter",
+            from: "self",
+            to: "#elements",
+        },
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#elements",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `protocol` offers to
+            // `#elements` are only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection,
+            // and if/when there is a way to route capabilities to specific
+            // collection members, these protocols should be routed only to
+            // terminal.
+            //
+            // Other (current and future) members of `#elements` should not
+            // `use` these protocols without first getting a security policy
+            // review.
+            protocol: [
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.bluetooth.sys.Pairing",
+                "fuchsia.device.NameProvider",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.logger.Log",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+                "fuchsia.space.Manager",
+                "fuchsia.starnix.developer.Manager",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+                "fuchsia.virtualization.DebianGuestManager",
+                "fuchsia.virtualization.LinuxManager",
+                "fuchsia.virtualization.TerminaGuestManager",
+                "fuchsia.virtualization.ZirconGuestManager",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+            from: "parent",
+            to: "#elements",
+            availability: "same_as_target",
+        },
+        {
+            // TODO(fxbug.dev/105828): These additional `directory` offers to
+            // `#elements` are only required by the `terminal` component.
+            // `terminal` is launched as a member of the `elements` collection,
+            // and if/when there is a way to route capabilities to specific
+            // collection members, these directories should be routed only to
+            // terminal.
+            //
+            // Other (current and future) members of `#elements` should not
+            // `use` these directories without first getting a security policy
+            // review.
+            directory: [
+                "bin",
+                "boot-bin",
+                "pkgfs-packages",
+            ],
+            from: "parent",
+            to: "#elements",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+            to: "#element_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys.Launcher",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "parent",
+            to: "#element_manager",
+        },
+        {
+            protocol: "fuchsia.element.GraphicalPresenter",
+            from: "self",
+            to: "#element_manager",
+            dependency: "weak",
+        },
+
+        // Support Chrome as a static component.
+        {
+            protocol: [
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.camera3.DeviceWatcher",
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#chrome",
+        },
+        {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            from: "self",
+            to: "#chrome",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: [ "#chrome" ],
+        },
+        {
+            storage: "account_cache",
+            from: "parent",
+            as: "cache",
+            to: "#chrome",
+        },
+        {
+            storage: "account_tmp",
+            from: "parent",
+            as: "tmp",
+            to: "#chrome",
+        },
+        {
+            storage: "account",
+            from: "parent",
+            as: "data",
+            to: "#chrome",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "ermine.tools.ShellAutomator",
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.ui.app.ViewProvider",
+            ],
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.element.Manager",
+            from: "#element_manager",
+        },
+    ],
+    environments: [
+        {
+            name: "full-resolver-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "parent",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+    ],
+}

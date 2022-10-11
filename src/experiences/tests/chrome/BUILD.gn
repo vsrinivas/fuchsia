@@ -1,0 +1,85 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/testing/environments.gni")
+
+# E2E product test runtime dependencies specific to end to end product tests for
+# products in src/experiences.
+#
+# This is pulled from workstation_pro.gni.
+group("end_to_end_deps") {
+  testonly = true
+  public_deps = [ "//src/experiences/bin/ermine_testserver" ]
+}
+
+dart_test("workstation_chrome_smoke_test") {
+  null_safe = true
+  sources = [ "workstation_chrome_smoke_test.dart" ]
+
+  deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
+    "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//src/experiences/tests:ermine_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    {
+      dimensions = {
+        device_type = "AEMU"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    atlas_env,
+  ]
+}
+
+dart_test("workstation_chrome_advanced_smoke_test") {
+  null_safe = true
+  sources = [ "workstation_chrome_advanced_smoke_test.dart" ]
+
+  deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
+    "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//src/experiences/tests:ermine_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  environments = [
+    # TODO(fxbug.dev/106660): Reenable on EMU after finding a stable target rect.
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    atlas_env,
+  ]
+}
+
+group("test") {
+  testonly = true
+  if (is_host && is_linux) {
+    # Chromedriver prebuilt is only available for linux-x64
+    deps = [
+      ":workstation_chrome_advanced_smoke_test($host_toolchain)",
+      ":workstation_chrome_smoke_test($host_toolchain)",
+    ]
+  }
+}

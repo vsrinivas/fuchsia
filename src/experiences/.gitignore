@@ -1,0 +1,35 @@
+### General file patterns
+*~
+.DS_Store
+.flutter_tool_state
+.vscode
+*_BACKUP_*
+*_REMOTE_*
+*_LOCAL_*
+*_BASE_*
+*.dSYM
+*.iml
+*.orig
+*.pyc
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+Cargo.lock
+!/third_party/rust_crates/**/Cargo.lock
+Cargo.toml
+!/third_party/rust_crates/**/Cargo.toml
+rls*.log
+Session.vim
+tags
+TAGS
+Thumbs.db
+.config
+
+# For storing local scripts and data files in a source tree.
+/local/
+/tmp/
+
+# rust-analyzer
+/rust-project.json

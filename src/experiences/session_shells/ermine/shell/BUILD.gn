@@ -1,0 +1,260 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/dart/dart_library.gni")
+import("//build/fidl/fidl.gni")
+import("//build/flutter/flutter_component.gni")
+import("//build/flutter/test.gni")
+import("//build/testing/flutter_driver.gni")
+import("//src/lib/icu/tools/static_icu_data.gni")
+
+declare_args() {
+  # Build arg that allows overriding the default set of application entries
+  # using '--args=ermine_app_entries="config/app_launch_entries.json"'
+  ermine_app_entries = "config/app_launch_entries.json"
+
+  # Whether or not to launch screensaver.
+  ermine_start_screensaver = false
+
+  # Whether or not to allow user feedback report from the device.
+  ermine_user_feedback_enabled = false
+}
+
+dart_library("lib") {
+  package_name = "ermine"
+  null_safe = true
+
+  entrypoints = [
+    "main.dart",
+    "test_main.dart",
+  ]
+
+  services = [
+    "src/services/automator_service.dart",
+    "src/services/focus_service.dart",
+    "src/services/launch_service.dart",
+    "src/services/preferences_service.dart",
+    "src/services/presenter_service.dart",
+    "src/services/shortcuts_service.dart",
+    "src/services/startup_service.dart",
+    "src/services/settings/battery_watcher_service.dart",
+    "src/services/settings/brightness_service.dart",
+    "src/services/settings/channel_service.dart",
+    "src/services/settings/data_sharing_consent_service.dart",
+    "src/services/settings/datetime_service.dart",
+    "src/services/settings/keyboard_service.dart",
+    "src/services/settings/memory_watcher_service.dart",
+    "src/services/settings/network_address_service.dart",
+    "src/services/settings/task_service.dart",
+    "src/services/settings/timezone_service.dart",
+    "src/services/settings/volume_service.dart",
+    "src/services/settings/wifi_service.dart",
+    "src/services/user_feedback_service.dart",
+  ]
+
+  states = [
+    "src/states/app_state.dart",
+    "src/states/app_state_impl.dart",
+    "src/states/settings_state.dart",
+    "src/states/settings_state_impl.dart",
+    "src/states/view_state.dart",
+    "src/states/view_state_impl.dart",
+  ]
+
+  widgets = [
+    "src/widgets/app.dart",
+    "src/widgets/app_bar.dart",
+    "src/widgets/app_chips.dart",
+    "src/widgets/app_launcher.dart",
+    "src/widgets/app_switcher.dart",
+    "src/widgets/app_view.dart",
+    "src/widgets/launch_button.dart",
+    "src/widgets/overlays.dart",
+    "src/widgets/quick_settings.dart",
+    "src/widgets/scrim.dart",
+    "src/widgets/settings/about_settings.dart",
+    "src/widgets/settings/channel_settings.dart",
+    "src/widgets/settings/data_sharing_consent_settings.dart",
+    "src/widgets/settings/keyboard_settings.dart",
+    "src/widgets/settings/setting_details.dart",
+    "src/widgets/settings/shortcut_settings.dart",
+    "src/widgets/settings/timezone_settings.dart",
+    "src/widgets/user_feedback.dart",
+    "src/widgets/settings/wifi_settings.dart",
+    "src/widgets/side_bar.dart",
+    "src/widgets/status.dart",
+    "src/widgets/timeout.dart",
+  ]
+
+  sources = entrypoints + services + states + widgets
+
+  deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia",
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_internationalization_flutter",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic",
+    "//sdk/dart/fuchsia_scenic_flutter",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_dart",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_dart",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_dart",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_dart",
+    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl_dart",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_dart",
+    "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio_dart",
+    "//sdk/fidl/fuchsia.memory:fuchsia.memory_dart",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_dart",
+    "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery_dart",
+    "//sdk/fidl/fuchsia.power.button:fuchsia.power.button_dart",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_dart",
+    "//sdk/fidl/fuchsia.ssh:fuchsia.ssh_dart",
+    "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_dart",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_dart",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_dart",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_dart",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_dart",
+    "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut_dart",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_dart",
+    "//sdk/fidl/fuchsia.update:fuchsia.update_dart",
+    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol_dart",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_dart",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_dart",
+    "//src/experiences/session_shells/ermine/fidl",
+    "//src/experiences/session_shells/ermine/internationalization",
+    "//src/experiences/session_shells/ermine/keyboard_shortcuts",
+    "//src/experiences/session_shells/ermine/utils:ermine_utils",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/collection",
+    "//third_party/dart-pkg/pub/flutter_mobx",
+    "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/mobx",
+    "//third_party/dart-pkg/pub/uuid",
+    "//third_party/dart-pkg/pub/vector_math",
+  ]
+}
+
+flutter_component("component") {
+  if (flutter_driver_enabled) {
+    main_dart = "test_main.dart"
+  } else {
+    main_dart = "main.dart"
+  }
+  component_name = "ermine"
+  manifest = "meta/ermine.cml"
+  deps = [
+    ":app_launch_entries_resource",
+    ":lib",
+    ":resources",
+    ":time_zone_list",
+  ]
+
+  if (ermine_user_feedback_enabled) {
+    deps += [ ":enable_user_feedback" ]
+  }
+}
+
+tz_ids_path = "${target_gen_dir}/tz_ids.txt"
+
+static_icu_data("time_zone_list") {
+  command = "tz-ids"
+  output = tz_ids_path
+
+  # Put these time zones at the top for the convenience of Fuchsia developers.
+  fixed_order_ids = [
+    "America/Los_Angeles",
+    "America/New_York",
+    "Europe/Paris",
+    "Australia/Sydney",
+  ]
+  fixed_order = string_join(",", fixed_order_ids)
+  command_args = [ "--fixed-order=${fixed_order}" ]
+}
+
+resource("app_launch_entries_resource") {
+  sources = [ ermine_app_entries ]
+  outputs = [ "data/app_launch_entries.json" ]
+  visibility = [ ":*" ]
+}
+
+preferences_path = "${target_gen_dir}/preferences.json"
+
+generated_file("preferences") {
+  outputs = [ preferences_path ]
+  contents = {
+    screensaver = ermine_start_screensaver
+  }
+  output_conversion = "json"
+}
+
+resource("resources") {
+  sources = [
+    "config/keyboard_shortcuts.json",
+    rebase_path(preferences_path),
+    rebase_path(tz_ids_path),
+    rebase_path(
+        "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf"),
+  ]
+  outputs = [ "data/{{source_file_part}}" ]
+
+  deps = [ ":preferences" ]
+}
+
+# With this JSON, user feedback will be enabled in Ermine.
+resource("enable_user_feedback") {
+  sources = [ "config/enable_user_feedback" ]
+  outputs = [ "config/enable_user_feedback" ]
+}
+
+config_data("images") {
+  for_pkg = "ermine"
+
+  sources = rebase_path([
+                          "images/Chromium-icon-2x.png",
+                          "images/Default-icon-2x.png",
+                          "images/Fuchsia-logo-2x.png",
+                          "images/Linux-icon-2x.png",
+                          "images/Settings-icon-2x.png",
+                          "images/SimpleBrowser-icon-2x.png",
+                          "images/SpinningSquare-icon-2x.png",
+                          "images/Terminal-icon-2x.png",
+                        ])
+
+  outputs = [ "{{source_file_part}}" ]
+}
+
+flutter_test("ermine_unittests") {
+  null_safe = true
+  sources = [
+    "app_chips_test.dart",
+    "app_launcher_test.dart",
+    "app_widget_test.dart",
+    "overlays_widget_test.dart",
+    "quick_settings_widget_test.dart",
+    "side_bar_widget_test.dart",
+  ]
+
+  deps = [
+    ":lib",
+    "//sdk/dart/fuchsia_logger",
+    "//src/experiences/session_shells/ermine/internationalization",
+    "//src/experiences/session_shells/ermine/keyboard_shortcuts",
+    "//src/experiences/session_shells/ermine/utils:ermine_utils",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/http",
+    "//third_party/dart-pkg/pub/intl",
+    "//third_party/dart-pkg/pub/mobx",
+    "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}

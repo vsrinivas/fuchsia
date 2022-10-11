@@ -1,0 +1,29 @@
+# Global approvers
+#
+# Please keep in sync with //OWNERS
+aaronwood@google.com
+abarth@google.com
+abdulla@google.com
+digit@google.com
+etiennej@google.com
+ianloic@google.com
+jamesr@google.com
+jeremymanson@google.com
+joshuaseaton@google.com
+lindkvist@google.com
+maruel@google.com
+mcgrathr@google.com
+phosek@google.com
+qsr@google.com
+shayba@google.com
+surajmalhotra@google.com
+tamird@google.com
+thatguy@google.com
+tmandry@google.com
+
+# //src/experiences OWNERS
+anwilson@google.com
+chaselatta@google.com
+cwhitten@google.com
+jasoncampbell@google.com
+sanjayc@google.com

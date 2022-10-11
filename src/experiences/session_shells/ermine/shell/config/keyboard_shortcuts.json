@@ -1,0 +1,285 @@
+{
+    "cancel": [
+        {
+            "char": "escape",
+            "chord": "Escape",
+            "description": "Dismiss system overlays",
+            "localizedDescription": "cancelKeyboardShortcut"
+        }
+    ],
+    "close": [
+        {
+            "char": "w",
+            "chord": "Shift + Ctrl + w",
+            "description": "Close top view",
+            "exclusive": true,
+            "modifier": "shift + control",
+            "localizedDescription": "closeKeyboardShortcut"
+        }
+    ],
+    "launcher": [
+        {
+            "char": "leftMeta",
+            "chord": "Meta",
+            "description": "Show Launcher",
+            "exclusive": true,
+            "localizedDescription": "launcherKeyboardShortcut"
+        },
+        {
+            "char": "rightMeta",
+            "chord": "Meta",
+            "description": "Show Launcher",
+            "exclusive": true,
+            "localizedDescription": "launcherKeyboardShortcut"
+        },
+        {
+            "char": "space",
+            "chord": "Alt + Space",
+            "description": "Show Launcher",
+            "exclusive": true,
+            "modifier": "alt",
+            "localizedDescription": "launcherKeyboardShortcut"
+        }
+    ],
+    "settings": [
+        {
+            "char": "s",
+            "chord": "Alt + Shift + s",
+            "description": "Show Quick Settings",
+            "exclusive": true,
+            "modifier": "alt + shift",
+            "localizedDescription": "settingsKeyboardShortcut"
+        }
+    ],
+    "shortcuts": [
+        {
+            "char": "slash",
+            "chord": "Ctrl + Alt + /",
+            "description": "Show keyboard shortcuts",
+            "exclusive": true,
+            "modifier": "control + alt",
+            "localizedDescription": "shortcutsKeyboardShortcut"
+        }
+    ],
+    "screenSaver": [
+        {
+            "char": "q",
+            "chord": "Ctrl + Alt + q",
+            "description": "Start screen saver",
+            "exclusive": true,
+            "trigger": "pressAndRelease",
+            "modifier": "control + alt",
+            "localizedDescription": "screenSaverKeyboardShortcut"
+        }
+    ],
+    "switchNext": [
+        {
+            "char": "tab",
+            "chord": "Alt + tab",
+            "description": "Switch to next app",
+            "exclusive": true,
+            "modifier": "alt",
+            "localizedDescription": "switchNextKeyboardShortcut"
+        }
+    ],
+    "switchPrev": [
+        {
+            "char": "tab",
+            "chord": "Shift + Alt + tab",
+            "description": "Switch to previous app",
+            "exclusive": true,
+            "modifier": "shift + alt",
+            "localizedDescription": "switchPrevKeyboardShortcut"
+        }
+    ],
+    "navigateBack": [
+        {
+            "char": "f1",
+            "chord": "F1",
+            "description": "Navigate Back",
+            "exclusive": false,
+            "localizedDescription": "navigateBackKeyboardShortcut"
+        },
+        {
+            "char": "acBack",
+            "chord": "←",
+            "description": "Navigate Back",
+            "exclusive": false,
+            "localizedDescription": "navigateBackKeyboardShortcut"
+        }
+    ],
+    "refresh": [
+        {
+            "char": "f2",
+            "chord": "F2",
+            "description": "Refresh",
+            "exclusive": false,
+            "localizedDescription": "refreshKeyboardShortcut"
+        },
+        {
+            "char": "acRefresh",
+            "chord": "⟳",
+            "description": "Refresh",
+            "exclusive": false,
+            "localizedDescription": "refreshKeyboardShortcut"
+        }
+    ],
+    "fullscreenToggle": [
+        {
+            "char": "f3",
+            "chord": "F3",
+            "description": "Toggle Fullscreen",
+            "exclusive": true,
+            "localizedDescription": "fullscreenToggleKeyboardShortcut"
+        },
+        {
+            "char": "acFullScreenView",
+            "chord": "⛶",
+            "description": "Toggle Fullscreen",
+            "exclusive": true,
+            "localizedDescription": "fullscreenToggleKeyboardShortcut"
+        }
+    ],
+    "arrangeWindows": [
+        {
+            "char": "f4",
+            "chord": "F4",
+            "description": "Arrange Windows",
+            "exclusive": true,
+            "localizedDescription": "arrangeWindowsKeyboardShortcut"
+        },
+        {
+            "char": "acSelectTaskApplication",
+            "chord": "◻‖",
+            "description": "Arrange Windows",
+            "exclusive": true,
+            "localizedDescription": "arrangeWindowsKeyboardShortcut"
+        }
+    ],
+    "decreaseBrightness": [
+        {
+            "char": "f5",
+            "chord": "F5",
+            "description": "Decrease Screen Brightness",
+            "exclusive": true,
+            "localizedDescription": "decreaseBrightnessKeyboardShortcut"
+        },
+        {
+            "char": "brightnessDown",
+            "chord": "🔅",
+            "description": "Decrease Screen Brightness",
+            "exclusive": true,
+            "localizedDescription": "decreaseBrightnessKeyboardShortcut"
+        }
+    ],
+    "increaseBrightness": [
+        {
+            "char": "f6",
+            "chord": "F6",
+            "description": "Increase Screen Brightness",
+            "exclusive": true,
+            "localizedDescription": "increaseBrightnessKeyboardShortcut"
+        },
+        {
+            "char": "brightnessUp",
+            "chord": "🔆",
+            "description": "Increase Screen Brightness",
+            "exclusive": true,
+            "localizedDescription": "increaseBrightnessKeyboardShortcut"
+        }
+    ],
+    "playPauseMedia": [
+        {
+            "char": "f7",
+            "chord": "F7",
+            "description": "Play/Pause Media",
+            "exclusive": false,
+            "localizedDescription": "playPauseMediaKeyboardShortcut"
+        },
+        {
+            "char": "playPause",
+            "chord": "⏯",
+            "description": "Play/Pause Media",
+            "exclusive": false,
+            "localizedDescription": "playPauseMediaKeyboardShortcut"
+        }
+    ],
+    "muteVolume": [
+        {
+            "char": "f8",
+            "chord": "F8",
+            "description": "Mute Volume",
+            "exclusive": false,
+            "localizedDescription": "muteVolumeKeyboardShortcut"
+        },
+        {
+            "char": "mute",
+            "chord": "🔇",
+            "description": "Mute Volume",
+            "exclusive": false,
+            "localizedDescription": "muteVolumeKeyboardShortcut"
+        }
+    ],
+    "decreaseVolume": [
+        {
+            "char": "f9",
+            "chord": "F9",
+            "description": "Decrease Volume",
+            "exclusive": false,
+            "localizedDescription": "decreaseVolumeKeyboardShortcut"
+        },
+        {
+            "char": "volumeDown",
+            "chord": "🔉",
+            "description": "Decrease Volume",
+            "exclusive": false,
+            "localizedDescription": "decreaseVolumeKeyboardShortcut"
+        }
+    ],
+    "increaseVolume": [
+        {
+            "char": "f10",
+            "chord": "F10",
+            "description": "Increase Volume",
+            "exclusive": false,
+            "localizedDescription": "increaseVolumeKeyboardShortcut"
+        },
+        {
+            "char": "volumeUp",
+            "chord": "🔊",
+            "description": "Increase Volume",
+            "exclusive": false,
+            "localizedDescription": "increaseVolumeKeyboardShortcut"
+        }
+    ],
+    "zoomIn": [
+        {
+            "char": "up",
+            "chord": "Shift + Ctrl + Arrow Up",
+            "modifier": "shift + control",
+            "exclusive": false,
+            "description": "Zoom In",
+            "localizedDescription": "zoomInKeyboardShortcut"
+        }
+    ],
+    "zoomOut": [
+        {
+            "char": "down",
+            "chord": "Shift + Ctrl + Arrow Down",
+            "modifier": "shift + control",
+            "exclusive": false,
+            "description": "Zoom Out",
+            "localizedDescription": "zoomOutKeyboardShortcut"
+        }
+    ],
+    "reportAnIssue": [
+        {
+            "char": "i",
+            "chord": "Ctrl + Alt + i",
+            "modifier": "control + alt",
+            "exclusive": false,
+            "description": "Report an Issue",
+            "localizedDescription": "reportAnIssueKeyboardShortcut"
+        }
+    ]
+}

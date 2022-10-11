@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("examples") {
+  deps = [
+    "hello_experiences:hello-experiences",
+    "localized_flutter:localized-flutter",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":dart_unittests" ]
+}
+
+group("dart_unittests") {
+  testonly = true
+
+  # TODO(fxb/41505): Temporarily disable flutter_tester tests on mac hosts.
+  _flutter_tester_tests = []
+  if (host_os != "mac") {
+    _flutter_tester_tests += [
+      "localized_flutter/localized_flutter_app:localized_flutter_app_unittests($host_toolchain)",
+      "hello_experiences:hello_experiences_unittests($host_toolchain)",
+    ]
+  }
+
+  deps = _flutter_tester_tests
+}

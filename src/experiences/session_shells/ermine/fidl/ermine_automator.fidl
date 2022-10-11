@@ -1,0 +1,100 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library ermine.tools;
+
+// A maximum of 16 fences is enough for the current usage of these APIs.
+const MAX_PASSWORD_LENGTH int32 = 64;
+
+/// The set of error codes returned from calls to the automator API.
+type AutomatorErrorCode = flexible enum {
+    /// Indicates that the system was not in an expected state when the call was made.
+    INVALID_STATE = 1;
+    /// Indicates that the parameters provided were invalid or incomplete.
+    INVALID_ARGS = 2;
+    /// Indicates that the call failed to perform the expectated action.
+    FAILED = 3;
+};
+
+/// The set of OOBE pages that are available for automation.
+type OobePage = flexible enum {
+    /// An OOBE page is visible but not available for automation. Use [`SkipPage`] to
+    /// to skip this page.
+    UNKNOWN = 1;
+    /// The set password page is visible. Use [`SetPasssword`] to automate setting
+    /// the password and moving to the next screen.
+    SET_PASSWORD = 2;
+    /// The login page is visible. Use [`Login`] to automate login and moving to the
+    /// next screen.
+    LOGIN = 3;
+    /// There are no OOBE pages visible. Instead the Shell is visible. Use [`ShellAutomator`]
+    /// to automate the shell functionality.
+    SHELL = 20;
+};
+
+/// A protocol used to automate OOBE functionality by test scripts.
+///
+/// The automation is meant for programmatic control of the system by clients
+/// that are the only users of the system. Presence of more than one entity
+/// driving the system will result in unexpected and errorneous behavior.
+@discoverable
+protocol OobeAutomator {
+    /// Returns the currently visible [`OobePage`] that is visible.
+    ///
+    /// This call does not return any error.
+    GetOobePage() -> (struct {
+        state OobePage;
+    });
+
+    /// Set the password on the [`SET_PASSWORD`] OOBE page.
+    ///
+    /// Returns [`INVALID_STATE`] when not on [`SET_PASSWORD`] page.
+    /// Returns [`INVALID_ARGS`] if fails to set password with the supplied password.
+    SetPassword(struct {
+        password string:MAX_PASSWORD_LENGTH;
+    }) -> (struct {}) error AutomatorErrorCode;
+
+    /// Login with a password on the [`LOGIN`] OOBE page.
+    ///
+    /// Returns [`INVALID_STATE`] when not on [`LOGIN`] page.
+    /// Returns [`INVALID_ARGS`] if fails to login with the supplied password.
+    Login(struct {
+        password string:MAX_PASSWORD_LENGTH;
+    }) -> (struct {}) error AutomatorErrorCode;
+
+    /// Skip an [`UNKNOWN`] OOBE page.
+    ///
+    /// Returns [`INVALID_STATE`] when not in OOBE or not on a [`UNKNOWN`] page.
+    /// Returns [`FAILED`] if a page cannot be skipped for any reason.
+    SkipPage() -> (struct {}) error AutomatorErrorCode;
+};
+
+/// A protocol used to automate Shell functionality by test scripts.
+///
+/// The automation is meant for programmatic control of the system by clients
+/// that are the only users of the system. Presence of more than one entity
+/// driving the system will result in unexpected and errorneous behavior.
+@discoverable
+protocol ShellAutomator {
+    /// Launch an application given its name.
+    ///
+    /// param: app_name
+    ///
+    /// Only names of applications that are registered with the Shell in its
+    /// application launcher UI are accepted.
+    ///
+    /// Returns after the application is successfully launched and has
+    /// keyboard focus.
+    ///
+    /// Returns [`INVALID_STATE`] when not logged in to the shell.
+    /// Returns [`INVALID_ARGS`] if app_name was not found.
+    /// Returns [`FAILED`] if application fails to launch for any reason.
+    Launch(table {
+        1: app_name string:128;
+    }) -> (struct {}) error AutomatorErrorCode;
+
+    /// Closes all applications currently opened in the Shell.
+    ///
+    /// Returns [`FAILED`] if it fails for any reason.
+    CloseAll() -> (struct {}) error AutomatorErrorCode;
+};

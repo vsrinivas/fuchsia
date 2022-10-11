@@ -1,0 +1,53 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/flutter/test.gni")
+
+dart_library("ermine_ui") {
+  package_name = "ermine_ui"
+  null_safe = true
+  sources = [
+    "ermine_ui.dart",
+    "ui_components/alert/alert.dart",
+    "ui_components/alert/layout.dart",
+    "ui_components/button/bordered_button.dart",
+    "ui_components/button/button.dart",
+    "ui_components/button/filled_button.dart",
+    "ui_components/button/layout.dart",
+    "ui_components/button/text_only_button.dart",
+    "ui_components/inputs/layout.dart",
+    "ui_components/inputs/text_field.dart",
+    "ui_components/loading_indicator/layout.dart",
+    "ui_components/loading_indicator/loading_indicator.dart",
+    "ui_components/toggles/checkbox.dart",
+    "ui_components/toggles/layout.dart",
+    "ui_components/toggles/radio.dart",
+    "visual_languages/colors.dart",
+    "visual_languages/icons.dart",
+    "visual_languages/text_styles.dart",
+  ]
+  deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
+}
+
+# fx test ermine_ui_unittests
+flutter_test("ermine_ui_unittests") {
+  null_safe = true
+  sources = [
+    "alert_test.dart",
+    "bordered_button_test.dart",
+    "checkbox_test.dart",
+    "filled_button_test.dart",
+    "loading_indicator_test.dart",
+    "radio_test.dart",
+    "text_field_test.dart",
+    "text_only_button_test.dart",
+  ]
+
+  deps = [
+    ":ermine_ui",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+  ]
+}

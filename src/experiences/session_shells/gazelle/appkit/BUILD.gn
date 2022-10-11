@@ -1,0 +1,68 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+import("//src/lib/vulkan/vulkan.gni")
+
+rustc_library("appkit") {
+  name = "appkit"
+  with_unit_tests = true
+  version = "0.1.0"
+  edition = "2018"
+  sources = [
+    "src/child_view.rs",
+    "src/event.rs",
+    "src/lib.rs",
+    "src/tests.rs",
+    "src/utils.rs",
+    "src/window.rs",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.element:fuchsia.element_rust",
+    "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
+    "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
+    "//src/lib/async-utils",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/ui/fuchsia-scenic",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
+    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_rust",
+    "//sdk/fidl/fuchsia.ui.test.scene:fuchsia.ui.test.scene_rust",
+    "//src/lib/fuchsia",
+  ]
+}
+
+fuchsia_unittest_package("appkit-tests") {
+  component_name = "appkit_lib_test"
+  manifest = "meta/appkit_lib_test.cml"
+  deps = [
+    ":appkit_test",
+    "//src/ui/testing/test_ui_stack:flatland_scene_manager_config",
+    "//src/ui/testing/test_ui_stack:test-ui-stack-component",
+  ]
+  test_specs = {
+    parallel = 1
+    log_settings = {
+      max_severity = "ERROR"
+    }
+
+    # Ensure the device has Vulkan.
+    environments = vulkan_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":appkit-tests" ]
+}

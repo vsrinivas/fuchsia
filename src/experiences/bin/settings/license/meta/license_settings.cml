@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        data: "data/license_settings"
+    },
+    include: [
+        "syslog/client.shard.cml",
+    ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.ui.app.ViewProvider",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.ui.app.ViewProvider",
+            ],
+            from: "self",
+        },
+    ],
+}
