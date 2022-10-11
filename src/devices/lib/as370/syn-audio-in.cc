@@ -22,13 +22,12 @@ namespace {
 constexpr uint64_t kPortDmaNotification = 0x00;
 }  // namespace
 
-std::unique_ptr<SynAudioInDevice> SynAudioInDevice::Create(ddk::MmioBuffer mmio_global,
-                                                           ddk::MmioBuffer mmio_avio_global,
+std::unique_ptr<SynAudioInDevice> SynAudioInDevice::Create(ddk::MmioBuffer mmio_avio_global,
                                                            ddk::MmioBuffer mmio_i2s,
                                                            ddk::SharedDmaProtocolClient dma) {
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<SynAudioInDevice>(new (&ac) SynAudioInDevice(
-      std::move(mmio_global), std::move(mmio_avio_global), std::move(mmio_i2s), dma));
+  auto dev = std::unique_ptr<SynAudioInDevice>(
+      new (&ac) SynAudioInDevice(std::move(mmio_avio_global), std::move(mmio_i2s), dma));
   if (!ac.check()) {
     return nullptr;
   }
@@ -41,12 +40,9 @@ std::unique_ptr<SynAudioInDevice> SynAudioInDevice::Create(ddk::MmioBuffer mmio_
   return dev;
 }
 
-SynAudioInDevice::SynAudioInDevice(ddk::MmioBuffer mmio_global, ddk::MmioBuffer mmio_avio_global,
-                                   ddk::MmioBuffer mmio_i2s, ddk::SharedDmaProtocolClient dma)
-    : global_(std::move(mmio_global)),
-      avio_global_(std::move(mmio_avio_global)),
-      i2s_(std::move(mmio_i2s)),
-      dma_(dma) {
+SynAudioInDevice::SynAudioInDevice(ddk::MmioBuffer mmio_avio_global, ddk::MmioBuffer mmio_i2s,
+                                   ddk::SharedDmaProtocolClient dma)
+    : avio_global_(std::move(mmio_avio_global)), i2s_(std::move(mmio_i2s)), dma_(dma) {
   cic_filter_ = std::make_unique<CicFilter>();
 }
 

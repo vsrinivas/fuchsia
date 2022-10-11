@@ -82,22 +82,17 @@ zx_status_t As370AudioStreamIn::InitPDev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  std::optional<ddk::MmioBuffer> mmio_global, mmio_avio_global, mmio_i2s;
-  zx_status_t status = pdev_.MapMmio(0, &mmio_global);
+  std::optional<ddk::MmioBuffer> mmio_avio_global, mmio_i2s;
+  zx_status_t status = pdev_.MapMmio(0, &mmio_avio_global);
   if (status != ZX_OK) {
     return status;
   }
-  status = pdev_.MapMmio(1, &mmio_avio_global);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = pdev_.MapMmio(2, &mmio_i2s);
+  status = pdev_.MapMmio(1, &mmio_i2s);
   if (status != ZX_OK) {
     return status;
   }
 
-  lib_ = SynAudioInDevice::Create(*std::move(mmio_global), *std::move(mmio_avio_global),
-                                  *std::move(mmio_i2s), dma);
+  lib_ = SynAudioInDevice::Create(*std::move(mmio_avio_global), *std::move(mmio_i2s), dma);
   if (lib_ == nullptr) {
     zxlogf(ERROR, "failed to create Syn audio device");
     return ZX_ERR_NO_MEMORY;

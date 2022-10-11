@@ -29,8 +29,7 @@ class SynAudioInDevice {
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(SynAudioInDevice);
 
-  static std::unique_ptr<SynAudioInDevice> Create(ddk::MmioBuffer mmio_global,
-                                                  ddk::MmioBuffer mmio_avio_global,
+  static std::unique_ptr<SynAudioInDevice> Create(ddk::MmioBuffer mmio_avio_global,
                                                   ddk::MmioBuffer mmio_i2s,
                                                   ddk::SharedDmaProtocolClient dma);
 
@@ -58,14 +57,12 @@ class SynAudioInDevice {
   static constexpr uint32_t kNumberOfDmas = (kNumberOfChannels + 1) / 2;
 
   // TODO(andresoportus): Add more configuration options.
-  SynAudioInDevice(ddk::MmioBuffer mmio_global, ddk::MmioBuffer mmio_avio_global,
-                   ddk::MmioBuffer mmio_i2s,
+  SynAudioInDevice(ddk::MmioBuffer mmio_avio_global, ddk::MmioBuffer mmio_i2s,
                    ddk::SharedDmaProtocolClient dma);  // protected for unit testing.
   std::unique_ptr<CicFilter> cic_filter_;              // protected for unit testing.
   uint32_t dma_buffer_size_[kNumberOfDmas] = {};       // protected for unit testing.
 
  private:
-  ddk::MmioBuffer global_;
   ddk::MmioBuffer avio_global_;
   ddk::MmioBuffer i2s_;  // the i2s name comes from the docs, not used as I2S here, has PDM config.
   const ddk::SharedDmaProtocolClient dma_;

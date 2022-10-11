@@ -106,10 +106,6 @@ static const device_fragment_t in_fragments[] = {
 zx_status_t As370::AudioInit() {
   static const std::vector<fpbus::Mmio> mmios_out{
       {{
-          .base = as370::kGlobalBase,
-          .length = as370::kGlobalSize,
-      }},
-      {{
           .base = as370::kAudioGlobalBase,
           .length = as370::kAudioGlobalSize,
       }},
@@ -127,10 +123,6 @@ zx_status_t As370::AudioInit() {
   controller_out.mmio() = mmios_out;
 
   static const std::vector<fpbus::Mmio> mmios_in{
-      {{
-          .base = as370::kGlobalBase,
-          .length = as370::kGlobalSize,
-      }},
       {{
           .base = as370::kAudioGlobalBase,
           .length = as370::kAudioGlobalSize,

@@ -30,22 +30,20 @@ class SynAudioInDeviceTest : public SynAudioInDevice {
     static fbl::Array<ddk_mock::MockMmioReg> unused_mocks =
         fbl::Array(new ddk_mock::MockMmioReg[1], 1);
     static ddk_mock::MockMmioRegRegion unused_region(unused_mocks.data(), sizeof(uint32_t), 1);
-    ddk::MmioBuffer b1(unused_region.GetMmioBuffer());
     ddk::MmioBuffer b2(unused_region.GetMmioBuffer());
     ddk::MmioBuffer b3(unused_region.GetMmioBuffer());
 
     fbl::AllocChecker ac;
-    auto dev = std::unique_ptr<SynAudioInDeviceTest>(new (&ac) SynAudioInDeviceTest(
-        std::move(b1), std::move(b2), std::move(b3), dma->GetProto()));
+    auto dev = std::unique_ptr<SynAudioInDeviceTest>(
+        new (&ac) SynAudioInDeviceTest(std::move(b2), std::move(b3), dma->GetProto()));
     if (!ac.check()) {
       return nullptr;
     }
     return dev;
   }
-  SynAudioInDeviceTest(ddk::MmioBuffer mmio_global, ddk::MmioBuffer mmio_avio,
-                       ddk::MmioBuffer mmio_i2s, ddk::SharedDmaProtocolClient dma)
-      : SynAudioInDevice(std::move(mmio_global), std::move(mmio_avio), std::move(mmio_i2s),
-                         std::move(dma)) {
+  SynAudioInDeviceTest(ddk::MmioBuffer mmio_avio, ddk::MmioBuffer mmio_i2s,
+                       ddk::SharedDmaProtocolClient dma)
+      : SynAudioInDevice(std::move(mmio_avio), std::move(mmio_i2s), std::move(dma)) {
     cic_filter_ = std::make_unique<CicFilterTest>();
     dma_buffer_size_[0] = 0x10;
     if (kNumberOfDmas > 1) {

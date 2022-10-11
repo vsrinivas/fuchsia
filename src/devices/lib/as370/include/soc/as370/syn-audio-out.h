@@ -20,8 +20,7 @@ class SynAudioOutDevice {
   SynAudioOutDevice(const SynAudioOutDevice&) = delete;
   SynAudioOutDevice& operator=(const SynAudioOutDevice&) = delete;
 
-  static std::unique_ptr<SynAudioOutDevice> Create(ddk::MmioBuffer mmio_global,
-                                                   ddk::MmioBuffer mmio_avio_global,
+  static std::unique_ptr<SynAudioOutDevice> Create(ddk::MmioBuffer mmio_avio_global,
                                                    ddk::MmioBuffer mmio_i2s,
                                                    ddk::SharedDmaProtocolClient dma);
 
@@ -43,7 +42,6 @@ class SynAudioOutDevice {
  private:
   static constexpr uint32_t kFifoDepth = 1024;  // in bytes.
 
-  ddk::MmioBuffer global_;
   ddk::MmioBuffer avio_global_;
   ddk::MmioBuffer i2s_;
   bool enabled_ = false;
@@ -51,8 +49,8 @@ class SynAudioOutDevice {
   ddk::SharedDmaProtocolClient dma_;
   zx::vmo dma_buffer_;
 
-  SynAudioOutDevice(ddk::MmioBuffer mmio_global, ddk::MmioBuffer mmio_avio_global,
-                    ddk::MmioBuffer mmio_i2s, ddk::SharedDmaProtocolClient dma);
+  SynAudioOutDevice(ddk::MmioBuffer mmio_avio_global, ddk::MmioBuffer mmio_i2s,
+                    ddk::SharedDmaProtocolClient dma);
 
   zx_status_t Init();
 };

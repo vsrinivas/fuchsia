@@ -11,13 +11,12 @@
 #include <soc/as370/as370-dma.h>
 #include <soc/as370/syn-audio-out.h>
 
-std::unique_ptr<SynAudioOutDevice> SynAudioOutDevice::Create(ddk::MmioBuffer mmio_global,
-                                                             ddk::MmioBuffer mmio_avio_global,
+std::unique_ptr<SynAudioOutDevice> SynAudioOutDevice::Create(ddk::MmioBuffer mmio_avio_global,
                                                              ddk::MmioBuffer mmio_i2s,
                                                              ddk::SharedDmaProtocolClient dma) {
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<SynAudioOutDevice>(new (&ac) SynAudioOutDevice(
-      std::move(mmio_global), std::move(mmio_avio_global), std::move(mmio_i2s), dma));
+  auto dev = std::unique_ptr<SynAudioOutDevice>(
+      new (&ac) SynAudioOutDevice(std::move(mmio_avio_global), std::move(mmio_i2s), dma));
   if (!ac.check()) {
     return nullptr;
   }
@@ -25,12 +24,9 @@ std::unique_ptr<SynAudioOutDevice> SynAudioOutDevice::Create(ddk::MmioBuffer mmi
   return dev;
 }
 
-SynAudioOutDevice::SynAudioOutDevice(ddk::MmioBuffer mmio_global, ddk::MmioBuffer mmio_avio_global,
-                                     ddk::MmioBuffer mmio_i2s, ddk::SharedDmaProtocolClient dma)
-    : global_(std::move(mmio_global)),
-      avio_global_(std::move(mmio_avio_global)),
-      i2s_(std::move(mmio_i2s)),
-      dma_(dma) {
+SynAudioOutDevice::SynAudioOutDevice(ddk::MmioBuffer mmio_avio_global, ddk::MmioBuffer mmio_i2s,
+                                     ddk::SharedDmaProtocolClient dma)
+    : avio_global_(std::move(mmio_avio_global)), i2s_(std::move(mmio_i2s)), dma_(dma) {
   AIO_PRI_TSD0_PRI_CTRL::Get().ReadFrom(&i2s_).set_ENABLE(0).WriteTo(&i2s_);  // Disable channel 0.
   AIO_IRQENABLE::Get().ReadFrom(&i2s_).set_PRIIRQ(1).WriteTo(&i2s_);
   AIO_PRI_PRIPORT::Get().ReadFrom(&i2s_).set_ENABLE(1).WriteTo(&i2s_);
