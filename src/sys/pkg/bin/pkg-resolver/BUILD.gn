@@ -103,6 +103,7 @@ rustc_library("lib") {
     "src/repository_service.rs",
     "src/resolver_service.rs",
     "src/resolver_service/inspect.rs",
+    "src/resolver_service/resolve_with_context.rs",
     "src/rewrite_manager.rs",
     "src/rewrite_service.rs",
     "src/test_util.rs",

@@ -24,7 +24,7 @@ use {
     fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::{
         self as fpkg, FontResolverRequest, FontResolverRequestStream, PackageResolverRequest,
-        PackageResolverRequestStream, ResolveError,
+        PackageResolverRequestStream,
     },
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId},
     fuchsia_cobalt_builders::MetricEventExt as _,
@@ -40,6 +40,8 @@ use {
 
 mod inspect;
 pub use inspect::ResolverService as ResolverServiceInspectState;
+
+mod resolve_with_context;
 
 /// Work-queue based package resolver. When all clones of
 /// [`QueuedResolver`] are dropped, the queue will resolve all remaining
@@ -175,10 +177,7 @@ impl Resolver for QueuedResolver {
             ),
         ]);
         resolve_res.map(|pkg_with_source| {
-            (
-                pkg_with_source.package,
-                pkg::ResolutionContext::new(pkg_with_source.blob_id.as_bytes().to_vec()),
-            )
+            (pkg_with_source.package, pkg_with_source.blob_id.as_bytes().to_vec().into())
         })
     }
 }
@@ -428,68 +427,50 @@ pub async fn run_resolver_service(
     stream
         .map_err(anyhow::Error::new)
         .try_for_each_concurrent(None, |event| async {
-            let mut cobalt_sender = cobalt_sender.clone();
             match event {
                 PackageResolverRequest::Resolve { package_url, dir, responder } => {
-                    let start_time = Instant::now();
-                    let response = resolve_and_reopen(
-                        &package_resolver,
-                        package_url.clone(),
+                    let response = resolve_unparsed_absolute_url_and_send_cobalt_metrics(
+                        &package_url,
                         dir,
+                        &package_resolver,
                         eager_package_manager.as_ref().as_ref(),
+                        cobalt_sender.clone(),
                     )
                     .await;
-
-                    cobalt_sender.send(
-                        MetricEvent::builder(metrics::RESOLVE_STATUS_MIGRATED_METRIC_ID)
-                            .with_event_codes(resolve_result_to_resolve_status_code(&response))
-                            .as_occurrence(1),
-                    );
-
-                    cobalt_sender.send(
-                        MetricEvent::builder(metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID)
-                            .with_event_codes((
-                                resolve_result_to_resolve_duration_code(&response),
-                                metrics::ResolveDurationMigratedMetricDimensionResolverType::Regular,
-                            ))
-                            .as_integer(
-                                Instant::now().duration_since(start_time).as_micros() as i64
-                            ),
-                    );
-
-                    responder.send(&mut response.map_err(|status| status.into())).with_context(
-                        || {
+                    let () =
+                        responder.send(&mut response.map_err(Into::into)).with_context(|| {
                             format!(
                                 "sending fuchsia.pkg/PackageResolver.Resolve response for {:?}",
                                 package_url
                             )
-                        },
-                    )?;
+                        })?;
                     Ok(())
                 }
-
                 PackageResolverRequest::ResolveWithContext {
                     package_url,
                     context,
-                    dir: _,
+                    dir,
                     responder,
                 } => {
-                    fx_log_err!(
-                        "ResolveWithContext is not currently implemented by the resolver_service.
-                         Could not resolve {} with context {:?}",
-                        package_url,
+                    let response = resolve_with_context::resolve_with_context(
+                        package_url.clone(),
                         context,
-                    );
-                    responder.send(&mut Err(ResolveError::Internal)).with_context(|| {
-                        format!(
-                            "sending fuchsia.pkg/PackageResolver.ResolveWithContext response
-                                 for {} with context {:?}",
-                            package_url, context
-                        )
-                    })?;
+                        dir,
+                        &package_resolver,
+                        eager_package_manager.as_ref().as_ref(),
+                        cobalt_sender.clone(),
+                    )
+                    .await;
+                    let () =
+                        responder.send(&mut response.map_err(Into::into)).with_context(|| {
+                            format!(
+                                "sending fuchsia.pkg/PackageResolver.ResolveWithContext response \
+                                 for {:?}",
+                                package_url
+                            )
+                        })?;
                     Ok(())
                 }
-
                 PackageResolverRequest::GetHash { package_url, responder } => {
                     match get_hash(
                         &rewriter,
@@ -526,6 +507,53 @@ pub async fn run_resolver_service(
             }
         })
         .await
+}
+
+async fn resolve_unparsed_absolute_url_and_send_cobalt_metrics(
+    url: &str,
+    dir: ServerEnd<fio::DirectoryMarker>,
+    package_resolver: &QueuedResolver,
+    eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
+    cobalt_sender: ProtocolSender<MetricEvent>,
+) -> Result<fpkg::ResolutionContext, pkg::ResolveError> {
+    let url = AbsolutePackageUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
+    resolve_absolute_url_and_send_cobalt_metrics(
+        url,
+        dir,
+        package_resolver,
+        eager_package_manager,
+        cobalt_sender,
+    )
+    .await
+}
+
+async fn resolve_absolute_url_and_send_cobalt_metrics(
+    package_url: AbsolutePackageUrl,
+    dir: ServerEnd<fio::DirectoryMarker>,
+    package_resolver: &QueuedResolver,
+    eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
+    mut cobalt_sender: ProtocolSender<MetricEvent>,
+) -> Result<fpkg::ResolutionContext, pkg::ResolveError> {
+    let start_time = Instant::now();
+    let response =
+        resolve_and_reopen(package_resolver, package_url, dir, eager_package_manager).await;
+
+    cobalt_sender.send(
+        MetricEvent::builder(metrics::RESOLVE_STATUS_MIGRATED_METRIC_ID)
+            .with_event_codes(resolve_result_to_resolve_status_code(&response))
+            .as_occurrence(1),
+    );
+
+    cobalt_sender.send(
+        MetricEvent::builder(metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID)
+            .with_event_codes((
+                resolve_result_to_resolve_duration_code(&response),
+                metrics::ResolveDurationMigratedMetricDimensionResolverType::Regular,
+            ))
+            .as_integer(Instant::now().duration_since(start_time).as_micros() as i64),
+    );
+
+    response
 }
 
 async fn rewrite_url(
@@ -744,14 +772,12 @@ async fn get_hash(
 
 async fn resolve_and_reopen(
     package_resolver: &QueuedResolver,
-    url: String,
+    url: AbsolutePackageUrl,
     dir_request: ServerEnd<fio::DirectoryMarker>,
     eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
 ) -> Result<fpkg::ResolutionContext, pkg::ResolveError> {
-    let pkg_url =
-        AbsolutePackageUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
     let (pkg, resolution_context) =
-        package_resolver.resolve(pkg_url, eager_package_manager).await?;
+        package_resolver.resolve(url.clone(), eager_package_manager).await?;
     let () = pkg.reopen(dir_request).map_err(|e| {
         fx_log_err!("failed to re-open directory for package url {}: {:#}", url, anyhow!(e));
         pkg::ResolveError::Internal
@@ -832,7 +858,8 @@ async fn resolve_font<'a>(
     );
     if is_font_package {
         let _resolution_context =
-            resolve_and_reopen(&package_resolver, package_url, directory_request, None).await?;
+            resolve_and_reopen(&package_resolver, parsed_package_url, directory_request, None)
+                .await?;
         Ok(fpkg::ResolutionContext { bytes: vec![] })
     } else {
         fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);

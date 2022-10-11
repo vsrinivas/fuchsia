@@ -11,7 +11,6 @@ rustc_library("lib") {
   name = "lib"
   edition = "2021"
   testonly = true
-
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
@@ -44,7 +43,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
   ]
-
   sources = [
     "src/lib.rs",
     "src/mock_filesystem.rs",
@@ -52,41 +50,30 @@ rustc_library("lib") {
 }
 
 rustc_test("dynamic_repositories_disabled") {
-  name = "dynamic-repositories-disabled"
   edition = "2021"
-
   source_root = "src/dynamic_repositories_disabled.rs"
-
   deps = [
     ":lib",
     "//src/lib/fuchsia",
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
-
   sources = [ "src/dynamic_repositories_disabled.rs" ]
 }
 
 rustc_test("persists_tuf_metadata") {
-  name = "persists-tuf-metadata"
   edition = "2021"
-
   source_root = "src/persists_tuf_metadata.rs"
-
   deps = [
     ":lib",
     "//src/lib/fuchsia",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
   ]
-
   sources = [ "src/persists_tuf_metadata.rs" ]
 }
 
 rustc_test("dynamic_rewrite_disabled") {
-  name = "dynamic-rewrite-disabled"
   edition = "2021"
-
   source_root = "src/dynamic_rewrite_disabled.rs"
-
   deps = [
     ":lib",
     "//src/lib/fidl/rust/fidl",
@@ -94,16 +81,12 @@ rustc_test("dynamic_rewrite_disabled") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
   ]
-
   sources = [ "src/dynamic_rewrite_disabled.rs" ]
 }
 
 rustc_test("pkg_resolve_inspect") {
-  name = "pkg-resolve-inspect"
   edition = "2021"
-
   source_root = "src/pkg_resolve_inspect.rs"
-
   deps = [
     ":lib",
     "//src/lib/diagnostics/inspect/rust",
@@ -115,16 +98,12 @@ rustc_test("pkg_resolve_inspect") {
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
   ]
-
   sources = [ "src/pkg_resolve_inspect.rs" ]
 }
 
 rustc_test("resolve_fails") {
-  name = "resolve-fails"
   edition = "2021"
-
   source_root = "src/resolve_fails.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
@@ -134,16 +113,12 @@ rustc_test("resolve_fails") {
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//third_party/rust_crates:hyper",
   ]
-
   sources = [ "src/resolve_fails.rs" ]
 }
 
 rustc_test("resolve_propagates_blobfs_failure") {
-  name = "resolve-propagates-blobfs-failure"
   edition = "2021"
-
   source_root = "src/resolve_propagates_blobfs_failure.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
@@ -158,16 +133,12 @@ rustc_test("resolve_propagates_blobfs_failure") {
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
   ]
-
   sources = [ "src/resolve_propagates_blobfs_failure.rs" ]
 }
 
 rustc_test("resolve_recovers_from_http_errors") {
-  name = "resolve-recovers-from-http-errors"
   edition = "2021"
-
   source_root = "src/resolve_recovers_from_http_errors.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
@@ -176,16 +147,12 @@ rustc_test("resolve_recovers_from_http_errors") {
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:assert_matches",
   ]
-
   sources = [ "src/resolve_recovers_from_http_errors.rs" ]
 }
 
 rustc_test("resolve_resumes_blob_gets") {
-  name = "resolve-resumes-blob-gets"
   edition = "2021"
-
   source_root = "src/resolve_resumes_blob_gets.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
@@ -196,16 +163,12 @@ rustc_test("resolve_resumes_blob_gets") {
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
   ]
-
   sources = [ "src/resolve_resumes_blob_gets.rs" ]
 }
 
 rustc_test("resolve_succeeds_with_broken_minfs") {
-  name = "resolve-succeeds-with-broken-minfs"
   edition = "2021"
-
   source_root = "src/resolve_succeeds_with_broken_minfs.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
@@ -220,16 +183,12 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tempfile",
   ]
-
   sources = [ "src/resolve_succeeds_with_broken_minfs.rs" ]
 }
 
 rustc_test("resolve_succeeds") {
-  name = "resolve-succeeds"
   edition = "2021"
-
   source_root = "src/resolve_succeeds.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
@@ -243,16 +202,25 @@ rustc_test("resolve_succeeds") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rand",
   ]
-
   sources = [ "src/resolve_succeeds.rs" ]
 }
 
-rustc_test("get_hash") {
-  name = "get-hash"
+rustc_test("resolve_with_context") {
   edition = "2021"
+  source_root = "src/resolve_with_context.rs"
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
+    "//src/lib/fuchsia",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//third_party/rust_crates:assert_matches",
+  ]
+  sources = [ "src/resolve_with_context.rs" ]
+}
 
+rustc_test("get_hash") {
+  edition = "2021"
   source_root = "src/get_hash.rs"
-
   deps = [
     ":lib",
     "//src/lib/fuchsia",
@@ -260,16 +228,12 @@ rustc_test("get_hash") {
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:assert_matches",
   ]
-
   sources = [ "src/get_hash.rs" ]
 }
 
 rustc_test("system_cache_fallback") {
-  name = "system-cache-fallback"
   edition = "2021"
-
   source_root = "src/system_cache_fallback.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
@@ -284,16 +248,12 @@ rustc_test("system_cache_fallback") {
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:rand",
   ]
-
   sources = [ "src/system_cache_fallback.rs" ]
 }
 
 rustc_test("base_pinning") {
-  name = "base-pinning"
   edition = "2021"
-
   source_root = "src/base_pinning.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
@@ -303,16 +263,12 @@ rustc_test("base_pinning") {
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
   ]
-
   sources = [ "src/base_pinning.rs" ]
 }
 
 rustc_test("metrics") {
-  name = "metrics"
   edition = "2021"
-
   source_root = "src/metrics.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
@@ -327,16 +283,12 @@ rustc_test("metrics") {
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:serde_json",
   ]
-
   sources = [ "src/metrics.rs" ]
 }
 
 rustc_test("eager_updates") {
-  name = "eager-updates"
   edition = "2021"
-
   source_root = "src/eager_updates.rs"
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
@@ -349,7 +301,6 @@ rustc_test("eager_updates") {
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:serde_json",
   ]
-
   sources = [ "src/eager_updates.rs" ]
 }
 
@@ -411,6 +362,12 @@ fuchsia_test_component("resolve_succeeds-component") {
   component_name = "resolve-succeeds"
   manifest = "meta/resolve-succeeds.cml"
   deps = [ ":resolve_succeeds" ]
+}
+
+fuchsia_test_component("resolve_with_context-component") {
+  component_name = "resolve-with-context"
+  manifest = "meta/resolve-with-context.cml"
+  deps = [ ":resolve_with_context" ]
 }
 
 fuchsia_test_component("resolve_succeeds_with_broken_minfs-component") {
@@ -517,6 +474,7 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
     ":resolve_recovers_from_http_errors-component",
     ":resolve_resumes_blob_gets-component",
     ":resolve_succeeds-component",
+    ":resolve_with_context-component",
     ":resolve_succeeds_with_broken_minfs-component",
     ":system_cache_fallback-component",
   ]

@@ -74,7 +74,7 @@ async fn package_resolution() {
     // All blobs in the repository should now be present in blobfs.
     assert_eq!(env.blobfs.list_blobs().unwrap(), repo_blobs);
 
-    assert_eq!(resolved_context.bytes, pkg.meta_far_merkle_root().as_bytes());
+    assert_eq!(resolved_context.bytes(), pkg.meta_far_merkle_root().as_bytes());
 
     env.stop().await;
 }

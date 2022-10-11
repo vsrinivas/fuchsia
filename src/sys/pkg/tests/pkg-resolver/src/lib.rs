@@ -20,7 +20,7 @@ use {
         RepositoryManagerMarker, RepositoryManagerProxy, WriteError,
     },
     fidl_fuchsia_pkg_ext::{
-        self as pkg, BlobId, CupData, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs,
+        self as pkg, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs,
     },
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
     fidl_fuchsia_pkg_rewrite::{
@@ -100,7 +100,7 @@ pub struct MountsBuilder {
     dynamic_repositories: Option<RepositoryConfigs>,
     custom_config_data: Vec<(PathBuf, String)>,
     persisted_repos_config: Option<PersistedReposConfig>,
-    eager_packages: Vec<(PinnedAbsolutePackageUrl, CupData)>,
+    eager_packages: Vec<(PinnedAbsolutePackageUrl, pkg::CupData)>,
 }
 
 impl MountsBuilder {
@@ -142,7 +142,7 @@ impl MountsBuilder {
     }
     pub fn eager_packages(
         mut self,
-        package_urls: Vec<(PinnedAbsolutePackageUrl, CupData)>,
+        package_urls: Vec<(PinnedAbsolutePackageUrl, pkg::CupData)>,
     ) -> Self {
         assert!(self.eager_packages.is_empty());
         self.eager_packages = package_urls;
@@ -252,7 +252,7 @@ impl Mounts {
         }
     }
 
-    fn add_eager_packages(&self, packages: Vec<(PinnedAbsolutePackageUrl, CupData)>) {
+    fn add_eager_packages(&self, packages: Vec<(PinnedAbsolutePackageUrl, pkg::CupData)>) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
             let mut f = BufWriter::new(File::create(d.path().join("eager_packages.pf")).unwrap());
 
@@ -894,14 +894,30 @@ impl<B: Blobfs> TestEnv<B> {
         resolve_package(&self.proxies.resolver, url)
     }
 
-    pub fn get_hash(&self, url: impl Into<String>) -> impl Future<Output = Result<BlobId, Status>> {
+    pub fn resolve_with_context(
+        &self,
+        url: &str,
+        context: pkg::ResolutionContext,
+    ) -> impl Future<
+        Output = Result<
+            (fio::DirectoryProxy, pkg::ResolutionContext),
+            fidl_fuchsia_pkg::ResolveError,
+        >,
+    > {
+        resolve_with_context(&self.proxies.resolver, url, context)
+    }
+
+    pub fn get_hash(
+        &self,
+        url: impl Into<String>,
+    ) -> impl Future<Output = Result<pkg::BlobId, Status>> {
         let fut = self.proxies.resolver.get_hash(&mut fpkg::PackageUrl { url: url.into() });
         async move { fut.await.unwrap().map(|blob_id| blob_id.into()).map_err(|i| Status::from_raw(i)) }
     }
 
     pub async fn open_cached_package(
         &self,
-        hash: BlobId,
+        hash: pkg::BlobId,
     ) -> Result<fio::DirectoryProxy, zx::Status> {
         let cache_service = self
             .apps
@@ -981,7 +997,11 @@ impl<B: Blobfs> TestEnv<B> {
         }
     }
 
-    pub async fn cup_write(&self, url: impl Into<String>, cup: CupData) -> Result<(), WriteError> {
+    pub async fn cup_write(
+        &self,
+        url: impl Into<String>,
+        cup: pkg::CupData,
+    ) -> Result<(), WriteError> {
         self.proxies.cup.write(&mut fpkg::PackageUrl { url: url.into() }, cup.into()).await.unwrap()
     }
 
@@ -1028,6 +1048,21 @@ pub fn resolve_package(
 > {
     let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
     let response_fut = resolver.resolve(url, package_server_end);
+    async move {
+        let resolved_context = response_fut.await.unwrap()?;
+        Ok((package, resolved_context.into()))
+    }
+}
+
+pub fn resolve_with_context(
+    resolver: &PackageResolverProxy,
+    url: &str,
+    context: pkg::ResolutionContext,
+) -> impl Future<
+    Output = Result<(fio::DirectoryProxy, pkg::ResolutionContext), fidl_fuchsia_pkg::ResolveError>,
+> {
+    let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
+    let response_fut = resolver.resolve_with_context(url, &mut context.into(), package_server_end);
     async move {
         let resolved_context = response_fut.await.unwrap()?;
         Ok((package, resolved_context.into()))

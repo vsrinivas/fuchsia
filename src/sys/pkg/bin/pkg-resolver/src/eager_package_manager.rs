@@ -683,7 +683,7 @@ mod tests {
             BlobInfoIteratorRequest, NeededBlobsRequest, PackageCacheMarker, PackageCacheRequest,
             PackageCacheRequestStream,
         },
-        fidl_fuchsia_pkg_ext as pkg, fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         omaha_client::{
             cup_ecdsa::{
                 test_support::{
@@ -706,7 +706,7 @@ mod tests {
         let pkg_dir = PackageDirectory::open_from_namespace().unwrap();
         MockResolver::new(move |_url| {
             let pkg_dir = pkg_dir.clone();
-            async move { Ok((pkg_dir, pkg::ResolutionContext::new(vec![]))) }
+            async move { Ok((pkg_dir, vec![].into())) }
         })
     }
 
@@ -759,7 +759,7 @@ mod tests {
         let pkg_dir = PackageDirectory::from_proxy(proxy);
         let package_resolver = MockResolver::new(move |_url| {
             let pkg_dir = pkg_dir.clone();
-            async move { Ok((pkg_dir, pkg::ResolutionContext::new(vec![]))) }
+            async move { Ok((pkg_dir, vec![].into())) }
         });
         (package_resolver, dir)
     }
