@@ -20,6 +20,8 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object_physical.h>
 
+#include "efi-private.h"
+
 #include <ktl/enforce.h>
 
 namespace {
@@ -116,6 +118,53 @@ zx_status_t MapUnalignedRegion(VmAspace* aspace, paddr_t base, size_t size, cons
 
 }  // namespace
 
+// Loops over a ktl::span<ktl::byte> that may or may not be a valid
+// efi_memory_attributes_table.
+// Will return early if |callback| does not return ZX_OK.
+// Returns ZX_ERR_INVALID_ARGS if |table| is invalid.
+zx_status_t ForEachMemoryAttributeEntrySafe(
+    ktl::span<const ktl::byte> table,
+    fit::inline_function<zx_status_t(const efi_memory_descriptor*)> callback) {
+  if (table.size() < sizeof(efi_memory_attributes_table_header)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  auto header_bytes = table.subspan(0, sizeof(efi_memory_attributes_table_header));
+  const efi_memory_attributes_table_header* header =
+      reinterpret_cast<const efi_memory_attributes_table_header*>(header_bytes.data());
+
+  auto entries = table.subspan(sizeof(efi_memory_attributes_table_header));
+
+  if (header->descriptor_size < sizeof(efi_memory_descriptor)) {
+    dprintf(CRITICAL,
+            "EFI memory attributes header reports a descriptor size of 0x%x, which is smaller than "
+            "ours (0x%zx)\n",
+            header->descriptor_size, sizeof(efi_memory_descriptor));
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  for (size_t i = 0; i < header->number_of_entries; i++) {
+    if (entries.size() < sizeof(efi_memory_descriptor)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    ktl::span<const ktl::byte> entry = entries.subspan(0, sizeof(efi_memory_descriptor));
+
+    const efi_memory_descriptor* desc =
+        reinterpret_cast<const efi_memory_descriptor*>(entry.data());
+
+    zx_status_t status = callback(desc);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    if (header->descriptor_size > entries.size()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    entries = entries.subspan(header->descriptor_size);
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t InitEfiServices(uint64_t efi_system_table) {
   ZX_ASSERT(!gEfiSystemTable);
   gEfiSystemTable = efi_system_table;
@@ -127,11 +176,10 @@ zx_status_t InitEfiServices(uint64_t efi_system_table) {
   }
   auto error_cleanup = fit::defer([]() { efi_aspace.reset(); });
 
-  // Switch to the EFI address space.
-  VmAspace* old_aspace = Thread::Current::Get()->aspace();
-  auto switch_to_old_aspace = fit::defer([old_aspace]() { PanicFriendlySwitchAspace(old_aspace); });
-  PanicFriendlySwitchAspace(efi_aspace.get());
-
+  // gPhysHandoff currently points into physical pages that are part of the ZBI VMO.
+  // This is safe for now, because we call the EfiInitHook at LK_INIT_LEVEL_PLATFORM, which is
+  // before userboot runs.
+  // There are plans to change this in the future, at which point we may need to revisit this.
   if (gPhysHandoff->efi_memory_attributes.get().size() == 0) {
     dprintf(CRITICAL, "EFI did not provide memory table, cannot map runtime services.\n");
     return ZX_ERR_NOT_SUPPORTED;
@@ -147,34 +195,38 @@ zx_status_t InitEfiServices(uint64_t efi_system_table) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  const uint8_t* raw_desc = reinterpret_cast<const uint8_t*>(efi_memory_table);
-  raw_desc += sizeof(*efi_memory_table);
-  // Iterate through the memory table and map each entry appropriately.
-  for (size_t i = 0; i < efi_memory_table->number_of_entries; i++) {
-    const efi_memory_descriptor* desc = reinterpret_cast<const efi_memory_descriptor*>(raw_desc);
-    if (!(desc->Attribute & EFI_MEMORY_RUNTIME)) {
-      continue;
-    }
-    if (desc->Type != EfiRuntimeServicesCode && desc->Type != EfiRuntimeServicesData) {
-      continue;
-    }
+  zx_status_t status = ForEachMemoryAttributeEntrySafe(
+      gPhysHandoff->efi_memory_attributes.get(), [](const efi_memory_descriptor* desc) {
+        if (!(desc->Attribute & EFI_MEMORY_RUNTIME)) {
+          return ZX_OK;
+        }
+        if (desc->Type != EfiRuntimeServicesCode && desc->Type != EfiRuntimeServicesData) {
+          return ZX_OK;
+        }
 
-    uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_RWX_MASK;
-    // UEFI v2.9, section 4.6, "EFI_MEMORY_ATTRIBUTES_TABLE" says that only RUNTIME, RO and XP are
-    // allowed to be set.
-    if (desc->Attribute & EFI_MEMORY_RO) {
-      arch_mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
-    }
-    if (desc->Attribute & EFI_MEMORY_XP) {
-      arch_mmu_flags &= ~ARCH_MMU_FLAG_PERM_EXECUTE;
-    }
-    zx_status_t result =
-        MapUnalignedRegion(efi_aspace.get(), desc->PhysicalStart, desc->NumberOfPages * PAGE_SIZE,
-                           "efi_runtime", arch_mmu_flags);
-    if (result != ZX_OK) {
-      return result;
-    }
-    raw_desc += efi_memory_table->descriptor_size;
+        uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_RWX_MASK;
+        // UEFI v2.9, section 4.6, "EFI_MEMORY_ATTRIBUTES_TABLE" says that only RUNTIME, RO and XP
+        // are allowed to be set.
+        if (desc->Attribute & EFI_MEMORY_RO) {
+          arch_mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
+        }
+        if (desc->Attribute & EFI_MEMORY_XP) {
+          arch_mmu_flags &= ~ARCH_MMU_FLAG_PERM_EXECUTE;
+        }
+        zx_status_t result =
+            MapUnalignedRegion(efi_aspace.get(), desc->PhysicalStart,
+                               desc->NumberOfPages * PAGE_SIZE, "efi_runtime", arch_mmu_flags);
+        if (result != ZX_OK) {
+          dprintf(CRITICAL, "Failed to map EFI region base=0x%lx size=0x%lx: %d\n",
+                  desc->PhysicalStart, desc->NumberOfPages * PAGE_SIZE, result);
+          return result;
+        }
+
+        return ZX_OK;
+      });
+
+  if (status != ZX_OK) {
+    return status;
   }
 
   error_cleanup.cancel();
