@@ -43,6 +43,27 @@ char tftp_out_scratch[SCRATCHSZ];
 size_t last_msg_size = 0;
 tftp_session* session = nullptr;
 transport_info_t transport_info;
+bool g_experiencing_timeouts = false;
+
+void debug_print_packet(const char* prefix, const cpp20::span<uint8_t>& pkt) {
+  // Only print TFTP packets to console if we're experiencing timeouts.
+  if (!g_experiencing_timeouts) {
+    return;
+  }
+  printf("netsvc: tftp %s: %ld bytes: ", prefix, pkt.size());
+  // Only print enough bytes so we can see the TFTP header and some initial
+  // bytes. We're trying to catch problems while transferring data and the
+  // header is rather small (4 bytes). See https://fxbug.dev/90854.
+  size_t print_len = std::min(pkt.size(), static_cast<size_t>(16));
+  for (const uint8_t& b : pkt.subspan(0, print_len)) {
+    printf("%02x", b);
+  }
+  if (print_len != pkt.size()) {
+    printf("...");
+  }
+  printf("\n");
+}
+
 async::Task timeout_task([](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
   if (status == ZX_ERR_CANCELED) {
     return;
@@ -60,11 +81,15 @@ async::Task timeout_task([](async_dispatcher_t* dispatcher, async::Task* task, z
     g_file_api->Abort();
     end_connection();
   } else {
+    g_experiencing_timeouts = true;
     if (last_msg_size > 0) {
       tftp_status send_result = transport_send(tftp_out_scratch, last_msg_size, &transport_info);
       if (send_result != TFTP_NO_ERROR) {
         printf("netsvc: failed to send tftp timeout response (err = %d)\n", send_result);
       }
+      // transport_send will kick the timeout task, always reset to experiencing
+      // timeouts from here.
+      g_experiencing_timeouts = true;
     }
   }
 });
@@ -73,6 +98,7 @@ void kick_timeout_task(const transport_info_t& transport_info) {
   if (transport_info.timeout_ms == 0) {
     return;
   }
+  g_experiencing_timeouts = false;
   zx_status_t status = timeout_task.Cancel();
   ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_NOT_FOUND, "failed to cancel timeout task %s",
                 zx_status_get_string(status));
@@ -107,6 +133,7 @@ void file_close(void* cookie) {
 }
 
 tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
+  debug_print_packet("tx", cpp20::span(reinterpret_cast<uint8_t*>(data), len));
   transport_info_t& transport_info = *reinterpret_cast<transport_info_t*>(transport_cookie);
   zx_status_t status = udp6_send(data, len, &transport_info.dest_addr, transport_info.dest_port,
                                  NB_TFTP_OUTGOING_PORT, true);
@@ -166,6 +193,7 @@ void end_connection() {
   zx_status_t status = timeout_task.Cancel();
   ZX_ASSERT_MSG(status == ZX_OK || status == ZX_ERR_NOT_FOUND, "failed to cancel timeout task %s",
                 zx_status_get_string(status));
+  g_experiencing_timeouts = false;
   xfer_active = false;
 }
 
@@ -193,6 +221,7 @@ void tftp_send_next() {
 
 void tftp_recv(async_dispatcher_t* dispatcher, void* data, size_t len, const ip6_addr_t* daddr,
                uint16_t dport, const ip6_addr_t* saddr, uint16_t sport) {
+  debug_print_packet("rx", cpp20::span(reinterpret_cast<uint8_t*>(data), len));
   if (dport == NB_TFTP_INCOMING_PORT) {
     if (session != NULL) {
       printf("netsvc: only one simultaneous tftp session allowed\n");
