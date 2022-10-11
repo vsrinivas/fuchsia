@@ -903,7 +903,7 @@ pub(crate) enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen> {
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 /// Possible errors for closing a connection
-pub enum CloseError {
+pub(super) enum CloseError {
     /// The connection is already being closed.
     Closing,
     /// There is no connection to be closed.

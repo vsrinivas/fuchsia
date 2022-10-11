@@ -498,8 +498,8 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
         netstack_buffers: C::ProvidedBuffers,
     ) -> Result<ConnectionId, ConnectError>;
 
-    fn shutdown_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError>;
-    fn close_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError>;
+    fn shutdown_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), NoConnection>;
+    fn close_conn(&mut self, ctx: &mut C, id: ConnectionId);
     fn remove_unbound(&mut self, id: UnboundId);
     fn remove_bound(&mut self, id: BoundId);
 
@@ -697,31 +697,36 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
         )
     }
 
-    fn shutdown_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError> {
+    fn shutdown_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), NoConnection> {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
             let (conn, (), addr) =
                 sockets.socketmap.conns_mut().get_by_id_mut(&id.into()).expect("invalid conn ID");
-            conn.state.close()?;
-            Ok(do_send_inner(id, conn, addr, ip_transport_ctx, ctx))
+            assert!(!conn.defunct);
+            match conn.state.close() {
+                Ok(()) => Ok(do_send_inner(id, conn, addr, ip_transport_ctx, ctx)),
+                Err(CloseError::NoConnection) => Err(NoConnection),
+                Err(CloseError::Closing) => Ok(()),
+            }
         })
     }
 
-    fn close_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), CloseError> {
+    fn close_conn(&mut self, ctx: &mut C, id: ConnectionId) {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
             let (conn, (), addr) =
                 sockets.socketmap.conns_mut().get_by_id_mut(&id.into()).expect("invalid conn ID");
+            assert!(!conn.defunct);
             conn.defunct = true;
             let already_closed = match conn.state.close() {
                 Err(CloseError::NoConnection) => true,
-                Err(CloseError::Closing) => return Err(CloseError::Closing),
+                Err(CloseError::Closing) => return,
                 Ok(()) => matches!(conn.state, State::Closed(_)),
             };
             if already_closed {
                 assert_matches!(sockets.socketmap.conns_mut().remove(&id), Some(_));
                 let _: Option<_> = ctx.cancel_timer(TimerId(id, I::VERSION));
-                return Ok(());
+                return;
             }
-            Ok(do_send_inner(id, conn, addr, ip_transport_ctx, ctx))
+            do_send_inner(id, conn, addr, ip_transport_ctx, ctx)
         })
     }
 
@@ -767,8 +772,9 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
 
     fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr, SC::DeviceId> {
         self.with_tcp_sockets(|sockets| {
-            let (_, (), addr): &(Connection<_, _, _, _, _, _>, _, _) =
+            let (conn, (), addr): &(Connection<_, _, _, _, _, _>, _, _) =
                 sockets.socketmap.conns().get_by_id(&id.into()).expect("invalid conn ID");
+            assert!(!conn.defunct);
             addr.clone()
         })
         .into()
@@ -911,6 +917,10 @@ pub enum AcceptError {
     WouldBlock,
 }
 
+/// Possible error for calling `shutdown` on a not-yet connected socket.
+#[derive(Debug)]
+pub struct NoConnection;
+
 /// Accepts an established socket from the queue of a listener socket.
 pub fn accept<I: Ip, C>(
     mut sync_ctx: &SyncCtx<C>,
@@ -1040,11 +1050,7 @@ where
 
 /// Closes the connection. The user has promised that they will not use `id`
 /// again, we can reclaim the connection after the connection becomes `Closed`.
-pub fn close_conn<I, C>(
-    mut sync_ctx: &SyncCtx<C>,
-    ctx: &mut C,
-    id: ConnectionId,
-) -> Result<(), CloseError>
+pub fn close_conn<I, C>(mut sync_ctx: &SyncCtx<C>, ctx: &mut C, id: ConnectionId)
 where
     I: IpExt,
     C: NonSyncContext,
@@ -1061,7 +1067,7 @@ pub fn shutdown_conn<I, C>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: ConnectionId,
-) -> Result<(), CloseError>
+) -> Result<(), NoConnection>
 where
     I: IpExt,
     C: NonSyncContext,
@@ -2032,7 +2038,7 @@ mod tests {
         let (mut net, local, remote) =
             bind_listen_connect_accept_inner::<I>(I::UNSPECIFIED_ADDRESS, false, 0, 0.0);
         net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
-            assert_matches!(TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, remote), Ok(()));
+            TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, remote);
         });
         net.run_until_idle(handle_frame, handle_timer);
         net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
@@ -2043,7 +2049,7 @@ mod tests {
             })
         });
         net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
-            assert_matches!(TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, local), Ok(()));
+            TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, local);
         });
         net.run_until_idle(handle_frame, handle_timer);
 
@@ -2076,7 +2082,11 @@ mod tests {
                     let (conn, (), _addr) =
                         sockets.socketmap.conns().get_by_id(&remote).expect("invalid conn ID");
                     assert_matches!(conn.state, State::FinWait1(_));
-                })
+                });
+                assert_matches!(
+                    TcpSocketHandler::shutdown_conn(sync_ctx, non_sync_ctx, id),
+                    Ok(())
+                );
             });
         }
         net.run_until_idle(handle_frame, handle_timer);
@@ -2087,7 +2097,7 @@ mod tests {
                         sockets.socketmap.conns().get_by_id(&remote).expect("invalid conn ID");
                     assert_matches!(conn.state, State::Closed(_));
                 });
-                assert_matches!(TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, id), Ok(()));
+                TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, id);
                 sync_ctx.with_tcp_sockets(|sockets| {
                     assert_matches!(sockets.socketmap.conns().get_by_id(&id), None);
                 })
