@@ -125,16 +125,6 @@ uint8_t* GetFrameData(io_buffer_t* bufs, uint16_t ring_id, uint16_t desc_id, siz
 
 }  // namespace
 
-zx_status_t EthernetDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
-  auto* proto = static_cast<ddk::AnyProtocol*>(out);
-  proto->ctx = this;
-  if (proto_id == ZX_PROTOCOL_ETHERNET_IMPL) {
-    proto->ops = &ethernet_impl_protocol_ops_;
-    return ZX_OK;
-  }
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 EthernetDevice::EthernetDevice(zx_device_t* bus_device, zx::bti bti,
                                std::unique_ptr<Backend> backend)
     : virtio::Device(bus_device, std::move(bti), std::move(backend)),

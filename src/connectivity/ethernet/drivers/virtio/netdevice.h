@@ -35,7 +35,7 @@ using VmoStore = vmo_store::VmoStore<vmo_store::SlabStorage<uint32_t>>;
 
 class NetworkDevice;
 
-using DeviceType = ddk::Device<NetworkDevice, ddk::GetProtocolable, ddk::Unbindable>;
+using DeviceType = ddk::Device<NetworkDevice, ddk::Unbindable>;
 class NetworkDevice : public Device,
                       // Mixins for protocol device:
                       public DeviceType,
@@ -66,7 +66,6 @@ class NetworkDevice : public Device,
   zx_status_t Init() override __TA_EXCLUDES(state_lock_);
   void DdkRelease() __TA_EXCLUDES(state_lock_);
   void DdkUnbind(ddk::UnbindTxn txn) { virtio::Device::Unbind(std::move(txn)); }
-  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 
   // VirtIO callbacks
   void IrqRingUpdate() override __TA_EXCLUDES(state_lock_);

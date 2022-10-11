@@ -32,16 +32,6 @@
 
 namespace virtio {
 
-zx_status_t NetworkDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
-  auto* proto = static_cast<ddk::AnyProtocol*>(out);
-  proto->ctx = this;
-  if (proto_id == ZX_PROTOCOL_NETWORK_DEVICE_IMPL) {
-    proto->ops = &network_device_impl_protocol_ops_;
-    return ZX_OK;
-  }
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 NetworkDevice::NetworkDevice(zx_device_t* bus_device, zx::bti bti_handle,
                              std::unique_ptr<Backend> backend)
     : virtio::Device(bus_device, std::move(bti_handle), std::move(backend)),
