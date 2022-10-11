@@ -788,4 +788,10 @@ TEST(ConstsTests, BadConstReferencesInvalidConst) {
   }
 }
 
+TEST(ConstsTests, GoodDeclaration) {
+  TestLibrary library;
+  library.AddFile("good/simple_declaration.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 }  // namespace

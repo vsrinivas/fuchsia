@@ -19,8 +19,7 @@ constexpr UndocumentedErrorDef<3, std::string_view> ErrInvalidEscapeSequence(
     "invalid escape sequence '{}'");
 constexpr ErrorDef<4, char> ErrInvalidHexDigit("invalid hex digit '{}'");
 constexpr ErrorDef<5, char> ErrInvalidOctDigit("invalid oct digit '{}'");
-constexpr UndocumentedErrorDef<6, std::string_view> ErrExpectedDeclaration(
-    "invalid declaration type {}");
+constexpr ErrorDef<6, std::string_view> ErrExpectedDeclaration("invalid declaration type {}");
 constexpr UndocumentedErrorDef<7> ErrUnexpectedToken("found unexpected token");
 constexpr ErrorDef<8, Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedTokenOfKind(
     "unexpected token {}, was expecting {}");

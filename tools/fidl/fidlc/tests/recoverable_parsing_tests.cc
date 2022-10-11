@@ -405,4 +405,10 @@ TEST(RecoverableParsingTests, InvalidOctDigit) {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidOctDigit);
 }
 
+TEST(RecoverableParsingTests, ExpectedDeclaration) {
+  TestLibrary library;
+  library.AddFile("bad/expected_declaration.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
+}
+
 }  // namespace
