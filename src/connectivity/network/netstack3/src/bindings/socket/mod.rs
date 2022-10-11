@@ -24,10 +24,8 @@ use net_types::{
 use netstack3_core::{
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
-    socket::datagram::SetMulticastMembershipError,
-    transport::udp::{
-        UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
-    },
+    socket::datagram::{ConnectListenerError, SetMulticastMembershipError},
+    transport::udp::{UdpSendError, UdpSendListenerError, UdpSockCreationError},
     Ctx,
 };
 
@@ -508,7 +506,7 @@ impl IntoErrno for UdpSockCreationError {
     }
 }
 
-impl IntoErrno for UdpConnectListenerError {
+impl IntoErrno for ConnectListenerError {
     fn into_errno(self) -> Errno {
         match self {
             Self::Ip(err) => err.into_errno(),

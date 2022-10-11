@@ -37,14 +37,14 @@ use netstack3_core::{
     error::{LocalAddressError, SocketError},
     ip::{icmp, socket::IpSockSendError, IpExt},
     socket::datagram::{
-        MulticastInterfaceSelector, MulticastMembershipInterfaceSelector,
+        ConnectListenerError, MulticastInterfaceSelector, MulticastMembershipInterfaceSelector,
         SetMulticastMembershipError,
     },
     sync::Mutex,
     transport::udp::{
-        self as core_udp, BufferUdpContext, UdpBoundId, UdpConnId, UdpConnInfo,
-        UdpConnectListenerError, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
-        UdpSendListenerError, UdpSockCreationError, UdpSocketId, UdpUnboundId,
+        self as core_udp, BufferUdpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
+        UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
+        UdpSocketId, UdpUnboundId,
     },
     BufferNonSyncContext, Ctx, NonSyncContext, SyncCtx,
 };
@@ -427,8 +427,8 @@ impl OptionFromU16 for NonZeroU16 {
 impl<I: IpExt> TransportState<I> for Udp {
     type CreateConnError = UdpSockCreationError;
     type CreateListenerError = LocalAddressError;
-    type ConnectListenerError = UdpConnectListenerError;
-    type ReconnectConnError = UdpConnectListenerError;
+    type ConnectListenerError = ConnectListenerError;
+    type ReconnectConnError = ConnectListenerError;
     type SetSocketDeviceError = SocketError;
     type SetMulticastMembershipError = SetMulticastMembershipError;
     type LocalIdentifier = NonZeroU16;

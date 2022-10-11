@@ -122,13 +122,13 @@ pub(crate) trait SocketMapStateSpec {
     type ListenerState: Debug;
     /// The state stored for a listening socket that is used to determine
     /// whether sockets can share an address.
-    type ListenerSharingState: Debug;
+    type ListenerSharingState: Clone + Debug;
 
     /// The state stored for a connected socket.
     type ConnState;
     /// The state stored for a connected socket that is used to determine
     /// whether sockets can share an address.
-    type ConnSharingState;
+    type ConnSharingState: Clone + Debug;
 
     /// The state stored for a listener socket address.
     type ListenerAddrState: Debug;
