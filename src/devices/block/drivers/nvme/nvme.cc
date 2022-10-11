@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/devices/block/drivers/nvme/nvme.h"
+
 #include <assert.h>
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
@@ -30,9 +32,11 @@
 #include "nvme-hw.h"
 #include "src/devices/block/drivers/nvme/nvme_bind.h"
 
+namespace nvme {
+
 #define TXN_FLAG_FAILED 1
 
-typedef struct {
+struct nvme_txn_t {
   block_op_t op;
   list_node_t node;
   block_impl_queue_callback completion_cb;
@@ -40,9 +44,9 @@ typedef struct {
   uint16_t pending_utxns;
   uint8_t opcode;
   uint8_t flags;
-} nvme_txn_t;
+};
 
-typedef struct {
+struct nvme_utxn_t {
   zx_paddr_t phys;  // io buffer phys base (1 page)
   void* virt;       // io buffer virt base
   zx_handle_t pmt;  // pinned memory
@@ -50,7 +54,7 @@ typedef struct {
   uint16_t id;
   uint16_t reserved0;
   uint32_t reserved1;
-} nvme_utxn_t;
+};
 
 #define UTXN_COUNT 63
 
@@ -70,7 +74,7 @@ typedef struct {
 
 #define FLAG_HAS_VWC 0x0100
 
-typedef struct {
+struct nvme_device_t {
   mmio_buffer_t mmio;
   zx_handle_t irqh;
   zx_handle_t bti;
@@ -143,7 +147,7 @@ typedef struct {
 
   // pool of utxns
   nvme_utxn_t utxn[UTXN_COUNT];
-} nvme_device_t;
+};
 
 // Takes the log2 of a page size to turn it into a shift.
 static inline size_t PageShift(size_t page_size) {
@@ -522,9 +526,9 @@ static int io_thread(void* arg) {
   return 0;
 }
 
-static void nvme_queue(void* ctx, block_op_t* op, block_impl_queue_callback completion_cb,
-                       void* cookie) {
-  nvme_device_t* nvme = static_cast<nvme_device_t*>(ctx);
+void Nvme::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb, void* cookie) {
+  nvme_device_t* nvme = nvme_;
+
   nvme_txn_t* txn = containerof(op, nvme_txn_t, op);
   txn->completion_cb = completion_cb;
   txn->cookie = cookie;
@@ -573,42 +577,29 @@ static void nvme_queue(void* ctx, block_op_t* op, block_impl_queue_callback comp
   sync_completion_signal(&nvme->io_signal);
 }
 
-static void nvme_query(void* ctx, block_info_t* info_out, size_t* block_op_size_out) {
-  nvme_device_t* nvme = static_cast<nvme_device_t*>(ctx);
+void Nvme::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
+  nvme_device_t* nvme = nvme_;
+
   *info_out = nvme->info;
   *block_op_size_out = sizeof(nvme_txn_t);
 }
 
 static zx_status_t nvme_init_internal(nvme_device_t* nvme);
 
-static void nvme_init(void* ctx) {
-  nvme_device_t* nvme = static_cast<nvme_device_t*>(ctx);
+void Nvme::DdkInit(ddk::InitTxn txn) {
+  nvme_device_t* nvme = nvme_;
+
   if (nvme_init_internal(nvme) != ZX_OK) {
     zxlogf(ERROR, "init failed");
-    device_init_reply(nvme->zxdev, ZX_ERR_INTERNAL, NULL);
+    txn.Reply(ZX_ERR_INTERNAL);
   } else {
-    device_init_reply(nvme->zxdev, ZX_OK, NULL);
+    txn.Reply(ZX_OK);
   }
 }
 
-static zx_off_t nvme_get_size(void* ctx) {
-  nvme_device_t* nvme = static_cast<nvme_device_t*>(ctx);
-  return nvme->info.block_count * nvme->info.block_size;
-}
+void Nvme::DdkRelease() {
+  nvme_device_t* nvme = nvme_;
 
-static void nvme_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
-                         uint8_t suspend_reason) {
-  nvme_device_t* nvme = static_cast<nvme_device_t*>(ctx);
-  device_suspend_reply(nvme->zxdev, ZX_OK, requested_state);
-}
-
-static void nvme_resume(void* ctx, uint32_t requested_perf_state) {
-  nvme_device_t* nvme = static_cast<nvme_device_t*>(ctx);
-  device_resume_reply(nvme->zxdev, ZX_OK, DEV_POWER_STATE_D0, requested_perf_state);
-}
-
-static void nvme_release(void* ctx) {
-  nvme_device_t* nvme = static_cast<nvme_device_t*>(ctx);
   int r;
 
   zxlogf(DEBUG, "release");
@@ -644,16 +635,6 @@ static void nvme_release(void* ctx) {
   io_buffer_release(&nvme->iob);
   free(nvme);
 }
-
-static zx_protocol_device_t device_ops = {
-    .version = DEVICE_OPS_VERSION,
-
-    .init = nvme_init,
-    .release = nvme_release,
-    .get_size = nvme_get_size,
-    .suspend = nvme_suspend,
-    .resume = nvme_resume,
-};
 
 static void infostring(const char* prefix, uint8_t* str, size_t len) {
   char tmp[len + 1];
@@ -1014,23 +995,20 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   return ZX_OK;
 }
 
-block_impl_protocol_ops_t block_ops = {
-    .query = nvme_query,
-    .queue = nvme_queue,
-};
-
-static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
-  nvme_device_t* nvme;
-  if ((nvme = static_cast<nvme_device_t*>(calloc(1, sizeof(nvme_device_t)))) == NULL) {
+zx_status_t Nvme::AddDevice(zx_device_t* dev) {
+  if ((nvme_ = static_cast<nvme_device_t*>(calloc(1, sizeof(nvme_device_t)))) == NULL) {
     return ZX_ERR_NO_MEMORY;
   }
+  nvme_device_t* nvme = nvme_;
+
   list_initialize(&nvme->pending_txns);
   list_initialize(&nvme->active_txns);
 
-  auto cleanup = fit::defer([&] { nvme_release(nvme); });
+  auto cleanup = fit::defer([&] { DdkRelease(); });
 
   zx_status_t status = ZX_OK;
   if ((status = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &nvme->pci)) != ZX_OK) {
+    zxlogf(ERROR, "Failed to find PCI fragment: %s", zx_status_get_string(status));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -1064,16 +1042,9 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "nvme",
-      .ctx = nvme,
-      .ops = &device_ops,
-      .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
-      .proto_ops = &block_ops,
-  };
-
-  if (device_add(dev, &args, &nvme->zxdev)) {
+  status = DdkAdd(ddk::DeviceAddArgs("nvme"));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed DdkAdd: %s", zx_status_get_string(status));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -1081,9 +1052,22 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
   return ZX_OK;
 }
 
+zx_status_t Nvme::Bind(void* ctx, zx_device_t* dev) {
+  auto driver = std::make_unique<nvme::Nvme>(dev);
+  if (zx_status_t status = driver->AddDevice(dev); status != ZX_OK) {
+    return status;
+  }
+
+  // The DriverFramework now owns driver.
+  __UNUSED auto placeholder = driver.release();
+  return ZX_OK;
+}
+
 static zx_driver_ops_t driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = nvme_bind,
+    .bind = Nvme::Bind,
 };
 
-ZIRCON_DRIVER(nvme, driver_ops, "zircon", "0.1");
+}  // namespace nvme
+
+ZIRCON_DRIVER(nvme, nvme::driver_ops, "zircon", "0.1");
