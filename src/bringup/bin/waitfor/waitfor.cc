@@ -4,24 +4,18 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <lib/fdio/unsafe.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
 #include <memory>
 
-// for guid printing
-#include <zircon/device/block.h>
-#include <zircon/syscalls.h>
-
 #include <fbl/intrusive_double_list.h>
-#include <gpt/c/gpt.h>
+#include <fbl/unique_fd.h>
 
-void usage(void) {
+#include "src/lib/uuid/uuid.h"
+
+void usage() {
   fprintf(stderr,
           "usage: waitfor <expr>+        wait for devices to be published\n"
           "\n"
@@ -46,7 +40,7 @@ static bool print = false;
 static bool forever = false;
 static bool matched = false;
 static zx_duration_t timeout = 0;
-const char* devclass = NULL;
+const char* devclass = nullptr;
 
 class Rule : public fbl::DoublyLinkedListable<std::unique_ptr<Rule>> {
  public:
@@ -70,31 +64,28 @@ zx_status_t watchcb(int dirfd, int event, const char* fn, void* cookie) {
   if (verbose) {
     fprintf(stderr, "waitfor: device='/dev/class/%s/%s'\n", devclass, fn);
   }
-  int fd;
-  if ((fd = openat(dirfd, fn, O_RDONLY)) < 0) {
-    fprintf(stderr, "waitfor: warning: failed to open '/dev/class/%s/%s'\n", devclass, fn);
+  const fbl::unique_fd fd(openat(dirfd, fn, O_RDONLY));
+  if (!fd.is_valid()) {
+    fprintf(stderr, "waitfor: warning: failed to open '/dev/class/%s/%s': %s\n", devclass, fn,
+            strerror(errno));
     return ZX_OK;
   }
 
   for (const Rule& r : rules) {
-    zx_status_t status = r.CallWithFd(fd);
-    switch (status) {
+    switch (const zx_status_t status = r.CallWithFd(fd.get()); status) {
       case ZX_OK:
         // rule matched
         continue;
       case ZX_ERR_NEXT:
         // rule did not match
-        close(fd);
         return ZX_OK;
       default:
         // fatal error
-        close(fd);
         return status;
     }
   }
 
   matched = true;
-  close(fd);
 
   if (print) {
     printf("/dev/class/%s/%s\n", devclass, fn);
@@ -102,23 +93,17 @@ zx_status_t watchcb(int dirfd, int event, const char* fn, void* cookie) {
 
   if (forever) {
     return ZX_OK;
-  } else {
-    return ZX_ERR_STOP;
   }
+  return ZX_ERR_STOP;
 }
 
 // Expression evaluators return OK on match, NEXT on no-match
 // any other error is fatal
 
 zx_status_t expr_topo(const char* arg, int fd) {
-  fdio_t* io = fdio_unsafe_fd_to_io(fd);
-  if (io == nullptr) {
-    return ZX_ERR_NEXT;
-  }
-  const fidl::WireResult result = fidl::WireCall<fuchsia_device::Controller>(
-                                      zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                                      ->GetTopologicalPath();
-  fdio_unsafe_release(io);
+  const fdio_cpp::UnownedFdioCaller caller(fd);
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->GetTopologicalPath();
   if (!result.ok()) {
     fprintf(stderr, "waitfor: warning: cannot request topological path: %s\n",
             result.FormatDescription().c_str());
@@ -144,81 +129,82 @@ zx_status_t expr_topo(const char* arg, int fd) {
 }
 
 zx_status_t expr_part_guid(const char* arg, int fd) {
-  fdio_t* io = fdio_unsafe_fd_to_io(fd);
-  if (io == NULL) {
-    return ZX_ERR_NEXT;
+  const fdio_cpp::UnownedFdioCaller caller(fd);
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_partition::Partition>())
+          ->GetInstanceGuid();
+  if (!result.ok()) {
+    fprintf(stderr, "waitfor: warning: cannot request instance guid: %s\n",
+            result.FormatDescription().c_str());
+    return result.status();
   }
-  fuchsia_hardware_block_partition_GUID guid;
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_hardware_block_partition_PartitionGetInstanceGuid(
-      fdio_unsafe_borrow_channel(io), &status, &guid);
-  fdio_unsafe_release(io);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "waitfor: warning: cannot read partition guid\n");
-    return ZX_ERR_NEXT;
+  const fidl::WireResponse response = result.value();
+  if (const zx_status_t status = response.status; status != ZX_OK) {
+    fprintf(stderr, "waitfor: warning: cannot get instance guid: %s\n",
+            zx_status_get_string(status));
+    return result.status();
   }
-  char text[GPT_GUID_STRLEN];
-  uint8_to_guid_string(text, guid.value);
+  fidl::Array value = response.guid->value;
+  static_assert(decltype(value)::size() == uuid::kUuidSize);
+  const std::string text = uuid::Uuid(value.data()).ToString();
   if (verbose) {
-    fprintf(stderr, "waitfor: part.guid='%s'\n", text);
+    fprintf(stderr, "waitfor: part.guid='%s'\n", text.c_str());
   }
-  if (strcasecmp(text, arg)) {
-    return ZX_ERR_NEXT;
-  } else {
+  if (strcasecmp(text.c_str(), arg) == 0) {
     return ZX_OK;
   }
+  return ZX_ERR_NEXT;
 }
 
 zx_status_t expr_part_type_guid(const char* arg, int fd) {
-  fdio_t* io = fdio_unsafe_fd_to_io(fd);
-  if (io == NULL) {
-    return ZX_ERR_NEXT;
+  const fdio_cpp::UnownedFdioCaller caller(fd);
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_partition::Partition>())
+          ->GetTypeGuid();
+  if (!result.ok()) {
+    fprintf(stderr, "waitfor: warning: cannot request type guid: %s\n",
+            result.FormatDescription().c_str());
+    return result.status();
   }
-  fuchsia_hardware_block_partition_GUID guid;
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(
-      fdio_unsafe_borrow_channel(io), &status, &guid);
-  fdio_unsafe_release(io);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "waitfor: warning: cannot read type guid\n");
-    return ZX_ERR_NEXT;
+  const fidl::WireResponse response = result.value();
+  if (const zx_status_t status = response.status; status != ZX_OK) {
+    fprintf(stderr, "waitfor: warning: cannot get type guid: %s\n", zx_status_get_string(status));
+    return result.status();
   }
-  char text[GPT_GUID_STRLEN];
-  uint8_to_guid_string(text, guid.value);
+  fidl::Array value = response.guid->value;
+  static_assert(decltype(value)::size() == uuid::kUuidSize);
+  const std::string text = uuid::Uuid(value.data()).ToString();
   if (verbose) {
-    fprintf(stderr, "waitfor: part.type.guid='%s'\n", text);
+    fprintf(stderr, "waitfor: part.type.guid='%s'\n", text.c_str());
   }
-  if (strcasecmp(text, arg)) {
-    return ZX_ERR_NEXT;
-  } else {
+  if (strcasecmp(text.c_str(), arg) == 0) {
     return ZX_OK;
   }
+  return ZX_ERR_NEXT;
 }
 
 zx_status_t expr_part_name(const char* arg, int fd) {
-  char name[NAME_MAX + 1];
-
-  fdio_t* io = fdio_unsafe_fd_to_io(fd);
-  if (io == NULL) {
-    return ZX_ERR_NEXT;
+  const fdio_cpp::UnownedFdioCaller caller(fd);
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_partition::Partition>())->GetName();
+  if (!result.ok()) {
+    fprintf(stderr, "waitfor: warning: cannot request partition name: %s\n",
+            result.FormatDescription().c_str());
+    return result.status();
   }
-  zx_status_t status;
-  size_t actual;
-  zx_status_t io_status = fuchsia_hardware_block_partition_PartitionGetName(
-      fdio_unsafe_borrow_channel(io), &status, name, sizeof(name), &actual);
-  fdio_unsafe_release(io);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    fprintf(stderr, "waitfor: warning: cannot read partition name\n");
-    return ZX_ERR_NEXT;
+  const fidl::WireResponse response = result.value();
+  if (const zx_status_t status = response.status; status != ZX_OK) {
+    fprintf(stderr, "waitfor: warning: cannot get type guid: %s\n", zx_status_get_string(status));
+    return result.status();
   }
+  const std::string name(response.name.get());
   if (verbose) {
-    fprintf(stderr, "waitfor: part.name='%s'\n", name);
+    fprintf(stderr, "waitfor: part.name='%s'\n", name.c_str());
   }
-  if (strcmp(arg, name)) {
-    return ZX_ERR_NEXT;
-  } else {
+  if (strcmp(arg, name.c_str()) == 0) {
     return ZX_OK;
   }
+  return ZX_ERR_NEXT;
 }
 
 void new_rule(const char* arg, zx_status_t (*func)(const char* arg, int fd)) {
@@ -231,8 +217,6 @@ void new_rule(const char* arg, zx_status_t (*func)(const char* arg, int fd)) {
 }
 
 int main(int argc, char** argv) {
-  int dirfd = -1;
-
   if (argc == 1) {
     usage();
     exit(1);
@@ -270,7 +254,7 @@ int main(int argc, char** argv) {
     argv++;
   }
 
-  if (devclass == NULL) {
+  if (devclass == nullptr) {
     fprintf(stderr, "waitfor: error: no class specified\n");
     exit(1);
   }
@@ -283,7 +267,8 @@ int main(int argc, char** argv) {
   char path[strlen(devclass) + strlen("/dev/class/") + 1];
   sprintf(path, "/dev/class/%s", devclass);
 
-  if ((dirfd = open(path, O_DIRECTORY | O_RDONLY)) < 0) {
+  const fbl::unique_fd dirfd(open(path, O_DIRECTORY | O_RDONLY));
+  if (!dirfd.is_valid()) {
     fprintf(stderr, "waitfor: error: cannot watch class '%s': %s\n", devclass, strerror(errno));
     exit(1);
   }
@@ -294,10 +279,9 @@ int main(int argc, char** argv) {
   } else {
     deadline = zx_deadline_after(timeout);
   }
-  zx_status_t status = fdio_watch_directory(dirfd, watchcb, deadline, NULL);
-  close(dirfd);
 
-  switch (status) {
+  switch (const zx_status_t status = fdio_watch_directory(dirfd.get(), watchcb, deadline, nullptr);
+          status) {
     case ZX_ERR_STOP:
       // clean exit on a match
       return 0;
