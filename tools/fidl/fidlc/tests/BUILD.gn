@@ -23,6 +23,7 @@ host_test_data("bad_cases") {
     "fidl/bad/event_empty_struct_payload.test.fidl",
     "fidl/bad/files_disagree_on_library_name_1.test.fidl",
     "fidl/bad/files_disagree_on_library_name_2.test.fidl",
+    "fidl/bad/invalid_character.test.fidl",
     "fidl/bad/invalid_hex_digit.test.fidl",
     "fidl/bad/invalid_layout.test.fidl",
     "fidl/bad/invalid_oct_digit.test.fidl",

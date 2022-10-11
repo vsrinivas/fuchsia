@@ -454,16 +454,10 @@ class LocaleSwapper {
 
 TEST(ParsingTests, BadInvalidCharacterTest) {
   LocaleSwapper swapper("de_DE.iso88591");
-  TestLibrary library(R"FIDL(
-library fidl.test.maxbytes;
-
-// This is all alphanumeric in the appropriate locale, but not a valid
-// identifier.
-type ß = struct {
-    x int32;
-};
-
-)FIDL");
+  TestLibrary library;
+  // This is all alphanumeric in the appropriate locale, but not a valid
+  // identifier.
+  library.AddFile("bad/invalid_character.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrInvalidCharacter,
                                       fidl::ErrInvalidCharacter);
 }

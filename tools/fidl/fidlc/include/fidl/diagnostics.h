@@ -13,7 +13,7 @@
 namespace fidl {
 
 constexpr RetiredDef<0> ErrAlwaysRetired("error id fi-0000 was always retired");
-constexpr UndocumentedErrorDef<1, std::string_view> ErrInvalidCharacter("invalid character '{}'");
+constexpr ErrorDef<1, std::string_view> ErrInvalidCharacter("invalid character '{}'");
 constexpr UndocumentedErrorDef<2> ErrUnexpectedLineBreak("unexpected line-break in string literal");
 constexpr UndocumentedErrorDef<3, std::string_view> ErrInvalidEscapeSequence(
     "invalid escape sequence '{}'");
