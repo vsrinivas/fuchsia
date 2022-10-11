@@ -23,8 +23,9 @@ use {
     },
     std::{
         convert::TryInto,
-        fs::remove_dir_all,
+        fs::{read_dir, remove_dir_all},
         io::{stderr, stdin, stdout, BufRead, Read, Write},
+        path::Component,
     },
     structured_ui,
     url::Url,
@@ -166,6 +167,16 @@ where
         for url in pbs_to_remove {
             // Resolve the directory for the target bundle.
             let root_dir = pbms::get_product_dir(&url).await.context("Couldn't get directory")?;
+            assert_ne!(root_dir.components().count(), 0, "An empty PBMS path is not allowed.");
+            assert_ne!(
+                root_dir.components().collect::<Vec<_>>(),
+                &[Component::RootDir],
+                "Refusing to delete from the root of the filesystem."
+            );
+            assert!(
+                !root_dir.components().into_iter().any(|x| x == Component::ParentDir),
+                "Directory traversal is not allowed."
+            );
             let name = url.fragment().expect("URL with trailing product_name fragment.");
 
             // If there is a repository for the bundle...
@@ -176,13 +187,19 @@ where
                     r.name == repo_name &&
                     // It has to be a Pm-style repo, since that's what we add in `get`...
                     match &r.spec {
-                        // And the local path has to match, to make sure it's the right bundle of that name...
-                        RepositorySpec::Pm { path } => path.clone().into_std_path_buf() == repo_path,
+                        // And the local path has to match, to make sure it's the right bundle of
+                        // that name...
+                        RepositorySpec::Pm { path } => {
+                            path.clone().into_std_path_buf() == repo_path
+                        }
                         _ => false,
                     }
                 }) {
                     // If all those match, we remove it.
-                    repos.remove_repository(&repo_name).await.context("communicating with ffx daemon")?;
+                    repos
+                        .remove_repository(&repo_name)
+                        .await
+                        .context("communicating with ffx daemon")?;
                     tracing::info!("Removed repository named '{}'", repo_name);
                 }
             }
@@ -192,6 +209,13 @@ where
             println!("Removing product bundle '{}'.", url);
             tracing::debug!("Removing product bundle '{}'.", url);
             remove_dir_all(&product_dir).context("removing product directory")?;
+
+            // If there are no more bundles in this directory, delete it too.
+            if !read_dir(&root_dir).context("reading root dir)")?.any(|d| {
+                d.expect("intermittent IO error, please try the command again.").path().is_dir()
+            }) {
+                remove_dir_all(&root_dir).context("removing root directory")?;
+            }
         }
     } else {
         println!("Cancelling product bundle removal.");
