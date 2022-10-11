@@ -56,9 +56,8 @@ zx_status_t GetTopologicalPath(int fd, std::string* out) {
 }
 
 struct DevicePaths {
-  std::string peripheral_path;
-  std::string host_path;
-  int dirfd;
+  std::optional<std::string> peripheral_path;
+  std::optional<std::string> host_path;
 };
 
 zx_status_t WaitForHostAndPeripheral([[maybe_unused]] int dirfd, int event, const char* name,
@@ -66,21 +65,19 @@ zx_status_t WaitForHostAndPeripheral([[maybe_unused]] int dirfd, int event, cons
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
   }
-  DevicePaths* device_paths = reinterpret_cast<DevicePaths*>(cookie);
-  std::string path(name);
-  path = "class/ethernet/" + path;
-  fbl::unique_fd dev_fd(openat(device_paths->dirfd, path.c_str(), O_RDONLY));
+  fbl::unique_fd dev_fd(openat(dirfd, name, O_RDONLY));
   std::string topological_path;
-  auto status = GetTopologicalPath(dev_fd.get(), &topological_path);
+  zx_status_t status = GetTopologicalPath(dev_fd.get(), &topological_path);
   if (status != ZX_OK) {
     return status;
   }
+  DevicePaths& device_paths = *reinterpret_cast<DevicePaths*>(cookie);
   if (topological_path.find("/usb-peripheral/function-001") != std::string::npos) {
-    device_paths->peripheral_path = path;
+    device_paths.peripheral_path.emplace(name);
   } else if (topological_path.find("/usb-bus/") != std::string::npos) {
-    device_paths->host_path = path;
+    device_paths.host_path.emplace(name);
   }
-  if (!device_paths->host_path.empty() && !device_paths->peripheral_path.empty()) {
+  if (device_paths.host_path.has_value() && device_paths.peripheral_path.has_value()) {
     return ZX_ERR_STOP;
   }
   return ZX_OK;
@@ -126,20 +123,17 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 
     ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
-    fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/ethernet", O_RDONLY));
+    constexpr char kClassEthernet[] = "class/ethernet";
+    fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), kClassEthernet, O_RDONLY));
     DevicePaths device_paths;
-    device_paths.dirfd = devmgr_.devfs_root().get();
-    while (true) {
-      auto result =
-          fdio_watch_directory(fd.get(), WaitForHostAndPeripheral, ZX_TIME_INFINITE, &device_paths);
-      if (result == ZX_ERR_STOP) {
-        break;
-      }
-      // If we see ZX_ERR_INTERNAL, something wrong happens while waiting for devices.
-      ASSERT_NE(result, ZX_ERR_INTERNAL);
-    }
-    *peripheral_path = device_paths.peripheral_path;
-    *host_path = device_paths.host_path;
+    ASSERT_STATUS(
+        fdio_watch_directory(fd.get(), WaitForHostAndPeripheral, ZX_TIME_INFINITE, &device_paths),
+        ZX_ERR_STOP);
+    ASSERT_TRUE(device_paths.peripheral_path.has_value());
+    *peripheral_path =
+        std::string(kClassEthernet) + '/' + std::move(device_paths.peripheral_path.value());
+    ASSERT_TRUE(device_paths.host_path.has_value());
+    *host_path = std::string(kClassEthernet) + '/' + std::move(device_paths.host_path.value());
   }
 };
 
