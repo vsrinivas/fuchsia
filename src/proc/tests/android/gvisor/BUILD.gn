@@ -180,8 +180,7 @@ gvisor_tests = [
   "sigprocmask_test",
   "sigstop_test",
   "sigtimedwait_test",
-
-  # "socket_abstract_non_blocking_test",
+  "socket_abstract_non_blocking_test",
   "socket_abstract_test",
 
   # "socket_bind_to_device_distribution_test",
