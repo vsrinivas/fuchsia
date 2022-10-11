@@ -174,7 +174,7 @@ fn with_devices<
 fn get_mtu<NonSyncCtx: NonSyncContext>(mut ctx: &SyncCtx<NonSyncCtx>, device: &DeviceId) -> u32 {
     match device.inner() {
         DeviceIdInner::Ethernet(id) => self::ethernet::get_mtu(&mut ctx, &id),
-        DeviceIdInner::Loopback(id) => self::loopback::get_mtu(ctx, *id),
+        DeviceIdInner::Loopback(id) => self::loopback::get_mtu(ctx, id),
     }
 }
 
@@ -293,7 +293,7 @@ where
             self::ethernet::send_ip_frame(&mut sync_ctx, ctx, &id, local_addr, body)
         }
         DeviceIdInner::Loopback(id) => {
-            self::loopback::send_ip_frame(sync_ctx, ctx, *id, local_addr, body)
+            self::loopback::send_ip_frame(sync_ctx, ctx, id, local_addr, body)
         }
     }
 }
@@ -506,7 +506,7 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
 }
 
 /// Device IDs identifying Ethernet devices.
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub(crate) struct EthernetDeviceId(usize);
 
 impl Debug for EthernetDeviceId {
@@ -530,10 +530,10 @@ impl From<usize> for EthernetDeviceId {
 }
 
 /// The identifier for timer events in the device layer.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) struct DeviceLayerTimerId(DeviceLayerTimerIdInner);
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 enum DeviceLayerTimerIdInner {
     /// A timer event for an Ethernet device.
     Ethernet(EthernetTimerId<EthernetDeviceId>),
@@ -567,7 +567,7 @@ pub(crate) fn handle_timer<NonSyncCtx: NonSyncContext>(
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub(crate) enum DeviceIdInner {
     Ethernet(EthernetDeviceId),
     Loopback(LoopbackDeviceId),

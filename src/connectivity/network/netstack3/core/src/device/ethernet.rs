@@ -458,7 +458,7 @@ fn should_deliver(
 /// A timer ID for Ethernet devices.
 ///
 /// `D` is the type of device ID that identifies different Ethernet devices.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) enum EthernetTimerId<D> {
     Arp(ArpTimerId<EthernetLinkDevice, D>),
     Nudv6(NudTimerId<Ipv6, EthernetLinkDevice, D>),
@@ -944,7 +944,7 @@ mod tests {
     use super::*;
     use crate::{
         context::testutil::DummyInstant,
-        device::{DeviceId, DeviceIdInner, EthernetDeviceId},
+        device::DeviceId,
         error::NotFoundError,
         ip::{
             device::{
@@ -2032,18 +2032,14 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let mut sync_ctx = &sync_ctx;
-        let device = EthernetDeviceId(0);
-        assert_eq!(
-            crate::device::add_ethernet_device(
-                &mut sync_ctx,
-                &mut non_sync_ctx,
-                config.local_mac,
-                Ipv6::MINIMUM_LINK_MTU.into()
-            ),
-            DeviceIdInner::Ethernet(device).into()
+        let device = crate::device::add_ethernet_device(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            config.local_mac,
+            Ipv6::MINIMUM_LINK_MTU.into(),
         );
 
-        crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &device.into());
+        crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &device);
         // Verify that there is a single assigned address.
         assert_eq!(
             sync_ctx
@@ -2066,7 +2062,7 @@ mod tests {
         crate::device::add_ip_addr_subnet(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &device.into(),
+            &device,
             AddrSubnet::new(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network(), 128).unwrap(),
         )
         .unwrap();

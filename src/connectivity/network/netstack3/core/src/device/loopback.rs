@@ -29,7 +29,7 @@ use crate::{
     DeviceId, NonSyncContext, SyncCtx,
 };
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub(crate) struct LoopbackDeviceId;
 
 impl Debug for LoopbackDeviceId {
@@ -74,7 +74,7 @@ pub(super) fn send_ip_frame<
 >(
     mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
-    device_id: LoopbackDeviceId,
+    device_id: &LoopbackDeviceId,
     _local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
@@ -95,7 +95,7 @@ pub(super) fn send_ip_frame<
     match BufferReceiveQueueHandler::queue_rx_packet(
         &mut sync_ctx,
         ctx,
-        &device_id,
+        device_id,
         A::Version::VERSION,
         frame,
     ) {
@@ -112,7 +112,7 @@ pub(super) fn send_ip_frame<
 /// Gets the MTU associated with this device.
 pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(
     ctx: &SyncCtx<NonSyncCtx>,
-    LoopbackDeviceId: LoopbackDeviceId,
+    &LoopbackDeviceId: &LoopbackDeviceId,
 ) -> u32 {
     let loopback = {
         let devices = ctx.state.device.devices.read();

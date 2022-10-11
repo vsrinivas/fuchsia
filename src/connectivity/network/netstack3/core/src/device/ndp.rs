@@ -146,7 +146,7 @@ mod tests {
         type Error = DeviceId;
         fn try_from(id: DeviceId) -> Result<EthernetDeviceId, DeviceId> {
             match id.inner() {
-                DeviceIdInner::Ethernet(id) => Ok(*id),
+                DeviceIdInner::Ethernet(id) => Ok(id.clone()),
                 DeviceIdInner::Loopback(_) => Err(id),
             }
         }
@@ -485,7 +485,7 @@ mod tests {
             local_mac(),
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let eth_dev_id = dev_id.clone().try_into().expect("expected ethernet ID");
+        let eth_dev_id: EthernetDeviceId = dev_id.clone().try_into().expect("expected ethernet ID");
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &dev_id);
 
         // Enable DAD.
@@ -508,7 +508,7 @@ mod tests {
         for _ in 0..3 {
             assert_eq!(
                 non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer).unwrap(),
-                dad_timer_id(eth_dev_id, local_ip())
+                dad_timer_id(eth_dev_id.clone(), local_ip())
             );
         }
         assert_eq!(
@@ -625,7 +625,7 @@ mod tests {
             local_mac(),
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let eth_dev_id = dev_id.clone().try_into().expect("expected ethernet ID");
+        let eth_dev_id: EthernetDeviceId = dev_id.clone().try_into().expect("expected ethernet ID");
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &dev_id);
 
         assert_empty(non_sync_ctx.frames_sent());
@@ -656,7 +656,7 @@ mod tests {
         assert_eq!(non_sync_ctx.frames_sent().len(), 1);
 
         // Send another NS.
-        let local_timer_id = dad_timer_id(eth_dev_id, local_ip());
+        let local_timer_id = dad_timer_id(eth_dev_id.clone(), local_ip());
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
                 Duration::from_secs(1),
@@ -734,7 +734,7 @@ mod tests {
             local_mac(),
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let eth_dev_id = dev_id.clone().try_into().expect("expected ethernet ID");
+        let eth_dev_id: EthernetDeviceId = dev_id.clone().try_into().expect("expected ethernet ID");
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &dev_id);
 
         // Enable DAD.
@@ -766,7 +766,7 @@ mod tests {
         assert_eq!(non_sync_ctx.frames_sent().len(), 1);
 
         // Send another NS.
-        let local_timer_id = dad_timer_id(eth_dev_id, local_ip());
+        let local_timer_id = dad_timer_id(eth_dev_id.clone(), local_ip());
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
                 Duration::from_secs(1),
@@ -795,7 +795,7 @@ mod tests {
         assert_eq!(non_sync_ctx.frames_sent().len(), 3);
 
         // Run 1s
-        let remote_timer_id = dad_timer_id(eth_dev_id, remote_ip());
+        let remote_timer_id = dad_timer_id(eth_dev_id.clone(), remote_ip());
         assert_eq!(
             non_sync_ctx.trigger_timers_for(
                 Duration::from_secs(1),
@@ -1165,7 +1165,8 @@ mod tests {
             dummy_config.local_mac,
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let eth_device_id = device_id.clone().try_into().expect("expected ethernet ID");
+        let eth_device_id: EthernetDeviceId =
+            device_id.clone().try_into().expect("expected ethernet ID");
         crate::device::update_ipv6_configuration(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1182,7 +1183,7 @@ mod tests {
         let time = non_sync_ctx.now();
         assert_eq!(
             non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer).unwrap(),
-            rs_timer_id(eth_device_id).into()
+            rs_timer_id(eth_device_id.clone()).into()
         );
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
@@ -1200,7 +1201,7 @@ mod tests {
         let time = non_sync_ctx.now();
         assert_eq!(
             non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer).unwrap(),
-            rs_timer_id(eth_device_id).into()
+            rs_timer_id(eth_device_id.clone()).into()
         );
         assert_eq!(non_sync_ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
@@ -1224,7 +1225,7 @@ mod tests {
         let time = non_sync_ctx.now();
         assert_eq!(
             non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer).unwrap(),
-            rs_timer_id(eth_device_id).into()
+            rs_timer_id(eth_device_id.clone()).into()
         );
         assert_eq!(non_sync_ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
@@ -1272,7 +1273,7 @@ mod tests {
         let time = non_sync_ctx.now();
         assert_eq!(
             non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer).unwrap(),
-            rs_timer_id(eth_device_id).into()
+            rs_timer_id(eth_device_id.clone()).into()
         );
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
@@ -2981,7 +2982,7 @@ mod tests {
             config.local_mac,
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let device_id = device.clone().try_into().unwrap();
+        let device_id: EthernetDeviceId = device.clone().try_into().unwrap();
         // No DAD for the auto-generated link-local address.
         crate::device::update_ipv6_configuration(
             &mut sync_ctx,
@@ -3063,7 +3064,7 @@ mod tests {
         let dad_timer_ids = get_matching_slaac_address_entries(&sync_ctx, &device, |entry| {
             entry.addr_sub().subnet() == subnet
         })
-        .map(|entry| dad_timer_id(device_id, entry.addr_sub().addr()))
+        .map(|entry| dad_timer_id(device_id.clone(), entry.addr_sub().addr()))
         .collect::<Vec<_>>();
         non_sync_ctx.trigger_timers_until_and_expect_unordered(
             before_regen,
