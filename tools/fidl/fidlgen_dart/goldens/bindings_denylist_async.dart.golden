@@ -976,6 +976,7 @@ class AllowedProxy extends $fidl.AsyncProxy<Allowed> implements Allowed {
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -1010,6 +1011,7 @@ class AllowedBinding extends $fidl.AsyncBinding<Allowed> {
       $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(r'Unexpected message name for AllowedBinding');
     }
   }
@@ -1124,6 +1126,7 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -1610,6 +1613,7 @@ class DenyEachBindingBinding extends $fidl.AsyncBinding<DenyEachBinding> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for DenyEachBindingBinding');
     }
@@ -1673,6 +1677,7 @@ class ImportsSameNameContextProxy extends $fidl
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -1777,6 +1782,7 @@ class ImportsSameNameContextBinding
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for ImportsSameNameContextBinding');
     }

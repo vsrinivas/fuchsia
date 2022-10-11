@@ -69,6 +69,7 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -103,6 +104,7 @@ class ChildBinding extends $fidl.AsyncBinding<Child> {
       $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(r'Unexpected message name for ChildBinding');
     }
   }
@@ -190,6 +192,7 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -432,6 +435,7 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(r'Unexpected message name for ParentBinding');
     }
   }

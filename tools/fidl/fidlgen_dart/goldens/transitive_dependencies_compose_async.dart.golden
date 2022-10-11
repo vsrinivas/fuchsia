@@ -84,6 +84,7 @@ class TopProxy extends $fidl.AsyncProxy<Top> implements Top {
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -178,6 +179,7 @@ class TopBinding extends $fidl.AsyncBinding<Top> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(r'Unexpected message name for TopBinding');
     }
   }

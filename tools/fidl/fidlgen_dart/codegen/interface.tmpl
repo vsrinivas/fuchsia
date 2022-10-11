@@ -242,6 +242,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
 {{- end }}
 {{- end }}
       default:
+        $message.closeHandles();
         {{ if .OneWayUnknownInteractions -}}
         switch ($message.strictness) {
           case $fidl.CallStrictness.flexible:
@@ -463,6 +464,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .ServerName }}> {
       {{- end }}
     {{- end }}
       default:
+        $message.closeHandles();
         {{ if .TwoWayUnknownInteractions -}}
         switch ($message.strictness) {
           case $fidl.CallStrictness.flexible:

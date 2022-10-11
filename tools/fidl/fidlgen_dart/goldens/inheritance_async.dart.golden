@@ -84,6 +84,7 @@ class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -184,6 +185,7 @@ class SubBinding extends $fidl.AsyncBinding<Sub> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(r'Unexpected message name for SubBinding');
     }
   }
@@ -234,6 +236,7 @@ class SuperProxy extends $fidl.AsyncProxy<Super> implements Super {
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -334,6 +337,7 @@ class SuperBinding extends $fidl.AsyncBinding<Super> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(r'Unexpected message name for SuperBinding');
     }
   }

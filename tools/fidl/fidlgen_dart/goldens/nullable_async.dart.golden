@@ -671,6 +671,7 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -778,6 +779,7 @@ class SimpleProtocolBinding extends $fidl.AsyncBinding<SimpleProtocol> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for SimpleProtocolBinding');
     }

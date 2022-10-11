@@ -628,6 +628,7 @@ class InterfaceProxy extends $fidl.AsyncProxy<Interface> implements Interface {
         });
         break;
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -739,6 +740,7 @@ class InterfaceBinding extends $fidl.AsyncBinding<Interface> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(r'Unexpected message name for InterfaceBinding');
     }
   }

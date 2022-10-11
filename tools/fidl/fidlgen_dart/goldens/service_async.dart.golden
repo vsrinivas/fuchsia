@@ -82,6 +82,7 @@ class FirstProtocolProxy extends $fidl.AsyncProxy<FirstProtocol>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -148,6 +149,7 @@ class FirstProtocolBinding extends $fidl.AsyncBinding<FirstProtocol> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for FirstProtocolBinding');
     }
@@ -196,6 +198,7 @@ class SecondProtocolProxy extends $fidl.AsyncProxy<SecondProtocol>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -262,6 +265,7 @@ class SecondProtocolBinding extends $fidl.AsyncBinding<SecondProtocol> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for SecondProtocolBinding');
     }

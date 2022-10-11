@@ -229,10 +229,6 @@ class RunnerImpl extends Runner {
       // - Ignores the ZX_ERR_INVALID_ARGS from sending a handle which did not
       //   have the rights specified in the handle dispositions list.
       case Test.serverSendsTooFewRights:
-      // Dart bindings unknown interaction handlers do not currently close
-      // incoming handles:
-      case Test.unknownFlexibleOneWayHandleOpenProtocol:
-      case Test.unknownFlexibleTwoWayHandleOpenProtocol:
         return false;
       default:
         return true;

@@ -914,6 +914,7 @@ class AnotherDiscoverableProtocolProxy
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -949,6 +950,7 @@ class AnotherDiscoverableProtocolBinding
       $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for AnotherDiscoverableProtocolBinding');
     }
@@ -1090,6 +1092,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
         });
         break;
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -1429,6 +1432,7 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for ChannelProtocolBinding');
     }
@@ -1481,6 +1485,7 @@ class DiscoverableProtocolProxy extends $fidl.AsyncProxy<DiscoverableProtocol>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -1548,6 +1553,7 @@ class DiscoverableProtocolBinding
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for DiscoverableProtocolBinding');
     }
@@ -1650,6 +1656,7 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
         });
         break;
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -1852,6 +1859,7 @@ class HandleRightsProtocolBinding
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for HandleRightsProtocolBinding');
     }
@@ -1931,6 +1939,7 @@ class ManyParametersProxy extends $fidl.AsyncProxy<ManyParameters>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -2049,6 +2058,7 @@ class ManyParametersBinding extends $fidl.AsyncBinding<ManyParameters> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for ManyParametersBinding');
     }
@@ -2101,6 +2111,7 @@ class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -2210,6 +2221,7 @@ class MethodWithUnionBinding extends $fidl.AsyncBinding<MethodWithUnion> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for MethodWithUnionBinding');
     }
@@ -2312,6 +2324,7 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
         });
         break;
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -2499,6 +2512,7 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for TransitionalBinding');
     }
@@ -2693,6 +2707,7 @@ class WithAndWithoutRequestResponseProxy
         });
         break;
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -3184,6 +3199,7 @@ class WithAndWithoutRequestResponseBinding
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for WithAndWithoutRequestResponseBinding');
     }
@@ -3287,6 +3303,7 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -3658,6 +3675,7 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for WithErrorSyntaxBinding');
     }
@@ -3747,6 +3765,7 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -4019,6 +4038,7 @@ class WithProtocolEndsBinding extends $fidl.AsyncBinding<WithProtocolEnds> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for WithProtocolEndsBinding');
     }

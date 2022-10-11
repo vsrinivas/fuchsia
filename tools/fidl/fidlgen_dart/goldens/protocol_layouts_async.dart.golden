@@ -1902,6 +1902,7 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
         });
         break;
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -3497,6 +3498,7 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for MainProtocolBinding');
     }

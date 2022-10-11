@@ -182,6 +182,7 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
         });
         break;
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -373,6 +374,7 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for EmptyProtocolBinding');
     }

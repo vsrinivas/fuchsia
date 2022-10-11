@@ -12840,6 +12840,7 @@ class UnknownInteractionsAjarProtocolProxy
         });
         break;
       default:
+        $message.closeHandles();
         switch ($message.strictness) {
           case $fidl.CallStrictness.flexible:
             const String _name =
@@ -14386,6 +14387,7 @@ class UnknownInteractionsAjarProtocolBinding
         }, close);
         break;
       default:
+        $message.closeHandles();
         switch ($message.strictness) {
           case $fidl.CallStrictness.flexible:
             if ($message.txid == 0) {
@@ -14914,6 +14916,7 @@ class UnknownInteractionsClosedProtocolProxy
         });
         break;
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -16044,6 +16047,7 @@ class UnknownInteractionsClosedProtocolBinding
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for UnknownInteractionsClosedProtocolBinding');
     }
@@ -16983,6 +16987,7 @@ class UnknownInteractionsProtocolProxy
         });
         break;
       default:
+        $message.closeHandles();
         switch ($message.strictness) {
           case $fidl.CallStrictness.flexible:
             const String _name = "UnknownInteractionsProtocol [UnknownEvent]";
@@ -19238,6 +19243,7 @@ class UnknownInteractionsProtocolBinding
         }, close);
         break;
       default:
+        $message.closeHandles();
         switch ($message.strictness) {
           case $fidl.CallStrictness.flexible:
             if ($message.txid == 0) {

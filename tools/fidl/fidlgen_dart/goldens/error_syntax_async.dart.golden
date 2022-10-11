@@ -266,6 +266,7 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -506,6 +507,7 @@ class ExampleUseOfErrorSyntaxBinding
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for ExampleUseOfErrorSyntaxBinding');
     }

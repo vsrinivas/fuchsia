@@ -433,6 +433,7 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
   void _handleEvent($fidl.IncomingMessage $message) {
     switch ($message.ordinal) {
       default:
+        $message.closeHandles();
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
         break;
@@ -508,6 +509,7 @@ class ExampleProtocolBinding extends $fidl.AsyncBinding<ExampleProtocol> {
         }, close);
         break;
       default:
+        $message.closeHandles();
         throw $fidl.FidlError(
             r'Unexpected message name for ExampleProtocolBinding');
     }
