@@ -1033,7 +1033,7 @@ relationship between the request and the response in FIDL syntax and therefore
 it is prone to misuse. Flow control will only work when clients correctly
 implement sending of the notification message.
 
-<<../widgets/_acknowledgement_pattern.md>>
+<<../languages/fidl/widgets/_acknowledgement_pattern.md>>
 
 ### Feed-forward dataflow
 
