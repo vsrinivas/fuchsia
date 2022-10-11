@@ -18,4 +18,8 @@ modified or improved.
 
 <!-- DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
+### Basic metering on client requests {#add_line_metered}
+
+<<_add_line_metered_tutorial.md>>
+
 <!-- /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->

@@ -1,0 +1,44 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library examples.canvas.addlinemetered;
+
+/// A point in 2D space.
+type Point = struct {
+    x int64;
+    y int64;
+};
+
+/// A line in 2D space.
+alias Line = array<Point, 2>;
+
+/// A bounding box in 2D space. This is the result of "drawing" operations on our canvas, and what
+/// the server reports back to the client. These bounds are sufficient to contain all of the
+/// lines (inclusive) on a canvas at a given time.
+type BoundingBox = struct {
+    top_left Point;
+    bottom_right Point;
+};
+
+/// Manages a single instance of a canvas. Each session of this protocol is responsible for a new
+/// canvas.
+@discoverable
+protocol Instance {
+    // [START add_line_method]
+    /// Add a line to the canvas.
+    ///
+    /// This method can be considered an improvement over the one-way case from a flow control
+    /// perspective, as it is now much more difficult for a well-behaved client to "get ahead" of
+    /// the server and overwhelm. This is because the client now waits for each request to be acked
+    /// by the server before proceeding. This change represents a trade-off: we get much greater
+    /// synchronization of message flow between the client and the server, at the cost of worse
+    /// performance at the limit due to the extra wait imposed by each ack.
+    AddLine(struct {
+        line Line;
+    }) -> ();
+    // [END add_line_method]
+
+    /// Update the client with the latest drawing state. The server makes no guarantees about how
+    /// often this event occurs - it could occur multiple times per board state, for example.
+    -> OnDrawn(BoundingBox);
+};
