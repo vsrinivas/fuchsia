@@ -1002,6 +1002,7 @@ mod sys {
     pub type trace_blob_type_t = libc::c_int;
     pub const TRACE_BLOB_TYPE_DATA: trace_blob_type_t = 1;
     pub const TRACE_BLOB_TYPE_LAST_BRANCH: trace_blob_type_t = 2;
+    pub const TRACE_BLOB_TYPE_PERFETTO: trace_blob_type_t = 3;
 
     #[repr(C)]
     #[derive(Copy, Clone)]

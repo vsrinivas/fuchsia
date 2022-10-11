@@ -752,6 +752,9 @@ The following blob types are defined:
   The format is defined by the
 [CPU performance
 monitor](/docs/development/tracing/advanced/recording-a-cpu-performance-trace.md).
+- `TRACE_BLOB_TYPE_PERFETTO = `0x03`: The blob contains data recorded from a
+  Perfetto speaking component. The data is encoded in [Perfetto's Proto
+  Format](https://perfetto.dev/docs/reference/trace-packet-proto).
 
 ### Userspace object record (record type = 6) {#userspace-object-record}
 

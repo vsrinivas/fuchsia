@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/async/default.h>
+#include <lib/trace/event.h>
 #include <unistd.h>
 
 #include <functional>
@@ -51,12 +52,13 @@ void ConsumerAdapter::OnTraceData(std::vector<perfetto::TracePacket> packets, bo
   FX_DCHECK(perfetto_task_runner_->RunsTasksOnCurrentThread());
 
   for (auto& cur_packet : packets) {
-    // TODO: Write the preamble from cur_packet.GetProtoPreamble()
+    auto [preamble_data, preamble_size] = cur_packet.GetProtoPreamble();
+    TRACE_BLOB(TRACE_BLOB_TYPE_PERFETTO, "perfetto-bridge", preamble_data, preamble_size);
 
     trace_entry_count_ += cur_packet.slices().size();
     for (auto& cur_slice : cur_packet.slices()) {
       trace_bytes_received_ += cur_slice.size;
-      // TODO: Write cur_slice.
+      TRACE_BLOB(TRACE_BLOB_TYPE_PERFETTO, "perfetto-bridge", cur_slice.start, cur_slice.size);
     }
   }
 
@@ -125,6 +127,7 @@ void ConsumerAdapter::OnStopTracing() {
   // drained after this point.
   consumer_endpoint_->ReadBuffers();
 
+  FX_LOGS(INFO) << "Received " << trace_bytes_received_ << " bytes of trace data.";
   consumer_endpoint_.reset();
 }
 

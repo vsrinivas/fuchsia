@@ -58,8 +58,6 @@ class ConsumerAdapter : public perfetto::Consumer {
   // Used for handling FXT events.
   trace::TraceObserver trace_observer_;
 
-  // For early development purposes only, used to write trace data to a file.
-  fbl::unique_fd output_fd_;
   size_t trace_entry_count_ = 0;
   size_t trace_bytes_received_ = 0;
 };
