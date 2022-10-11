@@ -317,13 +317,37 @@ class FaultTlbReadData {
   static bool is_ggtt(uint64_t val) { return val & kGgttCycle; }
 };
 
+class PowerGateEnable : public hwreg::RegisterBase<PowerGateEnable, uint32_t> {
+ public:
+  DEF_BIT(0, render_powergate_enable);
+  DEF_BIT(1, media_powergate_enable);
+  DEF_BIT(2, media_sampler_powergate_enable);
+  DEF_BIT(3, vcs0_hcp_powergate_enable);
+  DEF_BIT(4, vcs0_mfx_powergate_enable);
+  DEF_BIT(5, vcs1_hcp_powergate_enable);
+  DEF_BIT(6, vcs1_mfx_powergate_enable);
+  DEF_BIT(7, vcs2_hcp_powergate_enable);
+  DEF_BIT(8, vcs2_mfx_powergate_enable);
+  // More available hcp/mfx bits up to vcs7
+
+  static constexpr uint32_t kPowerGateAll = 0xFFFF'FFFF;
+
+  static auto GetAddr() { return hwreg::RegisterAddr<PowerGateEnable>(0xA210); }
+};
+
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.493
 class ForceWake {
  public:
-  enum Domain { RENDER };
+  enum Domain { RENDER, GEN9_MEDIA, GEN12_VDBOX0 };
 
   static constexpr uint32_t kRenderOffset = 0xA278;
   static constexpr uint32_t kRenderStatusOffset = 0xD84;
+
+  static constexpr uint32_t kGen9MediaOffset = 0xA270;
+  static constexpr uint32_t kGen9MediaStatusOffset = 0xD88;
+
+  static constexpr uint32_t kGen12Vdbox0Offset = 0xA540;
+  static constexpr uint32_t kGen12Vdbox0StatusOffset = 0xD50;
 
   static void reset(magma::RegisterIo* reg_io, Domain domain) { write(reg_io, domain, 0xFFFF, 0); }
 
@@ -334,6 +358,12 @@ class ForceWake {
       case RENDER:
         reg_io->Write32(val32, kRenderOffset);
         break;
+      case GEN9_MEDIA:
+        reg_io->Write32(val32, kGen9MediaOffset);
+        break;
+      case GEN12_VDBOX0:
+        reg_io->Write32(val32, kGen12Vdbox0Offset);
+        break;
     }
   }
 
@@ -341,6 +371,10 @@ class ForceWake {
     switch (domain) {
       case RENDER:
         return static_cast<uint16_t>(reg_io->Read32(kRenderStatusOffset));
+      case GEN9_MEDIA:
+        return static_cast<uint16_t>(reg_io->Read32(kGen9MediaStatusOffset));
+      case GEN12_VDBOX0:
+        return static_cast<uint16_t>(reg_io->Read32(kGen12Vdbox0StatusOffset));
     }
   }
 };

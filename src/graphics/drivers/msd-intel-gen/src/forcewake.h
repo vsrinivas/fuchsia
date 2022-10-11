@@ -33,6 +33,9 @@ class ForceWake {
     wait(reg_io, domain, false);
   }
 
+  static constexpr uint32_t kThreadShift = 0;
+  static constexpr uint32_t kRetryMaxMs = 3;
+
  private:
   static void wait(magma::RegisterIo* reg_io, registers::ForceWake::Domain domain, bool set) {
     uint32_t status;
@@ -45,11 +48,6 @@ class ForceWake {
     }
     DLOG("timed out waiting for forcewake, status 0x%x", status);
   }
-
-  static constexpr uint32_t kThreadShift = 0;
-  static constexpr uint32_t kRetryMaxMs = 3;
-
-  friend class TestForceWake;
 };
 
 #endif  // FORCEWAKE_H

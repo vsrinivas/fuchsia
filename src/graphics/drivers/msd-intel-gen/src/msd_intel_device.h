@@ -152,6 +152,7 @@ class MsdIntelDevice : public msd_device_t,
   void Destroy();
 
   bool BaseInit(void* device_handle);
+  bool HardwarePreinit();
   bool CreateEngineCommandStreamers();
   void CheckEngines();
   void InitEngine(EngineCommandStreamer* engine);

@@ -192,6 +192,11 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   device_id_ = pci_dev_id;
   DLOG("device_id 0x%x revision 0x%x", device_id_, revision);
 
+  if (!DeviceId::is_gen9(device_id_) && !DeviceId::is_gen12(device_id_)) {
+    MAGMA_LOG(WARNING, "Unrecognized graphics PCI device id 0x%x", device_id_);
+    return false;
+  }
+
   std::unique_ptr<magma::PlatformMmio> mmio(
       platform_device_->CpuMapPciMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE));
   if (!mmio)
@@ -199,23 +204,11 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
 
   register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
-  if (!DeviceId::is_gen9(device_id_) && !DeviceId::is_gen12(device_id_)) {
-    MAGMA_LOG(WARNING, "Unrecognized graphics PCI device id 0x%x", device_id_);
-    return false;
-  }
-
-  ForceWake::reset(register_io_.get(), registers::ForceWake::RENDER);
-  ForceWake::request(register_io_.get(), registers::ForceWake::RENDER);
+  HardwarePreinit();
 
   bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
   if (!bus_mapper_)
     return DRETF(false, "failed to create bus mapper");
-
-  // Clear faults
-  registers::AllEngineFault::GetAddr(device_id_)
-      .FromValue(0)
-      .set_valid(0)
-      .WriteTo(register_io_.get());
 
   topology_ = std::make_unique<Topology>();
 
@@ -253,6 +246,37 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
   CheckEngines();
+
+  return true;
+}
+
+bool MsdIntelDevice::HardwarePreinit() {
+  DASSERT(register_io());
+
+  // TODO(fxbug.dev/79999): request and release forcewake as needed. For now we always hold
+  // forcewake for the engines we support, however on some hardware (eg gen12) this prevents
+  // the GPU from reaching max frequency.
+  ForceWake::reset(register_io(), registers::ForceWake::RENDER);
+  ForceWake::request(register_io(), registers::ForceWake::RENDER);
+
+  if (DeviceId::is_gen12(device_id_)) {
+    ForceWake::reset(register_io(), registers::ForceWake::GEN12_VDBOX0);
+    ForceWake::request(register_io(), registers::ForceWake::GEN12_VDBOX0);
+  } else if (DeviceId::is_gen9(device_id_)) {
+    ForceWake::reset(register_io(), registers::ForceWake::GEN9_MEDIA);
+    ForceWake::request(register_io(), registers::ForceWake::GEN9_MEDIA);
+  }
+
+  if (DeviceId::is_gen12(device_id_)) {
+    // Power gate everything, assume missing engines will be ignored.
+    // On gen9 there are issues around engine reset, so leave power gating disabled for now.
+    registers::PowerGateEnable::GetAddr()
+        .FromValue(registers::PowerGateEnable::kPowerGateAll)
+        .WriteTo(register_io());
+  }
+
+  // Clear faults
+  registers::AllEngineFault::GetAddr(device_id_).FromValue(0).set_valid(0).WriteTo(register_io());
 
   return true;
 }
