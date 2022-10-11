@@ -282,11 +282,44 @@ RecurringCallback g_status_callback([]() {
   MsrAccess msr;
   rapl_units units = GetUnits(&msr);
 
-  static uint64_t last_energy_status = 0;
-  uint64_t energy_status = read_msr(X86_MSR_PKG_ENERGY_STATUS);
-  printf("energy consumed: %luuJ (total: %luuJ)\n",
-         (energy_status - last_energy_status) * units.energy_uj, energy_status * units.energy_uj);
-  last_energy_status = energy_status;
+  printf("energy consumed:\n");
+  {
+    static uint64_t last_energy_status = 0;
+
+    uint64_t energy_status = read_msr(X86_MSR_PKG_ENERGY_STATUS);
+    uint64_t uj = (energy_status - last_energy_status) * units.energy_uj;
+
+    printf("\tpkg: %lu uJ (%lu J) (total: %lu uJ)\n", uj, uj / 1000000,
+           energy_status * units.energy_uj);
+
+    last_energy_status = energy_status;
+  }
+
+  {
+    // PP0 usually is the core
+    static uint64_t last_pp0_energy_status = 0;
+
+    uint64_t pp0_energy_status = msr.read_msr(X86_MSR_PP0_ENERGY_STATUS);
+    uint64_t uj = (pp0_energy_status - last_pp0_energy_status) * units.energy_uj;
+
+    printf("\tpp0: %lu uJ (%lu J) (total: %lu uJ)\n", uj, uj / 1000000,
+           pp0_energy_status * units.energy_uj);
+
+    last_pp0_energy_status = pp0_energy_status;
+  }
+
+  {
+    // PP1 usually is graphics
+    static uint64_t last_pp1_energy_status = 0;
+
+    uint64_t pp1_energy_status = msr.read_msr(X86_MSR_PP1_ENERGY_STATUS);
+    uint64_t uj = (pp1_energy_status - last_pp1_energy_status) * units.energy_uj;
+
+    printf("\tpp1: %lu uJ (%lu J) (total: %lu uJ)\n", uj, uj / 1000000,
+           pp1_energy_status * units.energy_uj);
+
+    last_pp1_energy_status = pp1_energy_status;
+  }
 
   print_limit_reasons(/*use_log=*/false);
 });
