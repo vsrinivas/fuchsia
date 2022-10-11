@@ -395,8 +395,7 @@ impl GUID {
 
     #[cfg(test)]
     pub fn from_u128(n: u128) -> Self {
-        // TODO: use uuid::Uuid::from_u128() when it's available.
-        Self { uuid: uuid::Uuid::from_slice(&n.to_be_bytes()).unwrap() }
+        Self { uuid: uuid::Uuid::from_u128(n) }
     }
 }
 
@@ -406,6 +405,6 @@ impl Serialize for GUID {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&format!("{{{}}}", self.uuid))
+        self.uuid.as_braced().serialize(serializer)
     }
 }
