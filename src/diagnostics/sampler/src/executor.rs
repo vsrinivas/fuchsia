@@ -472,8 +472,6 @@ impl ProjectSampler {
                 }
             }
         }
-        let mut archive_reader = ArchiveReader::new();
-        archive_reader.retry_if_empty(false).add_selectors(all_selectors.into_iter());
         let mut project_sampler = ProjectSampler {
             archive_reader: ArchiveReader::new(),
             moniker_to_selector_map: HashMap::new(),
