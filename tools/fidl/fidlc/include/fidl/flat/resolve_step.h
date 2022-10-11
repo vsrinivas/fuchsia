@@ -81,7 +81,7 @@ class ResolveStep : public Compiler::Step {
   Context ConstraintContext(const TypeConstructor* type_ctor, Context context);
 
   // Per-node information for the version graph.
-  struct NodeInfoDeprecated {
+  struct NodeInfo {
     // Set of points at which to split this element in the final decomposition.
     // It initially contains 2 endpoints (or 3 points with deprecation), and
     // then receives more points from incoming neighbours.
@@ -97,7 +97,7 @@ class ResolveStep : public Compiler::Step {
   // all the current library's elements, plus elements from external libraries
   // it references. The latter have in-degree zero, i.e. they only appear as map
   // keys and never in the sets of outgoing neighbors.
-  std::map<const Element*, NodeInfoDeprecated> graph_;
+  std::map<const Element*, NodeInfo> graph_;
 };
 
 }  // namespace fidl::flat

@@ -2032,6 +2032,43 @@ const SECOND bool = false;
                 "const 'FIRST' -> const 'SECOND' -> const 'FIRST'");
 }
 
+TEST(AttributesTests, BadLibraryReferencesNonexistentConst) {
+  TestLibrary library(R"FIDL(
+@foo(nonexistent)
+library example;
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
+}
+
+TEST(AttributesTests, BadLibraryReferencesConst) {
+  TestLibrary library(R"FIDL(
+@foo(BAR)
+library example;
+
+const BAR bool = true;
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrReferenceInLibraryAttribute);
+}
+
+TEST(AttributesTests, BadLibraryReferencesExternalConst) {
+  SharedAmongstLibraries shared;
+  TestLibrary dependency(&shared, "dependency.fidl", R"FIDL(
+library dependency;
+
+const BAR bool = true;
+)FIDL");
+  ASSERT_COMPILED(dependency);
+
+  TestLibrary library(&shared, "example.fidl", R"FIDL(
+@foo(dependency.BAR)
+library example;
+
+using dependency;
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrReferenceInLibraryAttribute);
+}
+
 TEST(AttributesTests, GoodDiscoverableImplicitName) {
   TestLibrary library(R"FIDL(
 library example;

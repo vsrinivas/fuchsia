@@ -440,6 +440,8 @@ constexpr UndocumentedErrorDef<179, flat::Name> ErrNewTypeCannotHaveConstraint(
     "{} is a new-type, which cannot carry constraints");
 constexpr ErrorDef<180, flat::Name> ErrExperimentalZxCTypesDisallowed(
     "{} is an experimental type that must be enabled by with `--experimental zx_c_types`");
+constexpr UndocumentedErrorDef<181> ErrReferenceInLibraryAttribute(
+    "attributes on the 'library' declaration do not support referencing constants");
 
 }  // namespace fidl
 // LINT.ThenChange(/docs/reference/fidl/language/errcat.md)

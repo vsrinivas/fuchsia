@@ -96,7 +96,9 @@ library example;
 @available(added=HEAD)
 library example;
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
+  // TODO(fxbug.dev/111624): Check for duplicate attributes earlier in
+  // compilation so that this is ErrDuplicateAttribute instead.
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrReferenceInLibraryAttribute);
 }
 
 TEST(VersioningTests, GoodLibraryDefault) {

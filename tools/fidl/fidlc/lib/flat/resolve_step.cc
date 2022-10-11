@@ -23,14 +23,19 @@ void ResolveStep::RunImpl() {
   for (auto& entry : library()->declarations.all) {
     Decl* decl = entry.second;
     // Note: It's important to insert decl here so that (1) we properly
-    // initialize its points below, and (2) we can always recursively look up a
-    // neighbor in the graph, even if it has out-degree zero.
+    // initialize its points in the next loop, and (2) we can always recursively
+    // look up a neighbor in the graph, even if it has out-degree zero.
     graph_.try_emplace(decl);
     decl->ForEachMember([this, &decl](Element* member) { graph_[member].neighbors.insert(decl); });
   }
 
   // Initialize point sets for each element in the graph.
   for (auto& [element, info] : graph_) {
+    // There shouldn't be any library elements in the graph because they are
+    // special (they don't get split, so their availabilities stop at
+    // kInherited). We don't add membership edges to them, and we specifically
+    // avoid adding reference edges to them in ResolveStep::ParseReference.
+    ZX_ASSERT(element->kind != Element::Kind::kLibrary);
     auto [a, b] = element->availability.range().pair();
     info.points.insert(a);
     info.points.insert(b);
@@ -383,6 +388,12 @@ void ResolveStep::VisitReference(Reference& ref, Context context) {
   }
 }
 
+// Returns true if ref (assumed to be resolved) refers to HEAD.
+static bool IsResolvedToHead(const Reference& ref) {
+  return ref.resolved().element()->kind == Element::Kind::kBuiltin &&
+         static_cast<Builtin*>(ref.resolved().element())->id == Builtin::Identity::kHead;
+}
+
 void ResolveStep::ParseReference(Reference& ref, Context context) {
   auto initial_state = ref.state();
   auto checkpoint = reporter()->Checkpoint();
@@ -396,8 +407,7 @@ void ResolveStep::ParseReference(Reference& ref, Context context) {
     case Reference::State::kResolved:
       // This can only happen for the early compilation of HEAD in
       // AttributeArgSchema::TryResolveAsHead.
-      ZX_ASSERT(ref.resolved().element()->kind == Element::Kind::kBuiltin &&
-                static_cast<Builtin*>(ref.resolved().element())->id == Builtin::Identity::kHead);
+      ZX_ASSERT(IsResolvedToHead(ref));
       return;
     default:
       ZX_PANIC("unexpected reference state");
@@ -405,6 +415,16 @@ void ResolveStep::ParseReference(Reference& ref, Context context) {
   if (ref.state() == initial_state) {
     ZX_ASSERT_MSG(checkpoint.NumNewErrors() > 0, "should have reported an error");
     ref.MarkFailed();
+    return;
+  }
+  // A library element can reference things via attribute arguments. Other than
+  // HEAD, which causes an early return above, we don't allow this: how would we
+  // decide what value to use if the const it's referencing has different values
+  // at different versions?
+  if (context.enclosing->kind == Element::Kind::kLibrary) {
+    Fail(ErrReferenceInLibraryAttribute, ref.span());
+    ref.MarkFailed();
+    return;
   }
 }
 
@@ -622,6 +642,14 @@ void ResolveStep::ValidateReference(const Reference& ref, Context context) {
   }
   if (!ref.IsSynthetic() && ref.resolved().name().as_anonymous()) {
     Fail(ErrAnonymousNameReference, ref.span(), ref.resolved().name());
+  }
+  if (context.enclosing->kind == Element::Kind::kLibrary) {
+    // A library element can reference things via attribute arguments. The only
+    // such reference we allow is to HEAD (see ResolveStep::ParseReference).
+    // Return early since the library's availability never advances to
+    // kNarrowed, which is assumed below.
+    ZX_ASSERT(IsResolvedToHead(ref));
+    return;
   }
 
   auto source = context.enclosing;
