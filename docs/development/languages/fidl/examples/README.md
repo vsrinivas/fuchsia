@@ -44,6 +44,10 @@ section.
 
 <<../concepts/_named_payload.md>>
 
+### Acknowledgement pattern
+
+<<../concepts/_acknowledgement_pattern.md>>
+
 <!-- /DO_NOT_REMOVE_COMMENT:concepts (Why? See: /tools/fidl/scripts/canonical_example/README.md) -->
 
 [example_canvas]: canvas/README.md

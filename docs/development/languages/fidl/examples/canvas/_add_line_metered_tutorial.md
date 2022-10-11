@@ -1,4 +1,17 @@
-<!-- TODO(fxbug.dev/111273): DOCUMENT[canvas/add_line_metered] no need for a header, just a brief description -->
+Sending unmetered one way calls back and forth produces a simple design, but
+there are potential pitfalls: what if the client is much slower at processing
+updates than the server? For example, the client may load a drawing consisting
+of many thousands of lines from some text file, and try to send them all
+sequentially. How can we apply back pressure to the client to prevent the server
+from being overwhelmed by this wave of updates?
+
+By using the acknowledgement pattern and making the one way call `AddLine(...);`
+into a two way `AddLine(...) -> ();`, we can provide feedback to the client.
+This will allow the client to throttle its output as appropriate. In this
+example, we'll simply have the client wait for the ack before sending the next
+message it has waiting, though more complex designs could send messages
+optimistically, and only throttle when they receive async acks less frequently
+than expected.
 
 Note: The source code for this example is located at
 [//examples/fidl/new/canvas/add_line_metered](/examples/fidl/new/canvas/add_line_metered).

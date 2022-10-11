@@ -1033,6 +1033,8 @@ relationship between the request and the response in FIDL syntax and therefore
 it is prone to misuse. Flow control will only work when clients correctly
 implement sending of the notification message.
 
+<<../widgets/_acknowledgement_pattern.md>>
+
 ### Feed-forward dataflow
 
 Some protocols have _feed-forward dataflow_, which avoids round-trip latency by
