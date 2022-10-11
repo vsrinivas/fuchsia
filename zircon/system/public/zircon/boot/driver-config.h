@@ -8,21 +8,50 @@
 #include <stdint.h>
 
 // ZBI_TYPE_KERNEL_DRIVER item types (for zbi_header_t.extra)
-#define ZBI_KERNEL_DRIVER_ARM_PSCI 0x49435350                // 'PSCI'
-#define ZBI_KERNEL_DRIVER_ARM_GIC_V2 0x32434947              // 'GIC2'
-#define ZBI_KERNEL_DRIVER_ARM_GIC_V3 0x33434947              // 'GIC3'
-#define ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER 0x4D495441       // 'ATIM'
-#define ZBI_KERNEL_DRIVER_PL011_UART 0x55304C50              // 'PL0U'
-#define ZBI_KERNEL_DRIVER_AMLOGIC_UART 0x554C4D41            // 'AMLU'
-#define ZBI_KERNEL_DRIVER_AMLOGIC_HDCP 0x484C4D41            // 'AMLH'
-#define ZBI_KERNEL_DRIVER_DW8250_UART 0x44573855             // 'DW8U'
-#define ZBI_KERNEL_DRIVER_AMLOGIC_RNG 0x484C4D52             // 'AMLR'
-#define ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG 0x32334457  // 'WD32'
-#define ZBI_KERNEL_DRIVER_I8250_PIO_UART 0x30353238          // '8250'
-#define ZBI_KERNEL_DRIVER_I8250_MMIO_UART 0x4d353238         // '825M'
-#define ZBI_KERNEL_DRIVER_MOTMOT_UART 0x4d4d5455             // 'MMTU'
-#define ZBI_KERNEL_DRIVER_MOTMOT_POWER 0x4d4d5450            // 'MMTP'
-#define ZBI_KERNEL_DRIVER_AS370_POWER 0x50303733             // '370P'
+// 'PSCI'
+#define ZBI_KERNEL_DRIVER_ARM_PSCI ((uint32_t)(0x49435350u))
+
+// 'GIC2'
+#define ZBI_KERNEL_DRIVER_ARM_GIC_V2 ((uint32_t)(0x32434947u))
+
+// 'GIC3'
+#define ZBI_KERNEL_DRIVER_ARM_GIC_V3 ((uint32_t)(0x33434947u))
+
+// 'ATIM'
+#define ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER ((uint32_t)(0x4d495441u))
+
+// 'PL0U'
+#define ZBI_KERNEL_DRIVER_PL011_UART ((uint32_t)(0x55304c50u))
+
+// 'AMLU'
+#define ZBI_KERNEL_DRIVER_AMLOGIC_UART ((uint32_t)(0x554c4d41u))
+
+// 'AMLH'
+#define ZBI_KERNEL_DRIVER_AMLOGIC_HDCP ((uint32_t)(0x484c4d41u))
+
+// 'DW8U'
+#define ZBI_KERNEL_DRIVER_DW8250_UART ((uint32_t)(0x44573855u))
+
+// 'AMLR'
+#define ZBI_KERNEL_DRIVER_AMLOGIC_RNG ((uint32_t)(0x484c4d52u))
+
+// 'WD32'
+#define ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG ((uint32_t)(0x32334457u))
+
+// '8250'
+#define ZBI_KERNEL_DRIVER_I8250_PIO_UART ((uint32_t)(0x30353238u))
+
+// '825M'
+#define ZBI_KERNEL_DRIVER_I8250_MMIO_UART ((uint32_t)(0x4d353238u))
+
+// 'MMTU'
+#define ZBI_KERNEL_DRIVER_MOTMOT_UART ((uint32_t)(0x4d4d5455u))
+
+// 'MMTP'
+#define ZBI_KERNEL_DRIVER_MOTMOT_POWER ((uint32_t)(0x4d4d5450u))
+
+// '370P'
+#define ZBI_KERNEL_DRIVER_AS370_POWER ((uint32_t)(0x50303733u))
 
 // Kernel driver struct that can be used for simple drivers.
 // Used by ZBI_KERNEL_DRIVER_PL011_UART, ZBI_KERNEL_DRIVER_AMLOGIC_UART, and
@@ -104,49 +133,47 @@ typedef struct {
 // 1) Read from the register located a physical address |addr|
 // 2) Clear all of the bits in the value which was read using the |clr_mask|
 // 3) Set all of the bits in the value using the |set_mask|
-// 4) Write this value back to the address located at addr.
-//
+// 4) Write this value back to the address located at addr
 typedef struct {
   uint64_t addr;
   uint32_t clr_mask;
   uint32_t set_mask;
 } zbi_dcfg_generic_32bit_watchdog_action_t;
 
+// TODO(fxbug.dev/111453): Update singular naming for better modeling as a FIDL
+// bits declaration.
 #define ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG_FLAG_ENABLED ((uint32_t)0x00000001)
-#define ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG_MIN_PERIOD ((int64_t)(1000000))  // 1ms
+
+// 1ms
+#define ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG_MIN_PERIOD ((int64_t)(1000000))
 
 // Definitions of actions which may be taken by a generic 32 bit watchdog timer
 // kernel driver which may be passed by a bootloader.  Field definitions are as
 // follows.
-//
-// |pet_action|
-// The address and masks needed to "pet" (aka, dismiss) a hardware watchdog timer.
-//
-// |enable_action|
-// The address and masks needed to enable a hardware watchdog timer.  If enable
-// is an unsupported operation, the addr of the |enable_action| shall be zero.
-//
-// |disable_action|
-// The address and masks needed to disable a hardware watchdog timer.  If
-// disable is an unsupported operation, the addr of the |disable_action| shall
-// be zero.
-//
-// |watchdog_period_nsec|
-// The period of the watchdog timer given in nanoseconds.  When enabled, the
-// watchdog timer driver must pet the watch dog at least this often.  The value
-// must be at least 1 mSec, typically much larger (on the order of a second or
-// two)
-//
-// |flags|
-// Storage for additional flags.  Currently, only one flag is defined,
-// "FLAG_ENABLED".  When this flag is set, it indicates that the watchdog timer
-// was left enabled by the bootloader at startup.
 typedef struct {
+  // The address and masks needed to "pet" (aka, dismiss) a hardware watchdog timer.
   zbi_dcfg_generic_32bit_watchdog_action_t pet_action;
+
+  // The address and masks needed to enable a hardware watchdog timer.  If enable
+  // is an unsupported operation, the addr of the |enable_action| shall be zero.
   zbi_dcfg_generic_32bit_watchdog_action_t enable_action;
+
+  // The address and masks needed to disable a hardware watchdog timer.  If
+  // disable is an unsupported operation, the addr of the |disable_action| shall
+  // be zero.
   zbi_dcfg_generic_32bit_watchdog_action_t disable_action;
+
+  // The period of the watchdog timer given in nanoseconds.  When enabled, the
+  // watchdog timer driver must pet the watch dog at least this often.  The value
+  // must be at least 1 mSec, typically much larger (on the order of a second or
+  // two).
   int64_t watchdog_period_nsec;
+
+  // Storage for additional flags.  Currently, only one flag is defined,
+  // "FLAG_ENABLED".  When this flag is set, it indicates that the watchdog timer
+  // was left enabled by the bootloader at startup.
   uint32_t flags;
+
   uint32_t reserved;
 } zbi_dcfg_generic_32bit_watchdog_t;
 
