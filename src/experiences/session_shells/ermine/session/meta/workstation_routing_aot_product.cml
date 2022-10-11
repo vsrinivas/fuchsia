@@ -56,6 +56,11 @@
                 "#workstation_session",
             ],
         },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#flutter_aot_product_runner",
+        },
     ],
     environments: [
         {
