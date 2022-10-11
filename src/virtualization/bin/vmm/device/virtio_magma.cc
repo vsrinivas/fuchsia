@@ -84,6 +84,9 @@ void VirtioMagma::Start(
 
   for (auto entry = readdir(dir); entry != nullptr && !device_fd_.is_valid();
        entry = readdir(dir)) {
+    if (strcmp(entry->d_name, ".") == 0) {
+      continue;
+    }
     device_path_ = std::string(kDeviceDir) + "/" + entry->d_name;
     device_fd_ = fbl::unique_fd(open(device_path_.c_str(), O_RDONLY));
     if (!device_fd_.is_valid()) {
