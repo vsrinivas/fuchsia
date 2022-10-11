@@ -21,19 +21,17 @@ VersionRange range(uint64_t x, uint64_t y) {
 }
 
 TEST(VersioningTypesTests, GoodPlatformParse) {
-  EXPECT_EQ(fidl::Platform::Parse("foo123").value().name(), "foo123");
+  EXPECT_EQ(Platform::Parse("foo123").value().name(), "foo123");
 }
 
-TEST(VersioningTypesTests, BadPlatformParseEmpty) {
-  EXPECT_FALSE(fidl::Platform::Parse("").has_value());
-}
+TEST(VersioningTypesTests, BadPlatformParseEmpty) { EXPECT_FALSE(Platform::Parse("").has_value()); }
 
 TEST(VersioningTypesTests, BadPlatformParseInvalidChar) {
-  EXPECT_FALSE(fidl::Platform::Parse("foo_bar").has_value());
+  EXPECT_FALSE(Platform::Parse("foo_bar").has_value());
 }
 
 TEST(VersioningTypesTests, GoodVersionFromMinNumeric) {
-  auto maybe_version = fidl::Version::From(1);
+  auto maybe_version = Version::From(1);
   ASSERT_TRUE(maybe_version.has_value());
   EXPECT_EQ(maybe_version.value().ordinal(), 1);
   EXPECT_EQ(maybe_version.value().ToString(), "1");
@@ -46,7 +44,7 @@ TEST(VersioningTypesTests, GoodVersionFromMaxNumeric) {
   EXPECT_EQ(maybe_version.value().ordinal(), ordinal);
   EXPECT_EQ(maybe_version.value().ToString(), std::to_string(ordinal));
   // Confirm this is in fact the last valid ordinal.
-  EXPECT_EQ(fidl::Version::From(ordinal + 1), std::nullopt);
+  EXPECT_EQ(Version::From(ordinal + 1), std::nullopt);
 }
 
 TEST(VersioningTypesTests, GoodVersionFromHead) {
@@ -100,53 +98,53 @@ TEST(VersioningTypesTests, GoodVersionRangeComparisons) {
 
 TEST(VersioningTypesTests, GoodVersionRangeIntersect) {
   // Case #1: (empty) (empty)
-  EXPECT_EQ(fidl::VersionRange::Intersect(std::nullopt, std::nullopt), std::nullopt);
+  EXPECT_EQ(VersionRange::Intersect(std::nullopt, std::nullopt), std::nullopt);
 
   // Case #2: (empty) |---|
-  EXPECT_EQ(fidl::VersionRange::Intersect(std::nullopt, range(3, 6)), std::nullopt);
+  EXPECT_EQ(VersionRange::Intersect(std::nullopt, range(3, 6)), std::nullopt);
 
   // Case #3: |---| (empty)
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), std::nullopt), std::nullopt);
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), std::nullopt), std::nullopt);
 
   // Case #4:  |---|
   //                 |--|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(7, 9))), std::nullopt);
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(7, 9))), std::nullopt);
 
   // Case #5:  |---|
   //               |--|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(6, 8))), std::nullopt);
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(6, 8))), std::nullopt);
 
   // Case #6:  |---|
   //             |--|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(5, 7))), range(5, 6));
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(5, 7))), range(5, 6));
 
   // Case #7:  |---|
   //            |--|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(4, 6))), range(4, 6));
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(4, 6))), range(4, 6));
 
   // Case #8:  |---|
   //           |--|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(3, 5))), range(3, 5));
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(3, 5))), range(3, 5));
 
   // Case #9:  |---|
   //            |-|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(4, 5))), range(4, 5));
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(4, 5))), range(4, 5));
 
   // Case #10:  |---|
   //           |---|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(3, 6))), range(3, 6));
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(3, 6))), range(3, 6));
 
   // Case #11:  |---|
   //          |--|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(2, 4))), range(3, 4));
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(2, 4))), range(3, 4));
 
   // Case #12:  |---|
   //        |--|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(1, 3))), std::nullopt);
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(1, 3))), std::nullopt);
 
   // Case #13: |---|
   //      |--|
-  EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(1, 2))), std::nullopt);
+  EXPECT_EQ(VersionRange::Intersect(range(3, 6), (range(1, 2))), std::nullopt);
 }
 
 TEST(VersioningTypesTests, GoodAvailabilityInitNone) {
