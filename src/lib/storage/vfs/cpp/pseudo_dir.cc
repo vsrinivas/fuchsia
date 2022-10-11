@@ -18,8 +18,7 @@ namespace fio = fuchsia_io;
 
 namespace fs {
 
-PseudoDir::PseudoDir(PlatformVfs* vfs, bool has_dot_entry)
-    : Vnode(vfs), has_dot_entry_(has_dot_entry) {}
+PseudoDir::PseudoDir(PlatformVfs* vfs) : Vnode(vfs) {}
 
 PseudoDir::~PseudoDir() {
   entries_by_name_.clear_unsafe();
@@ -58,7 +57,7 @@ zx_status_t PseudoDir::WatchDir(fs::Vfs* vfs, fio::wire::WatchMask mask, uint32_
 zx_status_t PseudoDir::Readdir(VdirCookie* cookie, void* data, size_t len, size_t* out_actual) {
   fs::DirentFiller df(data, len);
   zx_status_t r = 0;
-  if (has_dot_entry_ && cookie->n < kDotId) {
+  if (cookie->n < kDotId) {
     uint64_t ino = fio::wire::kInoUnknown;
     if ((r = df.Next(".", VTYPE_TO_DTYPE(V_TYPE_DIR), ino)) != ZX_OK) {
       *out_actual = df.BytesFilled();
