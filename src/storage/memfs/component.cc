@@ -9,7 +9,6 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-#include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/storage/memfs/memfs.h"
 #include "src/storage/memfs/memfs_config.h"
@@ -34,9 +33,8 @@ int main() {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing_dir->AddEntry("root", tmp_vnode);
 
-  fs::ManagedVfs vfs(loop.dispatcher());
-  vfs.ServeDirectory(outgoing_dir, fidl::ServerEnd<fuchsia_io::Directory>(
-                                       zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST))));
+  tmp->ServeDirectory(outgoing_dir, fidl::ServerEnd<fuchsia_io::Directory>(
+                                        zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST))));
 
   loop.Run();
 
