@@ -124,6 +124,8 @@ fbl::String GetTestFilter() {
     return "*Msm8x53Som*";
   } else if (board_name == "as370" || board_name == "visalia") {
     return "*Visalia*";
+  } else if (board_name == "pinecrest") {
+    return "*Pinecrest*";
   } else if (board_name == "Nocturne") {
     return "*Nocturne*";
   } else if (board_name == "nelson") {
@@ -760,6 +762,31 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "audio-max98373",
       "as370-audio-in",
       "as370-audio-out",
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  EXPECT_EQ(zx_system_get_num_cpus(), 4);
+}
+
+TEST_F(DeviceEnumerationTest, PinecrestTest) {
+  static const char* kDevicePaths[] = {
+      "sys/platform/14:01:1/as370-gpio",
+      "sys/platform/00:00:9/dw-i2c",
+      "sys/platform/14:01:2/as370-usb-phy",
+      "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
+      "pinecrest-emmc/as370-sdhci/sdhci/sdmmc/sdmmc-mmc/user/block/part-000",
+      "pinecrest-emmc/as370-sdhci/sdhci/sdmmc/sdmmc-mmc/boot1/block",
+      "pinecrest-emmc/as370-sdhci/sdhci/sdmmc/sdmmc-mmc/boot2/block",
+      "pinecrest-emmc/as370-sdhci/sdhci/sdmmc/sdmmc-mmc/rpmb",
+      "dwc2-usb/dwc2",
+      "power/as370-power",
+      "thermal/as370-thermal",
+      "lp5018-light/lp50xx-light",
+      "pinecrest-touch/cy8cmbr3108/hid-device/InputReport",
+      "pinecrest-audio-in",
+      "pinecrest-audio-out",
+      "pinecrest-nna/as370-nna",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
