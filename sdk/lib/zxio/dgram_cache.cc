@@ -200,9 +200,6 @@ RouteCacheResult RouteCache::Get(
     // connected addr for the first time. We still proceed with the syscall
     // to check for errors in that case (since the socket might have been
     // connected by another process).
-    //
-    // TODO(https://fxbug.dev/103655): Test errors are returned when connected
-    // addr looked up for the first time.
     if (addr_to_lookup.has_value()) {
       const Key key = {
           .remote_addr = addr_to_lookup.value(),
