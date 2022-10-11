@@ -14,6 +14,18 @@
 
 namespace {
 
+TEST(CanonicalNamesTests, BadCollision) {
+  TestLibrary library;
+  library.AddFile("bad/name_collision_canonical.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollisionCanonical);
+}
+
+TEST(CanonicalNamesTests, GoodCollisionFixRename) {
+  TestLibrary library;
+  library.AddFile("good/name_collision_canonical_fix_rename.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(CanonicalNamesTests, GoodTopLevel) {
   TestLibrary library(R"FIDL(library example;
 

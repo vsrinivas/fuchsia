@@ -67,18 +67,17 @@ constexpr UndocumentedErrorDef<32, Token::KindAndSubkind> ErrDuplicateModifier(
     "duplicate occurrence of modifier {}");
 constexpr ErrorDef<33, Token::KindAndSubkind, Token::KindAndSubkind> ErrConflictingModifier(
     "modifier {} conflicts with modifier {}");
-constexpr UndocumentedErrorDef<34, std::string_view, SourceSpan> ErrNameCollision(
+constexpr ErrorDef<34, std::string_view, SourceSpan> ErrNameCollision(
     "the name '{}' conflicts with another declaration at {}");
-constexpr UndocumentedErrorDef<35, std::string_view, std::string_view, SourceSpan, std::string_view>
+constexpr ErrorDef<35, std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrNameCollisionCanonical(
         "the name '{}' conflicts with '{}' from {}; both are represented by "
         "the canonical form '{}'");
-constexpr UndocumentedErrorDef<36, std::string_view, SourceSpan, VersionRange, Platform>
-    ErrNameOverlap(
-        "the name '{}' conflicts with another declaration at {}; both are "
-        "available {} of platform '{}'");
-constexpr UndocumentedErrorDef<37, std::string_view, std::string_view, SourceSpan, std::string_view,
-                               VersionRange, Platform>
+constexpr ErrorDef<36, std::string_view, SourceSpan, VersionRange, Platform> ErrNameOverlap(
+    "the name '{}' conflicts with another declaration at {}; both are "
+    "available {} of platform '{}'");
+constexpr ErrorDef<37, std::string_view, std::string_view, SourceSpan, std::string_view,
+                   VersionRange, Platform>
     ErrNameOverlapCanonical(
         "the name '{}' conflicts with '{}' from {}; both are represented "
         "by the canonical form '{}' and are available {} of platform '{}'");

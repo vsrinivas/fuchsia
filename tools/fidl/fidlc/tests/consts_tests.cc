@@ -544,13 +544,21 @@ TEST(ConstsTests, BadConstTestAssignBuiltinNonType) {
 }
 
 TEST(ConstsTests, BadNameCollision) {
-  TestLibrary library(R"FIDL(
-library example;
-
-const FOO uint8 = 0;
-const FOO uint8 = 1;
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/name_collision.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
+}
+
+TEST(ConstsTests, GoodFixNameCollisionRename) {
+  TestLibrary library;
+  library.AddFile("good/name_collision_fix_rename.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ConstsTests, GoodFixNameCollisionRemove) {
+  TestLibrary library;
+  library.AddFile("good/name_collision_fix_remove.test.fidl");
+  ASSERT_COMPILED(library);
 }
 
 TEST(ConstsTests, GoodMultiFileConstReference) {

@@ -1408,6 +1408,30 @@ type FOO = table {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollisionCanonical);
 }
 
+TEST(VersioningTests, BadOverlappingNamesSimple) {
+  TestLibrary library;
+  library.AddFile("bad/name_overlap.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameOverlap);
+}
+
+TEST(VersioningTests, GoodOverlappingNamesSimpleFixAvailability) {
+  TestLibrary library;
+  library.AddFile("good/name_overlap_fix_availability.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(VersioningTests, BadOverlappingNamesCanonicalSimple) {
+  TestLibrary library;
+  library.AddFile("bad/name_overlap_canonical.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameOverlapCanonical);
+}
+
+TEST(VersioningTests, GoodOverlappingNamesCanonicalSimpleFixRename) {
+  TestLibrary library;
+  library.AddFile("good/name_overlap_canonical_fix_rename.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(VersioningTests, BadOverlappingNamesContainsOther) {
   TestLibrary library(R"FIDL(
 @available(added=1)
