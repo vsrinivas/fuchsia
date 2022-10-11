@@ -10,6 +10,7 @@
 #include <hwreg/bitfields.h>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 
 namespace tgl_registers {
 
@@ -606,22 +607,95 @@ class IclCdClkPllEnable : public hwreg::RegisterBase<IclCdClkPllEnable, uint32_t
   static auto Get() { return hwreg::RegisterAddr<IclCdClkPllEnable>(0x46070); }
 };
 
-// DBUF_CTL
-class DbufCtl : public hwreg::RegisterBase<DbufCtl, uint32_t> {
+// DBUF_CTL (DBUF Slice Control)
+//
+// Some of the register's reserved are not documented as MBZ (must be zero). So,
+// this register can only be safely updated using read-modify-write operations.
+//
+// The "Data Buffer" expansion for the DBUF acronym is implicitly documented in
+// the "Shared Functions" > "Data Buffer" section of the display engine PRMs
+// (Vol 12 for all recent display engines), which lists all the DBUF-related
+// registers.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 331-332
+// DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 pages 309-310
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 430-431
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 426-427
+class DataBufferControl : public hwreg::RegisterBase<DataBufferControl, uint32_t> {
  public:
-  DEF_BIT(31, power_request);
-  DEF_BIT(30, power_state);
+  // The eventual state that `powered_on` will reach.
+  //
+  // If true, the DBUF (Data Buffer) slice will eventually power on. If false,
+  // the DBUF slice will eventually power off.
+  //
+  // The first DBUF slice must be powered on before using the display engine.
+  // Powering it on is a step in the "Sequences to Initialize Display".
+  DEF_BIT(31, powered_on_target);
 
-  static auto GetForSlice(size_t slice) {
-    ZX_DEBUG_ASSERT(slice >= 1 && slice <= 2);
-    switch (slice) {
-      case 1:
-        return hwreg::RegisterAddr<DbufCtl>(0x45008);
-      case 2:
-        return hwreg::RegisterAddr<DbufCtl>(0x44fe8);
-      default:
-        ZX_ASSERT(false);
-    }
+  // If true, the DBUF (Data Buffer) slice is powered on.
+  DEF_BIT(30, powered_on);
+
+  // Maximum number of clock cycles until the tracker state is serviced.
+  //
+  // This field is not documented on Kaby Lake and Skylake. The underlying bits
+  // are documented as reserved MBZ (must be zero).
+  DEF_FIELD(23, 19, maximum_tracker_state_delay_tiger_lake);
+
+  // Maximum number of clock cycles until the CC block valid state is serviced.
+  //
+  // This field is not documented on Kaby Lake and Skylake. The underlying bits
+  // are documented as reserved MBZ (must be zero).
+  DEF_FIELD(15, 12, maximum_cc_block_valid_delay);
+
+  // DBUF (Data Buffer) slice count varies by display engine.
+  //
+  // `slice_index` is 0-based.
+  static auto GetForSlice(int slice_index) {
+    ZX_ASSERT(slice_index >= 0);
+    ZX_ASSERT(slice_index < 2);
+
+    static constexpr uint32_t kMmioAddress[] = {0x45008, 0x44fe8};
+    return hwreg::RegisterAddr<DataBufferControl>(kMmioAddress[slice_index]);
+  }
+};
+
+// DBUF_CTL (DBUF Slice Control 2)
+//
+// All reserved bits are MBZ (must be zero), so this register can be written
+// safely without reading it first.
+//
+// This register is not documented on Kaby Lake or Skylake.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 1 page 333
+// DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 page 311
+class DataBufferControl2 : public hwreg::RegisterBase<DataBufferControl2, uint32_t> {
+ public:
+  DEF_RSVDZ_FIELD(31, 13);
+
+  // Number of time slots between servicing HPUTs.
+  //
+  // This field must not be set to zero.
+  DEF_FIELD(12, 8, hput_service_interval);
+
+  // Number of time slots dedicated to servicing APUTs.
+  //
+  // This field must not be set to zero.
+  DEF_FIELD(7, 4, aput_service_time_slots);
+
+  // Number of time slots dedicated to servicing BYPASS puts.
+  //
+  // This field must not be set to zero.
+  DEF_FIELD(3, 0, bypass_put_service_time_slots);
+
+  // DBUF (Data Buffer) slice count varies by display engine.
+  //
+  // `slice_index` is 0-based.
+  static auto GetForSlice(int slice_index) {
+    ZX_ASSERT(slice_index >= 0);
+    ZX_ASSERT(slice_index < 2);
+
+    static constexpr uint32_t kMmioAddress[] = {0x44ffc, 0x44fe4};
+    return hwreg::RegisterAddr<DataBufferControl2>(kMmioAddress[slice_index]);
   }
 };
 

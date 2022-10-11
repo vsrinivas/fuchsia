@@ -670,11 +670,6 @@ class PlaneBufferConfig : public hwreg::RegisterBase<PlaneBufferConfig, uint32_t
  public:
   static constexpr uint32_t kBaseAddr = 0x7017c;
 
-  // TODO(fxbug.dev/111326): This value is not a constant -- it varies across
-  // the display engines we want to support. Kaby Lake and Skylake display
-  // engines use a value of 892.
-  static constexpr uint32_t kBufferCount = 1023;
-
   DEF_RSVDZ_FIELD(31, 27);
 
   // The buffer end position for this plane.

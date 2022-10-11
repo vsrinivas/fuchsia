@@ -225,6 +225,12 @@ class Controller : public DeviceType,
       uint64_t alloc[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()])
       __TA_REQUIRES(display_lock_);
 
+  // The number of DBUF (Data Buffer) blocks that can be allocated to planes.
+  //
+  // This number depends on the display engine and the number of DBUF slices
+  // that are powered up.
+  int DataBufferBlockCount() const;
+
   zx_device_t* zx_gpu_dev_ = nullptr;
   zx_device_t* display_controller_dev_ = nullptr;
   bool gpu_released_ = false;

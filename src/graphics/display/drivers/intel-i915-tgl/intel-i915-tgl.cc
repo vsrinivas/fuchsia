@@ -375,21 +375,17 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     }
   }
 
-  // Enable and wait for DBUF
-  std::vector<int> supported_dbuf_slices = is_tgl(device_id_) ? std::vector{1, 2} : std::vector{1};
-  for (auto dbuf_slice : supported_dbuf_slices) {
-    auto dbuf_ctl = tgl_registers::DbufCtl::GetForSlice(dbuf_slice).ReadFrom(mmio_space());
-    dbuf_ctl.set_power_request(1);
-    dbuf_ctl.WriteTo(mmio_space());
+  // Power up DBUF (Data Buffer) slices.
+  zxlogf(TRACE, "Powering up DBUF (Data Buffer) slices");
+  const int display_buffer_slice_count = is_tgl(device_id_) ? 2 : 1;
+  for (int slice_index = 0; slice_index < display_buffer_slice_count; ++slice_index) {
+    auto display_buffer_control =
+        tgl_registers::DataBufferControl::GetForSlice(slice_index).ReadFrom(mmio_space());
+    display_buffer_control.set_powered_on_target(true).WriteTo(mmio_space());
 
-    if (!PollUntil(
-            [&] {
-              return tgl_registers::DbufCtl::GetForSlice(dbuf_slice)
-                  .ReadFrom(mmio_space())
-                  .power_state();
-            },
-            zx::usec(1), 10)) {
-      zxlogf(ERROR, "Failed to enable DBUF");
+    if (!PollUntil([&] { return display_buffer_control.ReadFrom(mmio_space()).powered_on(); },
+                   zx::usec(1), 10)) {
+      zxlogf(ERROR, "DBUF slice %d did not power up in time", slice_index + 1);
       return false;
     }
   }
@@ -451,8 +447,9 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 
 void Controller::ResetPipePlaneBuffers(tgl_registers::Pipe pipe) {
   fbl::AutoLock lock(&plane_buffers_lock_);
+  const int data_buffer_block_count = DataBufferBlockCount();
   for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
-    plane_buffers_[pipe][plane_num].start = tgl_registers::PlaneBufferConfig::kBufferCount;
+    plane_buffers_[pipe][plane_num].start = data_buffer_block_count;
   }
 }
 
@@ -916,7 +913,7 @@ bool Controller::GetPlaneLayer(Pipe* pipe, uint32_t plane,
 
 uint16_t Controller::CalculateBuffersPerPipe(size_t active_pipe_count) {
   ZX_ASSERT(active_pipe_count < tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size());
-  return static_cast<uint16_t>(tgl_registers::PlaneBufferConfig::kBufferCount / active_pipe_count);
+  return static_cast<uint16_t>(DataBufferBlockCount() / active_pipe_count);
 }
 
 bool Controller::CalculateMinimumAllocations(
@@ -1034,6 +1031,7 @@ void Controller::UpdateAllocations(
   // Do the actual allocation, using the buffers that are assigned to each pipe.
   {
     fbl::AutoLock lock(&plane_buffers_lock_);
+    const int data_buffer_block_count = DataBufferBlockCount();
     for (unsigned pipe_num = 0;
          pipe_num < tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size(); pipe_num++) {
       uint16_t start = pipe_buffers_[pipe_num].start;
@@ -1041,7 +1039,7 @@ void Controller::UpdateAllocations(
         auto cur = &plane_buffers_[pipe_num][plane_num];
 
         if (allocs[pipe_num][plane_num] == 0) {
-          cur->start = tgl_registers::PlaneBufferConfig::kBufferCount;
+          cur->start = data_buffer_block_count;
           cur->end = static_cast<uint16_t>(cur->start + 1);
         } else {
           cur->start = start;
@@ -1060,9 +1058,9 @@ void Controller::UpdateAllocations(
         buf_cfg.set_buffer_end(cur->end - 1);
         buf_cfg.WriteTo(mmio_space());
 
-        // TODO(stevensd): Real watermark programming
+        // TODO(fxbug.com/111420): Follow the "Display Watermarks" guidelines.
         auto wm0 = pipe_regs.PlaneWatermark(plane_num + 1, 0).FromValue(0);
-        wm0.set_enable(cur->start != tgl_registers::PlaneBufferConfig::kBufferCount);
+        wm0.set_enable(cur->start != data_buffer_block_count);
         wm0.set_blocks(cur->end - cur->start);
         wm0.WriteTo(mmio_space());
 
@@ -1075,7 +1073,7 @@ void Controller::UpdateAllocations(
           buf_cfg.WriteTo(mmio_space());
 
           auto wm0 = pipe_regs.PlaneWatermark(0, 0).FromValue(0);
-          wm0.set_enable(cur->start != tgl_registers::PlaneBufferConfig::kBufferCount);
+          wm0.set_enable(cur->start != data_buffer_block_count);
           wm0.set_blocks(cur->end - cur->start);
           wm0.WriteTo(mmio_space());
         }
@@ -1551,6 +1549,26 @@ bool Controller::CalculatePipeAllocation(
     }
   }
   return true;
+}
+
+int Controller::DataBufferBlockCount() const {
+  // Data buffer sizes are documented in the "Display Buffer Programming" >
+  // "Display Buffer Size" section in the display engine PRMs.
+
+  // Kaby Lake and Skylake display engines have a single DBUF slice with
+  // 892 blocks.
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 page 167
+  // Skylake: IHD-OS-KBL-Vol 12-1.17 page 164
+  static constexpr int kKabyLakeDataBufferBlockCount = 892;
+
+  // Tiger Lake display engines have two DBUF slice with 1024 blocks each.
+  // TODO(fxbug.dev/111716): We should be able to use 2048 blocks, since we
+  // power up both slices.
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 page 297
+  // DG1: IHD-OS-DG1-Vol 12-2.21 page 250
+  static constexpr int kTigerLakeDataBufferBlockCount = 1023;
+
+  return is_tgl(device_id_) ? kTigerLakeDataBufferBlockCount : kKabyLakeDataBufferBlockCount;
 }
 
 void Controller::DisplayControllerImplSetEld(uint64_t display_id, const uint8_t* raw_eld_list,

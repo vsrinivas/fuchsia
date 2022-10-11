@@ -137,6 +137,33 @@ TEST(RegistersTest, PowerWellControlAux_TigerLake) {
   EXPECT_TRUE(reg.powered_on_thunderbolt(tgl_registers::DDI_TC_6));
 }
 
+TEST(DataBufferControlTest, GetForSlice) {
+  // The register MMIO addresses come from the reference manual.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 331
+  // DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 page 309
+  // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 430
+
+  auto dbuf_ctl_s1 = tgl_registers::DataBufferControl::GetForSlice(0).FromValue(0);
+  EXPECT_EQ(0x45008u, dbuf_ctl_s1.reg_addr());
+
+  auto dbuf_ctl_s2 = tgl_registers::DataBufferControl::GetForSlice(1).FromValue(0);
+  EXPECT_EQ(0x44fe8u, dbuf_ctl_s2.reg_addr());
+}
+
+TEST(DataBufferControl2Test, GetForSlice) {
+  // The register MMIO addresses come from the reference manual.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 333
+  // DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 page 311
+
+  auto dbuf_ctl2_s1 = tgl_registers::DataBufferControl2::GetForSlice(0).FromValue(0);
+  EXPECT_EQ(0x44ffcu, dbuf_ctl2_s1.reg_addr());
+
+  auto dbuf_ctl2_s2 = tgl_registers::DataBufferControl2::GetForSlice(1).FromValue(0);
+  EXPECT_EQ(0x44fe4u, dbuf_ctl2_s2.reg_addr());
+}
+
 }  // namespace
 
 }  // namespace i915_tgl
