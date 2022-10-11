@@ -1,0 +1,61 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <fidl/examples.${series_flat_case}.${variant_flat_case}/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/sys/component/cpp/service_client.h>
+#include <lib/syslog/cpp/macros.h>
+#include <unistd.h>
+
+#include <examples/fidl/new/${series_snake_case}/${variant_snake_case}/cpp_natural/client/config.h>
+
+// The |EventHandler| is a derived class that we pass into the |fidl::WireClient| to handle incoming
+// events asynchronously.
+class EventHandler : public fidl::AsyncEventHandler<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}> {
+ public:
+  // TODO(${dns}): Add any event sending protocol methods here. If there are none on this
+  // protocol, you may delete this entire class definition.
+
+  void on_fidl_error(fidl::UnbindInfo error) override { FX_LOGS(ERROR) << error; }
+
+  explicit EventHandler(async::Loop& loop) : loop_(loop) {}
+
+ private:
+  async::Loop& loop_;
+};
+
+int main(int argc, const char** argv) {
+  FX_LOGS(INFO) << "Started";
+
+  // Retrieve component configuration.
+  auto conf = config::Config::TakeFromStartupHandle();
+
+  // Start up an async loop and dispatcher.
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
+  // Connect to the protocol inside the component's namespace. This can fail so it's wrapped in a
+  // |zx::status| and it must be checked for errors.
+  zx::status client_end = component::Connect<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}>();
+  if (!client_end.is_ok()) {
+    FX_LOGS(ERROR) << "Synchronous error when connecting to the |${protocol_pascal_case}| protocol: "
+                   << client_end.status_string();
+    return -1;
+  }
+
+  // Create an instance of the event handler.
+  EventHandler event_handler(loop);
+
+  // Create an asynchronous client using the newly-established connection.
+  fidl::Client client(std::move(*client_end), dispatcher, &event_handler);
+  FX_LOGS(INFO) << "Outgoing connection enabled";
+
+  // TODO(${dns}): Read config from the |conf| to process script events, and thereby make calls
+  // to the server, here.
+
+  // TODO(fxbug.dev/76579): We need to sleep here to make sure all logs get drained. Once the
+  // referenced bug has been resolved, we can remove the sleep.
+  sleep(2);
+  return 0;
+}

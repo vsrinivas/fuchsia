@@ -18,7 +18,7 @@ fuchsia_component("server") {
 }
 
 # The Fuchsia package, containing all of our child components in one neat artifact.
-fuchsia_package("examples_fidl_canvas_baseline_rust") {
+fuchsia_package("examples_fidl_canvas_baseline_hlcpp") {
   deps = [
     ":client",
     ":server",

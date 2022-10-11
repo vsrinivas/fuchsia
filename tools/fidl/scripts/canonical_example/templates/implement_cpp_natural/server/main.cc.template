@@ -1,0 +1,79 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <fidl/examples.${series_flat_case}.${variant_flat_case}/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/syslog/cpp/macros.h>
+#include <unistd.h>
+
+// An implementation of the |${protocol_pascal_case}| protocol.
+class ${protocol_pascal_case}Impl final : public fidl::Server<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}> {
+ public:
+  // Bind this implementation to a channel.
+  ${protocol_pascal_case}Impl(async_dispatcher_t* dispatcher,
+               fidl::ServerEnd<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}> server_end)
+      : binding_(fidl::BindServer(
+            dispatcher, std::move(server_end), this,
+            [this](${protocol_pascal_case}Impl* impl, fidl::UnbindInfo info,
+                   fidl::ServerEnd<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}> server_end) {
+              if (info.reason() != ::fidl::Reason::kPeerClosed) {
+                FX_LOGS(ERROR) << "Shutdown unexpectedly";
+              }
+              delete this;
+            })) {
+    // Start the update timer on startup. Our server sends one update per second
+    ScheduleOnDrawnEvent(dispatcher, zx::sec(1));
+  }
+
+  // TODO(${dns}): override each of the as-yet-undefined methods on the generated FIDL class
+  // here.
+
+ private:
+  fidl::ServerBindingRef<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}> binding_;
+};
+
+int main(int argc, char** argv) {
+  FX_LOGS(INFO) << "Started";
+
+  // The event loop is used to asynchronously listen for incoming connections and requests from the
+  // client. The following initializes the loop, and obtains the dispatcher, which will be used when
+  // binding the server implementation to a channel.
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
+  // Create an |OutgoingDirectory| instance.
+  //
+  // The |component::OutgoingDirectory| class serves the outgoing directory for our component. This
+  // directory is where the outgoing FIDL protocols are installed so that they can be provided to
+  // other components.
+  component::OutgoingDirectory outgoing = component::OutgoingDirectory::Create(dispatcher);
+
+  // The `ServeFromStartupInfo()` function sets up the outgoing directory with the startup handle.
+  // The startup handle is a handle provided to every component by the system, so that they can
+  // serve capabilities (e.g. FIDL protocols) to other components.
+  zx::status result = outgoing.ServeFromStartupInfo();
+  if (result.is_error()) {
+    FX_LOGS(ERROR) << "Failed to serve outgoing directory: " << result.status_string();
+    return -1;
+  }
+
+  // Register a handler for components trying to connect to |${protocol_pascal_case}|.
+  result = outgoing.AddProtocol<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}>(
+      [dispatcher](fidl::ServerEnd<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}> server_end) {
+        // Create an instance of our ${protocol_pascal_case}Impl that destroys itself when the connection closes.
+        new ${protocol_pascal_case}Impl(dispatcher, std::move(server_end));
+      });
+  if (result.is_error()) {
+    FX_LOGS(ERROR) << "Failed to add ${protocol_pascal_case} protocol: " << result.status_string();
+    return -1;
+  }
+
+  // Everything is wired up. Sit back and run the loop until an incoming connection wakes us up.
+  FX_LOGS(INFO) << "Listening for incoming connections";
+  loop.Run();
+  return 0;
+}

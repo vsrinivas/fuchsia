@@ -1,0 +1,70 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <examples/${series_flat_case}/${variant_flat_case}/cpp/fidl.h>
+
+// An implementation of the |${protocol_pascal_case}| protocol.
+class ${protocol_pascal_case}Impl final : public examples::${series_flat_case}::${variant_flat_case}::${protocol_pascal_case} {
+ public:
+  // Bind this implementation to an |InterfaceRequest|.
+  ${protocol_pascal_case}Impl(async_dispatcher_t* dispatcher,
+               fidl::InterfaceRequest<examples::${series_flat_case}::${variant_flat_case}::${protocol_pascal_case}> request)
+      : binding_(fidl::Binding<examples::${series_flat_case}::${variant_flat_case}::${protocol_pascal_case}>(this))) {
+    binding_.Bind(std::move(request), dispatcher);
+
+    // Gracefully handle abrupt shutdowns.
+    binding_.set_error_handler([this](zx_status_t status) mutable {
+      if (status != ZX_ERR_PEER_CLOSED) {
+        FX_LOGS(ERROR) << "Shutdown unexpectedly";
+      }
+      delete this;
+    });
+  }
+
+  // TODO(${dns}): override each of the as-yet-undefined methods on the generated FIDL class
+  // here.
+
+ private:
+  fidl::Binding<examples::${series_flat_case}::${variant_flat_case}::${protocol_pascal_case}> binding_;
+};
+
+int main(int argc, char** argv) {
+  FX_LOGS(INFO) << "Started";
+
+  // The event loop is used to asynchronously listen for incoming connections and requests from the
+  // client. The following initializes the loop, and obtains the dispatcher, which will be used when
+  // binding the server implementation to a channel.
+  //
+  // Note that unlike the new C++ bindings, HLCPP bindings rely on the async loop being attached to
+  // the current thread via the |kAsyncLoopConfigAttachToCurrentThread| configuration.
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
+  // Create an |OutgoingDirectory| instance.
+  //
+  // The |component::OutgoingDirectory| class serves the outgoing directory for our component.
+  // This directory is where the outgoing FIDL protocols are installed so that they can be
+  // provided to other components.
+  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+
+  // Register a handler for components trying to connect to |${protocol_pascal_case}|.
+  context->outgoing()->AddPublicService(
+      fidl::InterfaceRequestHandler<examples::${series_flat_case}::${variant_flat_case}::${protocol_pascal_case}>(
+          [dispatcher](fidl::InterfaceRequest<examples::${series_flat_case}::${variant_flat_case}::${protocol_pascal_case}> request) {
+            // Create an instance of our |${protocol_pascal_case}Impl| that destroys itself when the connection
+            // closes.
+            new ${protocol_pascal_case}Impl(dispatcher, std::move(request));
+          }));
+
+  // Everything is wired up. Sit back and run the loop until an incoming connection wakes us up.
+  FX_LOGS(INFO) << "Listening for incoming connections";
+  loop.Run();
+  return 0;
+}
