@@ -16,6 +16,8 @@ source_set("fidl_realtime") {
   ]
 
   sources = [
+    "gain_control_server.cc",
+    "gain_control_server.h",
     "stream_sink_client.cc",
     "stream_sink_client.h",
     "stream_sink_server.cc",
@@ -23,6 +25,7 @@ source_set("fidl_realtime") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.audio:fuchsia.audio_cpp_wire",
     "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp_wire",
     "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_cpp_wire",
     "//sdk/lib/fit",
@@ -42,6 +45,7 @@ executable("fidl_realtime_unittests") {
   testonly = true
 
   sources = [
+    "gain_control_server_unittest.cc",
     "stream_sink_client_unittest.cc",
     "stream_sink_server_unittest.cc",
   ]

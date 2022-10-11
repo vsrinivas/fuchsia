@@ -58,7 +58,15 @@ protocol GainControl {
 };
 
 /// Type of errors returned by `GainControl`.
-type GainError = flexible enum {};
+type GainError = flexible enum {
+    /// A required field was not provided.
+    MISSING_REQUIRED_FIELD = 1;
+
+    /// A flexible field had an unsupported option. This can happen when a
+    /// client built with API version X+1 talks to a server built with API
+    /// version X.
+    UNSUPPORTED_OPTION = 2;
+};
 
 /// Timestamp of a gain command.
 type GainTimestamp = flexible union {
