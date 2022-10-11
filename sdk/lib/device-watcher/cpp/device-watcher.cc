@@ -139,18 +139,18 @@ finish:
 __EXPORT
 zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique_fd* out) {
   auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
-    auto file = reinterpret_cast<const char*>(cookie);
+    const std::string_view& file = *static_cast<std::string_view*>(cookie);
     if (event != WATCH_EVENT_ADD_FILE) {
       return ZX_OK;
     }
-    if (!strcmp(fn, file)) {
+    if (std::string_view{fn} == file) {
       return ZX_ERR_STOP;
     }
     return ZX_OK;
   };
 
-  zx_status_t status =
-      fdio_watch_directory(dir.get(), watch_func, ZX_TIME_INFINITE, const_cast<char*>(file));
+  std::string_view file_view{file};
+  zx_status_t status = fdio_watch_directory(dir.get(), watch_func, ZX_TIME_INFINITE, &file_view);
   if (status != ZX_ERR_STOP) {
     return status;
   }
@@ -229,18 +229,18 @@ zx_status_t WaitForFile2(const fbl::unique_fd& rootdir, const fbl::unique_fd& di
                          const char* full_path, const char* file, bool last, bool readonly,
                          fbl::unique_fd* out) {
   auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
-    auto file = reinterpret_cast<const char*>(cookie);
+    const std::string_view& file = *static_cast<std::string_view*>(cookie);
     if (event != WATCH_EVENT_ADD_FILE) {
       return ZX_OK;
     }
-    if (!strcmp(fn, file)) {
+    if (std::string_view{fn} == file) {
       return ZX_ERR_STOP;
     }
     return ZX_OK;
   };
 
-  zx_status_t status =
-      fdio_watch_directory(dir.get(), watch_func, ZX_TIME_INFINITE, const_cast<char*>(file));
+  std::string_view file_view{file};
+  zx_status_t status = fdio_watch_directory(dir.get(), watch_func, ZX_TIME_INFINITE, &file_view);
   if (status != ZX_ERR_STOP) {
     return status;
   }
