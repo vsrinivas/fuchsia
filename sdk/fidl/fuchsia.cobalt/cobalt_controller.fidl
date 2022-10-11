@@ -32,34 +32,6 @@ protocol Controller {
         success bool;
     });
 
-    /// The Cobalt FIDL service will block, not processing any further FIDL
-    /// requests or responses, on either this interface or the Logger interface,
-    /// until either `max_wait_seconds` have elapsed or the Cobalt service's
-    /// worker thread has successfully sent all previously added Observations to
-    /// the Shuffler. The response will be returned after the blocking period has
-    /// ended. Note that this method does not request an expedited send and so it
-    /// is possible that the worker thread is currently waiting for the next
-    /// scheduled send time and so the empty state will not be achieved prior
-    /// that time.
-    BlockUntilEmpty(struct {
-        max_wait_seconds uint32;
-    }) -> ();
-
-    /// These diagnostic stats are mostly useful in a testing environment but
-    /// may possibly prove useful in production also.
-    GetNumSendAttempts() -> (struct {
-        num uint32;
-    });
-    GetFailedSendAttempts() -> (struct {
-        num uint32;
-    });
-    GetNumObservationsAdded() -> (struct {
-        num_obs uint64;
-    });
-    GetNumEventAggregatorRuns() -> (struct {
-        num_runs uint64;
-    });
-
     /// Triggers Cobalt to generate Observations based on locally aggregated
     /// event data and write them to the local ObservationStore. In a non-test
     /// environment this would normally be done periodically by a background

@@ -38,9 +38,6 @@ cobalt::CobaltConfig cfg = {
     .max_bytes_per_envelope = 100,
     .max_bytes_total = 1000,
 
-    .local_aggregate_proto_store_path = "/tmp/local_agg",
-    .obs_history_proto_store_path = "/tmp/obs_hist",
-
     .upload_schedule_cfg =
         {
             .target_interval = std::chrono::seconds(10),

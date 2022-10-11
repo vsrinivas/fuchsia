@@ -28,28 +28,6 @@ void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
   });
 }
 
-void CobaltControllerImpl::BlockUntilEmpty(uint32_t max_wait_seconds,
-                                           BlockUntilEmptyCallback callback) {
-  cobalt_service_->WaitUntilShippingIdle(std::chrono::seconds(max_wait_seconds));
-  callback();
-}
-
-void CobaltControllerImpl::GetNumSendAttempts(GetNumSendAttemptsCallback callback) {
-  callback(cobalt_service_->num_shipping_send_attempts());
-}
-
-void CobaltControllerImpl::GetFailedSendAttempts(GetFailedSendAttemptsCallback callback) {
-  callback(cobalt_service_->num_shipping_failed_attempts());
-}
-
-void CobaltControllerImpl::GetNumObservationsAdded(GetNumObservationsAddedCallback callback) {
-  callback(cobalt_service_->num_observations_added());
-}
-
-void CobaltControllerImpl::GetNumEventAggregatorRuns(GetNumEventAggregatorRunsCallback callback) {
-  callback(cobalt_service_->num_aggregator_runs());
-}
-
 void CobaltControllerImpl::GenerateAggregatedObservations(
     uint32_t day_index, std::vector<fuchsia::cobalt::ReportSpec> report_specs,
     GenerateAggregatedObservationsCallback callback) {

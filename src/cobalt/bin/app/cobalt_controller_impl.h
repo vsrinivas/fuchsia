@@ -23,17 +23,8 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
  private:
   void RequestSendSoon(RequestSendSoonCallback callback) override;
 
-  void BlockUntilEmpty(uint32_t max_wait_seconds, BlockUntilEmptyCallback callback) override;
-
-  void GetNumSendAttempts(GetNumSendAttemptsCallback callback) override;
-
-  void GetFailedSendAttempts(GetFailedSendAttemptsCallback callback) override;
-
-  void GetNumObservationsAdded(GetNumObservationsAddedCallback callback) override;
-
-  void GetNumEventAggregatorRuns(GetNumEventAggregatorRunsCallback callback) override;
-
-  void GenerateAggregatedObservations(uint32_t day_index, std::vector<fuchsia::cobalt::ReportSpec> report_specs,
+  void GenerateAggregatedObservations(uint32_t day_index,
+                                      std::vector<fuchsia::cobalt::ReportSpec> report_specs,
                                       GenerateAggregatedObservationsCallback callback) override;
 
   void ListenForInitialized(ListenForInitializedCallback callback) override;
