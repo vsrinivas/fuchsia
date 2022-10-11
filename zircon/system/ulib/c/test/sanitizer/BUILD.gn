@@ -139,7 +139,10 @@ shared_library("sanitizer-memory-snapshot-test-dlopen-dso") {
 
 lsan_target("lsan-test") {
   target_type = "test"
-  deps = [ "//zircon/system/ulib/zxtest" ]
+  deps = [
+    "//zircon/system/ulib/explicit-memory",
+    "//zircon/system/ulib/zxtest",
+  ]
 
   if (toolchain_variant.tags + [
         "lto",

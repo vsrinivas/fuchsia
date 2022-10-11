@@ -17,6 +17,7 @@
 #include <thread>
 #include <utility>
 
+#include <explicit-memory/bytes.h>
 #include <sanitizer/lsan_interface.h>
 #include <zxtest/zxtest.h>
 
@@ -63,19 +64,17 @@ class LeakedAllocation {
   }
 
   [[nodiscard, gnu::noinline]] bool Allocate() {
-    auto ptr = Allocator<T>::New();
-    if (!ptr) {
-      return false;
-    }
-    this->~LeakedAllocation();
-    obfuscated_ptr_ = reinterpret_cast<uintptr_t>(ptr) ^ kCipher_;
+    // The real work is done in another call frame that won't be inlined.  That
+    // means all the local state of the real function's call frame will be only
+    // in the call-clobbered registers and/or the stack below this call frame.
+    bool ok = DoAllocate();
 
     // This function is never inlined, and it clobbers all the call-clobbered
     // registers just in case so that the unobfuscated pointer value should
     // not appear in any registers or live stack after it returns.
-    ClobberRegisters();
+    ClobberRegistersAndStack();
 
-    return true;
+    return ok;
   }
 
   auto get() const { return reinterpret_cast<pointer_type>(obfuscated_ptr_ ^ kCipher_); }
@@ -85,8 +84,8 @@ class LeakedAllocation {
   // value does not appear in registers or live stack.
   template <typename F>
   [[gnu::noinline]] void CallWith(F func) const {
-    func(get());
-    ClobberRegisters();
+    DoCallWith(std::move(func));
+    ClobberRegistersAndStack();
   }
 
   ~LeakedAllocation() {
@@ -97,11 +96,35 @@ class LeakedAllocation {
   }
 
  private:
+  // This is a large enough size that it should be well more than whatever
+  // was used in DoAllocate or DoCallWith.
+  static constexpr size_t kClobberStackSize_ = 16384;
+
   static constexpr uintptr_t kCipher_ = 0xfeedfacedeadbeefUL;
   uintptr_t obfuscated_ptr_ = kCipher_;
 
+  [[nodiscard, gnu::noinline]] bool DoAllocate() {
+    auto ptr = Allocator<T>::New();
+    if (!ptr) {
+      return false;
+    }
+    this->~LeakedAllocation();
+    obfuscated_ptr_ = reinterpret_cast<uintptr_t>(ptr) ^ kCipher_;
+    return true;
+  }
+
+  template <typename F>
+  [[gnu::noinline]] void DoCallWith(F func) const {
+    func(get());
+  }
+
   // Caller should use [[gnu::noinline]] too.
-  static void ClobberRegisters() {
+  [[gnu::noinline]] static void ClobberRegistersAndStack() {
+    // Wipe out a sizable range in both the machine stack and unsafe stack,
+    // just in case either or both is in use and gets a pointer value stored.
+    ClobberUnsafeStack();
+    ClobberMachineStack();
+
 #ifdef __aarch64__
     __asm__ volatile("mov x0, xzr" ::: "x0");
     __asm__ volatile("mov x1, xzr" ::: "x1");
@@ -132,6 +155,18 @@ class LeakedAllocation {
     __asm__ volatile("xor %%r9, %%r9" ::: "%r9");
     __asm__ volatile("xor %%r10, %%r10" ::: "%r10");
     __asm__ volatile("xor %%r11, %%r11" ::: "%r11");
+#endif
+  }
+
+  [[gnu::noinline, clang::no_sanitize("safe-stack")]] static void ClobberMachineStack() {
+    char array[kClobberStackSize_];
+    mandatory_memset(array, 0, sizeof(array));
+  }
+
+  [[gnu::noinline]] static void ClobberUnsafeStack() {
+#if __has_feature(safe_stack)
+    char array[kClobberStackSize_];
+    mandatory_memset(array, 0, sizeof(array));
 #endif
   }
 };
@@ -360,7 +395,6 @@ TEST_F(LeakSanitizerTest, ThreadStackReference) {
   // Now those threads' stacks should be the only place holding those pointers.
   EXPECT_FALSE(LsanDetectsLeaks());
 }
-
 TEST_F(LeakSanitizerTest, TlsReference) {
   thread_local int* tls_reference = nullptr;
 
@@ -392,10 +426,11 @@ TEST_F(LeakSanitizerTest, TlsReference) {
 
 // This is the regression test for ensuring the issue described in fxbug.dev/66819 is fixed. The
 // issue was that lsan would report leaks in libc++'s std::thread that weren't actual leaks. This
-// was because it was possible for the newly spawned thread to be suspended before actually running
-// any user code, meaning the memory snapshot would occur while the std::thread allocations were
-// accessible via the new thread's pthread arguments, but not through the thread register. The fix
-// ensures that the start_arg of all pthread structs are checked, so this should no longer leak.
+// was because it was possible for the newly spawned thread to be suspended before actually
+// running any user code, meaning the memory snapshot would occur while the std::thread
+// allocations were accessible via the new thread's pthread arguments, but not through the thread
+// register. The fix ensures that the start_arg of all pthread structs are checked, so this should
+// no longer leak.
 //
 // Below is a minimal reproducer for this issue. As a final test, to ensure this is fixed, we'll
 // rerun the test a large number of times such that we have enough confidence the bug is fixed.
