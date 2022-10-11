@@ -194,8 +194,6 @@ async fn test_media_sounds() {
 // Test to ensure that when the media volume changes via a system update, the SoundPlayer does
 // not receive a request to play the volume changed sound.
 #[should_panic]
-// TODO(fxbug.dev/88496): delete the below
-#[cfg_attr(feature = "variant_asan", ignore)]
 #[fuchsia::test(allow_stalls = false)]
 async fn test_media_sounds_system_source() {
     let test_instance = VolumeChangeEarconsTest::create_realm_and_init()
