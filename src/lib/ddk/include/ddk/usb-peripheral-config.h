@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_DDK_INCLUDE_DDK_USB_PERIPHERAL_CONFIG_H_
 #define SRC_LIB_DDK_INCLUDE_DDK_USB_PERIPHERAL_CONFIG_H_
 
-#include <fuchsia/hardware/usb/peripheral/c/fidl.h>
+#include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire_types.h>
 #include <stdint.h>
 
 struct UsbConfig {
@@ -14,7 +14,7 @@ struct UsbConfig {
   char manufacturer[240];
   char product[240];
   char serial[240];
-  fuchsia_hardware_usb_peripheral_FunctionDescriptor functions[];
+  fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor functions[];
 };
 
 #endif  // SRC_LIB_DDK_INCLUDE_DDK_USB_PERIPHERAL_CONFIG_H_

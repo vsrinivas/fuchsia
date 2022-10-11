@@ -95,8 +95,9 @@ library_headers("ddk-metadata-headers") {
   ]
 
   public_deps = [
-    # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_c",
+    # <ddk/usb-peripheral-config.h> has
+    # #include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire_types.h>.
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
   ]
 }
 

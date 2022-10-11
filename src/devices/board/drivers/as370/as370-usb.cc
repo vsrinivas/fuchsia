@@ -75,7 +75,7 @@ constexpr uint8_t eth_mac_address[] = {
     0x02, 0x98, 0x8f, 0x3c, 0xd2, 0xaa,
 };
 
-using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
+using FunctionDescriptor = fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
 
 static const std::vector<fpbus::Mmio> usb_phy_mmios{
     {{

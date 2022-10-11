@@ -96,7 +96,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/devices/block/drivers/ftl/tests:ftl-integration",
     "//src/devices/block/drivers/ramdisk/test:ramdisk",
     "//src/devices/block/drivers/ums-function:ums-function-driver",
-    "//src/devices/board/drivers/as370:as370-driver",
     "//src/devices/board/drivers/astro:astro-driver",
     "//src/devices/board/drivers/av400:av400-driver",
     "//src/devices/board/drivers/nelson:nelson-driver",

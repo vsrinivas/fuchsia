@@ -171,7 +171,7 @@ static const device_fragment_t xhci_fragments[] = {
     {"xhci-phy", std::size(xhci_phy_fragment), xhci_phy_fragment},
 };
 
-using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
+using FunctionDescriptor = fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
 
 static const std::vector<fpbus::Metadata> usb_metadata{
     {{

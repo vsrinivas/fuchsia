@@ -76,7 +76,7 @@ constexpr dwc2_metadata_t dwc2_metadata = {
         },
 };
 
-using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
+using FunctionDescriptor = fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
 
 static std::vector<fpbus::Metadata> usb_metadata{
     {{
