@@ -576,6 +576,10 @@ fuchsia_test_package("termina_container_tests_pkg") {
   package_name = "termina_container_tests"
   test_components = [ ":termina_container_tests_cmp" ]
   test_specs = {
+    if (is_debug) {
+      # See fxbug.dev/110903 for test timeouts when starting the container.
+      timeout_secs = 420
+    }
     environments = [ nuc_env ]
     log_settings = {
       max_severity = "ERROR"
