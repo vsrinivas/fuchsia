@@ -371,16 +371,11 @@ const str2 string:1 = "\i";
 // error: invalid oct digit '9'
 const str3 string:1 = "\297";
     )",
-      R"(
-// error: unexpected line-break in string literal
-const str4 string:1 = "Hello
-World";
-    )",
   };
 
-  std::vector<std::string> expected_errors{
-      fidl::ErrInvalidHexDigit.msg.data(), fidl::ErrInvalidEscapeSequence.msg.data(),
-      fidl::ErrInvalidOctDigit.msg.data(), fidl::ErrUnexpectedLineBreak.msg.data()};
+  std::vector<std::string> expected_errors{fidl::ErrInvalidHexDigit.msg.data(),
+                                           fidl::ErrInvalidEscapeSequence.msg.data(),
+                                           fidl::ErrInvalidOctDigit.msg.data()};
 
   for (size_t i = 0; i < invalid_string_literals.size(); i++) {
     const auto& invalidStringLiteral = invalid_string_literals[i];
@@ -390,6 +385,12 @@ World";
     ASSERT_EQ(currErrors.size(), 1);
     ASSERT_EQ(currErrors[0]->def.msg.data(), expected_errors[i]);
   }
+}
+
+TEST(RecoverableParsingTests, UnexpextedLineBreakInLiteral) {
+  TestLibrary library;
+  library.AddFile("bad/unexpected_linebreak.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedLineBreak);
 }
 
 TEST(RecoverableParsingTests, InvalidHexDigit) {

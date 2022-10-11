@@ -217,10 +217,8 @@ const b float32 = -3.41e38;
 }
 
 TEST(ConstsTests, GoodConstTestString) {
-  TestLibrary library(R"FIDL(library example;
-
-const c string:4 = "four";
-)FIDL");
+  TestLibrary library;
+  library.AddFile("good/simple_string_literal.test.fidl");
   ASSERT_COMPILED(library);
 }
 
