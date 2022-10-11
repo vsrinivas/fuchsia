@@ -388,12 +388,11 @@ void DirectoryConnection::Watch(WatchRequestView request, WatchCompleter::Sync& 
 void DirectoryConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryQueryFilesystem] our options: ", options());
 
-  fuchsia_io::wire::FilesystemInfo info;
-  zx_status_t status = vnode()->QueryFilesystem(&info);
-  completer.Reply(status,
-                  status == ZX_OK
-                      ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(&info)
-                      : nullptr);
+  zx::status result = Connection::NodeQueryFilesystem();
+  completer.Reply(result.status_value(),
+                  result.is_ok() ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(
+                                       &result.value())
+                                 : nullptr);
 }
 
 void DirectoryConnection::AdvisoryLock(AdvisoryLockRequestView request,

@@ -39,7 +39,6 @@ class StreamFileConnection final : public FileConnection {
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
   void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
-  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io/Node| operations.

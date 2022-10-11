@@ -116,12 +116,11 @@ void NodeConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sy
 }
 
 void NodeConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
-  fuchsia_io::wire::FilesystemInfo info;
-  zx_status_t status = vnode()->QueryFilesystem(&info);
-  completer.Reply(status,
-                  status == ZX_OK
-                      ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(&info)
-                      : nullptr);
+  zx::status result = Connection::NodeQueryFilesystem();
+  completer.Reply(result.status_value(),
+                  result.is_ok() ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(
+                                       &result.value())
+                                 : nullptr);
 }
 
 }  // namespace internal

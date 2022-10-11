@@ -408,6 +408,14 @@ zx_koid_t Connection::GetChannelOwnerKoid() {
   return owner_info.koid;
 }
 
+zx::status<fuchsia_io::wire::FilesystemInfo> Connection::NodeQueryFilesystem() {
+  zx::status<FilesystemInfo> info = vfs_->GetFilesystemInfo();
+  if (info.is_error()) {
+    return info.take_error();
+  }
+  return zx::ok(info.value().ToFidl());
+}
+
 }  // namespace internal
 
 }  // namespace fs

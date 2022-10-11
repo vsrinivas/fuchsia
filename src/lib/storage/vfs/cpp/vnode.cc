@@ -279,22 +279,6 @@ zx_status_t Vnode::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Vnode::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) {
-  *out = {};
-  std::lock_guard lock(mutex_);
-
-  if (!vfs_)
-    return ZX_ERR_NOT_SUPPORTED;
-
-  zx::status<FilesystemInfo> info_or = vfs_->GetFilesystemInfo();
-  if (info_or.is_error()) {
-    return info_or.status_value();
-  }
-
-  *out = info_or.value().ToFidl();
-  return ZX_OK;
-}
-
 zx::status<std::string> Vnode::GetDevicePath() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
 zx_status_t Vnode::OpenRemote(fuchsia_io::OpenFlags, uint32_t, fidl::StringView,

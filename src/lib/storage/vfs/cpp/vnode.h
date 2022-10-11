@@ -382,9 +382,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual bool IsService() const { return false; }
 
 #ifdef __Fuchsia__
-  // Return information about the underlying filesystem, if desired.
-  virtual zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out);
-
   // Returns the name of the device backing the filesystem, if one exists.
   virtual zx::status<std::string> GetDevicePath() const;
 

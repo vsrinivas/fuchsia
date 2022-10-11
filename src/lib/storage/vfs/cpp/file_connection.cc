@@ -114,6 +114,14 @@ void FileConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync&
   }
 }
 
+void FileConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
+  zx::status result = Connection::NodeQueryFilesystem();
+  completer.Reply(result.status_value(),
+                  result.is_ok() ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(
+                                       &result.value())
+                                 : nullptr);
+}
+
 zx_status_t FileConnection::ResizeInternal(uint64_t length) {
   FS_PRETTY_TRACE_DEBUG("[FileTruncate] options: ", options());
 

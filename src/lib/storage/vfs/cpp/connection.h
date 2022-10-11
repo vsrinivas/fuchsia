@@ -205,6 +205,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
                            const fuchsia_io::wire::NodeAttributes& attributes);
   zx::status<fuchsia_io::wire::OpenFlags> NodeGetFlags();
   zx::status<> NodeSetFlags(fuchsia_io::wire::OpenFlags flags);
+  zx::status<fuchsia_io::wire::FilesystemInfo> NodeQueryFilesystem();
 
  private:
   // The contract of the Vnode API is that there should be a balancing |Close| call for every |Open|
