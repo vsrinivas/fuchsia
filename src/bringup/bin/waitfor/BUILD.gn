@@ -9,8 +9,7 @@ executable("waitfor") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_cpp_wire",
     "//sdk/lib/fdio",
     "//src/lib/uuid",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/zx",
-    "//zircon/third_party/ulib/cksum",
   ]
 }
