@@ -26,7 +26,8 @@
           "tools/devshell/tests",
           "src/tests",
           "src/sys/component_manager/tests",
-          "sdk/dart/zircon/test"
+          "sdk/dart/zircon/test",
+          "tools/fidl/fidlc/tests/fidl"
         ],
         "notes": [
           "Skip test directories"
