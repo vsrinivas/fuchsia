@@ -127,12 +127,6 @@ class VersionRange final {
   static std::optional<VersionRange> Intersect(const std::optional<VersionRange>& lhs,
                                                const std::optional<VersionRange>& rhs);
 
-  // Returns the difference of two (possible empty) ranges. The result must be
-  // expressible as a single range, i.e. it is invalid to subtract a range that
-  // would split this range in two pieces.
-  static std::optional<VersionRange> Subtract(const std::optional<VersionRange>& lhs,
-                                              const std::optional<VersionRange>& rhs);
-
   constexpr bool operator==(const VersionRange& rhs) const { return pair_ == rhs.pair_; }
   constexpr bool operator!=(const VersionRange& rhs) const { return pair_ != rhs.pair_; }
   constexpr bool operator<(const VersionRange& rhs) const { return pair_ < rhs.pair_; }
@@ -202,11 +196,13 @@ class Availability final {
 
   State state() const { return state_; }
 
+  // Returns the points demarcating the availability: `added`, `removed`, and
+  // `deprecated` (if deprecated). Must be in the kInherited or kNarrowed state.
+  std::set<Version> points() const;
+
   // Returns the [added, removed) range. Must be in the kInherit state or later.
   VersionRange range() const;
-  // Returns the [deprecated, removed) range, or null if `deprecated` is not
-  // set. Must be in the kInherit state or later.
-  std::optional<VersionRange> deprecated_range() const;
+
   // Returns true if the whole range is deprecated, and false if none of it is.
   // Must be in the kNarrowed state (where deprecation is all-or-nothing).
   bool is_deprecated() const;

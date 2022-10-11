@@ -237,6 +237,12 @@ std::unique_ptr<Library> Library::CreateRootLibrary() {
   insert("MAX", Builtin::Identity::kMax);
   insert("HEAD", Builtin::Identity::kHead);
 
+  // Simulate narrowing availabilities to maintain the invariant that they
+  // always reach kNarrowed (except for the availability of `library`).
+  library->TraverseElements([](Element* element) {
+    element->availability.Narrow(VersionRange(Version::Head(), Version::PosInf()));
+  });
+
   return library;
 }
 

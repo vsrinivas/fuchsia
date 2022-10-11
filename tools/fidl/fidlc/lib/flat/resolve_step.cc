@@ -36,14 +36,11 @@ void ResolveStep::RunImpl() {
     // kInherited). We don't add membership edges to them, and we specifically
     // avoid adding reference edges to them in ResolveStep::ParseReference.
     ZX_ASSERT(element->kind != Element::Kind::kLibrary);
-    auto [a, b] = element->availability.range().pair();
-    info.points.insert(a);
-    info.points.insert(b);
-    if (auto deprecated = element->availability.deprecated_range()) {
-      auto [c, another_b] = deprecated.value().pair();
-      ZX_ASSERT_MSG(another_b == b, "deprecation continues until the end");
-      info.points.insert(c);
-    }
+    // Each element starts 2 or 3 points. All have `added` and `removed`, and
+    // some have `deprecated`. Elements from other libraries (that exist due to
+    // reference edges) only ever have 2 points because those libraries are
+    // already compiled, hence post-decomposition.
+    info.points = element->availability.points();
   }
 
   // Run the temporal decomposition algorithm.
@@ -653,13 +650,9 @@ void ResolveStep::ValidateReference(const Reference& ref, Context context) {
   }
 
   auto source = context.enclosing;
-  auto& source_platform = library()->platform.value();
-  auto source_present = source->availability.range();
-  auto source_deprecated = source->availability.deprecated_range();
-
   auto target = ref.resolved().element();
-  auto& target_platform = ref.resolved().library()->platform.value();
-  auto target_deprecated = target->availability.deprecated_range();
+  auto source_deprecated = source->availability.is_deprecated();
+  auto target_deprecated = target->availability.is_deprecated();
 
   // TODO(fxbug.dev/101849): The check below is a stopgap solution to allow
   // @deprecated elements to reference @available(deprecated=...) elements. We
@@ -674,27 +667,23 @@ void ResolveStep::ValidateReference(const Reference& ref, Context context) {
   // Whereas with the current stopgap you'd have to also add @deprecated on the
   // member itself.
   if (source->attributes->Get("deprecated")) {
+    source_deprecated = true;
+  }
+
+  if (source_deprecated || !target_deprecated) {
     return;
   }
 
-  if (!target_deprecated) {
-    return;
-  }
+  auto& source_platform = library()->platform.value();
+  auto& target_platform = ref.resolved().library()->platform.value();
 
   if (source_platform == target_platform) {
-    // Same platform: check if target is deprecated while source is not.
-    if (auto problem = VersionRange::Subtract(
-            VersionRange::Intersect(target_deprecated, source_present), source_deprecated)) {
-      Fail(ErrInvalidReferenceToDeprecated, ref.span(), target, problem.value(), source_platform,
-           source, source);
-    }
+    Fail(ErrInvalidReferenceToDeprecated, ref.span(), target, source->availability.range(),
+         source_platform, source, source);
   } else {
-    // Different platform: check if source is _ever_ not deprecated.
-    if (auto problem = VersionRange::Subtract(source_present, source_deprecated)) {
-      Fail(ErrInvalidReferenceToDeprecatedOtherPlatform, ref.span(), target,
-           target_deprecated.value(), target_platform, source, problem.value(), source_platform,
-           source);
-    }
+    Fail(ErrInvalidReferenceToDeprecatedOtherPlatform, ref.span(), target,
+         target->availability.range(), target_platform, source, source->availability.range(),
+         source_platform, source);
   }
 }
 

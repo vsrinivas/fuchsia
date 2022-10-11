@@ -86,37 +86,18 @@ std::optional<VersionRange> VersionRange::Intersect(const std::optional<VersionR
   return VersionRange(std::max(a1, a2), std::min(b1, b2));
 }
 
-// static
-std::optional<VersionRange> VersionRange::Subtract(const std::optional<VersionRange>& lhs,
-                                                   const std::optional<VersionRange>& rhs) {
-  if (!lhs || !rhs) {
-    return lhs;
-  }
-  auto [a1, b1] = lhs.value().pair_;
-  auto [a2, b2] = rhs.value().pair_;
-  if (a2 <= a1 && b2 >= b1) {
-    return std::nullopt;
-  }
-  if (a2 > a1) {
-    ZX_ASSERT_MSG(b2 >= b1, "result would not be contiguous");
-    return VersionRange(a1, a2);
-  }
-  ZX_ASSERT_MSG(b2 < b1, "logic error");
-  ZX_ASSERT_MSG(a2 <= a1, "result would not be contiguous");
-  return VersionRange(b2, b1);
-}
-
 VersionRange Availability::range() const {
   ZX_ASSERT(state_ == State::kInherited || state_ == State::kNarrowed);
   return VersionRange(added_.value(), removed_.value());
 }
 
-std::optional<VersionRange> Availability::deprecated_range() const {
+std::set<Version> Availability::points() const {
   ZX_ASSERT(state_ == State::kInherited || state_ == State::kNarrowed);
-  if (!deprecated_) {
-    return std::nullopt;
+  std::set<Version> result{added_.value(), removed_.value()};
+  if (deprecated_) {
+    result.insert(deprecated_.value());
   }
-  return VersionRange(deprecated_.value(), removed_.value());
+  return result;
 }
 
 bool Availability::is_deprecated() const {

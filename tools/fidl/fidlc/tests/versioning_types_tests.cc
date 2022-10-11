@@ -149,21 +149,6 @@ TEST(VersioningTypesTests, GoodVersionRangeIntersect) {
   EXPECT_EQ(fidl::VersionRange::Intersect(range(3, 6), (range(1, 2))), std::nullopt);
 }
 
-TEST(VersioningTypesTests, GoodVersionRangeSubtract) {
-  EXPECT_EQ(fidl::VersionRange::Subtract(std::nullopt, std::nullopt), std::nullopt);
-  EXPECT_EQ(fidl::VersionRange::Subtract(std::nullopt, range(1, 2)), std::nullopt);
-  EXPECT_EQ(fidl::VersionRange::Subtract(range(1, 2), (range(1, 2))), std::nullopt);
-  EXPECT_EQ(fidl::VersionRange::Subtract(range(1, 2), (range(1, 3))), std::nullopt);
-  EXPECT_EQ(fidl::VersionRange::Subtract(range(2, 3), (range(1, 3))), std::nullopt);
-  EXPECT_EQ(fidl::VersionRange::Subtract(range(2, 3), (range(1, 4))), std::nullopt);
-
-  EXPECT_EQ(fidl::VersionRange::Subtract(range(1, 2), std::nullopt), range(1, 2));
-  EXPECT_EQ(fidl::VersionRange::Subtract(range(1, 3), (range(1, 2))), range(2, 3));
-  EXPECT_EQ(fidl::VersionRange::Subtract(range(1, 3), (range(2, 3))), range(1, 2));
-  EXPECT_EQ(fidl::VersionRange::Subtract(range(2, 4), (range(1, 3))), range(3, 4));
-  EXPECT_EQ(fidl::VersionRange::Subtract(range(2, 4), (range(3, 5))), range(2, 3));
-}
-
 TEST(VersioningTypesTests, GoodAvailabilityInitNone) {
   Availability availability;
   ASSERT_TRUE(availability.Init(std::nullopt, std::nullopt, std::nullopt));
