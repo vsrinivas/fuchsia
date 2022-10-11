@@ -175,6 +175,14 @@
                 "#flutter_jit_runner",
             ],
         },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
     ],
     expose: [
         {

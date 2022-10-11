@@ -42,12 +42,19 @@
         {
             directory: "config-data",
             from: "parent",
-            to: "#parent_view",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+                "#parent_view",
+            ],
         },
         {
-            directory: "config-data",
+            directory: "root-ssl-certificates",
             from: "parent",
-            to: "#flutter_aot_runner",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
         },
     ],
     expose: [
