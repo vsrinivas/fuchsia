@@ -402,12 +402,11 @@ GMBusI2c::GMBusI2c(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space)
 
 // Modesetting functions
 
-namespace {
-
 // See the section on HDMI/DVI programming in intel-gfx-prm-osrc-skl-vol12-display.pdf
 // for documentation on this algorithm.
-static bool calculate_params(uint32_t symbol_clock_khz, uint16_t* dco_int, uint16_t* dco_frac,
-                             uint8_t* q, uint8_t* q_mode, uint8_t* k, uint8_t* p, uint8_t* cf) {
+bool ComputeDpllConfigurationForHdmi(uint32_t symbol_clock_khz, uint16_t* dco_int,
+                                     uint16_t* dco_frac, uint8_t* q, uint8_t* q_mode, uint8_t* k,
+                                     uint8_t* p, uint8_t* cf) {
   uint8_t even_candidates[36] = {4,  6,  8,  10, 12, 14, 16, 18, 20, 24, 28, 30,
                                  32, 36, 40, 42, 44, 48, 52, 54, 56, 60, 64, 66,
                                  68, 70, 72, 76, 78, 80, 84, 88, 90, 92, 96, 98};
@@ -535,8 +534,6 @@ static bool calculate_params(uint32_t symbol_clock_khz, uint16_t* dco_int, uint1
   return true;
 }
 
-}  // namespace
-
 // On DisplayDevice creation we cannot determine whether it is an HDMI
 // display; this will be updated when intel-i915 Controller gets EDID
 // information for this device (before Init()).
@@ -585,8 +582,9 @@ bool HdmiDisplay::InitDdi() {
 
 bool HdmiDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) {
   HdmiDpllState hdmi = {};
-  bool result = calculate_params(pixel_clock_10khz * 10, &hdmi.dco_int, &hdmi.dco_frac, &hdmi.q,
-                                 &hdmi.q_mode, &hdmi.k, &hdmi.p, &hdmi.cf);
+  bool result =
+      ComputeDpllConfigurationForHdmi(pixel_clock_10khz * 10, &hdmi.dco_int, &hdmi.dco_frac,
+                                      &hdmi.q, &hdmi.q_mode, &hdmi.k, &hdmi.p, &hdmi.cf);
   if (result) {
     *config = hdmi;
   }
@@ -599,8 +597,8 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
 
   // Calculate and the HDMI DPLL parameters
   HdmiDpllState hdmi;
-  if (!calculate_params(mode.pixel_clock_10khz * 10, &hdmi.dco_int, &hdmi.dco_frac, &hdmi.q,
-                        &hdmi.q_mode, &hdmi.k, &hdmi.p, &hdmi.cf)) {
+  if (!ComputeDpllConfigurationForHdmi(mode.pixel_clock_10khz * 10, &hdmi.dco_int, &hdmi.dco_frac,
+                                       &hdmi.q, &hdmi.q_mode, &hdmi.k, &hdmi.p, &hdmi.cf)) {
     zxlogf(ERROR, "hdmi: failed to calculate clock params");
     return false;
   }

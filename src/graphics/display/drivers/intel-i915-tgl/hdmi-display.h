@@ -58,6 +58,10 @@ class HdmiDisplay : public DisplayDevice {
   uint32_t i2c_bus_id() const final { return 2 * ddi() + 1; }
 };
 
+bool ComputeDpllConfigurationForHdmi(uint32_t symbol_clock_khz, uint16_t* dco_int,
+                                     uint16_t* dco_frac, uint8_t* q, uint8_t* q_mode, uint8_t* k,
+                                     uint8_t* p, uint8_t* cf);
+
 }  // namespace i915_tgl
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_HDMI_DISPLAY_H_
