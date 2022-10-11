@@ -666,10 +666,7 @@ pub(super) mod ipv6_source_address_selection {
         use net_types::ip::AddrSubnet;
 
         use super::*;
-        use crate::{
-            device::DeviceId,
-            ip::device::state::{AddrConfig, AddressState},
-        };
+        use crate::ip::device::state::{AddrConfig, AddressState};
 
         #[test]
         fn test_select_ipv6_source_address() {
@@ -688,9 +685,9 @@ pub(super) mod ipv6_source_address_selection {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3,
             ]))
             .unwrap();
-            let dev0 = &DeviceId::new_ethernet(0);
-            let dev1 = &DeviceId::new_ethernet(1);
-            let dev2 = &DeviceId::new_ethernet(2);
+            let dev0 = &0;
+            let dev1 = &1;
+            let dev2 = &2;
 
             // Rule 1: Prefer same address
             assert_eq!(rule_1(remote, remote, local0), Ordering::Greater);
@@ -1284,7 +1281,7 @@ mod tests {
 
         let DummyEventDispatcherConfig { local_ip, remote_ip, subnet, local_mac: _, remote_mac: _ } =
             cfg;
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(cfg).build();
         let mut sync_ctx = &sync_ctx;
         let loopback_device_id =
@@ -1299,12 +1296,10 @@ mod tests {
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result, device_type } =
             test_case;
 
-        const LOCAL_DEVICE: DeviceId = DeviceId::new_ethernet(0);
-        const OTHER_DEVICE: DeviceId = DeviceId::new_ethernet(1);
         let local_device = match device_type {
             DeviceType::Unspecified => None,
-            DeviceType::LocalDevice => Some(LOCAL_DEVICE),
-            DeviceType::OtherDevice => Some(OTHER_DEVICE),
+            DeviceType::LocalDevice => Some(device_ids[0].clone()),
+            DeviceType::OtherDevice => Some(loopback_device_id.clone()),
         };
 
         let (expected_from_ip, from_ip) = match local_ip_type {
@@ -1417,8 +1412,9 @@ mod tests {
         } = I::DUMMY_CONFIG;
 
         let mut builder = DummyEventDispatcherBuilder::default();
-        let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
-        let Ctx { sync_ctx, mut non_sync_ctx } = builder.build();
+        let device_idx = builder.add_device(local_mac);
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) = builder.build();
+        let device_id = &device_ids[device_idx];
         let mut sync_ctx = &sync_ctx;
         crate::device::add_ip_addr_subnet(
             &mut sync_ctx,
@@ -1439,14 +1435,14 @@ mod tests {
                 &mut sync_ctx,
                 &mut non_sync_ctx,
                 subnet,
-                device_id,
+                device_id.clone(),
             )
             .expect("install IPv4 device route on a fresh stack without routes"),
             SubnetEither::V6(subnet) => crate::ip::add_device_route::<Ipv6, _, _>(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
                 subnet,
-                device_id,
+                device_id.clone(),
             )
             .expect("install IPv6 device route on a fresh stack without routes"),
         }
@@ -1536,10 +1532,10 @@ mod tests {
         let DummyEventDispatcherConfig::<_> { local_mac, remote_mac, local_ip, remote_ip, subnet } =
             cfg;
 
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
         let mut sync_ctx = &sync_ctx;
-
+        let device_id = &device_ids[0];
         // Create a normal, routable socket.
         let sock = IpSocketHandler::<I, _>::new_ip_socket(
             &mut sync_ctx,
@@ -1599,7 +1595,7 @@ mod tests {
             packet_count += 1;
             assert_eq!(non_sync_ctx.frames_sent().len(), packet_count);
             let (dev, frame) = &non_sync_ctx.frames_sent()[packet_count - 1];
-            assert_eq!(dev, &DeviceId::new_ethernet(0));
+            assert_eq!(dev, device_id);
             check_frame(&frame, packet_count);
         };
         check_sent_frame(&non_sync_ctx);
@@ -1686,8 +1682,9 @@ mod tests {
         } = I::DUMMY_CONFIG;
 
         let mut builder = DummyEventDispatcherBuilder::default();
-        let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
-        let Ctx { sync_ctx, mut non_sync_ctx } = builder.build();
+        let device_idx = builder.add_device(local_mac);
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) = builder.build();
+        let device_id = &device_ids[device_idx];
         let mut sync_ctx = &sync_ctx;
         crate::device::add_ip_addr_subnet(
             &mut sync_ctx,

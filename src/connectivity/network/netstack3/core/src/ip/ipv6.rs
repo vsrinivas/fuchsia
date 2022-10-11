@@ -214,14 +214,14 @@ mod tests {
     use super::*;
     use crate::{
         testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V6},
-        Ctx, DeviceId,
+        Ctx,
     };
 
     #[test]
     fn test_no_extension_headers() {
         // Test that if we have no extension headers, we continue
 
-        let Ctx { sync_ctx, non_sync_ctx: _ } =
+        let (Ctx { sync_ctx, non_sync_ctx: _ }, device_ids) =
             DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
         let mut sync_ctx = &sync_ctx;
         let builder = Ipv6PacketBuilder::new(
@@ -230,7 +230,7 @@ mod tests {
             10,
             IpProto::Tcp.into(),
         );
-        let device_id = DeviceId::new_ethernet(0);
+        let device_id = &device_ids[0];
         let frame_dst = FrameDestination::Unicast;
         let mut buffer =
             Buf::new(vec![1, 2, 3, 4, 5], ..).encapsulate(builder).serialize_vec_outer().unwrap();

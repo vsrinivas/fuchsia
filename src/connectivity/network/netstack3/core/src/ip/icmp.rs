@@ -3007,7 +3007,7 @@ mod tests {
     use super::*;
     use crate::{
         context::testutil::{DummyCtx, DummyInstant, DummyNonSyncCtx, DummySyncCtx},
-        device::{DeviceId, FrameDestination},
+        device::FrameDestination,
         ip::{
             device::{
                 route_discovery::Ipv6DiscoveredRoute,
@@ -3145,25 +3145,25 @@ mod tests {
         modify_packet_builder(&mut pb);
         let buffer = Buf::new(body, ..).encapsulate(pb).serialize_vec_outer().unwrap();
 
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             I::DUMMY_CONFIG.into_builder().build_with_modifications(modify_stack_state_builder);
         let mut sync_ctx = &sync_ctx;
 
-        let device = DeviceId::new_ethernet(0);
-        set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut non_sync_ctx, &device, true)
+        let device = &device_ids[0];
+        set_routing_enabled::<_, _, I>(&mut sync_ctx, &mut non_sync_ctx, device, true)
             .expect("error setting routing enabled");
         match I::VERSION {
             IpVersion::V4 => receive_ipv4_packet(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                &device,
+                device,
                 FrameDestination::Unicast,
                 buffer,
             ),
             IpVersion::V6 => receive_ipv6_packet(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                &device,
+                device,
                 FrameDestination::Unicast,
                 buffer,
             ),
@@ -3725,13 +3725,15 @@ mod tests {
 
         const LOCAL_CTX_NAME: &str = "alice";
         const REMOTE_CTX_NAME: &str = "bob";
-        let local = I::DUMMY_CONFIG.into_builder().build();
-        let remote = I::DUMMY_CONFIG.swap().into_builder().build();
+        let (local, local_device_ids) = I::DUMMY_CONFIG.into_builder().build();
+        let (remote, remove_device_ids) = I::DUMMY_CONFIG.swap().into_builder().build();
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             LOCAL_CTX_NAME,
             local,
+            local_device_ids[0].clone(),
             REMOTE_CTX_NAME,
             remote,
+            remove_device_ids[0].clone(),
         );
 
         let icmp_id = 13;

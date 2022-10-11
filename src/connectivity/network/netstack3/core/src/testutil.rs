@@ -476,10 +476,11 @@ impl DummyEventDispatcherBuilder {
         mac: UnicastAddr<Mac>,
         ip: A,
         subnet: Subnet<A>,
-    ) {
+    ) -> usize {
         let idx = self.devices.len();
         self.devices.push((mac, Some((ip.into(), subnet.into()))));
         self.device_routes.push((subnet.into(), idx));
+        idx
     }
 
     /// Add an ARP table entry for a device's ARP table.
@@ -503,7 +504,7 @@ impl DummyEventDispatcherBuilder {
     }
 
     /// Builds a `Ctx` from the present configuration with a default dispatcher.
-    pub(crate) fn build(self) -> DummyCtx {
+    pub(crate) fn build(self) -> (DummyCtx, Vec<DeviceId>) {
         self.build_with_modifications(|_| {})
     }
 
@@ -513,7 +514,7 @@ impl DummyEventDispatcherBuilder {
     pub(crate) fn build_with_modifications<F: FnOnce(&mut StackStateBuilder)>(
         self,
         f: F,
-    ) -> DummyCtx {
+    ) -> (DummyCtx, Vec<DeviceId>) {
         let mut stack_builder = StackStateBuilder::default();
         f(&mut stack_builder);
         self.build_with(stack_builder)
@@ -524,7 +525,7 @@ impl DummyEventDispatcherBuilder {
     pub(crate) fn build_with<NonSyncCtx: NonSyncContext + Default>(
         self,
         state_builder: StackStateBuilder,
-    ) -> Ctx<NonSyncCtx> {
+    ) -> (Ctx<NonSyncCtx>, Vec<DeviceId>) {
         let mut ctx = Ctx::new_with_builder(state_builder);
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
@@ -535,10 +536,9 @@ impl DummyEventDispatcherBuilder {
             device_routes,
             routes,
         } = self;
-        let idx_to_device_id: HashMap<_, _> = devices
+        let idx_to_device_id: Vec<_> = devices
             .into_iter()
-            .enumerate()
-            .map(|(idx, (mac, ip_subnet))| {
+            .map(|(mac, ip_subnet)| {
                 let id = crate::device::add_ethernet_device(
                     sync_ctx,
                     non_sync_ctx,
@@ -560,21 +560,21 @@ impl DummyEventDispatcherBuilder {
                     None => {}
                     _ => unreachable!(),
                 }
-                (idx, id)
+                id
             })
             .collect();
         for (idx, ip, mac) in arp_table_entries {
-            let device = idx_to_device_id.get(&idx).unwrap();
+            let device = &idx_to_device_id[idx];
             crate::device::insert_static_arp_table_entry(sync_ctx, non_sync_ctx, device, ip, mac)
                 .expect("error inserting static ARP entry");
         }
         for (idx, ip, mac) in ndp_table_entries {
-            let device = idx_to_device_id.get(&idx).unwrap();
+            let device = &idx_to_device_id[idx];
             crate::device::insert_ndp_table_entry(sync_ctx, non_sync_ctx, device, ip, mac.get())
                 .expect("error inserting static NDP entry");
         }
         for (subnet, idx) in device_routes {
-            let device = idx_to_device_id.get(&idx).unwrap();
+            let device = &idx_to_device_id[idx];
             crate::add_route(
                 sync_ctx,
                 non_sync_ctx,
@@ -586,7 +586,7 @@ impl DummyEventDispatcherBuilder {
             crate::add_route(sync_ctx, non_sync_ctx, entry).expect("add remote route");
         }
 
-        ctx
+        (ctx, idx_to_device_id)
     }
 }
 
@@ -842,11 +842,15 @@ mod tests {
     #[test]
     fn test_dummy_network_transmits_packets() {
         set_logger_for_test();
+        let (alice_ctx, alice_device_ids) = DUMMY_CONFIG_V4.into_builder().build();
+        let (bob_ctx, bob_device_ids) = DUMMY_CONFIG_V4.swap().into_builder().build();
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "alice",
-            DUMMY_CONFIG_V4.into_builder().build(),
+            alice_ctx,
+            alice_device_ids[0].clone(),
             "bob",
-            DUMMY_CONFIG_V4.swap().into_builder().build(),
+            bob_ctx,
+            bob_device_ids[0].clone(),
         );
 
         // Alice sends Bob a ping.
@@ -888,11 +892,15 @@ mod tests {
     #[test]
     fn test_dummy_network_timers() {
         set_logger_for_test();
+        let (ctx_1, device_ids_1) = DUMMY_CONFIG_V4.into_builder().build();
+        let (ctx_2, device_ids_2) = DUMMY_CONFIG_V4.swap().into_builder().build();
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             1,
-            DUMMY_CONFIG_V4.into_builder().build(),
+            ctx_1,
+            device_ids_1[0].clone(),
             2,
-            DUMMY_CONFIG_V4.swap().into_builder().build(),
+            ctx_2,
+            device_ids_2[0].clone(),
         );
 
         net.with_context(1, |Ctx { sync_ctx: _, non_sync_ctx }| {
@@ -959,11 +967,15 @@ mod tests {
     #[test]
     fn test_dummy_network_until_idle() {
         set_logger_for_test();
+        let (ctx_1, device_ids_1) = DUMMY_CONFIG_V4.into_builder().build();
+        let (ctx_2, device_ids_2) = DUMMY_CONFIG_V4.swap().into_builder().build();
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             1,
-            DUMMY_CONFIG_V4.into_builder().build(),
+            ctx_1,
+            device_ids_1[0].clone(),
             2,
-            DUMMY_CONFIG_V4.swap().into_builder().build(),
+            ctx_2,
+            device_ids_2[0].clone(),
         );
         net.with_context(1, |Ctx { sync_ctx: _, non_sync_ctx }| {
             assert_eq!(
@@ -996,17 +1008,15 @@ mod tests {
         set_logger_for_test();
         // Create a network that takes 5ms to get any packet to go through.
         let latency = Duration::from_millis(5);
+        let (alice_ctx, alice_device_ids) = DUMMY_CONFIG_V4.into_builder().build();
+        let (bob_ctx, bob_device_ids) = DUMMY_CONFIG_V4.swap().into_builder().build();
         let mut net = DummyNetwork::new(
-            [
-                ("alice", DUMMY_CONFIG_V4.into_builder().build()),
-                ("bob", DUMMY_CONFIG_V4.swap().into_builder().build()),
-            ],
-            move |net: &'static str, _device_id: DeviceId| {
-                let device_id = DeviceId::new_ethernet(0);
+            [("alice", alice_ctx), ("bob", bob_ctx)],
+            |net: &'static str, _device_id: DeviceId| {
                 if net == "alice" {
-                    vec![("bob", device_id, Some(latency))]
+                    vec![("bob", bob_device_ids[0].clone(), Some(latency))]
                 } else {
-                    vec![("alice", device_id, Some(latency))]
+                    vec![("alice", alice_device_ids[0].clone(), Some(latency))]
                 }
             },
         );
@@ -1134,8 +1144,6 @@ mod tests {
         for<'a> &'a DummySyncCtx:
             BufferIpLayerHandler<I, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
     {
-        let device_builder_id = 0;
-        let device = &DeviceId::new_ethernet(device_builder_id);
         let mac_a = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap();
         let mac_b = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 8])).unwrap();
         let mac_c = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 9])).unwrap();
@@ -1144,22 +1152,28 @@ mod tests {
         let ip_c = I::get_other_ip_address(3);
         let subnet = Subnet::new(I::get_other_ip_address(0).get(), I::Addr::BYTES * 8 - 8).unwrap();
         let mut alice = DummyEventDispatcherBuilder::default();
-        alice.add_device_with_ip(mac_a, ip_a.get(), subnet);
+        let alice_device_idx = alice.add_device_with_ip(mac_a, ip_a.get(), subnet);
         let mut bob = DummyEventDispatcherBuilder::default();
-        bob.add_device_with_ip(mac_b, ip_b.get(), subnet);
+        let bob_device_idx = bob.add_device_with_ip(mac_b, ip_b.get(), subnet);
         let mut calvin = DummyEventDispatcherBuilder::default();
-        calvin.add_device_with_ip(mac_c, ip_c.get(), subnet);
-        add_arp_or_ndp_table_entry(&mut alice, device_builder_id, ip_b.get(), mac_b);
-        add_arp_or_ndp_table_entry(&mut alice, device_builder_id, ip_c.get(), mac_c);
-        add_arp_or_ndp_table_entry(&mut bob, device_builder_id, ip_a.get(), mac_a);
-        add_arp_or_ndp_table_entry(&mut bob, device_builder_id, ip_c.get(), mac_c);
-        add_arp_or_ndp_table_entry(&mut calvin, device_builder_id, ip_a.get(), mac_a);
-        add_arp_or_ndp_table_entry(&mut calvin, device_builder_id, ip_b.get(), mac_b);
+        let calvin_device_idx = calvin.add_device_with_ip(mac_c, ip_c.get(), subnet);
+        add_arp_or_ndp_table_entry(&mut alice, alice_device_idx, ip_b.get(), mac_b);
+        add_arp_or_ndp_table_entry(&mut alice, alice_device_idx, ip_c.get(), mac_c);
+        add_arp_or_ndp_table_entry(&mut bob, bob_device_idx, ip_a.get(), mac_a);
+        add_arp_or_ndp_table_entry(&mut bob, bob_device_idx, ip_c.get(), mac_c);
+        add_arp_or_ndp_table_entry(&mut calvin, calvin_device_idx, ip_a.get(), mac_a);
+        add_arp_or_ndp_table_entry(&mut calvin, calvin_device_idx, ip_b.get(), mac_b);
+        let (alice_ctx, alice_device_ids) = alice.build();
+        let (bob_ctx, bob_device_ids) = bob.build();
+        let (calvin_ctx, calvin_device_ids) = calvin.build();
         let mut net = DummyNetwork::new(
-            [("alice", alice.build()), ("bob", bob.build()), ("calvin", calvin.build())],
-            move |net: &'static str, _device_id: DeviceId| match net {
-                "alice" => vec![("bob", device.clone(), None), ("calvin", device.clone(), None)],
-                "bob" => vec![("alice", device.clone(), None)],
+            [("alice", alice_ctx), ("bob", bob_ctx), ("calvin", calvin_ctx)],
+            |net: &'static str, _device_id: DeviceId| match net {
+                "alice" => vec![
+                    ("bob", bob_device_ids[bob_device_idx].clone(), None),
+                    ("calvin", calvin_device_ids[calvin_device_idx].clone(), None),
+                ],
+                "bob" => vec![("alice", alice_device_ids[alice_device_idx].clone(), None)],
                 "calvin" => Vec::new(),
                 _ => unreachable!(),
             },
@@ -1174,7 +1188,7 @@ mod tests {
         // Bob and Calvin should get any packet sent by Alice.
 
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
-            send_packet(sync_ctx, non_sync_ctx, ip_a, ip_b, device);
+            send_packet(sync_ctx, non_sync_ctx, ip_a, ip_b, &alice_device_ids[alice_device_idx]);
         });
         assert_eq!(net.non_sync_ctx("alice").frames_sent().len(), 1);
         assert_empty(net.non_sync_ctx("bob").frames_sent().iter());
@@ -1185,18 +1199,16 @@ mod tests {
         assert_empty(net.non_sync_ctx("bob").frames_sent().iter());
         assert_empty(net.non_sync_ctx("calvin").frames_sent().iter());
         assert_eq!(net.iter_pending_frames().count(), 2);
-        assert!(net
-            .iter_pending_frames()
-            .any(|InstantAndData(_, x)| (x.dst_context == "bob") && (&x.meta == device)));
-        assert!(net
-            .iter_pending_frames()
-            .any(|InstantAndData(_, x)| (x.dst_context == "calvin") && (&x.meta == device)));
+        assert!(net.iter_pending_frames().any(|InstantAndData(_, x)| (x.dst_context == "bob")
+            && (&x.meta == &bob_device_ids[bob_device_idx])));
+        assert!(net.iter_pending_frames().any(|InstantAndData(_, x)| (x.dst_context == "calvin")
+            && (&x.meta == &calvin_device_ids[calvin_device_idx])));
 
         // Only Alice should get packets sent by Bob.
 
         net.drop_pending_frames();
         net.with_context("bob", |Ctx { sync_ctx, non_sync_ctx }| {
-            send_packet(sync_ctx, non_sync_ctx, ip_b, ip_a, device);
+            send_packet(sync_ctx, non_sync_ctx, ip_b, ip_a, &bob_device_ids[bob_device_idx]);
         });
         assert_empty(net.non_sync_ctx("alice").frames_sent().iter());
         assert_eq!(net.non_sync_ctx("bob").frames_sent().len(), 1);
@@ -1207,15 +1219,14 @@ mod tests {
         assert_empty(net.non_sync_ctx("bob").frames_sent().iter());
         assert_empty(net.non_sync_ctx("calvin").frames_sent().iter());
         assert_eq!(net.iter_pending_frames().count(), 1);
-        assert!(net
-            .iter_pending_frames()
-            .any(|InstantAndData(_, x)| (x.dst_context == "alice") && (&x.meta == device)));
+        assert!(net.iter_pending_frames().any(|InstantAndData(_, x)| (x.dst_context == "alice")
+            && (&x.meta == &alice_device_ids[alice_device_idx])));
 
         // No one gets packets sent by Calvin.
 
         net.drop_pending_frames();
         net.with_context("calvin", |Ctx { sync_ctx, non_sync_ctx }| {
-            send_packet(sync_ctx, non_sync_ctx, ip_c, ip_a, device);
+            send_packet(sync_ctx, non_sync_ctx, ip_c, ip_a, &calvin_device_ids[calvin_device_idx]);
         });
         assert_empty(net.non_sync_ctx("alice").frames_sent().iter());
         assert_empty(net.non_sync_ctx("bob").frames_sent().iter());

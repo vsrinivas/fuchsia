@@ -166,7 +166,7 @@ fn with_devices<
     cb(Box::new(
         ethernet
             .iter()
-            .map(|(id, _state)| DeviceId::new_ethernet(id))
+            .map(|(id, _state)| EthernetDeviceId(id).into())
             .chain(loopback.iter().map(|_state| DeviceIdInner::Loopback(LoopbackDeviceId).into())),
     ))
 }
@@ -596,11 +596,6 @@ impl From<LoopbackDeviceId> for DeviceId {
 }
 
 impl DeviceId {
-    /// Construct a new `DeviceId` for an Ethernet device.
-    pub(crate) const fn new_ethernet(id: usize) -> DeviceId {
-        DeviceId(DeviceIdInner::Ethernet(EthernetDeviceId(id)))
-    }
-
     pub(crate) fn inner(&self) -> &DeviceIdInner {
         let DeviceId(id) = self;
         id
@@ -710,7 +705,7 @@ impl<I: Instant> DeviceLayerState<I> {
         let id = ethernet
             .push(IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build()).into());
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
-        DeviceId::new_ethernet(id)
+        EthernetDeviceId(id).into()
     }
 
     /// Adds a new loopback device to the device layer.
@@ -1120,15 +1115,13 @@ mod tests {
 
     use super::*;
     use crate::{
-        testutil::{
-            DummyEventDispatcherBuilder, DummyEventDispatcherConfig, DummySyncCtx, DUMMY_CONFIG_V4,
-        },
+        testutil::{DummyEventDispatcherConfig, DummySyncCtx, DUMMY_CONFIG_V4},
         Ctx,
     };
 
     #[test]
     fn test_iter_devices() {
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
 
         fn check(sync_ctx: &&DummySyncCtx, expected: &[DeviceId]) {
@@ -1183,7 +1176,7 @@ mod tests {
 
     #[test]
     fn test_add_loopback_device_routes() {
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
 
         let loopback_device =
             crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, 55 /* mtu */)
@@ -1201,7 +1194,7 @@ mod tests {
 
     #[test]
     fn test_add_ethernet_device_routes() {
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
 
         let ethernet_device = crate::device::add_ethernet_device(
             &mut sync_ctx,

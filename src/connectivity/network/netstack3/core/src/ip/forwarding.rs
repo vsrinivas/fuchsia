@@ -243,7 +243,7 @@ mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 
     use super::*;
-    use crate::{device::DeviceId, testutil::DummyEventDispatcherConfig};
+    use crate::testutil::DummyEventDispatcherConfig;
 
     impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         /// Print the table.
@@ -312,17 +312,17 @@ mod tests {
     }
 
     fn simple_setup<I: Ip + TestIpExt>() -> (
-        ForwardingTable<I, DeviceId>,
+        ForwardingTable<I, u8>,
         DummyEventDispatcherConfig<I::Addr>,
         SpecifiedAddr<I::Addr>,
         Subnet<I::Addr>,
-        DeviceId,
+        u8,
     ) {
-        let mut table = ForwardingTable::<I, DeviceId>::default();
+        let mut table = ForwardingTable::<I, u8>::default();
 
         let config = I::DUMMY_CONFIG;
         let subnet = config.subnet;
-        let device = DeviceId::new_ethernet(0);
+        let device = 0;
         let (next_hop, next_hop_subnet) = I::next_hop_addr_sub(1, 1);
 
         // Should add the route successfully.
@@ -458,8 +458,8 @@ mod tests {
 
     #[ip_test]
     fn test_default_route_ip<I: Ip + TestIpExt>() {
-        let mut table = ForwardingTable::<I, DeviceId>::default();
-        let device0 = DeviceId::new_ethernet(0);
+        let mut table = ForwardingTable::<I, u8>::default();
+        let device0 = 0;
         let (addr1, sub1) = I::next_hop_addr_sub(1, 24);
         let (addr2, _) = I::next_hop_addr_sub(2, 24);
         let (addr3, _) = I::next_hop_addr_sub(3, 24);

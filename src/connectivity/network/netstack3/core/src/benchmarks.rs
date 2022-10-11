@@ -31,7 +31,7 @@ use packet_formats::{
 };
 
 use crate::{
-    device::{receive_frame, DeviceId},
+    device::receive_frame,
     testutil::{
         benchmarks::{black_box, Bencher},
         DummyEventDispatcherBuilder, DummyNonSyncCtx, DUMMY_CONFIG_V4,
@@ -50,14 +50,15 @@ use crate::{
 // IPv4 packet frame which we expect will be parsed and forwarded without
 // requiring any new buffers to be allocated.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
-    let Ctx { sync_ctx, mut non_sync_ctx } =
+    let (Ctx { sync_ctx, mut non_sync_ctx }, idx_to_device_id) =
         DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
             .build_with::<DummyNonSyncCtx>(StackStateBuilder::default());
     let mut sync_ctx = &sync_ctx;
+    let device = &idx_to_device_id[0];
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(
         &mut sync_ctx,
         &mut non_sync_ctx,
-        &DeviceId::new_ethernet(0),
+        device,
         true,
     )
     .expect("error setting routing enabled");
@@ -87,7 +88,6 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
         .serialize_vec_outer()
         .unwrap();
 
-    let device = DeviceId::new_ethernet(0);
     let buf = buf.as_mut();
     let range = 0..buf.len();
 
@@ -108,7 +108,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
             receive_frame(
                 black_box(&mut sync_ctx),
                 black_box(&mut non_sync_ctx),
-                black_box(&device),
+                black_box(device),
                 black_box(Buf::new(&mut buf[..], range.clone())),
             )
             .expect("error receiving frame"),

@@ -2811,10 +2811,10 @@ mod tests {
 
     #[test]
     fn test_ipv6_icmp_parameter_problem_non_must() {
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
 
         // Test parsing an IPv6 packet with invalid next header value which
         // we SHOULD send an ICMP response for (but we don't since its not a
@@ -2854,10 +2854,10 @@ mod tests {
 
     #[test]
     fn test_ipv6_icmp_parameter_problem_must() {
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
 
         // Test parsing an IPv6 packet where we MUST send an ICMP parameter problem
         // response (invalid routing type for a routing extension header).
@@ -2907,10 +2907,10 @@ mod tests {
 
     #[test]
     fn test_ipv6_unrecognized_ext_hdr_option() {
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let mut expected_icmps = 0;
         let mut bytes = [0; 64];
         let frame_dst = FrameDestination::Unicast;
@@ -3025,10 +3025,10 @@ mod tests {
 
     #[ip_test]
     fn test_ip_packet_reassembly_not_needed<I: Ip + TestIpExt>() {
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let fragment_id = 5;
 
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 0);
@@ -3043,10 +3043,10 @@ mod tests {
 
     #[ip_test]
     fn test_ip_packet_reassembly<I: Ip + TestIpExt>() {
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let fragment_id = 5;
 
         // Test that the received packet gets dispatched only after receiving
@@ -3071,10 +3071,10 @@ mod tests {
 
     #[ip_test]
     fn test_ip_packet_reassembly_with_packets_arriving_out_of_order<I: Ip + TestIpExt>() {
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
         let fragment_id_2 = 15;
@@ -3126,10 +3126,10 @@ mod tests {
     where
         IpLayerTimerId: From<FragmentCacheKey<I::Addr>>,
     {
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let fragment_id = 5;
 
         // Test to make sure that packets must arrive within the reassembly
@@ -3183,15 +3183,27 @@ mod tests {
         let a = "alice";
         let b = "bob";
         let dummy_config = I::DUMMY_CONFIG;
-        let device = DeviceId::new_ethernet(0);
-        let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap()).build();
+        let (mut alice, alice_device_ids) =
+            DummyEventDispatcherBuilder::from_config(dummy_config.swap()).build();
         {
             let Ctx { sync_ctx, non_sync_ctx } = &mut alice;
-            set_routing_enabled::<_, _, I>(&mut &*sync_ctx, non_sync_ctx, &device, true)
-                .expect("qerror setting routing enabled");
+            set_routing_enabled::<_, _, I>(
+                &mut &*sync_ctx,
+                non_sync_ctx,
+                &alice_device_ids[0],
+                true,
+            )
+            .expect("qerror setting routing enabled");
         }
-        let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
-        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(a, alice, b, bob);
+        let (bob, bob_device_ids) = DummyEventDispatcherBuilder::from_config(dummy_config).build();
+        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
+            a,
+            alice,
+            alice_device_ids[0].clone(),
+            b,
+            bob,
+            bob_device_ids[0].clone(),
+        );
         let fragment_id = 5;
 
         // Test that packets only get reassembled and dispatched at the
@@ -3202,14 +3214,28 @@ mod tests {
 
         // Process fragment #0
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
-            process_ip_fragment::<I, _>(&mut &*sync_ctx, non_sync_ctx, &device, fragment_id, 0, 3);
+            process_ip_fragment::<I, _>(
+                &mut &*sync_ctx,
+                non_sync_ctx,
+                &alice_device_ids[0],
+                fragment_id,
+                0,
+                3,
+            );
         });
         // Make sure the packet got sent from alice to bob
         assert!(!net.step(receive_frame_or_panic, handle_timer).is_idle());
 
         // Process fragment #1
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
-            process_ip_fragment::<I, _>(&mut &*sync_ctx, non_sync_ctx, &device, fragment_id, 1, 3);
+            process_ip_fragment::<I, _>(
+                &mut &*sync_ctx,
+                non_sync_ctx,
+                &alice_device_ids[0],
+                fragment_id,
+                1,
+                3,
+            );
         });
         assert!(!net.step(receive_frame_or_panic, handle_timer).is_idle());
 
@@ -3225,7 +3251,14 @@ mod tests {
 
         // Process fragment #2
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
-            process_ip_fragment::<I, _>(&mut &*sync_ctx, non_sync_ctx, &device, fragment_id, 2, 3);
+            process_ip_fragment::<I, _>(
+                &mut &*sync_ctx,
+                non_sync_ctx,
+                &alice_device_ids[0],
+                fragment_id,
+                2,
+                3,
+            );
         });
         assert!(!net.step(receive_frame_or_panic, handle_timer).is_idle());
 
@@ -3263,9 +3296,9 @@ mod tests {
             extra_mac.to_ipv6_link_local().addr().get(),
             extra_mac,
         );
-        let Ctx { sync_ctx, mut non_sync_ctx } = dispatcher_builder.build();
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) = dispatcher_builder.build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         set_routing_enabled::<_, _, Ipv6>(&mut sync_ctx, &mut non_sync_ctx, &device, true)
             .expect("error setting routing enabled");
         let frame_dst = FrameDestination::Unicast;
@@ -3398,10 +3431,10 @@ mod tests {
         // less than the current value.
 
         let dummy_config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(dummy_config.clone()).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let frame_dst = FrameDestination::Unicast;
 
         // Update PMTU from None.
@@ -3506,10 +3539,10 @@ mod tests {
         // is less than the min MTU.
 
         let dummy_config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(dummy_config.clone()).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let frame_dst = FrameDestination::Unicast;
 
         // Update PMTU from None but with an MTU too low.
@@ -3558,10 +3591,10 @@ mod tests {
         // Required from a node that does not implement RFC 1191.
 
         let dummy_config = Ipv4::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(dummy_config.clone()).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let frame_dst = FrameDestination::Unicast;
 
         // Update from None.
@@ -3688,10 +3721,10 @@ mod tests {
     #[test]
     fn test_invalid_icmpv4_in_ipv6() {
         let ip_config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(ip_config.clone()).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let frame_dst = FrameDestination::Unicast;
 
         let ic_config = Ipv4::DUMMY_CONFIG;
@@ -3732,11 +3765,11 @@ mod tests {
     #[test]
     fn test_invalid_icmpv6_in_ipv4() {
         let ip_config = Ipv4::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(ip_config.clone()).build();
         let mut sync_ctx = &sync_ctx;
         // First possible device id.
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let frame_dst = FrameDestination::Unicast;
 
         let ic_config = Ipv6::DUMMY_CONFIG;
@@ -3782,10 +3815,10 @@ mod tests {
         // multicast MAC).
 
         let config = I::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(config.clone()).build();
         let mut sync_ctx = &sync_ctx;
-        let device = DeviceId::new_ethernet(0);
+        let device = &device_ids[0];
         let multi_addr = I::get_multicast_addr(3).get();
         let dst_mac = Mac::from(&MulticastAddr::new(multi_addr).unwrap());
         let buf = Buf::new(vec![0; 10], ..)
@@ -3859,7 +3892,7 @@ mod tests {
         // Detection (DAD)) -- IPv6 only.
 
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -3950,7 +3983,7 @@ mod tests {
         // Test that an inbound IPv6 packet with a non-unicast source address is
         // dropped.
         let cfg = DUMMY_CONFIG_V6;
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, _device_ids) =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
@@ -3992,17 +4025,17 @@ mod tests {
         // Both devices have the same MAC address, which is a bit weird, but not
         // a problem for this test.
         let v4_subnet = AddrSubnet::from_witness(v4_config.local_ip, 16).unwrap().subnet();
-        builder.add_device_with_ip(v4_config.local_mac, v4_config.local_ip.get(), v4_subnet);
-        builder.add_device_with_ip(
+        let dev_idx0 =
+            builder.add_device_with_ip(v4_config.local_mac, v4_config.local_ip.get(), v4_subnet);
+        let dev_idx1 = builder.add_device_with_ip(
             v6_config.local_mac,
             v6_config.local_ip.get(),
             AddrSubnet::from_witness(v6_config.local_ip, 64).unwrap().subnet(),
         );
-        let v4_dev = DeviceId::new_ethernet(0);
-        let v6_dev = DeviceId::new_ethernet(1);
-
-        let Ctx { sync_ctx, mut non_sync_ctx } = builder.clone().build();
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) = builder.clone().build();
         let mut sync_ctx = &sync_ctx;
+        let v4_dev = &device_ids[dev_idx0];
+        let v6_dev = &device_ids[dev_idx1];
 
         // Receive packet addressed to us.
         assert_eq!(

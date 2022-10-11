@@ -1714,8 +1714,10 @@ pub(crate) mod testutil {
     pub(crate) fn new_legacy_simple_dummy_network<CtxId: Copy + Debug + Hash + Eq>(
         a_id: CtxId,
         a: crate::testutil::DummyCtx,
+        a_device_id: DeviceId,
         b_id: CtxId,
         b: crate::testutil::DummyCtx,
+        b_device_id: DeviceId,
     ) -> DummyNetwork<
         CtxId,
         DeviceId,
@@ -1724,11 +1726,10 @@ pub(crate) mod testutil {
     > {
         let contexts = vec![(a_id, a), (b_id, b)].into_iter();
         DummyNetwork::new(contexts, move |net, _device_id: DeviceId| {
-            let device_id = DeviceId::new_ethernet(0);
             if net == a_id {
-                vec![(b_id, device_id, None)]
+                vec![(b_id, b_device_id.clone(), None)]
             } else {
-                vec![(a_id, device_id, None)]
+                vec![(a_id, a_device_id.clone(), None)]
             }
         })
     }

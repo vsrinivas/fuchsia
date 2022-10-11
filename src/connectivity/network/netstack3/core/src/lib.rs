@@ -510,11 +510,11 @@ mod tests {
     };
 
     use super::*;
-    use crate::testutil::{DummyEventDispatcherBuilder, TestIpExt};
+    use crate::testutil::TestIpExt;
 
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,

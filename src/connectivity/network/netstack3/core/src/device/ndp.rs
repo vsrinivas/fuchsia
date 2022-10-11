@@ -90,7 +90,7 @@ mod tests {
             assert_empty, get_counter_val, handle_timer, set_logger_for_test,
             DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V6,
         },
-        Ctx, Instant, StackStateBuilder, TimerId, TimerIdInner,
+        Ctx, Instant, TimerId, TimerIdInner,
     };
 
     const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
@@ -156,16 +156,20 @@ mod tests {
     fn test_address_resolution() {
         set_logger_for_test();
         let mut local = DummyEventDispatcherBuilder::default();
-        assert_eq!(local.add_device(local_mac()), 0);
+        let local_dev_idx = local.add_device(local_mac());
         let mut remote = DummyEventDispatcherBuilder::default();
-        assert_eq!(remote.add_device(remote_mac()), 0);
-        let device_id = DeviceId::new_ethernet(0);
-
+        let remote_dev_idx = remote.add_device(remote_mac());
+        let (local, local_device_ids) = local.build();
+        let (remote, remote_device_ids) = remote.build();
+        let local_device_id = &local_device_ids[local_dev_idx];
+        let remote_device_id = &remote_device_ids[remote_dev_idx];
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "local",
-            local.build(),
+            local,
+            local_device_id.clone(),
             "remote",
-            remote.build(),
+            remote,
+            remote_device_id.clone(),
         );
 
         // Let's try to ping the remote device from the local device:
@@ -179,7 +183,7 @@ mod tests {
             add_ip_addr_subnet(
                 sync_ctx,
                 non_sync_ctx,
-                &device_id,
+                &remote_device_id,
                 AddrSubnet::new(remote_ip().get(), 128).unwrap(),
             )
             .unwrap();
@@ -190,7 +194,7 @@ mod tests {
             add_ip_addr_subnet(
                 sync_ctx,
                 non_sync_ctx,
-                &device_id,
+                &local_device_id,
                 AddrSubnet::new(local_ip().get(), 128).unwrap(),
             )
             .unwrap();
@@ -201,7 +205,7 @@ mod tests {
                 &mut &*sync_ctx,
                 non_sync_ctx,
                 SendIpPacketMeta {
-                    device: &device_id,
+                    device: &local_device_id,
                     src_ip: Some(local_ip().into_specified()),
                     dst_ip: remote_ip().into_specified(),
                     next_hop: remote_ip().into_specified(),
@@ -266,16 +270,29 @@ mod tests {
         let mac = UnicastAddr::new(Mac::new([6, 5, 4, 3, 2, 1])).unwrap();
         let ll_addr: Ipv6Addr = mac.to_ipv6_link_local().addr().get();
         let multicast_addr = ll_addr.to_solicited_node_address();
-        let local = DummyEventDispatcherBuilder::default();
-        let remote = DummyEventDispatcherBuilder::default();
-        let device_id = DeviceId::new_ethernet(0);
 
-        let stack_builder = StackStateBuilder::default();
+        // Create the devices (will start DAD at the same time).
+        let make_ctx_and_dev = || {
+            let mut ctx = crate::testutil::DummyCtx::default();
+            let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
+            let device_id = crate::device::add_ethernet_device(
+                sync_ctx,
+                non_sync_ctx,
+                mac,
+                Ipv6::MINIMUM_LINK_MTU.into(),
+            );
+            (ctx, device_id)
+        };
+
+        let (local, local_device_id) = make_ctx_and_dev();
+        let (remote, remote_device_id) = make_ctx_and_dev();
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "local",
-            local.build_with(stack_builder.clone()),
+            local,
+            local_device_id.clone(),
             "remote",
-            remote.build_with(stack_builder),
+            remote,
+            remote_device_id.clone(),
         );
 
         // Create the devices (will start DAD at the same time).
@@ -286,50 +303,42 @@ mod tests {
             ipv6_config.dad_transmits = NonZeroU8::new(1);
         };
         net.with_context("local", |Ctx { sync_ctx, non_sync_ctx }| {
-            assert_eq!(
-                crate::device::add_ethernet_device(
-                    sync_ctx,
-                    non_sync_ctx,
-                    mac,
-                    Ipv6::MINIMUM_LINK_MTU.into(),
-                ),
-                device_id
+            crate::device::update_ipv6_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                &local_device_id,
+                update,
             );
-            crate::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, &device_id, update);
             assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         });
         net.with_context("remote", |Ctx { sync_ctx, non_sync_ctx }| {
-            assert_eq!(
-                crate::device::add_ethernet_device(
-                    sync_ctx,
-                    non_sync_ctx,
-                    mac,
-                    Ipv6::MINIMUM_LINK_MTU.into(),
-                ),
-                device_id
+            crate::device::update_ipv6_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                &remote_device_id,
+                update,
             );
-            crate::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, &device_id, update);
             assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         });
 
         // Both devices should be in the solicited-node multicast group.
-        assert!(is_in_ip_multicast(net.sync_ctx("local"), &device_id, multicast_addr));
-        assert!(is_in_ip_multicast(net.sync_ctx("remote"), &device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("local"), &local_device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("remote"), &remote_device_id, multicast_addr));
 
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
-        with_assigned_ipv6_addr_subnets(&&*net.sync_ctx("local"), &device_id, |addrs| {
+        with_assigned_ipv6_addr_subnets(&&*net.sync_ctx("local"), &local_device_id, |addrs| {
             assert_empty(addrs)
         });
-        with_assigned_ipv6_addr_subnets(&&*net.sync_ctx("remote"), &device_id, |addrs| {
+        with_assigned_ipv6_addr_subnets(&&*net.sync_ctx("remote"), &remote_device_id, |addrs| {
             assert_empty(addrs)
         });
 
         // Both devices should not be in the multicast group
-        assert!(!is_in_ip_multicast(&&*net.sync_ctx("local"), &device_id, multicast_addr));
-        assert!(!is_in_ip_multicast(&&*net.sync_ctx("remote"), &device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(&&*net.sync_ctx("local"), &local_device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(&&*net.sync_ctx("remote"), &remote_device_id, multicast_addr));
     }
 
     fn dad_timer_id(id: EthernetDeviceId, addr: UnicastAddr<Ipv6Addr>) -> TimerId {
@@ -353,17 +362,21 @@ mod tests {
         // address.
         set_logger_for_test();
         let mut local = DummyEventDispatcherBuilder::default();
-        assert_eq!(local.add_device(local_mac()), 0);
+        let local_dev_idx = local.add_device(local_mac());
         let mut remote = DummyEventDispatcherBuilder::default();
-        assert_eq!(remote.add_device(remote_mac()), 0);
-        let device_id = DeviceId::new_ethernet(0);
-        let eth_device_id = device_id.clone().try_into().expect("expected ethernet ID");
-
+        let remote_dev_idx = remote.add_device(remote_mac());
+        let (local, local_device_ids) = local.build();
+        let (remote, remote_device_ids) = remote.build();
+        let local_device_id = &local_device_ids[local_dev_idx];
+        let local_eth_device_id = local_device_id.clone().try_into().expect("expected ethernet ID");
+        let remote_device_id = &remote_device_ids[remote_dev_idx];
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "local",
-            local.build(),
+            local,
+            local_device_id.clone(),
             "remote",
-            remote.build(),
+            remote,
+            remote_device_id.clone(),
         );
 
         // Enable DAD.
@@ -376,53 +389,66 @@ mod tests {
         let addr = AddrSubnet::new(local_ip().get(), 128).unwrap();
         let multicast_addr = local_ip().to_solicited_node_address();
         net.with_context("local", |Ctx { sync_ctx, non_sync_ctx }| {
-            crate::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, &device_id, update);
-            add_ip_addr_subnet(sync_ctx, non_sync_ctx, &device_id, addr).unwrap();
+            crate::device::update_ipv6_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                &local_device_id,
+                update,
+            );
+            add_ip_addr_subnet(sync_ctx, non_sync_ctx, &local_device_id, addr).unwrap();
         });
         net.with_context("remote", |Ctx { sync_ctx, non_sync_ctx }| {
-            crate::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, &device_id, update);
+            crate::device::update_ipv6_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                &remote_device_id,
+                update,
+            );
         });
 
         // Only local should be in the solicited node multicast group.
-        assert!(is_in_ip_multicast(net.sync_ctx("local"), &device_id, multicast_addr));
-        assert!(!is_in_ip_multicast(net.sync_ctx("remote"), &device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("local"), &local_device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(net.sync_ctx("remote"), &remote_device_id, multicast_addr));
 
         net.with_context("local", |Ctx { sync_ctx, non_sync_ctx }| {
             assert_eq!(
                 non_sync_ctx.trigger_next_timer(&*sync_ctx, crate::handle_timer).unwrap(),
-                dad_timer_id(eth_device_id, local_ip())
+                dad_timer_id(local_eth_device_id, local_ip())
             );
         });
 
         assert_eq!(
-            get_address_state(&&*net.sync_ctx("local"), &device_id, local_ip()),
+            get_address_state(&&*net.sync_ctx("local"), &local_device_id, local_ip()),
             Some(AddressState::Assigned)
         );
 
         net.with_context("remote", |Ctx { sync_ctx, non_sync_ctx }| {
-            add_ip_addr_subnet(sync_ctx, non_sync_ctx, &device_id, addr).unwrap();
+            add_ip_addr_subnet(sync_ctx, non_sync_ctx, &local_device_id, addr).unwrap();
         });
         // Local & remote should be in the multicast group.
-        assert!(is_in_ip_multicast(net.sync_ctx("local"), &device_id, multicast_addr));
-        assert!(is_in_ip_multicast(net.sync_ctx("remote"), &device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("local"), &local_device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("remote"), &remote_device_id, multicast_addr));
 
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
 
         assert_eq!(
-            with_assigned_ipv6_addr_subnets(&&*net.sync_ctx("remote"), &device_id, |addrs| addrs
-                .count()),
+            with_assigned_ipv6_addr_subnets(
+                &&*net.sync_ctx("remote"),
+                &remote_device_id,
+                |addrs| addrs.count()
+            ),
             1
         );
 
         // Let's make sure that our local node still can use that address.
         assert_eq!(
-            get_address_state(&&*net.sync_ctx("local"), &device_id, local_ip()),
+            get_address_state(&&*net.sync_ctx("local"), &local_device_id, local_ip()),
             Some(AddressState::Assigned)
         );
 
         // Only local should be in the solicited node multicast group.
-        assert!(is_in_ip_multicast(net.sync_ctx("local"), &device_id, multicast_addr));
-        assert!(!is_in_ip_multicast(net.sync_ctx("remote"), &device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("local"), &local_device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(net.sync_ctx("remote"), &remote_device_id, multicast_addr));
     }
 
     #[test]
@@ -430,7 +456,7 @@ mod tests {
         // Test that we can make our tentative address change when DAD is
         // ongoing.
 
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let dev_id = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -522,18 +548,22 @@ mod tests {
         // Test if the implementation is correct when we have more than 1 NS
         // packets to send.
         set_logger_for_test();
-        let mac = UnicastAddr::new(Mac::new([6, 5, 4, 3, 2, 1])).unwrap();
         let mut local = DummyEventDispatcherBuilder::default();
-        assert_eq!(local.add_device(mac), 0);
+        let local_dev_idx = local.add_device(local_mac());
         let mut remote = DummyEventDispatcherBuilder::default();
-        assert_eq!(remote.add_device(mac), 0);
-        let device_id = DeviceId::new_ethernet(0);
-        let eth_device_id = device_id.clone().try_into().expect("expected ethernet ID");
+        let remote_dev_idx = remote.add_device(remote_mac());
+        let (local, local_device_ids) = local.build();
+        let (remote, remote_device_ids) = remote.build();
+        let local_device_id = &local_device_ids[local_dev_idx];
+        let local_eth_device_id = local_device_id.clone().try_into().expect("expected ethernet ID");
+        let remote_device_id = &remote_device_ids[remote_dev_idx];
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "local",
-            local.build(),
+            local,
+            local_device_id.clone(),
             "remote",
-            remote.build(),
+            remote,
+            remote_device_id.clone(),
         );
 
         let update = |ipv6_config: &mut Ipv6DeviceConfiguration| {
@@ -541,21 +571,31 @@ mod tests {
             ipv6_config.dad_transmits = NonZeroU8::new(3);
         };
         net.with_context("local", |Ctx { sync_ctx, non_sync_ctx }| {
-            crate::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, &device_id, update);
+            crate::device::update_ipv6_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                &local_device_id,
+                update,
+            );
 
             add_ip_addr_subnet(
                 sync_ctx,
                 non_sync_ctx,
-                &device_id,
+                &local_device_id,
                 AddrSubnet::new(local_ip().get(), 128).unwrap(),
             )
             .unwrap();
         });
         net.with_context("remote", |Ctx { sync_ctx, non_sync_ctx }| {
-            crate::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, &device_id, update);
+            crate::device::update_ipv6_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                &remote_device_id,
+                update,
+            );
         });
 
-        let expected_timer_id = dad_timer_id(eth_device_id, local_ip());
+        let expected_timer_id = dad_timer_id(local_eth_device_id, local_ip());
         // During the first and second period, the remote host is still down.
         net.with_context("local", |Ctx { sync_ctx, non_sync_ctx }| {
             assert_eq!(
@@ -571,7 +611,7 @@ mod tests {
             add_ip_addr_subnet(
                 sync_ctx,
                 non_sync_ctx,
-                &device_id,
+                &remote_device_id,
                 AddrSubnet::new(local_ip().get(), 128).unwrap(),
             )
             .unwrap();
@@ -594,11 +634,13 @@ mod tests {
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
         assert_eq!(
-            with_assigned_ipv6_addr_subnets(&&*net.sync_ctx("local"), &device_id, |a| a.count()),
+            with_assigned_ipv6_addr_subnets(&&*net.sync_ctx("local"), &local_device_id, |a| a
+                .count()),
             1
         );
         assert_eq!(
-            with_assigned_ipv6_addr_subnets(&&*net.sync_ctx("remote"), &device_id, |a| a.count()),
+            with_assigned_ipv6_addr_subnets(&&*net.sync_ctx("remote"), &remote_device_id, |a| a
+                .count()),
             1
         );
     }
@@ -617,7 +659,7 @@ mod tests {
 
     #[test]
     fn test_dad_multiple_ips_simultaneously() {
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let dev_id = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -726,7 +768,7 @@ mod tests {
 
     #[test]
     fn test_dad_cancel_when_ip_removed() {
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let dev_id = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -864,10 +906,10 @@ mod tests {
 
         // Test receiving NDP RS when not a router (should not receive)
 
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(config.clone()).build();
         let mut sync_ctx = &sync_ctx;
-        let device_id = DeviceId::new_ethernet(0);
+        let device_id = &device_ids[0];
 
         let icmpv6_packet_buf = OptionSequenceBuilder::new(options.iter())
             .into_serializer()
@@ -926,10 +968,10 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let src_mac = [10, 11, 12, 13, 14, 15];
         let src_ip = Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(config.clone()).build();
         let mut sync_ctx = &sync_ctx;
-        let device_id = DeviceId::new_ethernet(0);
+        let device_id = &device_ids[0];
 
         // Test receiving NDP RA where source IP is not a link local address
         // (should not receive).
@@ -966,11 +1008,11 @@ mod tests {
         fn inner_test(
             sync_ctx: &mut &crate::testutil::DummySyncCtx,
             ctx: &mut crate::testutil::DummyNonSyncCtx,
+            device_id: &DeviceId,
             hop_limit: u8,
             frame_offset: usize,
         ) {
             let config = Ipv6::DUMMY_CONFIG;
-            let device_id = DeviceId::new_ethernet(0);
             let src_ip = config.remote_mac.to_ipv6_link_local().addr();
             let src_ip: Ipv6Addr = src_ip.get();
 
@@ -993,16 +1035,16 @@ mod tests {
             receive_ipv6_packet(
                 sync_ctx,
                 ctx,
-                &device_id,
+                device_id,
                 FrameDestination::Multicast,
                 icmpv6_packet_buf,
             );
-            assert_eq!(get_ipv6_hop_limit(sync_ctx, &device_id).get(), hop_limit);
+            assert_eq!(get_ipv6_hop_limit(sync_ctx, device_id).get(), hop_limit);
             crate::ip::send_ipv6_packet_from_device(
                 sync_ctx,
                 ctx,
                 SendIpPacketMeta {
-                    device: &device_id,
+                    device: device_id,
                     src_ip: Some(config.local_ip),
                     dst_ip: config.remote_ip,
                     next_hop: config.remote_ip,
@@ -1019,15 +1061,16 @@ mod tests {
             assert_eq!(buf[7], hop_limit);
         }
 
-        let Ctx { sync_ctx, mut non_sync_ctx } =
+        let (Ctx { sync_ctx, mut non_sync_ctx }, device_ids) =
             DummyEventDispatcherBuilder::from_config(Ipv6::DUMMY_CONFIG).build();
         let mut sync_ctx = &sync_ctx;
+        let device_id = &device_ids[0];
 
         // Set hop limit to 100.
-        inner_test(&mut sync_ctx, &mut non_sync_ctx, 100, 0);
+        inner_test(&mut sync_ctx, &mut non_sync_ctx, &device_id, 100, 0);
 
         // Set hop limit to 30.
-        inner_test(&mut sync_ctx, &mut non_sync_ctx, 30, 1);
+        inner_test(&mut sync_ctx, &mut non_sync_ctx, &device_id, 30, 1);
     }
 
     #[test]
@@ -1053,7 +1096,7 @@ mod tests {
                 .unwrap_b()
         }
 
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let hw_mtu = 5000;
         let device = crate::device::add_ethernet_device(
@@ -1317,7 +1360,7 @@ mod tests {
         // solicitations do not get cancelled when we enable forwarding on the
         // device.
 
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
 
         assert_empty(non_sync_ctx.frames_sent());
@@ -1407,7 +1450,7 @@ mod tests {
         // duplicate.
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -1567,7 +1610,7 @@ mod tests {
         // Routers should not perform SLAAC for global addresses.
 
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -1702,7 +1745,7 @@ mod tests {
     ) -> (crate::testutil::DummyCtx, DeviceId, SlaacConfiguration) {
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
-        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let mut ctx = crate::testutil::DummyCtx::default();
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
         let mut sync_ctx = &*sync_ctx;
         let device = crate::device::add_ethernet_device(
@@ -2015,7 +2058,7 @@ mod tests {
     #[test]
     fn test_host_slaac_invalid_prefix_information() {
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -2063,7 +2106,7 @@ mod tests {
     #[test]
     fn test_host_slaac_address_deprecate_while_tentative() {
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -2288,7 +2331,7 @@ mod tests {
         }
 
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -2506,7 +2549,7 @@ mod tests {
         // duplicate, a new address gets created.
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -2660,7 +2703,7 @@ mod tests {
         // as duplicates enough times, the system gives up.
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -2791,7 +2834,7 @@ mod tests {
         // another preferred address (namely B) for the subnet.
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -2974,7 +3017,7 @@ mod tests {
         // should be regenerated immediately.
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
@@ -3329,7 +3372,7 @@ mod tests {
     #[test]
     fn test_remove_stable_slaac_address() {
         let config = Ipv6::DUMMY_CONFIG;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,

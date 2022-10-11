@@ -210,14 +210,14 @@ mod tests {
         device::DeviceId,
         error::NotFoundError,
         ip::device::state::{AssignedAddress, IpDeviceStateIpExt},
-        testutil::{DummyEventDispatcherBuilder, DummyEventDispatcherConfig, TestIpExt},
+        testutil::{DummyEventDispatcherConfig, TestIpExt},
         Ctx, NonSyncContext, SyncCtx,
     };
 
     #[test]
     fn test_loopback_methods() {
         const MTU: u32 = 66;
-        let Ctx { sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, MTU)
             .expect("error adding loopback device");
