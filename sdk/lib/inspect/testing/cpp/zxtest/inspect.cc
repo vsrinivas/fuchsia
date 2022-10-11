@@ -24,10 +24,11 @@ void InspectTestHelper::ReadInspect(const inspect::Inspector& inspector) {
   ASSERT_TRUE(hierarchy_.is_ok());
 }
 
-void InspectTestHelper::PrintAllProperties(const inspect::NodeValue& node) {
+void InspectTestHelper::PrintAllProperties(const inspect::NodeValue& node, unsigned indent) {
   const auto& props = node.properties();
   auto* log_sink = zxtest::Runner::GetInstance()->mutable_reporter()->mutable_log_sink();
   for (const auto& p : props) {
+    log_sink->Write("%*c\b", indent, ' ');
     log_sink->Write("%s : ", p.name().c_str());
     switch (p.format()) {
       case inspect::PropertyFormat::kInt:
@@ -82,15 +83,17 @@ void InspectTestHelper::PrintAllProperties(const inspect::NodeValue& node) {
 
 void InspectTestHelper::PrintAllProperties(const inspect::Hierarchy& hierarchy) {
   auto* log_sink = zxtest::Runner::GetInstance()->mutable_reporter()->mutable_log_sink();
-  std::deque<const Hierarchy*> to_visit{&hierarchy};
+  std::deque<std::pair<const Hierarchy*, int>> to_visit{std::make_pair(&hierarchy, 1)};
   while (!to_visit.empty()) {
-    const auto* next_hierarchy = to_visit.front();
-    log_sink->Write("%s: \n", next_hierarchy->name().c_str());
-    PrintAllProperties(next_hierarchy->node());
-    for (const auto& child : next_hierarchy->children()) {
-      to_visit.push_back(&child);
-    }
+    const auto [next_hierarchy, indent] = to_visit.front();
+    log_sink->Write("%*c\b%s: \n", indent, ' ', next_hierarchy->name().c_str());
+    PrintAllProperties(next_hierarchy->node(), indent + 2);
+    // Add the children of our level to the front of the list in proper order
+    // before advancing to the next hierarchy.
     to_visit.pop_front();
+    for (size_t child = next_hierarchy->children().size(); child > 0; child--) {
+      to_visit.emplace_front(&next_hierarchy->children()[child - 1], indent + 2);
+    }
   }
 }
 

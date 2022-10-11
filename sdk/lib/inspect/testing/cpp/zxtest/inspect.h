@@ -62,7 +62,7 @@ class InspectTestHelper {
   }
 
   // Printers for debugging purpose.
-  static void PrintAllProperties(const inspect::NodeValue& node);
+  static void PrintAllProperties(const inspect::NodeValue& node, unsigned indent = 0);
   static void PrintAllProperties(const inspect::Hierarchy& hierarchy);
 
  private:
