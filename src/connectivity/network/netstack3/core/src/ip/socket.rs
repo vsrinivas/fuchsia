@@ -1341,7 +1341,7 @@ mod tests {
             definition: IpSockDefinition {
                 remote_ip: to_ip,
                 local_ip: expected_from_ip,
-                device: local_device,
+                device: local_device.clone(),
                 proto,
             },
             options: WithHopLimit(None),

@@ -326,28 +326,35 @@ mod tests {
         let (next_hop, next_hop_subnet) = I::next_hop_addr_sub(1, 1);
 
         // Should add the route successfully.
-        table.add_device_route(subnet, device).unwrap();
+        table.add_device_route(subnet, device.clone()).unwrap();
         assert_eq!(
             table.iter_table().collect::<Vec<_>>(),
-            &[&ip::types::Entry { subnet, device, gateway: None }]
+            &[&ip::types::Entry { subnet, device: device.clone(), gateway: None }]
         );
 
         // Attempting to add the route again should fail.
-        assert_eq!(table.add_device_route(subnet, device).unwrap_err(), crate::error::ExistsError);
+        assert_eq!(
+            table.add_device_route(subnet, device.clone()).unwrap_err(),
+            crate::error::ExistsError
+        );
         assert_eq!(
             table.iter_table().collect::<Vec<_>>(),
-            &[&ip::types::Entry { subnet, device, gateway: None }]
+            &[&ip::types::Entry { subnet, device: device.clone(), gateway: None }]
         );
 
         // Add the route but as a next hop route.
-        table.add_device_route(next_hop_subnet, device).unwrap();
+        table.add_device_route(next_hop_subnet, device.clone()).unwrap();
         table.add_route(subnet, next_hop).unwrap();
         assert_eq!(
             table.iter_table().collect::<HashSet<_>>(),
             HashSet::from([
-                &ip::types::Entry { subnet, device, gateway: None },
-                &ip::types::Entry { subnet: next_hop_subnet, device, gateway: None },
-                &ip::types::Entry { subnet, device, gateway: Some(next_hop) },
+                &ip::types::Entry { subnet, device: device.clone(), gateway: None },
+                &ip::types::Entry {
+                    subnet: next_hop_subnet,
+                    device: device.clone(),
+                    gateway: None
+                },
+                &ip::types::Entry { subnet, device: device.clone(), gateway: Some(next_hop) },
             ])
         );
 
@@ -356,9 +363,13 @@ mod tests {
         assert_eq!(
             table.iter_table().collect::<HashSet<_>>(),
             HashSet::from([
-                &ip::types::Entry { subnet, device, gateway: None },
-                &ip::types::Entry { subnet: next_hop_subnet, device, gateway: None },
-                &ip::types::Entry { subnet, device, gateway: Some(next_hop) },
+                &ip::types::Entry { subnet, device: device.clone(), gateway: None },
+                &ip::types::Entry {
+                    subnet: next_hop_subnet,
+                    device: device.clone(),
+                    gateway: None
+                },
+                &ip::types::Entry { subnet, device: device.clone(), gateway: Some(next_hop) },
             ])
         );
 
@@ -374,14 +385,18 @@ mod tests {
         assert_eq!(
             table.del_route(config.subnet).unwrap().into_iter().collect::<HashSet<_>>(),
             HashSet::from([
-                ip::types::Entry { subnet: config.subnet, device, gateway: None },
-                ip::types::Entry { subnet: config.subnet, device, gateway: Some(next_hop) }
+                ip::types::Entry { subnet: config.subnet, device: device.clone(), gateway: None },
+                ip::types::Entry {
+                    subnet: config.subnet,
+                    device: device.clone(),
+                    gateway: Some(next_hop)
+                }
             ])
         );
 
         assert_eq!(
             table.iter_table().collect::<Vec<_>>(),
-            &[&ip::types::Entry { subnet: next_hop_subnet, device, gateway: None }]
+            &[&ip::types::Entry { subnet: next_hop_subnet, device: device.clone(), gateway: None }]
         );
     }
 
@@ -390,16 +405,19 @@ mod tests {
         let (mut table, config, next_hop, _next_hop_subnet, device) = simple_setup::<I>();
 
         // Do lookup for our next hop (should be the device).
-        assert_eq!(table.lookup(None, next_hop), Some(Destination { next_hop, device }));
+        assert_eq!(
+            table.lookup(None, next_hop),
+            Some(Destination { next_hop, device: device.clone() })
+        );
 
         // Do lookup for some address within `subnet`.
         assert_eq!(
             table.lookup(None, config.local_ip),
-            Some(Destination { next_hop: config.local_ip, device })
+            Some(Destination { next_hop: config.local_ip, device: device.clone() })
         );
         assert_eq!(
             table.lookup(None, config.remote_ip),
-            Some(Destination { next_hop: config.remote_ip, device })
+            Some(Destination { next_hop: config.remote_ip, device: device.clone() })
         );
 
         // Delete routes to the subnet and make sure that we can no longer route
@@ -407,19 +425,35 @@ mod tests {
         assert_eq!(
             table.del_route(config.subnet).unwrap().into_iter().collect::<HashSet<_>>(),
             HashSet::from([
-                ip::types::Entry { subnet: config.subnet, device, gateway: None },
-                ip::types::Entry { subnet: config.subnet, device, gateway: Some(next_hop) }
+                ip::types::Entry { subnet: config.subnet, device: device.clone(), gateway: None },
+                ip::types::Entry {
+                    subnet: config.subnet,
+                    device: device.clone(),
+                    gateway: Some(next_hop)
+                }
             ])
         );
-        assert_eq!(table.lookup(None, next_hop), Some(Destination { next_hop, device }));
+        assert_eq!(
+            table.lookup(None, next_hop),
+            Some(Destination { next_hop, device: device.clone() })
+        );
         assert_eq!(table.lookup(None, config.local_ip), None);
         assert_eq!(table.lookup(None, config.remote_ip), None);
 
         // Make the subnet routable again but through a gateway.
         table.add_route(config.subnet, next_hop).unwrap();
-        assert_eq!(table.lookup(None, next_hop), Some(Destination { next_hop, device }));
-        assert_eq!(table.lookup(None, config.local_ip), Some(Destination { next_hop, device }));
-        assert_eq!(table.lookup(None, config.remote_ip), Some(Destination { next_hop, device }));
+        assert_eq!(
+            table.lookup(None, next_hop),
+            Some(Destination { next_hop, device: device.clone() })
+        );
+        assert_eq!(
+            table.lookup(None, config.local_ip),
+            Some(Destination { next_hop, device: device.clone() })
+        );
+        assert_eq!(
+            table.lookup(None, config.remote_ip),
+            Some(Destination { next_hop, device: device.clone() })
+        );
     }
 
     #[ip_test]
@@ -436,11 +470,11 @@ mod tests {
         // Our expected forwarding table should look like:
         //  sub1 -> device0
 
-        table.add_device_route(sub1, device0).unwrap();
+        table.add_device_route(sub1, device0.clone()).unwrap();
         table.print_table();
         assert_eq!(
             table.lookup(None, addr1).unwrap(),
-            Destination { next_hop: addr1, device: device0 }
+            Destination { next_hop: addr1, device: device0.clone() }
         );
         assert_eq!(table.lookup(None, addr2), None);
 
@@ -454,15 +488,15 @@ mod tests {
         table.add_route(default_sub, addr1).unwrap();
         assert_eq!(
             table.lookup(None, addr1).unwrap(),
-            Destination { next_hop: addr1, device: device0 }
+            Destination { next_hop: addr1, device: device0.clone() }
         );
         assert_eq!(
             table.lookup(None, addr2).unwrap(),
-            Destination { next_hop: addr1, device: device0 }
+            Destination { next_hop: addr1, device: device0.clone() }
         );
         assert_eq!(
             table.lookup(None, addr3).unwrap(),
-            Destination { next_hop: addr1, device: device0 }
+            Destination { next_hop: addr1, device: device0.clone() }
         );
     }
 
@@ -479,15 +513,15 @@ mod tests {
             sub
         };
 
-        table.add_device_route(less_specific_sub, LESS_SPECIFIC_SUB_DEVICE).unwrap();
+        table.add_device_route(less_specific_sub, LESS_SPECIFIC_SUB_DEVICE.clone()).unwrap();
         assert_eq!(
             table.lookup(None, next_hop),
-            Some(Destination { next_hop, device: LESS_SPECIFIC_SUB_DEVICE }),
+            Some(Destination { next_hop, device: LESS_SPECIFIC_SUB_DEVICE.clone() }),
             "matches route"
         );
         assert_eq!(
             table.lookup(Some(&LESS_SPECIFIC_SUB_DEVICE), next_hop),
-            Some(Destination { next_hop, device: LESS_SPECIFIC_SUB_DEVICE }),
+            Some(Destination { next_hop, device: LESS_SPECIFIC_SUB_DEVICE.clone() }),
             "route matches specified device"
         );
         assert_eq!(
@@ -496,20 +530,20 @@ mod tests {
             "no route with the specified device"
         );
 
-        table.add_device_route(more_specific_sub, MORE_SPECIFIC_SUB_DEVICE).unwrap();
+        table.add_device_route(more_specific_sub, MORE_SPECIFIC_SUB_DEVICE.clone()).unwrap();
         assert_eq!(
             table.lookup(None, next_hop).unwrap(),
-            Destination { next_hop, device: MORE_SPECIFIC_SUB_DEVICE },
+            Destination { next_hop, device: MORE_SPECIFIC_SUB_DEVICE.clone() },
             "matches most specific route"
         );
         assert_eq!(
             table.lookup(Some(&LESS_SPECIFIC_SUB_DEVICE), next_hop),
-            Some(Destination { next_hop, device: LESS_SPECIFIC_SUB_DEVICE }),
+            Some(Destination { next_hop, device: LESS_SPECIFIC_SUB_DEVICE.clone() }),
             "matches less specific route with the specified device"
         );
         assert_eq!(
             table.lookup(Some(&MORE_SPECIFIC_SUB_DEVICE), next_hop).unwrap(),
-            Destination { next_hop, device: MORE_SPECIFIC_SUB_DEVICE },
+            Destination { next_hop, device: MORE_SPECIFIC_SUB_DEVICE.clone() },
             "matches the most specific route with the specified device"
         );
     }
@@ -522,13 +556,13 @@ mod tests {
         let mut table = ForwardingTable::<I, u8>::default();
         let (next_hop, sub) = I::next_hop_addr_sub(1, 1);
 
-        table.add_device_route(sub, DEVICE1).unwrap();
-        table.add_device_route(sub, DEVICE2).unwrap();
+        table.add_device_route(sub, DEVICE1.clone()).unwrap();
+        table.add_device_route(sub, DEVICE2.clone()).unwrap();
         let lookup = table.lookup(None, next_hop);
         assert!(
             [
-                Some(Destination { next_hop, device: DEVICE1 }),
-                Some(Destination { next_hop, device: DEVICE2 })
+                Some(Destination { next_hop, device: DEVICE1.clone() }),
+                Some(Destination { next_hop, device: DEVICE2.clone() })
             ]
             .contains(&lookup),
             "lookup = {:?}",
@@ -536,11 +570,11 @@ mod tests {
         );
         assert_eq!(
             table.lookup(Some(&DEVICE1), next_hop),
-            Some(Destination { next_hop, device: DEVICE1 }),
+            Some(Destination { next_hop, device: DEVICE1.clone() }),
         );
         assert_eq!(
             table.lookup(Some(&DEVICE2), next_hop),
-            Some(Destination { next_hop, device: DEVICE2 }),
+            Some(Destination { next_hop, device: DEVICE2.clone() }),
         );
     }
 }

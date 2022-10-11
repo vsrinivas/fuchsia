@@ -652,7 +652,7 @@ mod tests {
             )
         };
 
-        let timer_id = |route| timer_id(route, device_id);
+        let timer_id = |route| timer_id(route, device_id.clone());
 
         // Do nothing as router with no valid lifetime has not been discovered
         // yet and prefix does not make on-link determination.
@@ -680,7 +680,7 @@ mod tests {
         assert_eq!(
             take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([Ipv6RouteDiscoveryEvent {
-                device_id,
+                device_id: device_id.clone(),
                 route: gateway_route,
                 action: Ipv6RouteDiscoverAction::Discovered,
             },])
@@ -703,7 +703,7 @@ mod tests {
         assert_eq!(
             take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([Ipv6RouteDiscoveryEvent {
-                device_id,
+                device_id: device_id.clone(),
                 route: on_link_route,
                 action: Ipv6RouteDiscoverAction::Discovered,
             }])
@@ -725,7 +725,7 @@ mod tests {
         assert_eq!(
             take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([Ipv6RouteDiscoveryEvent {
-                device_id,
+                device_id: device_id.clone(),
                 route: gateway_route,
                 action: Ipv6RouteDiscoverAction::Invalidated,
             }])
@@ -761,7 +761,7 @@ mod tests {
         assert_eq!(
             take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([Ipv6RouteDiscoveryEvent {
-                device_id,
+                device_id: device_id.clone(),
                 route: on_link_route,
                 action: Ipv6RouteDiscoverAction::Invalidated,
             }])
@@ -796,7 +796,7 @@ mod tests {
             )
         };
 
-        let timer_id = |route| timer_id(route, device_id);
+        let timer_id = |route| timer_id(route, device_id.clone());
 
         let gateway_route =
             Ipv6DiscoveredRoute { subnet: IPV6_DEFAULT_SUBNET, gateway: Some(src_ip) };
@@ -817,12 +817,12 @@ mod tests {
             take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([
                 Ipv6RouteDiscoveryEvent {
-                    device_id,
+                    device_id: device_id.clone(),
                     route: gateway_route,
                     action: Ipv6RouteDiscoverAction::Discovered,
                 },
                 Ipv6RouteDiscoveryEvent {
-                    device_id,
+                    device_id: device_id.clone(),
                     route: on_link_route,
                     action: Ipv6RouteDiscoverAction::Discovered,
                 },
@@ -884,12 +884,12 @@ mod tests {
             take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([
                 Ipv6RouteDiscoveryEvent {
-                    device_id,
+                    device_id: device_id.clone(),
                     route: gateway_route,
                     action: Ipv6RouteDiscoverAction::Invalidated,
                 },
                 Ipv6RouteDiscoveryEvent {
-                    device_id,
+                    device_id: device_id.clone(),
                     route: on_link_route,
                     action: Ipv6RouteDiscoverAction::Invalidated,
                 },
@@ -918,7 +918,7 @@ mod tests {
             Ipv6DiscoveredRoute { subnet: IPV6_DEFAULT_SUBNET, gateway: Some(src_ip) };
         let on_link_route = Ipv6DiscoveredRoute { subnet, gateway: None };
 
-        let timer_id = |route| timer_id(route, device_id);
+        let timer_id = |route| timer_id(route, device_id.clone());
 
         // Discover both an on-link prefix and default router.
         receive_ipv6_packet(
@@ -938,12 +938,12 @@ mod tests {
             take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([
                 Ipv6RouteDiscoveryEvent {
-                    device_id,
+                    device_id: device_id.clone(),
                     route: gateway_route,
                     action: Ipv6RouteDiscoverAction::Discovered,
                 },
                 Ipv6RouteDiscoveryEvent {
-                    device_id,
+                    device_id: device_id.clone(),
                     route: on_link_route,
                     action: Ipv6RouteDiscoverAction::Discovered,
                 },
@@ -967,12 +967,12 @@ mod tests {
             take_route_discovery_events(&mut non_sync_ctx),
             HashSet::from([
                 Ipv6RouteDiscoveryEvent {
-                    device_id,
+                    device_id: device_id.clone(),
                     route: gateway_route,
                     action: Ipv6RouteDiscoverAction::Invalidated,
                 },
                 Ipv6RouteDiscoveryEvent {
-                    device_id,
+                    device_id: device_id.clone(),
                     route: on_link_route,
                     action: Ipv6RouteDiscoverAction::Invalidated,
                 },

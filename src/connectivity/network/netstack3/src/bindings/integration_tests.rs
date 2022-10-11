@@ -219,7 +219,7 @@ impl TimerContext<TimerId> for TestNonSyncCtx {
 }
 
 impl DeviceLayerEventDispatcher for TestNonSyncCtx {
-    fn wake_rx_task(&mut self, device: DeviceId) {
+    fn wake_rx_task(&mut self, device: &DeviceId) {
         self.ctx.wake_rx_task(device)
     }
 }
@@ -227,7 +227,7 @@ impl DeviceLayerEventDispatcher for TestNonSyncCtx {
 impl<B: BufferMut> BufferDeviceLayerEventDispatcher<B> for TestNonSyncCtx {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        device: DeviceId,
+        device: &DeviceId,
         frame: S,
     ) -> Result<(), S> {
         self.ctx.send_frame(device, frame)
@@ -705,7 +705,7 @@ impl TestSetupBuilder {
                     crate::bindings::devices::spawn_rx_task(
                         &loopback_rx_notifier,
                         netstack.clone(),
-                        loopback,
+                        loopback.clone(),
                     );
                     devices
                         .add_device(loopback, |id| {
@@ -1159,38 +1159,42 @@ async fn test_list_del_routes() {
     let route1: AddableEntryEither<_> = AddableEntry::without_gateway(
         Subnet::<Ipv4Addr>::new(Ipv4Addr::from(route1_subnet_bytes).into(), route1_subnet_prefix)
             .unwrap(),
-        device,
+        device.clone(),
     )
     .into();
     let sub10 = Subnet::<Ipv4Addr>::new(Ipv4Addr::from([10, 0, 0, 0]).into(), 24).unwrap();
-    let route2 = AddableEntry::without_gateway(sub10, device).into();
+    let route2: AddableEntryEither<_> = AddableEntry::without_gateway(sub10, device.clone()).into();
     let sub10_gateway = SpecifiedAddr::new(Ipv4Addr::from([10, 0, 0, 1])).unwrap().into();
     let route3 = AddableEntry::with_gateway(sub10, None, sub10_gateway).into();
 
     let () = test_stack
         .with_ctx(|Ctx { sync_ctx, non_sync_ctx }| {
             // add a couple of routes directly into core:
-            netstack3_core::add_route(sync_ctx, non_sync_ctx, route1).unwrap();
-            netstack3_core::add_route(sync_ctx, non_sync_ctx, route2).unwrap();
+            netstack3_core::add_route(sync_ctx, non_sync_ctx, route1.clone()).unwrap();
+            netstack3_core::add_route(sync_ctx, non_sync_ctx, route2.clone()).unwrap();
             netstack3_core::add_route(sync_ctx, non_sync_ctx, route3).unwrap();
         })
         .await;
 
     let routes = stack.get_forwarding_table().await.expect("Can get forwarding table");
-    let route3_with_device = AddableEntry::with_gateway(sub10, Some(device), sub10_gateway).into();
+    let route3_with_device: AddableEntryEither<_> =
+        AddableEntry::with_gateway(sub10, Some(device.clone()), sub10_gateway).into();
 
     let auto_routes = [
         // Link local route is added automatically by core.
-        AddableEntry::without_gateway(net_declare::net_subnet_v6!("fe80::/64").into(), device)
-            .into(),
+        AddableEntry::without_gateway(
+            net_declare::net_subnet_v6!("fe80::/64").into(),
+            device.clone(),
+        )
+        .into(),
         // Loopback routes are added on netstack creation.
-        AddableEntry::without_gateway(Ipv4::LOOPBACK_SUBNET, loopback).into(),
-        AddableEntry::without_gateway(Ipv6::LOOPBACK_SUBNET, loopback).into(),
+        AddableEntry::without_gateway(Ipv4::LOOPBACK_SUBNET, loopback.clone()).into(),
+        AddableEntry::without_gateway(Ipv6::LOOPBACK_SUBNET, loopback.clone()).into(),
         // Multicast routes are added automatically by core.
-        AddableEntry::without_gateway(Ipv4::MULTICAST_SUBNET, loopback).into(),
+        AddableEntry::without_gateway(Ipv4::MULTICAST_SUBNET, loopback.clone()).into(),
         AddableEntry::without_gateway(Ipv6::MULTICAST_SUBNET, loopback).into(),
-        AddableEntry::without_gateway(Ipv4::MULTICAST_SUBNET, device).into(),
-        AddableEntry::without_gateway(Ipv6::MULTICAST_SUBNET, device).into(),
+        AddableEntry::without_gateway(Ipv4::MULTICAST_SUBNET, device.clone()).into(),
+        AddableEntry::without_gateway(Ipv6::MULTICAST_SUBNET, device.clone()).into(),
     ];
     let got = test_stack
         .with_ctx(|ctx| {
@@ -1200,8 +1204,9 @@ async fn test_list_del_routes() {
                 .collect::<HashSet<_>>()
         })
         .await;
-    let want =
-        HashSet::from_iter([route1, route2, route3_with_device].into_iter().chain(auto_routes));
+    let want = HashSet::from_iter(
+        [route1, route2.clone(), route3_with_device.clone()].into_iter().chain(auto_routes.clone()),
+    );
     assert_eq!(got, want, "got - want = {:?}", got.symmetric_difference(&want));
 
     // delete route1:

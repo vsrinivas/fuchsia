@@ -1362,7 +1362,7 @@ mod tests {
         assert_eq!(
             non_sync_ctx.take_events()[..],
             [DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::EnabledChanged {
-                device: device_id,
+                device: device_id.clone(),
                 ip_enabled: true,
             })]
         );
@@ -1373,7 +1373,7 @@ mod tests {
         assert_eq!(
             non_sync_ctx.take_events()[..],
             [DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::EnabledChanged {
-                device: device_id,
+                device: device_id.clone(),
                 ip_enabled: false,
             })]
         );
@@ -1389,7 +1389,7 @@ mod tests {
         assert_eq!(
             non_sync_ctx.take_events()[..],
             [DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::AddressAdded {
-                device: device_id,
+                device: device_id.clone(),
                 addr: ipv4_addr_subnet.clone(),
                 state: IpAddressState::Unavailable,
             })]
@@ -1402,11 +1402,11 @@ mod tests {
             non_sync_ctx.take_events()[..],
             [
                 DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::EnabledChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     ip_enabled: true,
                 }),
                 DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::AddressStateChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     addr: ipv4_addr_subnet.addr().into(),
                     state: IpAddressState::Assigned,
                 }),
@@ -1425,12 +1425,12 @@ mod tests {
             non_sync_ctx.take_events()[..],
             [
                 DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::AddressStateChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     addr: ipv4_addr_subnet.addr().into(),
                     state: IpAddressState::Unavailable,
                 }),
                 DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::EnabledChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     ip_enabled: false,
                 }),
             ]
@@ -1500,13 +1500,13 @@ mod tests {
                 let mut timers = vec![
                     (
                         TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Rs(RsTimerId {
-                            device_id,
+                            device_id: device_id.clone(),
                         }))),
                         ..,
                     ),
                     (
                         TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Dad(DadTimerId {
-                            device_id,
+                            device_id: device_id.clone(),
                             addr: ll_addr.ipv6_unicast_addr(),
                         }))),
                         ..,
@@ -1514,7 +1514,7 @@ mod tests {
                     (
                         TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
                             MldDelayedReportTimerId(GmpDelayedReportTimerId {
-                                device: device_id,
+                                device: device_id.clone(),
                                 group_addr: local_mac
                                     .to_ipv6_link_local()
                                     .addr()
@@ -1529,7 +1529,7 @@ mod tests {
                     timers.push((
                         TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
                             MldDelayedReportTimerId(GmpDelayedReportTimerId {
-                                device: device_id,
+                                device: device_id.clone(),
                                 group_addr,
                             })
                             .into(),
@@ -1544,12 +1544,12 @@ mod tests {
             non_sync_ctx.take_events()[..],
             [
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressAdded {
-                    device: device_id,
+                    device: device_id.clone(),
                     addr: ll_addr.to_witness(),
                     state: IpAddressState::Tentative,
                 }),
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::EnabledChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     ip_enabled: true,
                 })
             ]
@@ -1567,11 +1567,11 @@ mod tests {
             non_sync_ctx.take_events()[..],
             [
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressRemoved {
-                    device: device_id,
+                    device: device_id.clone(),
                     addr: ll_addr.addr().into(),
                 }),
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::EnabledChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     ip_enabled: false,
                 })
             ]
@@ -1611,7 +1611,7 @@ mod tests {
         assert_eq!(
             non_sync_ctx.take_events()[..],
             [DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressAdded {
-                device: device_id,
+                device: device_id.clone(),
                 addr: ll_addr.to_witness(),
                 state: IpAddressState::Unavailable,
             })]
@@ -1622,12 +1622,12 @@ mod tests {
             non_sync_ctx.take_events()[..],
             [
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressStateChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     addr: ll_addr.addr().into(),
                     state: IpAddressState::Tentative,
                 }),
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::EnabledChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     ip_enabled: true,
                 })
             ]
@@ -1638,12 +1638,12 @@ mod tests {
             non_sync_ctx.take_events()[..],
             [
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressStateChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     addr: ll_addr.addr().into(),
                     state: IpAddressState::Unavailable,
                 }),
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::EnabledChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     ip_enabled: false,
                 })
             ]
@@ -1678,12 +1678,12 @@ mod tests {
             non_sync_ctx.take_events()[..],
             [
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressStateChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     addr: ll_addr.addr().into(),
                     state: IpAddressState::Tentative,
                 }),
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::EnabledChanged {
-                    device: device_id,
+                    device: device_id.clone(),
                     ip_enabled: true,
                 })
             ]

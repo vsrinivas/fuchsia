@@ -980,7 +980,7 @@ mod tests {
     impl ConversionContext for FakeConversionContext {
         fn get_core_id(&self, binding_id: u64) -> Option<DeviceId> {
             if binding_id == self.binding {
-                Some(self.core)
+                Some(self.core.clone())
             } else {
                 None
             }
@@ -1188,7 +1188,7 @@ mod tests {
         let ctx = FakeConversionContext::new();
         let zoned = zoned.map(|z| match z {
             ZonedAddr::Unzoned(z) => z.into(),
-            ZonedAddr::Zoned(z) => z.map_zone(|ReplaceWithCoreId| ctx.core).into(),
+            ZonedAddr::Zoned(z) => z.map_zone(|ReplaceWithCoreId| ctx.core.clone()).into(),
         });
 
         let result: (Option<ZonedAddr<_, _>>, _) =
@@ -1219,7 +1219,8 @@ mod tests {
     async fn zoned_addr_port_into_fidl_err() {
         let ctx = FakeConversionContext::new();
         let zoned = ZonedAddr::Zoned(
-            AddrAndZone::<Ipv6Addr, _>::new(net_ip_v6!("fe80::1"), ctx.invalid_core).unwrap(),
+            AddrAndZone::<Ipv6Addr, _>::new(net_ip_v6!("fe80::1"), ctx.invalid_core.clone())
+                .unwrap(),
         );
 
         let result = (Some(zoned), 9000).try_into_fidl_with_ctx(&ctx);

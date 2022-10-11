@@ -501,7 +501,7 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
         device: EthernetDeviceId,
         frame: S,
     ) -> Result<(), S> {
-        BufferDeviceLayerEventDispatcher::send_frame(ctx, device.into(), frame)
+        BufferDeviceLayerEventDispatcher::send_frame(ctx, &device.into(), frame)
     }
 }
 
@@ -574,7 +574,7 @@ pub(crate) enum DeviceIdInner {
 }
 
 /// An ID identifying a device.
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct DeviceId(pub(crate) DeviceIdInner);
 
 impl From<DeviceIdInner> for DeviceId {
@@ -739,7 +739,7 @@ pub trait DeviceLayerEventDispatcher {
     /// Implementations must make sure that [`handle_queued_rx_packets`] is
     /// scheduled to be called as soon as possible so that enqueued RX frames
     /// are promptly handled.
-    fn wake_rx_task(&mut self, device: DeviceId);
+    fn wake_rx_task(&mut self, device: &DeviceId);
 }
 
 /// A [`DeviceLayerEventDispatcher`] with a buffer.
@@ -752,7 +752,7 @@ pub trait BufferDeviceLayerEventDispatcher<B: BufferMut>: DeviceLayerEventDispat
     /// reported as success.
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        device: DeviceId,
+        device: &DeviceId,
         frame: S,
     ) -> Result<(), S>;
 }
@@ -1148,7 +1148,7 @@ mod tests {
         let loopback_device =
             crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, 55 /* mtu */)
                 .expect("error adding loopback device");
-        check(&sync_ctx, &[loopback_device][..]);
+        check(&sync_ctx, &[loopback_device.clone()][..]);
 
         let DummyEventDispatcherConfig {
             subnet: _,

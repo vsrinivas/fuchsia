@@ -297,7 +297,7 @@ impl TimerContext<TimerId> for BindingsNonSyncCtxImpl {
 }
 
 impl DeviceLayerEventDispatcher for BindingsNonSyncCtxImpl {
-    fn wake_rx_task(&mut self, device: DeviceId) {
+    fn wake_rx_task(&mut self, device: &DeviceId) {
         match self.devices.get_core_device_mut(device) {
             Some(dev) => match dev.info_mut() {
                 DeviceSpecificInfo::Ethernet(_) | DeviceSpecificInfo::Netdevice(_) => {
@@ -320,7 +320,7 @@ where
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        device: DeviceId,
+        device: &DeviceId,
         frame: S,
     ) -> Result<(), S> {
         // TODO(wesleyac): Error handling
@@ -451,31 +451,31 @@ impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for BindingsNonSyncCtxImpl 
         match event {
             IpDeviceEvent::AddressAdded { device, addr, state } => {
                 self.notify_interface_update(
-                    device,
+                    &device,
                     InterfaceUpdate::AddressAdded {
                         addr: addr.into(),
                         assignment_state: state,
                         valid_until: zx::Time::INFINITE,
                     },
                 );
-                self.notify_address_update(device, addr.addr().into(), state);
+                self.notify_address_update(&device, addr.addr().into(), state);
             }
             IpDeviceEvent::AddressRemoved { device, addr } => self.notify_interface_update(
-                device,
+                &device,
                 InterfaceUpdate::AddressRemoved(addr.to_ip_addr()),
             ),
             IpDeviceEvent::AddressStateChanged { device, addr, state } => {
                 self.notify_interface_update(
-                    device,
+                    &device,
                     InterfaceUpdate::AddressAssignmentStateChanged {
                         addr: addr.to_ip_addr(),
                         new_state: state,
                     },
                 );
-                self.notify_address_update(device, addr.into(), state);
+                self.notify_address_update(&device, addr.into(), state);
             }
             IpDeviceEvent::EnabledChanged { device, ip_enabled } => {
-                self.notify_interface_update(device, InterfaceUpdate::OnlineChanged(ip_enabled))
+                self.notify_interface_update(&device, InterfaceUpdate::OnlineChanged(ip_enabled))
             }
         };
     }
@@ -496,7 +496,7 @@ impl<I: Ip> EventContext<netstack3_core::ip::IpLayerEvent<DeviceId, I>> for Bind
             return;
         }
         self.notify_interface_update(
-            device,
+            &device,
             InterfaceUpdate::DefaultRouteChanged { version: I::VERSION, has_default_route },
         );
     }
@@ -530,7 +530,7 @@ impl EventContext<netstack3_core::ip::device::route_discovery::Ipv6RouteDiscover
 }
 
 impl BindingsNonSyncCtxImpl {
-    fn notify_interface_update(&self, device: DeviceId, event: InterfaceUpdate) {
+    fn notify_interface_update(&self, device: &DeviceId, event: InterfaceUpdate) {
         self.devices
             .get_core_device(device)
             .unwrap_or_else(|| panic!("issued event {:?} for deleted device {:?}", event, device))
@@ -544,7 +544,7 @@ impl BindingsNonSyncCtxImpl {
     /// Notify `AddressStateProvider.WatchAddressAssignmentState` watchers.
     fn notify_address_update(
         &self,
-        device: DeviceId,
+        device: &DeviceId,
         address: SpecifiedAddr<IpAddr>,
         state: netstack3_core::ip::device::IpAddressState,
     ) {
@@ -829,10 +829,10 @@ impl NetstackSeed {
             crate::bindings::devices::spawn_rx_task(
                 &loopback_rx_notifier,
                 netstack.clone(),
-                loopback,
+                loopback.clone(),
             );
             let binding_id = devices
-                .add_device(loopback, |id| {
+                .add_device(loopback.clone(), |id| {
                     let events = netstack.create_interface_event_producer(
                         id,
                         InterfaceProperties {

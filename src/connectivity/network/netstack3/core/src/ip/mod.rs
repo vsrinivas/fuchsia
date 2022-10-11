@@ -2722,7 +2722,7 @@ mod tests {
     fn process_ip_fragment<I: Ip, NonSyncCtx: NonSyncContext>(
         sync_ctx: &mut &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
-        device: DeviceId,
+        device: &DeviceId,
         fragment_id: u16,
         fragment_offset: u8,
         fragment_count: u8,
@@ -2755,7 +2755,7 @@ mod tests {
     fn process_ipv4_fragment<NonSyncCtx: NonSyncContext>(
         sync_ctx: &mut &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
-        device: DeviceId,
+        device: &DeviceId,
         fragment_id: u16,
         fragment_offset: u8,
         fragment_count: u8,
@@ -2772,7 +2772,7 @@ mod tests {
         body.extend(fragment_offset * 8..fragment_offset * 8 + 8);
         let buffer =
             Buf::new(body, ..).encapsulate(builder).serialize_vec_outer().unwrap().into_inner();
-        receive_ipv4_packet(sync_ctx, ctx, &device, FrameDestination::Unicast, buffer);
+        receive_ipv4_packet(sync_ctx, ctx, device, FrameDestination::Unicast, buffer);
     }
 
     /// Generate and 'receive' an IPv6 fragment packet.
@@ -2783,7 +2783,7 @@ mod tests {
     fn process_ipv6_fragment<NonSyncCtx: NonSyncContext>(
         sync_ctx: &mut &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
-        device: DeviceId,
+        device: &DeviceId,
         fragment_id: u16,
         fragment_offset: u8,
         fragment_count: u8,
@@ -2806,7 +2806,7 @@ mod tests {
         let payload_len = u16::try_from(bytes.len() - 40).unwrap();
         bytes[4..6].copy_from_slice(&payload_len.to_be_bytes());
         let buffer = Buf::new(bytes, ..);
-        receive_ipv6_packet(sync_ctx, ctx, &device, FrameDestination::Unicast, buffer);
+        receive_ipv6_packet(sync_ctx, ctx, device, FrameDestination::Unicast, buffer);
     }
 
     #[test]
@@ -3035,7 +3035,7 @@ mod tests {
 
         // Test that a non fragmented packet gets dispatched right away.
 
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id, 0, 1);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id, 0, 1);
 
         // Make sure the packet got dispatched.
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
@@ -3053,16 +3053,16 @@ mod tests {
         // all the fragments.
 
         // Process fragment #0
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id, 0, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id, 0, 3);
 
         // Process fragment #1
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id, 1, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id, 1, 3);
 
         // Make sure no packets got dispatched yet.
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Process fragment #2
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id, 2, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id, 2, 3);
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been 'received'.
@@ -3083,38 +3083,38 @@ mod tests {
         // the fragments with out of order arrival of fragments.
 
         // Process packet #0, fragment #1
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id_0, 1, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id_0, 1, 3);
 
         // Process packet #1, fragment #2
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id_1, 2, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id_1, 2, 3);
 
         // Process packet #1, fragment #0
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id_1, 0, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id_1, 0, 3);
 
         // Make sure no packets got dispatched yet.
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 0);
 
         // Process a packet that does not require reassembly (packet #2, fragment #0).
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id_2, 0, 1);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id_2, 0, 1);
 
         // Make packet #1 got dispatched since it didn't need reassembly.
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Process packet #0, fragment #2
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id_0, 2, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id_0, 2, 3);
 
         // Make sure no other packets got dispatched yet.
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         // Process packet #0, fragment #0
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id_0, 0, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id_0, 0, 3);
 
         // Make sure that packet #0 finally got dispatched now that the final
         // fragment has been 'received'.
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 2);
 
         // Process packet #1, fragment #1
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id_1, 1, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id_1, 1, 3);
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been 'received'.
@@ -3136,7 +3136,7 @@ mod tests {
         // timer.
 
         // Process fragment #0
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id, 0, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id, 0, 3);
 
         // Make sure a timer got added.
         non_sync_ctx.timer_ctx().assert_timers_installed([(
@@ -3150,7 +3150,7 @@ mod tests {
         )]);
 
         // Process fragment #1
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id, 1, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id, 1, 3);
 
         // Trigger the timer (simulate a timer for the fragmented packet)
         let key = FragmentCacheKey::new(
@@ -3167,7 +3167,7 @@ mod tests {
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         // Process fragment #2
-        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, device, fragment_id, 2, 3);
+        process_ip_fragment::<I, _>(&mut sync_ctx, &mut non_sync_ctx, &device, fragment_id, 2, 3);
 
         // Make sure no packets got dispatched yet since even though we
         // technically received all the fragments, this fragment (#2) arrived
@@ -3202,14 +3202,14 @@ mod tests {
 
         // Process fragment #0
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
-            process_ip_fragment::<I, _>(&mut &*sync_ctx, non_sync_ctx, device, fragment_id, 0, 3);
+            process_ip_fragment::<I, _>(&mut &*sync_ctx, non_sync_ctx, &device, fragment_id, 0, 3);
         });
         // Make sure the packet got sent from alice to bob
         assert!(!net.step(receive_frame_or_panic, handle_timer).is_idle());
 
         // Process fragment #1
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
-            process_ip_fragment::<I, _>(&mut &*sync_ctx, non_sync_ctx, device, fragment_id, 1, 3);
+            process_ip_fragment::<I, _>(&mut &*sync_ctx, non_sync_ctx, &device, fragment_id, 1, 3);
         });
         assert!(!net.step(receive_frame_or_panic, handle_timer).is_idle());
 
@@ -3225,7 +3225,7 @@ mod tests {
 
         // Process fragment #2
         net.with_context("alice", |Ctx { sync_ctx, non_sync_ctx }| {
-            process_ip_fragment::<I, _>(&mut &*sync_ctx, non_sync_ctx, device, fragment_id, 2, 3);
+            process_ip_fragment::<I, _>(&mut &*sync_ctx, non_sync_ctx, &device, fragment_id, 2, 3);
         });
         assert!(!net.step(receive_frame_or_panic, handle_timer).is_idle());
 
@@ -4157,7 +4157,7 @@ mod tests {
                 v4_config.remote_ip
             ),
             ReceivePacketAction::Forward {
-                dst: Destination { next_hop: v4_config.remote_ip, device: v4_dev }
+                dst: Destination { next_hop: v4_config.remote_ip, device: v4_dev.clone() }
             }
         );
         assert_eq!(
@@ -4168,7 +4168,7 @@ mod tests {
                 v6_config.remote_ip
             ),
             ReceivePacketAction::Forward {
-                dst: Destination { next_hop: v6_config.remote_ip, device: v6_dev }
+                dst: Destination { next_hop: v6_config.remote_ip, device: v6_dev.clone() }
             }
         );
 

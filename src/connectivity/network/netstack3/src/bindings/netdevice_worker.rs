@@ -97,7 +97,7 @@ impl NetdeviceWorker {
             };
             let port = rx.port();
             let id = if let Some(id) = state.lock().await.get(&port) {
-                *id
+                id.clone()
             } else {
                 log::debug!("dropping frame for port {:?}, no device mapping available", port);
                 continue;
@@ -234,7 +234,7 @@ impl DeviceHandler {
 
         let core_id =
             netstack3_core::device::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
-        state_entry.insert(core_id);
+        state_entry.insert(core_id.clone());
         let make_info = |id| {
             let name = name.unwrap_or_else(|| format!("eth{}", id));
             devices::DeviceSpecificInfo::Netdevice(devices::NetdeviceInfo {

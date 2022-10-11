@@ -112,13 +112,13 @@ where
     }
 
     /// Retrieve non-mutable reference to device by associated [`CoreId`] `id`.
-    pub fn get_core_device(&self, id: C) -> Option<&DeviceInfo<C, I>> {
-        self.devices.get(&id)
+    pub fn get_core_device(&self, id: &C) -> Option<&DeviceInfo<C, I>> {
+        self.devices.get(id)
     }
 
     /// Retrieve mutable reference to device by associated [`CoreId`] `id`.
-    pub fn get_core_device_mut(&mut self, id: C) -> Option<&mut DeviceInfo<C, I>> {
-        self.devices.get_mut(&id)
+    pub fn get_core_device_mut(&mut self, id: &C) -> Option<&mut DeviceInfo<C, I>> {
+        self.devices.get_mut(id)
     }
 
     /// Retrieve associated `binding_id` for `core_id`.
@@ -336,8 +336,8 @@ mod tests {
         assert_eq!(d.get_binding_id(core_b).unwrap(), b);
 
         // check that we can retrieve both devices by the core id:
-        assert_matches!(d.get_core_device_mut(core_a), Some(_));
-        assert_matches!(d.get_core_device_mut(core_b), Some(_));
+        assert_matches!(d.get_core_device_mut(&core_a), Some(_));
+        assert_matches!(d.get_core_device_mut(&core_b), Some(_));
 
         // remove both devices
         let info_a = d.remove_device(a).expect("can remove device");
@@ -352,7 +352,7 @@ mod tests {
         // retrieving the devices now should fail:
         assert_eq!(d.get_device(a), None);
         assert_eq!(d.get_core_id(a), None);
-        assert_eq!(d.get_core_device_mut(core_a), None);
+        assert_eq!(d.get_core_device_mut(&core_a), None);
 
         assert!(d.devices.is_empty());
         assert!(d.id_map.is_empty());

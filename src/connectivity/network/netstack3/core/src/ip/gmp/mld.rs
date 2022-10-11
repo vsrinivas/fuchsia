@@ -1165,7 +1165,7 @@ mod tests {
         let snmc_addr = ll_addr.to_solicited_node_address();
         let snmc_timer_id = TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
             MldDelayedReportTimerId(GmpDelayedReportTimerId {
-                device: device_id,
+                device: device_id.clone(),
                 group_addr: snmc_addr,
             })
             .into(),

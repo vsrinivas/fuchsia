@@ -124,7 +124,7 @@ pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(
 
 impl<C: NonSyncContext> ReceiveQueueNonSyncContext<LoopbackDevice, LoopbackDeviceId> for C {
     fn wake_rx_task(&mut self, device_id: LoopbackDeviceId) {
-        DeviceLayerEventDispatcher::wake_rx_task(self, device_id.into())
+        DeviceLayerEventDispatcher::wake_rx_task(self, &device_id.into())
     }
 }
 

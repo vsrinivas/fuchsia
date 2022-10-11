@@ -1216,7 +1216,7 @@ mod tests {
             FrameDestination::Multicast,
             ra_packet_buf(&[][..]),
         );
-        let link_device_id = device_id.try_into().unwrap();
+        let link_device_id = device_id.clone().try_into().unwrap();
         assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, &link_device_id, Default::default());
 
         // RA with a source link layer option should create a new entry.
@@ -1306,7 +1306,7 @@ mod tests {
             FrameDestination::Multicast,
             na_packet_buf(false, false),
         );
-        let link_device_id = device_id.try_into().unwrap();
+        let link_device_id = device_id.clone().try_into().unwrap();
         assert_neighbors::<Ipv6, _, _, _>(&mut sync_ctx, &link_device_id, Default::default());
         receive_ipv6_packet(
             &mut sync_ctx,

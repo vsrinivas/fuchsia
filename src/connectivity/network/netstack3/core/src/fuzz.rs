@@ -313,13 +313,13 @@ fn arbitrary_packet<B: NestedPacketBuilder + core::fmt::Debug>(
 
 fn dispatch(
     Ctx { sync_ctx, non_sync_ctx }: &mut crate::testutil::DummyCtx,
-    device_id: DeviceId,
+    device_id: &DeviceId,
     action: FuzzAction,
 ) {
     use FuzzAction::*;
     match action {
         ReceiveFrame(ArbitraryFrame { frame_type: _, buf, description: _ }) => {
-            crate::device::receive_frame(sync_ctx, non_sync_ctx, &device_id, buf)
+            crate::device::receive_frame(sync_ctx, non_sync_ctx, device_id, buf)
                 .expect("error receiving frame")
         }
         AdvanceTime(SmallDuration(duration)) => {
@@ -350,7 +350,7 @@ pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
     log::info!("Processing {} actions", actions.len());
     for action in actions {
         log::info!("{}", action);
-        dispatch(&mut ctx, device_id, action);
+        dispatch(&mut ctx, &device_id, action);
     }
 
     // No panic occurred, so clear the log for the next run.

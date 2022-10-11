@@ -2138,16 +2138,19 @@ mod tests {
         // Make sure deprecate and invalidation timers are set.
         non_sync_ctx.timer_ctx().assert_some_timers_installed([
             (
-                SlaacTimerId::new_deprecate_slaac_address(device, expected_addr).into(),
+                SlaacTimerId::new_deprecate_slaac_address(device.clone(), expected_addr).into(),
                 now + Duration::from_secs(preferred_lifetime.into()),
             ),
-            (SlaacTimerId::new_invalidate_slaac_address(device, expected_addr).into(), valid_until),
+            (
+                SlaacTimerId::new_invalidate_slaac_address(device.clone(), expected_addr).into(),
+                valid_until,
+            ),
         ]);
 
         // Trigger the deprecation timer.
         assert_eq!(
             non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer).unwrap(),
-            SlaacTimerId::new_deprecate_slaac_address(device, expected_addr).into()
+            SlaacTimerId::new_deprecate_slaac_address(device.clone(), expected_addr).into()
         );
         assert_eq!(
             get_global_ipv6_addrs(&sync_ctx, &device),
@@ -2845,14 +2848,15 @@ mod tests {
                 }
         })
         .unwrap();
-        let regen_timer_id = SlaacTimerId::new_regenerate_temporary_slaac_address(
-            device,
+        let regen_timer_id: TimerId = SlaacTimerId::new_regenerate_temporary_slaac_address(
+            device.clone(),
             *first_addr_entry.addr_sub(),
-        );
+        )
+        .into();
         trace!("advancing to regen for first address");
         assert_eq!(
             non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer),
-            Some(regen_timer_id.into())
+            Some(regen_timer_id.clone())
         );
 
         // The regeneration timer should cause a new address to be created in
@@ -2895,7 +2899,7 @@ mod tests {
         for address in &addresses {
             assert_matches!(
                 non_sync_ctx.scheduled_instant(SlaacTimerId::new_deprecate_slaac_address(
-                    device,
+                    device.clone(),
                     *address,
                 )),
                 Some(deprecate_at) => {
@@ -2910,7 +2914,7 @@ mod tests {
         // for regeneration doesn't result in a new address being created.
         assert_eq!(
             non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer),
-            Some(regen_timer_id.into())
+            Some(regen_timer_id.clone())
         );
         assert_eq!(
             get_matching_slaac_address_entries(&sync_ctx, &device, |entry| entry
@@ -2934,7 +2938,7 @@ mod tests {
             non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer),
             Some(
                 SlaacTimerId::new_deprecate_slaac_address(
-                    device,
+                    device.clone(),
                     first_addr_entry.addr_sub().addr()
                 )
                 .into()
@@ -3048,7 +3052,7 @@ mod tests {
         .unwrap();
         let regen_at = non_sync_ctx
             .scheduled_instant(SlaacTimerId::new_regenerate_temporary_slaac_address(
-                device,
+                device.clone(),
                 *first_addr_entry.addr_sub(),
             ))
             .unwrap();
@@ -3069,7 +3073,7 @@ mod tests {
 
         let preferred_until = non_sync_ctx
             .scheduled_instant(SlaacTimerId::new_deprecate_slaac_address(
-                device,
+                device.clone(),
                 first_addr_entry.addr_sub().addr(),
             ))
             .unwrap();
@@ -3115,7 +3119,7 @@ mod tests {
                 handle_timer_helper_with_sc_ref(sync_ctx, crate::handle_timer)
             ),
             vec![SlaacTimerId::new_regenerate_temporary_slaac_address(
-                device,
+                device.clone(),
                 *first_addr_entry.addr_sub()
             )
             .into()]
@@ -3390,10 +3394,13 @@ mod tests {
         // Make sure deprecate and invalidation timers are set.
         non_sync_ctx.timer_ctx().assert_some_timers_installed([
             (
-                SlaacTimerId::new_deprecate_slaac_address(device, expected_addr).into(),
+                SlaacTimerId::new_deprecate_slaac_address(device.clone(), expected_addr).into(),
                 now + Duration::from_secs(PREFERRED_LIFETIME_SECS.into()),
             ),
-            (SlaacTimerId::new_invalidate_slaac_address(device, expected_addr).into(), valid_until),
+            (
+                SlaacTimerId::new_invalidate_slaac_address(device.clone(), expected_addr).into(),
+                valid_until,
+            ),
         ]);
 
         // Deleting the address should cancel its SLAAC timers.

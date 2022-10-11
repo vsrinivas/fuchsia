@@ -2709,25 +2709,37 @@ mod tests {
             temp_addr_preferred_until_end - ((ONE_HOUR.get() * 3) / 5);
         non_sync_ctx.timer_ctx().assert_some_timers_installed([
             (
-                SlaacTimerId::new_invalidate_slaac_address(device_id, stable_addr_sub.addr())
+                SlaacTimerId::new_invalidate_slaac_address(
+                    device_id.clone(),
+                    stable_addr_sub.addr(),
+                )
+                .into(),
+                stable_addr_lifetime_until.as_dyn(),
+            ),
+            (
+                SlaacTimerId::new_deprecate_slaac_address(
+                    device_id.clone(),
+                    stable_addr_sub.addr(),
+                )
+                .into(),
+                stable_addr_lifetime_until.as_dyn(),
+            ),
+            (
+                SlaacTimerId::new_invalidate_slaac_address(device_id.clone(), temp_addr_sub.addr())
                     .into(),
-                stable_addr_lifetime_until.as_dyn(),
-            ),
-            (
-                SlaacTimerId::new_deprecate_slaac_address(device_id, stable_addr_sub.addr()).into(),
-                stable_addr_lifetime_until.as_dyn(),
-            ),
-            (
-                SlaacTimerId::new_invalidate_slaac_address(device_id, temp_addr_sub.addr()).into(),
                 temp_addr_lifetime_until.as_dyn(),
             ),
             (
-                SlaacTimerId::new_deprecate_slaac_address(device_id, temp_addr_sub.addr()).into(),
+                SlaacTimerId::new_deprecate_slaac_address(device_id.clone(), temp_addr_sub.addr())
+                    .into(),
                 (temp_addr_preferred_until_start..temp_addr_preferred_until_end).as_dyn(),
             ),
             (
-                SlaacTimerId::new_regenerate_temporary_slaac_address(device_id, temp_addr_sub)
-                    .into(),
+                SlaacTimerId::new_regenerate_temporary_slaac_address(
+                    device_id.clone(),
+                    temp_addr_sub,
+                )
+                .into(),
                 (temp_addr_preferred_until_start - MIN_REGEN_ADVANCE.get()
                     ..temp_addr_preferred_until_end - MIN_REGEN_ADVANCE.get())
                     .as_dyn(),

@@ -1252,7 +1252,7 @@ mod tests {
         let now = non_sync_ctx.now();
         let timer_id = TimerId(TimerIdInner::Ipv4Device(
             IgmpTimerId::Gmp(GmpDelayedReportTimerId {
-                device: device_id,
+                device: device_id.clone(),
                 group_addr: Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS,
             })
             .into(),

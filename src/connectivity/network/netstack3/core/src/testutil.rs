@@ -564,21 +564,21 @@ impl DummyEventDispatcherBuilder {
             })
             .collect();
         for (idx, ip, mac) in arp_table_entries {
-            let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_static_arp_table_entry(sync_ctx, non_sync_ctx, &device, ip, mac)
+            let device = idx_to_device_id.get(&idx).unwrap();
+            crate::device::insert_static_arp_table_entry(sync_ctx, non_sync_ctx, device, ip, mac)
                 .expect("error inserting static ARP entry");
         }
         for (idx, ip, mac) in ndp_table_entries {
-            let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::insert_ndp_table_entry(sync_ctx, non_sync_ctx, &device, ip, mac.get())
+            let device = idx_to_device_id.get(&idx).unwrap();
+            crate::device::insert_ndp_table_entry(sync_ctx, non_sync_ctx, device, ip, mac.get())
                 .expect("error inserting static NDP entry");
         }
         for (subnet, idx) in device_routes {
-            let device = *idx_to_device_id.get(&idx).unwrap();
+            let device = idx_to_device_id.get(&idx).unwrap();
             crate::add_route(
                 sync_ctx,
                 non_sync_ctx,
-                AddableEntryEither::without_gateway(subnet, device),
+                AddableEntryEither::without_gateway(subnet, device.clone()),
             )
             .expect("add device route");
         }
@@ -700,18 +700,18 @@ impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyNonSyncCtx {
 }
 
 impl DeviceLayerEventDispatcher for DummyNonSyncCtx {
-    fn wake_rx_task(&mut self, device: DeviceId) {
-        self.state_mut().rx_available.push(device);
+    fn wake_rx_task(&mut self, device: &DeviceId) {
+        self.state_mut().rx_available.push(device.clone());
     }
 }
 
 impl<B: BufferMut> BufferDeviceLayerEventDispatcher<B> for DummyNonSyncCtx {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        device: DeviceId,
+        device: &DeviceId,
         frame: S,
     ) -> Result<(), S> {
-        self.frame_ctx_mut().send_frame(&mut (), device, frame)
+        self.frame_ctx_mut().send_frame(&mut (), device.clone(), frame)
     }
 }
 
@@ -1104,14 +1104,14 @@ mod tests {
         ctx: &mut DummyNonSyncCtx,
         src_ip: SpecifiedAddr<A>,
         dst_ip: SpecifiedAddr<A>,
-        device: DeviceId,
+        device: &DeviceId,
     ) where
         A::Version: TestIpExt,
         &'a DummySyncCtx:
             BufferIpLayerHandler<A::Version, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
     {
         let meta = SendIpPacketMeta {
-            device,
+            device: device.clone(),
             src_ip: Some(src_ip),
             dst_ip,
             next_hop: dst_ip,
@@ -1135,7 +1135,7 @@ mod tests {
             BufferIpLayerHandler<I, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
     {
         let device_builder_id = 0;
-        let device = DeviceId::new_ethernet(device_builder_id);
+        let device = &DeviceId::new_ethernet(device_builder_id);
         let mac_a = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap();
         let mac_b = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 8])).unwrap();
         let mac_c = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 9])).unwrap();
@@ -1187,10 +1187,10 @@ mod tests {
         assert_eq!(net.iter_pending_frames().count(), 2);
         assert!(net
             .iter_pending_frames()
-            .any(|InstantAndData(_, x)| (x.dst_context == "bob") && (x.meta == device)));
+            .any(|InstantAndData(_, x)| (x.dst_context == "bob") && (&x.meta == device)));
         assert!(net
             .iter_pending_frames()
-            .any(|InstantAndData(_, x)| (x.dst_context == "calvin") && (x.meta == device)));
+            .any(|InstantAndData(_, x)| (x.dst_context == "calvin") && (&x.meta == device)));
 
         // Only Alice should get packets sent by Bob.
 
@@ -1209,7 +1209,7 @@ mod tests {
         assert_eq!(net.iter_pending_frames().count(), 1);
         assert!(net
             .iter_pending_frames()
-            .any(|InstantAndData(_, x)| (x.dst_context == "alice") && (x.meta == device)));
+            .any(|InstantAndData(_, x)| (x.dst_context == "alice") && (&x.meta == device)));
 
         // No one gets packets sent by Calvin.
 

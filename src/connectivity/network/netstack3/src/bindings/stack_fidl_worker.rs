@@ -196,7 +196,7 @@ where
 
             let devices: &mut Devices = non_sync_ctx.as_mut();
             devices
-                .add_device(eth_id, |id| {
+                .add_device(eth_id.clone(), |id| {
                     let device_class = if features.contains(fhardware_ethernet::Features::LOOPBACK)
                     {
                         finterfaces::DeviceClass::Loopback(finterfaces::Empty)
