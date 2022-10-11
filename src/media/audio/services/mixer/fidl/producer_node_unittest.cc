@@ -244,5 +244,87 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(), ElementsAre());
 }
 
+TEST(ProducerNodeTest, StopCancelsStart) {
+  FakeGraph graph({});
+
+  auto stream_sink = MakeStreamSink();
+  auto producer = ProducerNode::Create({
+      .pipeline_direction = PipelineDirection::kInput,
+      .format = kFormat,
+      .reference_clock =
+          RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true),
+      .data_source = stream_sink->server_ptr(),
+      .detached_thread = graph.detached_thread(),
+  });
+
+  // Start then stop immediately -- the stop should cancel the start.
+  bool canceled = false;
+  producer->Start(ProducerStage::StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_frame = Fixed(0),
+      .callback =
+          [&canceled](auto result) {
+            ASSERT_TRUE(result.is_error());
+            EXPECT_EQ(result.error(), StartStopControl::StartError::Canceled);
+            canceled = true;
+          },
+  });
+  producer->Stop(ProducerStage::StopCommand{
+      .when = Fixed(1),
+  });
+
+  EXPECT_TRUE(canceled);
+}
+
+TEST(ProducerNodeTest, StartCancelsStop) {
+  FakeGraph graph({});
+
+  const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
+  ClockSnapshots clock_snapshots;
+  clock_snapshots.AddClock(clock);
+  clock_snapshots.Update(zx::clock::get_monotonic());
+  MixJobContext ctx(clock_snapshots);
+
+  auto stream_sink = MakeStreamSink();
+  auto producer = ProducerNode::Create({
+      .pipeline_direction = PipelineDirection::kInput,
+      .format = kFormat,
+      .reference_clock = clock,
+      .data_source = stream_sink->server_ptr(),
+      .detached_thread = graph.detached_thread(),
+  });
+
+  // Start the producer's internal frame timeline.
+  producer->Start(ProducerStage::StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_frame = Fixed(0),
+  });
+
+  // Also start the producer's downstream frame timeline.
+  producer->pipeline_stage()->UpdatePresentationTimeToFracFrame(
+      DefaultPresentationTimeToFracFrame(kFormat));
+
+  // Read from the producer to ensure the Start command is applied.
+  [[maybe_unused]] const auto packet = producer->pipeline_stage()->Read(ctx, Fixed(0), 20);
+
+  // Stop then start immediately -- the start should cancel the stop.
+  bool canceled = false;
+  producer->Stop(ProducerStage::StopCommand{
+      .when = Fixed(1),
+      .callback =
+          [&canceled](auto result) {
+            ASSERT_TRUE(result.is_error());
+            EXPECT_EQ(result.error(), StartStopControl::StopError::Canceled);
+            canceled = true;
+          },
+  });
+  producer->Start(ProducerStage::StartCommand{
+      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0) + zx::msec(100)},
+      .start_frame = Fixed(1000),
+  });
+
+  EXPECT_TRUE(canceled);
+}
+
 }  // namespace
 }  // namespace media_audio

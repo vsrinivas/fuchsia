@@ -20,7 +20,7 @@ ConsumerStage::ConsumerStage(Args args)
       pipeline_direction_(args.pipeline_direction),
       presentation_delay_(args.presentation_delay),
       writer_(std::move(args.writer)),
-      pending_commands_(std::move(args.command_queue)),
+      pending_start_stop_command_(std::move(args.pending_start_stop_command)),
       start_stop_control_(args.format, args.reference_clock) {}
 
 ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
@@ -125,13 +125,8 @@ void ConsumerStage::UpdatePresentationTimeToFracFrame(std::optional<TimelineFunc
 
 void ConsumerStage::UpdateStatus(const MixJobContext& ctx,
                                  zx::time mix_job_current_presentation_time) {
-  // Flush all commands from the queue.
-  for (;;) {
-    auto cmd_or_null = pending_commands_->pop();
-    if (!cmd_or_null) {
-      break;
-    }
-
+  // Pop the pending command, if any.
+  if (auto cmd_or_null = pending_start_stop_command_->pop(); cmd_or_null) {
     if (std::holds_alternative<StartCommand>(*cmd_or_null)) {
       start_stop_control_.Start(std::move(std::get<StartCommand>(*cmd_or_null)));
     } else {

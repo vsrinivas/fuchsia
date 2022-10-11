@@ -49,11 +49,12 @@ class ConsumerNode : public Node {
   zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
  private:
-  using CommandQueue = ConsumerStage::CommandQueue;
+  using PendingStartStopCommand = ConsumerStage::PendingStartStopCommand;
 
   ConsumerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                PipelineDirection pipeline_direction, ConsumerStagePtr pipeline_stage,
-               const Format& format, std::shared_ptr<CommandQueue> command_queue,
+               const Format& format,
+               std::shared_ptr<PendingStartStopCommand> pending_start_stop_command,
                std::shared_ptr<GraphMixThread> mix_thread);
 
   NodePtr CreateNewChildSource() final {
@@ -68,7 +69,7 @@ class ConsumerNode : public Node {
   bool AllowsDest() const final;
 
   const Format format_;
-  const std::shared_ptr<CommandQueue> command_queue_;
+  const std::shared_ptr<PendingStartStopCommand> pending_start_stop_command_;
   const std::shared_ptr<GraphMixThread> mix_thread_;
   const ConsumerStagePtr consumer_stage_;
 };

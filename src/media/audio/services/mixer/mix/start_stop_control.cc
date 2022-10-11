@@ -18,6 +18,19 @@ using When = StartStopControl::When;
 StartStopControl::StartStopControl(const Format& format, UnreadableClock reference_clock)
     : format_(format), reference_clock_(reference_clock) {}
 
+// static
+void StartStopControl::CancelCommand(Command& command) {
+  if (std::holds_alternative<StartCommand>(command)) {
+    if (auto& cmd = std::get<StartCommand>(command); cmd.callback) {
+      cmd.callback(fpromise::error(StartError::Canceled));
+    }
+  } else {
+    if (auto& cmd = std::get<StopCommand>(command); cmd.callback) {
+      cmd.callback(fpromise::error(StopError::Canceled));
+    }
+  }
+}
+
 void StartStopControl::Start(StartCommand cmd) {
   CancelPendingCommand();
   pending_ = std::move(cmd);
@@ -90,21 +103,10 @@ std::optional<std::pair<When, bool>> StartStopControl::PendingCommand(
 }
 
 void StartStopControl::CancelPendingCommand() {
-  if (!pending_) {
-    return;
+  if (pending_) {
+    CancelCommand(*pending_);
+    pending_ = std::nullopt;
   }
-
-  if (std::holds_alternative<StartCommand>(*pending_)) {
-    if (auto& cmd = std::get<StartCommand>(*pending_); cmd.callback) {
-      cmd.callback(fpromise::error(StartError::Canceled));
-    }
-  } else {
-    if (auto& cmd = std::get<StopCommand>(*pending_); cmd.callback) {
-      cmd.callback(fpromise::error(StopError::Canceled));
-    }
-  }
-
-  pending_ = std::nullopt;
 }
 
 std::pair<When, bool> StartStopControl::PendingCommand(

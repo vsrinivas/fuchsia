@@ -18,16 +18,16 @@ namespace media_audio {
 ProducerStage::ProducerStage(Args args)
     : PipelineStage(args.name, args.format, args.reference_clock),
       internal_source_(std::move(args.internal_source)),
-      pending_commands_(std::move(args.command_queue)),
+      pending_start_stop_command_(std::move(args.pending_start_stop_command)),
       start_stop_control_(args.format, args.reference_clock) {
   FX_CHECK(internal_source_);
   FX_CHECK(internal_source_->format() == format());
   FX_CHECK(internal_source_->reference_clock() == reference_clock());
-  FX_CHECK(pending_commands_);
+  FX_CHECK(pending_start_stop_command_);
 }
 
 void ProducerStage::AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {
-  FlushCommandQueue();
+  PopPendingCommand();
   AdvanceStartStopControlTo(ctx, *DownstreamFrameToPresentationTime(frame));
 
   // Advance the internal frame timeline if it is started.
@@ -38,7 +38,7 @@ void ProducerStage::AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {
 
 std::optional<PipelineStage::Packet> ProducerStage::ReadImpl(MixJobContext& ctx, Fixed start_frame,
                                                              int64_t frame_count) {
-  FlushCommandQueue();
+  PopPendingCommand();
   AdvanceStartStopControlTo(ctx, *DownstreamFrameToPresentationTime(start_frame));
 
   Fixed end_frame = start_frame + Fixed(frame_count);
@@ -99,18 +99,16 @@ std::optional<ProducerStage::CommandSummary> ProducerStage::NextCommand(const Mi
   };
 }
 
-void ProducerStage::FlushCommandQueue() {
-  for (;;) {
-    auto cmd_or_null = pending_commands_->pop();
-    if (!cmd_or_null) {
-      return;
-    }
+void ProducerStage::PopPendingCommand() {
+  auto cmd_or_null = pending_start_stop_command_->pop();
+  if (!cmd_or_null) {
+    return;
+  }
 
-    if (std::holds_alternative<StartCommand>(*cmd_or_null)) {
-      start_stop_control_.Start(std::move(std::get<StartCommand>(*cmd_or_null)));
-    } else {
-      start_stop_control_.Stop(std::move(std::get<StopCommand>(*cmd_or_null)));
-    }
+  if (std::holds_alternative<StartCommand>(*cmd_or_null)) {
+    start_stop_control_.Start(std::move(std::get<StartCommand>(*cmd_or_null)));
+  } else {
+    start_stop_control_.Stop(std::move(std::get<StopCommand>(*cmd_or_null)));
   }
 }
 

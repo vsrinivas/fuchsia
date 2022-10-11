@@ -25,12 +25,12 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
    public:
     explicit WithPublicCtor(std::string_view name, std::shared_ptr<Clock> reference_clock,
                             PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage,
-                            std::shared_ptr<StartStopCommandQueue> start_stop_command_queue)
+                            std::shared_ptr<PendingStartStopCommand> pending_start_stop_command)
         : ProducerNode(name, std::move(reference_clock), pipeline_direction,
-                       std::move(pipeline_stage), std::move(start_stop_command_queue)) {}
+                       std::move(pipeline_stage), std::move(pending_start_stop_command)) {}
   };
 
-  const auto start_stop_command_queue = std::make_shared<StartStopCommandQueue>();
+  const auto pending_start_stop_command = std::make_shared<PendingStartStopCommand>();
   PipelineStagePtr internal_source;
 
   if (args.data_source.index() == kStreamSinkServerIndex) {
@@ -58,31 +58,35 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
       .name = args.name,
       .format = args.format,
       .reference_clock = UnreadableClock(args.reference_clock),
-      .command_queue = start_stop_command_queue,
+      .pending_start_stop_command = pending_start_stop_command,
       .internal_source = std::move(internal_source),
   });
   pipeline_stage->set_thread(args.detached_thread->pipeline_thread());
 
   auto node = std::make_shared<WithPublicCtor>(args.name, std::move(args.reference_clock),
                                                args.pipeline_direction, std::move(pipeline_stage),
-                                               std::move(start_stop_command_queue));
+                                               std::move(pending_start_stop_command));
   node->set_thread(args.detached_thread);
   return node;
 }
 
 ProducerNode::ProducerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                            PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage,
-                           std::shared_ptr<StartStopCommandQueue> start_stop_command_queue)
+                           std::shared_ptr<PendingStartStopCommand> pending_start_stop_command)
     : Node(Type::kProducer, name, std::move(reference_clock), pipeline_direction,
            std::move(pipeline_stage), /*parent=*/nullptr),
-      start_stop_command_queue_(std::move(start_stop_command_queue)) {}
+      pending_start_stop_command_(std::move(pending_start_stop_command)) {}
 
 void ProducerNode::Start(ProducerStage::StartCommand cmd) const {
-  start_stop_command_queue_->push(cmd);
+  if (auto old = pending_start_stop_command_->swap(std::move(cmd)); old) {
+    StartStopControl::CancelCommand(*old);
+  }
 }
 
 void ProducerNode::Stop(ProducerStage::StopCommand cmd) const {
-  start_stop_command_queue_->push(cmd);
+  if (auto old = pending_start_stop_command_->swap(std::move(cmd)); old) {
+    StartStopControl::CancelCommand(*old);
+  }
 }
 
 zx::duration ProducerNode::GetSelfPresentationDelayForSource(const Node* source) const {

@@ -25,6 +25,8 @@ namespace media_audio {
 // arrives before a pending command takes effect, the pending command is canceled.
 class StartStopControl {
  public:
+  StartStopControl(const Format& format, UnreadableClock reference_clock);
+
   enum class WhichClock {
     SystemMonotonic,
     Reference,
@@ -84,7 +86,8 @@ class StartStopControl {
     std::function<void(fpromise::result<When, StopError>)> callback;
   };
 
-  StartStopControl(const Format& format, UnreadableClock reference_clock);
+  using Command = std::variant<StartCommand, StopCommand>;
+  static void CancelCommand(Command& cmd);
 
   // Queues a Start or Stop command. The command will remain pending until it is scheduled to occur.
   // If another command arrives before that time, the prior command will be canceled. There is never
@@ -131,8 +134,6 @@ class StartStopControl {
       const ClockSnapshots& clocks) const;
 
  private:
-  using Command = std::variant<StartCommand, StopCommand>;
-
   struct LastStartCommand {
     TimelineFunction presentation_time_to_frac_frame;
     zx::time start_reference_time;

@@ -14,7 +14,7 @@
 
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
-#include "src/media/audio/services/mixer/common/thread_safe_queue.h"
+#include "src/media/audio/services/mixer/common/atomic_optional.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
@@ -64,8 +64,7 @@ class ProducerStage : public PipelineStage {
  public:
   using StartCommand = StartStopControl::StartCommand;
   using StopCommand = StartStopControl::StopCommand;
-  using Command = std::variant<StartCommand, StopCommand>;
-  using CommandQueue = ThreadSafeQueue<Command>;
+  using PendingStartStopCommand = AtomicOptional<StartStopControl::Command>;
 
   struct Args {
     // Name of this stage.
@@ -77,12 +76,8 @@ class ProducerStage : public PipelineStage {
     // Reference clock of this stage's output stream.
     UnreadableClock reference_clock;
 
-    // Message queue for pending commands. Will be drained by each call to Advance or Read.
-    //
-    // TODO(fxbug.dev/87651): since the latest command overrides the pending command (if any), this
-    // doesn't need to be a full queue; instead it could be a single optional value with a `swap`
-    // operation to update the current value, and `pop` to extract the current value.
-    std::shared_ptr<CommandQueue> command_queue;
+    // Slot to hold a pending start/stop command.
+    std::shared_ptr<PendingStartStopCommand> pending_start_stop_command;
 
     // Internal stage which actually produces the data. This must be specified and must have the
     // same format and reference clock as this ProducerStage.
@@ -117,14 +112,14 @@ class ProducerStage : public PipelineStage {
   };
 
   std::optional<CommandSummary> NextCommand(const MixJobContext& ctx);
-  void FlushCommandQueue();
+  void PopPendingCommand();
   void AdvanceStartStopControlTo(const MixJobContext& ctx, zx::time presentation_time);
   void RecomputeInternalFrameOffset();
   std::optional<Fixed> PresentationTimeToDownstreamFrame(zx::time t);
   std::optional<zx::time> DownstreamFrameToPresentationTime(Fixed downstream_frame);
 
   const PipelineStagePtr internal_source_;  // uses internal frame time
-  const std::shared_ptr<CommandQueue> pending_commands_;
+  const std::shared_ptr<PendingStartStopCommand> pending_start_stop_command_;
   StartStopControl start_stop_control_;
 
   // The translation between internal frame and presentation time.

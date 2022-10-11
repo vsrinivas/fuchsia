@@ -24,14 +24,14 @@ struct ConsumerStageWrapper {
                        UnreadableClock reference_clock = DefaultUnreadableClock())
       : format(f) {
     packet_queue = MakeDefaultPacketQueue(format),
-    command_queue = std::make_shared<ConsumerStage::CommandQueue>();
+    pending_start_stop_command = std::make_shared<ConsumerStage::PendingStartStopCommand>();
     writer = std::make_shared<FakeConsumerStageWriter>();
     consumer = std::make_shared<ConsumerStage>(ConsumerStage::Args{
         .pipeline_direction = pipeline_direction,
         .presentation_delay = presentation_delay,
         .format = format,
         .reference_clock = std::move(reference_clock),
-        .command_queue = command_queue,
+        .pending_start_stop_command = pending_start_stop_command,
         .writer = writer,
     });
     consumer->AddSource(packet_queue, {});
@@ -45,7 +45,7 @@ struct ConsumerStageWrapper {
 
   const Format format;
   std::shared_ptr<ConsumerStage> consumer;
-  std::shared_ptr<ConsumerStage::CommandQueue> command_queue;
+  std::shared_ptr<ConsumerStage::PendingStartStopCommand> pending_start_stop_command;
   std::shared_ptr<FakeConsumerStageWriter> writer;
   std::shared_ptr<SimplePacketQueueProducerStage> packet_queue;
 };

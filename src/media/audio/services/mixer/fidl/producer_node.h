@@ -17,6 +17,7 @@
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/producer_stage.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
+#include "src/media/audio/services/mixer/mix/start_stop_control.h"
 
 namespace media_audio {
 
@@ -57,11 +58,11 @@ class ProducerNode : public Node {
   zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
 
  private:
-  using StartStopCommandQueue = ProducerStage::CommandQueue;
+  using PendingStartStopCommand = ProducerStage::PendingStartStopCommand;
 
   ProducerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,
                PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage,
-               std::shared_ptr<StartStopCommandQueue> start_stop_command_queue);
+               std::shared_ptr<PendingStartStopCommand> pending_start_stop_command);
 
   NodePtr CreateNewChildSource() final {
     UNREACHABLE << "CreateNewChildSource should not be called on ordinary nodes";
@@ -73,7 +74,7 @@ class ProducerNode : public Node {
   std::optional<size_t> MaxSources() const final;
   bool AllowsDest() const final;
 
-  const std::shared_ptr<StartStopCommandQueue> start_stop_command_queue_;
+  const std::shared_ptr<PendingStartStopCommand> pending_start_stop_command_;
 };
 
 }  // namespace media_audio

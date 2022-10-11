@@ -37,12 +37,12 @@ const Format kFormat = Format::CreateOrDie({SampleType::kFloat32, 2, 48000});
 class ProducerStageTestWithPacketQueue : public ::testing::Test {
  public:
   ProducerStageTestWithPacketQueue()
-      : start_stop_command_queue_(std::make_shared<ProducerStage::CommandQueue>()),
+      : pending_start_stop_command_(std::make_shared<ProducerStage::PendingStartStopCommand>()),
         packet_command_queue_(std::make_shared<SimplePacketQueueProducerStage::CommandQueue>()),
         producer_stage_({
             .format = kFormat,
             .reference_clock = DefaultUnreadableClock(),
-            .command_queue = start_stop_command_queue_,
+            .pending_start_stop_command = pending_start_stop_command_,
             .internal_source = std::make_shared<SimplePacketQueueProducerStage>(
                 SimplePacketQueueProducerStage::Args{
                     .format = kFormat,
@@ -68,14 +68,14 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
   }
 
   void SendStartCommand(zx::time start_presentation_time, Fixed start_frame) {
-    start_stop_command_queue_->push(ProducerStage::StartCommand{
+    pending_start_stop_command_->set_must_be_empty(ProducerStage::StartCommand{
         .start_time = RealTime{.clock = WhichClock::Reference, .time = start_presentation_time},
         .start_frame = start_frame,
     });
   }
 
   void SendStopCommand(Fixed stop_frame) {
-    start_stop_command_queue_->push(ProducerStage::StopCommand{
+    pending_start_stop_command_->set_must_be_empty(ProducerStage::StopCommand{
         .when = stop_frame,
     });
   }
@@ -118,7 +118,7 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
     return it->second;
   }
 
-  std::shared_ptr<ProducerStage::CommandQueue> start_stop_command_queue_;
+  std::shared_ptr<ProducerStage::PendingStartStopCommand> pending_start_stop_command_;
   std::shared_ptr<SimplePacketQueueProducerStage::CommandQueue> packet_command_queue_;
   ProducerStage producer_stage_;
   std::map<int32_t, Packet> packets_;  // ordered map so iteration is deterministic
@@ -474,7 +474,7 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
   static inline const int64_t kRingBufferFrames = 100;
 
   ProducerStageTestWithRingBuffer()
-      : start_stop_command_queue_(std::make_shared<ProducerStage::CommandQueue>()),
+      : pending_start_stop_command_(std::make_shared<ProducerStage::PendingStartStopCommand>()),
         buffer_(
             MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true)),
         ring_buffer_(RingBuffer::Create({
@@ -487,7 +487,7 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
         producer_stage_({
             .format = kFormat,
             .reference_clock = DefaultUnreadableClock(),
-            .command_queue = start_stop_command_queue_,
+            .pending_start_stop_command = pending_start_stop_command_,
             .internal_source =
                 std::make_shared<SimpleRingBufferProducerStage>("InternalSource", ring_buffer_),
         }) {
@@ -495,14 +495,14 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
   }
 
   void SendStartCommand(zx::time start_presentation_time, Fixed start_frame) {
-    start_stop_command_queue_->push(ProducerStage::StartCommand{
+    pending_start_stop_command_->set_must_be_empty(ProducerStage::StartCommand{
         .start_time = RealTime{.clock = WhichClock::Reference, .time = start_presentation_time},
         .start_frame = start_frame,
     });
   }
 
   void SendStopCommand(Fixed stop_frame) {
-    start_stop_command_queue_->push(ProducerStage::StopCommand{
+    pending_start_stop_command_->set_must_be_empty(ProducerStage::StopCommand{
         .when = stop_frame,
     });
   }
@@ -516,7 +516,7 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
   void set_safe_read_frame(int64_t frame) { safe_read_frame_ = frame; }
 
  private:
-  std::shared_ptr<ProducerStage::CommandQueue> start_stop_command_queue_;
+  std::shared_ptr<ProducerStage::PendingStartStopCommand> pending_start_stop_command_;
   std::shared_ptr<MemoryMappedBuffer> buffer_;
   std::shared_ptr<RingBuffer> ring_buffer_;
   ProducerStage producer_stage_;

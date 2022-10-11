@@ -18,6 +18,7 @@ source_set("common") {
   ]
 
   sources = [
+    "atomic_optional.h",
     "basic_types.h",
     "global_task_queue.cc",
     "global_task_queue.h",
@@ -44,6 +45,7 @@ executable("common_unittests") {
   testonly = true
 
   sources = [
+    "atomic_optional_unittest.cc",
     "global_task_queue_unittest.cc",
     "memory_mapped_buffer_unittest.cc",
     "thread_safe_queue_unittest.cc",
