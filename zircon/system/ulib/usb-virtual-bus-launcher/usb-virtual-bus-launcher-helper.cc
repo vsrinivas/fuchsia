@@ -22,6 +22,9 @@ zx_status_t WatchDirectory(int dirfd, Callback* callback) {
 
 __EXPORT
 zx_status_t WaitForAnyFile(int dirfd, int event, const char* name, void* cookie) {
+  if (std::string_view{name} == ".") {
+    return ZX_OK;
+  }
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
   }

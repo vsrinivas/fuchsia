@@ -170,6 +170,10 @@ zx::status<zx::channel> WaitForDeviceTopologicalPath(const fbl::unique_fd& dir,
   };
 
   auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
+    if (std::string_view{fn} == ".") {
+      return ZX_OK;
+    }
+
     if (event != WATCH_EVENT_ADD_FILE) {
       return ZX_OK;
     }

@@ -369,6 +369,9 @@ async fn watch_first_file<P: AsRef<Path> + AsRef<OsStr>>(dir: P) -> Result<PathB
     while let Some(msg) = watcher.try_next().await? {
         match msg.event {
             WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
+                if msg.filename == Path::new(".") {
+                    continue;
+                }
                 return Ok(path.join(msg.filename));
             }
             _ => continue,

@@ -178,6 +178,9 @@ struct WatchTeeArgs {
 
 // Callback function called when a TEE device is found.
 zx_status_t WatchTee(int dirfd, int event, const char* filename, void* cookie) {
+  if (std::string_view{filename} == ".") {
+    return ZX_OK;
+  }
   fbl::StringBuffer<kMaxPathLen> device_path;
   device_path.Append(kDeviceClass).Append("/").Append(filename);
   // Hardware derived key is expected to be 128-bit AES key.

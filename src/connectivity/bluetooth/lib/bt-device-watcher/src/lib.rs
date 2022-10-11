@@ -158,6 +158,9 @@ impl DeviceWatcher {
     ) -> Result<DeviceFile, Error> {
         assert!(!events.contains(&WatchEvent::REMOVE_FILE));
         while let Some(msg) = self.watcher.try_next().await? {
+            if msg.filename == Path::new(".") {
+                continue;
+            }
             if events.contains(&msg.event) {
                 let relative_path = msg.filename.as_path();
                 let debug_path = self.debug_dir_name.join(relative_path);

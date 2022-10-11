@@ -146,6 +146,9 @@ void SysmemConnector::Post(fit::closure to_run) {
 
 zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filename) {
   ZX_DEBUG_ASSERT(thrd_current() == process_queue_thrd_);
+  if (std::string_view{filename} == ".") {
+    return ZX_OK;
+  }
   if (event != WATCH_EVENT_ADD_FILE) {
     // Keep going on IDLE or REMOVE.  There's nothing else useful that the
     // current thread can do until a sysmem device instance is available,

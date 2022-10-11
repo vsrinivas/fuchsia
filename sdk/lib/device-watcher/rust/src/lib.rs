@@ -31,6 +31,9 @@ pub async fn wait_for_device_topo_path(
         {
             continue;
         }
+        if msg.filename == Path::new(".") {
+            continue;
+        }
 
         let filename = msg.filename.to_str().ok_or(format_err!("to_str for filename failed"))?;
 

@@ -53,6 +53,9 @@ async fn watch_directory_async(
         while let Some(msg) = (watcher.try_next()).await.expect("msg") {
             match msg.event {
                 vfs_watcher::WatchEvent::ADD_FILE | vfs_watcher::WatchEvent::EXISTING => {
+                    if msg.filename == Path::new(".") {
+                        continue;
+                    }
                     let device_path = dir.join(msg.filename);
                     app_sender
                         .unbounded_send(MessageInternal::NewDisplayController(device_path))

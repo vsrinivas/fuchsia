@@ -22,7 +22,7 @@ use {
     fuchsia_syslog::macros::*,
     fuchsia_vfs_watcher as vfs, fuchsia_zircon as zx,
     futures::{prelude::*, select, stream::FusedStream},
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
     uuid::Uuid,
 };
 
@@ -108,6 +108,9 @@ async fn enumerate_tee_devices() -> Result<Vec<PathBuf>, Error> {
     while let Some(msg) = watcher.try_next().await? {
         match msg.event {
             vfs::WatchEvent::EXISTING => {
+                if msg.filename == Path::new(".") {
+                    continue;
+                }
                 device_list.push(PathBuf::new().join(DEV_TEE_PATH).join(msg.filename));
             }
             vfs::WatchEvent::IDLE => {

@@ -62,6 +62,9 @@ struct DevicePaths {
 
 zx_status_t WaitForHostAndPeripheral([[maybe_unused]] int dirfd, int event, const char* name,
                                      void* cookie) {
+  if (std::string_view{name} == ".") {
+    return ZX_OK;
+  }
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
   }

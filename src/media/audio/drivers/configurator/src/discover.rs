@@ -27,6 +27,9 @@ pub async fn find_codecs<T: Configurator>(
         match msg.event {
             fuchsia_vfs_watcher::WatchEvent::EXISTING
             | fuchsia_vfs_watcher::WatchEvent::ADD_FILE => {
+                if msg.filename == Path::new(".") {
+                    continue;
+                }
                 let dev_proxy_local =
                     fuchsia_fs::clone_directory(&dev_proxy, fio::OpenFlags::empty());
                 match dev_proxy_local {
@@ -76,6 +79,9 @@ pub async fn find_dais<T: Configurator>(
         match msg.event {
             fuchsia_vfs_watcher::WatchEvent::EXISTING
             | fuchsia_vfs_watcher::WatchEvent::ADD_FILE => {
+                if msg.filename == Path::new(".") {
+                    continue;
+                }
                 let dev_proxy_local =
                     fuchsia_fs::clone_directory(&dev_proxy, fio::OpenFlags::empty());
                 match dev_proxy_local {

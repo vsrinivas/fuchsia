@@ -7,7 +7,7 @@ use fuchsia_zircon as zx;
 use futures::{StreamExt as _, TryStreamExt as _};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::vec;
 use structopt::StructOpt;
 
@@ -54,10 +54,14 @@ async fn get_class_path_from_topological(
             futures::future::ready((|| match event {
                 fuchsia_vfs_watcher::WatchEvent::ADD_FILE
                 | fuchsia_vfs_watcher::WatchEvent::EXISTING => {
-                    let block_path = PathBuf::from(BLOCK_CLASS_PATH).join(filename);
-                    let block_dev = File::open(&block_path)?;
-                    let topo_path = fdio::device_get_topo_path(&block_dev)?;
-                    Ok(topo_path.ends_with(topological_path_suffix).then(|| block_path))
+                    if filename == Path::new(".") {
+                        Ok(None)
+                    } else {
+                        let block_path = PathBuf::from(BLOCK_CLASS_PATH).join(filename);
+                        let block_dev = File::open(&block_path)?;
+                        let topo_path = fdio::device_get_topo_path(&block_dev)?;
+                        Ok(topo_path.ends_with(topological_path_suffix).then(|| block_path))
+                    }
                 }
                 _ => Ok(None),
             })())

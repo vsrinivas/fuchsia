@@ -60,6 +60,9 @@ struct App {
 };
 
 zx_status_t watchcb(int dirfd, int event, const char* fn, void* cookie) {
+  if (std::string_view{fn} == ".") {
+    return ZX_OK;
+  }
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
   }
