@@ -2203,7 +2203,7 @@ pub(crate) trait BufferIpLayerHandler<I: IpExt, C, B: BufferMut>:
     fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        meta: SendIpPacketMeta<I, Self::DeviceId, Option<SpecifiedAddr<I::Addr>>>,
+        meta: SendIpPacketMeta<I, &Self::DeviceId, Option<SpecifiedAddr<I::Addr>>>,
         body: S,
     ) -> Result<(), S>;
 }
@@ -2217,7 +2217,7 @@ impl<
     fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        meta: SendIpPacketMeta<Ipv4, SC::DeviceId, Option<SpecifiedAddr<Ipv4Addr>>>,
+        meta: SendIpPacketMeta<Ipv4, &SC::DeviceId, Option<SpecifiedAddr<Ipv4Addr>>>,
         body: S,
     ) -> Result<(), S> {
         send_ipv4_packet_from_device(self, ctx, meta, body)
@@ -2233,7 +2233,7 @@ impl<
     fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        meta: SendIpPacketMeta<Ipv6, SC::DeviceId, Option<SpecifiedAddr<Ipv6Addr>>>,
+        meta: SendIpPacketMeta<Ipv6, &SC::DeviceId, Option<SpecifiedAddr<Ipv6Addr>>>,
         body: S,
     ) -> Result<(), S> {
         send_ipv6_packet_from_device(self, ctx, meta, body)
@@ -2256,7 +2256,7 @@ pub(crate) fn send_ipv4_packet_from_device<
     ctx: &mut C,
     SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl, mtu }: SendIpPacketMeta<
         Ipv4,
-        <SC as IpDeviceIdContext<Ipv4>>::DeviceId,
+        &<SC as IpDeviceIdContext<Ipv4>>::DeviceId,
         Option<SpecifiedAddr<Ipv4Addr>>,
     >,
     body: S,
@@ -2270,7 +2270,7 @@ pub(crate) fn send_ipv4_packet_from_device<
         let mut builder = Ipv4PacketBuilder::new(
             src_ip,
             dst_ip,
-            ttl.unwrap_or_else(|| sync_ctx.get_hop_limit(&device)).get(),
+            ttl.unwrap_or_else(|| sync_ctx.get_hop_limit(device)).get(),
             proto,
         );
         builder.id(gen_ipv4_packet_id(sync_ctx));
@@ -2281,10 +2281,10 @@ pub(crate) fn send_ipv4_packet_from_device<
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
         sync_ctx
-            .send_ip_frame(ctx, &device, next_hop, body)
+            .send_ip_frame(ctx, device, next_hop, body)
             .map_err(|ser| ser.into_inner().into_inner())
     } else {
-        sync_ctx.send_ip_frame(ctx, &device, next_hop, body).map_err(|ser| ser.into_inner())
+        sync_ctx.send_ip_frame(ctx, device, next_hop, body).map_err(|ser| ser.into_inner())
     }
 }
 
@@ -2304,7 +2304,7 @@ pub(crate) fn send_ipv6_packet_from_device<
     ctx: &mut C,
     SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl, mtu }: SendIpPacketMeta<
         Ipv6,
-        SC::DeviceId,
+        &SC::DeviceId,
         Option<SpecifiedAddr<Ipv6Addr>>,
     >,
     body: S,
@@ -2318,7 +2318,7 @@ pub(crate) fn send_ipv6_packet_from_device<
         Ipv6PacketBuilder::new(
             src_ip,
             dst_ip,
-            ttl.unwrap_or_else(|| sync_ctx.get_hop_limit(&device)).get(),
+            ttl.unwrap_or_else(|| sync_ctx.get_hop_limit(device)).get(),
             proto,
         )
     };
@@ -2328,10 +2328,10 @@ pub(crate) fn send_ipv6_packet_from_device<
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
         sync_ctx
-            .send_ip_frame(ctx, &device, next_hop, body)
+            .send_ip_frame(ctx, device, next_hop, body)
             .map_err(|ser| ser.into_inner().into_inner())
     } else {
-        sync_ctx.send_ip_frame(ctx, &device, next_hop, body).map_err(|ser| ser.into_inner())
+        sync_ctx.send_ip_frame(ctx, device, next_hop, body).map_err(|ser| ser.into_inner())
     }
 }
 

@@ -1116,7 +1116,7 @@ pub(crate) fn send_ndp_packet<
         sync_ctx,
         ctx,
         SendIpPacketMeta {
-            device: device_id.clone(),
+            device: device_id,
             src_ip,
             dst_ip,
             next_hop: dst_ip,
@@ -4194,7 +4194,7 @@ mod tests {
         fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
             &mut self,
             _ctx: &mut Dummyv6NonSyncCtx,
-            _meta: SendIpPacketMeta<Ipv6, Self::DeviceId, Option<SpecifiedAddr<Ipv6Addr>>>,
+            _meta: SendIpPacketMeta<Ipv6, &Self::DeviceId, Option<SpecifiedAddr<Ipv6Addr>>>,
             _body: S,
         ) -> Result<(), S> {
             unimplemented!()

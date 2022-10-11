@@ -347,7 +347,7 @@ where
     fn send_ip_packet<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        meta: SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
+        meta: SendIpPacketMeta<I, &Self::DeviceId, SpecifiedAddr<I::Addr>>,
         body: S,
     ) -> Result<(), S>;
 }
@@ -440,7 +440,7 @@ fn send_ip_packet<
         sync_ctx,
         ctx,
         SendIpPacketMeta {
-            device,
+            device: &device,
             src_ip: *local_ip,
             dst_ip: *remote_ip,
             next_hop,
@@ -939,9 +939,18 @@ pub(crate) mod testutil {
         fn send_ip_packet<SS: Serializer<Buffer = B>>(
             &mut self,
             ctx: &mut DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
-            meta: SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
+            SendIpPacketMeta {  device, src_ip, dst_ip, next_hop, proto, ttl, mtu }: SendIpPacketMeta<I, &Self::DeviceId, SpecifiedAddr<I::Addr>>,
             body: SS,
         ) -> Result<(), SS> {
+            let meta = SendIpPacketMeta {
+                device: device.clone(),
+                src_ip,
+                dst_ip,
+                next_hop,
+                proto,
+                ttl,
+                mtu,
+            };
             self.send_frame(ctx, meta, body)
         }
     }

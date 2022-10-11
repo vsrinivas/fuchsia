@@ -1111,7 +1111,7 @@ mod tests {
             BufferIpLayerHandler<A::Version, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
     {
         let meta = SendIpPacketMeta {
-            device: device.clone(),
+            device,
             src_ip: Some(src_ip),
             dst_ip,
             next_hop: dst_ip,

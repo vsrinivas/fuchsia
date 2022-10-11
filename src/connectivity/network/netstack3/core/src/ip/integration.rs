@@ -63,7 +63,7 @@ impl<
         ctx: &mut C,
         meta: SendIpPacketMeta<
             Ipv4,
-            <SC as IpDeviceIdContext<Ipv4>>::DeviceId,
+            &<SC as IpDeviceIdContext<Ipv4>>::DeviceId,
             SpecifiedAddr<Ipv4Addr>,
         >,
         body: S,
@@ -87,7 +87,7 @@ impl<
         ctx: &mut C,
         meta: SendIpPacketMeta<
             Ipv6,
-            <SC as IpDeviceIdContext<Ipv6>>::DeviceId,
+            &<SC as IpDeviceIdContext<Ipv6>>::DeviceId,
             SpecifiedAddr<Ipv6Addr>,
         >,
         body: S,

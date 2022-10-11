@@ -201,7 +201,7 @@ mod tests {
                 &mut &*sync_ctx,
                 non_sync_ctx,
                 SendIpPacketMeta {
-                    device: device_id,
+                    device: &device_id,
                     src_ip: Some(local_ip().into_specified()),
                     dst_ip: remote_ip().into_specified(),
                     next_hop: remote_ip().into_specified(),
@@ -1002,7 +1002,7 @@ mod tests {
                 sync_ctx,
                 ctx,
                 SendIpPacketMeta {
-                    device: device_id,
+                    device: &device_id,
                     src_ip: Some(config.local_ip),
                     dst_ip: config.remote_ip,
                     next_hop: config.remote_ip,
