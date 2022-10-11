@@ -27,6 +27,9 @@ class MagmaVsi {
     if (dir != NULL) {
       struct dirent* dp;
       while ((dp = readdir(dir)) != NULL) {
+        if (strcmp(dp->d_name, ".") == 0) {
+          continue;
+        }
         char filename[NAME_MAX] = {};
         snprintf(filename, sizeof(filename), "%s/%s", kDevicePath, dp->d_name);
 
