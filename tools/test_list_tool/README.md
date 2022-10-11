@@ -18,7 +18,7 @@ This tool extends the test-list.json schema with a specific set of tags that wil
 | cpu | The CPU this test is intended to run on. For example: "x64" or "arm64".  | Copied from tests.json, which is output by the build. |
 | scope | The scope of the test. For example: "unit" or "integration". | See description below this table. |
 | realm | The test realm that the on-device Test Manager will run this test in. For example: "hermetic" or "system". | Copied from the "fuchsia.test" facet of the test's component manifest file. |
-| hermetic | "true" if this test is hermetic, "false" if not hermetic, empty if not applicable. | A test is hermetic if its realm is "hermetic". |
+| hermetic | "true" if this test is hermetic, "false" if not hermetic, empty if not applicable. | A test is hermetic if it does not depend on system capabilities or packages. |
 | legacy_test | "true" if this test is a legacy test, empty otherwise. | A test is a legacy test if its component URL ends in ".cmx" |
 
 #### Test Scopes
@@ -93,8 +93,8 @@ test.
 
 The supported build rules are:
 
-* `fuchsia_unittest_package` - Convenience rule for wrapping a single test in a package with a generated manifest.
-* `fuchsia_test_package` - Rule for including one or more test components in a package.
-* `fuchsia_test` - Rule for wrapping a single test component in a package.
-* `fuzzer_package` - Rule for defining a fuzzer and associated test.
-* `prebuilt_test_package` - Rule for wrapping a prebuilt test binary from another repository as a test package.
+- `fuchsia_unittest_package` - Convenience rule for wrapping a single test in a package with a generated manifest.
+- `fuchsia_test_package` - Rule for including one or more test components in a package.
+- `fuchsia_test` - Rule for wrapping a single test component in a package.
+- `fuzzer_package` - Rule for defining a fuzzer and associated test.
+- `prebuilt_test_package` - Rule for wrapping a prebuilt test binary from another repository as a test package.

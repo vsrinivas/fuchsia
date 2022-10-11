@@ -26,6 +26,10 @@ use {
 
 const META_FAR_PREFIX: &'static str = "meta/";
 const TEST_REALM_FACET_NAME: &'static str = "fuchsia.test.type";
+const TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY: &'static str =
+    "fuchsia.test.deprecated-allowed-packages";
+const TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY: &'static str =
+    "fuchsia.test.deprecated-allowed-all-packages";
 const HERMETIC_TEST_REALM: &'static str = "hermetic";
 // TODO(fxbug.dev/110507): This realm is deprecated. We will remove
 // this reference when it is no longer useful for burndown tracking.
@@ -124,6 +128,10 @@ fn update_tags_from_facets(
     test_tags: &mut FuchsiaTestTags,
     facets: &fdata::Dictionary,
 ) -> Result<(), Error> {
+    test_tags.realm = Some(HERMETIC_TEST_REALM.to_string());
+    let mut runs_in_hermetic_realm = true;
+    let mut depends_on_system_packages = false;
+    let mut deprecated_allowed_packages_facet_key_found = false;
     for facet in facets.entries.as_ref().unwrap_or(&vec![]) {
         // TODO(rudymathu): CFv1 tests should not have a hermetic tag.
         if facet.key.eq(TEST_REALM_FACET_NAME) {
@@ -134,8 +142,53 @@ fn update_tags_from_facets(
             match &**val {
                 fdata::DictionaryValue::Str(s) => {
                     test_tags.realm = Some(s.to_string());
-                    test_tags.hermetic = Some(s.eq(HERMETIC_TEST_REALM));
-                    return Ok(());
+                    runs_in_hermetic_realm = s.eq(HERMETIC_TEST_REALM);
+                }
+                _ => {
+                    return Err(error::TestListToolError::InvalidFacetValue(
+                        facet.key.clone(),
+                        format!("{:?}", val),
+                    )
+                    .into());
+                }
+            }
+        } else if facet.key.eq(TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY) {
+            let val = facet
+                .value
+                .as_ref()
+                .ok_or(error::TestListToolError::NullFacet(facet.key.clone()))?;
+            match &**val {
+                fdata::DictionaryValue::StrVec(s) => {
+                    deprecated_allowed_packages_facet_key_found = true;
+                    // this always overrides TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY
+                    depends_on_system_packages = !s.is_empty();
+                }
+                _ => {
+                    return Err(error::TestListToolError::InvalidFacetValue(
+                        facet.key.clone(),
+                        format!("{:?}", val),
+                    )
+                    .into());
+                }
+            }
+        }
+        // TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY overrides TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY
+        else if !deprecated_allowed_packages_facet_key_found
+            && facet.key.eq(TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY)
+        {
+            let val = facet
+                .value
+                .as_ref()
+                .ok_or(error::TestListToolError::NullFacet(facet.key.clone()))?;
+            match &**val {
+                fdata::DictionaryValue::Str(s) => {
+                    let v = s.trim().parse::<bool>().map_err(|_| {
+                        error::TestListToolError::InvalidFacetValue(
+                            facet.key.clone(),
+                            format!("{:?}", val),
+                        )
+                    })?;
+                    depends_on_system_packages = v;
                 }
                 _ => {
                     return Err(error::TestListToolError::InvalidFacetValue(
@@ -147,8 +200,10 @@ fn update_tags_from_facets(
             }
         }
     }
-    test_tags.realm = Some(HERMETIC_TEST_REALM.to_string());
-    test_tags.hermetic = Some(true);
+    // Only hermetic if the test is executed in `hermetic` realm and does not depend on any system
+    // packages.
+    test_tags.hermetic = Some(!depends_on_system_packages && runs_in_hermetic_realm);
+
     Ok(())
 }
 
@@ -432,6 +487,150 @@ mod tests {
             Some(e) => panic!("tags_from_facets returned incorrect TestListToolError: {:?}", e),
             None => panic!("tags_from_facets returned non-TestListToolError: {:?}", err),
         }
+
+        // test that hermetic tag depends on allowed_package_list
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![fdata::DictionaryEntry {
+            key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.to_string(),
+            value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![]))),
+        }]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        assert_eq!(tags, hermetic_tags);
+
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![fdata::DictionaryEntry {
+            key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.to_string(),
+            value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["some-pkg".to_string()]))),
+        }]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        let non_hermetic_tags = FuchsiaTestTags {
+            realm: Some(HERMETIC_TEST_REALM.to_string()),
+            hermetic: Some(false),
+            ..FuchsiaTestTags::default()
+        };
+        assert_eq!(tags, non_hermetic_tags);
+
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![
+            fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["some-pkg".to_string()]))),
+            },
+            fdata::DictionaryEntry {
+                key: TEST_REALM_FACET_NAME.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str(HERMETIC_TEST_REALM.to_string()))),
+            },
+        ]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        assert_eq!(tags, non_hermetic_tags);
+
+        // TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY overrides TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![
+            fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str("false".to_string()))),
+            },
+            fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["some-pkg".to_string()]))),
+            },
+            fdata::DictionaryEntry {
+                key: TEST_REALM_FACET_NAME.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str(HERMETIC_TEST_REALM.to_string()))),
+            },
+        ]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        assert_eq!(tags, non_hermetic_tags);
+
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![
+            fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![]))),
+            },
+            fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str("true".to_string()))),
+            },
+            fdata::DictionaryEntry {
+                key: TEST_REALM_FACET_NAME.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str(HERMETIC_TEST_REALM.to_string()))),
+            },
+        ]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        assert_eq!(tags, hermetic_tags);
+
+        // test with TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![
+            fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str("true".to_string()))),
+            },
+            fdata::DictionaryEntry {
+                key: TEST_REALM_FACET_NAME.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str(HERMETIC_TEST_REALM.to_string()))),
+            },
+        ]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        assert_eq!(tags, non_hermetic_tags);
+
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![
+            fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str("false".to_string()))),
+            },
+            fdata::DictionaryEntry {
+                key: TEST_REALM_FACET_NAME.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str(HERMETIC_TEST_REALM.to_string()))),
+            },
+        ]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        assert_eq!(tags, hermetic_tags);
+
+        // test with other collections
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![fdata::DictionaryEntry {
+            key: TEST_REALM_FACET_NAME.to_string(),
+            value: Some(Box::new(fdata::DictionaryValue::Str("other_collection".to_string()))),
+        }]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        let non_hermetic_tags = FuchsiaTestTags {
+            realm: Some("other_collection".to_string()),
+            hermetic: Some(false),
+            ..FuchsiaTestTags::default()
+        };
+        assert_eq!(tags, non_hermetic_tags);
+
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![
+            fdata::DictionaryEntry {
+                key: TEST_REALM_FACET_NAME.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str("other_collection".to_string()))),
+            },
+            fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str("true".to_string()))),
+            },
+        ]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        assert_eq!(tags, non_hermetic_tags);
+
+        let mut tags = FuchsiaTestTags::default();
+        facets.entries = Some(vec![
+            fdata::DictionaryEntry {
+                key: TEST_REALM_FACET_NAME.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str("other_collection".to_string()))),
+            },
+            fdata::DictionaryEntry {
+                key: TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY.to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![]))),
+            },
+        ]);
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        assert_eq!(tags, non_hermetic_tags);
     }
 
     #[test]
