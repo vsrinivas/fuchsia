@@ -232,53 +232,50 @@ sdk_molecule("e2e_testing_tools") {
 sdk_molecule("host_tools") {
   visibility = [ ":*" ]
 
-  if (sdk_cross_compile_host_tools) {
-    cross_compiled = [
-      "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
-      "//tools/cmc:cmc_sdk",
-      "//tools/configc:configc_sdk",
-      "//tools/fvdl:fvdl_sdk",
-      "//tools/sdk-tools/fpublish:fpublish_sdk",
-      "//tools/sdk-tools/fserve:fserve_sdk",
-      "//tools/sdk-tools/fssh:fssh_sdk",
-      "//src/developer/debug/zxdb:zxdb_sdk",
-      "//src/developer/ffx:bin_sdk",
-      "//src/storage/bin/fvm:fvm_sdk",
-      "//src/storage/tools/blobfs-compression:blobfs-compression_sdk",
-      "//src/sys/pkg/bin/far:bin_sdk",
-      "//src/sys/pkg/bin/pm:pm_bin_sdk",
-      "//tools/bootserver_old:bootserver_sdk",
-      "//tools/net/device-finder:device-finder_sdk",
-      "//tools/symbolizer:sdk",
-      "//tools/fidl/fidlc:fidl-format_sdk",
-      "//tools/fidl/fidlc:fidlc_sdk",
-      "//tools/fidlcat:fidlcat_sdk",
-      "//src/storage/blobfs/tools:blobfs_sdk",
-      "//zircon/tools/merkleroot:merkleroot_sdk",
-      "//src/storage/minfs/tools:minfs_sdk",
-      "//zircon/tools/zbi:zbi_sdk",
+  _host_tools = [
+    "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
+    "//tools/cmc:cmc_sdk",
+    "//tools/configc:configc_sdk",
+    "//tools/fvdl:fvdl_sdk",
+    "//tools/sdk-tools/fpublish:fpublish_sdk",
+    "//tools/sdk-tools/fserve:fserve_sdk",
+    "//tools/sdk-tools/fssh:fssh_sdk",
+    "//src/developer/debug/zxdb:zxdb_sdk",
+    "//src/developer/ffx:bin_sdk",
+    "//src/storage/bin/fvm:fvm_sdk",
+    "//src/storage/tools/blobfs-compression:blobfs-compression_sdk",
+    "//src/sys/pkg/bin/far:bin_sdk",
+    "//src/sys/pkg/bin/pm:pm_bin_sdk",
+    "//tools/bootserver_old:bootserver_sdk",
+    "//tools/net/device-finder:device-finder_sdk",
+    "//tools/symbolizer:sdk",
+    "//tools/fidl/fidlc:fidl-format_sdk",
+    "//tools/fidl/fidlc:fidlc_sdk",
+    "//tools/fidlcat:fidlcat_sdk",
+    "//src/storage/blobfs/tools:blobfs_sdk",
+    "//zircon/tools/merkleroot:merkleroot_sdk",
+    "//src/storage/minfs/tools:minfs_sdk",
+    "//zircon/tools/zbi:zbi_sdk",
 
-      # TODO(https://fxbug.dev/95661): Remove these once the emulators are available independently.
-      "//src/developer/ffx/plugins/emulator:aemu_internal",
-      "//src/developer/ffx/plugins/emulator:qemu_internal",
+    # TODO(https://fxbug.dev/95661): Remove these once the emulators are available independently.
+    "//src/developer/ffx/plugins/emulator:aemu_internal",
+    "//src/developer/ffx/plugins/emulator:qemu_internal",
+  ]
+
+  _toolchains = []
+  if (host_os == "linux" && sdk_cross_compile_host_tools) {
+    _toolchains += [
+      host_x64_toolchain,
+      host_arm64_toolchain,
     ]
+  } else {
+    _toolchains = [ host_toolchain ]
+  }
 
-    toolchains = []
-    if (host_os == "linux") {
-      toolchains += [
-        host_x64_toolchain,
-        host_arm64_toolchain,
-      ]
-    } else if (host_os == "mac") {
-      toolchains += [ host_toolchain ]
-    }
-
-    deps = []
-
-    foreach(toolchain, toolchains) {
-      foreach(dep, cross_compiled) {
-        deps += [ "$dep($toolchain)" ]
-      }
+  deps = []
+  foreach(toolchain, _toolchains) {
+    foreach(dep, _host_tools) {
+      deps += [ "$dep($toolchain)" ]
     }
   }
 }
@@ -360,6 +357,8 @@ sdk("core") {
   category = "partner"
 
   api = "manifests/core.manifest"
+
+  filter_api_host_tools = !sdk_cross_compile_host_tools
 
   deps = [
     ":core_idk",
@@ -541,29 +540,24 @@ sdk("fuchsia_dart") {
 sdk_molecule("driver_host_tools") {
   visibility = [ ":*" ]
 
-  if (sdk_cross_compile_host_tools) {
-    cross_compiled = [
-      "//src/devices/tools/fidlgen_banjo:fidlgen_banjo_bin_sdk",
-      "//tools/bindc:bindc_sdk",
-      "//tools/fidl/fidlgen_cpp:fidlgen_cpp_sdk",
+  _driver_host_tools = [
+    "//src/devices/tools/fidlgen_banjo:fidlgen_banjo_bin_sdk",
+    "//tools/bindc:bindc_sdk",
+    "//tools/fidl/fidlgen_cpp:fidlgen_cpp_sdk",
+  ]
+
+  if (host_os == "linux" && sdk_cross_compile_host_tools) {
+    _toolchains = [
+      host_x64_toolchain,
+      host_arm64_toolchain,
     ]
-
-    toolchains = []
-    if (host_os == "linux") {
-      toolchains += [
-        host_x64_toolchain,
-        host_arm64_toolchain,
-      ]
-    } else if (host_os == "mac") {
-      toolchains += [ host_toolchain ]
-    }
-
-    deps = []
-
-    foreach(toolchain, toolchains) {
-      foreach(dep, cross_compiled) {
-        deps += [ "$dep($toolchain)" ]
-      }
+  } else {
+    _toolchains = [ host_toolchain ]
+  }
+  deps = []
+  foreach(toolchain, _toolchains) {
+    foreach(dep, _driver_host_tools) {
+      deps += [ "$dep($toolchain)" ]
     }
   }
 }
@@ -603,6 +597,8 @@ sdk("driver") {
   category = "experimental"
 
   api = "manifests/driver.manifest"
+
+  filter_api_host_tools = !sdk_cross_compile_host_tools
 
   deps = [
     ":bind",

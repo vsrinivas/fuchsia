@@ -36,6 +36,12 @@ import("sdk_molecule.gni")
 #     build, for example to port a language runtime which would otherwise rely
 #     on an official SDK.
 #     Defaults to false.
+#
+#   filter_api_host_tools (optional)
+#     Boolean. Set to true to ignore host tools declarations in the api file
+#     that do not belong to the current host toolchain. Useful when
+#     host tools are not cross-compiled for several host architectures
+#     (see sdk_cross_compile_host_tools in //sdk/config.gni for details).
 
 template("sdk") {
   assert(defined(invoker.category), "Must define an SDK category")
@@ -104,6 +110,34 @@ template("sdk") {
 
   computed_api_file = "$root_out_dir/sdk/api/$sdk_name"
 
+  if (defined(invoker.api)) {
+    api_reference = invoker.api
+    api_deps = []
+    if (defined(invoker.filter_api_host_tools) &&
+        invoker.filter_api_host_tools) {
+      # Remove any host tools that does not belong to the current
+      # host_cpu architecture from the manifest, and use the
+      # result for verification.
+      host_api =
+          "$target_gen_dir/$generation_target_name.host_tools_only.manifest"
+      host_api_target = "$generation_target_name.host_tools_only.api"
+      action(host_api_target) {
+        script = "//build/sdk/filter_host_tools_from_sdk_api.py"
+        inputs = [ invoker.api ]
+        outputs = [ host_api ]
+        args = [
+          "--host_cpu=${host_cpu}",
+          "--input",
+          rebase_path(inputs[0], root_build_dir),
+          "--output",
+          rebase_path(outputs[0], root_build_dir),
+        ]
+      }
+      api_reference = host_api
+      api_deps = [ ":$host_api_target" ]
+    }
+  }
+
   # Verify that the contents of the SDK have not changed.
   action(verify_api_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
@@ -122,11 +156,12 @@ template("sdk") {
     ]
 
     if (defined(invoker.api)) {
-      inputs += [ invoker.api ]
+      inputs += [ api_reference ]
       args += [
         "--reference",
-        rebase_path(invoker.api, root_build_dir),
+        rebase_path(api_reference, root_build_dir),
       ]
+      deps = api_deps
     }
 
     if (warn_on_sdk_changes) {
