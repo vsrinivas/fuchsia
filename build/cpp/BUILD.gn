@@ -45,8 +45,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/devices/board/drivers/x86/test:x86-board",
     "//src/devices/bus/drivers/platform:platform-bus-driver",
     "//src/devices/bus/drivers/platform:platform-bus-unittest",
-    "//src/devices/bus/drivers/platform/test:platform-bus",
-    "//src/devices/bus/drivers/platform/test:platform-bus-bti",
     "//src/devices/cpu/bin/cpuctl",
     "//src/devices/cpu/bin/cpuctl:cpuctl-test-bin",
     "//src/devices/cpu/drivers/aml-cpu:aml-cpu-test-bin",

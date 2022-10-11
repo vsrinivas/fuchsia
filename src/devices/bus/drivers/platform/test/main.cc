@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/vmo.h>
@@ -28,11 +29,12 @@ using device_watcher::RecursiveWaitForFile;
 using devmgr_integration_test::IsolatedDevmgr;
 
 TEST(PbusTest, Enumeration) {
-  devmgr_launcher::Args args;
-  args.sys_device_driver = "fuchsia-boot:///#driver/platform-bus.so";
-
   IsolatedDevmgr devmgr;
-  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
+  ASSERT_OK(IsolatedDevmgr::Create(
+      {
+          .sys_device_driver = "fuchsia-boot:///#driver/platform-bus.so",
+      },
+      &devmgr));
 
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
@@ -80,8 +82,9 @@ TEST(PbusTest, Enumeration) {
 
   // Check that we see multiple entries that begin with "fragment-" for a device that is a
   // fragment of multiple composites
-  fbl::unique_fd clock_dir(
+  const fbl::unique_fd clock_dir(
       openat(dirfd, "sys/platform/11:01:7/test-clock/clock-1", O_DIRECTORY | O_RDONLY));
+  ASSERT_TRUE(clock_dir.is_valid(), "%s", strerror(errno));
   size_t devices_seen = 0;
   ASSERT_EQ(
       fdio_watch_directory(
@@ -103,28 +106,40 @@ TEST(PbusTest, Enumeration) {
   fbl::unique_fd platform_bus;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &platform_bus));
 
-  zx::channel channel;
-  ASSERT_OK(fdio_get_service_handle(platform_bus.release(), channel.reset_and_get_address()));
+  fdio_cpp::FdioCaller caller{std::move(platform_bus)};
 
-  fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client(std::move(channel));
+  zx::status channel = caller.take_as<fuchsia_sysinfo::SysInfo>();
+  ASSERT_OK(channel.status_value());
+
+  const fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client(std::move(channel.value()));
+
   // Get board name.
-  auto board_info = client->GetBoardName();
-  EXPECT_OK(board_info.status());
-  EXPECT_TRUE(board_info.ok());
-  EXPECT_BYTES_EQ(board_info.value().name.cbegin(), "driver-integration-test",
-                  board_info.value().name.size());
-  EXPECT_EQ(board_info.value().name.size(), strlen("driver-integration-test"));
+  [&client]() {
+    const fidl::WireResult result = client->GetBoardName();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    const std::string board_info{response.name.get()};
+    EXPECT_STREQ(board_info, "driver-integration-test");
+  }();
 
   // Get interrupt controller information.
-  auto irq_ctrl_info = client->GetInterruptControllerInfo();
-  EXPECT_OK(irq_ctrl_info.status());
-  EXPECT_TRUE(irq_ctrl_info.ok());
-  EXPECT_NE(nullptr, irq_ctrl_info.value().info);
+  [&client]() {
+    const fidl::WireResult result = client->GetInterruptControllerInfo();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    ASSERT_NOT_NULL(response.info.get());
+  }();
 
   // Get board revision information.
-  auto board_revision = client->GetBoardRevision();
-  EXPECT_OK(board_revision.status());
-  EXPECT_TRUE(board_revision.ok());
+  [&client]() {
+    const fidl::WireResult result = client->GetBoardRevision();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    ASSERT_OK(response.status);
+    ASSERT_NE(response.revision, 0);
+  }();
 }
 
 }  // namespace
