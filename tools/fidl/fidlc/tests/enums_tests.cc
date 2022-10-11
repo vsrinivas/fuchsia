@@ -152,22 +152,22 @@ type E = enum {};
   ASSERT_COMPILED(library);
 }
 
-TEST(EnumsTests, BadEnumTestNoMembersWhenStrict) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type E = strict enum {};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
+TEST(EnumsTests, GoodEnumTestNoMembersAllowedWhenFlexible) {
+  TestLibrary library;
+  library.AddFile("good/empty_flexible_enum.test.fidl");
+  ASSERT_COMPILED(library);
 }
 
-TEST(EnumsTests, GoodEnumTestNoMembersAllowedWhenFlexible) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type E = flexible enum {};
-)FIDL");
+TEST(EnumsTests, GoodEnumTestStrictWithMembers) {
+  TestLibrary library;
+  library.AddFile("good/simple_strict_enum.test.fidl");
   ASSERT_COMPILED(library);
+}
+
+TEST(EnumsTests, BadEnumTestNoMembersWhenStrict) {
+  TestLibrary library;
+  library.AddFile("bad/empty_strict_enum.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
 }
 
 TEST(EnumsTests, GoodEnumTestKeywordNames) {

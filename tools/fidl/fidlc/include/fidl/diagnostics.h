@@ -41,7 +41,7 @@ constexpr UndocumentedErrorDef<15> ErrAttributeArgsMustAllBeNamed(
 constexpr UndocumentedErrorDef<16> ErrMissingOrdinalBeforeMember("missing ordinal before member");
 constexpr UndocumentedErrorDef<17> ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef<18> ErrOrdinalsMustStartAtOne("ordinals must start at 1");
-constexpr UndocumentedErrorDef<19> ErrMustHaveOneMember("must have at least one member");
+constexpr ErrorDef<19> ErrMustHaveOneMember("must have at least one member");
 constexpr UndocumentedErrorDef<20> ErrUnrecognizedProtocolMember("unrecognized protocol member");
 constexpr UndocumentedErrorDef<21> ErrExpectedProtocolMember("expected protocol member");
 constexpr UndocumentedErrorDef<22> ErrCannotAttachAttributeToIdentifier(
