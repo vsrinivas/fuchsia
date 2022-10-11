@@ -32,6 +32,7 @@ use futures::{
 use net_declare::{
     fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet, std_ip_v4, std_socket_addr,
 };
+use net_types::ip::{Ipv4, Ipv6};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
 use netstack_testing_common::{
     ping,
@@ -694,15 +695,28 @@ async fn run_tcp_socket_test(
     let ((), ()) = futures::future::join(client_fut, server_fut).await;
 }
 
-// TODO(https://fxbug.dev/104974): This currently only tests for IPv4 addresses,
-// once we can support IPv6 in `join_network`, then we can parametrize this test
-// and exercise IPv6 code paths for TCP as well.
+trait TestIpExt {
+    const CLIENT_SUBNET: fnet::Subnet;
+    const SERVER_SUBNET: fnet::Subnet;
+}
+
+impl TestIpExt for Ipv4 {
+    const CLIENT_SUBNET: fnet::Subnet = fidl_subnet!("192.168.0.2/24");
+    const SERVER_SUBNET: fnet::Subnet = fidl_subnet!("192.168.0.1/24");
+}
+
+impl TestIpExt for Ipv6 {
+    const CLIENT_SUBNET: fnet::Subnet = fidl_subnet!("2001:0db8:85a3::8a2e:0370:7334/64");
+    const SERVER_SUBNET: fnet::Subnet = fidl_subnet!("2001:0db8:85a3::8a2e:0370:7335/64");
+}
+
 // Note: This methods returns the two end of the established connection through
 // a continuation, this is if we return them directly, the endpoints created
 // inside the function will be dropped so no packets can be possibly sent and
 // ultimately fail the tests. Using a closure allows us to execute the rest of
 // test within the context where the endpoints are still alive.
 async fn tcp_socket_accept_cross_ns<
+    I: net_types::ip::Ip + TestIpExt,
     Client: Netstack,
     Server: Netstack,
     E: netemul::Endpoint,
@@ -722,7 +736,10 @@ async fn tcp_socket_accept_cross_ns<
         .join_network::<E, _>(&net, "client-ep")
         .await
         .expect("failed to join network in realm");
-    client_interface.add_address_and_subnet_route(CLIENT_SUBNET).await.expect("configure address");
+    client_interface
+        .add_address_and_subnet_route(I::CLIENT_SUBNET)
+        .await
+        .expect("configure address");
 
     let server = sandbox
         .create_netstack_realm::<Server, _>(format!("{}_server", name))
@@ -731,11 +748,14 @@ async fn tcp_socket_accept_cross_ns<
         .join_network::<E, _>(&net, "server-ep")
         .await
         .expect("failed to join network in realm");
-    server_interface.add_address_and_subnet_route(SERVER_SUBNET).await.expect("configure address");
+    server_interface
+        .add_address_and_subnet_route(I::SERVER_SUBNET)
+        .await
+        .expect("configure address");
 
-    let fnet_ext::IpAddress(client_ip) = CLIENT_SUBNET.addr.into();
+    let fnet_ext::IpAddress(client_ip) = I::CLIENT_SUBNET.addr.into();
 
-    let fnet_ext::IpAddress(server_ip) = SERVER_SUBNET.addr.into();
+    let fnet_ext::IpAddress(server_ip) = I::SERVER_SUBNET.addr.into();
     let server_addr = std::net::SocketAddr::new(server_ip, 8080);
 
     let listener = fasync::net::TcpListener::listen_in_realm(&server, server_addr)
@@ -753,12 +773,25 @@ async fn tcp_socket_accept_cross_ns<
 }
 
 #[variants_test]
-async fn tcp_socket_accept<E: netemul::Endpoint, Client: Netstack, Server: Netstack>(name: &str) {
-    tcp_socket_accept_cross_ns::<Client, Server, E, _, _>(name, |_client, _server| async {}).await
+async fn tcp_socket_accept<
+    I: net_types::ip::Ip + TestIpExt,
+    E: netemul::Endpoint,
+    Client: Netstack,
+    Server: Netstack,
+>(
+    name: &str,
+) {
+    tcp_socket_accept_cross_ns::<I, Client, Server, E, _, _>(name, |_client, _server| async {})
+        .await
 }
 
 #[variants_test]
-async fn tcp_socket_send_recv<E: netemul::Endpoint, Client: Netstack, Server: Netstack>(
+async fn tcp_socket_send_recv<
+    I: net_types::ip::Ip + TestIpExt,
+    E: netemul::Endpoint,
+    Client: Netstack,
+    Server: Netstack,
+>(
     name: &str,
 ) {
     async fn send_recv(mut sender: fasync::net::TcpStream, mut receiver: fasync::net::TcpStream) {
@@ -771,7 +804,7 @@ async fn tcp_socket_send_recv<E: netemul::Endpoint, Client: Netstack, Server: Ne
         assert_eq!(read_count, write_count);
         assert_eq!(&buf[..read_count], PAYLOAD);
     }
-    tcp_socket_accept_cross_ns::<Client, Server, E, _, _>(name, send_recv).await
+    tcp_socket_accept_cross_ns::<I, Client, Server, E, _, _>(name, send_recv).await
 }
 
 #[variants_test]
