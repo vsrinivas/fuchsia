@@ -504,7 +504,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
 }
 
 zx_status_t GicDistributor::ConfigureZbi(cpp20::span<std::byte> zbi) const {
-  const zbi_dcfg_arm_gicv2_driver_t gic_v2 = {
+  const zbi_dcfg_arm_gic_v2_driver_t gic_v2 = {
       .mmio_phys = kGicv2DistributorPhysBase,
       .gicd_offset = 0x0000,
       .gicc_offset = kGicv2DistributorSize,
@@ -513,7 +513,7 @@ zx_status_t GicDistributor::ConfigureZbi(cpp20::span<std::byte> zbi) const {
       .use_msi = true,
   };
 
-  const zbi_dcfg_arm_gicv3_driver_t gic_v3 = {
+  const zbi_dcfg_arm_gic_v3_driver_t gic_v3 = {
       .mmio_phys = kGicv3DistributorPhysBase,
       .gicd_offset = 0x00000,
       .gicr_offset = kGicv3RedistributorSize,
@@ -527,7 +527,8 @@ zx_status_t GicDistributor::ConfigureZbi(cpp20::span<std::byte> zbi) const {
   return LogIfZbiError(image.Append(
       zbi_header_t{
           .type = ZBI_TYPE_KERNEL_DRIVER,
-          .extra = static_cast<uint32_t>(v2 ? ZBI_KERNEL_DRIVER_ARM_GIC_V2 : ZBI_KERNEL_DRIVER_ARM_GIC_V3),
+          .extra = static_cast<uint32_t>(v2 ? ZBI_KERNEL_DRIVER_ARM_GIC_V2
+                                            : ZBI_KERNEL_DRIVER_ARM_GIC_V3),
       },
       v2 ? zbitl::AsBytes(&gic_v2, sizeof(gic_v2)) : zbitl::AsBytes(&gic_v3, sizeof(gic_v3))));
 }

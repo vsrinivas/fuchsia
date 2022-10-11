@@ -259,8 +259,8 @@ uint8_t topology_from_madt(const acpi_madt_t* madt, zbi_topology_node_t* nodes, 
 
 // Use the data in the MADT table to construct a GIC configuration.
 // Returns the version of the GIC that was found, 0 if there was an error.
-uint8_t gic_driver_from_madt(const acpi_madt_t* madt, zbi_dcfg_arm_gicv2_driver_t* v2_cfg,
-                             zbi_dcfg_arm_gicv3_driver_t* v3_cfg);
+uint8_t gic_driver_from_madt(const acpi_madt_t* madt, zbi_dcfg_arm_gic_v2_driver_t* v2_cfg,
+                             zbi_dcfg_arm_gic_v3_driver_t* v3_cfg);
 
 // Uses the data in the FADT table to construct a PSCI configuration.
 // Returns -1 if the architecture does not support PSCI.

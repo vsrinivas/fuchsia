@@ -11,7 +11,7 @@
 #include <zircon/boot/driver-config.h>
 
 // Early and late initialization routines for the driver.
-void ArmGicInitEarly(const zbi_dcfg_arm_gicv2_driver_t& config);
-void ArmGicInitLate(const zbi_dcfg_arm_gicv2_driver_t& config);
+void ArmGicInitEarly(const zbi_dcfg_arm_gic_v2_driver_t& config);
+void ArmGicInitLate(const zbi_dcfg_arm_gic_v2_driver_t& config);
 
 #endif  // ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_V2_INCLUDE_DEV_INTERRUPT_ARM_GICV2_INIT_H_

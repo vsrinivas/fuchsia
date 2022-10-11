@@ -4,6 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#ifndef ZIRCON_KERNEL_TARGET_ARM64_BOARD_VISALIA_BOOT_SHIM_CONFIG_H_
+#define ZIRCON_KERNEL_TARGET_ARM64_BOARD_VISALIA_BOOT_SHIM_CONFIG_H_
+
 #define HAS_DEVICE_TREE 0
 
 static const zbi_mem_range_t mem_config[] = {
@@ -24,7 +27,7 @@ static const zbi_dcfg_simple_t uart_driver = {
     .irq = 88,
 };
 
-static const zbi_dcfg_arm_gicv2_driver_t gicv2_driver = {
+static const zbi_dcfg_arm_gic_v2_driver_t gic_v2_driver = {
     .mmio_phys = 0xf7900000,
     .gicd_offset = 0x1000,
     .gicc_offset = 0x2000,
@@ -85,12 +88,12 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
   // add kernel drivers
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_DW8250_UART, &uart_driver,
                    sizeof(uart_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2, &gicv2_driver,
-                   sizeof(gicv2_driver));
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2, &gic_v2_driver,
+                   sizeof(gic_v2_driver));
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_PSCI, &psci_driver,
                    sizeof(psci_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER, &timer_driver,
-                   sizeof(timer_driver));
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER,
+                   &timer_driver, sizeof(timer_driver));
 
   // append_boot_item doesn't support zero-length payloads, so we have to call zbi_create_entry
   // directly.
@@ -104,3 +107,5 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
 }
+
+#endif  // ZIRCON_KERNEL_TARGET_ARM64_BOARD_VISALIA_BOOT_SHIM_CONFIG_H_

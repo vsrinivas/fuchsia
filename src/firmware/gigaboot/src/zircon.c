@@ -316,8 +316,8 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
 
   acpi_madt_t* madt = (acpi_madt_t*)load_table_with_signature(rsdp, (uint8_t*)kMadtSignature);
   uint8_t num_cpu_nodes = 0;
-  zbi_dcfg_arm_gicv2_driver_t v2_gic_cfg;
-  zbi_dcfg_arm_gicv3_driver_t v3_gic_cfg;
+  zbi_dcfg_arm_gic_v2_driver_t v2_gic_cfg;
+  zbi_dcfg_arm_gic_v3_driver_t v3_gic_cfg;
   uint8_t gic_version = 0;
   if (madt != 0) {
     // Assemble CPU topology.

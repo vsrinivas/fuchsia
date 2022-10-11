@@ -12,7 +12,7 @@
 
 // Early (single-threaded) and late (multi-threaded) initialization routines
 // for the driver.
-void Generic32BitWatchdogEarlyInit(const zbi_dcfg_generic_32bit_watchdog_t& config);
+void Generic32BitWatchdogEarlyInit(const zbi_dcfg_generic32_watchdog_t& config);
 void Generic32BitWatchdogLateInit();
 
 #endif  // ZIRCON_KERNEL_DEV_HW_WATCHDOG_GENERIC32_INCLUDE_DEV_HW_WATCHDOG_GENERIC32_INIT_H_

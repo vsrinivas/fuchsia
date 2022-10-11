@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef ZIRCON_KERNEL_TARGET_ARM64_BOARD_MOTMOT_BOOT_SHIM_CONFIG_H_
+#define ZIRCON_KERNEL_TARGET_ARM64_BOARD_MOTMOT_BOOT_SHIM_CONFIG_H_
+
 #define HAS_DEVICE_TREE 1
 #define USE_DEVICE_TREE_CPU_COUNT 0
 #define USE_DEVICE_TREE_GIC_VERSION 0
@@ -46,7 +49,7 @@ static const zbi_dcfg_simple_t uart_driver = {
     .irq = 634 + 32,  // SPI[634] INTREQ__USI0_UART_PERIC0
 };
 
-static const zbi_dcfg_arm_gicv3_driver_t gicv3_driver = {
+static const zbi_dcfg_arm_gic_v3_driver_t gic_v3_driver = {
     .mmio_phys = 0x10400000,
     .gicd_offset = 0x00000,
     .gicr_offset = 0x40000,
@@ -66,7 +69,7 @@ static const zbi_dcfg_arm_generic_timer_driver_t timer_driver = {
 
 // TODO: fxb/86566 implement proper watchdog driver for hardware
 #define WDT_CLUSTER0 (0x10060000)
-static const zbi_dcfg_generic_32bit_watchdog_t watchdog_driver = {
+static const zbi_dcfg_generic32_watchdog_t watchdog_driver = {
     .pet_action =
         {
             .addr = WDT_CLUSTER0 + 0x8,  // count register
@@ -76,7 +79,7 @@ static const zbi_dcfg_generic_32bit_watchdog_t watchdog_driver = {
     .enable_action = {},
     .disable_action = {},
     .watchdog_period_nsec = ZX_SEC(10),
-    .flags = ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG_FLAG_ENABLED,
+    .flags = ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_FLAG_ENABLED,
     .reserved = 0,
 };
 
@@ -174,17 +177,19 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
   // add kernel drivers
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_MOTMOT_UART, &uart_driver,
                    sizeof(uart_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V3, &gicv3_driver,
-                   sizeof(gicv3_driver));
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V3, &gic_v3_driver,
+                   sizeof(gic_v3_driver));
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_PSCI, &psci_driver,
                    sizeof(psci_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER, &timer_driver,
-                   sizeof(timer_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG, &watchdog_driver,
-                   sizeof(watchdog_driver));
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER,
+                   &timer_driver, sizeof(timer_driver));
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG,
+                   &watchdog_driver, sizeof(watchdog_driver));
   uint32_t junk = 0;
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_MOTMOT_POWER, &junk, 0);
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
 }
+
+#endif  // ZIRCON_KERNEL_TARGET_ARM64_BOARD_MOTMOT_BOOT_SHIM_CONFIG_H_

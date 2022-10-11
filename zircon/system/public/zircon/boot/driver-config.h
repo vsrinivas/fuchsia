@@ -36,7 +36,7 @@
 #define ZBI_KERNEL_DRIVER_AMLOGIC_RNG ((uint32_t)(0x484c4d52u))
 
 // 'WD32'
-#define ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG ((uint32_t)(0x32334457u))
+#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG ((uint32_t)(0x32334457u))
 
 // '8250'
 #define ZBI_KERNEL_DRIVER_I8250_PIO_UART ((uint32_t)(0x30353238u))
@@ -91,7 +91,7 @@ typedef struct {
   uint8_t optional;
   uint8_t use_msi;
   uint16_t reserved;
-} zbi_dcfg_arm_gicv2_driver_t;
+} zbi_dcfg_arm_gic_v2_driver_t;
 
 // for ZBI_KERNEL_DRIVER_ARM_GIC_V3
 typedef struct {
@@ -103,7 +103,7 @@ typedef struct {
   uint32_t ipi_base;
   uint8_t optional;
   uint8_t reserved1[3];
-} zbi_dcfg_arm_gicv3_driver_t;
+} zbi_dcfg_arm_gic_v3_driver_t;
 
 // for ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER
 typedef struct {
@@ -138,30 +138,30 @@ typedef struct {
   uint64_t addr;
   uint32_t clr_mask;
   uint32_t set_mask;
-} zbi_dcfg_generic_32bit_watchdog_action_t;
+} zbi_dcfg_generic32_watchdog_action_t;
 
 // TODO(fxbug.dev/111453): Update singular naming for better modeling as a FIDL
 // bits declaration.
-#define ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG_FLAG_ENABLED ((uint32_t)0x00000001)
+#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_FLAG_ENABLED ((uint32_t)0x00000001)
 
 // 1ms
-#define ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG_MIN_PERIOD ((int64_t)(1000000))
+#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_MIN_PERIOD ((int64_t)(1000000))
 
 // Definitions of actions which may be taken by a generic 32 bit watchdog timer
 // kernel driver which may be passed by a bootloader.  Field definitions are as
 // follows.
 typedef struct {
   // The address and masks needed to "pet" (aka, dismiss) a hardware watchdog timer.
-  zbi_dcfg_generic_32bit_watchdog_action_t pet_action;
+  zbi_dcfg_generic32_watchdog_action_t pet_action;
 
   // The address and masks needed to enable a hardware watchdog timer.  If enable
   // is an unsupported operation, the addr of the |enable_action| shall be zero.
-  zbi_dcfg_generic_32bit_watchdog_action_t enable_action;
+  zbi_dcfg_generic32_watchdog_action_t enable_action;
 
   // The address and masks needed to disable a hardware watchdog timer.  If
   // disable is an unsupported operation, the addr of the |disable_action| shall
   // be zero.
-  zbi_dcfg_generic_32bit_watchdog_action_t disable_action;
+  zbi_dcfg_generic32_watchdog_action_t disable_action;
 
   // The period of the watchdog timer given in nanoseconds.  When enabled, the
   // watchdog timer driver must pet the watch dog at least this often.  The value
@@ -175,6 +175,6 @@ typedef struct {
   uint32_t flags;
 
   uint32_t reserved;
-} zbi_dcfg_generic_32bit_watchdog_t;
+} zbi_dcfg_generic32_watchdog_t;
 
 #endif  // SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_

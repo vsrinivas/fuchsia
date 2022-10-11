@@ -490,7 +490,7 @@ static const struct pdev_interrupt_ops gic_ops = {
     .msi_register_handler = gic_msi_register_handler,
 };
 
-void ArmGicInitEarly(const zbi_dcfg_arm_gicv3_driver_t& config) {
+void ArmGicInitEarly(const zbi_dcfg_arm_gic_v3_driver_t& config) {
   ASSERT(config.mmio_phys);
 
   LTRACE_ENTRY;
@@ -530,7 +530,7 @@ void ArmGicInitEarly(const zbi_dcfg_arm_gicv3_driver_t& config) {
   LTRACE_EXIT;
 }
 
-void ArmGicInitLate(const zbi_dcfg_arm_gicv3_driver_t& config) {
+void ArmGicInitLate(const zbi_dcfg_arm_gic_v3_driver_t& config) {
   ASSERT(mmio_phys);
 
   arm_gicv3_pcie_init();

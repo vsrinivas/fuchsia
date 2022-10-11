@@ -234,10 +234,10 @@ uint8_t topology_from_madt(const acpi_madt_t* madt, zbi_topology_node_t* nodes, 
   return num_nodes;
 }
 
-uint8_t gic_driver_from_madt(const acpi_madt_t* madt, zbi_dcfg_arm_gicv2_driver_t* v2_cfg,
-                             zbi_dcfg_arm_gicv3_driver_t* v3_cfg) {
-  memset(v2_cfg, 0x0, sizeof(zbi_dcfg_arm_gicv2_driver_t));
-  memset(v3_cfg, 0x0, sizeof(zbi_dcfg_arm_gicv3_driver_t));
+uint8_t gic_driver_from_madt(const acpi_madt_t* madt, zbi_dcfg_arm_gic_v2_driver_t* v2_cfg,
+                             zbi_dcfg_arm_gic_v3_driver_t* v3_cfg) {
+  memset(v2_cfg, 0x0, sizeof(zbi_dcfg_arm_gic_v2_driver_t));
+  memset(v3_cfg, 0x0, sizeof(zbi_dcfg_arm_gic_v3_driver_t));
   const uint8_t* madt_end = (uint8_t*)madt + madt->hdr.length;
   // The list of interrupt controller structures is located at the end of MADT,
   // and each one starts with a type and a length.

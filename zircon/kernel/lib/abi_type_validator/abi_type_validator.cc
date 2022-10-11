@@ -533,27 +533,27 @@ VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_psci_driver_t, reboot_args, 32, 24);
 VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_psci_driver_t, reboot_bootloader_args, 56, 24);
 VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_psci_driver_t, reboot_recovery_args, 80, 24);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zbi_dcfg_arm_gicv2_driver_t, 56, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, mmio_phys, 0, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, msi_frame_phys, 8, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, gicd_offset, 16, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, gicc_offset, 24, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, gich_offset, 32, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, gicv_offset, 40, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, ipi_base, 48, 4);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, optional, 52, 1);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, use_msi, 53, 1);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv2_driver_t, reserved, 54, 2);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zbi_dcfg_arm_gic_v2_driver_t, 56, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, mmio_phys, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, msi_frame_phys, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, gicd_offset, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, gicc_offset, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, gich_offset, 32, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, gicv_offset, 40, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, ipi_base, 48, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, optional, 52, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, use_msi, 53, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v2_driver_t, reserved, 54, 2);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zbi_dcfg_arm_gicv3_driver_t, 48, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv3_driver_t, mmio_phys, 0, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv3_driver_t, gicd_offset, 8, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv3_driver_t, gicr_offset, 16, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv3_driver_t, gicr_stride, 24, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv3_driver_t, reserved0, 32, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv3_driver_t, ipi_base, 40, 4);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv3_driver_t, optional, 44, 1);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gicv3_driver_t, reserved1, 45, 3);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zbi_dcfg_arm_gic_v3_driver_t, 48, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v3_driver_t, mmio_phys, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v3_driver_t, gicd_offset, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v3_driver_t, gicr_offset, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v3_driver_t, gicr_stride, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v3_driver_t, reserved0, 32, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v3_driver_t, ipi_base, 40, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v3_driver_t, optional, 44, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_gic_v3_driver_t, reserved1, 45, 3);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zbi_dcfg_arm_generic_timer_driver_t, 16, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_arm_generic_timer_driver_t, irq_phys, 0, 4);
@@ -571,18 +571,18 @@ VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_amlogic_rng_driver_t, rng_data_phys, 0, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_amlogic_rng_driver_t, rng_status_phys, 8, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_amlogic_rng_driver_t, rng_refresh_interval_usec, 16, 8);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zbi_dcfg_generic_32bit_watchdog_action_t, 16, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic_32bit_watchdog_action_t, addr, 0, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic_32bit_watchdog_action_t, clr_mask, 8, 4);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic_32bit_watchdog_action_t, set_mask, 12, 4);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zbi_dcfg_generic32_watchdog_action_t, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic32_watchdog_action_t, addr, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic32_watchdog_action_t, clr_mask, 8, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic32_watchdog_action_t, set_mask, 12, 4);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zbi_dcfg_generic_32bit_watchdog_t, 64, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic_32bit_watchdog_t, pet_action, 0, 16);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic_32bit_watchdog_t, enable_action, 16, 16);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic_32bit_watchdog_t, disable_action, 32, 16);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic_32bit_watchdog_t, watchdog_period_nsec, 48, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic_32bit_watchdog_t, flags, 56, 4);
-VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic_32bit_watchdog_t, reserved, 60, 4);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zbi_dcfg_generic32_watchdog_t, 64, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic32_watchdog_t, pet_action, 0, 16);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic32_watchdog_t, enable_action, 16, 16);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic32_watchdog_t, disable_action, 32, 16);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic32_watchdog_t, watchdog_period_nsec, 48, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic32_watchdog_t, flags, 56, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zbi_dcfg_generic32_watchdog_t, reserved, 60, 4);
 
 #undef VALIDATE_TYPE_SIZE_ALIGNMENT
 #undef VALIDATE_FIELD_OFFSET_SIZE

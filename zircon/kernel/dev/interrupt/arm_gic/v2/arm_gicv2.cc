@@ -416,7 +416,7 @@ static const struct pdev_interrupt_ops gic_ops = {
     .msi_register_handler = arm_gicv2m_msi_register_handler,
 };
 
-void ArmGicInitEarly(const zbi_dcfg_arm_gicv2_driver_t& config) {
+void ArmGicInitEarly(const zbi_dcfg_arm_gic_v2_driver_t& config) {
   ASSERT(config.mmio_phys);
 
   arm_gicv2_gic_base = periph_paddr_to_vaddr(config.mmio_phys);
@@ -467,7 +467,7 @@ void ArmGicInitEarly(const zbi_dcfg_arm_gicv2_driver_t& config) {
   gicv2_hw_interface_register();
 }
 
-void ArmGicInitLate(const zbi_dcfg_arm_gicv2_driver_t& config) {
+void ArmGicInitLate(const zbi_dcfg_arm_gic_v2_driver_t& config) {
   ASSERT(mmio_phys);
 
   arm_gicv2_pcie_init(use_msi);

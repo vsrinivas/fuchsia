@@ -79,8 +79,8 @@ void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
   // interrupt handlers.
   ktl::visit([](const auto& config) { ArmGicInitEarly(config); }, arch_handoff.gic_driver);
 
-  if (arch_handoff.generic_32bit_watchdog_driver) {
-    Generic32BitWatchdogEarlyInit(arch_handoff.generic_32bit_watchdog_driver.value());
+  if (arch_handoff.generic32_watchdog_driver) {
+    Generic32BitWatchdogEarlyInit(arch_handoff.generic32_watchdog_driver.value());
   }
 
   if (arch_handoff.generic_timer_driver) {
@@ -112,7 +112,7 @@ void ArchDriverHandoffLate(const ArchPhysHandoff& arch_handoff) {
     AmlogicRngInit(arch_handoff.amlogic_rng_driver.value());
   }
 
-  if (arch_handoff.generic_32bit_watchdog_driver) {
+  if (arch_handoff.generic32_watchdog_driver) {
     Generic32BitWatchdogLateInit();
   }
 }

@@ -32,7 +32,7 @@ class GenericWatchdog32 {
 
   // Early init takes place while we are still single threaded, and don't need
   // to worry about thread safety.
-  void InitEarly(const zbi_dcfg_generic_32bit_watchdog_t& config);
+  void InitEarly(const zbi_dcfg_generic32_watchdog_t& config);
   void Init();
 
   // Actions
@@ -93,7 +93,7 @@ class GenericWatchdog32 {
 
  private:
   static bool TranslatePAddr(uint64_t* paddr);
-  void TakeAction(const zbi_dcfg_generic_32bit_watchdog_action_t& action) TA_REQ(lock_) {
+  void TakeAction(const zbi_dcfg_generic32_watchdog_action_t& action) TA_REQ(lock_) {
     uint32_t val = readl(action.addr);
     val &= ~action.clr_mask;
     val |= action.set_mask;
@@ -119,7 +119,7 @@ class GenericWatchdog32 {
   void PretendLocked() TA_ASSERT(lock_) {}
 
   mutable DECLARE_SPINLOCK(GenericWatchdog32) lock_;
-  zbi_dcfg_generic_32bit_watchdog_t cfg_{};
+  zbi_dcfg_generic32_watchdog_t cfg_{};
   zx_status_t early_init_result_ = ZX_ERR_INTERNAL;
   zx_time_t last_pet_time_ TA_GUARDED(lock_) = 0;
   Timer pet_timer_ TA_GUARDED(lock_);
@@ -139,7 +139,7 @@ static const pdev_watchdog_ops_t THUNKS = {
     .is_petting_suppressed = []() -> bool { return g_watchdog.IsPettingSuppressed(); },
 };
 
-void GenericWatchdog32::InitEarly(const zbi_dcfg_generic_32bit_watchdog_t& config) {
+void GenericWatchdog32::InitEarly(const zbi_dcfg_generic32_watchdog_t& config) {
   // "Assert" that we are holding the lock.  While this is technically a no-op,
   // it tells the thread analyzer to pretend that we are holding the lock.  We
   // are in the early init stage of boot, so it is too early to need to worry
@@ -165,7 +165,7 @@ void GenericWatchdog32::InitEarly(const zbi_dcfg_generic_32bit_watchdog_t& confi
 
   // The watchdog period must be at least 1 mSec.  We don't want to spend 15% of
   // our CPU petting the watchdog all of the time.
-  if (config.watchdog_period_nsec < ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG_MIN_PERIOD) {
+  if (config.watchdog_period_nsec < ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_MIN_PERIOD) {
     early_init_result_ = ZX_ERR_INVALID_ARGS;
     return;
   }
@@ -184,7 +184,7 @@ void GenericWatchdog32::InitEarly(const zbi_dcfg_generic_32bit_watchdog_t& confi
   TranslatePAddr(&cfg_.disable_action.addr);
 
   // Record our initial enabled/disabled state.
-  is_enabled_ = (cfg_.flags & ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG_FLAG_ENABLED) != 0;
+  is_enabled_ = (cfg_.flags & ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_FLAG_ENABLED) != 0;
 
   // If we are currently enabled, be sure to pet the dog ASAP.  We don't want it
   // to fire while we are bringing up the kernel to the point where we can do
@@ -273,7 +273,7 @@ bool GenericWatchdog32::TranslatePAddr(uint64_t* paddr) {
   return (*paddr != 0);
 }
 
-void Generic32BitWatchdogEarlyInit(const zbi_dcfg_generic_32bit_watchdog_t& config) {
+void Generic32BitWatchdogEarlyInit(const zbi_dcfg_generic32_watchdog_t& config) {
   g_watchdog.InitEarly(config);
 }
 

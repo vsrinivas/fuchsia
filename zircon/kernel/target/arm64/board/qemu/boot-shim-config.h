@@ -4,6 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#ifndef ZIRCON_KERNEL_TARGET_ARM64_BOARD_QEMU_BOOT_SHIM_CONFIG_H_
+#define ZIRCON_KERNEL_TARGET_ARM64_BOARD_QEMU_BOOT_SHIM_CONFIG_H_
+
 #define HAS_DEVICE_TREE 1
 #define USE_DEVICE_TREE_CPU_COUNT 1
 #define USE_DEVICE_TREE_GIC_VERSION 1
@@ -30,7 +33,7 @@ static const zbi_dcfg_simple_t uart_driver = {
     .irq = 33,
 };
 
-static const zbi_dcfg_arm_gicv3_driver_t gicv3_driver = {
+static const zbi_dcfg_arm_gic_v3_driver_t gic_v3_driver = {
     .mmio_phys = 0x08000000,
     .gicd_offset = 0x00000,
     .gicr_offset = 0xa0000,
@@ -39,7 +42,7 @@ static const zbi_dcfg_arm_gicv3_driver_t gicv3_driver = {
     .optional = true,
 };
 
-static const zbi_dcfg_arm_gicv2_driver_t gicv2_driver = {
+static const zbi_dcfg_arm_gic_v2_driver_t gic_v2_driver = {
     .mmio_phys = 0x08000000,
     .msi_frame_phys = 0x08020000,
     .gicd_offset = 0x00000,
@@ -133,19 +136,19 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
   // append the gic information from the specific gic version we detected from the
   // device tree.
   if (saved_gic_version == 2) {
-    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2, &gicv2_driver,
-                     sizeof(gicv2_driver));
+    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2, &gic_v2_driver,
+                     sizeof(gic_v2_driver));
   } else if (saved_gic_version >= 3) {
-    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V3, &gicv3_driver,
-                     sizeof(gicv3_driver));
+    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V3, &gic_v3_driver,
+                     sizeof(gic_v3_driver));
   } else {
     fail("failed to detect gic version from device tree\n");
   }
 
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_PSCI, &psci_driver,
                    sizeof(psci_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER, &timer_driver,
-                   sizeof(timer_driver));
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER,
+                   &timer_driver, sizeof(timer_driver));
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
@@ -160,3 +163,5 @@ static void set_cpu_count(uint32_t new_count) {
     cpu_count = new_count;
   }
 }
+
+#endif  // ZIRCON_KERNEL_TARGET_ARM64_BOARD_QEMU_BOOT_SHIM_CONFIG_H_

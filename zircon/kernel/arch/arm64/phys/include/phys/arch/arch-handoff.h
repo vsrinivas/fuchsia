@@ -25,13 +25,14 @@ struct ArchPhysHandoff {
   ktl::optional<zbi_dcfg_arm_generic_timer_driver_t> generic_timer_driver;
 
   // (ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2/ZBI_KERNEL_DRIVER_ARM_GIC_V3) payload.
-  ktl::variant<ktl::monostate, zbi_dcfg_arm_gicv2_driver_t, zbi_dcfg_arm_gicv3_driver_t> gic_driver;
+  ktl::variant<ktl::monostate, zbi_dcfg_arm_gic_v2_driver_t, zbi_dcfg_arm_gic_v3_driver_t>
+      gic_driver;
 
   // (ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_PSCI) payload.
   ktl::optional<zbi_dcfg_arm_psci_driver_t> psci_driver;
 
-  // (ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG) payload.
-  ktl::optional<zbi_dcfg_generic_32bit_watchdog_t> generic_32bit_watchdog_driver;
+  // (ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG) payload.
+  ktl::optional<zbi_dcfg_generic32_watchdog_t> generic32_watchdog_driver;
 
   // (ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_AS370_POWER) payload.
   bool as370_power_driver = false;
