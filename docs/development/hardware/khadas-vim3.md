@@ -20,7 +20,7 @@ this guide.
 If you've never tinkered with electronics you might find this
 guide difficult to complete. For example, this guide assumes that you know
 how to hook up serial cable wires to GPIOs to read logs and send commands
-over a serial communication program like `minicom`.
+over a serial communication program.
 
 This guide also assumes that you're comfortable
 with CLI workflows such as building Fuchsia from source.
@@ -92,6 +92,11 @@ complete:
 Note: The rest of this guide assumes that your Fuchsia source code directory
 is located at `~/fuchsia`.
 
+Important: Whenever you see an `fx` command this guide assumes that your
+working directory is within your in-tree Fuchsia source code checkout.
+In other words this guide assumes that you run `cd ~/fuchsia` before
+running any `fx` commands.
+
 You'll use the Fuchsia development environment to build the Fuchsia image
 for VIM3 and run an in-tree CLI tool for flashing the Fuchsia image onto
 the VIM3.
@@ -126,37 +131,27 @@ Set up the VIM3 to communicate with your host:
    Caution: In general the colors for TX and RX wires are not standardized.
    For example your RX wire may be blue or green.
 
-   See [Serial Debugging Tool](https://docs.khadas.com/linux/vim3/SetupSerialTool.html)
+   See [Serial Debugging Tool](https://docs.khadas.com/products/sbc/vim3/development/setup-serial-tool)
    for an example image of how your serial wires should be connected to the VIM3.
 
 ### Verify the serial connection {#serial}
 
 Make sure that you can view the logs being sent over the serial cable:
 
-1. Open a terminal in your host and run `ls /dev/ttyUSB*` before connecting the
-   serial cable to a USB port on your host.
+1. Open Fuchsia's serial console:
 
-1. Connect the serial cable to your host and run `ls /dev/ttyUSB*` again.
-   There should be 1 more result than the first time you ran the command,
-   such as `/dev/ttyUSB0`. That is the USB connection between your VIM3
-   and your host. You'll provide this result for the `Serial Device`
-   value in the next step.
+   ```posix-terminal
+   fx serial
+   ```
 
-   If you see no difference when running `ls /dev/ttyUSB*` before and after
-   connecting the serial cable, try `ls /dev/tty*` or `ls /dev/*` instead.
-
-1. Install, set up, and launch `minicom` on your host as explained in [Set Up Serial Communication
-   Program](https://docs.khadas.com/linux/vim3/SetupSerialTool.html#Setup-Serial-Communication-Program).
-
-   Key Term: In the rest of this guide the terminal window running `minicom` is called
-   the **serial console**.
-
-   Note: This guide assumes that you're using `minicom` for your serial communication
-   program but you can use whatever program you prefer.
+   Note: If `fx serial` detects multiple USB devices and you don't know which one to use,
+   try disconnecting the serial cable from your host, running `ls /dev/ttyUSB*`,
+   then re-connecting the serial cable and running the command again. If you see
+   no difference when running `ls /dev/ttyUSB*` try `ls /dev/tty*` or `ls /dev/*` instead.
 
 1. Press the reset button on the VIM3. The reset button is the one with the **R**
    printed next to it on the circuit board.
-   See [VIM3/3L Hardware](https://docs.khadas.com/linux/vim3/Hardware.html) for
+   See [VIM3/3L Hardware](https://docs.khadas.com/products/sbc/vim3/hardware/start) for
    a diagram. In your serial console you should see human-readable logs.
 
 ## Erase the eMMC {#emmc}
@@ -181,7 +176,7 @@ completely erase the eMMC first:
 
    Your serial console logs should verify that the eMMC was correctly erased.
 
-See [Erase eMMC](https://docs.khadas.com/linux/vim3/EraseEmmc.html)
+See [Erase eMMC](https://docs.khadas.com/products/sbc/vim3/development/erase-emmc)
 for more details.
 
 ## Update the Android image on the VIM3 {#android}
@@ -193,14 +188,14 @@ not support Fuchsia installation. If you just received your VIM3
 from Khadas you must update your Android image:
 
 1. Click the following URL to download the updated Android image:
-   <https://dl.khadas.com/Firmware/VIM3/Android/VIM3_Pie_V210527.7z>
+   <https://dl.khadas.com/firmware/vim3/android/VIM3_Pie_V210527.7z>
 
 1. Extract the compressed archive file (`VIM3_Pie_V210527.7z`).
    After the extraction you should have a `VIM3_Pie_V210527` directory
    with an `update.img` file in it.
 
 1. Follow the instructions in [Install OS into
-   eMMC](https://docs.khadas.com/linux/vim3/InstallOsIntoEmmc.html).
+   eMMC](https://docs.khadas.com/products/sbc/vim3/install-os/install-os-into-emmc-via-usb-tool).
    When running `aml-burn-tool` the value for the `-i` flag should be the
    path to your `update.img` file. Your command should look similar to this:
 
@@ -217,7 +212,7 @@ from Khadas you must update your Android image:
 
 1. If the white and red LEDs on your VIM3 are off and the blue LED is on,
    it means that your VIM3 is in sleep mode. Try putting your VIM3
-   back into [Upgrade Mode](https://docs.khadas.com/linux/vim3/BootIntoUpgradeMode.html)
+   back into [Upgrade Mode](https://docs.khadas.com/products/sbc/vim3/install-os/boot-into-upgrade-mode)
    and then pressing the reset button again.
 
 At this point the white LED on your VIM3 should be on and you should see
@@ -226,17 +221,6 @@ logs in your serial console after you press the reset button on your VIM3.
 ## Update the bootloader {#bootloader}
 
 Flash Fuchsia's custom bootloader onto the VIM3:
-
-1. Install the [Android SDK Platform
-   Tools](https://developer.android.com/studio/releases/platform-tools).
-
-   Installing these tools gives you access to `adb`.
-
-1. Verify that you can now run `adb`:
-
-   ```posix-terminal
-   adb --version
-   ```
 
 1. Access the U-Boot shell again by pressing the reset button and
    then repeatedly pressing the <kbd>Space</kbd> key in your serial
@@ -290,23 +274,48 @@ Note: You can also build the custom bootloader (`u-boot.bin.unsigned`) from sour
 
 ## Flash Fuchsia into the eMMC {#fuchsia}
 
-Install Fuchsia onto your VIM3:
+Complete these steps to install Fuchsia onto your VIM3 for the first time. You only
+need to do these steps once. Once you have Fuchsia running on your VIM3, the
+[Update your Fuchsia image](#update) workflow is a faster way to update the Fuchsia
+image on your VIM3.
 
-1. Put your VIM3 into `fastboot` mode by pressing the reset button
-   and then immediately pressing the <kbd>F</kbd> key.
+1. If you just ran the `./fastboot reboot` command from the last section then
+   your VIM3 should already be in `fastboot` mode. You can check your `fx serial`
+   logs to confirm. Otherwise press the reset button and then repeatedly press
+   the <kbd>F</kbd> in your `fx serial` console until you see `USB RESET` and
+   `SPEED ENUM` again.
+
+   Important: You have to press the <kbd>F</kbd> key now to enter <code>fastboot</code>
+   mode. Previously you pressed the <kbd>Space</kbd> key.
 
 1. From a separate terminal on your host run the following command:
 
    ```posix-terminal
-   cd ~/fuchsia
-
-   fx flash --pave
+   fx flash
    ```
 
 Your VIM3 is now running Fuchsia!
 
-Repeat the steps in this section whenever you want to flash a new Fuchsia
-image onto your VIM3.
+## Update your Fuchsia image {#update}
+
+Complete these steps when you already have Fuchsia running on your VIM3
+and want to update the Fuchsia image on your VIM3.
+
+1. Run the following command from a terminal on your host:
+
+   ```posix-terminal
+   fx serve
+   ```
+
+   Leave this command running.
+
+1. Make some changes in your in-tree Fuchsia checkout and build the changes.
+
+1. Open a new terminal window and perform an OTA update of the Fuchsia image on your VIM3:
+
+   ```posix-terminal
+   fx ota
+   ```
 
 ## Appendix: Fix a bricked VIM3 {#bricks}
 
