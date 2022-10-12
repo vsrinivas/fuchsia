@@ -1,0 +1,31 @@
+[
+    {
+        "node": "pdev",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.AS370_NNA",
+                    "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
+                    "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.synaptics.platform.BIND_PLATFORM_DEV_PID.AS370_SDHCI1",
+                    "fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID": "0"
+                }
+            }
+        ]
+    },
+    {
+        "node": "reset",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.registers.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_REGISTER_ID": "fuchsia.synaptics.platform.BIND_REGISTER_ID.EMMC_RESET"
+                }
+            }
+        ]
+    }
+]

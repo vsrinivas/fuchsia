@@ -10,6 +10,8 @@
 #include <lib/ddk/platform-defs.h>
 
 #include <soc/as370/as370-hw.h>
+#include <soc/as370/as370-registers.h>
+#include <soc/as370/as370-reset.h>
 
 #include "pinecrest.h"
 #include "src/devices/lib/as370/include/soc/as370/as370-nna.h"
@@ -43,31 +45,40 @@ zx_status_t Pinecrest::RegistersInit() {
 
   mmio_entries[GBL_MMIO] = registers::BuildMetadata(allocator, GBL_MMIO);
 
-  fidl::VectorView<registers::RegistersMetadataEntry> register_entries(allocator, 1);
+  fidl::VectorView<registers::RegistersMetadataEntry> register_entries(allocator,
+                                                                       as370::REGISTER_ID_COUNT);
 
-  register_entries[0] = registers::BuildMetadata(allocator, 0, GBL_MMIO,
-                                                 std::vector<registers::MaskEntryBuilder<uint32_t>>{
-                                                     {
-                                                         .mask = as370::kNnaPowerMask,
-                                                         .mmio_offset = as370::kNnaPowerOffset,
-                                                         .reg_count = 1,
-                                                     },
-                                                     {
-                                                         .mask = as370::kNnaResetMask,
-                                                         .mmio_offset = as370::kNnaResetOffset,
-                                                         .reg_count = 1,
-                                                     },
-                                                     {
-                                                         .mask = as370::kNnaClockSysMask,
-                                                         .mmio_offset = as370::kNnaClockSysOffset,
-                                                         .reg_count = 1,
-                                                     },
-                                                     {
-                                                         .mask = as370::kNnaClockCoreMask,
-                                                         .mmio_offset = as370::kNnaClockCoreOffset,
-                                                         .reg_count = 1,
-                                                     },
-                                                 });
+  register_entries[0] =
+      registers::BuildMetadata(allocator, as370::AS370_TOP_STICKY_RESETN, GBL_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = as370::kNnaPowerMask,
+                                       .mmio_offset = as370::kNnaPowerOffset,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = as370::kNnaResetMask,
+                                       .mmio_offset = as370::kNnaResetOffset,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = as370::kNnaClockSysMask,
+                                       .mmio_offset = as370::kNnaClockSysOffset,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = as370::kNnaClockCoreMask,
+                                       .mmio_offset = as370::kNnaClockCoreOffset,
+                                       .reg_count = 1,
+                                   },
+                               });
+  register_entries[1] =
+      registers::BuildMetadata(allocator, as370::EMMC_RESET, GBL_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{{
+                                   .mask = as370::kEmmcSyncReset,
+                                   .mmio_offset = as370::kGblPerifReset,
+                                   .reg_count = 1,
+                               }});
   auto metadata =
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));
   fidl::unstable::OwnedEncodedMessage<registers::Metadata> encoded_metadata(

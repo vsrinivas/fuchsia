@@ -20,6 +20,7 @@ enum {
   BTI_AUDIO_DHUB,
   BTI_SDIO0,
   BTI_NNA,
+  BTI_EMMC0,
 };
 
 class Pinecrest : public ddk::Device<Pinecrest> {
@@ -44,6 +45,7 @@ class Pinecrest : public ddk::Device<Pinecrest> {
   zx_status_t AudioInit();
   zx_status_t ClockInit();
   zx_status_t LightInit();
+  zx_status_t EmmcInit();
   zx_status_t NnaInit();
   zx_status_t PowerInit();
   zx_status_t RegistersInit();

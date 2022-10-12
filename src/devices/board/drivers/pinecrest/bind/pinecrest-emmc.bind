@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite pinecrest_emmc;
+
+using fuchsia.platform;
+using fuchsia.synaptics.platform;
+using fuchsia.registers;
+
+primary node "pdev" {
+  fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_PID.AS370;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.AS370_SDHCI1;
+  fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "reset" {
+  fuchsia.BIND_PROTOCOL == fuchsia.registers.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_REGISTER_ID == fuchsia.synaptics.platform.BIND_REGISTER_ID.EMMC_RESET;
+}

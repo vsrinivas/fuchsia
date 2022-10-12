@@ -36,4 +36,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
 
 extend uint fuchsia.BIND_REGISTER_ID {
   AS370_TOP_STICKY_RESETN = 0,
+  EMMC_RESET = 1,
 };

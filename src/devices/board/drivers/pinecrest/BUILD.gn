@@ -24,6 +24,18 @@ driver_bind_rules("pinecrest-wifi-bind") {
   deps = [ "//src/devices/bind/fuchsia.sdmmc" ]
 }
 
+driver_bind_rules("pinecrest-emmc-bind") {
+  rules = "bind/pinecrest-emmc.bind"
+  header_output = "pinecrest-emmc-bind.h"
+  bind_output = "pinecrest-emmc-bind.bc"
+  tests = "bind-tests/pinecrest-emmc-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+    "//src/devices/bind/fuchsia.synaptics.platform",
+  ]
+}
+
 fuchsia_driver("pinecrest-driver") {
   output_name = "pinecrest"
   configs += [
@@ -33,6 +45,7 @@ fuchsia_driver("pinecrest-driver") {
   sources = [
     "pinecrest-audio.cc",
     "pinecrest-clock.cc",
+    "pinecrest-emmc.cc",
     "pinecrest-gpio.cc",
     "pinecrest-i2c.cc",
     "pinecrest-light.cc",
@@ -48,6 +61,7 @@ fuchsia_driver("pinecrest-driver") {
   deps = [
     ":pinecrest-bind",
     ":pinecrest-bind_header",
+    ":pinecrest-emmc-bind_header",
     ":pinecrest-nna-bind_header",
     ":pinecrest-wifi-bind_header",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
