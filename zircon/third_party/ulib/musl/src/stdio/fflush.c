@@ -29,7 +29,11 @@ int fflush(FILE* f) {
     return r;
   }
 
-  r = fflush(stdout);
+  // In case of any non-canonical buffering of stderr in-process, including any buffering below
+  // writev() (canonically a syscall) but above the process boundary.
+  r = fflush(stderr);
+
+  r |= fflush(stdout);
 
   for (f = *__ofl_lock(); f; f = f->next) {
     FLOCK(f);

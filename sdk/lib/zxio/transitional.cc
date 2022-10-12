@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+
 zx_status_t zxio_sendmsg_inner(zxio_t* io, const struct msghdr* msg, int flags,
                                size_t* out_actual) {
   if (flags) {
@@ -16,12 +18,13 @@ zx_status_t zxio_sendmsg_inner(zxio_t* io, const struct msghdr* msg, int flags,
   }
 
   // Variable length arrays have to have nonzero sizes, so we can't allocate a zx_iov for an empty
-  // io vector. Instead, we can ask to write zero entries with a null vector.
-  if (msg->msg_iovlen == 0) {
-    return zxio_writev(io, nullptr, 0, 0, out_actual);
-  }
+  // io vector. Instead, we can allocate 1 entry when msg_iovlen is 0.  This way zx_iov can still be
+  // non-nullptr (for example, to avoid failure due to vector nullptr when calling
+  // zx_stream_writev() further down; more generally so implementations further down don't need to
+  // worry about allowing zx_iovec_t* nullptr but only when vector_count == 0), but we won't
+  // actually use the 1 entry since msg->msg_iovlen is zero.
+  zx_iovec_t zx_iov[std::max(msg->msg_iovlen, 1)];
 
-  zx_iovec_t zx_iov[msg->msg_iovlen];
   for (int i = 0; i < msg->msg_iovlen; ++i) {
     zx_iov[i] = {
         .buffer = msg->msg_iov[i].iov_base,
@@ -43,12 +46,13 @@ zx_status_t zxio_recvmsg_inner(zxio_t* io, struct msghdr* msg, int flags, size_t
   }
 
   // Variable length arrays have to have nonzero sizes, so we can't allocate a zx_iov for an empty
-  // io vector. Instead, we can ask to read zero entries with a null vector.
-  if (msg->msg_iovlen == 0) {
-    return zxio_readv(io, nullptr, 0, zxio_flags, out_actual);
-  }
+  // io vector. Instead, we can allocate 1 entry when msg_iovlen is 0.  This way zx_iov can still be
+  // non-nullptr (for example, to avoid failure due to vector nullptr when calling
+  // zx_stream_readv() further down; more generally so implementations further down don't need to
+  // worry about allowing zx_iovec_t* nullptr but only when vector_count == 0), but we won't
+  // actually use the 1 entry since msg->msg_iovlen is zero.
+  zx_iovec_t zx_iov[std::max(msg->msg_iovlen, 1)];
 
-  zx_iovec_t zx_iov[msg->msg_iovlen];
   for (int i = 0; i < msg->msg_iovlen; ++i) {
     iovec const& iov = msg->msg_iov[i];
     zx_iov[i] = {

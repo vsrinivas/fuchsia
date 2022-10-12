@@ -94,6 +94,40 @@ zx_status_t Debuglog::Writev(const zx_iovec_t* vector, size_t vector_count, zxio
     // doesn't, because the compiler can't tell that the lock is held in that function.
     []() __TA_ASSERT(lock_) {}();
     const char* data = static_cast<const char*>(buffer);
+    if (data == nullptr && capacity == 0) {
+      // The musl (libc) layer above uses f->write(f, 0, 0) to indicate the need for a
+      // flush-out-of-process (when client code does fflush(FILE), and in a few other cases).  That
+      // call will result in vector[i].buffer == nullptr && vector[i].capacity == 0 at this layer.
+      //
+      // We check for both because we don't want to hide / normalize data == nullptr with capacity
+      // not 0, and we don't want to trigger on data != nullptr and capacity == 0 since that might
+      // match on additional cases beyond the f->write(f, 0, 0) data == nullptr && capacity == 0
+      // case.
+      //
+      // We currently know that the (nullptr, 0; flush) entry, when present, will be the last entry,
+      // but this implementation can handle additional batched write entries beyond the flush
+      // without incorrectly implying flush of the later batched write entries.  Such additional
+      // batched write entries beyond the flush seem unlikely to be added in future, but since
+      // allowing for them isn't really any additional cost, we allow for them here.
+      //
+      // Since no layer above is filtering out data == nullptr && capacity == 0 passed by client
+      // code in a vector to writev(), a flush at this layer is reachable by client code that calls
+      // writev() (or sendmsg() or similar), which seems fine, especially given that only the
+      // Debuglog currently needs to do anything with such a flush - it's just ignored by other zxio
+      // implementations since their fd-layer writes aren't buffered in-process.
+      //
+      // A (nullptr, 0) entry will flush out previously-buffered data, even if the incoming vector
+      // doesn't have \n at the end of previosuly-buffered data (for example: ZX_PANIC("foo")
+      // without \n after "foo").
+      zx_status_t status = flush();
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+    // If the above if condition is true, the capacity will be 0 so this loop won't execute its
+    // body.  We could have the loop under an "else" to (at least nominally / syntactically) avoid
+    // evaluating the for loop termination condition since we know it'll be false anyway when the if
+    // condition above was true, but we choose instead to indent this loop less.
     for (size_t i = 0; i < capacity; ++i) {
       char c = data[i];
       if (c == '\n') {

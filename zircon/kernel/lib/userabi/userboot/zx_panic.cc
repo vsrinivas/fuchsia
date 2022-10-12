@@ -15,5 +15,12 @@ extern "C" __NO_RETURN __PRINTFLIKE(1, 2) void __zx_panic(const char* fmt, ...) 
   // This uses zx_debug_write().  The log handle isn't plumbed to __zx_panic.
   vprintl(zx::debuglog{}, fmt, ap);
   va_end(ap);
+
+  // Because the zx::debuglog{} is default constructed above, vprintl() will use zx_debug_write(),
+  // and in that path vprintl() will explicitly output a \n after whatever is written via vprintl()
+  // above.  So we don't need/want a printl(zx::debuglog{}, "\n") here (at least for now).  This
+  // intentionally differs from other __zx_panic() implementations that have the \n added in
+  // __zx_panic().
+
   __builtin_trap();
 }
