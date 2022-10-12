@@ -5,14 +5,28 @@
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 
-executable("json_validator") {
-  sources = [ "main.cc" ]
+if (is_host) {
+  executable("json_validator") {
+    sources = [ "main.cc" ]
 
-  deps = [
-    "//src/lib/fxl",
-    "//third_party/rapidjson",
-    "//third_party/re2",
-  ]
+    deps = [
+      "//src/lib/fxl",
+      "//third_party/rapidjson",
+      "//third_party/re2",
+    ]
+  }
+
+  rustc_binary("json_validator_valico") {
+    edition = "2021"
+    sources = [ "src/main.rs" ]
+
+    deps = [
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:serde_json5",
+      "//third_party/rust_crates:valico",
+    ]
+  }
 }
 
 install_host_tools("install") {
@@ -24,18 +38,6 @@ install_host_tools("install") {
   outputs = [
     "json_validator",
     "json_validator_valico",
-  ]
-}
-
-rustc_binary("json_validator_valico") {
-  edition = "2021"
-  sources = [ "src/main.rs" ]
-
-  deps = [
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:serde_json5",
-    "//third_party/rust_crates:valico",
   ]
 }
 
