@@ -15,7 +15,7 @@
 namespace {
 
 // Create an alias, as "TEST_F" requires the fixture name to be a valid C token.
-using VirtioInputDebianGuestTest = GuestTest<DebianEnclosedGuest>;
+using VirtioInputDebianGuestTest = GuestTest<DebianGpuEnclosedGuest>;
 
 TEST_F(VirtioInputDebianGuestTest, Input) {
   // We need to wait for a display because we route input from that display to the input device.

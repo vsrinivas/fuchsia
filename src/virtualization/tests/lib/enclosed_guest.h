@@ -178,7 +178,8 @@ class EnclosedGuest {
 
 class ZirconEnclosedGuest : public EnclosedGuest {
  public:
-  explicit ZirconEnclosedGuest(async::Loop& loop) : EnclosedGuest(loop) {}
+  explicit ZirconEnclosedGuest(async::Loop& loop)
+      : ZirconEnclosedGuest(loop, /* enable_gpu */ false) {}
 
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
                                               const std::vector<std::string>& argv) override;
@@ -188,14 +189,27 @@ class ZirconEnclosedGuest : public EnclosedGuest {
   zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override;
 
  protected:
+  ZirconEnclosedGuest(async::Loop& loop, bool enable_gpu)
+      : EnclosedGuest(loop), enable_gpu_(enable_gpu) {}
+
   zx_status_t WaitForSystemReady(zx::time deadline) override;
   zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }
+
+ private:
+  const bool enable_gpu_;
+};
+
+class ZirconGpuEnclosedGuest : public ZirconEnclosedGuest {
+ public:
+  explicit ZirconGpuEnclosedGuest(async::Loop& loop)
+      : ZirconEnclosedGuest(loop, /* enable_gpu */ true) {}
 };
 
 class DebianEnclosedGuest : public EnclosedGuest {
  public:
-  explicit DebianEnclosedGuest(async::Loop& loop) : EnclosedGuest(loop) {}
+  explicit DebianEnclosedGuest(async::Loop& loop)
+      : DebianEnclosedGuest(loop, /* enable_gpu */ false) {}
 
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
                                               const std::vector<std::string>& argv) override;
@@ -205,9 +219,21 @@ class DebianEnclosedGuest : public EnclosedGuest {
   zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override;
 
  protected:
+  DebianEnclosedGuest(async::Loop& loop, bool enable_gpu)
+      : EnclosedGuest(loop), enable_gpu_(enable_gpu) {}
+
   zx_status_t WaitForSystemReady(zx::time deadline) override;
   zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }
+
+ private:
+  const bool enable_gpu_;
+};
+
+class DebianGpuEnclosedGuest : public DebianEnclosedGuest {
+ public:
+  explicit DebianGpuEnclosedGuest(async::Loop& loop)
+      : DebianEnclosedGuest(loop, /* enable_gpu */ true) {}
 };
 
 class TerminaEnclosedGuest : public EnclosedGuest {

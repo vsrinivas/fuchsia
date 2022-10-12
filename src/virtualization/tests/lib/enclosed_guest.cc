@@ -513,7 +513,7 @@ zx_status_t ZirconEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) {
   launch_info->interface_name = fuchsia::virtualization::ZirconGuestManager::Name_;
   // Disable netsvc to avoid spamming the net device with logs.
   launch_info->config.mutable_cmdline_add()->emplace_back("netsvc.disable=true");
-  launch_info->config.set_virtio_gpu(true);
+  launch_info->config.set_virtio_gpu(enable_gpu_);
   return ZX_OK;
 }
 
@@ -600,7 +600,7 @@ zx_status_t DebianEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) {
   for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
     launch_info->config.mutable_cmdline_add()->emplace_back(cmd);
   }
-  launch_info->config.set_virtio_gpu(true);
+  launch_info->config.set_virtio_gpu(enable_gpu_);
   return ZX_OK;
 }
 

@@ -84,7 +84,7 @@ class VirtioGpuTest : public GuestTest<T> {
   fuchsia::ui::composition::ScreenshotPtr screenshot_;
 };
 
-using GuestTypes = ::testing::Types<DebianEnclosedGuest, ZirconEnclosedGuest>;
+using GuestTypes = ::testing::Types<DebianGpuEnclosedGuest, ZirconGpuEnclosedGuest>;
 TYPED_TEST_SUITE(VirtioGpuTest, GuestTypes, GuestTestNameGenerator);
 
 // Poll |condition| using exponential backoff until it returns true, or
