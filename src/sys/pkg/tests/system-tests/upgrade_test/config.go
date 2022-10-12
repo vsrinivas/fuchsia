@@ -27,7 +27,7 @@ type config struct {
 	afterInitScript      string
 	afterTestScript      string
 	useFlash             bool
-	downgradeOTAttempts  uint
+	downgradeOTAAttempts uint
 }
 
 func newConfig(fs *flag.FlagSet) (*config, error) {
@@ -56,7 +56,7 @@ func newConfig(fs *flag.FlagSet) (*config, error) {
 	fs.StringVar(&c.afterInitScript, "after-init-script", "", "Run this script after initializing device for testing")
 	fs.StringVar(&c.afterTestScript, "after-test-script", "", "Run this script after a test step")
 	fs.BoolVar(&c.useFlash, "use-flash", false, "Provision device using flashing instead of paving")
-	fs.UintVar(&c.downgradeOTAttempts, "downgrade-ota-attempts", 1, "Number of times to try to OTA from the downgrade build to the upgrade build before failing.")
+	fs.UintVar(&c.downgradeOTAAttempts, "downgrade-ota-attempts", 1, "Number of times to try to OTA from the downgrade build to the upgrade build before failing.")
 
 	return c, nil
 }

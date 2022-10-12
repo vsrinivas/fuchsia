@@ -190,26 +190,47 @@ func doTestOTAs(
 		return fmt.Errorf("error extracting expected system image merkle: %w", err)
 	}
 
-	upToDate, err := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
-	if err != nil {
-		return fmt.Errorf("failed to check if device is up to date: %w", err)
+	// Attempt to check if the device is up-to-date, up to downgradeOTAAttempts times.
+	// We retry this since some downgrade builds contain bugs which make them spuriously reboot
+	// See fxbug.dev/109811 for more details
+	var upToDate bool
+	var lastError error
+	for i := uint(1); i <= c.downgradeOTAAttempts; i++ {
+		logger.Infof(ctx, "checking device version (attempt %d of %d)", i, c.downgradeOTAAttempts)
+		upToDate, lastError := check.IsDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
+		if lastError == nil {
+			logger.Infof(ctx, "Got device version, upToDate: %t", upToDate)
+			break
+		}
+		logger.Warningf(ctx, "failed to check if device up to date, attempt %d of %d", i, c.downgradeOTAAttempts)
+
+		// Reset our client state since the device has _potentially_ rebooted
+		device.Close()
+		newClient, err := c.deviceConfig.NewDeviceClient(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create ota test client: %w", err)
+		}
+		*device = *newClient
 	}
+	if lastError != nil {
+		return fmt.Errorf("failed to check if device is up to date after %d attempts: Last error: %w", c.downgradeOTAAttempts, lastError)
+	}
+
 	if !upToDate {
 		// Attempt an N-1 -> N OTA, up to downgradeOTAAttempts times.
 		// We optionally retry this OTA because some downgrade builds contain bugs which make them
 		// spuriously reboot. Those builds are already cut, but we still need to test them.
 		// See fxbug.dev/109811 for more details.
 		successfulNMinusOneToN := false
-		var lastError error
-		for i := uint(1); i <= c.downgradeOTAttempts; i++ {
-			logger.Infof(ctx, "starting OTA from N-1 -> N test, attempt %d of %d", i, c.downgradeOTAttempts)
+		for i := uint(1); i <= c.downgradeOTAAttempts; i++ {
+			logger.Infof(ctx, "starting OTA from N-1 -> N test, attempt %d of %d", i, c.downgradeOTAAttempts)
 			otaTime := time.Now()
 			if lastError = systemOTA(ctx, device, rpcClient, repo, true); lastError == nil {
 				logger.Infof(ctx, "OTA from N-1 -> N successful in %s", time.Now().Sub(otaTime))
 				successfulNMinusOneToN = true
 				break
 			}
-			logger.Warningf(ctx, "OTA from N-1 -> N failed, trying again %d times: %v", c.downgradeOTAttempts-i, lastError)
+			logger.Warningf(ctx, "OTA from N-1 -> N failed, trying again %d times: %v", c.downgradeOTAAttempts-i, lastError)
 
 			// Reset our client state since the device has _potentially_ rebooted
 			device.Close()
@@ -221,7 +242,7 @@ func doTestOTAs(
 		}
 
 		if !successfulNMinusOneToN {
-			return fmt.Errorf("OTA from N-1 -> N unsuccessful after %d attempts. Last error: %w", c.downgradeOTAttempts, lastError)
+			return fmt.Errorf("OTA from N-1 -> N unsuccessful after %d attempts. Last error: %w", c.downgradeOTAAttempts, lastError)
 		}
 	}
 
