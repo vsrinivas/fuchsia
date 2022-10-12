@@ -5,5 +5,5 @@
 declare_args() {
   # If true, use scene_manager as the scene owner component (via ui.cml).
   # Otherwise use root_presenter (via ui_with_root_presenter.cml).
-  use_scene_manager_as_scene_owner = true
+  use_scene_manager_as_scene_owner = false
 }
