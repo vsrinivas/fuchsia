@@ -47,10 +47,11 @@ fx-config-read
 source "${DEVSHELL_DIR}"/lib/fvm.sh || exit $?
 
 echo
-fx-info "The Fuchsia emulator is improving and will soon be launched in ffx. Want to be an early adopter?"
-fx-info "Please use 'ffx emu' and send us feedback!"
+fx-warn "This tool has been deprecated, and will soon be removed completely."
+fx-warn "Please change your tools and workflows to use 'ffx emu' instead."
+fx-warn "If you have questions or concerns, please reach out to femu-core@google.com."
 echo
-sleep 0.3
+sleep 5
 
 # Note these match the defaults in `fx qemu` (//zircon/scripts/run-zircon) and the ram value in
 # `fx vdl` (//src/developer/ffx/plugins/emulator/src/vdl_files.rs). This can be overriden by the
