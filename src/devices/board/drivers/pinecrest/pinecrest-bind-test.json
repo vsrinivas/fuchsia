@@ -1,0 +1,29 @@
+[
+    {
+        "name": "Match Pinecrest",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.PINECREST"
+        }
+    },
+    {
+        "name": "Don't match Visalia",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.VISALIA"
+        }
+    },
+    {
+        "name": "Don't match AS370",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.SYNAPTICS",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.AS370"
+        }
+    }
+]

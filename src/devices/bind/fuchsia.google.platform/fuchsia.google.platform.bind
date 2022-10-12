@@ -22,6 +22,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   LUIS = 0x0C,
   GOLDFISH = 0x0D,
   MOTMOT = 0x0E,
+  PINECREST = 0x10,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

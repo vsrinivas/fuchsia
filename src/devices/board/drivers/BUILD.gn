@@ -9,6 +9,7 @@ group("tests") {
     "astro:tests",
     "machina:tests",
     "nelson:tests",
+    "pinecrest:tests",
     "qemu-arm64:tests",
     "sherlock:tests",
     "vim3:tests",

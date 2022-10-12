@@ -1,0 +1,108 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("pinecrest-bind") {
+  rules = "pinecrest.bind"
+  header_output = "pinecrest-bind.h"
+  bind_output = "pinecrest.bc"
+  tests = "pinecrest-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.hardware.platform.bus",
+  ]
+}
+
+driver_bind_rules("pinecrest-wifi-bind") {
+  rules = "bind/pinecrest-wifi.bind"
+  header_output = "pinecrest-wifi-bind.h"
+  bind_output = "pinecrest-wifi-bind.bc"
+  tests = "bind-tests/pinecrest-wifi-bind-test.json"
+  deps = [ "//src/devices/bind/fuchsia.sdmmc" ]
+}
+
+fuchsia_driver("pinecrest-driver") {
+  output_name = "pinecrest"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [
+    "pinecrest-audio.cc",
+    "pinecrest-clock.cc",
+    "pinecrest-gpio.cc",
+    "pinecrest-i2c.cc",
+    "pinecrest-light.cc",
+    "pinecrest-nand.cc",
+    "pinecrest-nna.cc",
+    "pinecrest-power.cc",
+    "pinecrest-registers.cc",
+    "pinecrest-sdio.cc",
+    "pinecrest-thermal.cc",
+    "pinecrest-touch.cc",
+    "pinecrest-usb.cc",
+    "pinecrest.cc",
+  ]
+  deps = [
+    ":pinecrest-bind",
+    ":pinecrest-bind_header",
+    ":pinecrest-nna-bind_header",
+    ":pinecrest-wifi-bind_header",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.shareddma:fuchsia.hardware.shareddma_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_cpp_wire",
+    "//src/devices/bus/lib/platform-bus-composites",
+    "//src/devices/lib/as370",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/devices/lib/fidl-metadata",
+    "//src/devices/lib/metadata:llcpp",
+    "//src/devices/lib/mmio",
+    "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
+    "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
+  ]
+
+  # TODO(fxbug.dev/47406): restore some form of data dependency on as370 and pinecrest
+  # boot shims.
+}
+
+fuchsia_driver_component("pinecrest") {
+  component_name = "pinecrest"
+  deps = [ ":pinecrest-driver" ]
+  info = "pinecrest-info.json"
+  manifest = "meta/pinecrest.cml"
+}
+
+driver_bind_rules("pinecrest-nna-bind") {
+  rules = "bind/pinecrest-nna.bind"
+  header_output = "pinecrest_nna_bind.h"
+  bind_output = "pinecrest_nna_bind.bc"
+  tests = "bind-tests/pinecrest-nna-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+    "//src/devices/bind/fuchsia.synaptics.platform",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":pinecrest-bind_test",
+    ":pinecrest-nna-bind_test",
+    ":pinecrest-wifi-bind_test",
+  ]
+}
