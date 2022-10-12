@@ -5,7 +5,10 @@
     include: [ "//src/diagnostics/persistence/meta/diagnostics-persistence.shard.cml" ],
     capabilities: [
         {
-            protocol: [ "fuchsia.diagnostics.persist.DataPersistence-wlan" ],
+            protocol: [
+                "fuchsia.diagnostics.persist.DataPersistence-netstack",
+                "fuchsia.diagnostics.persist.DataPersistence-wlan",
+            ],
         },
     ],
     use: [
@@ -16,7 +19,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.diagnostics.persist.DataPersistence-wlan" ],
+            protocol: [
+                "fuchsia.diagnostics.persist.DataPersistence-netstack",
+                "fuchsia.diagnostics.persist.DataPersistence-wlan",
+            ],
             from: "self",
         },
     ],
