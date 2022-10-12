@@ -77,6 +77,10 @@ async fn resolved_error_test() {
     start_nested_cm_and_wait_for_clean_stop("#meta/resolved_error_reporter.cm", "./root").await;
 }
 
+// TODO(https://fxbug.dev/111789): Test disabled due to flakes.
+// Plan to delete this test rather than re-enable once
+// RFC-121 completely removes legacy events.
+#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn synthesis_test() {
     start_nested_cm_and_wait_for_clean_stop("#meta/synthesis_reporter.cm", "./root").await;
