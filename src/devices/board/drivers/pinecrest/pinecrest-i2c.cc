@@ -80,7 +80,7 @@ zx_status_t Pinecrest::I2cInit() {
       // },
       // TI LP5018 LED driver
       {
-          .bus_id = 0,
+          .bus_id = 1,
           .address = 0x29,
           .vid = 0,
           .pid = 0,
@@ -96,7 +96,7 @@ zx_status_t Pinecrest::I2cInit() {
       },
       // Cypress touch sensor
       {
-          .bus_id = 0,
+          .bus_id = 1,
           .address = 0x37,
           .vid = 0,
           .pid = 0,

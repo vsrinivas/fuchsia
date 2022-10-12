@@ -22,7 +22,7 @@ namespace fpbus = fuchsia_hardware_platform_bus;
 
 static const zx_bind_inst_t ref_out_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
+    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 1),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x37),
 };
 static const device_fragment_part_t ref_out_i2c_fragment[] = {
@@ -43,10 +43,10 @@ static const device_fragment_t controller_fragments[] = {
 };
 
 zx_status_t Pinecrest::TouchInit() {
-  static constexpr touch_button_config_t as370_touch_buttons[] = {
+  static constexpr touch_button_config_t touch_buttons[] = {
       {
           .id = BUTTONS_ID_VOLUME_UP,
-          .idx = 4,
+          .idx = 0,
       },
       {
           .id = BUTTONS_ID_VOLUME_DOWN,
@@ -54,15 +54,15 @@ zx_status_t Pinecrest::TouchInit() {
       },
       {
           .id = BUTTONS_ID_PLAY_PAUSE,
-          .idx = 0,
+          .idx = 4,
       },
   };
 
-  static constexpr device_metadata_t as370_touch_metadata[] = {
+  static constexpr device_metadata_t touch_metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,
-          .data = &as370_touch_buttons,
-          .length = sizeof(as370_touch_buttons),
+          .data = &touch_buttons,
+          .length = sizeof(touch_buttons),
       },
   };
 
@@ -78,8 +78,8 @@ zx_status_t Pinecrest::TouchInit() {
       .fragments_count = std::size(controller_fragments),
       .primary_fragment = "i2c",
       .spawn_colocated = false,
-      .metadata_list = as370_touch_metadata,
-      .metadata_count = std::size(as370_touch_metadata),
+      .metadata_list = touch_metadata,
+      .metadata_count = std::size(touch_metadata),
   };
 
   zx_status_t status = DdkAddComposite("pinecrest-touch", &comp_desc);

@@ -32,6 +32,7 @@ zx_status_t Pinecrest::LightInit() {
   gpio_impl_.Write(4, 0);
   gpio_impl_.Write(4, 1);
 
+  // TODO(fxbug.dev/111722): Update this list for Pinecrest.
   constexpr LightsConfig kConfigs[] = {
       {.brightness = true, .rgb = true, .init_on = false, .group_id = 1},
       {.brightness = true, .rgb = true, .init_on = false, .group_id = 0},
@@ -61,7 +62,7 @@ zx_status_t Pinecrest::LightInit() {
 
   static const zx_bind_inst_t i2c_match[] = {
       BI_ABORT_IF(NE, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_I2C),
-      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0x0),
+      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0x1),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x29),
   };
 
