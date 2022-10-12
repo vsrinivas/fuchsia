@@ -4,7 +4,7 @@
 use {
     crate::{
         setup::DevhostConfig,
-        storage::{Storage, TopoPathInitializer},
+        storage::{Storage, StorageFactory, TopoPathInitializer},
     },
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::ClientEnd,
@@ -47,7 +47,10 @@ enum BoardName {
     Override { name: String },
 }
 
-enum StorageType {
+pub enum StorageType {
+    /// Use storage that has already had its blobfs partition wiped.
+    #[allow(dead_code)]
+    Ready(Box<dyn Storage>),
     /// Use real storage (i.e. wipe disk and use the real FVM)
     Real,
     /// Use the given DirectoryMarker for blobfs, and the given path for minfs.
@@ -62,7 +65,7 @@ pub struct OtaEnvBuilder {
     ota_type: OtaType,
     paver: PaverType,
     ssl_certificates: String,
-    storage_type: StorageType,
+    storage_type: Option<StorageType>,
     factory_reset: bool,
 }
 
@@ -74,7 +77,7 @@ impl OtaEnvBuilder {
             ota_type: OtaType::WellKnown,
             paver: PaverType::Real,
             ssl_certificates: "/config/ssl".to_owned(),
-            storage_type: StorageType::Real,
+            storage_type: None,
             factory_reset: true,
         }
     }
@@ -83,17 +86,6 @@ impl OtaEnvBuilder {
     /// Override the board name for this OTA.
     pub fn board_name(mut self, name: &str) -> Self {
         self.board_name = BoardName::Override { name: name.to_owned() };
-        self
-    }
-
-    #[cfg(test)]
-    /// Use the given blobfs root and path for minfs.
-    pub fn fake_storage(
-        mut self,
-        blobfs_root: ClientEnd<fio::DirectoryMarker>,
-        minfs_path: String,
-    ) -> Self {
-        self.storage_type = StorageType::Fake { blobfs_root, minfs_path: Some(minfs_path) };
         self
     }
 
@@ -107,6 +99,12 @@ impl OtaEnvBuilder {
     /// Use the given |OmahaConfig| to run an OTA.
     pub fn omaha_config(mut self, omaha_config: OmahaConfig) -> Self {
         self.omaha_config = Some(omaha_config);
+        self
+    }
+
+    /// Use the given StorageType as the storage target.
+    pub fn storage_type(mut self, storage_type: StorageType) -> Self {
+        self.storage_type = Some(storage_type);
         self
     }
 
@@ -212,17 +210,17 @@ impl OtaEnvBuilder {
 
     /// Wipe the system's disk and mount the clean blobfs partition.
     pub async fn init_real_storage(
-        &self,
-    ) -> Result<(Option<Storage>, ClientEnd<fio::DirectoryMarker>, Option<String>), Error> {
+    ) -> Result<(Option<Box<dyn Storage>>, ClientEnd<fio::DirectoryMarker>, Option<String>), Error>
+    {
         let storage_initializer = TopoPathInitializer {};
-        let mut storage = storage_initializer.initialize().await.context("initialising storage")?;
+        let storage = storage_initializer.create().await.context("initialising storage")?;
         storage.wipe_storage().await.context("Wiping storage")?;
 
         let blobfs_root = storage.get_blobfs().context("Opening blobfs")?;
         let minfs_mount_point =
             storage.get_minfs_mount_point().context("Getting minfs mount point")?;
 
-        Ok((Some(storage), blobfs_root, minfs_mount_point))
+        Ok((Some(Box::new(storage)), blobfs_root, minfs_mount_point))
     }
 
     /// Construct an |OtaEnv| from this |OtaEnvBuilder|.
@@ -241,12 +239,15 @@ impl OtaEnvBuilder {
 
         let board_name = self.get_board_name().await.context("Could not get board name")?;
 
-        let (storage, blobfs_root, minfs_root_path) =
-            if let StorageType::Fake { blobfs_root, minfs_path } = self.storage_type {
-                (None, blobfs_root, minfs_path)
-            } else {
-                self.init_real_storage().await?
-            };
+        let storage_type = self.storage_type.expect("storage_type is required");
+        let (storage, blobfs_root, minfs_root_path) = match storage_type {
+            StorageType::Ready(storage) => {
+                let blobfs_root = storage.wipe_or_get_storage().await.context("Opening blobfs")?;
+                (Some(storage), blobfs_root, None)
+            }
+            StorageType::Real => Self::init_real_storage().await?,
+            StorageType::Fake { blobfs_root, minfs_path } => (None, blobfs_root, minfs_path),
+        };
 
         let paver_connector = match self.paver {
             PaverType::Real => {
@@ -269,7 +270,7 @@ impl OtaEnvBuilder {
             paver_connector,
             repo_dir,
             ssl_certificates,
-            storage: storage,
+            storage,
             factory_reset: self.factory_reset,
         })
     }
@@ -284,7 +285,7 @@ pub struct OtaEnv {
     paver_connector: ClientEnd<fio::DirectoryMarker>,
     repo_dir: File,
     ssl_certificates: File,
-    storage: Option<Storage>,
+    storage: Option<Box<dyn Storage>>,
     factory_reset: bool,
 }
 
@@ -364,7 +365,7 @@ pub async fn run_devhost_ota(cfg: DevhostConfig) -> Result<(), Error> {
 }
 
 /// Run an OTA against a TUF or Omaha server. Returns Ok after the system has successfully been installed.
-pub async fn run_wellknown_ota() -> Result<(), Error> {
+pub async fn run_wellknown_ota(storage_type: StorageType) -> Result<(), Error> {
     let config: RecoveryUpdateConfig = get_config().context("Couldn't get config")?;
 
     let version = get_running_version().await.context("Error reading version")?;
@@ -374,7 +375,11 @@ pub async fn run_wellknown_ota() -> Result<(), Error> {
     match config.update_type {
         UpdateType::Tuf => {
             println!("recovery-ota: Creating TUF OTA environment");
-            let ota_env = OtaEnvBuilder::new().build().await.context("Failed to create OTA env")?;
+            let ota_env = OtaEnvBuilder::new()
+                .storage_type(storage_type)
+                .build()
+                .await
+                .context("Failed to create OTA env")?;
             let channel = config.default_channel;
             println!(
                 "recovery-ota: Starting TUF OTA on channel '{}' against version '{}'",
@@ -387,10 +392,12 @@ pub async fn run_wellknown_ota() -> Result<(), Error> {
             // Check for testing override
             let service_url = service_url.unwrap_or(DEFAULT_OMAHA_SERVICE_URL.to_string());
 
-            let builder = OtaEnvBuilder::new();
-            let builder =
-                builder.omaha_config(OmahaConfig { app_id: app_id, server_url: service_url });
-            let ota_env = builder.build().await.context("Failed to create OTA env")?;
+            let ota_env = OtaEnvBuilder::new()
+                .omaha_config(OmahaConfig { app_id: app_id, server_url: service_url })
+                .storage_type(storage_type)
+                .build()
+                .await
+                .context("Failed to create OTA env")?;
 
             println!(
                 "recovery-ota: Starting Omaha OTA on channel '{}' against version '{}'",
@@ -669,10 +676,10 @@ mod tests {
             // Build the environment, and do the OTA.
             let ota_env = OtaEnvBuilder::new()
                 .board_name("x64")
-                .fake_storage(
-                    self.storage.blobfs_root().context("Opening blobfs root")?,
-                    self.storage.minfs_path(),
-                )
+                .storage_type(StorageType::Fake {
+                    blobfs_root: self.storage.blobfs_root().context("Opening blobfs root")?,
+                    minfs_path: Some(self.storage.minfs_path()),
+                })
                 .fake_paver(paver_connector)
                 .ssl_certificates(TEST_SSL_CERTS)
                 .devhost(cfg)

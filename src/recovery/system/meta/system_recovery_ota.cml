@@ -1,0 +1,118 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/lib/fuchsia-hyper/hyper.shard.cml",
+        "//src/lib/storage/fs_management/client.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/system_recovery_ota",
+        forward_stderr_to: "log",
+        forward_stdout_to: "log",
+    },
+    children: [
+        {
+            name: "pkg-recovery",
+            url: "#meta/pkg.cm",
+        },
+    ],
+    capabilities: [
+        // Declare that system_recovery_ota has a directory capability for blobfs.
+        {
+            directory: "primary-system-blobfs",
+            rights: [
+                "execute",
+                "rw*",
+            ],
+
+            // system_recovery_ota mounts blob at /blob in its outgoing directory.
+            path: "/blob",
+        },
+    ],
+    use: [
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+        {
+            directory: "dev-class-block",
+            rights: [ "rw*" ],
+            path: "/dev/class/block",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+        {
+            protocol: [
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.pkg.RetainedPackages",
+                "fuchsia.space.Manager",
+            ],
+            from: "#pkg-recovery",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.paver.Paver",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.recovery.FactoryReset",
+                "fuchsia.recovery.ui.ProgressRenderer",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.device.manager.Administrator",
+            from: "parent",
+            to: "#fs-collection",
+        },
+
+        // Offer the blobfs directory from system_recovery_ota to pkg-recovery child (inherits rights from system_recovery_ota).
+        {
+            directory: "primary-system-blobfs",
+            from: "self",
+            as: "blob-exec",
+            to: "#pkg-recovery",
+            dependency: "weak_for_migration",
+        },
+
+        // Offer other protocols that pkg-recovery expects.
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.logger.LogSink",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#pkg-recovery",
+        },
+    ],
+    expose: [
+        {
+            // Expose binder to allow system_recovery to launch OTA.
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
+}

@@ -856,7 +856,7 @@ impl RecoveryViewAssistant {
                             make_message(RecoveryMessages::StartingOta),
                         );
                         let f = async move {
-                            let res = ota::run_wellknown_ota().await;
+                            let res = ota::run_wellknown_ota(ota::StorageType::Real).await;
                             match res {
                                 Ok(_) => println!("OTA Success!"),
                                 Err(ref e) => println!("OTA Error..... {:?}", e),

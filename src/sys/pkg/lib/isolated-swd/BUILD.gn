@@ -86,6 +86,10 @@ isolated_swd_components = [
 fuchsia_component("pkg-component") {
   component_name = "pkg"
   manifest = "//src/sys/pkg/meta/pkg-recovery.cml"
+  deps = [
+    "//src/sys/pkg/bin/fake-system-update-committer",
+    "//src/sys/pkg/bin/pkg-cache:component-ignore-system-image",
+  ]
 }
 
 fuchsia_test_package("isolated-swd-tests") {

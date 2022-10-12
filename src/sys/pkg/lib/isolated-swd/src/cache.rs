@@ -42,10 +42,10 @@ impl Cache {
     /// calling this function. Should be the default in production usage, as these capabilities
     /// should be statically routed (i.e. from `pkg-recovery.cml`).
     pub fn new() -> Result<Self, Error> {
+        // TODO(https://fxbug.dev/110044): Remove WRITABLE when FIDL through /svc works without it.
         let svc_dir_proxy = fuchsia_fs::directory::open_in_namespace(
             "/svc",
-            fidl_fuchsia_io::OpenFlags::RIGHT_READABLE
-                | fidl_fuchsia_io::OpenFlags::RIGHT_EXECUTABLE,
+            fidl_fuchsia_io::OpenFlags::RIGHT_READABLE | fidl_fuchsia_io::OpenFlags::RIGHT_WRITABLE,
         )
         .context("error opening svc directory")?;
 
