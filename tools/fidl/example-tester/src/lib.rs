@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Error},
-    component_events::{events::*, matcher::*},
+    component_events::{events::*, matcher::*, sequence::*},
     diagnostics_data::{Data, Logs},
     diagnostics_reader::ArchiveReader,
     fuchsia_component_test::{Capability, ChildOptions, ChildRef, RealmBuilder, Ref, Route},
@@ -160,11 +160,7 @@ where
     Fut: Future<Output = Result<(RealmBuilder, ChildRef), Error>>,
 {
     // Subscribe to started events for child components.
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Stopped::NAME])])
-        .await
-        .context("failed to subscribe to EventSource")?;
+    let event_stream = EventStream::open().await.unwrap();
 
     // Create a new empty test realm.
     let builder = RealmBuilder::new().await?;
@@ -274,21 +270,18 @@ where
     // Create the realm instance.
     let realm_instance = builder.build().await?;
 
-    // Verify that all of the realm's components started.
-    for matcher in start_event_matchers.into_iter() {
-        matcher
-            .wait::<Started>(&mut event_stream)
-            .await
-            .context("failed to observe at least one child component start")?;
-    }
-
-    // Verify that the client component exited successfully.
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex(client_regex_matcher)
-        .wait::<Stopped>(&mut event_stream)
+    // Verify that we get expected start and stop (clean) events.
+    EventSequence::new()
+        .has_subset(start_event_matchers, Ordering::Unordered)
+        .has_subset(
+            vec![EventMatcher::ok()
+                .stop(Some(ExitStatusMatcher::Clean))
+                .moniker_regex(client_regex_matcher)],
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
         .await
-        .context("failed to observe client exit")?;
+        .unwrap();
 
     // Setup the archivist link, but don't read the logs yet!
     let mut archivist_reader = ArchiveReader::new();
