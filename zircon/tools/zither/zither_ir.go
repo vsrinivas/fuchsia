@@ -193,8 +193,8 @@ type FileSummary struct {
 	// Library is the associated FIDL library.
 	Library fidlgen.LibraryName
 
-	// Name is the extension-less basename of the file.
-	Name string
+	// Source gives the associated source file.
+	Source string
 
 	// The contained declarations.
 	Decls []DeclWrapper
@@ -204,6 +204,15 @@ type FileSummary struct {
 
 	// See TypeKinds().
 	typeKinds map[TypeKind]struct{}
+}
+
+// Name is the extension-less basename of the file.
+func (summary FileSummary) Name() string {
+	name := filepath.Base(summary.Source)
+	name = strings.TrimSuffix(name, ".test.fidl")
+	name = strings.TrimSuffix(name, ".fidl")
+	name = strings.ReplaceAll(name, ".", "_")
+	return name
 }
 
 // Deps records the (extension-less) file names that this file depends on; we
@@ -239,7 +248,7 @@ type memberMap map[string]Member
 
 // Summarize creates FIDL file summaries from FIDL IR. Within each file
 // summary, declarations are ordered according to `order`.
-func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
+func Summarize(ir fidlgen.Root, sourceDir string, order DeclOrder) ([]FileSummary, error) {
 	libName, err := fidlgen.ReadLibraryName(string(ir.Name))
 	if err != nil {
 		return nil, err
@@ -259,20 +268,20 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 
 	filesByName := make(map[string]*FileSummary)
 	getFile := func(location fidlgen.Location) *FileSummary {
-		name := filepath.Base(location.Filename)
-		name = strings.TrimSuffix(name, ".test.fidl")
-		name = strings.TrimSuffix(name, ".fidl")
-		name = strings.ReplaceAll(name, ".", "_")
+		src, err := filepath.Rel(sourceDir, location.Filename)
+		if err != nil {
+			panic(fmt.Sprintf("could not relativize %s against source directory %s: %s", location.Filename, sourceDir, err))
+		}
 
-		file, ok := filesByName[name]
+		file, ok := filesByName[location.Filename]
 		if !ok {
 			file = &FileSummary{
 				Library:   libName,
-				Name:      name,
+				Source:    src,
 				deps:      make(map[string]struct{}),
 				typeKinds: make(map[TypeKind]struct{}),
 			}
-			filesByName[name] = file
+			filesByName[location.Filename] = file
 		}
 		return file
 	}
@@ -328,8 +337,8 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 		}
 		for _, dependent := range dependents {
 			dependentFile := getFile(dependent.GetLocation())
-			if dependentFile.Name != file.Name {
-				dependentFile.deps[file.Name] = struct{}{}
+			if dependentFile.Source != file.Source {
+				dependentFile.deps[file.Name()] = struct{}{}
 			}
 		}
 

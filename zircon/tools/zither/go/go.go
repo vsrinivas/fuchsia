@@ -53,7 +53,7 @@ func (gen *Generator) Generate(summaries []zither.FileSummary, outputDir string)
 	outputs = append(outputs, pkgName)
 
 	for _, summary := range summaries {
-		output := filepath.Join(outputDir, summary.Name+".go")
+		output := filepath.Join(outputDir, summary.Name()+".go")
 		if err := gen.GenerateFile(output, "GenerateGoFile", summary); err != nil {
 			return nil, err
 		}

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// DO NOT EDIT.
-// Generated from FIDL library `zither.aliases` by zither, a Fuchsia platform tool.
+// DO NOT EDIT. Generated from FIDL library
+//   zither.aliases (//zircon/tools/zither/testdata/aliases/aliases.test.fidl)
+// by zither, a Fuchsia platform tool.
 
 #ifndef LIB_ZITHER_ALIASES_C_ALIASES_H_
 #define LIB_ZITHER_ALIASES_C_ALIASES_H_

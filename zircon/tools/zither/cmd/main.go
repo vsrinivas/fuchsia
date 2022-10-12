@@ -35,6 +35,7 @@ var flags struct {
 	backend        string
 	outputManifest string
 	outputDir      string
+	sourceDir      string
 	formatter      string
 	formatterArgs  flagmisc.StringsValue
 }
@@ -44,6 +45,7 @@ func init() {
 	flag.StringVar(&flags.backend, "backend", "", "The zither backend.\nSupported values: \""+strings.Join(supportedBackends, "\", \"")+"\"")
 	flag.StringVar(&flags.outputManifest, "output-manifest", "", "A path to which a JSON list of the binding output files will be written, if specified. This list excludes the output manifest")
 	flag.StringVar(&flags.outputDir, "output-dir", "", "The directory to which the bindings will be written. (The layout is backend-specific.)")
+	flag.StringVar(&flags.sourceDir, "source-dir", "", "The path to the associated FIDL codebase, relative to the working directory at which compilation took place")
 	flag.StringVar(&flags.formatter, "formatter", "", "The path to a (stdin-to-stdout) formatter, used to format bindings in the appropriate backends")
 	flag.Var(&flags.formatterArgs, "formatter-args", "Arguments to pass to the formatter")
 }
@@ -79,7 +81,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := execute(ctx, gen, ir, flags.outputDir, flags.outputManifest); err != nil {
+	if err := execute(ctx, gen, ir, flags.sourceDir, flags.outputDir, flags.outputManifest); err != nil {
 		logger.Errorf(ctx, "%s", err)
 		os.Exit(1)
 	}
@@ -94,8 +96,8 @@ type generator interface {
 	Generate(summaries []zither.FileSummary, outputDir string) ([]string, error)
 }
 
-func execute(ctx context.Context, gen generator, ir fidlgen.Root, outputDir, outputManifest string) error {
-	summaries, err := zither.Summarize(ir, gen.DeclOrder())
+func execute(ctx context.Context, gen generator, ir fidlgen.Root, sourceDir, outputDir, outputManifest string) error {
+	summaries, err := zither.Summarize(ir, sourceDir, gen.DeclOrder())
 	if err != nil {
 		return err
 	}

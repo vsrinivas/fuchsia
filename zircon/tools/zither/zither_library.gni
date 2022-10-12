@@ -182,6 +182,8 @@ template("_zither") {
         rebase_path(output_manifest, root_build_dir),
         "-output-dir",
         rebase_path(output_dir, root_build_dir),
+        "-source-dir",
+        rebase_path("//", root_build_dir),
       ]
 
       if (defined(formatter)) {

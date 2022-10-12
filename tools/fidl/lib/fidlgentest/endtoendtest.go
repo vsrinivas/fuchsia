@@ -9,6 +9,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,11 +33,12 @@ import (
 //	    .Single(`library example; struct MyStruct{ dep.S foo};`)
 type EndToEndTest struct {
 	*testing.T
+	wd         string
 	deps       []string
 	experiment []string
 }
 
-var fidlcPath = flag.String("fidlc", "", "Path to fidlc.")
+var fidlc = flag.String("fidlc", "", "Path to fidlc.")
 
 // WithDependency adds the source text for a dependency.
 func (t EndToEndTest) WithDependency(content string) EndToEndTest {
@@ -50,12 +52,22 @@ func (t EndToEndTest) WithExperiment(f string) EndToEndTest {
 	return t
 }
 
+// WithWorkingDirectory sets the working directory of any associated fidlc
+// invocation. If unset, the process's current working directory will be used.
+func (t EndToEndTest) WithWorkingDirectory(wd string) EndToEndTest {
+	t.wd = wd
+	return t
+}
+
 // Single compiles a single FIDL file, and returns a Root.
 func (t EndToEndTest) Single(content string) fidlgen.Root {
 	return t.Multiple([]string{content})
 }
 
 // Multiple compiles multiple FIDL files, and returns a Root.
+//
+// The mapping of `contents` to the list of generated FIDL source files
+// preserves ordering (by index to lexicographically on filename).
 func (t EndToEndTest) Multiple(contents []string) fidlgen.Root {
 	if len(contents) == 0 {
 		t.Fatal("no FIDL file contents provided")
@@ -109,18 +121,32 @@ func (t EndToEndTest) Multiple(contents []string) fidlgen.Root {
 		params = append(params, f.Name())
 	}
 
+	fidlcPath := *fidlc
+	if t.wd != "" {
+		// Absolutize for access in the case of an arbitrary working directory.
+		var err error
+		fidlcPath, err = filepath.Abs(fidlcPath)
+		if err != nil {
+			log.Fatalf("could not derive absolute `fidlc` path: %s", err)
+		}
+	}
+
 	var (
-		cmd         = exec.CommandContext(ctx, *fidlcPath, params...)
+		cmd         = exec.CommandContext(ctx, fidlcPath, params...)
 		fidlcStdout = new(bytes.Buffer)
 		fidlcStderr = new(bytes.Buffer)
 	)
 	cmd.Stdout = fidlcStdout
 	cmd.Stderr = fidlcStderr
+	cmd.Dir = t.wd // Uses current working directory if empty.
 
 	if err := cmd.Run(); err != nil {
-		t.Logf("fidlc cmdline: %v %v", *fidlcPath, params)
+		t.Logf("fidlc cmdline: %v %v", fidlcPath, params)
 		t.Logf("fidlc stdout: %s", fidlcStdout.String())
 		t.Logf("fidlc stderr: %s", fidlcStderr.String())
+		if t.wd != "" {
+			t.Logf("fidlc working directory: %s", t.wd)
+		}
 		t.Fatal(err)
 	}
 

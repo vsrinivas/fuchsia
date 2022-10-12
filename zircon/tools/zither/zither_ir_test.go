@@ -31,13 +31,14 @@ var cmpOpt = cmp.AllowUnexported(
 
 func TestGeneratedFileCount(t *testing.T) {
 	{
-		ir := fidlgentest.EndToEndTest{T: t}.Single(`
+		wd := t.TempDir()
+		ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(`
 	library example;
 
 	const A bool = true;
 	`)
 
-		summaries, err := Summarize(ir, SourceDeclOrder)
+		summaries, err := Summarize(ir, wd, SourceDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +48,8 @@ func TestGeneratedFileCount(t *testing.T) {
 	}
 
 	{
-		ir := fidlgentest.EndToEndTest{T: t}.Multiple([]string{
+		wd := t.TempDir()
+		ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Multiple([]string{
 			`
 	library example;
 
@@ -65,7 +67,7 @@ func TestGeneratedFileCount(t *testing.T) {
 	`,
 		})
 
-		summaries, err := Summarize(ir, SourceDeclOrder)
+		summaries, err := Summarize(ir, wd, SourceDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -77,13 +79,14 @@ func TestGeneratedFileCount(t *testing.T) {
 
 func TestCanSummarizeLibraryName(t *testing.T) {
 	name := "this.is.an.example.library"
-	ir := fidlgentest.EndToEndTest{T: t}.Single(fmt.Sprintf(`
+	wd := t.TempDir()
+	ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(fmt.Sprintf(`
 	library %s;
 
 	const A bool = true;
 	`, name))
 
-	summaries, err := Summarize(ir, SourceDeclOrder)
+	summaries, err := Summarize(ir, wd, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +96,8 @@ func TestCanSummarizeLibraryName(t *testing.T) {
 }
 
 func TestDeclOrder(t *testing.T) {
-	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+	wd := t.TempDir()
+	ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(`
 library example;
 
 const A int32 = 0;
@@ -106,7 +110,7 @@ const G int32 = 2;
 `)
 
 	{
-		summaries, err := Summarize(ir, SourceDeclOrder)
+		summaries, err := Summarize(ir, wd, SourceDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -130,7 +134,7 @@ const G int32 = 2;
 	}
 
 	{
-		summaries, err := Summarize(ir, DependencyDeclOrder)
+		summaries, err := Summarize(ir, wd, DependencyDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -161,13 +165,14 @@ func TestFloatConstantsAreDisallowed(t *testing.T) {
 	}
 
 	for _, decl := range decls {
-		ir := fidlgentest.EndToEndTest{T: t}.Single(fmt.Sprintf(`
+		wd := t.TempDir()
+		ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(fmt.Sprintf(`
 library example;
 
 %s
 `, decl))
 
-		_, err := Summarize(ir, SourceDeclOrder)
+		_, err := Summarize(ir, wd, SourceDeclOrder)
 		if err == nil {
 			t.Fatal("expected an error")
 		}
@@ -178,7 +183,8 @@ library example;
 }
 
 func TestCanSummarizeConstants(t *testing.T) {
-	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+	wd := t.TempDir()
+	ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(`
 library example;
 
 const BOOL bool = false;
@@ -224,7 +230,7 @@ const COMMENTED_BOOL bool = true;
 /// comment.
 const COMMENTED_STRING string = "YYY";
 `)
-	summaries, err := Summarize(ir, SourceDeclOrder)
+	summaries, err := Summarize(ir, wd, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -376,7 +382,8 @@ const COMMENTED_STRING string = "YYY";
 }
 
 func TestCanSummarizeEnums(t *testing.T) {
-	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+	wd := t.TempDir()
+	ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(`
 library example;
 
 /// This is a uint8 enum.
@@ -399,7 +406,7 @@ type Int64Enum = enum : int64 {
   HEX_DEADBEEF = 0xdeadbeef;
 };
 `)
-	summaries, err := Summarize(ir, SourceDeclOrder)
+	summaries, err := Summarize(ir, wd, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -465,7 +472,8 @@ type Int64Enum = enum : int64 {
 }
 
 func TestCanSummarizeBits(t *testing.T) {
-	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+	wd := t.TempDir()
+	ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(`
 library example;
 
 /// This is a uint8 bits.
@@ -487,7 +495,7 @@ type Uint64Bits = bits : uint64 {
   MEMBER = 0x1000;
 };
 `)
-	summaries, err := Summarize(ir, SourceDeclOrder)
+	summaries, err := Summarize(ir, wd, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,7 +557,8 @@ type Uint64Bits = bits : uint64 {
 }
 
 func TestCanSummarizeStructs(t *testing.T) {
-	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+	wd := t.TempDir()
+	ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(`
 library example;
 
 /// This is a struct.
@@ -585,7 +594,7 @@ type StructWithArrayMembers = struct {
     nested array<array<bool, 2>, 4>;
 };
 `)
-	summaries, err := Summarize(ir, SourceDeclOrder)
+	summaries, err := Summarize(ir, wd, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -797,7 +806,8 @@ type StructWithArrayMembers = struct {
 }
 
 func TestCanSummarizeAliases(t *testing.T) {
-	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+	wd := t.TempDir()
+	ir := fidlgentest.EndToEndTest{T: t}.WithWorkingDirectory(wd).Single(`
 library example;
 
 type Enum = enum : uint16 {
@@ -829,7 +839,7 @@ alias NestedArrayAlias = array<array<Struct, 8>, 4>;
 // Exercise more complicated aliases (e.g., aliases of aliases) when fixed.
 
 `)
-	summaries, err := Summarize(ir, SourceDeclOrder)
+	summaries, err := Summarize(ir, wd, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}

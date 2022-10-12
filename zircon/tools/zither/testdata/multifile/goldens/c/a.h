@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// DO NOT EDIT.
-// Generated from FIDL library `zither.multifile` by zither, a Fuchsia platform tool.
+// DO NOT EDIT. Generated from FIDL library
+//   zither.multifile (//zircon/tools/zither/testdata/multifile/a.test.fidl)
+// by zither, a Fuchsia platform tool.
 
 #ifndef LIB_ZITHER_MULTIFILE_C_A_H_
 #define LIB_ZITHER_MULTIFILE_C_A_H_

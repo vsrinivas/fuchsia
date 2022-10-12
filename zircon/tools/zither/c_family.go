@@ -14,7 +14,7 @@ import (
 // HeaderPath gives the relative path at which to emit .h files for a given C
 // family backend.
 func HeaderPath(summary FileSummary, backend string) string {
-	return filepath.Join("lib", summary.Library.String(), backend, summary.Name+".h")
+	return filepath.Join("lib", summary.Library.String(), backend, summary.Name()+".h")
 }
 
 // HeaderGuard gives the header guard value for a C family backend.

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// DO NOT EDIT.
-// Generated from FIDL library `zither.bits` by zither, a Fuchsia platform tool.
+// DO NOT EDIT. Generated from FIDL library
+//   zither.bits (//zircon/tools/zither/testdata/bits/bits.test.fidl)
+// by zither, a Fuchsia platform tool.
 
 package bits
 
