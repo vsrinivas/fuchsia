@@ -78,7 +78,7 @@ zx_status_t Device::SetIrqMode(pci_interrupt_mode_t mode, uint32_t irq_cnt) {
   fbl::AutoLock dev_lock(&dev_lock_);
   // Before enabling any given interrupt mode we need to ensure no existing
   // interrupts are configured. Disabling them can fail in cases downstream
-  // drivers have mot freed outstanding interrupt objects allocated off of
+  // drivers have not freed outstanding interrupt objects allocated off of
   // an MSI object.
   if (zx_status_t st = DisableInterrupts(); st != ZX_OK) {
     return st;
