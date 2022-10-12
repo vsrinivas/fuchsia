@@ -18,9 +18,13 @@ type HostInfo = table {
     /// This field is always present.
     2: technology TechnologyType;
 
-    /// The identity address.
+    /// The identity address - this is always the Public address of the host.
+    ///
+    /// # Deprecation
+    /// The `addresses` field provides more information about the host.
     ///
     /// This field is always present.
+    @available(deprecated=HEAD, note="use `HostInfo.addresses`")
     3: address bt.Address;
 
     /// Indicates whether or not this is the active host. The system has one active host which
@@ -37,6 +41,14 @@ type HostInfo = table {
 
     /// Whether or not device discovery is currently being performed.
     7: discovering bool;
+
+    /// The addresses (LE and/or BR/EDR) associated with the host.
+    ///
+    /// The Public address is always reported first.
+    ///
+    /// This field is always present.
+    @available(added=HEAD)
+    8: addresses vector<bt.Address>:MAX;
 };
 
 /// Protocol used to observe and manage the Bluetooth controllers on the system.

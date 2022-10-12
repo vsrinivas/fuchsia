@@ -187,6 +187,7 @@ pub(crate) mod tests {
             local_name: Some("foobar".to_string()),
             discoverable: Some(discoverable),
             discovering: Some(true),
+            addresses: Some(vec![Address::Public([1, 2, 3, 4, 5, 6]).into()]),
             ..sys::HostInfo::EMPTY
         }
     }

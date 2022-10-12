@@ -747,7 +747,7 @@ impl HostDispatcher {
     }
 
     /// Finishes initializing a host device by setting host configs and services.
-    pub async fn add_host_device(&self, host_device: &HostDevice) -> Result<(), Error> {
+    async fn add_host_device(&self, host_device: &HostDevice) -> Result<(), Error> {
         let dbg_ids = host_device.debug_identifiers();
 
         // TODO(fxbug.dev/66615): Make sure that the bt-host device is left in a well-known state if

@@ -850,6 +850,7 @@ mod tests {
             local_name: name,
             discoverable,
             discovering,
+            addresses: vec![address],
         }
     }
 

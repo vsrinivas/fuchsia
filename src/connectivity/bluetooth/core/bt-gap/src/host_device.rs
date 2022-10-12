@@ -365,6 +365,7 @@ impl HostDevice {
             local_name: None,
             discoverable: false,
             discovering: false,
+            addresses: vec![address],
         };
         HostDevice::new(
             path.into(),
