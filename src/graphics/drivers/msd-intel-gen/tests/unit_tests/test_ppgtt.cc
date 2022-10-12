@@ -142,7 +142,7 @@ class TestPerProcessGtt {
   }
 
   static void PrivatePat() {
-    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
+    auto reg_io = std::make_unique<MsdIntelRegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
 
     PerProcessGtt::InitPrivatePat(reg_io.get());
 
@@ -151,7 +151,7 @@ class TestPerProcessGtt {
   }
 
   static void PrivatePatGen12() {
-    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
+    auto reg_io = std::make_unique<MsdIntelRegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
 
     PerProcessGtt::InitPrivatePatGen12(reg_io.get());
 

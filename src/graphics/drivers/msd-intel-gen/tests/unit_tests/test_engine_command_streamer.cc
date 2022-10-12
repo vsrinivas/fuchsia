@@ -54,7 +54,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   };
 
   void SetUp() override {
-    register_io_ = std::make_unique<magma::RegisterIo>(MockMmio::Create(8 * 1024 * 1024));
+    register_io_ = std::make_unique<MsdIntelRegisterIo>(MockMmio::Create(8 * 1024 * 1024));
 
     std::weak_ptr<MsdIntelConnection> connection;
 
@@ -465,7 +465,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   void Reset() {
     class Hook : public magma::RegisterIo::Hook {
      public:
-      Hook(magma::RegisterIo* register_io, EngineCommandStreamerId id, uint32_t device_id)
+      Hook(MsdIntelRegisterIo* register_io, EngineCommandStreamerId id, uint32_t device_id)
           : register_io_(register_io), id_(id), device_id_(device_id) {}
 
       constexpr uint32_t mask(EngineCommandStreamerId id) {
@@ -507,7 +507,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
       void Read64(uint64_t val, uint32_t offset) override {}
 
      private:
-      magma::RegisterIo* register_io_;
+      MsdIntelRegisterIo* register_io_;
       EngineCommandStreamerId id_;
       uint32_t device_id_;
     };
@@ -567,7 +567,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
   uint32_t device_id() override { return GetParam().device_id; }
 
-  magma::RegisterIo* register_io() override { return register_io_.get(); }
+  MsdIntelRegisterIo* register_io() override { return register_io_.get(); }
 
   Sequencer* sequencer() override { return sequencer_.get(); }
 
@@ -582,7 +582,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   }
 
  private:
-  std::unique_ptr<magma::RegisterIo> register_io_;
+  std::unique_ptr<MsdIntelRegisterIo> register_io_;
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
   std::shared_ptr<AddressSpace> address_space_;
   std::shared_ptr<MsdIntelContext> context_;

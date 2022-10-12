@@ -49,7 +49,7 @@ void MsdIntelDevice::DumpFault(DumpState* dump_out, uint32_t fault) {
 }
 
 // static
-void MsdIntelDevice::DumpFaultAddress(DumpState* dump_out, magma::RegisterIo* register_io) {
+void MsdIntelDevice::DumpFaultAddress(DumpState* dump_out, MsdIntelRegisterIo* register_io) {
   uint64_t val = registers::FaultTlbReadData::read(register_io);
   dump_out->fault_gpu_address = registers::FaultTlbReadData::addr(val);
   dump_out->global = registers::FaultTlbReadData::is_ggtt(val);

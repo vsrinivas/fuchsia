@@ -29,10 +29,10 @@ class TestForceWake : public testing::TestWithParam<registers::ForceWake::Domain
         break;
     }
 
-    register_io_ = std::make_unique<magma::RegisterIo>(MockMmio::Create(2 * 1024 * 1024));
+    register_io_ = std::make_unique<MsdIntelRegisterIo>(MockMmio::Create(2 * 1024 * 1024));
   }
 
-  std::unique_ptr<magma::RegisterIo> register_io_;
+  std::unique_ptr<MsdIntelRegisterIo> register_io_;
   registers::ForceWake::Domain domain_;
   uint32_t offset_;
   uint32_t status_offset_;

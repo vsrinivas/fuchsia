@@ -8,16 +8,16 @@
 #include <thread>
 
 #include "magma_util/macros.h"
-#include "magma_util/register_io.h"
+#include "msd_intel_register_io.h"
 #include "registers.h"
 
 class ForceWake {
  public:
-  static void reset(magma::RegisterIo* reg_io, registers::ForceWake::Domain domain) {
+  static void reset(MsdIntelRegisterIo* reg_io, registers::ForceWake::Domain domain) {
     registers::ForceWake::reset(reg_io, domain);
   }
 
-  static void request(magma::RegisterIo* reg_io, registers::ForceWake::Domain domain) {
+  static void request(MsdIntelRegisterIo* reg_io, registers::ForceWake::Domain domain) {
     if (registers::ForceWake::read_status(reg_io, domain) & (1 << kThreadShift))
       return;
     DLOG("forcewake request");
@@ -25,7 +25,7 @@ class ForceWake {
     wait(reg_io, domain, true);
   }
 
-  static void release(magma::RegisterIo* reg_io, registers::ForceWake::Domain domain) {
+  static void release(MsdIntelRegisterIo* reg_io, registers::ForceWake::Domain domain) {
     if ((registers::ForceWake::read_status(reg_io, domain) & (1 << kThreadShift)) == 0)
       return;
     DLOG("forcewake release");
@@ -37,7 +37,7 @@ class ForceWake {
   static constexpr uint32_t kRetryMaxMs = 3;
 
  private:
-  static void wait(magma::RegisterIo* reg_io, registers::ForceWake::Domain domain, bool set) {
+  static void wait(MsdIntelRegisterIo* reg_io, registers::ForceWake::Domain domain, bool set) {
     uint32_t status;
     for (unsigned int ms = 0; ms < kRetryMaxMs; ms++) {
       status = registers::ForceWake::read_status(reg_io, domain);

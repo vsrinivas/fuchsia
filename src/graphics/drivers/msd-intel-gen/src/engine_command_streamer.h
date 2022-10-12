@@ -11,10 +11,10 @@
 #include "address_space.h"
 #include "gpu_progress.h"
 #include "hardware_status_page.h"
-#include "magma_util/register_io.h"
 #include "magma_util/status.h"
 #include "mapped_batch.h"
 #include "msd_intel_context.h"
+#include "msd_intel_register_io.h"
 #include "pagetable.h"
 #include "render_init_batch.h"
 #include "scheduler.h"
@@ -28,7 +28,7 @@ class EngineCommandStreamer {
  public:
   class Owner {
    public:
-    virtual magma::RegisterIo* register_io() = 0;
+    virtual MsdIntelRegisterIo* register_io() = 0;
     virtual Sequencer* sequencer() = 0;
     virtual uint32_t device_id() = 0;
   };
@@ -113,7 +113,7 @@ class EngineCommandStreamer {
   static constexpr uint32_t kVideoEngineMmioBase = 0x12000;
   static constexpr uint32_t kVideoEngineMmioBaseGen12 = 0x1C0000;
 
-  magma::RegisterIo* register_io() { return owner_->register_io(); }
+  MsdIntelRegisterIo* register_io() { return owner_->register_io(); }
 
   Sequencer* sequencer() { return owner_->sequencer(); }
 

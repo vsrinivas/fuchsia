@@ -7,7 +7,7 @@
 
 #include <type_traits>
 
-#include "magma_util/register_io.h"
+#include "msd_intel_register_io.h"
 #include "platform_interrupt.h"
 #include "platform_pci_device.h"
 
@@ -15,7 +15,7 @@ class InterruptManager {
  public:
   class Owner {
    public:
-    virtual magma::RegisterIo* register_io_for_interrupt() = 0;
+    virtual MsdIntelRegisterIo* register_io_for_interrupt() = 0;
     virtual magma::PlatformPciDevice* platform_device() = 0;
   };
 

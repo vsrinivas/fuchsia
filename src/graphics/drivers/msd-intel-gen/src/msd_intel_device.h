@@ -14,12 +14,12 @@
 #include "gtt.h"
 #include "interrupt_manager.h"
 #include "magma_util/macros.h"
-#include "magma_util/register_io.h"
 #include "magma_util/thread.h"
 #include "msd.h"
 #include "msd_intel_connection.h"
 #include "msd_intel_context.h"
 #include "msd_intel_pci_device.h"
+#include "msd_intel_register_io.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
 #include "render_command_streamer.h"
@@ -109,14 +109,14 @@ class MsdIntelDevice : public msd_device_t,
   DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
 
   // EngineCommandStreamer::Owner
-  magma::RegisterIo* register_io() override {
+  MsdIntelRegisterIo* register_io() override {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     DASSERT(register_io_);
     return register_io_.get();
   }
 
   // InterruptManager::Owner
-  magma::RegisterIo* register_io_for_interrupt() override {
+  MsdIntelRegisterIo* register_io_for_interrupt() override {
     DASSERT(register_io_);
     return register_io_.get();
   }
@@ -188,7 +188,7 @@ class MsdIntelDevice : public msd_device_t,
   void TraceFreq(std::chrono::steady_clock::time_point& last_freq_poll_time);
 
   static void DumpFault(DumpState* dump_out, uint32_t fault);
-  static void DumpFaultAddress(DumpState* dump_out, magma::RegisterIo* register_io);
+  static void DumpFaultAddress(DumpState* dump_out, MsdIntelRegisterIo* register_io);
   void FormatDump(DumpState& dump_state, std::vector<std::string>& dump_out);
 
   int DeviceThreadLoop();
@@ -227,7 +227,7 @@ class MsdIntelDevice : public msd_device_t,
   std::atomic_uint64_t last_interrupt_timestamp_{};
 
   std::unique_ptr<MsdIntelPciDevice> platform_device_;
-  std::unique_ptr<magma::RegisterIo> register_io_;
+  std::unique_ptr<MsdIntelRegisterIo> register_io_;
   std::shared_ptr<Gtt> gtt_;
   std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
   std::unique_ptr<VideoCommandStreamer> video_command_streamer_;

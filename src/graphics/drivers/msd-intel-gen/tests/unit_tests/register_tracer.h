@@ -4,7 +4,7 @@
 
 #include <vector>
 
-#include "magma_util/register_io.h"
+#include "msd_intel_register_io.h"
 
 #ifndef REGISTER_TRACER_H
 #define REGISTER_TRACER_H

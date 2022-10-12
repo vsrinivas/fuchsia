@@ -6,7 +6,7 @@
 #define PPGTT_H
 
 #include "address_space.h"
-#include "magma_util/register_io.h"
+#include "msd_intel_register_io.h"
 #include "pagetable.h"
 #include "platform_buffer.h"
 
@@ -34,8 +34,8 @@ class PerProcessGtt : public AddressSpace {
 
   uint64_t Size() const override { return kSize; }
 
-  static void InitPrivatePat(magma::RegisterIo* reg_io);
-  static void InitPrivatePatGen12(magma::RegisterIo* reg_io);
+  static void InitPrivatePat(MsdIntelRegisterIo* reg_io);
+  static void InitPrivatePatGen12(MsdIntelRegisterIo* reg_io);
 
   uint64_t get_pml4_bus_addr() { return pml4_table_->bus_addr(); }
 

@@ -202,7 +202,7 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   if (!mmio)
     return DRETF(false, "failed to map pci bar 0");
 
-  register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
+  register_io_ = std::make_unique<MsdIntelRegisterIo>(std::move(mmio));
 
   HardwarePreinit();
 
@@ -417,7 +417,7 @@ void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_con
   device->last_interrupt_timestamp_ = interrupt_timestamp;
 
   // We're running in the core driver's interrupt thread.
-  magma::RegisterIo* register_io = device->register_io_for_interrupt();
+  MsdIntelRegisterIo* register_io = device->register_io_for_interrupt();
 
   uint64_t now = get_current_time_ns();
   uint32_t render_interrupt_status = 0;

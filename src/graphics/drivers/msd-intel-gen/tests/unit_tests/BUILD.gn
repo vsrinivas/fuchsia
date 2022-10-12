@@ -36,6 +36,7 @@ source_set("nonhardware_tests") {
     "test_instructions.cc",
     "test_ppgtt.cc",
     "test_progress.cc",
+    "test_register_io.cc",
     "test_render_init_batch.cc",
     "test_scheduler.cc",
     "test_semaphore.cc",

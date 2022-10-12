@@ -145,7 +145,7 @@ class TestMsdIntelDevice : public testing::Test {
   }
 
   void MockDump() {
-    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(2 * 1024 * 1024));
+    auto reg_io = std::make_unique<MsdIntelRegisterIo>(MockMmio::Create(2 * 1024 * 1024));
 
     reg_io->Write32(0xabcd1234, registers::FaultTlbReadData::kOffset0);
     reg_io->Write32(0x1f, registers::FaultTlbReadData::kOffset1);

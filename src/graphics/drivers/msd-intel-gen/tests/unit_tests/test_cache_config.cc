@@ -120,7 +120,7 @@ TEST_F(TestCacheConfig, InitCacheConfig) {
 }
 
 TEST_F(TestCacheConfig, InitCacheConfigGen12) {
-  auto register_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
+  auto register_io = std::make_unique<MsdIntelRegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
 
   ASSERT_TRUE(CacheConfig::InitCacheConfigGen12(register_io.get()));
 
