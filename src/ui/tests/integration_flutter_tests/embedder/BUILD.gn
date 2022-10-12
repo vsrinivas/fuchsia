@@ -10,7 +10,7 @@ import("//build/test.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":flutter-embedder-test-ip",
+    ":flutter-embedder-test",
     "//src/ui/testing/test_ui_stack:test-ui-stack-flavors",
 
     # The deps below are necessary on minimal product configs.
@@ -23,10 +23,10 @@ group("tests") {
   ]
 }
 
-fuchsia_unittest_package("flutter-embedder-test-ip") {
-  manifest = "meta/flutter-embedder-test-ip.cml"
+fuchsia_unittest_package("flutter-embedder-test") {
+  manifest = "meta/flutter-embedder-test.cml"
   deps = [
-    ":flutter-embedder-test-ip-bin",
+    ":flutter-embedder-test-bin",
     "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
@@ -39,13 +39,13 @@ fuchsia_unittest_package("flutter-embedder-test-ip") {
   }
 }
 
-test("flutter-embedder-test-ip-bin") {
+test("flutter-embedder-test-bin") {
   sources = [
     "embedder_view.h",
-    "flutter-embedder-test-ip.cc",
-    "flutter-embedder-test-ip.h",
+    "flutter-embedder-test.cc",
+    "flutter-embedder-test.h",
   ]
-  output_name = "flutter-embedder-test-ip"
+  output_name = "flutter-embedder-test"
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",

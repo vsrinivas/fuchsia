@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_IP_H_
-#define SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_IP_H_
+#ifndef SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_
+#define SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/test/input/cpp/fidl.h>
@@ -23,18 +23,18 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/util/screenshot_helper.h"
 
-namespace flutter_embedder_test_ip {
+namespace flutter_embedder_test {
 
 // Timeout for Scenic's |TakeScreenshot| FIDL call.
 constexpr zx::duration kScreenshotTimeout = zx::sec(10);
 // Timeout to fail the test if it goes beyond this duration.
 constexpr zx::duration kTestTimeout = zx::min(1);
 
-class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
-                              public ::testing::Test,
-                              public ::testing::WithParamInterface<std::string> {
+class FlutterEmbedderTest : public ::loop_fixture::RealLoop,
+                            public ::testing::Test,
+                            public ::testing::WithParamInterface<std::string> {
  public:
-  FlutterEmbedderTestIp() : realm_builder_(component_testing::RealmBuilder::Create()) {
+  FlutterEmbedderTest() : realm_builder_(component_testing::RealmBuilder::Create()) {
     FX_VLOGS(1) << "Setting up base realm";
     SetUpRealmBase();
 
@@ -149,6 +149,6 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
   uint64_t display_height_ = 0;
 };
 
-}  // namespace flutter_embedder_test_ip
+}  // namespace flutter_embedder_test
 
-#endif  // SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_IP_H_
+#endif  // SRC_UI_TESTS_INTEGRATION_FLUTTER_TESTS_EMBEDDER_FLUTTER_EMBEDDER_TEST_H_

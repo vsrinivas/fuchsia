@@ -8,16 +8,16 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":mediabuttons-integration-tests-ip",
+    ":mediabuttons-integration-tests",
 
     # The deps below are necessary on minimal product configs.
     "//src/graphics/bin/vulkan_loader",
   ]
 }
 
-executable("mediabuttons_listener_test_ip") {
+executable("mediabuttons_listener_test") {
   testonly = true
-  sources = [ "mediabuttons_listener_test_ip.cc" ]
+  sources = [ "mediabuttons_listener_test.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_hlcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
@@ -39,9 +39,9 @@ executable("mediabuttons_listener_test_ip") {
   ]
 }
 
-fuchsia_unittest_package("mediabuttons-integration-tests-ip") {
-  manifest = "meta/mediabuttons_listener_test_ip.cml"
-  deps = [ ":mediabuttons_listener_test_ip" ]
+fuchsia_unittest_package("mediabuttons-integration-tests") {
+  manifest = "meta/mediabuttons_listener_test.cml"
+  deps = [ ":mediabuttons_listener_test" ]
 
   test_specs = {
     log_settings = {

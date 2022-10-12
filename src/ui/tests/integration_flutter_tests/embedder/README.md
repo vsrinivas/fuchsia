@@ -29,11 +29,8 @@ fx build
 ### Run
 
 ```console
-# Run Flutter Embedder Test
+# Run Flutter Embedder Test (Input Pipeline and Scene Manager variants included)
 ffx test run fuchsia-pkg://fuchsia.com/flutter-embedder-test#meta/flutter-embedder-test.cm
-
-# Run Flutter Embedder Input Pipeline Test
-ffx test run fuchsia-pkg://fuchsia.com/flutter-embedder-test-ip#meta/flutter-embedder-test-ip.cm
 ```
 
 ## Implementation Details
@@ -58,17 +55,15 @@ realm has the following topology:
 
 ```
 
-<sup>\*</sup> *For `flutter-embedder-test-ip` only.*
-
 ### Test Pattern Overview
 
 Each test consists of the following pattern:
 
-*   Construct the test realm.
-
-    *   `flutter-embedder-test` uses ScenicTestRealm whilst
-        `flutter-embedder-test-ip` uses InputPipelineTestRealm. All other
-        services remain the same.
+*   Construct the test realm. Because the test is parameterized, one variant
+    will run with a test realm comprised of Root Presenter (GFX) as the scene
+    owner and Input Pipeline as the input owner, and another variant will run
+    with a test realm comprised of Scene Manager (GFX) as both the scene owner
+    and input owner.
 
 *   Launch and embed the parent-view component with any specified arguments.
 
@@ -79,13 +74,8 @@ Each test consists of the following pattern:
 
 *   The parent-view, in turn, launches and embeds the child-view component.
 
-*   Optionally register input:
-
-    *   For `flutter-embedder-test`, use Scenic to inject and register input to
-        the root view.
-
-    *   For `flutter-embedder-test-ip`, register a fake touch input device into
-        the input pipeline registry and create a fake input event.
+*   Register a fake touch input device into the input pipeline registry and
+    create a fake input event.
 
 *   Use Scenic to take a screenshot until a specified color is found or a
     failure timeout is reached.

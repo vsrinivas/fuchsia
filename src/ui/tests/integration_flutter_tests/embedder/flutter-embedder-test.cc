@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/tests/integration_flutter_tests/embedder/flutter-embedder-test-ip.h"
+#include "src/ui/tests/integration_flutter_tests/embedder/flutter-embedder-test.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
@@ -59,7 +59,7 @@ bool CheckViewExistsInUpdates(
 
 }  // namespace
 
-namespace flutter_embedder_test_ip {
+namespace flutter_embedder_test {
 
 constexpr char kChildViewUrl[] = "fuchsia-pkg://fuchsia.com/child-view#meta/child-view-realm.cm";
 constexpr char kParentViewUrl[] = "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view-realm.cm";
@@ -89,7 +89,7 @@ static uint32_t OverlayPixelCount(std::map<ui_testing::Pixel, uint32_t>& histogr
          histogram[kOverlayBackgroundColor5] + histogram[kOverlayBackgroundColor6];
 }
 
-void FlutterEmbedderTestIp::SetUpRealmBase() {
+void FlutterEmbedderTest::SetUpRealmBase() {
   FX_LOGS(INFO) << "Setting up realm base.";
 
   // Add test UI stack component.
@@ -128,7 +128,7 @@ void FlutterEmbedderTestIp::SetUpRealmBase() {
 
 // Checks whether the view with |view_ref_koid| has connected to the view tree. The response of a
 // f.u.o.g.Provider.Watch call is stored in |watch_response| if it contains |view_ref_koid|.
-bool FlutterEmbedderTestIp::HasViewConnected(
+bool FlutterEmbedderTest::HasViewConnected(
     const fuchsia::ui::observation::geometry::ViewTreeWatcherPtr& view_tree_watcher,
     std::optional<fuchsia::ui::observation::geometry::WatchResponse>& watch_response,
     zx_koid_t view_ref_koid) {
@@ -144,9 +144,9 @@ bool FlutterEmbedderTestIp::HasViewConnected(
   return watch_response.has_value();
 }
 
-void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_url,
-                                                   const std::vector<std::string>& component_args,
-                                                   bool usePointerInjection2) {
+void FlutterEmbedderTest::BuildRealmAndLaunchApp(const std::string& component_url,
+                                                 const std::vector<std::string>& component_args,
+                                                 bool usePointerInjection2) {
   FX_LOGS(INFO) << "Building realm with component: " << component_url;
   realm_builder_.AddChild(kParentFlutterRealm, kParentViewUrl);
 
@@ -254,7 +254,7 @@ void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_
   FX_LOGS(INFO) << "Launched component: " << component_url;
 }
 
-void FlutterEmbedderTestIp::RegisterTouchScreen() {
+void FlutterEmbedderTest::RegisterTouchScreen() {
   FX_LOGS(INFO) << "Registering fake touch screen";
   input_registry_ = realm_->Connect<fuchsia::ui::test::input::Registry>();
   input_registry_.set_error_handler([](auto) { FX_LOGS(ERROR) << "Error from input helper"; });
@@ -267,7 +267,7 @@ void FlutterEmbedderTestIp::RegisterTouchScreen() {
   FX_LOGS(INFO) << "Touchscreen registered";
 }
 
-void FlutterEmbedderTestIp::InjectTap(int32_t x, int32_t y) {
+void FlutterEmbedderTest::InjectTap(int32_t x, int32_t y) {
   fuchsia::ui::test::input::TouchScreenSimulateTapRequest tap_request;
   tap_request.mutable_tap_location()->x = x;
   tap_request.mutable_tap_location()->y = y;
@@ -276,13 +276,13 @@ void FlutterEmbedderTestIp::InjectTap(int32_t x, int32_t y) {
   });
 }
 
-void FlutterEmbedderTestIp::TryInject(int32_t x, int32_t y) {
+void FlutterEmbedderTest::TryInject(int32_t x, int32_t y) {
   InjectTap(x, y);
   async::PostDelayedTask(
       dispatcher(), [this, x, y] { TryInject(x, y); }, kTapRetryInterval);
 }
 
-std::string FlutterEmbedderTestIp::GetPointerInjectorArgs() {
+std::string FlutterEmbedderTest::GetPointerInjectorArgs() {
   std::ostringstream config;
 
   config << "{"
@@ -293,12 +293,12 @@ std::string FlutterEmbedderTestIp::GetPointerInjectorArgs() {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    FlutterEmbedderTestIpWithParams, FlutterEmbedderTestIp,
+    FlutterEmbedderTestWithParams, FlutterEmbedderTest,
     ::testing::Values(
         "fuchsia-pkg://fuchsia.com/gfx-root-presenter-test-ui-stack#meta/test-ui-stack.cm",
         "fuchsia-pkg://fuchsia.com/gfx-scene-manager-test-ui-stack#meta/test-ui-stack.cm"));
 
-TEST_P(FlutterEmbedderTestIp, Embedding) {
+TEST_P(FlutterEmbedderTest, Embedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -311,7 +311,7 @@ TEST_P(FlutterEmbedderTestIp, Embedding) {
       }));
 }
 
-TEST_P(FlutterEmbedderTestIp, HittestEmbedding) {
+TEST_P(FlutterEmbedderTest, HittestEmbedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -331,7 +331,7 @@ TEST_P(FlutterEmbedderTestIp, HittestEmbedding) {
       }));
 }
 
-TEST_P(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
+TEST_P(FlutterEmbedderTest, HittestDisabledEmbedding) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--no-hitTestable"});
 
   // Take screenshots until we see the child-view's embedded color.
@@ -352,7 +352,7 @@ TEST_P(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
       }));
 }
 
-TEST_P(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
+TEST_P(FlutterEmbedderTest, EmbeddingWithOverlay) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
@@ -369,7 +369,7 @@ TEST_P(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
       }));
 }
 
-TEST_P(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
+TEST_P(FlutterEmbedderTest, HittestEmbeddingWithOverlay) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
@@ -396,7 +396,7 @@ TEST_P(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
       }));
 }
 
-TEST_P(FlutterEmbedderTestIp, ChildViewReinjectionTest) {
+TEST_P(FlutterEmbedderTest, ChildViewReinjectionTest) {
   BuildRealmAndLaunchApp(kParentViewUrl, {}, true);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -416,4 +416,4 @@ TEST_P(FlutterEmbedderTestIp, ChildViewReinjectionTest) {
       }));
 }
 
-}  // namespace flutter_embedder_test_ip
+}  // namespace flutter_embedder_test

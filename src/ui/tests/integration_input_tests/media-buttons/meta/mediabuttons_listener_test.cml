@@ -8,7 +8,7 @@
         "sys/testing/system-test.shard.cml",
     ],
     program: {
-        binary: "test/flutter-embedder-test-ip",
+        binary: "bin/mediabuttons_listener_test",
     },
     offer: [
         {
@@ -16,7 +16,6 @@
             // Keep it minimal, describe only what's actually needed.
             // TODO(fxbug.dev/81446): Remove this list.
             protocol: [
-                "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",

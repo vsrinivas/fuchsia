@@ -86,14 +86,14 @@
 //
 //     test_manager
 //         |
-//   touch-input-test-ip.cml (this component)
+//   touch-input-test.cml (this component)
 //
 // With the usage of the realm_builder library, we construct a realm during runtime
 // and then extend the topology to look like:
 //
 //    test_manager
 //         |
-//   touch-input-test-ip.cml (this component)
+//   touch-input-test.cml (this component)
 //         |
 //   <created realm root>
 //      /      \
@@ -576,12 +576,12 @@ class FlutterInputTestBase : public TouchInputBase<Ts...> {
   static constexpr auto kFlutterRealmUrl = "#meta/one-flutter-realm.cm";
 };
 
-class FlutterInputTestIp : public FlutterInputTestBase<> {};
+class FlutterInputTest : public FlutterInputTestBase<> {};
 
-INSTANTIATE_TEST_SUITE_P(FlutterInputTestIpParameterized, FlutterInputTestIp,
+INSTANTIATE_TEST_SUITE_P(FlutterInputTestParameterized, FlutterInputTest,
                          testing::ValuesIn(AsTuples(UIStackConfigsToTest())));
 
-TEST_P(FlutterInputTestIp, FlutterTap) {
+TEST_P(FlutterInputTest, FlutterTap) {
   // Launch client view, and wait until it's rendering to proceed with the test.
   FX_LOGS(INFO) << "Initializing scene";
   LaunchClient();
@@ -926,17 +926,17 @@ class EmbeddingFlutterTestIp {
   static constexpr auto kEmbeddingFlutterUrl = "#meta/embedding-flutter-realm.cm";
 };
 
-class FlutterInFlutterTestIp : public FlutterInputTestIp, public EmbeddingFlutterTestIp {
+class FlutterInFlutterTestIp : public FlutterInputTest, public EmbeddingFlutterTestIp {
  protected:
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return merge({EmbeddingFlutterTestIp::GetEmbeddingFlutterComponents(),
-                  FlutterInputTestIp::GetTestV2Components()});
+                  FlutterInputTest::GetTestV2Components()});
   }
 
   std::vector<Route> GetTestRoutes() override {
     return merge({EmbeddingFlutterTestIp::GetEmbeddingFlutterRoutes(),
-                  FlutterInputTestIp::GetFlutterRoutes(ChildRef{kEmbeddingFlutter}),
-                  FlutterInputTestIp::GetFlutterRoutes(ChildRef{kFlutterRealm}),
+                  FlutterInputTest::GetFlutterRoutes(ChildRef{kEmbeddingFlutter}),
+                  FlutterInputTest::GetFlutterRoutes(ChildRef{kFlutterRealm}),
                   {
                       {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                        .source = ChildRef{kFlutterRealm},

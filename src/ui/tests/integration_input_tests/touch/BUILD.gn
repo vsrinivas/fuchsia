@@ -6,10 +6,10 @@ import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/config.gni")
 
-executable("touch-input-test-ip-bin") {
+executable("touch-input-test-bin") {
   testonly = true
-  sources = [ "touch-input-test-ip.cc" ]
-  output_name = "touch-input-test-ip"
+  sources = [ "touch-input-test.cc" ]
+  output_name = "touch-input-test"
   deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp",
     "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_hlcpp",
@@ -56,14 +56,14 @@ executable("touch-input-test-ip-bin") {
   ]
 }
 
-fuchsia_test_component("touch-input-test-ip-component") {
+fuchsia_test_component("touch-input-test-component") {
   testonly = true
-  manifest = "meta/touch-input-test-ip.cml"
-  deps = [ ":touch-input-test-ip-bin" ]
+  manifest = "meta/touch-input-test.cml"
+  deps = [ ":touch-input-test-bin" ]
 }
 
-fuchsia_test_package("touch-input-test-ip") {
-  test_components = [ ":touch-input-test-ip-component" ]
+fuchsia_test_package("touch-input-test") {
+  test_components = [ ":touch-input-test-component" ]
   deps = [
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/connectivity/network/netstack:component",
@@ -154,7 +154,7 @@ group("tests") {
   testonly = true
   deps = [
     ":pointerinjector-config-test",
-    ":touch-input-test-ip",
+    ":touch-input-test",
 
     # The deps below are necessary on minimal product configs.
     "//src/chromium:web_engine",

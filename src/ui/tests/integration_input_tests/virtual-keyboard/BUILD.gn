@@ -20,18 +20,10 @@ font_collection("single-font-collection") {
   font_service_pkg = "virtual-keyboard-test"
 }
 
-font_collection("single-font-collection-ip") {
+executable("virtual-keyboard-test-bin") {
   testonly = true
-  product_config_path =
-      "//src/ui/testing/data/single-font-collection.fontcfg.json5"
-  local_asset_names = [ "Roboto-Regular.ttf" ]
-  font_service_pkg = "virtual-keyboard-test-ip"
-}
-
-executable("virtual-keyboard-test-ip-bin") {
-  testonly = true
-  sources = [ "virtual-keyboard-test-ip.cc" ]
-  output_name = "virtual-keyboard-test-ip"
+  sources = [ "virtual-keyboard-test.cc" ]
+  output_name = "virtual-keyboard-test"
   deps = [
     ":test.virtualkeyboard_hlcpp",
     "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp",
@@ -71,16 +63,16 @@ executable("virtual-keyboard-test-ip-bin") {
   ]
 }
 
-fuchsia_component("virtual-keyboard-test-ip-component") {
+fuchsia_component("virtual-keyboard-test-component") {
   testonly = true
-  manifest = "meta/virtual-keyboard-test-ip.cml"
-  deps = [ ":virtual-keyboard-test-ip-bin" ]
+  manifest = "meta/virtual-keyboard-test.cml"
+  deps = [ ":virtual-keyboard-test-bin" ]
 }
 
-fuchsia_test_package("virtual-keyboard-test-ip") {
-  test_components = [ ":virtual-keyboard-test-ip-component" ]
+fuchsia_test_package("virtual-keyboard-test") {
+  test_components = [ ":virtual-keyboard-test-component" ]
   deps = [
-    ":single-font-collection-ip",
+    ":single-font-collection",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/connectivity/network/netstack:component",
     "//src/developer/build_info/testing:fake-build-info-component",
@@ -110,7 +102,7 @@ fuchsia_test_package("virtual-keyboard-test-ip") {
 group("tests") {
   testonly = true
   deps = [
-    ":virtual-keyboard-test-ip",
+    ":virtual-keyboard-test",
 
     # The deps below are necessary on minimal product configs.
     "//src/chromium:web_engine",
@@ -123,7 +115,7 @@ group("tests") {
 group("tests-product-webengine") {
   testonly = true
   deps = [
-    ":virtual-keyboard-test-ip",
+    ":virtual-keyboard-test",
     "//src/graphics/bin/vulkan_loader",
   ]
 }

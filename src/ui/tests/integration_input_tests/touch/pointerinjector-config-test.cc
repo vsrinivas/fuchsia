@@ -67,14 +67,14 @@
 //
 //     test_manager
 //         |
-//   pointerinjector-config-test-ip.cml (this component)
+//   pointerinjector-config-test.cml (this component)
 //
 // With the usage of the realm_builder library, we construct a realm during runtime
 // and then extend the topology to look like:
 //
 //    test_manager
 //         |
-//   pointerinjector-config-test-ip.cml (this component)
+//   pointerinjector-config-test.cml (this component)
 //         |
 //   <created realm root>
 //      /      \

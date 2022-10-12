@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/lib/vulkan/vulkan-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
+        "sys/testing/system-test.shard.cml",
     ],
     program: {
         binary: "test/flutter-embedder-test",
@@ -16,6 +16,7 @@
             // Keep it minimal, describe only what's actually needed.
             // TODO(fxbug.dev/81446): Remove this list.
             protocol: [
+                "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",

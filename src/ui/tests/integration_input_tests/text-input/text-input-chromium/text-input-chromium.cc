@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // The contents of this web application are heavily borrowed from prior work
-// such as mouse-input-chromium.cc, virtual-keyboard-test-ip.cc and other
+// such as mouse-input-chromium.cc, virtual-keyboard-test.cc and other
 // similar efforts.
 
 #include <fuchsia/sys/cpp/fidl.h>
