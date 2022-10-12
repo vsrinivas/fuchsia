@@ -36,10 +36,6 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
 void InitializeCoordinator(Coordinator* coordinator) {
   coordinator->InitCoreDevices(kSystemDriverPath);
 
-  // Add the driver we're using as platform bus
-  load_driver(nullptr, kSystemDriverPath,
-              fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
-
   // Initialize devfs.
   ASSERT_OK(coordinator->devfs().initialize(*coordinator->sys_device()));
   coordinator->set_running(true);

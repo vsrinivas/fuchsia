@@ -422,7 +422,12 @@ async fn run_driver_development_server(
             let indexer = indexer.clone();
             match request {
                 fdd::DriverIndexRequest::GetDriverInfo { driver_filter, iterator, .. } => {
-                    let driver_info = Arc::new(Mutex::new(indexer.get_driver_info(driver_filter)));
+                    let driver_info = indexer.get_driver_info(driver_filter);
+                    if driver_info.len() == 0 {
+                        iterator.close_with_epitaph(Status::NOT_FOUND)?;
+                        return Ok(());
+                    }
+                    let driver_info = Arc::new(Mutex::new(driver_info));
                     let iterator = iterator.into_stream()?;
                     fasync::Task::spawn(async move {
                         run_driver_info_iterator_server(driver_info, iterator)
@@ -754,7 +759,11 @@ mod tests {
 
         let mut driver_infos = Vec::new();
         loop {
-            let mut driver_info = info_iterator.get_next().await.unwrap();
+            let driver_info = info_iterator.get_next().await;
+            if driver_info.is_err() {
+                break;
+            }
+            let mut driver_info = driver_info.unwrap();
             if driver_info.len() == 0 {
                 break;
             }

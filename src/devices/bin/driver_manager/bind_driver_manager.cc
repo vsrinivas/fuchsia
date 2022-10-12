@@ -141,54 +141,10 @@ zx::status<std::vector<MatchedDriver>> BindDriverManager::GetMatchingDrivers(
     return zx::error(ZX_ERR_ALREADY_BOUND);
   }
 
-  std::vector<MatchedDriver> matched_drivers;
-
-  // A libname of "" means a general rebind request
-  // instead of a specific request
-  bool autobind = drvlibname.size() == 0;
-
-  // Check for drivers outside of the Driver-index.
-  for (const Driver& driver : coordinator_->drivers()) {
-    if (!autobind && drvlibname.compare(driver.libname)) {
-      continue;
-    }
-
-    zx_status_t status = MatchDevice(dev, &driver, autobind);
-    if (status == ZX_ERR_ALREADY_BOUND) {
-      return zx::error(ZX_ERR_ALREADY_BOUND);
-    }
-
-    if (status == ZX_ERR_NEXT) {
-      continue;
-    }
-
-    if (status == ZX_OK) {
-      auto matched = MatchedDriverInfo{.driver = &driver};
-      matched_drivers.push_back(std::move(matched));
-    }
-
-    // If the device doesn't support multibind (this is a devmgr-internal setting),
-    // then return on first match or failure.
-    // Otherwise, keep checking all the drivers.
-    if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
-      if (status != ZX_OK) {
-        return zx::error(status);
-      }
-      return zx::ok(std::move(matched_drivers));
-    }
-  }
-
   // Check for drivers in the Driver-index.
-  {
-    DriverLoader::MatchDeviceConfig config;
-    config.libname = drvlibname;
-    auto drivers = coordinator_->driver_loader().MatchDeviceDriverIndex(dev, config);
-    for (auto driver : drivers) {
-      matched_drivers.push_back(driver);
-    }
-  }
-
-  return zx::ok(std::move(matched_drivers));
+  DriverLoader::MatchDeviceConfig config;
+  config.libname = drvlibname;
+  return zx::ok(coordinator_->driver_loader().MatchDeviceDriverIndex(dev, config));
 }
 
 zx::status<std::vector<MatchedDriver>> BindDriverManager::MatchDeviceWithDriverIndex(

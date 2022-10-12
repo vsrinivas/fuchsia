@@ -353,35 +353,6 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
             /* reply_to_init */ true, /* always_init */ true, /* inspect */ zx::vmo(), index);
 }
 
-void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& parent,
-                                                   const char* name, uint32_t protocol_id,
-                                                   size_t* index) {
-  DeviceState state;
-
-  auto coordinator_server = fidl::CreateEndpoints(&state.coordinator_client);
-  ASSERT_OK(coordinator_server.status_value());
-
-  auto controller_client = fidl::CreateEndpoints(&state.controller_server);
-  ASSERT_OK(controller_client.status_value());
-
-  auto status = coordinator().device_manager()->AddDevice(
-      parent, std::move(*controller_client), std::move(*coordinator_server),
-      /* props_data */ nullptr, /* props_count */ 0,
-      /* str_props_data */ nullptr,
-      /* str_props_count */ 0, name, /* driver_path */ protocol_id, /* driver */ "", /* args */ {},
-      /* skip_autobind */ true, /* has_init */ false, /* always_init */ true,
-      /* inspect */ zx::vmo(),
-      /* outgoing_dir */ fidl::ClientEnd<fio::Directory>(), &state.device);
-  ASSERT_OK(status);
-  coordinator_loop_.RunUntilIdle();
-
-  devices_.push_back(std::move(state));
-  *index = devices_.size() - 1;
-
-  ASSERT_NO_FATAL_FAILURE(device(*index)->CheckInitReceivedAndReply());
-  coordinator_loop()->RunUntilIdle();
-}
-
 void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {
   auto& state = devices_[device_index];
   ASSERT_OK(coordinator().device_manager()->RemoveDevice(state.device, false));

@@ -31,7 +31,7 @@
 #include "src/devices/bin/driver_manager/driver_host.h"
 #include "src/devices/bin/driver_manager/fdio.h"
 
-constexpr char kSystemDriverPath[] = "/pkg/driver/platform-bus.so";
+constexpr char kSystemDriverPath[] = "#driver/platform-bus.so";
 
 class DummyFsProvider : public FsProvider {
  public:

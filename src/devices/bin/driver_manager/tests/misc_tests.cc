@@ -160,25 +160,6 @@ TEST(MiscTestCase, LoadDisabledDriver) {
   ASSERT_FALSE(found_driver);
 }
 
-TEST(MiscTestCase, BindDrivers) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
-
-  coordinator.InitCoreDevices(kSystemDriverPath);
-  coordinator.set_running(true);
-
-  Driver* driver;
-  auto callback = [&coordinator, &driver](Driver* drv, const char* version) {
-    driver = drv;
-    return coordinator.DriverAdded(drv, version);
-  };
-  load_driver(nullptr, kDriverPath, callback);
-  loop.RunUntilIdle();
-  ASSERT_EQ(1, coordinator.drivers().size_slow());
-  ASSERT_EQ(driver, &coordinator.drivers().front());
-}
-
 TEST(MiscTestCase, BindDevices) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
@@ -203,11 +184,7 @@ TEST(MiscTestCase, BindDevices) {
       fidl::ClientEnd<fio::Directory>() /* outgoing_dir */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.device_manager()->devices().size_slow());
-
-  // Add the driver.
-  load_driver(nullptr, kDriverPath, fit::bind_member(&coordinator, &Coordinator::DriverAdded));
   loop.RunUntilIdle();
-  ASSERT_FALSE(coordinator.drivers().is_empty());
 
   // The device has no driver_host, so the init task should automatically complete.
   ASSERT_TRUE(device->is_visible());
@@ -219,8 +196,20 @@ TEST(MiscTestCase, BindDevices) {
       &coordinator, fidl::ClientEnd<fuchsia_device_manager::DriverHostController>(),
       fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   dev->set_host(std::move(host));
-  status = coordinator.bind_driver_manager()->BindDevice(dev, kDriverPath, true /* new device */);
-  ASSERT_OK(status);
+
+  std::unique_ptr<Driver> driver;
+  // Load the driver and force bind it to the device.
+  load_driver(nullptr, kDriverPath,
+              [&coordinator, &dev, &driver](Driver* drv, const char* version) {
+                driver = std::unique_ptr<Driver>(drv);
+
+                MatchedDriverInfo info;
+                info.driver = driver.get();
+                info.colocate = true;
+                ASSERT_OK(coordinator.AttemptBind(info, dev));
+              });
+  loop.RunUntilIdle();
+  ASSERT_NO_FATAL_FAILURE();
 
   // Check the BindDriver request.
   ASSERT_NO_FATAL_FAILURE(

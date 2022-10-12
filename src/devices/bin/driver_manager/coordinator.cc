@@ -213,16 +213,38 @@ zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Dri
   return ZX_OK;
 }
 
-// Binds the driver to the device by sending a request to driver_host.
-zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const char* libname) {
-  zx::vmo vmo;
-  zx_status_t status = dev->coordinator->LibnameToVmo(libname, &vmo);
-  if (status != ZX_OK) {
-    return status;
+zx::status<zx::vmo> DriverToVmo(const Driver* driver) {
+  // If we haven't cached the vmo, load it now.
+  if (driver->dso_vmo == ZX_HANDLE_INVALID) {
+    zx::vmo vmo;
+    zx_status_t status = load_vmo(driver->libname.c_str(), &vmo);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    return zx::ok(std::move(vmo));
   }
+
+  // If we have cached the vmo then duplicate it.
+  zx::vmo vmo;
+  zx_status_t status = driver->dso_vmo.duplicate(
+      ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP, &vmo);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(vmo));
+}
+
+// Binds the driver to the device by sending a request to driver_host.
+zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* driver) {
+  auto vmo = DriverToVmo(driver);
+  if (vmo.is_error()) {
+    return vmo.error_value();
+  }
+
+  const char* libname = driver->libname.c_str();
   dev->flags |= DEV_CTX_BOUND;
   dev->device_controller()
-      ->BindDriver(fidl::StringView::FromExternal(libname, strlen(libname)), std::move(vmo))
+      ->BindDriver(fidl::StringView::FromExternal(libname, strlen(libname)), std::move(*vmo))
       .ThenExactlyOnce([dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>& result) {
         // TODO(fxbug.dev/56208): If we're closed from the driver host we only log a warning,
         // otherwise tests could flake.
@@ -300,15 +322,11 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
   PrepareProxy(sys_device_, nullptr);
 
   // Bind all the drivers we loaded.
-  AddAndBindDrivers(std::move(drivers_));
   DriverLoader::MatchDeviceConfig config;
   bind_driver_manager_->BindAllDevicesDriverIndex(config);
 
-  // Bind the fallback drivers if we don't require the full system.
   if (config_.require_system) {
     LOGF(INFO, "Full system required, fallback drivers will be loaded after '/system' is loaded");
-  } else {
-    BindFallbackDrivers();
   }
 
   // Schedule the base drivers to load.
@@ -396,12 +414,6 @@ void Coordinator::RegisterWithPowerManager(
 }
 
 const Driver* Coordinator::LibnameToDriver(std::string_view libname) const {
-  for (const auto& drv : drivers_) {
-    if (libname.compare(drv.libname) == 0) {
-      return &drv;
-    }
-  }
-
   return driver_loader_.LibnameToDriver(libname);
 }
 
@@ -412,21 +424,13 @@ zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_v
     return ZX_ERR_NOT_FOUND;
   }
 
-  // Check for cached DSO
-  if (drv->dso_vmo != ZX_HANDLE_INVALID) {
-    zx_status_t r = drv->dso_vmo.duplicate(
-        ZX_RIGHTS_BASIC | ZX_RIGHTS_PROPERTY | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
-        out_vmo);
-    if (r != ZX_OK) {
-      LOGF(ERROR, "Cannot duplicate cached DSO for '%s' '%s'", drv->name.data(), libname.data());
-    }
-    return r;
-  } else {
-    return load_vmo(libname, out_vmo);
+  zx::status result = DriverToVmo(drv);
+  if (result.is_error()) {
+    return result.error_value();
   }
+  *out_vmo = std::move(*result);
+  return ZX_OK;
 }
-
-zx_handle_t get_service_root();
 
 zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out,
                                             size_t max) {
@@ -744,7 +748,7 @@ zx_status_t Coordinator::AttemptBind(const MatchedDriverInfo matched_driver,
       LOGF(ERROR, "Cannot bind to device '%s', it has no driver_host", dev->name().data());
       return ZX_ERR_BAD_STATE;
     }
-    return BindDriverToDevice(dev, drv->libname.c_str());
+    return BindDriverToDevice(dev, drv);
   }
 
   zx_status_t status;
@@ -756,14 +760,14 @@ zx_status_t Coordinator::AttemptBind(const MatchedDriverInfo matched_driver,
     if (status != ZX_OK) {
       return status;
     }
-    status = BindDriverToDevice(new_proxy, drv->libname.c_str());
+    status = BindDriverToDevice(new_proxy, drv);
   } else {
     VLOGF(1, "Preparing old proxy for %s", dev->name().data());
     status = PrepareProxy(dev, nullptr /* target_driver_host */);
     if (status != ZX_OK) {
       return status;
     }
-    status = BindDriverToDevice(dev->proxy(), drv->libname.c_str());
+    status = BindDriverToDevice(dev->proxy(), drv);
   }
   // TODO(swetland): arrange to mark us unbound when the proxy (or its driver_host) goes away
   if ((status == ZX_OK) && !(dev->flags & DEV_CTX_MULTI_BIND)) {
@@ -836,37 +840,6 @@ zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
   return ZX_OK;
 }
 
-// DriverAdded is called when a driver is added after the
-// devcoordinator has started.  The driver is added to the new-drivers
-// list and work is queued to process it.
-void Coordinator::DriverAdded(Driver* drv, const char* version) {
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>> driver_list;
-  driver_list.push_back(std::unique_ptr<Driver>(drv));
-  async::PostTask(dispatcher_, [this, driver_list = std::move(driver_list)]() mutable {
-    AddAndBindDrivers(std::move(driver_list));
-  });
-}
-
-// DriverAddedInit is called from driver enumeration during
-// startup and before the devcoordinator starts running.  Enumerated
-// drivers are added directly to the all-drivers or fallback list.
-//
-// TODO: fancier priorities
-void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
-  auto driver = std::unique_ptr<Driver>(drv);
-
-  if (driver->fallback) {
-    // fallback driver, load only if all else fails
-    fallback_drivers_.push_front(std::move(driver));
-  } else if (version[0] == '!') {
-    // debugging / development hack
-    // prioritize drivers with version "!..." over others
-    drivers_.push_front(std::move(driver));
-  } else {
-    drivers_.push_back(std::move(driver));
-  }
-}
-
 zx_status_t Coordinator::AddDeviceGroup(
     const fbl::RefPtr<Device>& dev, std::string_view name,
     fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc) {
@@ -922,70 +895,22 @@ zx_status_t Coordinator::BindDriver(Driver* drv) {
   return ZX_OK;
 }
 
-void Coordinator::AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers) {
-  std::unique_ptr<Driver> driver;
-  while ((driver = drivers.pop_front()) != nullptr) {
-    Driver* driver_ptr = driver.get();
-    drivers_.push_back(std::move(driver));
-
-    zx_status_t status = BindDriver(driver_ptr);
-    if (status != ZX_OK && status != ZX_ERR_UNAVAILABLE) {
-      LOGF(ERROR, "Failed to bind driver '%s': %s", driver_ptr->name.data(),
-           zx_status_get_string(status));
-    }
-  }
-}
-
-void Coordinator::BindFallbackDrivers() {
-  for (auto& driver : fallback_drivers_) {
-    LOGF(INFO, "Fallback driver '%s' is available", driver.name.data());
-  }
-
-  AddAndBindDrivers(std::move(fallback_drivers_));
-}
-
 void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
                                 GetDriverInfoCompleter::Sync& completer) {
-  std::vector<const Driver*> driver_list;
-  if (request->driver_filter.empty()) {
-    for (const auto& driver : drivers()) {
-      driver_list.push_back(&driver);
-    }
-  } else {
-    for (const auto& d : request->driver_filter) {
-      std::string_view driver_path(d.data(), d.size());
-      for (const auto& drv : drivers()) {
-        if (driver_path.compare(drv.libname) == 0) {
-          driver_list.push_back(&drv);
-          break;
-        }
-      }
-    }
-  }
-
-  auto arena = std::make_unique<fidl::Arena<512>>();
-  auto result = ::GetDriverInfo(*arena, driver_list);
-  if (result.is_error()) {
-    request->iterator.Close(result.status_value());
+  auto driver_index_client = component::Connect<fuchsia_driver_development::DriverIndex>();
+  if (driver_index_client.is_error()) {
+    LOGF(WARNING, "Failed to connect to fuchsia_driver_development::DriverIndex");
     return;
   }
 
-  auto index_result = driver_loader_.GetDriverInfo(*arena, request->driver_filter);
-  if (!index_result.is_error()) {
-    result->reserve(result->size() + index_result->size());
-    result->insert(result->end(), index_result->begin(), index_result->end());
-  } else {
-    LOGF(ERROR, "Failed to call index: %s\n", zx_status_get_string(index_result.status_value()));
-  }
+  fidl::WireSyncClient driver_index{std::move(*driver_index_client)};
+  auto info_result =
+      driver_index->GetDriverInfo(request->driver_filter, std::move(request->iterator));
 
-  // If we have driver filters check that we found one driver per filter.
-  if (!request->driver_filter.empty() && (result->size() != request->driver_filter.count())) {
-    request->iterator.Close(ZX_ERR_NOT_FOUND);
-    return;
+  // There are still some environments where we can't connect to DriverIndex.
+  if (info_result.status() != ZX_OK) {
+    LOGF(INFO, "DriverIndex:GetDriverInfo failed: %d", info_result.status());
   }
-
-  auto iterator = std::make_unique<DriverInfoIterator>(std::move(arena), std::move(*result));
-  fidl::BindServer(dispatcher(), std::move(request->iterator), std::move(iterator));
 }
 
 void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,

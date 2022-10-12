@@ -141,13 +141,8 @@ class Coordinator : public CompositeManagerBridge,
   // Initialization functions for DFv1. InitCoreDevices() is public for testing only.
   void LoadV1Drivers(std::string_view sys_device_driver);
   void InitCoreDevices(std::string_view sys_device_driver);
-  void DriverAddedInit(Driver* drv, const char* version);
 
-  void BindFallbackDrivers();
-  void AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers);
   zx_status_t BindDriverToDeviceGroup(const MatchedDriver& driver, const fbl::RefPtr<Device>& dev);
-
-  void DriverAdded(Driver* drv, const char* version);
 
   zx_status_t AddDeviceGroup(const fbl::RefPtr<Device>& dev, std::string_view name,
                              fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc);
@@ -196,9 +191,6 @@ class Coordinator : public CompositeManagerBridge,
   void set_driver_runner(dfv2::DriverRunner* runner) { driver_runner_ = runner; }
 
   SystemStateManager& system_state_manager() { return system_state_manager_; }
-
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() { return drivers_; }
-  const fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() const { return drivers_; }
 
   // Called when a new driver becomes available to the Coordinator. Existing devices are
   // inspected to see if the new driver is bindable to them (unless they are already bound).
@@ -292,12 +284,6 @@ class Coordinator : public CompositeManagerBridge,
   fidl::WireSharedClient<fuchsia_power_manager::DriverManagerRegistration> power_manager_client_;
 
   internal::BasePackageResolver base_resolver_;
-
-  // All Drivers
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
-
-  // Drivers to try last
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>> fallback_drivers_;
 
   // All DriverHosts
   fbl::DoublyLinkedList<DriverHost*> driver_hosts_;

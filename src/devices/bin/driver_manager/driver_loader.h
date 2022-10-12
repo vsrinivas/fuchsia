@@ -64,9 +64,6 @@ class DriverLoader {
   const Driver* LoadDriverUrl(const std::string& driver_url, bool use_universe_resolver = false);
   const Driver* LoadDriverUrl(fdi::wire::MatchedDriverInfo driver_info);
 
-  zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
-      fidl::AnyArena& allocator, fidl::VectorView<fidl::StringView> filter);
-
   // This API is used for debugging, for GetDriverInfo and DumpDrivers.
   std::vector<const Driver*> GetAllDriverIndexDrivers();
 
