@@ -352,7 +352,7 @@ protocol A {
 
 TEST(AttributesTests, GoodDocAttribute) {
   TestLibrary library;
-  library.AddFile("good/fi-0028.test.fidl");
+  library.AddFile("good/fi-0028-b.test.fidl");
 
   ASSERT_COMPILED(library);
 }

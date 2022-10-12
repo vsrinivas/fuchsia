@@ -463,8 +463,10 @@ TEST(ParsingTests, BadInvalidCharacterTest) {
 }
 
 TEST(ParsingTests, GoodEmptyStructTest) {
-  TestLibrary library;
-  library.AddFile("good/fi-0012.test.fidl");
+  TestLibrary library(R"FIDL(library fidl.test.emptystruct;
+
+type Empty = struct {};
+)FIDL");
   ASSERT_COMPILED(library);
 }
 

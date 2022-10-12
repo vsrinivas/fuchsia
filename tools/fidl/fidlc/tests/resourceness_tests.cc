@@ -92,7 +92,7 @@ type Three = resource resource resource struct {}; // line 6
 TEST(ResourcenessTests, GoodResourceSimple) {
   TestLibrary library;
   library.UseLibraryZx();
-  library.AddFile("good/fi-0110.test.fidl");
+  library.AddFile("good/fi-0110-a.test.fidl");
 
   ASSERT_COMPILED(library);
 }

@@ -1,10 +1,7 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library test.good.fi0110;
+library test.good.fi0028b;
 
-using zx;
-
-type Foo = resource struct {
-    handle zx.handle;
-};
+@doc("An attribute doc comment")
+type Empty = struct {};
