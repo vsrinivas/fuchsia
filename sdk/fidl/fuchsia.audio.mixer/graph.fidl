@@ -484,6 +484,11 @@ protocol Graph {
         ///
         /// Required.
         2: control server_end:fuchsia.audio.GainControl;
+
+        /// Reference clock for this GainControl.
+        ///
+        /// Required.
+        3: reference_clock ReferenceClock;
     }) -> (table {
         /// ID of the newly-created GainControl. Guaranteed to be unique.
         1: id GainControlId;
@@ -614,7 +619,13 @@ type DeleteThreadError = flexible enum {
 };
 
 /// Type of errors return by [`CreateGainControl`].
-type CreateGainControlError = flexible enum {};
+type CreateGainControlError = flexible enum {
+    /// A required field was not provided.
+    MISSING_REQUIRED_FIELD = 1;
+
+    /// A parameter had an invalid value.
+    INVALID_PARAMETER = 2;
+};
 
 /// Type of errors return by [`DeleteGainControl`].
 type DeleteGainControlError = flexible enum {

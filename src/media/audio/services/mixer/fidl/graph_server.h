@@ -22,6 +22,7 @@
 #include "src/media/audio/services/mixer/fidl/graph_mix_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
+#include "src/media/audio/services/mixer/fidl_realtime/gain_control_server.h"
 
 namespace media_audio {
 
@@ -86,6 +87,7 @@ class GraphServer
   explicit GraphServer(Args args);
 
   void OnShutdown(fidl::UnbindInfo info) final;
+  GainControlId NextGainControlId();
   NodeId NextNodeId();
   ThreadId NextThreadId();
 
@@ -97,6 +99,13 @@ class GraphServer
 
   const std::shared_ptr<ClockFactory> clock_factory_;
   const std::shared_ptr<ClockRegistry> clock_registry_;
+
+  // Gain controls mapping.
+  // TODO(fxbug.dev/87651): Set up an async loop in `realtime_fidl_thread_` to iterate each gain
+  // control in `gain_controls_`, and call `Advance` periodically (i.e. move `GainControlRegistry`
+  // functionality here).
+  std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>> gain_controls_;
+  GainControlId next_gain_control_id_ = 1;
 
   // Nodes mapping.
   std::unordered_map<NodeId, NodePtr> nodes_;

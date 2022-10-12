@@ -14,6 +14,7 @@
 #include "fidl/fuchsia.audio.mixer/cpp/common_types.h"
 #include "fidl/fuchsia.audio.mixer/cpp/natural_types.h"
 #include "fidl/fuchsia.audio.mixer/cpp/wire_types.h"
+#include "fidl/fuchsia.audio/cpp/markers.h"
 #include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "fidl/fuchsia.mem/cpp/wire_types.h"
 #include "lib/fidl/cpp/wire/arena.h"
@@ -30,7 +31,9 @@
 namespace media_audio {
 namespace {
 
-using ::fuchsia_audio_mixer::CreateNodeError;
+using ::fuchsia_audio_mixer::wire::CreateGainControlError;
+using ::fuchsia_audio_mixer::wire::CreateNodeError;
+using ::fuchsia_audio_mixer::wire::DeleteGainControlError;
 
 const Format kFormat = Format::CreateOrDie({
     .sample_type = ::fuchsia_audio::SampleType::kFloat32,
@@ -169,6 +172,15 @@ MakeDefaultProcessorConfig(fidl::AnyArena& arena) {
   builder.processor(std::move(endpoints->client));
 
   return builder;
+}
+
+fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateGainControlRequest>
+MakeDefaultCreateGainControlRequest(fidl::AnyArena& arena) {
+  auto [client, server] = CreateClientOrDie<fuchsia_audio::GainControl>();
+  return fuchsia_audio_mixer::wire::GraphCreateGainControlRequest::Builder(arena)
+      .name(fidl::StringView::FromExternal("gaincontrol"))
+      .control(std::move(server))
+      .reference_clock(MakeReferenceClock(arena));
 }
 
 fidl::VectorView<GainControlId> MakeDefaultGainControls(fidl::AnyArena& arena) {
@@ -1528,6 +1540,113 @@ TEST_F(GraphServerTest, DeleteThreadSuccessAfterConsumerDeleted) {
         fuchsia_audio_mixer::wire::GraphDeleteThreadRequest::Builder(arena_).id(1).Build());
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();
+  }
+}
+
+//
+// CreateGainControl
+//
+
+TEST_F(GraphServerTest, CreateGainControlFails) {
+  struct TestCase {
+    std::string name;
+    std::function<void(
+        fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateGainControlRequest>&)>
+        edit;
+    CreateGainControlError expected_error;
+  };
+
+  const std::vector<TestCase> cases = {
+      {
+          .name = "MissingReferenceClock",
+          .edit =
+              [](auto request) {
+                request.reference_clock(
+                    fidl::ObjectView<fuchsia_audio_mixer::wire::ReferenceClock>());
+              },
+          .expected_error = CreateGainControlError::kMissingRequiredField,
+      },
+  };
+
+  for (auto& tc : cases) {
+    SCOPED_TRACE("TestCase: " + tc.name);
+    auto request = MakeDefaultCreateGainControlRequest(arena_);
+    tc.edit(request);
+
+    const auto result = client()->CreateGainControl(request.Build());
+    if (!result.ok()) {
+      ADD_FAILURE() << "failed to send method call: " << result;
+      continue;
+    }
+    if (!result->is_error()) {
+      ADD_FAILURE() << "CreateGainControl did not fail";
+      continue;
+    }
+    EXPECT_EQ(result->error_value(), tc.expected_error);
+  }
+}
+
+// TODO(fxbug.dev/109458): can be merged into `CreateGainControlFails` after fix.
+TEST_F(GraphServerTest, CreateGainControlFailsMissingServerEnd) {
+  const auto result = client()->CreateGainControl(
+      fuchsia_audio_mixer::wire::GraphCreateGainControlRequest::Builder(arena_)
+          .name(fidl::StringView::FromExternal("gaincontrol"))
+          // no control()
+          .reference_clock(MakeReferenceClock(arena_))
+          .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateGainControlError::kMissingRequiredField);
+}
+
+TEST_F(GraphServerTest, CreateGainControlSuccess) {
+  const auto result =
+      client()->CreateGainControl(MakeDefaultCreateGainControlRequest(arena_).Build());
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_FALSE(result->is_error()) << result->error_value();
+  ASSERT_TRUE(result->value()->has_id());
+  EXPECT_EQ(result->value()->id(), 1u);
+}
+
+//
+// DeleteGainControl
+//
+
+TEST_F(GraphServerTest, DeleteGainControlFailsMissingId) {
+  const auto result = client()->DeleteGainControl(
+      fuchsia_audio_mixer::wire::GraphDeleteGainControlRequest::Builder(arena_).Build());
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), DeleteGainControlError::kInvalidId);
+}
+
+TEST_F(GraphServerTest, DeleteGainControlFailsIdNotFound) {
+  const auto result = client()->DeleteGainControl(
+      fuchsia_audio_mixer::wire::GraphDeleteGainControlRequest::Builder(arena_).id(1).Build());
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), DeleteGainControlError::kInvalidId);
+}
+
+TEST_F(GraphServerTest, DeleteGainControlSuccess) {
+  // Create a gain control.
+  GainControlId id = kInvalidId;
+  {
+    const auto result =
+        client()->CreateGainControl(MakeDefaultCreateGainControlRequest(arena_).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    id = result->value()->id();
+  }
+
+  // Delete that gain control.
+  {
+    const auto result = client()->DeleteGainControl(
+        fuchsia_audio_mixer::wire::GraphDeleteGainControlRequest::Builder(arena_).id(id).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error());
   }
 }
 

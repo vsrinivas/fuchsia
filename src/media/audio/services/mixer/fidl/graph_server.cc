@@ -11,13 +11,17 @@
 
 #include <type_traits>
 
+#include "fidl/fuchsia.audio.mixer/cpp/common_types.h"
+#include "fidl/fuchsia.audio.mixer/cpp/wire_types.h"
 #include "fidl/fuchsia.audio/cpp/wire_types.h"
+#include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/fidl/consumer_node.h"
 #include "src/media/audio/services/mixer/fidl/custom_node.h"
 #include "src/media/audio/services/mixer/fidl/mixer_node.h"
 #include "src/media/audio/services/mixer/fidl/producer_node.h"
+#include "src/media/audio/services/mixer/fidl_realtime/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_client.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
@@ -751,15 +755,62 @@ void GraphServer::DeleteThread(DeleteThreadRequestView request,
 void GraphServer::CreateGainControl(CreateGainControlRequestView request,
                                     CreateGainControlCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::CreateGainControl");
-  ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+
+  if (!request->has_control() || !request->has_reference_clock()) {
+    FX_LOGS(WARNING) << "CreateGainControl: missing field";
+    completer.ReplyError(fuchsia_audio_mixer::CreateGainControlError::kMissingRequiredField);
+    return;
+  }
+
+  // Validate reference clock.
+  const auto name = NameOrEmpty(*request);
+  auto clock = LookupClock(*clock_registry_, *clock_factory_, request->reference_clock(), name);
+  if (!clock.is_ok()) {
+    FX_LOGS(WARNING) << "CreateGainControl: invalid reference clock";
+    completer.ReplyError(fuchsia_audio_mixer::CreateGainControlError::kInvalidParameter);
+    return;
+  }
+
+  // Register gain control.
+  const auto id = NextGainControlId();
+  auto server =
+      GainControlServer::Create(realtime_fidl_thread_, std::move(request->control()),
+                                GainControlServer::Args{
+                                    .name = name,
+                                    .reference_clock = UnreadableClock(std::move(clock.value())),
+                                });
+  FX_CHECK(server);
+  gain_controls_[id] = std::move(server);
+
+  fidl::Arena arena;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphCreateGainControlResponse::Builder(arena).id(id).Build());
 }
 
 void GraphServer::DeleteGainControl(DeleteGainControlRequestView request,
                                     DeleteGainControlCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::DeleteGainControl");
-  ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+
+  if (!request->has_id()) {
+    FX_LOGS(WARNING) << "DeleteGainControl: missing `id` field";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteGainControlError::kInvalidId);
+    return;
+  }
+
+  const auto it = gain_controls_.find(request->id());
+  if (it == gain_controls_.end()) {
+    FX_LOGS(WARNING) << "DeleteGainControl: invalid id";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteGainControlError::kInvalidId);
+    return;
+  }
+
+  // TODO(fxbug.dev/87651): Keep track of the use in `MixerNode`s and report `kStillInUse` error if
+  // any of the edges still use this gain control.
+  gain_controls_.erase(it);
+
+  fidl::Arena arena;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphDeleteGainControlResponse::Builder(arena).Build());
 }
 
 void GraphServer::CreateGraphControlledReferenceClock(
@@ -826,14 +877,20 @@ void GraphServer::OnShutdown(fidl::UnbindInfo info) {
   BaseFidlServer::OnShutdown(info);
 }
 
+GainControlId GraphServer::NextGainControlId() {
+  const auto id = next_gain_control_id_++;
+  FX_CHECK(id != kInvalidId);
+  return id;
+}
+
 NodeId GraphServer::NextNodeId() {
-  auto id = next_node_id_++;
+  const auto id = next_node_id_++;
   FX_CHECK(id != kInvalidId);
   return id;
 }
 
 ThreadId GraphServer::NextThreadId() {
-  auto id = next_thread_id_++;
+  const auto id = next_thread_id_++;
   FX_CHECK(id != kInvalidId);
   return id;
 }

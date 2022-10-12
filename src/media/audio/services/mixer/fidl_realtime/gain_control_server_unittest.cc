@@ -45,8 +45,10 @@ class GainControlServerTest : public ::testing::Test {
  public:
   void SetUp() {
     thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-    wrapper_ =
-        std::make_unique<TestServerAndClient<GainControlServer>>(thread_, DefaultUnreadableClock());
+    wrapper_ = std::make_unique<TestServerAndClient<GainControlServer>>(
+        thread_, GainControlServer::Args{
+                     .reference_clock = DefaultUnreadableClock(),
+                 });
   }
 
   void TearDown() {

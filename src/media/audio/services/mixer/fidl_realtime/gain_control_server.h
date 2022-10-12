@@ -23,16 +23,28 @@ class GainControlServer
     : public BaseFidlServer<GainControlServer, fidl::WireServer, fuchsia_audio::GainControl> {
  public:
   // The returned server will live until the `server_end` channel is closed.
+  struct Args {
+    // Name of this gain control. Used for diagnostics only.
+    std::string_view name;
+
+    // Reference clock of this gain control.
+    UnreadableClock reference_clock;
+  };
   static std::shared_ptr<GainControlServer> Create(
       std::shared_ptr<const FidlThread> thread,
-      fidl::ServerEnd<fuchsia_audio::GainControl> server_end, UnreadableClock reference_clock);
+      fidl::ServerEnd<fuchsia_audio::GainControl> server_end, Args args);
 
   // Wraps `GainControl::Advance`.
   void Advance(zx::time reference_time);
 
   // Implements `fidl::WireServer<fuchsia_audio::GainControl>`.
+  // TODO(fxbug.dev/87651): Keep track of all `MixerNode`s that use this gain control to forward
+  // these calls via `GlobalTaskQueue`.
   void SetGain(SetGainRequestView request, SetGainCompleter::Sync& completer) final;
   void SetMute(SetMuteRequestView request, SetMuteCompleter::Sync& completer) final;
+
+  // Returns the name of this gain control.
+  std::string_view name() const { return name_; }
 
   // Returns the internal gain control.
   const GainControl& gain_control() const { return gain_control_; }
@@ -42,8 +54,9 @@ class GainControlServer
   template <typename ServerT, template <typename T> typename FidlServerT, typename ProtocolT>
   friend class BaseFidlServer;
 
-  explicit GainControlServer(UnreadableClock reference_clock);
+  explicit GainControlServer(Args args);
 
+  const std::string name_;
   GainControl gain_control_;
 };
 

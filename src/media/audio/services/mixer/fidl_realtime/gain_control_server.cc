@@ -26,9 +26,8 @@ using ::fuchsia_audio::GainError;
 // static
 std::shared_ptr<GainControlServer> GainControlServer::Create(
     std::shared_ptr<const FidlThread> thread,
-    fidl::ServerEnd<fuchsia_audio::GainControl> server_end, UnreadableClock reference_clock) {
-  return BaseFidlServer::Create(std::move(thread), std::move(server_end),
-                                std::move(reference_clock));
+    fidl::ServerEnd<fuchsia_audio::GainControl> server_end, Args args) {
+  return BaseFidlServer::Create(std::move(thread), std::move(server_end), std::move(args));
 }
 
 void GainControlServer::Advance(zx::time reference_time) { gain_control_.Advance(reference_time); }
@@ -105,7 +104,7 @@ void GainControlServer::SetMute(SetMuteRequestView request, SetMuteCompleter::Sy
   completer.ReplySuccess(fuchsia_audio::wire::GainControlSetMuteResponse::Builder(arena).Build());
 }
 
-GainControlServer::GainControlServer(UnreadableClock reference_clock)
-    : gain_control_(std::move(reference_clock)) {}
+GainControlServer::GainControlServer(Args args)
+    : name_(args.name), gain_control_(std::move(args.reference_clock)) {}
 
 }  // namespace media_audio
