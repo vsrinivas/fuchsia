@@ -15,16 +15,12 @@ protocol Syscall {
         handle handle:VMO;
         buffer VectorVoid;
         offset uint64;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // Special case for abigen's test wrapper.
     TestWrapper(struct {
         a int32;
         b int32;
         c int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

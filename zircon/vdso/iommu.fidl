@@ -84,7 +84,6 @@ protocol Iommu {
         type uint32;
         desc VectorVoid;
     }) -> (resource struct {
-        status status;
         out handle:IOMMU;
-    });
+    }) error status;
 };

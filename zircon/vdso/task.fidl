@@ -98,9 +98,8 @@ protocol Task {
     Suspend(resource struct {
         handle handle;
     }) -> (resource struct {
-        status status;
         token handle;
-    });
+    }) error status;
 
     /// This function replaces [task_suspend](task_suspend.md). When all callers are
     /// updated, [`zx_task_suspend()`] will be deleted and this function will be renamed
@@ -166,9 +165,8 @@ protocol Task {
     SuspendToken(resource struct {
         handle handle;
     }) -> (resource struct {
-        status status;
         token handle;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -269,9 +267,8 @@ protocol Task {
         handle handle;
         options uint32;
     }) -> (resource struct {
-        status status;
         out handle:CHANNEL;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -334,7 +331,5 @@ protocol Task {
     /// [`zx_process_create()`]: process_create.md
     Kill(resource struct {
         handle handle;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

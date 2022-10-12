@@ -62,9 +62,7 @@ protocol Misc {
     @blocking
     Nanosleep(struct {
         deadline time;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -297,9 +295,7 @@ protocol Misc {
         size Usize;
         @release
         close_handle handle;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///

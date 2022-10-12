@@ -64,10 +64,9 @@ protocol Socket {
     Create(struct {
         options uint32;
     }) -> (resource struct {
-        status status;
         out0 handle;
         out1 handle;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -154,9 +153,8 @@ protocol Socket {
         options uint32;
         buffer VectorVoid;
     }) -> (struct {
-        status status;
         actual OptionalUsize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -237,10 +235,9 @@ protocol Socket {
         handle handle:SOCKET;
         options uint32;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
         actual OptionalUsize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -320,7 +317,5 @@ protocol Socket {
         handle handle:<SOCKET, rights.MANAGE_SOCKET>;
         disposition uint32;
         disposition_peer uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

@@ -65,7 +65,6 @@ protocol Event {
     Create(struct {
         options uint32;
     }) -> (resource struct {
-        status status;
         out handle:EVENT;
-    });
+    }) error status;
 };

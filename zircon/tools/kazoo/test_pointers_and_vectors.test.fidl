@@ -8,13 +8,9 @@ protocol TypeMappings {
     Func0(struct {
         bytes vector<byte>;
         str string;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
     Func1(resource struct {
         ins vector<handle>;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
     Func2();
 };

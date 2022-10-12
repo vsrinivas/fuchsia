@@ -38,9 +38,11 @@ TEST(SyscallLibrary, LoaderSingleMethod) {
   EXPECT_EQ(req.members().size(), 1u);
   EXPECT_EQ(req.members()[0].name(), "an_input");
 
-  const Struct& resp = sc->response();
-  EXPECT_EQ(resp.members().size(), 1u);
-  EXPECT_EQ(resp.members()[0].name(), "status");
+  EXPECT_TRUE(sc->response().members().empty());
+  const std::optional<Type>& error_type = sc->error_type();
+  ASSERT_TRUE(error_type);
+  ASSERT_TRUE(error_type->IsZxBasicAlias());
+  EXPECT_EQ(error_type->DataAsZxBasicAlias().name(), "Status");
 }
 
 TEST(SyscallLibrary, LoaderVectors) {

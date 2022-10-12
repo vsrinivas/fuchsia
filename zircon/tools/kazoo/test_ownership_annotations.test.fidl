@@ -30,17 +30,15 @@ protocol HandleOwnership {
     Fun4(resource struct {
         in handle;
     }) -> (resource struct {
-        status status;
         out handle;
-    });
+    }) error status;
     Fun5(resource struct {
         @release
         in handle;
     }) -> (resource struct {
-        status status;
         @use
         out handle;
-    });
+    }) error status;
     @handle_unchecked
     Fun6(resource struct {
         in vector<handle>;

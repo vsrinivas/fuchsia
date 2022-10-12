@@ -101,9 +101,7 @@ protocol Futexfuncs {
         current_value Futex;
         new_futex_owner handle;
         deadline time;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -164,9 +162,7 @@ protocol Futexfuncs {
     FutexWake(struct {
         value_ptr ConstFutexPtr;
         wake_count uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -266,9 +262,7 @@ protocol Futexfuncs {
         requeue_ptr ConstFutexPtr;
         requeue_count uint32;
         new_requeue_owner handle;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -315,9 +309,7 @@ protocol Futexfuncs {
     /// [`zx_futex_wake()`]: futex_wake.md
     FutexWakeSingleOwner(struct {
         value_ptr ConstFutexPtr;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -389,9 +381,7 @@ protocol Futexfuncs {
         requeue_ptr ConstFutexPtr;
         requeue_count uint32;
         new_requeue_owner handle;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -439,7 +429,6 @@ protocol Futexfuncs {
     FutexGetOwner(struct {
         value_ptr ConstFutexPtr;
     }) -> (struct {
-        status status;
         koid OptionalKoid;
-    });
+    }) error status;
 };

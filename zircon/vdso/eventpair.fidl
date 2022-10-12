@@ -81,8 +81,7 @@ protocol Eventpair {
     Create(struct {
         options uint32;
     }) -> (resource struct {
-        status status;
         out0 handle:EVENT;
         out1 handle:EVENT;
-    });
+    }) error status;
 };

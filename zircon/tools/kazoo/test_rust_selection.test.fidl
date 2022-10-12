@@ -15,9 +15,7 @@ protocol Rust {
 
     MultipleInHandles(resource struct {
         handles vector<handle>;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // noreturn handled properly.
     @noreturn
@@ -35,16 +33,12 @@ protocol Rust {
         offset uint64;
         size uint64;
         buffer MutableVectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // |input| treated const
     ConstInput(struct {
         input vector<byte>;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     VariousBasicTypeNames(struct {
         a bool;

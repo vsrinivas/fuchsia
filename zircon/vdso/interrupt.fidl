@@ -95,9 +95,8 @@ protocol Interrupt {
         src_num uint32;
         options uint32;
     }) -> (resource struct {
-        status status;
         out_handle handle:INTERRUPT;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -199,9 +198,7 @@ protocol Interrupt {
         port_handle handle:PORT;
         key uint64;
         options uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -272,9 +269,8 @@ protocol Interrupt {
     Wait(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
-        status status;
         out_timestamp OptionalTime;
-    });
+    }) error status;
 
     // TODO(fxbug.dev/32803): No DESTROY rights here.
     /// ## Summary
@@ -345,9 +341,7 @@ protocol Interrupt {
     /// [`zx_port_wait()`]: port_wait.md
     Destroy(resource struct {
         handle handle:INTERRUPT;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -417,9 +411,7 @@ protocol Interrupt {
     /// [`zx_port_wait()`]: port_wait.md
     Ack(resource struct {
         handle handle:INTERRUPT;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -487,7 +479,5 @@ protocol Interrupt {
         handle handle:INTERRUPT;
         options uint32;
         timestamp time;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

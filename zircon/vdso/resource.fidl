@@ -109,7 +109,6 @@ protocol Resource {
         size Usize;
         name string;
     }) -> (resource struct {
-        status status;
         resource_out handle:RESOURCE;
-    });
+    }) error status;
 };

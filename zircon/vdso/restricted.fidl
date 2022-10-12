@@ -84,9 +84,7 @@ protocol Restricted {
         options uint32;
         vector_table_ptr Uintptr;
         context Uintptr;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -148,9 +146,7 @@ protocol Restricted {
     @next
     WriteState(struct {
         buffer VectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -211,7 +207,6 @@ protocol Restricted {
     /// [`zx_restricted_write_state()`]: restricted_write_state.md
     @next
     ReadState() -> (struct {
-        status status;
         buffer VectorVoid;
-    });
+    }) error status;
 };

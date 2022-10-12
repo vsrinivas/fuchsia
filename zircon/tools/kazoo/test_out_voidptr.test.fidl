@@ -10,7 +10,6 @@ protocol Ovp {
     VoidPointerOut(resource struct {
         handle handle;
     }) -> (struct {
-        status status;
         details VoidPtr;
-    });
+    }) error status;
 };

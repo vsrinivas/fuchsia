@@ -9,6 +9,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <variant>
@@ -188,6 +189,7 @@ class Type {
   bool IsString() const { return std::holds_alternative<TypeString>(type_data_); }
   bool IsStruct() const { return std::holds_alternative<TypeStruct>(type_data_); }
   bool IsHandle() const { return std::holds_alternative<TypeHandle>(type_data_); }
+  bool IsZxBasicAlias() const { return std::holds_alternative<TypeZxBasicAlias>(type_data_); }
   bool IsSignedInt() const {
     return std::holds_alternative<TypeChar>(type_data_) ||
            std::holds_alternative<TypeInt8>(type_data_) ||
@@ -205,6 +207,9 @@ class Type {
   const TypeVector& DataAsVector() const { return std::get<TypeVector>(type_data_); }
   const TypePointer& DataAsPointer() const { return std::get<TypePointer>(type_data_); }
   const TypeStruct& DataAsStruct() const { return std::get<TypeStruct>(type_data_); }
+  const TypeZxBasicAlias& DataAsZxBasicAlias() const {
+    return std::get<TypeZxBasicAlias>(type_data_);
+  }
 
   bool IsSimpleType() const { return !IsVector() && !IsString() && !IsStruct(); }
 
@@ -295,6 +300,7 @@ class Syscall {
   bool is_noreturn() const { return is_noreturn_; }
   const Struct& request() const { return request_; }
   const Struct& response() const { return response_; }
+  const std::optional<Type>& error_type() const { return error_type_; }
 
   bool HasAttribute(const char* attrib_name) const;
   std::string GetAttribute(const char* attrib_name) const;
@@ -316,6 +322,7 @@ class Syscall {
   std::map<std::string, std::string> attributes_;
   Struct request_;
   Struct response_;
+  std::optional<Type> error_type_;
 
   // request_ and response_ mapped to C/Kernel-style call style.
   Type kernel_return_type_;

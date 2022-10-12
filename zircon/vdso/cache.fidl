@@ -63,7 +63,5 @@ protocol Cache {
         addr ConstVoidPtr;
         size Usize;
         options uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

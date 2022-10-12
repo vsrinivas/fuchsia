@@ -59,9 +59,8 @@ protocol Msi {
         handle handle:RESOURCE;
         count uint32;
     }) -> (resource struct {
-        status status;
         out_allocation handle;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -157,7 +156,6 @@ protocol Msi {
         vmo handle:VMO;
         vmo_offset Usize;
     }) -> (resource struct {
-        status status;
         out_interrupt handle;
-    });
+    }) error status;
 };

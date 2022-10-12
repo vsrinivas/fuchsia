@@ -170,9 +170,8 @@ protocol Clockfuncs {
         options uint64;
         args ConstVoidPtr;
     }) -> (resource struct {
-        status status;
         out handle;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -219,9 +218,8 @@ protocol Clockfuncs {
     ClockRead(resource struct {
         handle handle;
     }) -> (struct {
-        status status;
         now time;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -296,9 +294,8 @@ protocol Clockfuncs {
         handle handle;
         options uint64;
     }) -> (struct {
-        status status;
         details VoidPtr;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -529,7 +526,5 @@ protocol Clockfuncs {
         handle handle;
         options uint64;
         args ConstVoidPtr;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

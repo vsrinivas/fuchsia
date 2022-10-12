@@ -84,7 +84,6 @@ protocol Smc {
         handle handle:RESOURCE;
         parameters SmcParameters;
     }) -> (struct {
-        status status;
         out_smc_result SmcResult;
-    });
+    }) error status;
 };

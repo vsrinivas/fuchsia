@@ -103,9 +103,8 @@ protocol Vcpu {
         options uint32;
         entry vaddr;
     }) -> (resource struct {
-        status status;
         out handle:VCPU;
-    });
+    }) error status;
 
     // See port.fidl for definition of PortPacket.
     /// ## Summary
@@ -183,9 +182,8 @@ protocol Vcpu {
     Enter(resource struct {
         handle handle:VCPU;
     }) -> (struct {
-        status status;
         packet PortPacket;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -243,9 +241,7 @@ protocol Vcpu {
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     Kick(resource struct {
         handle handle:VCPU;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -304,9 +300,7 @@ protocol Vcpu {
     Interrupt(resource struct {
         handle handle:VCPU;
         vector uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -377,9 +371,8 @@ protocol Vcpu {
         handle handle:VCPU;
         kind uint32;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -450,7 +443,5 @@ protocol Vcpu {
         handle handle:VCPU;
         kind uint32;
         buffer VectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

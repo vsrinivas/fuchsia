@@ -8,7 +8,5 @@ protocol Single {
     /// This does a single thing.
     DoThing(struct {
         an_input int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

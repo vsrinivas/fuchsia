@@ -42,9 +42,7 @@ protocol Ioports {
         resource handle:RESOURCE;
         io_addr uint16;
         len uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -83,7 +81,5 @@ protocol Ioports {
         resource handle:RESOURCE;
         io_addr uint16;
         len uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

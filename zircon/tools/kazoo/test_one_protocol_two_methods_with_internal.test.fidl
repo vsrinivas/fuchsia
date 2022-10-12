@@ -9,15 +9,11 @@ protocol Couple {
     @internal
     DoThing(struct {
         an_input int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// Does great stuff.
     GetStuff(struct {
         an_input int32;
         input2 int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

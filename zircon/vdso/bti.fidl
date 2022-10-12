@@ -72,9 +72,8 @@ protocol Bti {
         options uint32;
         bti_id uint64;
     }) -> (resource struct {
-        status status;
         out handle:BTI;
-    });
+    }) error status;
 
     // READ is intentional in the EXECUTE condition.
     /// ## Summary
@@ -218,10 +217,9 @@ protocol Bti {
         offset uint64;
         size uint64;
     }) -> (resource struct {
-        status status;
         addrs VectorPaddr;
         pmt handle:PMT;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -268,7 +266,5 @@ protocol Bti {
     /// [`zx_pmt_unpin()`]: pmt_unpin.md
     ReleaseQuarantine(resource struct {
         handle handle:BTI;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

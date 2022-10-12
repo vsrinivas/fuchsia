@@ -90,9 +90,8 @@ protocol Stream {
         vmo handle:VMO;
         seek off;
     }) -> (resource struct {
-        status status;
         out_stream handle:STREAM;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -186,9 +185,8 @@ protocol Stream {
         options uint32;
         vector VectorIovec;
     }) -> (struct {
-        status status;
         actual OptionalUsize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -280,9 +278,8 @@ protocol Stream {
         offset off;
         vector VectorIovec;
     }) -> (struct {
-        status status;
         actual OptionalUsize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -363,10 +360,9 @@ protocol Stream {
         handle handle:STREAM;
         options uint32;
     }) -> (struct {
-        status status;
         vector VectorIovec;
         actual OptionalUsize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -447,10 +443,9 @@ protocol Stream {
         options uint32;
         offset off;
     }) -> (struct {
-        status status;
         vector VectorIovec;
         actual OptionalUsize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -530,7 +525,6 @@ protocol Stream {
         whence StreamSeekOrigin;
         offset int64;
     }) -> (struct {
-        status status;
         out_seek OptionalOff;
-    });
+    }) error status;
 };

@@ -29,9 +29,7 @@ protocol Selection {
         requeue_ptr ConstFutexPtr;
         requeue_count uint32;
         new_requeue_owner handle;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // Optional output (signals).
     ObjectWaitOne(resource struct {
@@ -39,9 +37,8 @@ protocol Selection {
         signals signals;
         deadline time;
     }) -> (struct {
-        status status;
         observed OptionalSignals;
-    });
+    }) error status;
 
     // Argument reordering.
     @arg_reorder("handle,data,offset,data_size,actual")
@@ -50,9 +47,8 @@ protocol Selection {
         data MutableVectorVoid;
         offset uint32;
     }) -> (struct {
-        status status;
         actual Usize;
-    });
+    }) error status;
 
     // Mutable uint32 in the middle of input parameters (rather than as an
     // output).
@@ -65,9 +61,7 @@ protocol Selection {
         val MutableUint32;
         width Usize;
         write bool;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // uint32_t for size of a "vector".
     JobSetPolicy(resource struct {
@@ -75,15 +69,12 @@ protocol Selection {
         options uint32;
         topic uint32;
         policy VectorVoidU32Size;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // Handling of enums.
     ClockGet(struct {
         clock_id Clock;
     }) -> (struct {
-        status status;
         out time;
-    });
+    }) error status;
 };

@@ -14,9 +14,7 @@ protocol Kwrap {
 
     MultipleInHandles(resource struct {
         handles vector<handle>;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // vdsocall excluded.
     @vdsocall
@@ -35,26 +33,20 @@ protocol Kwrap {
         offset uint64;
         size uint64;
         buffer MutableVectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // Output handle copied properly.
     OutputHandle() -> (resource struct {
-        status status;
         event handle:EVENT;
-    });
+    }) error status;
 
     // When two output handles, status and copy are verified before any bytes
     // returned.
     TwoOutputHandle() -> (resource struct {
-        status status;
         out0 handle:EVENT;
         out1 handle:EVENT;
-    });
+    }) error status;
 
     @testonly
-    CompiledOut() -> (struct {
-        status status;
-    });
+    CompiledOut() -> (struct {}) error status;
 };

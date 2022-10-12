@@ -76,9 +76,8 @@ protocol Job {
         parent_job handle:JOB;
         options uint32;
     }) -> (resource struct {
-        status status;
         out handle:JOB;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -292,9 +291,7 @@ protocol Job {
         options uint32;
         topic uint32;
         policy VectorVoidU32Size;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -360,7 +357,5 @@ protocol Job {
         job handle:JOB;
         options uint32;
         process handle:PROCESS;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

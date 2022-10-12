@@ -121,7 +121,6 @@ protocol Profile {
         options uint32;
         profile ProfileInfo;
     }) -> (resource struct {
-        status status;
         out handle:PROFILE;
-    });
+    }) error status;
 };

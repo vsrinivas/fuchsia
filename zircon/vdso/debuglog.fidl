@@ -61,9 +61,8 @@ protocol Debuglog {
         resource handle:RESOURCE;
         options uint32;
     }) -> (resource struct {
-        status status;
         out handle:LOG;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -129,9 +128,7 @@ protocol Debuglog {
         handle handle:LOG;
         options uint32;
         buffer VectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -238,7 +235,6 @@ protocol Debuglog {
         handle handle:LOG;
         options uint32;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
-    });
+    }) error status;
 };

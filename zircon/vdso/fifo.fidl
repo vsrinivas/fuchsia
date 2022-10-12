@@ -70,10 +70,9 @@ protocol Fifo {
         elem_size Usize;
         options uint32;
     }) -> (resource struct {
-        status status;
         out0 handle:FIFO;
         out1 handle:FIFO;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -149,10 +148,9 @@ protocol Fifo {
         handle handle:FIFO;
         elem_size Usize;
     }) -> (struct {
-        status status;
         data VectorVoid;
         actual_count OptionalUsize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -228,7 +226,6 @@ protocol Fifo {
         data ConstVoidPtr;
         count Usize;
     }) -> (struct {
-        status status;
         actual_count OptionalUsize;
-    });
+    }) error status;
 };

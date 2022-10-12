@@ -54,7 +54,5 @@ protocol Pmt {
     Unpin(resource struct {
         @release
         handle handle:PMT;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

@@ -43,12 +43,11 @@ protocol Framebuffer {
     GetInfo(resource struct {
         resource handle:RESOURCE;
     }) -> (struct {
-        status status;
         format uint32;
         width uint32;
         height uint32;
         stride uint32;
-    });
+    }) error status;
 
     // TODO(fxbug.dev/32803): vmo ZX_OBJ_TYPE_VMO; No rights required?
     /// ## Summary
@@ -96,7 +95,5 @@ protocol Framebuffer {
         width uint32;
         height uint32;
         stride uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

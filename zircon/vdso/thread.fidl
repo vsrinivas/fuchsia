@@ -135,9 +135,8 @@ protocol Thread {
         name string;
         options uint32;
     }) -> (resource struct {
-        status status;
         out handle:THREAD;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -235,9 +234,7 @@ protocol Thread {
         stack vaddr;
         arg1 Uintptr;
         arg2 Uintptr;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -331,9 +328,8 @@ protocol Thread {
         handle handle:THREAD;
         kind uint32;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -448,9 +444,7 @@ protocol Thread {
         handle handle:THREAD;
         kind uint32;
         buffer VectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -489,7 +483,5 @@ protocol Thread {
     /// [`zx_nanosleep()`]: nanosleep.md
     LegacyYield(resource struct {
         options uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

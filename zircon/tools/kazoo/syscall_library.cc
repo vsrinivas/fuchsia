@@ -297,11 +297,19 @@ bool Syscall::MapRequestResponseToKernelAbi() {
   // Similarly for the outputs, but turning buffers into outparams, and with special handling for
   // the C return value.
   size_t start_at;
-  if (response_.members().size() == 0 || !response_.members()[0].type().IsSimpleType()) {
+  if (error_type_) {
+    kernel_return_type_ = *error_type_;
+    start_at = 0;
+  } else if (response_.members().size() == 0 || !response_.members()[0].type().IsSimpleType()) {
     kernel_return_type_ = Type(TypeVoid{});
     start_at = 0;
   } else {
-    kernel_return_type_ = response_.members()[0].type();
+    const auto& first_type = response_.members()[0].type();
+    if (first_type.IsZxBasicAlias() && first_type.DataAsZxBasicAlias().name() == "Status") {
+      ZX_PANIC("%s.%s: `status` should be specified as `error status`", id().c_str(),
+               name().c_str());
+    }
+    kernel_return_type_ = first_type;
     start_at = 1;
   }
   for (size_t i = start_at; i < response_.members().size(); ++i) {
@@ -657,6 +665,19 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
                               document, library)) {
             return false;
           }
+
+          // If a "success" type is given, then so too has an error type been.
+          ZX_ASSERT(method.HasMember("maybe_response_err_type"));
+
+          // TODO(fxbug.dev/105758): Ideally, we would just naively translate
+          // `method["maybe_response_err_type"]` into `syscall_->error_type`,
+          // but that unfortunately does not work in the case of `zx.status`.
+          // It does not work since `zx.status` is currently defined as a type
+          // alias, but type aliases are currently lossy and all that would
+          // survive into the IR is "uint32". Since this is our only real error
+          // type use-case, we just hardcode its use when a method specifies
+          // `error`.
+          syscall->error_type_ = Type(TypeZxBasicAlias("status"));
         } else if (method.HasMember("maybe_response_payload")) {
           if (!ExtractPayload(resp, method["maybe_response_payload"]["identifier"].GetString(),
                               document, library)) {

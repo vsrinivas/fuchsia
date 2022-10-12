@@ -308,9 +308,8 @@ protocol System {
     GetFeatures(struct {
         kind uint32;
     }) -> (struct {
-        status status;
         features uint32;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -409,9 +408,8 @@ protocol System {
         root_job handle:JOB;
         kind uint32;
     }) -> (resource struct {
-        status status;
         event handle:EVENT;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -494,9 +492,7 @@ protocol System {
         topic uint32;
         info ConstVoidPtr;
         count Usize;
-    }) -> (resource struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -592,10 +588,9 @@ protocol System {
         topic uint32;
         count Usize;
     }) -> (resource struct {
-        status status;
         info VoidPtr;
         output_count Usize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -655,9 +650,7 @@ protocol System {
         resource handle:RESOURCE;
         kernel_vmo handle:VMO;
         bootimage_vmo handle:VMO;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -714,9 +707,8 @@ protocol System {
     MexecPayloadGet(resource struct {
         resource handle:RESOURCE;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -869,7 +861,5 @@ protocol System {
         resource handle:RESOURCE;
         cmd uint32;
         arg SystemPowerctlArg;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

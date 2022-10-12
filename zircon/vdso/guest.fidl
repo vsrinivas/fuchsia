@@ -96,10 +96,9 @@ protocol Guest {
         resource handle:RESOURCE;
         options uint32;
     }) -> (resource struct {
-        status status;
         guest_handle handle:GUEST;
         vmar_handle handle:VMAR;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -229,7 +228,5 @@ protocol Guest {
         size Usize;
         port_handle handle:PORT;
         key uint64;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

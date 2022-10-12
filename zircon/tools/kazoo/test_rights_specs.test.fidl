@@ -12,9 +12,8 @@ protocol RightsTest {
         handle handle;
         options uint32;
     }) -> (resource struct {
-        status status;
         out handle:CHANNEL;
-    });
+    }) error status;
 
     /// Rights: handle must have ZX_RIGHT_DESTROY.
     NoShortDesc(resource struct {

@@ -7,9 +7,8 @@ library zx;
 protocol Cprng {
     @internal
     DrawOnce() -> (struct {
-        status status;
         buffer VectorVoid;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -98,7 +97,5 @@ protocol Cprng {
     /// [`zx_cprng_draw()`]: cprng_draw.md
     AddEntropy(struct {
         buffer VectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

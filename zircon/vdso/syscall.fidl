@@ -37,9 +37,7 @@ protocol Syscall {
     ///
     /// TODO(fxbug.dev/32938)
     @testonly
-    Test_0() -> (struct {
-        status status;
-    });
+    Test_0() -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -76,9 +74,7 @@ protocol Syscall {
     @test_category1
     Test_1(struct {
         a int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -116,9 +112,7 @@ protocol Syscall {
     Test_2(struct {
         a int32;
         b int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -157,9 +151,7 @@ protocol Syscall {
         a int32;
         b int32;
         c int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -198,9 +190,7 @@ protocol Syscall {
         b int32;
         c int32;
         d int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -241,9 +231,7 @@ protocol Syscall {
         c int32;
         d int32;
         e int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -285,9 +273,7 @@ protocol Syscall {
         d int32;
         e int32;
         f int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -335,9 +321,7 @@ protocol Syscall {
         e int32;
         f int32;
         g int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -387,17 +371,13 @@ protocol Syscall {
         f int32;
         g int32;
         h int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     @no_doc
     @next
     Next_1(struct {
         arg int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -435,9 +415,7 @@ protocol Syscall {
         a int32;
         b int32;
         c int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -475,9 +453,8 @@ protocol Syscall {
     TestHandleCreate(struct {
         return_value status;
     }) -> (resource struct {
-        status status;
         out handle:EVENT;
-    });
+    }) error status;
 
     @testonly
     TestWideningUnsignedNarrow(struct {

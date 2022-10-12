@@ -117,10 +117,9 @@ protocol Channel {
     Create(struct {
         options uint32;
     }) -> (resource struct {
-        status status;
         out0 handle;
         out1 handle;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -233,12 +232,11 @@ protocol Channel {
         handle handle:CHANNEL;
         options uint32;
     }) -> (resource struct {
-        status status;
         bytes VectorVoidU32Size;
         handles VectorHandleU32Size;
         actual_bytes OptionalUint32;
         actual_handles OptionalUint32;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -351,12 +349,11 @@ protocol Channel {
         handle handle:CHANNEL;
         options uint32;
     }) -> (resource struct {
-        status status;
         bytes VectorVoidU32Size;
         handles VectorHandleInfoU32Size;
         actual_bytes OptionalUint32;
         actual_handles OptionalUint32;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -511,9 +508,7 @@ protocol Channel {
         bytes VectorVoidU32Size;
         @release
         handles VectorHandleU32Size;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -691,9 +686,7 @@ protocol Channel {
         options uint32;
         bytes VectorVoidU32Size;
         handles MutableVectorHandleDispositionU32Size;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     @internal
     CallNoretry(resource struct {
@@ -702,20 +695,18 @@ protocol Channel {
         deadline time;
         args ChannelCallArgs;
     }) -> (struct {
-        status status;
         actual_bytes uint32;
         actual_handles uint32;
-    });
+    }) error status;
 
     @internal
     CallFinish(resource struct {
         deadline time;
         args ChannelCallArgs;
     }) -> (struct {
-        status status;
         actual_bytes uint32;
         actual_handles uint32;
-    });
+    }) error status;
 
     // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
     /// ## Summary
@@ -906,10 +897,9 @@ protocol Channel {
         deadline time;
         args ChannelCallArgs;
     }) -> (struct {
-        status status;
         actual_bytes uint32;
         actual_handles uint32;
-    });
+    }) error status;
 
     @internal
     CallEtcNoretry(resource struct {
@@ -918,20 +908,18 @@ protocol Channel {
         deadline time;
         args MutableChannelCallEtcArgs;
     }) -> (struct {
-        status status;
         actual_bytes uint32;
         actual_handles uint32;
-    });
+    }) error status;
 
     @internal
     CallEtcFinish(resource struct {
         deadline time;
         args MutableChannelCallEtcArgs;
     }) -> (struct {
-        status status;
         actual_bytes uint32;
         actual_handles uint32;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -1078,8 +1066,7 @@ protocol Channel {
         deadline time;
         args MutableChannelCallEtcArgs;
     }) -> (struct {
-        status status;
         actual_bytes uint32;
         actual_handles uint32;
-    });
+    }) error status;
 };

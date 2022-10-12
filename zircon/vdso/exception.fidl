@@ -53,9 +53,8 @@ protocol Exception {
     GetThread(resource struct {
         handle handle:EXCEPTION;
     }) -> (resource struct {
-        status status;
         out handle:THREAD;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -110,7 +109,6 @@ protocol Exception {
     GetProcess(resource struct {
         handle handle:EXCEPTION;
     }) -> (resource struct {
-        status status;
         out handle:PROCESS;
-    });
+    }) error status;
 };

@@ -23,15 +23,11 @@ protocol ReservedWords {
         type uint32;
         func uint32;
         g uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     PciTypes(struct {
         bar PciBar;
         initarg PciInitArg;
         device_info PcieDeviceInfo;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

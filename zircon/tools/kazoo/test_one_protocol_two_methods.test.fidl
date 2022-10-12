@@ -7,19 +7,15 @@ type GetStuffRequestArgs = struct {
     an_input int32;
     input2 int32;
 };
-type GetStuffResponseArgs = struct {
-    status status;
-};
+type GetStuffResponseArgs = struct {};
 
 @transport("Syscall")
 protocol Couple {
     /// This does a single thing.
     DoThing(struct {
         an_input int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// Does great stuff.
-    GetStuff(GetStuffRequestArgs) -> (GetStuffResponseArgs);
+    GetStuff(GetStuffRequestArgs) -> (GetStuffResponseArgs) error status;
 };

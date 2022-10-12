@@ -62,9 +62,7 @@ protocol Handlefuncs {
     HandleClose(resource struct {
         @release
         handle handle;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -128,9 +126,7 @@ protocol Handlefuncs {
     HandleCloseMany(resource struct {
         @release
         handles vector<handle>;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -194,9 +190,8 @@ protocol Handlefuncs {
         handle handle;
         rights rights;
     }) -> (resource struct {
-        status status;
         out handle;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -257,7 +252,6 @@ protocol Handlefuncs {
         handle handle;
         rights rights;
     }) -> (resource struct {
-        status status;
         out handle;
-    });
+    }) error status;
 };

@@ -68,10 +68,9 @@ protocol Debug {
     Read(resource struct {
         handle handle:RESOURCE;
     }) -> (struct {
-        status status;
         buffer string;
         actual Usize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -126,9 +125,7 @@ protocol Debug {
     /// [`zx_debuglog_write()`]: debuglog_write.md
     Write(struct {
         buffer string;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -170,7 +167,5 @@ protocol Debug {
     SendCommand(resource struct {
         resource handle:RESOURCE;
         buffer string;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

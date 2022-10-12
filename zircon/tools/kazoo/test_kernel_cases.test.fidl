@@ -23,10 +23,9 @@ protocol KernelCases {
         offset uint64;
         size uint64;
     }) -> (resource struct {
-        status status;
         addrs VectorPaddr;
         pmt handle:PMT;
-    });
+    }) error status;
 
     // Still have NORETURN markup for kernel (but only this one).
     @noreturn
@@ -39,9 +38,7 @@ protocol KernelCases {
         action uint32;
         options uint32;
         ptr MutableVectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // vector of handles isn't turned into user_out_handle*, rather stays as
     // user_out_ptr<zx_handle_t>, because it's not just one.
@@ -49,18 +46,15 @@ protocol KernelCases {
         handle handle:CHANNEL;
         options uint32;
     }) -> (struct {
-        status status;
         bytes VectorVoidU32Size;
         handles VectorHandleU32Size;
         actual_bytes OptionalUint32;
         actual_handles OptionalUint32;
-    });
+    }) error status;
 
     @testonly
     CompiledOutInNonTest(struct {
         a int32;
         b int32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

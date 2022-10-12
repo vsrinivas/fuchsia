@@ -150,10 +150,9 @@ protocol Process {
         name string;
         options uint32;
     }) -> (resource struct {
-        status status;
         proc_handle handle:PROCESS;
         vmar_handle handle:VMAR;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -228,10 +227,9 @@ protocol Process {
         options uint32;
         name string;
     }) -> (resource struct {
-        status status;
         proc_handle handle:PROCESS;
         restricted_vmar_handle handle:VMAR;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -343,9 +341,7 @@ protocol Process {
         @release
         arg1 handle;
         arg2 Uintptr;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -420,10 +416,9 @@ protocol Process {
         handle handle:PROCESS;
         vaddr vaddr;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
         actual Usize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -505,7 +500,6 @@ protocol Process {
         vaddr vaddr;
         buffer VectorVoid;
     }) -> (struct {
-        status status;
         actual Usize;
-    });
+    }) error status;
 };

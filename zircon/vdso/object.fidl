@@ -106,9 +106,8 @@ protocol Object {
         signals signals;
         deadline time;
     }) -> (struct {
-        status status;
         observed OptionalSignals;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -224,9 +223,7 @@ protocol Object {
     WaitMany(resource struct {
         items MutableVectorWaitItem;
         deadline time;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -359,9 +356,7 @@ protocol Object {
         key uint64;
         signals signals;
         options uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -424,9 +419,7 @@ protocol Object {
         handle handle;
         clear_mask uint32;
         set_mask uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -491,9 +484,7 @@ protocol Object {
         handle handle;
         clear_mask uint32;
         set_mask uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -768,9 +759,8 @@ protocol Object {
         handle handle;
         property uint32;
     }) -> (struct {
-        status status;
         value VectorVoid;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -817,9 +807,7 @@ protocol Object {
         handle handle;
         property uint32;
         value VectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -1950,11 +1938,10 @@ protocol Object {
         handle handle;
         topic uint32;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
         actual OptionalUsize;
         avail OptionalUsize;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -2029,9 +2016,8 @@ protocol Object {
         koid uint64;
         rights rights;
     }) -> (resource struct {
-        status status;
         out handle;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -2091,7 +2077,5 @@ protocol Object {
         handle handle:THREAD;
         profile handle:PROFILE;
         options uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 };

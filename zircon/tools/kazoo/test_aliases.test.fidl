@@ -59,7 +59,6 @@ protocol Aliases {
         p VectorVoidU32Size;
         q VoidPtr;
     }) -> (struct {
-        status status;
         r OptionalPciBar;
         s OptionalPortPacket;
         t OptionalKoid;
@@ -68,5 +67,5 @@ protocol Aliases {
         w OptionalUint32;
         x OptionalUsize;
         y StringView;
-    });
+    }) error status;
 };

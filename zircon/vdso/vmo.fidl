@@ -115,9 +115,8 @@ protocol Vmo {
         size uint64;
         options uint32;
     }) -> (resource struct {
-        status status;
         out handle:VMO;
-    });
+    }) error status;
 
     // TODO(scottmg): This syscall is very weird, it's currently:
     //    (handle, buffer, offset, buffer_size)
@@ -210,9 +209,8 @@ protocol Vmo {
         handle handle:VMO;
         offset uint64;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
-    });
+    }) error status;
 
     // TODO(scottmg): Same problem as Read() above.
     /// ## Summary
@@ -292,9 +290,7 @@ protocol Vmo {
         handle handle:VMO;
         buffer VectorVoid;
         offset uint64;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // TODO(fxbug.dev/32803): No rights required?
     /// ## SUMMARY
@@ -350,9 +346,8 @@ protocol Vmo {
     GetSize(resource struct {
         handle handle:VMO;
     }) -> (struct {
-        status status;
         size uint64;
-    });
+    }) error status;
 
     /// ## SUMMARY
     ///
@@ -429,9 +424,7 @@ protocol Vmo {
     SetSize(resource struct {
         handle handle:VMO;
         size uint64;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## SUMMARY
     ///
@@ -640,9 +633,7 @@ protocol Vmo {
         offset uint64;
         size uint64;
         buffer MutableVectorVoid;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## SUMMARY
     ///
@@ -808,9 +799,8 @@ protocol Vmo {
         offset uint64;
         size uint64;
     }) -> (resource struct {
-        status status;
         out handle:VMO;
-    });
+    }) error status;
 
     /// ## SUMMARY
     ///
@@ -900,9 +890,7 @@ protocol Vmo {
     SetCachePolicy(resource struct {
         handle handle:VMO;
         cache_policy uint32;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     // TODO(fxbug.dev/32803): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
     // TODO(fxbug.dev/32803): vmex == ZX_HANDLE_INVALID also accepted.
@@ -960,9 +948,8 @@ protocol Vmo {
         handle handle:VMO;
         vmex handle:RESOURCE;
     }) -> (resource struct {
-        status status;
         out handle:VMO;
-    });
+    }) error status;
 
     /// ## SUMMARY
     ///
@@ -1003,9 +990,8 @@ protocol Vmo {
         size Usize;
         alignment_log2 uint32;
     }) -> (resource struct {
-        status status;
         out handle:VMO;
-    });
+    }) error status;
 
     /// ## SUMMARY
     ///
@@ -1104,7 +1090,6 @@ protocol Vmo {
         paddr paddr;
         size Usize;
     }) -> (resource struct {
-        status status;
         out handle:VMO;
-    });
+    }) error status;
 };

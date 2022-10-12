@@ -53,9 +53,8 @@ protocol Pager {
     Create(struct {
         options uint32;
     }) -> (resource struct {
-        status status;
         out handle:PAGER;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -170,9 +169,8 @@ protocol Pager {
         key uint64;
         size uint64;
     }) -> (resource struct {
-        status status;
         out handle:VMO;
-    });
+    }) error status;
 
     /// ## Summary
     ///
@@ -232,9 +230,7 @@ protocol Pager {
     DetachVmo(resource struct {
         pager handle:PAGER;
         vmo handle:VMO;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -315,9 +311,7 @@ protocol Pager {
         length uint64;
         aux_vmo handle:VMO;
         aux_offset uint64;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -449,9 +443,7 @@ protocol Pager {
         offset uint64;
         length uint64;
         data uint64;
-    }) -> (struct {
-        status status;
-    });
+    }) -> (struct {}) error status;
 
     /// ## Summary
     ///
@@ -580,11 +572,10 @@ protocol Pager {
         offset uint64;
         length uint64;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
         actual OptionalUsize;
         avail OptionalUsize;
-    });
+    }) error status;
 
     /// ## NAME
     ///
@@ -668,7 +659,6 @@ protocol Pager {
         pager_vmo handle:VMO;
         options uint32;
     }) -> (struct {
-        status status;
         buffer VectorVoid;
-    });
+    }) error status;
 };
