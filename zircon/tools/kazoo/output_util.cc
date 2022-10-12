@@ -111,7 +111,7 @@ std::string CNameImpl(const Type& type) {
     void operator()(const TypeUint64&) { ret = "uint64_t"; }
     void operator()(const TypeUintptrT&) { ret = "uintptr_t"; }
     void operator()(const TypeVoid&) { ret = "void"; }
-    void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.name(); }
+    void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.c_name(); }
 
     void operator()(const TypeAlias& alias) { ret = "zx_" + alias.alias_data().base_name() + "_t"; }
     void operator()(const TypeEnum& enm) { ret = "zx_" + enm.enum_data().base_name() + "_t"; }
@@ -222,7 +222,7 @@ std::string GetGoNameImpl(const Type& type) {
     void operator()(const TypeUint64&) { ret = "uint64"; }
     void operator()(const TypeUintptrT&) { ret = "uintptr"; }
     void operator()(const TypeVoid&) { ret = "void"; }
-    void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.go_name(); }
+    void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.name(); }
 
     void operator()(const TypeAlias& alias) { ret = "zx_" + alias.alias_data().base_name() + "_t"; }
     void operator()(const TypeEnum& enm) { ret = "zx_" + enm.enum_data().base_name() + "_t"; }
@@ -268,7 +268,7 @@ std::string GetGoName(const Type& type) {
     return "uint64";
   if (name == "Ticks")
     return "int64";
-  if (name == "Vm_option")
+  if (name == "VmOption")
     return "VMFlag";
   if (name == "zx_channel_call_args_t")
     return "ChannelCallArgs";
@@ -306,7 +306,7 @@ std::string GetGoName(const Type& type) {
     return "int";
   if (name == "zx_wait_item_t")
     return "WaitItem";
-  if (name == "String_view")
+  if (name == "StringView")
     return "unsafe.Pointer";
   return name;
 }
@@ -342,9 +342,9 @@ std::string GetNativeGoName(const Type& type) {
     return "int64";
   if (name == "Vaddr")
     return "uintptr";
-  if (name == "Vm_option")
+  if (name == "VmOption")
     return "uint32";
-  if (name == "String_view")
+  if (name == "StringView")
     return "unsafe.Pointer";
   if (name == "zx_channel_call_args_t")
     return "uintptr";

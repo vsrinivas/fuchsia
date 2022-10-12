@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol vcpu {
+protocol Vcpu {
     /// ## Summary
     ///
     /// Create a VCPU.
@@ -98,7 +98,7 @@ protocol vcpu {
     /// [`zx_vcpu_kick()`]: vcpu_kick.md
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
-    create(resource struct {
+    Create(resource struct {
         guest handle:GUEST;
         options uint32;
         entry vaddr;
@@ -180,7 +180,7 @@ protocol vcpu {
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     @blocking
-    enter(resource struct {
+    Enter(resource struct {
         handle handle:VCPU;
     }) -> (struct {
         status status;
@@ -241,7 +241,7 @@ protocol vcpu {
     /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
-    kick(resource struct {
+    Kick(resource struct {
         handle handle:VCPU;
     }) -> (struct {
         status status;
@@ -301,7 +301,7 @@ protocol vcpu {
     /// [`zx_vcpu_kick()`]: vcpu_kick.md
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
-    interrupt(resource struct {
+    Interrupt(resource struct {
         handle handle:VCPU;
         vector uint32;
     }) -> (struct {
@@ -373,12 +373,12 @@ protocol vcpu {
     /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
     /// [`zx_vcpu_kick()`]: vcpu_kick.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
-    read_state(resource struct {
+    ReadState(resource struct {
         handle handle:VCPU;
         kind uint32;
     }) -> (struct {
         status status;
-        buffer vector_void;
+        buffer VectorVoid;
     });
 
     /// ## Summary
@@ -446,10 +446,10 @@ protocol vcpu {
     /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
     /// [`zx_vcpu_kick()`]: vcpu_kick.md
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
-    write_state(resource struct {
+    WriteState(resource struct {
         handle handle:VCPU;
         kind uint32;
-        buffer vector_void;
+        buffer VectorVoid;
     }) -> (struct {
         status status;
     });

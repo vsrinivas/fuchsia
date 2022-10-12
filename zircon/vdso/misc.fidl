@@ -8,7 +8,7 @@ library zx;
 // generator to exclude putting "Misc" in the name.
 @transport("Syscall")
 @no_protocol_prefix
-protocol misc {
+protocol Misc {
     /// ## Summary
     ///
     /// High resolution sleep.
@@ -60,7 +60,7 @@ protocol misc {
     /// [`zx_timer_create()`]: timer_create.md
     /// [`zx_timer_set()`]: timer_set.md
     @blocking
-    nanosleep(struct {
+    Nanosleep(struct {
         deadline time;
     }) -> (struct {
         status status;
@@ -110,7 +110,7 @@ protocol misc {
     ///
     /// [ticks_per_second](ticks_per_second.md)
     @vdsocall
-    ticks_get() -> (struct {
+    TicksGet() -> (struct {
         ticks ticks;
     });
 
@@ -170,7 +170,7 @@ protocol misc {
     /// [`zx_ticks_get()`]: ticks_get.md
     @const
     @vdsocall
-    ticks_per_second() -> (struct {
+    TicksPerSecond() -> (struct {
         ticks ticks;
     });
 
@@ -217,7 +217,7 @@ protocol misc {
     ///
     /// [ticks_get](ticks_get.md)
     @vdsocall
-    deadline_after(struct {
+    DeadlineAfter(struct {
         nanoseconds duration;
     }) -> (struct {
         time time;
@@ -291,10 +291,10 @@ protocol misc {
     /// [`zx_thread_exit()`]: thread_exit.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
     @vdsocall
-    vmar_unmap_handle_close_thread_exit(resource struct {
+    VmarUnmapHandleCloseThreadExit(resource struct {
         vmar_handle handle:VMAR;
         addr vaddr;
-        size usize;
+        size Usize;
         @release
         close_handle handle;
     }) -> (struct {
@@ -374,8 +374,8 @@ protocol misc {
     /// [`zx_vmar_unmap_handle_close_thread_exit()`]: vmar_unmap_handle_close_thread_exit.md
     @noreturn
     @vdsocall
-    futex_wake_handle_close_thread_exit(resource struct {
-        value_ptr const_futexptr;
+    FutexWakeHandleCloseThreadExit(resource struct {
+        value_ptr ConstFutexPtr;
         wake_count uint32;
         new_value int32;
         @release
@@ -391,7 +391,7 @@ protocol misc {
     // backing the tick counter, or by making a syscall if the register is not
     // accessible from user mode code (for whatever reason).
     @internal
-    ticks_get_via_kernel() -> (struct {
+    TicksGetViaKernel() -> (struct {
         ticks ticks;
     });
 };

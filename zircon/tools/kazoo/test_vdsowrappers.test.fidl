@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library zx;
 
-alias vector_void = vector<byte>;
+alias VectorVoid = vector<byte>;
 
 // Note that this has to be named "protocol Syscall" to make test_wrapper have
 // the correct name.
@@ -13,7 +13,7 @@ protocol Syscall {
     @blocking
     BlockingWrite(resource struct {
         handle handle:VMO;
-        buffer vector_void;
+        buffer VectorVoid;
         offset uint64;
     }) -> (struct {
         status status;

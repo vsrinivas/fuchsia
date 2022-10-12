@@ -46,7 +46,7 @@ bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
       output_list(items);
     };
 
-    iprintn("\"name\": \"%s\",", syscall.name().c_str());
+    iprintn("\"name\": \"%s\",", syscall.snake_name().c_str());
 
     iprintn("\"attributes\": [");
     in();

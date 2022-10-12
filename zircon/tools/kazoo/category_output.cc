@@ -16,7 +16,7 @@ bool CategoryOutput(const SyscallLibrary& library, Writer* writer) {
     std::vector<std::string> syscalls_in_category;
     for (const auto& syscall : library.syscalls()) {
       if (syscall->HasAttribute(category)) {
-        syscalls_in_category.push_back(syscall->name());
+        syscalls_in_category.push_back(syscall->snake_name());
       }
     }
 

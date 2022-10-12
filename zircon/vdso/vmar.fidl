@@ -7,7 +7,7 @@ alias VmOption = uint32;
 
 // TODO(scottmg): bits for ZX_VM_xyz flags, and const for ZX_VM_ALIGN_xyz.
 @transport("Syscall")
-protocol vmar {
+protocol Vmar {
     /// ## Summary
     ///
     /// Allocate a new subregion.
@@ -139,11 +139,11 @@ protocol vmar {
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_protect()`]: vmar_protect.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
-    allocate(resource struct {
+    Allocate(resource struct {
         parent_vmar handle:VMAR;
         options VmOption;
-        offset usize;
-        size usize;
+        offset Usize;
+        size Usize;
     }) -> (resource struct {
         status status;
         child_vmar handle:VMAR;
@@ -204,7 +204,7 @@ protocol vmar {
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_protect()`]: vmar_protect.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
-    destroy(resource struct {
+    Destroy(resource struct {
         handle handle:VMAR;
     }) -> (struct {
         status status;
@@ -366,13 +366,13 @@ protocol vmar {
     /// [`zx_vmar_destroy()`]: vmar_destroy.md
     /// [`zx_vmar_protect()`]: vmar_protect.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
-    map(resource struct {
+    Map(resource struct {
         handle handle:VMAR;
         options VmOption;
-        vmar_offset usize;
+        vmar_offset Usize;
         vmo handle:VMO;
         vmo_offset uint64;
-        len usize;
+        len Usize;
     }) -> (struct {
         status status;
         mapped_addr vaddr;
@@ -436,10 +436,10 @@ protocol vmar {
     /// [`zx_vmar_destroy()`]: vmar_destroy.md
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_protect()`]: vmar_protect.md
-    unmap(resource struct {
+    Unmap(resource struct {
         handle handle:VMAR;
         addr vaddr;
-        len usize;
+        len Usize;
     }) -> (struct {
         status status;
     });
@@ -526,11 +526,11 @@ protocol vmar {
     /// [`zx_vmar_destroy()`]: vmar_destroy.md
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
-    protect(resource struct {
+    Protect(resource struct {
         handle handle:VMAR;
         options VmOption;
         addr vaddr;
-        len usize;
+        len Usize;
     }) -> (struct {
         status status;
     });
@@ -637,12 +637,12 @@ protocol vmar {
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
     /// [`zx_vmo_op_range()`]: vmo_op_range.md
-    op_range(resource struct {
+    OpRange(resource struct {
         handle handle:VMAR;
         op uint32;
         address vaddr;
-        size usize;
-        buffer mutable_vector_void;
+        size Usize;
+        buffer MutableVectorVoid;
     }) -> (struct {
         status status;
     });

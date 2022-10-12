@@ -4,11 +4,11 @@
 library zx;
 
 @transport("Syscall")
-protocol cprng {
+protocol Cprng {
     @internal
-    draw_once() -> (struct {
+    DrawOnce() -> (struct {
         status status;
-        buffer vector_void;
+        buffer VectorVoid;
     });
 
     /// ## Summary
@@ -52,8 +52,8 @@ protocol cprng {
     ///
     /// [`zx_cprng_add_entropy()`]: cprng_add_entropy.md
     @vdsocall
-    draw() -> (struct {
-        buffer vector_void;
+    Draw() -> (struct {
+        buffer VectorVoid;
     });
 
     /// ## Summary
@@ -96,8 +96,8 @@ protocol cprng {
     ///  - [`zx_cprng_draw()`]
     ///
     /// [`zx_cprng_draw()`]: cprng_draw.md
-    add_entropy(struct {
-        buffer vector_void;
+    AddEntropy(struct {
+        buffer VectorVoid;
     }) -> (struct {
         status status;
     });

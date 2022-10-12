@@ -113,7 +113,7 @@ class Formatter {
             return "void";
           }
           if constexpr (std::is_same_v<T, TypeZxBasicAlias>) {
-            return type.name();
+            return type.c_name();
           }
           if constexpr (std::is_same_v<T, TypeAlias>) {
             return Format(type.alias_data()).type_name;

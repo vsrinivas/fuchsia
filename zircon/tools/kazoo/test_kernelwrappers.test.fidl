@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library zx;
 
-alias mutable_vector_void = vector<byte>;
+alias MutableVectorVoid = vector<byte>;
 
 @transport("Syscall")
 protocol Kwrap {
@@ -34,7 +34,7 @@ protocol Kwrap {
         op uint32;
         offset uint64;
         size uint64;
-        buffer mutable_vector_void;
+        buffer MutableVectorVoid;
     }) -> (struct {
         status status;
     });

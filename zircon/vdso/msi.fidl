@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol msi {
+protocol Msi {
     /// ## Summary
     ///
     /// Allocate Message-Signaled Interrupts (MSIs).
@@ -55,7 +55,7 @@ protocol msi {
     ///  - [`zx_msi_create()`]
     ///
     /// [`zx_msi_create()`]: msi_create.md
-    allocate(resource struct {
+    Allocate(resource struct {
         handle handle:RESOURCE;
         count uint32;
     }) -> (resource struct {
@@ -150,12 +150,12 @@ protocol msi {
     /// [`zx_vmo_create_contiguous()`]: vmo_create_contiguous.md
     /// [`zx_vmo_create_physical()`]: vmo_create_physical.md
     /// [`zx_vmo_set_cache_policy()`]: vmo_set_cache_policy.md
-    create(resource struct {
+    Create(resource struct {
         handle handle;
         options uint32;
         msi_id uint32;
         vmo handle:VMO;
-        vmo_offset usize;
+        vmo_offset Usize;
     }) -> (resource struct {
         status status;
         out_interrupt handle;

@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol pc {
+protocol Pc {
     /// ## Summary
     ///
     /// TODO(fxbug.dev/32938)
@@ -38,7 +38,7 @@ protocol pc {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    firmware_tables(resource struct {
+    FirmwareTables(resource struct {
         handle handle:RESOURCE;
     }) -> (struct {
         status status;

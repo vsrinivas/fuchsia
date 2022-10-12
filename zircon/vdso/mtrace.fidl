@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol mtrace {
+protocol Mtrace {
     /// ## Summary
     ///
     /// TODO(fxbug.dev/32938)
@@ -45,12 +45,12 @@ protocol mtrace {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    control(resource struct {
+    Control(resource struct {
         handle handle:RESOURCE;
         kind uint32;
         action uint32;
         options uint32;
-        ptr mutable_vector_void;
+        ptr MutableVectorVoid;
     }) -> (struct {
         status status;
     });

@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol vmo {
+protocol Vmo {
 
     /// ## Summary
     ///
@@ -111,7 +111,7 @@ protocol vmo {
     /// [`zx_vmo_replace_as_executable()`]: vmo_replace_as_executable.md
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
     /// [`zx_vmo_write()`]: vmo_write.md
-    create(struct {
+    Create(struct {
         size uint64;
         options uint32;
     }) -> (resource struct {
@@ -206,12 +206,12 @@ protocol vmo {
     /// [`zx_vmo_write()`]: vmo_write.md
     @blocking
     @arg_reorder("handle, buffer, offset, buffer_size")
-    read(resource struct {
+    Read(resource struct {
         handle handle:VMO;
         offset uint64;
     }) -> (struct {
         status status;
-        buffer vector_void;
+        buffer VectorVoid;
     });
 
     // TODO(scottmg): Same problem as Read() above.
@@ -288,9 +288,9 @@ protocol vmo {
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
     @blocking
     @arg_reorder("handle, buffer, offset, buffer_size")
-    write(resource struct {
+    Write(resource struct {
         handle handle:VMO;
-        buffer vector_void;
+        buffer VectorVoid;
         offset uint64;
     }) -> (struct {
         status status;
@@ -347,7 +347,7 @@ protocol vmo {
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
     /// [`zx_vmo_write()`]: vmo_write.md
     /// Read the current size of a VMO object.
-    get_size(resource struct {
+    GetSize(resource struct {
         handle handle:VMO;
     }) -> (struct {
         status status;
@@ -426,7 +426,7 @@ protocol vmo {
     /// [`zx_vmo_op_range()`]: vmo_op_range.md
     /// [`zx_vmo_read()`]: vmo_read.md
     /// [`zx_vmo_write()`]: vmo_write.md
-    set_size(resource struct {
+    SetSize(resource struct {
         handle handle:VMO;
         size uint64;
     }) -> (struct {
@@ -634,12 +634,12 @@ protocol vmo {
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
     /// [`zx_vmo_write()`]: vmo_write.md
     @blocking
-    op_range(resource struct {
+    OpRange(resource struct {
         handle handle:VMO;
         op uint32;
         offset uint64;
         size uint64;
-        buffer mutable_vector_void;
+        buffer MutableVectorVoid;
     }) -> (struct {
         status status;
     });
@@ -802,7 +802,7 @@ protocol vmo {
     /// [`zx_vmo_read()`]: vmo_read.md
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
     /// [`zx_vmo_write()`]: vmo_write.md
-    create_child(resource struct {
+    CreateChild(resource struct {
         handle handle:VMO;
         options uint32;
         offset uint64;
@@ -897,7 +897,7 @@ protocol vmo {
     /// [`zx_vmo_read()`]: vmo_read.md
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
     /// [`zx_vmo_write()`]: vmo_write.md
-    set_cache_policy(resource struct {
+    SetCachePolicy(resource struct {
         handle handle:VMO;
         cache_policy uint32;
     }) -> (struct {
@@ -955,7 +955,7 @@ protocol vmo {
     ///
     /// [`zx_resource_create()`]: resource_create.md
     /// [`zx_vmar_map()`]: vmar_map.md
-    replace_as_executable(resource struct {
+    ReplaceAsExecutable(resource struct {
         @release
         handle handle:VMO;
         vmex handle:RESOURCE;
@@ -998,9 +998,9 @@ protocol vmo {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    create_contiguous(resource struct {
+    CreateContiguous(resource struct {
         bti handle:BTI;
-        size usize;
+        size Usize;
         alignment_log2 uint32;
     }) -> (resource struct {
         status status;
@@ -1099,10 +1099,10 @@ protocol vmo {
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmo_read()`]: vmo_read.md
     /// [`zx_vmo_write()`]: vmo_write.md
-    create_physical(resource struct {
+    CreatePhysical(resource struct {
         resource handle:RESOURCE;
         paddr paddr;
-        size usize;
+        size Usize;
     }) -> (resource struct {
         status status;
         out handle:VMO;

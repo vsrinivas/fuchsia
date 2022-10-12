@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol job {
+protocol Job {
     // TODO(fxbug.dev/32803): parent_job with ZX_RIGHT_WRITE is also accepted.
     /// ## Summary
     ///
@@ -72,7 +72,7 @@ protocol job {
     /// [`zx_object_get_property()`]: object_get_property.md
     /// [`zx_process_create()`]: process_create.md
     /// [`zx_task_kill()`]: task_kill.md
-    create(resource struct {
+    Create(resource struct {
         parent_job handle:JOB;
         options uint32;
     }) -> (resource struct {
@@ -287,11 +287,11 @@ protocol job {
     /// [`zx_object_get_info()`]: object_get_info.md
     /// [`zx_process_create()`]: process_create.md
     /// [`zx_vmo_replace_as_executable()`]: vmo_replace_as_executable.md
-    set_policy(resource struct {
+    SetPolicy(resource struct {
         handle handle:JOB;
         options uint32;
         topic uint32;
-        policy vector_void_u32size;
+        policy VectorVoidU32Size;
     }) -> (struct {
         status status;
     });
@@ -356,7 +356,7 @@ protocol job {
     /// [`zx_job_create()`]: job_create.md
     /// [`zx_process_create()`]: process_create.md
     /// [`zx_task_kill()`]: task_kill.md
-    set_critical(resource struct {
+    SetCritical(resource struct {
         job handle:JOB;
         options uint32;
         process handle:PROCESS;

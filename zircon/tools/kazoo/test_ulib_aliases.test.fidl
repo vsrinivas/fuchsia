@@ -12,6 +12,6 @@ alias Alias = Destination;
 
 // Test aliasing a special type charptr.
 // This item should not occur in the library header output.
-alias charptr = uint64;
+alias ConstVoidPtr = uint64;
 
-alias AliasCharPtr = charptr;
+alias AliasConstVoidPtr = ConstVoidPtr;

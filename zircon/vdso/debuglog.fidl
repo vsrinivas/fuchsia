@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol debuglog {
+protocol Debuglog {
     // TODO(fxbug.dev/32803): handle == ZX_HANDLE_INVALID accepted.
     /// ## Summary
     ///
@@ -57,7 +57,7 @@ protocol debuglog {
     ///
     /// [`zx_debuglog_read()`]: debuglog_read.md
     /// [`zx_debuglog_write()`]: debuglog_write.md
-    create(resource struct {
+    Create(resource struct {
         resource handle:RESOURCE;
         options uint32;
     }) -> (resource struct {
@@ -125,10 +125,10 @@ protocol debuglog {
     /// [`zx_debug_write()`]: debug_write.md
     /// [`zx_debuglog_create()`]: debuglog_create.md
     /// [`zx_debuglog_read()`]: debuglog_read.md
-    write(resource struct {
+    Write(resource struct {
         handle handle:LOG;
         options uint32;
-        buffer vector_void;
+        buffer VectorVoid;
     }) -> (struct {
         status status;
     });
@@ -234,11 +234,11 @@ protocol debuglog {
     ///
     /// [`zx_debuglog_create()`]: debuglog_create.md
     /// [`zx_debuglog_write()`]: debuglog_write.md
-    read(resource struct {
+    Read(resource struct {
         handle handle:LOG;
         options uint32;
     }) -> (struct {
         status status;
-        buffer vector_void;
+        buffer VectorVoid;
     });
 };

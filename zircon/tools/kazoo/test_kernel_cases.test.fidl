@@ -6,11 +6,11 @@ library zx;
 // This file is copies of some syscalls that were interesting for the kernel
 // header generator.
 
-alias mutable_vector_void = vector<handle>;
-alias optional_uint32 = uint32;
-alias vector_handle_u32size = vector<byte>;
-alias vector_paddr = vector<paddr>;
-alias vector_void_u32size = vector<byte>;
+alias MutableVectorVoid = vector<handle>;
+alias OptionalUint32 = uint32;
+alias VectorHandleU32Size = vector<byte>;
+alias VectorPaddr = vector<paddr>;
+alias VectorVoidU32Size = vector<byte>;
 
 @transport("Syscall")
 protocol KernelCases {
@@ -24,7 +24,7 @@ protocol KernelCases {
         size uint64;
     }) -> (resource struct {
         status status;
-        addrs vector_paddr;
+        addrs VectorPaddr;
         pmt handle:PMT;
     });
 
@@ -38,7 +38,7 @@ protocol KernelCases {
         kind uint32;
         action uint32;
         options uint32;
-        ptr mutable_vector_void;
+        ptr MutableVectorVoid;
     }) -> (struct {
         status status;
     });
@@ -50,14 +50,14 @@ protocol KernelCases {
         options uint32;
     }) -> (struct {
         status status;
-        bytes vector_void_u32size;
-        handles vector_handle_u32size;
-        actual_bytes optional_uint32;
-        actual_handles optional_uint32;
+        bytes VectorVoidU32Size;
+        handles VectorHandleU32Size;
+        actual_bytes OptionalUint32;
+        actual_handles OptionalUint32;
     });
 
     @testonly
-    compiled_out_in_non_test(struct {
+    CompiledOutInNonTest(struct {
         a int32;
         b int32;
     }) -> (struct {

@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 library zx;
 
-type stream_seek_origin = strict enum : uint32 {
+type StreamSeekOrigin = strict enum : uint32 {
     START = 0;
     CURRENT = 1;
     END = 2;
 };
 
 @transport("Syscall")
-protocol stream {
+protocol Stream {
     /// ## Summary
     ///
     /// Create a stream from a VMO.
@@ -85,7 +85,7 @@ protocol stream {
     /// [`zx_stream_seek()`]: stream_seek.md
     /// [`zx_stream_writev()`]: stream_writev.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
-    create(resource struct {
+    Create(resource struct {
         options uint32;
         vmo handle:VMO;
         seek off;
@@ -181,13 +181,13 @@ protocol stream {
     /// [`zx_stream_seek()`]: stream_seek.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
     @blocking
-    writev(resource struct {
+    Writev(resource struct {
         handle handle:STREAM;
         options uint32;
-        vector vector_iovec;
+        vector VectorIovec;
     }) -> (struct {
         status status;
-        actual optional_usize;
+        actual OptionalUsize;
     });
 
     /// ## Summary
@@ -274,14 +274,14 @@ protocol stream {
     /// [`zx_stream_seek()`]: stream_seek.md
     /// [`zx_stream_writev()`]: stream_writev.md
     @blocking
-    writev_at(resource struct {
+    WritevAt(resource struct {
         handle handle:STREAM;
         options uint32;
         offset off;
-        vector vector_iovec;
+        vector VectorIovec;
     }) -> (struct {
         status status;
-        actual optional_usize;
+        actual OptionalUsize;
     });
 
     /// ## Summary
@@ -359,13 +359,13 @@ protocol stream {
     /// [`zx_stream_writev()`]: stream_writev.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
     @blocking
-    readv(resource struct {
+    Readv(resource struct {
         handle handle:STREAM;
         options uint32;
     }) -> (struct {
         status status;
-        vector vector_iovec;
-        actual optional_usize;
+        vector VectorIovec;
+        actual OptionalUsize;
     });
 
     /// ## Summary
@@ -442,14 +442,14 @@ protocol stream {
     /// [`zx_stream_writev()`]: stream_writev.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
     @blocking
-    readv_at(resource struct {
+    ReadvAt(resource struct {
         handle handle:STREAM;
         options uint32;
         offset off;
     }) -> (struct {
         status status;
-        vector vector_iovec;
-        actual optional_usize;
+        vector VectorIovec;
+        actual OptionalUsize;
     });
 
     /// ## Summary
@@ -525,12 +525,12 @@ protocol stream {
     /// [`zx_stream_readv_at()`]: stream_readv_at.md
     /// [`zx_stream_writev()`]: stream_writev.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
-    seek(resource struct {
+    Seek(resource struct {
         handle handle:STREAM;
-        whence stream_seek_origin;
+        whence StreamSeekOrigin;
         offset int64;
     }) -> (struct {
         status status;
-        out_seek optional_off;
+        out_seek OptionalOff;
     });
 };

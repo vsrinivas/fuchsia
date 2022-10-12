@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol framebuffer {
+protocol Framebuffer {
     /// ## Summary
     ///
     /// TODO(fxbug.dev/32938)
@@ -40,7 +40,7 @@ protocol framebuffer {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    get_info(resource struct {
+    GetInfo(resource struct {
         resource handle:RESOURCE;
     }) -> (struct {
         status status;
@@ -88,7 +88,7 @@ protocol framebuffer {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    set_range(resource struct {
+    SetRange(resource struct {
         resource handle:RESOURCE;
         vmo handle:VMO;
         len uint32;

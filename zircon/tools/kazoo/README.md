@@ -22,7 +22,7 @@ includes:
 
 - Type aliases used to impart meaning. `alias_workarounds.fidl` includes various aliases that expand
   to something similar to the correct type, however Kazoo treats these specially. For example,
-  `mutable_string` is used to indicate that the type is a string, but that should be treated as
+  `MutableString` is used to indicate that the type is a string, but that should be treated as
   mutable (generally for a string that's both input and output).
 
 - Doc comments of the form `/// Rights: ...` are used by the Kazoo JSON generator, and are

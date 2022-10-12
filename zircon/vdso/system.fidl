@@ -21,7 +21,7 @@ type SystemPowerctlArg = struct {
         };
 
 @transport("Syscall")
-protocol system {
+protocol System {
     /// ## Summary
     ///
     /// TODO(fxbug.dev/32938)
@@ -55,7 +55,7 @@ protocol system {
     /// TODO(fxbug.dev/32938)
     @const
     @vdsocall
-    get_dcache_line_size() -> (struct {
+    GetDcacheLineSize() -> (struct {
         size uint32;
     });
 
@@ -98,7 +98,7 @@ protocol system {
     /// [`zx_system_get_physmem()`]: system_get_physmem.md
     @const
     @vdsocall
-    get_num_cpus() -> (struct {
+    GetNumCpus() -> (struct {
         count uint32;
     });
 
@@ -122,7 +122,7 @@ protocol system {
     /// The returned object is a simple pair of C string pointer and length.  The
     /// string is guaranteed to be NUL-terminated and to be valid UTF-8.  The length
     /// does not include the NUL terminator.  In C++ the return value can be coerced
-    /// implicitly to `std::string_view`, `std::u8string_view`, or other types with
+    /// implicitly to `std::string_view`, `std::u8StringView`, or other types with
     /// equivalent two-argument constructor signatures.
     ///
     /// The string constant may be of any length.  It is in read-only memory provided
@@ -150,8 +150,8 @@ protocol system {
     ///
     @const
     @vdsocall
-    get_version_string() -> (struct {
-        version string_view;
+    GetVersionString() -> (struct {
+        version StringView;
     });
 
     /// ## Summary
@@ -206,7 +206,7 @@ protocol system {
     /// [`zx_vmo_create()`]: vmo_create.md
     @const
     @vdsocall
-    get_page_size() -> (struct {
+    GetPageSize() -> (struct {
         size uint32;
     });
 
@@ -250,7 +250,7 @@ protocol system {
     ///
     /// [`zx_system_get_num_cpus()`]: system_get_num_cpus.md
     @vdsocall
-    get_physmem() -> (struct {
+    GetPhysmem() -> (struct {
         physmem uint64;
     });
 
@@ -305,7 +305,7 @@ protocol system {
     /// [`zx_system_get_num_cpus()`]: system_get_num_cpus.md
     /// [`zx_system_get_physmem()`]: system_get_physmem.md
     @vdsocall
-    get_features(struct {
+    GetFeatures(struct {
         kind uint32;
     }) -> (struct {
         status status;
@@ -405,7 +405,7 @@ protocol system {
     ///
     /// **ZX_ERR_INVALID_ARGS** *kind* was not one of the supported values specified
     /// above.
-    get_event(resource struct {
+    GetEvent(resource struct {
         root_job handle:JOB;
         kind uint32;
     }) -> (resource struct {
@@ -489,11 +489,11 @@ protocol system {
     ///  - [`zx_system_get_performance_info()`]
     ///
     /// [`zx_system_get_performance_info()`]: system_get_performance_info.md
-    set_performance_info(resource struct {
+    SetPerformanceInfo(resource struct {
         resource handle:RESOURCE;
         topic uint32;
-        info const_voidptr;
-        count usize;
+        info ConstVoidPtr;
+        count Usize;
     }) -> (resource struct {
         status status;
     });
@@ -587,14 +587,14 @@ protocol system {
     ///  - [`zx_system_set_performance_info()`]
     ///
     /// [`zx_system_set_performance_info()`]: system_set_performance_info.md
-    get_performance_info(resource struct {
+    GetPerformanceInfo(resource struct {
         resource handle:RESOURCE;
         topic uint32;
-        count usize;
+        count Usize;
     }) -> (resource struct {
         status status;
-        info voidptr;
-        output_count usize;
+        info VoidPtr;
+        output_count Usize;
     });
 
     /// ## Summary
@@ -651,7 +651,7 @@ protocol system {
     ///  - [`zx_system_mexec_payload_get()`]
     ///
     /// [`zx_system_mexec_payload_get()`]: system_mexec_payload_get.md
-    mexec(resource struct {
+    Mexec(resource struct {
         resource handle:RESOURCE;
         kernel_vmo handle:VMO;
         bootimage_vmo handle:VMO;
@@ -711,11 +711,11 @@ protocol system {
     ///  - [`zx_system_mexec()`]
     ///
     /// [`zx_system_mexec()`]: system_mexec.md
-    mexec_payload_get(resource struct {
+    MexecPayloadGet(resource struct {
         resource handle:RESOURCE;
     }) -> (struct {
         status status;
-        buffer vector_void;
+        buffer VectorVoid;
     });
 
     /// ## Summary
@@ -865,7 +865,7 @@ protocol system {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    powerctl(resource struct {
+    Powerctl(resource struct {
         resource handle:RESOURCE;
         cmd uint32;
         arg SystemPowerctlArg;

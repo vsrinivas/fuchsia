@@ -125,7 +125,7 @@ type PortPacket = struct {
 };
 
 @transport("Syscall")
-protocol port {
+protocol Port {
     /// ## Summary
     ///
     /// Create an IO port.
@@ -190,7 +190,7 @@ protocol port {
     /// [`zx_object_wait_async()`]: object_wait_async.md
     /// [`zx_port_queue()`]: port_queue.md
     /// [`zx_port_wait()`]: port_wait.md
-    create(struct {
+    Create(struct {
         options uint32;
     }) -> (resource struct {
         status status;
@@ -269,7 +269,7 @@ protocol port {
     ///
     /// [`zx_port_create()`]: port_create.md
     /// [`zx_port_wait()`]: port_wait.md
-    queue(resource struct {
+    Queue(resource struct {
         handle handle:PORT;
         packet PortPacket;
     }) -> (struct {
@@ -398,12 +398,12 @@ protocol port {
     /// [`zx_port_create()`]: port_create.md
     /// [`zx_port_queue()`]: port_queue.md
     @blocking
-    wait(resource struct {
+    Wait(resource struct {
         handle handle:PORT;
         deadline time;
     }) -> (struct {
         status status;
-        packet optional_PortPacket;
+        packet OptionalPortPacket;
     });
 
     /// ## Summary
@@ -458,7 +458,7 @@ protocol port {
     ///
     /// [`zx_object_wait_async()`]: object_wait_async.md
     /// [`zx_port_wait()`]: port_wait.md
-    cancel(resource struct {
+    Cancel(resource struct {
         handle handle:PORT;
         source handle;
         key uint64;

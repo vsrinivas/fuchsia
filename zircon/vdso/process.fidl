@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol process {
+protocol Process {
     /// ## Summary
     ///
     /// Exits the currently running process.
@@ -43,7 +43,7 @@ protocol process {
     /// [`zx_object_get_info()`]: object_get_info.md
     /// [`zx_process_create()`]: process_create.md
     @noreturn
-    exit(struct {
+    Exit(struct {
         retcode int64;
     });
 
@@ -145,7 +145,7 @@ protocol process {
     /// [`zx_thread_create()`]: thread_create.md
     /// [`zx_thread_exit()`]: thread_exit.md
     /// [`zx_thread_start()`]: thread_start.md
-    create(resource struct {
+    Create(resource struct {
         job handle:JOB;
         name string;
         options uint32;
@@ -223,7 +223,7 @@ protocol process {
     ///  - [`zx_process_create()`]
     ///
     /// [`zx_process_create()`]: process_create.md
-    create_shared(resource struct {
+    CreateShared(resource struct {
         shared_proc handle:PROCESS;
         options uint32;
         name string;
@@ -335,14 +335,14 @@ protocol process {
     /// [`zx_thread_exit()`]: thread_exit.md
     /// [`zx_thread_start()`]: thread_start.md
     /// [`zx_vmo_create()`]: vmo_create.md
-    start(resource struct {
+    Start(resource struct {
         handle handle:PROCESS;
         thread handle:THREAD;
         entry vaddr;
         stack vaddr;
         @release
         arg1 handle;
-        arg2 uintptr;
+        arg2 Uintptr;
     }) -> (struct {
         status status;
     });
@@ -416,13 +416,13 @@ protocol process {
     ///  - [`zx_process_write_memory()`]
     ///
     /// [`zx_process_write_memory()`]: process_write_memory.md
-    read_memory(resource struct {
+    ReadMemory(resource struct {
         handle handle:PROCESS;
         vaddr vaddr;
     }) -> (struct {
         status status;
-        buffer vector_void;
-        actual usize;
+        buffer VectorVoid;
+        actual Usize;
     });
 
     /// ## Summary
@@ -500,12 +500,12 @@ protocol process {
     ///  - [`zx_process_read_memory()`]
     ///
     /// [`zx_process_read_memory()`]: process_read_memory.md
-    write_memory(resource struct {
+    WriteMemory(resource struct {
         handle handle:PROCESS;
         vaddr vaddr;
-        buffer vector_void;
+        buffer VectorVoid;
     }) -> (struct {
         status status;
-        actual usize;
+        actual Usize;
     });
 };

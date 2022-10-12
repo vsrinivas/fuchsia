@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library zx;
 
-type clock = strict enum : uint32 {
+type Clock = strict enum : uint32 {
     MONOTONIC = 0;
     UTC = 1;
     THREAD = 2;
@@ -11,7 +11,7 @@ type clock = strict enum : uint32 {
 
 @transport("Syscall")
 @no_protocol_prefix
-protocol clockfuncs {
+protocol Clockfuncs {
     /// ## Summary
     ///
     /// Acquire the current monotonic time.
@@ -43,7 +43,7 @@ protocol clockfuncs {
     ///
     /// `zx_clock_get_monotonic()` cannot fail.
     @vdsocall
-    clock_get_monotonic() -> (struct {
+    ClockGetMonotonic() -> (struct {
         time time;
     });
 
@@ -53,7 +53,7 @@ protocol clockfuncs {
     // See the notes for ticks_get_via_kernel; this is not a syscall meant
     // to be used by application code.
     @internal
-    clock_get_monotonic_via_kernel() -> (struct {
+    ClockGetMonotonicViaKernel() -> (struct {
         time time;
     });
 
@@ -166,9 +166,9 @@ protocol clockfuncs {
     /// [`zx_clock_get_details()`]: clock_get_details.md
     /// [`zx_clock_read()`]: clock_read.md
     /// [`zx_clock_update()`]: clock_update.md
-    clock_create(struct {
+    ClockCreate(struct {
         options uint64;
-        args const_voidptr;
+        args ConstVoidPtr;
     }) -> (resource struct {
         status status;
         out handle;
@@ -216,7 +216,7 @@ protocol clockfuncs {
     /// [`zx_clock_create()`]: clock_create.md
     /// [`zx_clock_get_details()`]: clock_get_details.md
     /// [`zx_clock_update()`]: clock_update.md
-    clock_read(resource struct {
+    ClockRead(resource struct {
         handle handle;
     }) -> (struct {
         status status;
@@ -292,12 +292,12 @@ protocol clockfuncs {
     /// [`zx_clock_create()`]: clock_create.md
     /// [`zx_clock_read()`]: clock_read.md
     /// [`zx_clock_update()`]: clock_update.md
-    clock_get_details(resource struct {
+    ClockGetDetails(resource struct {
         handle handle;
         options uint64;
     }) -> (struct {
         status status;
-        details voidptr;
+        details VoidPtr;
     });
 
     /// ## Summary
@@ -525,10 +525,10 @@ protocol clockfuncs {
     /// [`zx_clock_create()`]: clock_create.md
     /// [`zx_clock_get_details()`]: clock_get_details.md
     /// [`zx_clock_read()`]: clock_read.md
-    clock_update(resource struct {
+    ClockUpdate(resource struct {
         handle handle;
         options uint64;
-        args const_voidptr;
+        args ConstVoidPtr;
     }) -> (struct {
         status status;
     });

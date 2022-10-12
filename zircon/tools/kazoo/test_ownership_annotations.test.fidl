@@ -5,35 +5,35 @@ library zx;
 
 @transport("Syscall")
 protocol HandleOwnership {
-    fun0(resource struct {
+    Fun0(resource struct {
         in vector<handle>;
     }) -> (resource struct {
         out vector<handle>;
     });
-    fun1(resource struct {
+    Fun1(resource struct {
         @release
         in vector<handle>;
     });
-    fun2(resource struct {
+    Fun2(resource struct {
         @use
         in vector<handle>;
     }) -> (resource struct {
         @use
         out vector<handle>;
     });
-    fun3(resource struct {
+    Fun3(resource struct {
         in vector<handle>;
     }) -> (resource struct {
         @acquire
         out vector<handle>;
     });
-    fun4(resource struct {
+    Fun4(resource struct {
         in handle;
     }) -> (resource struct {
         status status;
         out handle;
     });
-    fun5(resource struct {
+    Fun5(resource struct {
         @release
         in handle;
     }) -> (resource struct {
@@ -42,7 +42,7 @@ protocol HandleOwnership {
         out handle;
     });
     @handle_unchecked
-    fun6(resource struct {
+    Fun6(resource struct {
         in vector<handle>;
     }) -> (resource struct {
         out vector<handle>;

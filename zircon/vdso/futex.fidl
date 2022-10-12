@@ -11,7 +11,7 @@ alias Futex = int32;
 // sometimes it's passed by pointer, and sometimes by value.
 @transport("Syscall")
 @no_protocol_prefix
-protocol futexfuncs {
+protocol Futexfuncs {
     /// ## Summary
     ///
     /// Wait on a futex.
@@ -96,8 +96,8 @@ protocol futexfuncs {
     /// [`zx_futex_requeue()`]: futex_requeue.md
     /// [`zx_futex_wake()`]: futex_wake.md
     @blocking
-    futex_wait(resource struct {
-        value_ptr const_futexptr;
+    FutexWait(resource struct {
+        value_ptr ConstFutexPtr;
         current_value Futex;
         new_futex_owner handle;
         deadline time;
@@ -161,8 +161,8 @@ protocol futexfuncs {
     /// [`zx_futex_requeue()`]: futex_requeue.md
     /// [`zx_futex_wait()`]: futex_wait.md
     /// [`zx_futex_wake_single_owner()`]: futex_wake_single_owner.md
-    futex_wake(struct {
-        value_ptr const_futexptr;
+    FutexWake(struct {
+        value_ptr ConstFutexPtr;
         wake_count uint32;
     }) -> (struct {
         status status;
@@ -259,11 +259,11 @@ protocol futexfuncs {
     /// [`zx_futex_requeue_single_owner()`]: futex_requeue_single_owner.md
     /// [`zx_futex_wait()`]: futex_wait.md
     /// [`zx_futex_wake()`]: futex_wake.md
-    futex_requeue(resource struct {
-        value_ptr const_futexptr;
+    FutexRequeue(resource struct {
+        value_ptr ConstFutexPtr;
         wake_count uint32;
         current_value Futex;
-        requeue_ptr const_futexptr;
+        requeue_ptr ConstFutexPtr;
         requeue_count uint32;
         new_requeue_owner handle;
     }) -> (struct {
@@ -313,8 +313,8 @@ protocol futexfuncs {
     /// [`zx_futex_requeue()`]: futex_requeue.md
     /// [`zx_futex_wait()`]: futex_wait.md
     /// [`zx_futex_wake()`]: futex_wake.md
-    futex_wake_single_owner(struct {
-        value_ptr const_futexptr;
+    FutexWakeSingleOwner(struct {
+        value_ptr ConstFutexPtr;
     }) -> (struct {
         status status;
     });
@@ -383,10 +383,10 @@ protocol futexfuncs {
     /// [`zx_futex_requeue()`]: futex_requeue.md
     /// [`zx_futex_wait()`]: futex_wait.md
     /// [`zx_futex_wake()`]: futex_wake.md
-    futex_requeue_single_owner(resource struct {
-        value_ptr const_futexptr;
+    FutexRequeueSingleOwner(resource struct {
+        value_ptr ConstFutexPtr;
         current_value Futex;
-        requeue_ptr const_futexptr;
+        requeue_ptr ConstFutexPtr;
         requeue_count uint32;
         new_requeue_owner handle;
     }) -> (struct {
@@ -436,10 +436,10 @@ protocol futexfuncs {
     /// ## See also
     ///
     /// [futex objects](/docs/reference/kernel_objects/futex.md)
-    futex_get_owner(struct {
-        value_ptr const_futexptr;
+    FutexGetOwner(struct {
+        value_ptr ConstFutexPtr;
     }) -> (struct {
         status status;
-        koid optional_koid;
+        koid OptionalKoid;
     });
 };

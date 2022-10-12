@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol resource {
+protocol Resource {
     /// ## Summary
     ///
     /// Create a resource object.
@@ -102,11 +102,11 @@ protocol resource {
     /// [`zx_ioports_request()`]: ioports_request.md
     /// [`zx_object_get_info()`]: object_get_info.md
     /// [`zx_vmo_create_physical()`]: vmo_create_physical.md
-    create(resource struct {
+    Create(resource struct {
         parent_rsrc handle:RESOURCE;
         options uint32;
         base uint64;
-        size usize;
+        size Usize;
         name string;
     }) -> (resource struct {
         status status;

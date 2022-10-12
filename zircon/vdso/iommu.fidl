@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol iommu {
+protocol Iommu {
     /// ## Summary
     ///
     /// Create a new IOMMU object in the kernel.
@@ -79,10 +79,10 @@ protocol iommu {
     /// [`zx_bti_create()`]: bti_create.md
     /// [`zx_bti_pin()`]: bti_pin.md
     /// [`zx_pmt_unpin()`]: pmt_unpin.md
-    create(resource struct {
+    Create(resource struct {
         resource handle:RESOURCE;
         type uint32;
-        desc vector_void;
+        desc VectorVoid;
     }) -> (resource struct {
         status status;
         out handle:IOMMU;

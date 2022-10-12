@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 library zx;
 
-alias voidptr = uint64;
+alias VoidPtr = uint64;
 
 @transport("Syscall")
 protocol Ovp {
-    void_pointer_out(resource struct {
+    VoidPointerOut(resource struct {
         handle handle;
     }) -> (struct {
         status status;
-        details voidptr;
+        details VoidPtr;
     });
 };

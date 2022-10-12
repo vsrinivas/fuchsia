@@ -26,7 +26,7 @@ type SmcResult = struct {
 };
 
 @transport("Syscall")
-protocol smc {
+protocol Smc {
     // TODO(fxbug.dev/32803): handle No rights required?
     /// ## Summary
     ///
@@ -80,7 +80,7 @@ protocol smc {
     /// **ZX_ERR_NOT_SUPPORTED**  smc_call is not supported on this system.
     ///
     /// **ZX_ERR_INVALID_ARGS**  *parameters* or *out_smc_result* a null pointer
-    call(resource struct {
+    Call(resource struct {
         handle handle:RESOURCE;
         parameters SmcParameters;
     }) -> (struct {

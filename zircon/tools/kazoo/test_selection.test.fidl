@@ -6,12 +6,12 @@ library zx;
 // This file is copies of some syscalls that cover more unusual features (see
 // annotations at the method).
 
-alias const_futexptr = int32;
+alias ConstFutexPtr = int32;
 alias Futex = int32;
-alias mutable_uint32 = uint32;
-alias mutable_vector_void = vector<byte>;
-alias optional_signals = signals;
-alias vector_void_u32size = vector<byte>;
+alias MutableUint32 = uint32;
+alias MutableVectorVoid = vector<byte>;
+alias OptionalSignals = signals;
+alias VectorVoidU32Size = vector<byte>;
 type Clock = strict enum : uint32 {
     MONOTONIC = 0;
     UTC = 1;
@@ -23,10 +23,10 @@ type Clock = strict enum : uint32 {
 protocol Selection {
     // Special futex handling.
     FutexRequeue(resource struct {
-        value_ptr const_futexptr;
+        value_ptr ConstFutexPtr;
         wake_count uint32;
         current_value Futex;
-        requeue_ptr const_futexptr;
+        requeue_ptr ConstFutexPtr;
         requeue_count uint32;
         new_requeue_owner handle;
     }) -> (struct {
@@ -40,18 +40,18 @@ protocol Selection {
         deadline time;
     }) -> (struct {
         status status;
-        observed optional_signals;
+        observed OptionalSignals;
     });
 
     // Argument reordering.
     @arg_reorder("handle,data,offset,data_size,actual")
     KtraceRead(resource struct {
         handle handle:RESOURCE;
-        data mutable_vector_void;
+        data MutableVectorVoid;
         offset uint32;
     }) -> (struct {
         status status;
-        actual usize;
+        actual Usize;
     });
 
     // Mutable uint32 in the middle of input parameters (rather than as an
@@ -62,8 +62,8 @@ protocol Selection {
         dev uint8;
         func uint8;
         offset uint8;
-        val mutable_uint32;
-        width usize;
+        val MutableUint32;
+        width Usize;
         write bool;
     }) -> (struct {
         status status;
@@ -74,7 +74,7 @@ protocol Selection {
         handle handle:JOB;
         options uint32;
         topic uint32;
-        policy vector_void_u32size;
+        policy VectorVoidU32Size;
     }) -> (struct {
         status status;
     });

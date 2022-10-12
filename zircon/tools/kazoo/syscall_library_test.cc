@@ -5,10 +5,10 @@
 #include "tools/kazoo/syscall_library.h"
 
 #include "tools/kazoo/test.h"
+#include "tools/kazoo/test_ir_test_kernelwrappers.test.h"
 #include "tools/kazoo/test_ir_test_no_methods.test.h"
 #include "tools/kazoo/test_ir_test_one_protocol_one_method.test.h"
 #include "tools/kazoo/test_ir_test_pointers_and_vectors.test.h"
-#include "tools/kazoo/test_ir_test_kernelwrappers.test.h"
 
 namespace {
 
@@ -27,9 +27,9 @@ TEST(SyscallLibrary, LoaderSingleMethod) {
 
   const auto& sc = library.syscalls()[0];
   EXPECT_EQ(sc->id(), "zx/Single");
-  EXPECT_EQ(sc->original_name(), "DoThing");
+  EXPECT_EQ(sc->name(), "DoThing");
   EXPECT_EQ(sc->category(), "single");
-  EXPECT_EQ(sc->name(), "single_do_thing");
+  EXPECT_EQ(sc->snake_name(), "single_do_thing");
   EXPECT_EQ(sc->attributes().size(), 1u);  // Doc is an attribute.
   EXPECT_TRUE(sc->HasAttribute("Doc"));
   EXPECT_FALSE(sc->is_noreturn());
@@ -69,14 +69,13 @@ TEST(SyscallLibrary, LoaderVectors) {
 TEST(SyscallLibrary, AttributeBasedFilter) {
   // CompiledOut should be included normally.
   SyscallLibrary library1;
-  ASSERT_TRUE(
-      SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library1));
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library1));
   library1.FilterSyscalls(std::set<std::string>());
   EXPECT_EQ(library1.name(), "zx");
   ASSERT_EQ(library1.syscalls().size(), 8u);
   bool debug_found = false;
   for (const auto& sc : library1.syscalls()) {
-    if (sc->name() == "kwrap_compiled_out") {
+    if (sc->snake_name() == "kwrap_compiled_out") {
       debug_found = true;
     }
   }
@@ -84,8 +83,7 @@ TEST(SyscallLibrary, AttributeBasedFilter) {
 
   // CompiledOut should be excluded in when testonly are stripped.
   SyscallLibrary library2;
-  ASSERT_TRUE(
-      SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library2));
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library2));
   std::set<std::string> exclude1{"testonly"};
   library2.FilterSyscalls(exclude1);
   EXPECT_EQ(library2.name(), "zx");
@@ -101,8 +99,7 @@ TEST(SyscallLibrary, AttributeBasedFilter) {
   // Neither CompiledOut nor ANoRetFunc should be included when both attributes
   // are excluded.
   SyscallLibrary library3;
-  ASSERT_TRUE(
-      SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library3));
+  ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_kernelwrappers, &library3));
   std::set<std::string> exclude2{"testonly", "noreturn"};
   library3.FilterSyscalls(exclude2);
   EXPECT_EQ(library3.name(), "zx");

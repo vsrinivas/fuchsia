@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol thread {
+protocol Thread {
     /// ## Summary
     ///
     /// Terminate the current running thread.
@@ -52,7 +52,7 @@ protocol thread {
     /// [`zx_thread_create()`]: thread_create.md
     /// [`zx_thread_start()`]: thread_start.md
     @noreturn
-    exit();
+    Exit();
 
     /// ## Summary
     ///
@@ -130,7 +130,7 @@ protocol thread {
     /// [`zx_object_wait_one()`]: object_wait_one.md
     /// [`zx_thread_exit()`]: thread_exit.md
     /// [`zx_thread_start()`]: thread_start.md
-    create(resource struct {
+    Create(resource struct {
         process handle:PROCESS;
         name string;
         options uint32;
@@ -229,12 +229,12 @@ protocol thread {
     /// [`zx_thread_create()`]: thread_create.md
     /// [`zx_thread_exit()`]: thread_exit.md
     /// [`zx_vmar_unmap_handle_close_thread_exit()`]: vmar_unmap_handle_close_thread_exit.md
-    start(resource struct {
+    Start(resource struct {
         handle handle:THREAD;
         thread_entry vaddr;
         stack vaddr;
-        arg1 uintptr;
-        arg2 uintptr;
+        arg1 Uintptr;
+        arg2 Uintptr;
     }) -> (struct {
         status status;
     });
@@ -327,12 +327,12 @@ protocol thread {
     /// ## See also
     ///
     /// [thread_write_state](thread_write_state.md).
-    read_state(resource struct {
+    ReadState(resource struct {
         handle handle:THREAD;
         kind uint32;
     }) -> (struct {
         status status;
-        buffer vector_void;
+        buffer VectorVoid;
     });
 
     /// ## Summary
@@ -444,10 +444,10 @@ protocol thread {
     ///  - [`zx_thread_read_state()`]
     ///
     /// [`zx_thread_read_state()`]: thread_read_state.md
-    write_state(resource struct {
+    WriteState(resource struct {
         handle handle:THREAD;
         kind uint32;
-        buffer vector_void;
+        buffer VectorVoid;
     }) -> (struct {
         status status;
     });
@@ -487,7 +487,7 @@ protocol thread {
     ///  - [`zx_nanosleep()`]
     ///
     /// [`zx_nanosleep()`]: nanosleep.md
-    legacy_yield(resource struct {
+    LegacyYield(resource struct {
         options uint32;
     }) -> (struct {
         status status;

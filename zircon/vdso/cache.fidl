@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol cache {
+protocol Cache {
     /// ## Summary
     ///
     /// Flush CPU data and/or instruction caches.
@@ -59,9 +59,9 @@ protocol cache {
     ///
     /// **ZX_ERR_INVALID_ARGS** *options* is invalid.
     @vdsocall
-    flush(struct {
-        addr const_voidptr;
-        size usize;
+    Flush(struct {
+        addr ConstVoidPtr;
+        size Usize;
         options uint32;
     }) -> (struct {
         status status;

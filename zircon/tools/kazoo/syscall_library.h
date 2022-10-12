@@ -136,16 +136,14 @@ class TypeVector {
 // We want to implement special treatment for these types.
 class TypeZxBasicAlias {
  public:
-  explicit TypeZxBasicAlias(const std::string& name)
-      : name_("zx_" + name + "_t"),
-        go_name_(std::string(1, static_cast<char>(toupper(name[0]))) + name.substr(1)) {}
+  explicit TypeZxBasicAlias(const std::string& name);
 
   const std::string& name() const { return name_; }
-  const std::string& go_name() const { return go_name_; }
+  const std::string& c_name() const { return c_name_; }
 
  private:
   std::string name_;
-  std::string go_name_;
+  std::string c_name_;
 };
 
 inline const Type& TypeVector::contained_type() const { return *contained_type_; }
@@ -291,9 +289,9 @@ class Syscall {
   const std::map<std::string, std::string>& attributes() const { return attributes_; }
 
   const std::string& id() const { return id_; }
-  const std::string& original_name() const { return original_name_; }
-  const std::string& category() const { return category_; }
   const std::string& name() const { return name_; }
+  const std::string& category() const { return category_; }
+  const std::string& snake_name() const { return snake_name_; }
   bool is_noreturn() const { return is_noreturn_; }
   const Struct& request() const { return request_; }
   const Struct& response() const { return response_; }
@@ -310,10 +308,10 @@ class Syscall {
   bool MapRequestResponseToKernelAbi();
   bool HandleArgReorder();
 
-  std::string id_;             // "zx/Object"
-  std::string original_name_;  // "GetInfo"
-  std::string category_;       // "object"
-  std::string name_;           // "object_get_info"
+  std::string id_;          // "zx/Object"
+  std::string name_;        // "GetInfo"
+  std::string category_;    // "object"
+  std::string snake_name_;  // "object_get_info"
   bool is_noreturn_ = false;
   std::map<std::string, std::string> attributes_;
   Struct request_;

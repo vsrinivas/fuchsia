@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol restricted {
+protocol Restricted {
     /// ## Summary
     ///
     /// Enter restricted mode
@@ -80,10 +80,10 @@ protocol restricted {
     /// [`zx_process_create_shared()`]: process_create_shared.md
     /// [address spaces]: /docs/concepts/memory/address_spaces.md
     @next
-    enter(struct {
+    Enter(struct {
         options uint32;
-        vector_table_ptr uintptr;
-        context uintptr;
+        vector_table_ptr Uintptr;
+        context Uintptr;
     }) -> (struct {
         status status;
     });
@@ -146,8 +146,8 @@ protocol restricted {
     /// [`zx_restricted_enter()`]: restricted_enter.md
     /// [`zx_restricted_read_state()`]: restricted_read_state.md
     @next
-    write_state(struct {
-        buffer vector_void;
+    WriteState(struct {
+        buffer VectorVoid;
     }) -> (struct {
         status status;
     });
@@ -210,8 +210,8 @@ protocol restricted {
     /// [`zx_restricted_enter()`]: restricted_enter.md
     /// [`zx_restricted_write_state()`]: restricted_write_state.md
     @next
-    read_state() -> (struct {
+    ReadState() -> (struct {
         status status;
-        buffer vector_void;
+        buffer VectorVoid;
     });
 };

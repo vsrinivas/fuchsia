@@ -61,7 +61,7 @@ void CDeclarationMacro(const Syscall& syscall, std::string_view macro,
                        std::string (*type_name)(const Type&), Writer* writer) {
   std::string decl(macro);
   decl += "(";
-  decl += syscall.name();
+  decl += syscall.snake_name();
   decl += ", ";
 
   // First the return type.

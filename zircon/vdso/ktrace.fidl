@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol ktrace {
+protocol Ktrace {
     // TODO(scottmg): This is another one where it's:
     //   (handle, data, offset, data_size)
     // rather than:
@@ -49,13 +49,13 @@ protocol ktrace {
     ///
     /// TODO(fxbug.dev/32938)
     @arg_reorder("handle, data, offset, data_size, actual")
-    read(resource struct {
+    Read(resource struct {
         handle handle:RESOURCE;
         offset uint32;
     }) -> (struct {
         status status;
-        data vector_void;
-        actual usize;
+        data VectorVoid;
+        actual Usize;
     });
 
     // TODO(scottmg): syscalls.banjo had the length of |ptr| being |action|?
@@ -97,11 +97,11 @@ protocol ktrace {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    control(resource struct {
+    Control(resource struct {
         handle handle:RESOURCE;
         action uint32;
         options uint32;
-        ptr voidptr;
+        ptr VoidPtr;
     }) -> (struct {
         status status;
     });
@@ -144,7 +144,7 @@ protocol ktrace {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    write(resource struct {
+    Write(resource struct {
         handle handle:RESOURCE;
         id uint32;
         arg0 uint32;

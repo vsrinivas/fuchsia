@@ -157,7 +157,6 @@ if (current_toolchain == fidl_toolchain) {
 
     # TODO(fxbug.dev/109734): Burn these down.
     excluded_checks = [
-      "invalid-case-for-decl-name",
       "string-bounds-not-specified",
       "vector-bounds-not-specified",
     ]

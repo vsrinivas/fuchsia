@@ -11,95 +11,92 @@ library zx;
 // there were no handling of the alias (and the alias was "expanded" as is the
 // default behaviour), it would result in something sensible.
 
-// TODO(fidlc): (mutable) char*
-alias charptr = uint64;
-
 // TODO(fidl)
-alias const_futexptr = int32;
+alias ConstFutexPtr = int32;
 
 // TODO(fidlc): const void*
-alias const_voidptr = uint64;
+alias ConstVoidPtr = uint64;
 
 // TODO(fidlc): mutable<string>
-alias mutable_string = string;
+alias MutableString = string;
 
 // TODO(fidlc): mutable<uint32>
-alias mutable_uint32 = uint32;
+alias MutableUint32 = uint32;
 
-// TODO(fidlc): mutable<usize>
-alias mutable_usize = usize;
+// TODO(fidlc): mutable<Usize>
+alias MutableUsize = Usize;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): mutable<vector<HandleDisposition>
-alias mutable_vector_HandleDisposition_u32size = vector<HandleDisposition>;
+alias MutableVectorHandleDispositionU32Size = vector<HandleDisposition>;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): vector<HandleInfo>
-alias mutable_vector_HandleInfo_u32size = vector<HandleInfo>;
+alias MutableVectorHandleInfoU32Size = vector<HandleInfo>;
 
 // TODO(fidlc): mutable<ChannelCallEtcArgs>
-alias mutable_ChannelCallEtcArgs = ChannelCallEtcArgs;
+alias MutableChannelCallEtcArgs = ChannelCallEtcArgs;
 
 // TODO(fidlc): mutable<vector<WaitItem>>
-alias mutable_vector_WaitItem = vector<WaitItem>;
+alias MutableVectorWaitItem = vector<WaitItem>;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): mutable<vector<handle>
-alias mutable_vector_handle_u32size = vector<handle>;
+alias MutableVectorHandleU32Size = vector<handle>;
 
 // TODO(fidlc): mutable<vector<void>>
-alias mutable_vector_void = vector<byte>;
+alias MutableVectorVoid = vector<byte>;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): mutable<vector<void>>
-alias mutable_vector_void_u32size = vector<byte>;
+alias MutableVectorVoidU32Size = vector<byte>;
 
 // TODO(fidlc): optional<PciBar>
-alias optional_PciBar = PciBar;
+alias OptionalPciBar = PciBar;
 
 // TODO(fidlc): optional<PortPacket>
-alias optional_PortPacket = PortPacket;
+alias OptionalPortPacket = PortPacket;
 
 // TODO(fidlc): optional<koid>
-alias optional_koid = koid;
+alias OptionalKoid = koid;
 
-// TODO(fidlc): optional<signals>
-alias optional_signals = signals;
+// TODO(fidlc): optional<Signals>
+alias OptionalSignals = signals;
 
 // TODO(fidlc): optional<time>
-alias optional_time = time;
+alias OptionalTime = time;
 
 // TODO(fidlc): optional<uint32>
-alias optional_uint32 = uint32;
+alias OptionalUint32 = uint32;
 
-// TODO(fidlc): optional<usize>
-alias optional_usize = usize;
+// TODO(fidlc): optional<Usize>
+alias OptionalUsize = Usize;
 
-// TODO(fidlc): optional<usize>
-alias optional_off = off;
+// TODO(fidlc): optional<off>
+alias OptionalOff = off;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): vector<HandleInfo>
-alias vector_HandleInfo_u32size = vector<HandleInfo>;
+alias VectorHandleInfoU32Size = vector<HandleInfo>;
 
 // TODO(fidlc): vector<handle> uint32 size
-alias vector_handle_u32size = vector<handle>;
-
-// TODO(fidlc): vector<paddr>>
-alias vector_paddr = vector<paddr>;
+alias VectorHandleU32Size = vector<handle>;
 
 // TODO(fidlc): vector<void>
-alias vector_void = vector<byte>;
+alias VectorVoid = vector<byte>;
 
 // TODO(fidlc): vector<iovec>
-alias vector_iovec = vector<byte>;
+alias VectorIovec = vector<byte>;
+
+// TODO(fidlc): vector<paddr>
+alias VectorPaddr = vector<paddr>;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): vector<void>
-alias vector_void_u32size = vector<byte>;
+alias VectorVoidU32Size = vector<byte>;
 
 // TODO(fidlc): (mutable) void*
-alias voidptr = uint64;
+alias VoidPtr = uint64;
 
-// This is <zircon/string_view.h>'s zx_string_view_t in C/C++.
-alias string_view = uint64;
+// This is <zircon/StringView.h>'s zx_string_view_t in C/C++.
+alias StringView = uint64;

@@ -8,7 +8,7 @@
 namespace {
 
 void PrintStub(Writer* writer, Syscall* syscall) {
-  writer->Printf("func Sys_%s(", syscall->name().c_str());
+  writer->Printf("func Sys_%s(", syscall->snake_name().c_str());
   for (size_t i = 0; i < syscall->num_kernel_args(); ++i) {
     if (i > 0) {
       writer->Puts(", ");
@@ -35,8 +35,8 @@ bool GoSyscallsAsm(const SyscallLibrary& library, Writer* writer) {
   for (const auto& syscall : library.syscalls()) {
     writer->Puts("// ");
     PrintStub(writer, syscall.get());
-    writer->Printf("TEXT ·Sys_%s(SB),NOSPLIT,$0\n", syscall->name().c_str());
-    writer->Printf("\tJMP runtime·vdsoCall_zx_%s(SB)\n", syscall->name().c_str());
+    writer->Printf("TEXT ·Sys_%s(SB),NOSPLIT,$0\n", syscall->snake_name().c_str());
+    writer->Printf("\tJMP runtime·vdsoCall_zx_%s(SB)\n", syscall->snake_name().c_str());
     writer->Puts("\n");
   }
 

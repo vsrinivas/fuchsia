@@ -10,7 +10,7 @@
 namespace {
 
 void PrintStub(Writer* writer, Syscall* syscall) {
-  writer->Printf("func vdsoCall_zx_%s(", syscall->name().c_str());
+  writer->Printf("func vdsoCall_zx_%s(", syscall->snake_name().c_str());
   for (size_t i = 0; i < syscall->num_kernel_args(); ++i) {
     if (i > 0) {
       writer->Puts(", ");
@@ -46,7 +46,7 @@ size_t GoTypeSize(const Type& type) {
       native_name == "uint64" || native_name == "unsafe.Pointer") {
     return 8;
   }
-  ZX_ASSERT(false && "unhandled GoTypeSize");
+  ZX_PANIC("unhandled GoTypeSize: %s", native_name.c_str());
 }
 
 enum class Arch {
@@ -57,7 +57,7 @@ enum class Arch {
 bool IsSpecialGoRuntimeFunction(const Syscall& syscall) {
   // These functions can't call runtime·entersyscall and exitsyscall, otherwise
   // the system will hang.
-  return syscall.name() == "nanosleep" || syscall.name() == "futex_wait";
+  return syscall.name() == "Nanosleep" || syscall.name() == "FutexWait";
 }
 
 void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
@@ -111,7 +111,7 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
       break;
   }
 
-  writer->Printf("TEXT runtime·vdsoCall_zx_%s(SB),NOSPLIT,$%d-%zu\n", syscall->name().c_str(),
+  writer->Printf("TEXT runtime·vdsoCall_zx_%s(SB),NOSPLIT,$%d-%zu\n", syscall->snake_name().c_str(),
                  frame_size, arg_size + ret_size);
   writer->Puts("\tGO_ARGS\n");
   writer->Puts("\tNO_LOCAL_POINTERS\n");
@@ -175,7 +175,7 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
         }
         writer->Puts("\tPUSHQ R12\n");
       }
-      writer->Printf("\tMOVQ vdso_zx_%s(SB), AX\n", syscall->name().c_str());
+      writer->Printf("\tMOVQ vdso_zx_%s(SB), AX\n", syscall->snake_name().c_str());
       writer->Puts("\tCALL AX\n");
       if (syscall->num_kernel_args() >= 7) {
         writer->Puts("\tPOPQ R12\n");
@@ -186,7 +186,7 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
       }
       break;
     case Arch::kArm64:
-      writer->Printf("\tBL vdso_zx_%s(SB)\n", syscall->name().c_str());
+      writer->Printf("\tBL vdso_zx_%s(SB)\n", syscall->snake_name().c_str());
   }
 
   if (ret_size > 0) {
@@ -250,21 +250,21 @@ bool GoVdsoKeys(const SyscallLibrary& library, Writer* writer) {
 
   writer->Puts("var vdsoSymbolKeys = []vdsoSymbolKey{\n");
   for (const auto& syscall : library.syscalls()) {
-    std::string sym("_zx_" + syscall->name());
+    std::string sym("_zx_" + syscall->snake_name());
     writer->Printf("\t{\"%s\", 0x%x, &vdso%s},\n", sym.c_str(), DJBHash(sym), sym.c_str());
   }
   writer->Puts("}\n");
 
   writer->Puts("\n");
   for (const auto& syscall : library.syscalls()) {
-    writer->Printf("//go:cgo_import_dynamic vdso_zx_%s zx_%s\n", syscall->name().c_str(),
-                   syscall->name().c_str());
+    writer->Printf("//go:cgo_import_dynamic vdso_zx_%s zx_%s\n", syscall->snake_name().c_str(),
+                   syscall->snake_name().c_str());
   }
 
   writer->Puts("\n");
   for (const auto& syscall : library.syscalls()) {
-    writer->Printf("//go:linkname vdso_zx_%s vdso_zx_%s\n", syscall->name().c_str(),
-                   syscall->name().c_str());
+    writer->Printf("//go:linkname vdso_zx_%s vdso_zx_%s\n", syscall->snake_name().c_str(),
+                   syscall->snake_name().c_str());
   }
 
   writer->Puts("\n");
@@ -277,7 +277,7 @@ bool GoVdsoKeys(const SyscallLibrary& library, Writer* writer) {
 
   writer->Puts("var (\n");
   for (const auto& syscall : library.syscalls()) {
-    writer->Printf("\tvdso_zx_%s uintptr\n", syscall->name().c_str());
+    writer->Printf("\tvdso_zx_%s uintptr\n", syscall->snake_name().c_str());
   }
   writer->Puts(")\n");
 

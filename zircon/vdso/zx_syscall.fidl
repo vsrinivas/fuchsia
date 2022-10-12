@@ -3,6 +3,6 @@
 // found in the LICENSE file.
 library zx;
 
-alias usize = uint64;
+alias Usize = uint64;
 
-alias uintptr = uint64;
+alias Uintptr = uint64;

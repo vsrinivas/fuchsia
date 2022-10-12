@@ -115,7 +115,7 @@ typedef uint32_t zxio_destination_t;
 // Test doc comment on type alias.
 typedef zxio_destination_t zxio_alias_t;
 
-typedef uint64_t zxio_alias_char_ptr_t;
+typedef uint64_t zxio_alias_const_void_ptr_t;
 )" + std::string(kEpilogue));
 }
 

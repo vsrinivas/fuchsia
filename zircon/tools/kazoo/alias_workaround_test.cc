@@ -17,7 +17,7 @@ TEST(AliasWorkaround, Mappings) {
   ASSERT_EQ(library.syscalls().size(), 1u);
 
   const auto& sc = library.syscalls()[0];
-  EXPECT_EQ(sc->name(), "aliases_some_func");
+  EXPECT_EQ(sc->snake_name(), "aliases_some_func");
   EXPECT_EQ(GetCUserModeName(sc->kernel_return_type()), "zx_status_t");
 
   // See test_aliases.test.fidl for this giant function's fidl spec. This covers all the aliases
@@ -30,66 +30,63 @@ TEST(AliasWorkaround, Mappings) {
   EXPECT_EQ(GetCUserModeName(sc->kernel_arguments()[cur_arg].type()), _type); \
   ++cur_arg;
 
-  // charptr
-  CHECK_ARG("char*", "a");
-
-  // const_futexptr
+  // ConstFutexPtr
   CHECK_ARG("const zx_futex_t*", "b");
 
-  // const_voidptr
+  // ConstVoidPtr
   CHECK_ARG("const void*", "c");
 
-  // mutable_string
+  // MutableString
   CHECK_ARG("char*", "d");
   CHECK_ARG("size_t", "d_size");
 
-  // mutable_uint32
+  // MutableUint32
   CHECK_ARG("uint32_t*", "e");
 
-  // mutable_usize
+  // MutableUsize
   CHECK_ARG("size_t*", "f");
 
-  // mutable_vector_HandleDisposition_u32size
+  // MutableVectorHandleDispositionU32Size
   CHECK_ARG("zx_handle_disposition_t*", "g");
   CHECK_ARG("uint32_t", "num_g");
 
-  // mutable_vector_WaitItem
+  // MutableVectorWaitItem
   CHECK_ARG("zx_wait_item_t*", "h");
   CHECK_ARG("size_t", "num_h");
 
-  // mutable_vector_handle_u32size
+  // MutableVectorHandleU32Size
   CHECK_ARG("zx_handle_t*", "i");
   CHECK_ARG("uint32_t", "num_i");
 
-  // mutable_vector_void
+  // MutableVectorVoid
   CHECK_ARG("void*", "j");
   CHECK_ARG("size_t", "j_size");
 
-  // mutable_vector_void_u32size
+  // MutableVectorVoidU32Size
   CHECK_ARG("void*", "k");
   CHECK_ARG("uint32_t", "k_size");
 
-  // vector_HandleInfo_u32size
+  // VectorHandleInfoU32Size
   CHECK_ARG("const zx_handle_info_t*", "l");
   CHECK_ARG("uint32_t", "num_l");
 
-  // vector_handle_u32size
+  // VectorHandleU32Size
   CHECK_ARG("const zx_handle_t*", "m");
   CHECK_ARG("uint32_t", "num_m");
 
-  // vector_paddr
+  // VectorPaddr
   CHECK_ARG("const zx_paddr_t*", "n");
   CHECK_ARG("size_t", "num_n");
 
-  // vector_void
+  // VectorVoid
   CHECK_ARG("const void*", "o");
   CHECK_ARG("size_t", "o_size");
 
-  // vector_void_u32size
+  // VectorVoidU32Size
   CHECK_ARG("const void*", "p");
   CHECK_ARG("uint32_t", "p_size");
 
-  // voidptr
+  // VoidPtr
   CHECK_ARG("void*", "q");
 
   // Optionality only shows up in __NONNULL() header markup, not the actual type info when it's
@@ -123,7 +120,7 @@ TEST(AliasWorkaround, Mappings) {
 #undef CHECK_IS_OPTIONAL
 #undef CHECK_ARG
 
-  EXPECT_EQ(cur_arg, 36u);  // 25 fidl args + 11 that expand to pointer+size.
+  EXPECT_EQ(cur_arg, 35u);  // 25 fidl args + 11 that expand to pointer+size.
 }
 
 }  // namespace

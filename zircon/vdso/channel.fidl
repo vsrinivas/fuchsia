@@ -17,7 +17,7 @@ type HandleInfo = resource struct {
 type ChannelCallArgs = resource struct {
     wr_bytes vector<byte>;
     wr_handles vector<handle>;
-    // TODO(scottmg): mutable_vector_void
+    // TODO(scottmg): MutableVectorVoid
     rd_bytes vector<byte>;
     // TODO(scottmg): mutable_vector_handle
     rd_handles vector<handle>;
@@ -33,13 +33,13 @@ type HandleDisposition = resource struct {
 
 type ChannelCallEtcArgs = resource struct {
     wr_bytes vector<byte>;
-    wr_handles mutable_vector_HandleDisposition_u32size;
+    wr_handles MutableVectorHandleDispositionU32Size;
     rd_bytes vector<byte>;
-    rd_handles mutable_vector_HandleInfo_u32size;
+    rd_handles MutableVectorHandleInfoU32Size;
 };
 
 @transport("Syscall")
-protocol channel {
+protocol Channel {
     /// ## Summary
     ///
     /// Create a channel.
@@ -114,7 +114,7 @@ protocol channel {
     /// [`zx_object_wait_async()`]: object_wait_async.md
     /// [`zx_object_wait_many()`]: object_wait_many.md
     /// [`zx_object_wait_one()`]: object_wait_one.md
-    create(struct {
+    Create(struct {
         options uint32;
     }) -> (resource struct {
         status status;
@@ -229,15 +229,15 @@ protocol channel {
     @arg_reorder(
             "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles")
     @handle_unchecked
-    read(resource struct {
+    Read(resource struct {
         handle handle:CHANNEL;
         options uint32;
     }) -> (resource struct {
         status status;
-        bytes vector_void_u32size;
-        handles vector_handle_u32size;
-        actual_bytes optional_uint32;
-        actual_handles optional_uint32;
+        bytes VectorVoidU32Size;
+        handles VectorHandleU32Size;
+        actual_bytes OptionalUint32;
+        actual_handles OptionalUint32;
     });
 
     /// ## Summary
@@ -347,15 +347,15 @@ protocol channel {
     /// [`zx_object_wait_one()`]: object_wait_one.md
     @arg_reorder(
             "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles")
-    read_etc(resource struct {
+    ReadEtc(resource struct {
         handle handle:CHANNEL;
         options uint32;
     }) -> (resource struct {
         status status;
-        bytes vector_void_u32size;
-        handles vector_HandleInfo_u32size;
-        actual_bytes optional_uint32;
-        actual_handles optional_uint32;
+        bytes VectorVoidU32Size;
+        handles VectorHandleInfoU32Size;
+        actual_bytes OptionalUint32;
+        actual_handles OptionalUint32;
     });
 
     /// ## Summary
@@ -505,12 +505,12 @@ protocol channel {
     /// [`zx_object_wait_async()`]: object_wait_async.md
     /// [`zx_object_wait_many()`]: object_wait_many.md
     /// [`zx_object_wait_one()`]: object_wait_one.md
-    write(resource struct {
+    Write(resource struct {
         handle handle:CHANNEL;
         options uint32;
-        bytes vector_void_u32size;
+        bytes VectorVoidU32Size;
         @release
-        handles vector_handle_u32size;
+        handles VectorHandleU32Size;
     }) -> (struct {
         status status;
     });
@@ -686,17 +686,17 @@ protocol channel {
     /// [`zx_channel_write()`]: channel_write.md
     /// [`zx_handle_duplicate()`]: handle_duplicate.md
     /// [`zx_handle_replace()`]: handle_replace.md
-    write_etc(resource struct {
+    WriteEtc(resource struct {
         handle handle:CHANNEL;
         options uint32;
-        bytes vector_void_u32size;
-        handles mutable_vector_HandleDisposition_u32size;
+        bytes VectorVoidU32Size;
+        handles MutableVectorHandleDispositionU32Size;
     }) -> (struct {
         status status;
     });
 
     @internal
-    call_noretry(resource struct {
+    CallNoretry(resource struct {
         handle handle:CHANNEL;
         options uint32;
         deadline time;
@@ -708,7 +708,7 @@ protocol channel {
     });
 
     @internal
-    call_finish(resource struct {
+    CallFinish(resource struct {
         deadline time;
         args ChannelCallArgs;
     }) -> (struct {
@@ -900,7 +900,7 @@ protocol channel {
     /// [`zx_object_wait_one()`]: object_wait_one.md
     @blocking
     @vdsocall
-    call(resource struct {
+    Call(resource struct {
         handle handle:CHANNEL;
         options uint32;
         deadline time;
@@ -912,11 +912,11 @@ protocol channel {
     });
 
     @internal
-    call_etc_noretry(resource struct {
+    CallEtcNoretry(resource struct {
         handle handle:CHANNEL;
         options uint32;
         deadline time;
-        args mutable_ChannelCallEtcArgs;
+        args MutableChannelCallEtcArgs;
     }) -> (struct {
         status status;
         actual_bytes uint32;
@@ -924,9 +924,9 @@ protocol channel {
     });
 
     @internal
-    call_etc_finish(resource struct {
+    CallEtcFinish(resource struct {
         deadline time;
-        args mutable_ChannelCallEtcArgs;
+        args MutableChannelCallEtcArgs;
     }) -> (struct {
         status status;
         actual_bytes uint32;
@@ -1072,11 +1072,11 @@ protocol channel {
     @blocking
     @vdsocall
     // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
-    call_etc(resource struct {
+    CallEtc(resource struct {
         handle handle:CHANNEL;
         options uint32;
         deadline time;
-        args mutable_ChannelCallEtcArgs;
+        args MutableChannelCallEtcArgs;
     }) -> (struct {
         status status;
         actual_bytes uint32;

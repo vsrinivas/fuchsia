@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 library zx;
 
-alias mutable_vector_void = vector<byte>;
-alias voidptr = uint64;
+alias MutableVectorVoid = vector<byte>;
+alias VoidPtr = uint64;
 
 @transport("Syscall")
 protocol Rust {
@@ -34,7 +34,7 @@ protocol Rust {
         op uint32;
         offset uint64;
         size uint64;
-        buffer mutable_vector_void;
+        buffer MutableVectorVoid;
     }) -> (struct {
         status status;
     });
@@ -54,9 +54,9 @@ protocol Rust {
         f uint16;
         g uint32;
         h uint64;
-        i usize;
-        j uintptr;
-        k voidptr;
+        i Usize;
+        j Uintptr;
+        k VoidPtr;
         l time;
         m ticks;
     });

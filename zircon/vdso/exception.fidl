@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol exception {
+protocol Exception {
     /// ## Summary
     ///
     /// Create a handle for the exception's thread.
@@ -50,7 +50,7 @@ protocol exception {
     /// [exceptions]: /docs/concepts/kernel/exceptions.md
     /// [`zx_exception_get_process()`]: exception_get_process.md
     /// [`zx_task_create_exception_channel()`]: task_create_exception_channel.md
-    get_thread(resource struct {
+    GetThread(resource struct {
         handle handle:EXCEPTION;
     }) -> (resource struct {
         status status;
@@ -107,7 +107,7 @@ protocol exception {
     /// [exceptions]: /docs/concepts/kernel/exceptions.md
     /// [`zx_exception_get_thread()`]: exception_get_thread.md
     /// [`zx_task_create_exception_channel()`]: task_create_exception_channel.md
-    get_process(resource struct {
+    GetProcess(resource struct {
         handle handle:EXCEPTION;
     }) -> (resource struct {
         status status;

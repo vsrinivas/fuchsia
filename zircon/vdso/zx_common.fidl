@@ -12,41 +12,65 @@
 library zx;
 
 // zx_status_t and errors.h.
+//
+// TODO(fxbug.dev/109734): Status.
 alias status = int32;
 
 // zx_time_t: absolute monotonic time in nanoseconds, from a device-specific
 // timebase defined here:
 // https://fuchsia.dev/fuchsia-src/concepts/kernel/time/monotonic.md
+//
+// TODO(fxbug.dev/109734): Time.
 alias time = int64;
 
 // zx_duration_t: a duration in nanoseconds.
+//
+// TODO(fxbug.dev/109734): Duration.
 alias duration = int64;
 
 // zx_ticks_t: a duration in hardware ticks.
+//
+// TODO(fxbug.dev/109734): Ticks.
 alias ticks = int64;
 
 // zx_koid_t: global kernel object id.
+//
+// TODO(fxbug.dev/109734): Koid.
 alias koid = uint64;
 
 // zx_vaddr_t: virtual address.
+//
+// TODO(fxbug.dev/109734): Vaddr.
 alias vaddr = uint64;
 
 // zx_paddr_t: physical address.
+//
+// TODO(fxbug.dev/109734): Paddr.
 alias paddr = uint64;
 
 // zx_paddr32_t: low mem physical address.
+//
+// TODO(fxbug.dev/109734): Paddr32.
 alias paddr32 = uint32;
 
 // zx_gpaddr_t: hypervisor guest physical addresses.
+//
+// TODO(fxbug.dev/109734): Gpaddr.
 alias gpaddr = uint64;
 
 // zx_off_t: offset.
+//
+// TODO(fxbug.dev/109734): Off.
 alias off = uint64;
 
 // See zircon/processargs.h.
+//
+// TODO(fxbug.dev/109734): Procarg.
 alias procarg = uint32;
 
 // zx_signals_t.
+//
+// TODO(fxbug.dev/109734): Signals.
 alias signals = uint32;
 
 // TODO(fxbug.dev/51002): These are currently duplicated with zircon/types.h.
@@ -57,6 +81,7 @@ const CHANNEL_MAX_MSG_HANDLES uint64 = 64;
 const MAX_NAME_LEN uint64 = 32;
 const MAX_CPUS uint64 = 512;
 
+// TODO(fxbug.dev/109734): ObjType.
 type obj_type = strict enum : uint32 {
     NONE = 0;
     PROCESS = 1;

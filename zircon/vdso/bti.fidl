@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol bti {
+protocol Bti {
     // TODO(fxbug.dev/32803): This is an unusual rights spec.
     /// ## Summary
     ///
@@ -67,7 +67,7 @@ protocol bti {
     /// [`zx_bti_pin()`]: bti_pin.md
     /// [`zx_bti_release_quarantine()`]: bti_release_quarantine.md
     /// [`zx_pmt_unpin()`]: pmt_unpin.md
-    create(resource struct {
+    Create(resource struct {
         iommu handle:IOMMU;
         options uint32;
         bti_id uint64;
@@ -211,7 +211,7 @@ protocol bti {
     /// [`zx_vmo_create_physical()`]: vmo_create_physical.md
     /// [`zx_vmo_op_range()`]: vmo_op_range.md
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
-    pin(resource struct {
+    Pin(resource struct {
         handle handle:BTI;
         options uint32;
         vmo handle:VMO;
@@ -219,7 +219,7 @@ protocol bti {
         size uint64;
     }) -> (resource struct {
         status status;
-        addrs vector_paddr;
+        addrs VectorPaddr;
         pmt handle:PMT;
     });
 
@@ -266,7 +266,7 @@ protocol bti {
     ///
     /// [`zx_bti_pin()`]: bti_pin.md
     /// [`zx_pmt_unpin()`]: pmt_unpin.md
-    release_quarantine(resource struct {
+    ReleaseQuarantine(resource struct {
         handle handle:BTI;
     }) -> (struct {
         status status;

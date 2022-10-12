@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol pmt {
+protocol Pmt {
     // TODO(fxbug.dev/32803): handle ZX_OBJ_TYPE_PMT; No rights required?
     /// ## Summary
     ///
@@ -51,7 +51,7 @@ protocol pmt {
     /// [`zx_bti_pin()`]: bti_pin.md
     /// [`zx_bti_release_quarantine()`]: bti_release_quarantine.md
     /// [`zx_handle_close()`]: handle_close.md
-    unpin(resource struct {
+    Unpin(resource struct {
         @release
         handle handle:PMT;
     }) -> (struct {

@@ -59,7 +59,7 @@ class Formatter {
       // TODO(syscall-fidl-transition): This is what abigen does, not sure if there's something
       // better that could be done.
       void operator()(const TypeUintptrT&) { ret = "usize"; }
-      void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.name(); }
+      void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.c_name(); }
 
       void operator()(const TypeAlias& alias) {
         ret = formatter->Format(alias.alias_data()).type_name;
@@ -124,7 +124,7 @@ bool RustOutput(const SyscallLibrary& library, Writer* writer) {
       continue;
     }
 
-    writer->Printf("%spub fn zx_%s(\n", indent, syscall->name().c_str());
+    writer->Printf("%spub fn zx_%s(\n", indent, syscall->snake_name().c_str());
     for (size_t i = 0; i < syscall->kernel_arguments().size(); ++i) {
       const StructMember& arg = syscall->kernel_arguments()[i];
       const bool last = i == syscall->kernel_arguments().size() - 1;

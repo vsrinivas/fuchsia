@@ -13,7 +13,7 @@ bool SyscallNumbersOutput(const SyscallLibrary& library, Writer* writer) {
     if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
-    writer->Printf("#define ZX_SYS_%s %zu\n", syscall->name().c_str(), i);
+    writer->Printf("#define ZX_SYS_%s %zu\n", syscall->snake_name().c_str(), i);
     ++i;
   }
 

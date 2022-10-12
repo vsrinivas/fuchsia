@@ -4,7 +4,7 @@
 library zx;
 
 @transport("Syscall")
-protocol interrupt {
+protocol Interrupt {
     /// ## Summary
     ///
     /// Create an interrupt object.
@@ -90,7 +90,7 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    create(resource struct {
+    Create(resource struct {
         src_obj handle:RESOURCE;
         src_num uint32;
         options uint32;
@@ -194,7 +194,7 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    bind(resource struct {
+    Bind(resource struct {
         handle handle:INTERRUPT;
         port_handle handle:PORT;
         key uint64;
@@ -269,11 +269,11 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_port_wait()`]: port_wait.md
     @blocking
-    wait(resource struct {
+    Wait(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
         status status;
-        out_timestamp optional_time;
+        out_timestamp OptionalTime;
     });
 
     // TODO(fxbug.dev/32803): No DESTROY rights here.
@@ -343,7 +343,7 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    destroy(resource struct {
+    Destroy(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
         status status;
@@ -415,7 +415,7 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    ack(resource struct {
+    Ack(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
         status status;
@@ -483,7 +483,7 @@ protocol interrupt {
     /// [`zx_interrupt_destroy()`]: interrupt_destroy.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    trigger(resource struct {
+    Trigger(resource struct {
         handle handle:INTERRUPT;
         options uint32;
         timestamp time;

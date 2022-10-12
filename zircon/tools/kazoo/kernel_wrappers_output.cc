@@ -36,7 +36,7 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
     }
 
     auto write_prototype = [&]() {
-      writer->Printf("syscall_result wrapper_%s(", syscall->name().c_str());
+      writer->Printf("syscall_result wrapper_%s(", syscall->snake_name().c_str());
       for (const auto& arg : syscall->kernel_arguments()) {
         writer->Printf("SafeSyscallArgument<%s>::RawType %s, ",
                        GetCUserModeName(arg.type()).c_str(), arg.name().c_str());
@@ -51,7 +51,7 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
     writer->Printf(
         " {\n%sreturn do_syscall(ZX_SYS_%s, pc, &VDso::ValidSyscallPC::%s, [&](ProcessDispatcher* "
         "current_process) -> uint64_t {\n",
-        indent, syscall->name().c_str(), syscall->name().c_str());
+        indent, syscall->snake_name().c_str(), syscall->snake_name().c_str());
 
     // Write out locals for the output handles.
     std::vector<std::reference_wrapper<const StructMember>> out_handle_args;
@@ -70,7 +70,7 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer) {
 
     writer->Printf(
         "%s%s%s sys_%s(", indent, indent,
-        syscall->is_noreturn() ? "/*noreturn*/" : "auto result =", syscall->name().c_str());
+        syscall->is_noreturn() ? "/*noreturn*/" : "auto result =", syscall->snake_name().c_str());
     for (size_t i = 0; i < syscall->kernel_arguments().size(); ++i) {
       const StructMember& arg = syscall->kernel_arguments()[i];
       const Type& type = arg.type();

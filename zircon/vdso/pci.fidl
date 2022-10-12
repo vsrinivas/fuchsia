@@ -10,7 +10,7 @@ library zx;
 type PciBar = struct {
     id uint32;
     type uint32;
-    size usize;
+    size Usize;
     // TODO(scottmg): Unnamed union.
     //union {
     //    uintptr_t addr;
@@ -61,7 +61,7 @@ type PciInitArg = struct {
 };
 
 @transport("Syscall")
-protocol pci {
+protocol Pci {
     /// ## Summary
     ///
     /// This function is obsolete and should not be used.
@@ -97,7 +97,7 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    get_nth_device(resource struct {
+    GetNthDevice(resource struct {
         handle handle:RESOURCE;
         index uint32;
     }) -> (resource struct {
@@ -138,7 +138,7 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    enable_bus_master(resource struct {
+    EnableBusMaster(resource struct {
         handle handle:PCI_DEVICE;
         enable uint32;
     }) -> (struct {
@@ -177,7 +177,7 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    reset_device(resource struct {
+    ResetDevice(resource struct {
         handle handle:PCI_DEVICE;
     }) -> (struct {
         status status;
@@ -222,13 +222,13 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    config_read(resource struct {
+    ConfigRead(resource struct {
         handle handle:PCI_DEVICE;
         offset uint16;
-        width usize;
+        width Usize;
     }) -> (struct {
         status status;
-        out_val optional_uint32;
+        out_val OptionalUint32;
     });
 
     /// ## Summary
@@ -266,10 +266,10 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    config_write(resource struct {
+    ConfigWrite(resource struct {
         handle handle:PCI_DEVICE;
         offset uint16;
-        width usize;
+        width Usize;
         val uint32;
     }) -> (struct {
         status status;
@@ -314,14 +314,14 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    cfg_pio_rw(resource struct {
+    CfgPioRw(resource struct {
         handle handle:RESOURCE;
         bus uint8;
         dev uint8;
         func uint8;
         offset uint8;
-        val mutable_uint32;
-        width usize;
+        val MutableUint32;
+        width Usize;
         write uint32;
     }) -> (struct {
         status status;
@@ -366,12 +366,12 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    get_bar(resource struct {
+    GetBar(resource struct {
         handle handle:PCI_DEVICE;
         bar_num uint32;
     }) -> (resource struct {
         status status;
-        out_bar optional_PciBar;
+        out_bar OptionalPciBar;
         out_handle handle;
     });
 
@@ -409,7 +409,7 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    map_interrupt(resource struct {
+    MapInterrupt(resource struct {
         handle handle:PCI_DEVICE;
         which_irq int32;
     }) -> (resource struct {
@@ -451,7 +451,7 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    query_irq_mode(resource struct {
+    QueryIrqMode(resource struct {
         handle handle:PCI_DEVICE;
         mode uint32;
     }) -> (struct {
@@ -493,7 +493,7 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    set_irq_mode(resource struct {
+    SetIrqMode(resource struct {
         handle handle:PCI_DEVICE;
         mode uint32;
         requested_irq_count uint32;
@@ -537,7 +537,7 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    init(resource struct {
+    Init(resource struct {
         handle handle:RESOURCE;
         init_buf PciInitArg;
         len uint32;
@@ -581,7 +581,7 @@ protocol pci {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    add_subtract_io_range(resource struct {
+    AddSubtractIoRange(resource struct {
         handle handle:RESOURCE;
         mmio uint32;
         base uint64;

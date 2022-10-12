@@ -156,16 +156,16 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
       if (name == "duration" || name == "Futex" || name == "koid" || name == "paddr" ||
           name == "rights" || name == "signals" || name == "status" || name == "time" ||
           name == "ticks" || name == "vaddr" || name == "VmOption") {
-        return Type(TypeZxBasicAlias(CamelToSnake(name)));
+        return Type(TypeZxBasicAlias(name));
       }
     }
 
     const std::string name = StripLibraryName(full_name);
-    if (name == "uintptr") {
+    if (name == "Uintptr") {
       return Type(TypeUintptrT{});
     }
 
-    if (name == "usize") {
+    if (name == "Usize") {
       return Type(TypeSizeT{});
     }
 
@@ -205,6 +205,10 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
 }
 
 }  // namespace
+
+TypeZxBasicAlias::TypeZxBasicAlias(const std::string& name)
+    : name_(std::string(1, static_cast<char>(toupper(name[0]))) + name.substr(1)),
+      c_name_("zx_" + CamelToSnake(name) + "_t") {}
 
 bool Syscall::HasAttribute(const char* attrib_name) const {
   return attributes_.find(CamelToSnake(attrib_name)) != attributes_.end();
@@ -614,13 +618,12 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
     for (const auto& method : protocol["methods"].GetArray()) {
       auto syscall = std::make_unique<Syscall>();
       syscall->id_ = protocol_name;
-      syscall->original_name_ = method["name"].GetString();
       syscall->category_ = category;
-      std::string snake_name = CamelToSnake(method["name"].GetString());
+      syscall->name_ = method["name"].GetString();
       if (protocol_prefix) {
-        syscall->name_ = category + "_" + snake_name;
+        syscall->snake_name_ = CamelToSnake(syscall->category_ + syscall->name_);
       } else {
-        syscall->name_ = snake_name;
+        syscall->snake_name_ = CamelToSnake(syscall->name_);
       }
       syscall->is_noreturn_ = !method["has_response"].GetBool();
       const auto doc_attribute = GetDocAttribute(method);
@@ -638,7 +641,7 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
       ZX_ASSERT(method["has_request"].GetBool());  // Events are not expected in syscalls.
 
       Struct& req = syscall->request_;
-      req.id_ = syscall->original_name_ + "#request";
+      req.id_ = syscall->name() + "#request";
       if (method.HasMember("maybe_request_payload")) {
         if (!ExtractPayload(req, method["maybe_request_payload"]["identifier"].GetString(),
                             document, library)) {
@@ -648,7 +651,7 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
 
       if (method["has_response"].GetBool()) {
         Struct& resp = syscall->response_;
-        resp.id_ = syscall->original_name_ + "#response";
+        resp.id_ = syscall->name() + "#response";
         if (method.HasMember("maybe_response_success_type")) {
           if (!ExtractPayload(resp, method["maybe_response_success_type"]["identifier"].GetString(),
                               document, library)) {

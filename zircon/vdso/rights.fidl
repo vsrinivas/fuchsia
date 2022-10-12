@@ -4,6 +4,8 @@
 library zx;
 
 // TODO(scottmg): (1 << 4) notation or something else for bits would be nice.
+//
+// TODO(fxbug.dev/109734): Rights.
 type rights = strict bits : uint32 {
     // TODO(scottmg): "bits members must be powers of two"
     // NONE =           0x00000000;
