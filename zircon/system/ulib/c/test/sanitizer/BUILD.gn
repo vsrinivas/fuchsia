@@ -144,17 +144,6 @@ lsan_target("lsan-test") {
     "//zircon/system/ulib/zxtest",
   ]
 
-  if (toolchain_variant.tags + [
-        "lto",
-        "thinlto",
-      ] -
-      [
-        "lto",
-        "thinlto",
-      ] != toolchain_variant.tags) {
-    defines = [ "DISABLE_FOR_LTO" ]
-  }
-
   # Note that if lsan is not available, this will result in an empty test where
   # main is provided by zxtest.
   sources = [ "lsan-test.cc" ]
