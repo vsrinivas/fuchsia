@@ -537,6 +537,7 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
     fn close_conn(&mut self, ctx: &mut C, id: ConnectionId);
     fn remove_unbound(&mut self, id: UnboundId);
     fn remove_bound(&mut self, id: BoundId);
+    fn shutdown_listener(&mut self, ctx: &mut C, id: ListenerId) -> BoundId;
 
     fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<Self::DeviceId>;
     fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr, Self::DeviceId>;
@@ -767,6 +768,44 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
         self.with_tcp_sockets_mut(|TcpSockets { socketmap, inactive: _, port_alloc: _ }| {
             assert_matches!(socketmap.listeners_mut().remove(&id.into()), Some(_));
         });
+    }
+
+    fn shutdown_listener(&mut self, ctx: &mut C, id: ListenerId) -> BoundId {
+        self.with_ip_transport_ctx_and_tcp_sockets_mut(
+            |ip_transport_ctx, TcpSockets { socketmap, inactive: _, port_alloc: _ }| {
+                let (maybe_listener, (), _addr) = socketmap
+                    .listeners_mut()
+                    .get_by_id_mut(&id.into())
+                    .expect("invalid listener ID");
+                let Listener { backlog: _, pending, ready } = assert_matches!(
+                    core::mem::replace(maybe_listener, MaybeListener::Bound),
+                    MaybeListener::Listener(listener) => listener);
+                for conn_id in pending.into_iter().chain(
+                    ready
+                        .into_iter()
+                        .map(|(conn_id, _passive_open): (_, C::ReturnedBuffers)| conn_id),
+                ) {
+                    let (mut conn, (), conn_addr) = assert_matches!(
+                        socketmap.conns_mut().remove(&conn_id.into()),
+                        Some(conn) => conn);
+                    if let Some(reset) = conn.state.abort() {
+                        let ConnAddr { ip, device: _ } = conn_addr;
+                        let ser = tcp_serialize_segment(reset, ip);
+                        ip_transport_ctx
+                            .send_ip_packet(ctx, &conn.ip_sock, ser, None)
+                            .unwrap_or_else(|(body, err)| {
+                                log::debug!(
+                                    "failed to reset connection to {:?}, body: {:?}, err: {:?}",
+                                    ip,
+                                    body,
+                                    err
+                                )
+                            });
+                    }
+                }
+                BoundId(id.into())
+            },
+        )
     }
 
     fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<SC::DeviceId> {
@@ -1119,6 +1158,18 @@ where
     C: NonSyncContext,
 {
     with_ip_version!(Ip, I, remove_bound(&mut sync_ctx, id))
+}
+
+/// Shuts down a listener socket.
+///
+/// The socket remains in the socket map as a bound socket, taking the port
+/// that the socket has been using. Returns the id of that bound socket.
+pub fn shutdown_listener<I, C>(mut sync_ctx: &SyncCtx<C>, ctx: &mut C, id: ListenerId) -> BoundId
+where
+    I: IpExt,
+    C: NonSyncContext,
+{
+    with_ip_version!(Ip, I, shutdown_listener(&mut sync_ctx, ctx, id))
 }
 
 /// Information about an unbound socket.
@@ -2172,5 +2223,106 @@ mod tests {
             assert_eq!(inactive.get(unbound.into()), None);
             assert_eq!(socketmap.listeners().get_by_id(&bound.into()), None);
         })
+    }
+
+    #[ip_test]
+    fn shutdown_listener<I: Ip + TcpTestIpExt>()
+    where
+        MockBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = DummyDeviceId>,
+    {
+        set_logger_for_test();
+        let mut net = new_test_net::<I>();
+        let local_listener = net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            let unbound = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
+            let bound = TcpSocketHandler::bind(
+                sync_ctx,
+                non_sync_ctx,
+                unbound,
+                *I::DUMMY_CONFIG.local_ip,
+                Some(PORT_1),
+            )
+            .expect("bind should succeed");
+            TcpSocketHandler::listen(sync_ctx, non_sync_ctx, bound, NonZeroUsize::new(5).unwrap())
+        });
+
+        let remote_connection = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            let unbound = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
+            TcpSocketHandler::connect_unbound(
+                sync_ctx,
+                non_sync_ctx,
+                unbound,
+                SocketAddr { ip: I::DUMMY_CONFIG.local_ip, port: PORT_1 },
+                Default::default(),
+            )
+            .expect("connect should succeed")
+        });
+
+        // After the following step, we should have one established connection
+        // in the listener's accept queue, which ought to be aborted during
+        // shutdown.
+        net.run_until_idle(handle_frame, handle_timer);
+
+        let local_bound = net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            TcpSocketHandler::shutdown_listener(sync_ctx, non_sync_ctx, local_listener)
+        });
+
+        net.run_until_idle(handle_frame, handle_timer);
+
+        // The remote socket should now be reset to Closed state.
+        net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx: _ }| {
+            sync_ctx.with_tcp_sockets(|sockets| {
+                let (conn, (), _addr) = remote_connection.get_from_socketmap(&sockets.socketmap);
+                assert_matches!(
+                    conn.state,
+                    State::Closed(Closed { reason: UserError::ConnectionReset })
+                );
+            });
+        });
+
+        net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            let new_unbound = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
+            assert_matches!(
+                TcpSocketHandler::bind(
+                    sync_ctx,
+                    non_sync_ctx,
+                    new_unbound,
+                    *I::DUMMY_CONFIG.local_ip,
+                    Some(PORT_1),
+                ),
+                Err(BindError::Conflict)
+            );
+            // Bring the already-shutdown listener back to listener again.
+            let _: ListenerId = TcpSocketHandler::listen(
+                sync_ctx,
+                non_sync_ctx,
+                local_bound,
+                NonZeroUsize::new(5).unwrap(),
+            );
+        });
+
+        let new_remote_connection =
+            net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+                let unbound = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
+                let unbound = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
+                TcpSocketHandler::connect_unbound(
+                    sync_ctx,
+                    non_sync_ctx,
+                    unbound,
+                    SocketAddr { ip: I::DUMMY_CONFIG.local_ip, port: PORT_1 },
+                    Default::default(),
+                )
+                .expect("connect should succeed")
+            });
+
+        net.run_until_idle(handle_frame, handle_timer);
+
+        net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx: _ }| {
+            sync_ctx.with_tcp_sockets(|sockets| {
+                let (conn, (), _addr) =
+                    new_remote_connection.get_from_socketmap(&sockets.socketmap);
+                assert_matches!(conn.state, State::Established(_));
+            });
+        });
     }
 }

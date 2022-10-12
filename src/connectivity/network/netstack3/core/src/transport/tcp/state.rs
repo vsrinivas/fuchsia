@@ -1546,6 +1546,61 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
             | State::TimeWait(_) => Err(CloseError::Closing),
         }
     }
+
+    /// Corresponds to [ABORT](https://tools.ietf.org/html/rfc9293#section-3.10.5)
+    /// user call.
+    pub(crate) fn abort(&mut self) -> Option<Segment<()>> {
+        let reply = match self {
+            //   LISTEN STATE
+            //      *  Any outstanding RECEIVEs should be returned with "error:
+            //      connection reset" responses.  Delete TCB, enter CLOSED state, and
+            //      return.
+            //   SYN-SENT STATE
+            //   *  All queued SENDs and RECEIVEs should be given "connection reset"
+            //      notification.  Delete the TCB, enter CLOSED state, and return.
+            //   CLOSING STATE
+            //   LAST-ACK STATE
+            //   TIME-WAIT STATE
+            //   *  Respond with "ok" and delete the TCB, enter CLOSED state, and
+            //      return.
+            State::Closed(_)
+            | State::Listen(_)
+            | State::SynSent(_)
+            | State::Closing(_)
+            | State::LastAck(_)
+            | State::TimeWait(_) => None,
+            //   SYN-RECEIVED STATE
+            //   ESTABLISHED STATE
+            //   FIN-WAIT-1 STATE
+            //   FIN-WAIT-2 STATE
+            //   CLOSE-WAIT STATE
+            //   *  Send a reset segment:
+            //      <SEQ=SND.NXT><CTL=RST>
+            //   *  All queued SENDs and RECEIVEs should be given "connection reset"
+            //      notification; all segments queued for transmission (except for the
+            //      RST formed above) or retransmission should be flushed.  Delete the
+            //      TCB, enter CLOSED state, and return.
+            State::SynRcvd(SynRcvd {
+                iss,
+                irs,
+                timestamp: _,
+                retrans_timer: _,
+                simultaneous_open: _,
+            }) => Some(Segment::rst_ack(*iss, *irs + 1)),
+            State::Established(Established { snd, rcv }) => {
+                Some(Segment::rst_ack(snd.nxt, rcv.nxt()))
+            }
+            State::FinWait1(FinWait1 { snd, rcv }) => Some(Segment::rst_ack(snd.nxt, rcv.nxt())),
+            State::FinWait2(FinWait2 { rcv, last_seq }) => {
+                Some(Segment::rst_ack(*last_seq, rcv.nxt()))
+            }
+            State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack, last_wnd: _ }) => {
+                Some(Segment::rst_ack(snd.nxt, *last_ack))
+            }
+        };
+        *self = State::Closed(Closed { reason: UserError::ConnectionReset });
+        reply
+    }
 }
 
 #[cfg(test)]
