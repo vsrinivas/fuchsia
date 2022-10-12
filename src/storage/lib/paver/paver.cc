@@ -188,9 +188,9 @@ zx::status<zx::channel> FormatFvm(const fbl::unique_fd& devfs_root,
   }
   std::unique_ptr<PartitionClient> partition = std::move(status.value());
 
-  // TODO(fxbug.dev/39753): Configuration values should come from the build or environment.
   fvm::SparseImage header = {};
-  header.slice_size = 1 << 20;
+  static_assert(PRODUCT_FVM_SLICE_SIZE > 0, "Invalid product FVM slice size.");
+  header.slice_size = PRODUCT_FVM_SLICE_SIZE;
 
   fbl::unique_fd fvm_fd(
       FvmPartitionFormat(devfs_root, partition->block_fd(), header, BindOption::Reformat));

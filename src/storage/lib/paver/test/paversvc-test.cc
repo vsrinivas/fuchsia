@@ -67,7 +67,7 @@ constexpr size_t kBl2ImagePages = kBl2ImageSize / kPageSize;
 constexpr uint32_t kBootloaderFirstBlock = 4;
 constexpr uint32_t kBootloaderBlocks = 4;
 constexpr uint32_t kBootloaderLastBlock = kBootloaderFirstBlock + kBootloaderBlocks - 1;
-constexpr uint32_t kBl2FirstBlock = 39;
+constexpr uint32_t kBl2FirstBlock = kNumBlocks - 1;
 constexpr uint32_t kFvmFirstBlock = 18;
 
 constexpr fuchsia_hardware_nand_RamNandInfo
@@ -160,7 +160,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                                 .type_guid = GUID_FVM_VALUE,
                                 .unique_guid = {},
                                 .first_block = kFvmFirstBlock,
-                                .last_block = 38,
+                                .last_block = kBl2FirstBlock - 1,
                                 .copy_count = 0,
                                 .copy_byte_offset = 0,
                                 .name = {'f', 'v', 'm'},
@@ -171,7 +171,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
                                 .type_guid = GUID_BL2_VALUE,
                                 .unique_guid = {},
                                 .first_block = kBl2FirstBlock,
-                                .last_block = 39,
+                                .last_block = kBl2FirstBlock,
                                 .copy_count = 0,
                                 .copy_byte_offset = 0,
                                 .name = {'b', 'l', '2',},

@@ -32,7 +32,7 @@ constexpr uint32_t kOobSize = 8;
 constexpr uint32_t kPageSize = 2048;
 constexpr uint32_t kPagesPerBlock = 128;
 constexpr uint32_t kSkipBlockSize = kPageSize * kPagesPerBlock;
-constexpr uint32_t kNumBlocks = 40;
+constexpr uint32_t kNumBlocks = 400;
 
 class BlockDevice {
  public:

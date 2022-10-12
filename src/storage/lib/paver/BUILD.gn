@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/fvm.gni")
 import("//build/zircon/zx_library.gni")
 
 group("tests") {
@@ -66,6 +67,8 @@ source_set("paver-core") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
+
+  defines = [ "PRODUCT_FVM_SLICE_SIZE=${fvm_slice_size}" ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
