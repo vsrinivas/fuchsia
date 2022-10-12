@@ -131,6 +131,7 @@
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Registry",
+                "fuchsia.ui.shortcut2.Registry",
                 "fuchsia.update.channelcontrol.ChannelControl",
                 "fuchsia.update.Manager",
                 "fuchsia.vulkan.loader.Loader",

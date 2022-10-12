@@ -293,6 +293,7 @@
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.shortcut.Registry",
+                "fuchsia.ui.shortcut2.Registry",
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "parent",
