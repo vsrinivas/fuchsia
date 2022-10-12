@@ -189,18 +189,7 @@ impl Buffer for ReceiveBufferWithZirconSocket {
     }
 }
 
-impl From<ReceiveBufferWithZirconSocket> for () {
-    fn from(_: ReceiveBufferWithZirconSocket) -> () {
-        ()
-    }
-}
-
 impl ReceiveBuffer for ReceiveBufferWithZirconSocket {
-    // We don't need to store anything in our process during passive close: all
-    // bytes left that are not yet read by our user will be stored in a zircon
-    // socket in the kernel.
-    type Residual = ();
-
     fn write_at<P: Payload>(&mut self, offset: usize, data: &P) -> usize {
         self.out_of_order.write_at(offset, data)
     }

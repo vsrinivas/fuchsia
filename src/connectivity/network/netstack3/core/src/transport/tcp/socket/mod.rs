@@ -1484,8 +1484,6 @@ mod tests {
     }
 
     impl ReceiveBuffer for Rc<RefCell<RingBuffer>> {
-        type Residual = Self;
-
         fn write_at<P: Payload>(&mut self, offset: usize, data: &P) -> usize {
             self.borrow_mut().write_at(offset, data)
         }

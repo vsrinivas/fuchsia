@@ -760,9 +760,8 @@ impl<I: Instant, S: SendBuffer> Send<I, S, { FinQueued::NO }> {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct CloseWait<I: Instant, R, S: SendBuffer> {
+pub(crate) struct CloseWait<I: Instant, S: SendBuffer> {
     snd: Send<I, S, { FinQueued::NO }>,
-    rcv_residual: R,
     last_ack: SeqNum,
     last_wnd: WindowSize,
 }
@@ -784,9 +783,8 @@ pub(crate) struct CloseWait<I: Instant, R, S: SendBuffer> {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct LastAck<I: Instant, R, S: SendBuffer> {
+pub(crate) struct LastAck<I: Instant, S: SendBuffer> {
     snd: Send<I, S, { FinQueued::YES }>,
-    rcv_residual: R,
     last_ack: SeqNum,
     last_wnd: WindowSize,
 }
@@ -847,9 +845,8 @@ pub(crate) struct FinWait2<R: ReceiveBuffer> {
 ///   - accept
 ///   - listen
 ///   - connect
-pub(crate) struct Closing<I: Instant, R, S: SendBuffer> {
+pub(crate) struct Closing<I: Instant, S: SendBuffer> {
     snd: Send<I, S, { FinQueued::YES }>,
-    rcv_residual: R,
     last_ack: SeqNum,
     last_wnd: WindowSize,
 }
@@ -870,11 +867,10 @@ pub(crate) struct Closing<I: Instant, R, S: SendBuffer> {
 ///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct TimeWait<I: Instant, R> {
+pub(crate) struct TimeWait<I: Instant> {
     last_seq: SeqNum,
     last_ack: SeqNum,
     last_wnd: WindowSize,
-    rcv_residual: R,
     expiry: I,
 }
 
@@ -892,12 +888,12 @@ pub(crate) enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen> {
     SynRcvd(SynRcvd<I, ActiveOpen>),
     SynSent(SynSent<I, ActiveOpen>),
     Established(Established<I, R, S>),
-    CloseWait(CloseWait<I, R::Residual, S>),
-    LastAck(LastAck<I, R::Residual, S>),
+    CloseWait(CloseWait<I, S>),
+    LastAck(LastAck<I, S>),
     FinWait1(FinWait1<I, R, S>),
     FinWait2(FinWait2<R>),
-    Closing(Closing<I, R::Residual, S>),
-    TimeWait(TimeWait<I, R::Residual>),
+    Closing(Closing<I, S>),
+    TimeWait(TimeWait<I>),
 }
 
 #[derive(Debug)]
@@ -1021,22 +1017,18 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                     simultaneous_open: _,
                 }) => (*irs + 1, WindowSize::DEFAULT, *iss + 1),
                 State::Established(Established { rcv, snd }) => (rcv.nxt(), rcv.wnd(), snd.nxt),
-                State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack, last_wnd }) => {
+                State::CloseWait(CloseWait { snd, last_ack, last_wnd }) => {
                     (*last_ack, *last_wnd, snd.nxt)
                 }
-                State::LastAck(LastAck { snd, rcv_residual: _, last_ack, last_wnd })
-                | State::Closing(Closing { snd, rcv_residual: _, last_ack, last_wnd }) => {
+                State::LastAck(LastAck { snd, last_ack, last_wnd })
+                | State::Closing(Closing { snd, last_ack, last_wnd }) => {
                     (*last_ack, *last_wnd, snd.nxt)
                 }
                 State::FinWait1(FinWait1 { rcv, snd }) => (rcv.nxt(), rcv.wnd(), snd.nxt),
                 State::FinWait2(FinWait2 { last_seq, rcv }) => (rcv.nxt(), rcv.wnd(), *last_seq),
-                State::TimeWait(TimeWait {
-                    last_seq,
-                    last_ack,
-                    last_wnd,
-                    rcv_residual: _,
-                    expiry: _,
-                }) => (*last_ack, *last_wnd, *last_seq),
+                State::TimeWait(TimeWait { last_seq, last_ack, last_wnd, expiry: _ }) => {
+                    (*last_ack, *last_wnd, *last_seq)
+                }
             };
             // Unreachable note(1): The above match returns early for states CLOSED,
             // SYN_SENT and LISTEN, so it is impossible to have the above states
@@ -1156,19 +1148,14 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                         // impossible for SYN_RCVD to appear past this line.
                     }
                     State::Established(Established { snd, rcv: _ })
-                    | State::CloseWait(CloseWait {
-                        snd,
-                        rcv_residual: _,
-                        last_ack: _,
-                        last_wnd: _,
-                    }) => {
+                    | State::CloseWait(CloseWait { snd, last_ack: _, last_wnd: _ }) => {
                         if let Some(ack) =
                             snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
                         {
                             return Some(ack);
                         }
                     }
-                    State::LastAck(LastAck { snd, rcv_residual: _, last_ack: _, last_wnd: _ }) => {
+                    State::LastAck(LastAck { snd, last_ack: _, last_wnd: _ }) => {
                         let fin_seq = snd.una + snd.buffer.len() + 1;
                         if let Some(ack) =
                             snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
@@ -1195,7 +1182,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                             *self = State::FinWait2(FinWait2 { last_seq, rcv: rcv.take() });
                         }
                     }
-                    State::Closing(Closing { snd, rcv_residual, last_ack, last_wnd }) => {
+                    State::Closing(Closing { snd, last_ack, last_wnd }) => {
                         let fin_seq = snd.una + snd.buffer.len() + 1;
                         if let Some(ack) =
                             snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
@@ -1210,7 +1197,6 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                                 last_seq: snd.nxt,
                                 last_ack: *last_ack,
                                 last_wnd: *last_wnd,
-                                rcv_residual: rcv_residual.take(),
                                 expiry: new_time_wait_expiry(now),
                             });
                         }
@@ -1296,12 +1282,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                         //   Enter the CLOSE-WAIT state.
                         let last_ack = rcv.nxt() + 1;
                         let last_wnd = rcv.wnd().checked_sub(1).unwrap_or(WindowSize::ZERO);
-                        *self = State::CloseWait(CloseWait {
-                            snd: snd.take(),
-                            rcv_residual: rcv.buffer.take().into(),
-                            last_ack,
-                            last_wnd,
-                        });
+                        *self = State::CloseWait(CloseWait { snd: snd.take(), last_ack, last_wnd });
                         Some(Segment::ack(snd_nxt, last_ack, last_wnd))
                     }
                     State::CloseWait(_) | State::LastAck(_) | State::Closing(_) => {
@@ -1317,12 +1298,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                     State::FinWait1(FinWait1 { snd, rcv }) => {
                         let last_ack = rcv.nxt() + 1;
                         let last_wnd = rcv.wnd().checked_sub(1).unwrap_or(WindowSize::ZERO);
-                        *self = State::Closing(Closing {
-                            snd: snd.take(),
-                            rcv_residual: rcv.buffer.take().into(),
-                            last_ack,
-                            last_wnd,
-                        });
+                        *self = State::Closing(Closing { snd: snd.take(), last_ack, last_wnd });
                         Some(Segment::ack(snd_nxt, last_ack, last_wnd))
                     }
                     State::FinWait2(FinWait2 { last_seq, rcv }) => {
@@ -1332,18 +1308,11 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                             last_seq: *last_seq,
                             last_ack,
                             last_wnd,
-                            rcv_residual: rcv.buffer.take().into(),
                             expiry: new_time_wait_expiry(now),
                         });
                         Some(Segment::ack(snd_nxt, last_ack, last_wnd))
                     }
-                    State::TimeWait(TimeWait {
-                        last_seq,
-                        last_ack,
-                        last_wnd,
-                        rcv_residual: _,
-                        expiry,
-                    }) => {
+                    State::TimeWait(TimeWait { last_seq, last_ack, last_wnd, expiry }) => {
                         // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-76):
                         //   TIME-WAIT STATE
                         //     Remain in the TIME-WAIT state.  Restart the 2 MSL time-wait
@@ -1389,22 +1358,16 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
             State::Established(Established { snd, rcv }) => {
                 snd.poll_send(rcv.nxt(), rcv.wnd(), mss, now)
             }
-            State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack, last_wnd }) => {
+            State::CloseWait(CloseWait { snd, last_ack, last_wnd }) => {
                 snd.poll_send(*last_ack, *last_wnd, mss, now)
             }
-            State::LastAck(LastAck { snd, rcv_residual: _, last_ack, last_wnd })
-            | State::Closing(Closing { snd, rcv_residual: _, last_ack, last_wnd }) => {
+            State::LastAck(LastAck { snd, last_ack, last_wnd })
+            | State::Closing(Closing { snd, last_ack, last_wnd }) => {
                 snd.poll_send(*last_ack, *last_wnd, mss, now)
             }
             State::FinWait1(FinWait1 { snd, rcv }) => snd.poll_send(rcv.nxt(), rcv.wnd(), mss, now),
             State::Closed(_) | State::Listen(_) | State::FinWait2(_) => None,
-            State::TimeWait(TimeWait {
-                last_seq: _,
-                last_ack: _,
-                last_wnd: _,
-                rcv_residual: _,
-                expiry,
-            }) => {
+            State::TimeWait(TimeWait { last_seq: _, last_ack: _, last_wnd: _, expiry }) => {
                 if *expiry <= now {
                     *self = State::Closed(Closed { reason: UserError::ConnectionClosed });
                 }
@@ -1434,30 +1397,22 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
     pub(crate) fn poll_send_at(&self) -> Option<I> {
         match self {
             State::Established(Established { snd, rcv: _ })
-            | State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack: _, last_wnd: _ }) => {
-                match snd.timer? {
-                    SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
-                }
-            }
-            State::LastAck(LastAck { snd, rcv_residual: _, last_ack: _, last_wnd: _ })
-            | State::Closing(Closing { snd, rcv_residual: _, last_ack: _, last_wnd: _ }) => {
-                match snd.timer? {
-                    SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
-                }
-            }
+            | State::CloseWait(CloseWait { snd, last_ack: _, last_wnd: _ }) => match snd.timer? {
+                SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
+            },
+            State::LastAck(LastAck { snd, last_ack: _, last_wnd: _ })
+            | State::Closing(Closing { snd, last_ack: _, last_wnd: _ }) => match snd.timer? {
+                SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
+            },
             State::FinWait1(FinWait1 { snd, rcv: _ }) => match snd.timer? {
                 SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
             },
             State::SynRcvd(syn_rcvd) => Some(syn_rcvd.retrans_timer.at),
             State::SynSent(syn_sent) => Some(syn_sent.retrans_timer.at),
             State::Closed(_) | State::Listen(_) | State::FinWait2(_) => None,
-            State::TimeWait(TimeWait {
-                last_seq: _,
-                last_ack: _,
-                last_wnd: _,
-                rcv_residual: _,
-                expiry,
-            }) => Some(*expiry),
+            State::TimeWait(TimeWait { last_seq: _, last_ack: _, last_wnd: _, expiry }) => {
+                Some(*expiry)
+            }
         }
     }
 
@@ -1530,10 +1485,9 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                 *self = State::FinWait1(FinWait1 { snd: snd.take().queue_fin(), rcv: rcv.take() });
                 Ok(())
             }
-            State::CloseWait(CloseWait { snd, rcv_residual, last_ack, last_wnd }) => {
+            State::CloseWait(CloseWait { snd, last_ack, last_wnd }) => {
                 *self = State::LastAck(LastAck {
                     snd: snd.take().queue_fin(),
-                    rcv_residual: rcv_residual.take(),
                     last_ack: *last_ack,
                     last_wnd: *last_wnd,
                 });
@@ -1679,8 +1633,6 @@ mod test {
     }
 
     impl ReceiveBuffer for NullBuffer {
-        type Residual = Self;
-
         fn write_at<P: Payload>(&mut self, _offset: usize, _data: &P) -> usize {
             0
         }
@@ -1707,20 +1659,17 @@ mod test {
     impl<S: SendBuffer + Debug> State<DummyInstant, RingBuffer, S, ()> {
         fn read_with(&mut self, f: impl for<'b> FnOnce(&'b [&'_ [u8]]) -> usize) -> usize {
             match self {
-                State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => {
+                State::Closed(_)
+                | State::Listen(_)
+                | State::SynRcvd(_)
+                | State::SynSent(_)
+                | State::CloseWait(_)
+                | State::LastAck(_)
+                | State::Closing(_)
+                | State::TimeWait(_) => {
                     panic!("No receive state in {:?}", self);
                 }
                 State::Established(e) => e.rcv.buffer.read_with(f),
-                State::CloseWait(CloseWait { snd: _, rcv_residual, last_ack: _, last_wnd: _ })
-                | State::LastAck(LastAck { snd: _, rcv_residual, last_ack: _, last_wnd: _ })
-                | State::Closing(Closing { snd: _, rcv_residual, last_ack: _, last_wnd: _ })
-                | State::TimeWait(TimeWait {
-                    last_seq: _,
-                    last_ack: _,
-                    last_wnd: _,
-                    rcv_residual,
-                    expiry: _,
-                }) => rcv_residual.read_with(f),
                 State::FinWait1(FinWait1 { snd: _, rcv })
                 | State::FinWait2(FinWait2 { last_seq: _, rcv }) => rcv.buffer.read_with(f),
             }
@@ -1897,7 +1846,6 @@ mod test {
                 last_seq_ts: None,
                 timer: None,
             },
-            rcv_residual: NullBuffer,
             last_ack: ISS_1 + 2,
             last_wnd: WindowSize::ZERO,
         }))
@@ -1963,7 +1911,6 @@ mod test {
                 last_seq_ts: None,
                 timer: None,
             },
-            rcv_residual: RingBuffer::new(2),
             last_ack: ISS_2 + 2,
             last_wnd: WindowSize::new(1).unwrap(),
         }))
@@ -1985,7 +1932,6 @@ mod test {
                 last_seq_ts: None,
                 timer: None,
             },
-            rcv_residual: RingBuffer::with_data(2, "A".as_bytes()),
             last_ack: ISS_2 + 3,
             last_wnd: WindowSize::ZERO,
         }))
@@ -2094,19 +2040,16 @@ mod test {
             State::FinWait1(FinWait1 { snd: new_snd().queue_fin(), rcv: new_rcv() }),
             State::Closing(Closing {
                 snd: new_snd().queue_fin(),
-                rcv_residual: NullBuffer,
                 last_ack: ISS_2 + 1,
                 last_wnd: WindowSize::ZERO,
             }),
             State::CloseWait(CloseWait {
                 snd: new_snd(),
-                rcv_residual: NullBuffer,
                 last_ack: ISS_2 + 1,
                 last_wnd: WindowSize::ZERO,
             }),
             State::LastAck(LastAck {
                 snd: new_snd().queue_fin(),
-                rcv_residual: NullBuffer,
                 last_ack: ISS_2 + 1,
                 last_wnd: WindowSize::ZERO,
             }),
@@ -2185,7 +2128,6 @@ mod test {
                 last_seq_ts: None,
                 timer: None,
             },
-            rcv_residual: RingBuffer::new(0),
             last_ack: ISS_2 + 2,
             last_wnd: WindowSize::DEFAULT,
         });
@@ -2590,12 +2532,7 @@ mod test {
                 panic!("expected that we have entered established state, but got {:?}", state)
             }
             State::Established(Established { ref mut snd, rcv: _ })
-            | State::CloseWait(CloseWait {
-                ref mut snd,
-                rcv_residual: _,
-                last_ack: _,
-                last_wnd: _,
-            }) => {
+            | State::CloseWait(CloseWait { ref mut snd, last_ack: _, last_wnd: _ }) => {
                 assert_eq!(snd.buffer.enqueue_data(TEST_BYTES), TEST_BYTES.len());
             }
         }
@@ -2725,7 +2662,6 @@ mod test {
                     rtt_estimator: Estimator::default(),
                     timer: None,
                 },
-                rcv_residual: RingBuffer::new(BUFFER_SIZE),
                 last_ack: ISS_2 + 2,
                 last_wnd,
             })
@@ -3095,7 +3031,6 @@ mod test {
             last_seq: ISS_1 + 2,
             last_ack: ISS_2 + 2,
             last_wnd: WindowSize::DEFAULT,
-            rcv_residual: NullBuffer,
             expiry: new_time_wait_expiry(clock.now()),
         });
 
