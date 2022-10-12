@@ -4,9 +4,11 @@
 
 #include <fidl/fuchsia.hardware.platform.bus/cpp/driver/fidl.h>
 #include <fidl/fuchsia.hardware.platform.bus/cpp/fidl.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 
+#include <ddk/metadata/gpt.h>
 #include <soc/as370/as370-hw.h>
 
 #include "pinecrest-gpio.h"
@@ -39,6 +41,33 @@ zx_status_t Pinecrest::EmmcInit() {
       }},
   };
 
+  // This is a temporary mapping to allow paving using the old GPT. Can be removed once the
+  // bootstrapping flow installs a Fuchsia GPT.
+  static const guid_map_t guid_map[] = {
+      {"kernel_a", GUID_ZIRCON_A_VALUE},  // 16 MiB
+      {"kernel_b", GUID_ZIRCON_B_VALUE},  // 16 MiB
+      {"rootfs_a", GUID_ZIRCON_R_VALUE},  // 768 MiB
+      {"cache", GUID_FVM_VALUE},          // 2048 MiB
+  };
+
+  static_assert(sizeof(guid_map) / sizeof(guid_map[0]) <= DEVICE_METADATA_GUID_MAP_MAX_ENTRIES);
+
+  static const std::vector<fpbus::Metadata> emmc_metadata{
+      {{
+          .type = DEVICE_METADATA_GUID_MAP,
+          .data =
+              std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&guid_map),
+                                   reinterpret_cast<const uint8_t*>(&guid_map) + sizeof(guid_map)),
+      }},
+  };
+
+  static const std::vector<fpbus::BootMetadata> emmc_boot_metadata{
+      {{
+          .zbi_type = DEVICE_METADATA_PARTITION_MAP,
+          .zbi_extra = 0,
+      }},
+  };
+
   fpbus::Node emmc_dev;
   emmc_dev.name() = "pinecrest-emmc";
   emmc_dev.vid() = PDEV_VID_SYNAPTICS;
@@ -47,6 +76,8 @@ zx_status_t Pinecrest::EmmcInit() {
   emmc_dev.irq() = emmc_irqs;
   emmc_dev.mmio() = emmc_mmios;
   emmc_dev.bti() = emmc_btis;
+  emmc_dev.metadata() = emmc_metadata;
+  emmc_dev.boot_metadata() = emmc_boot_metadata;
 
   fidl::Arena<> fidl_arena;
   fdf::Arena arena('EMMC');
