@@ -14,10 +14,6 @@
 class Coordinator;
 class CompositeDevice;
 
-// Function that is invoked to request a driver try to bind to a device
-using AttemptBindFunc =
-    fit::function<zx_status_t(MatchedDriverInfo driver_info, const fbl::RefPtr<Device>& dev)>;
-
 using CompositeDeviceMap = std::unordered_map<std::string, std::unique_ptr<CompositeDevice>>;
 
 class BindDriverManager {
@@ -27,7 +23,7 @@ class BindDriverManager {
   BindDriverManager(BindDriverManager&&) = delete;
   BindDriverManager& operator=(BindDriverManager&&) = delete;
 
-  BindDriverManager(Coordinator* coordinator, AttemptBindFunc attempt_bind);
+  explicit BindDriverManager(Coordinator* coordinator);
   ~BindDriverManager();
 
   // Returns ZX_OK if |device| and |driver| are a match for binding.
@@ -62,9 +58,6 @@ class BindDriverManager {
   // Find matching device group nodes for |dev| through the Driver Index and then bind them.
   zx_status_t MatchAndBindDeviceGroups(const fbl::RefPtr<Device>& dev);
 
-  // Public for testing only.
-  void set_attempt_bind(AttemptBindFunc attempt_bind) { attempt_bind_ = std::move(attempt_bind); }
-
  private:
   // Find and return matching drivers for |dev| in the Driver Index.
   zx::status<std::vector<MatchedDriver>> MatchDeviceWithDriverIndex(
@@ -81,10 +74,6 @@ class BindDriverManager {
 
   // Owner. Must outlive BindDriverManager.
   Coordinator* coordinator_;
-
-  // Callback function. Used to attempt binding a driver to a device.
-  // TODO(fxb/90932): Remove this callback.
-  AttemptBindFunc attempt_bind_;
 
   // All the composite devices received from the DriverIndex.
   // This maps driver URLs to the CompositeDevice object.

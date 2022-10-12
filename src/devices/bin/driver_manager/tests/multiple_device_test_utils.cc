@@ -227,6 +227,7 @@ void MultipleDeviceTestCase::SetUp() {
 
   ASSERT_NO_FATAL_FAILURE(InitializeCoordinator(&coordinator()));
 
+  coordinator().driver_loader().LoadDriverUrl(coordinator().GetFragmentDriverUrl());
   {
     auto client_end = fidl::CreateEndpoints(&driver_host_server_);
     ASSERT_OK(client_end.status_value());

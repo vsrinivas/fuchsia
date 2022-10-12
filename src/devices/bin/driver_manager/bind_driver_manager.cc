@@ -13,8 +13,7 @@
 #include "src/devices/bin/driver_manager/v1/device_group_v1.h"
 #include "src/devices/lib/log/log.h"
 
-BindDriverManager::BindDriverManager(Coordinator* coordinator, AttemptBindFunc attempt_bind)
-    : coordinator_(coordinator), attempt_bind_(std::move(attempt_bind)) {}
+BindDriverManager::BindDriverManager(Coordinator* coordinator) : coordinator_(coordinator) {}
 
 BindDriverManager::~BindDriverManager() {}
 
@@ -37,7 +36,7 @@ zx_status_t BindDriverManager::BindDriverToDevice(const MatchedDriver& driver,
     return ZX_ERR_INTERNAL;
   }
   auto driver_info = std::get<MatchedDriverInfo>(driver);
-  zx_status_t status = attempt_bind_(driver_info, dev);
+  zx_status_t status = coordinator_->AttemptBind(driver_info, dev);
 
   // If we get this here it means we've successfully bound one driver
   // and the device isn't multi-bind.

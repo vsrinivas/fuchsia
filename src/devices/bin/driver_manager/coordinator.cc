@@ -296,8 +296,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
 
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
 
-  bind_driver_manager_ =
-      std::make_unique<BindDriverManager>(this, fit::bind_member<&Coordinator::AttemptBind>(this));
+  bind_driver_manager_ = std::make_unique<BindDriverManager>(this);
 
   device_manager_ = std::make_unique<DeviceManager>(this, config_.crash_policy);
 
