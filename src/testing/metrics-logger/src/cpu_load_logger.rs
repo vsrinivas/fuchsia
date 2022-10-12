@@ -233,15 +233,6 @@ impl CpuLoadLogger {
                                 "cpu_usage" => cpu_usage
                             );
                         }
-                        // TODO (fxbug.dev/100797): Remove system_metrics_logger category after the
-                        // e2e test is transitioned.
-                        fuchsia_trace::counter!(
-                            "system_metrics_logger",
-                            "cpu_usage",
-                            0,
-                            "cpu_usage" => calculate_cpu_usage(
-                                Vec::from_iter(0..cpu_num as u16), &last_sample, &current_sample)
-                        );
                     } else {
                         let cpu_usage = calculate_cpu_usage(
                             Vec::from_iter(0..cpu_num as u16),
@@ -266,6 +257,15 @@ impl CpuLoadLogger {
                             "cpu_usage" => cpu_usage
                         );
                     }
+                    // TODO (fxbug.dev/100797): Remove system_metrics_logger category after the
+                    // e2e test is transitioned.
+                    fuchsia_trace::counter!(
+                        "system_metrics_logger",
+                        "cpu_usage",
+                        0,
+                        "cpu_usage" => calculate_cpu_usage(
+                            Vec::from_iter(0..cpu_num as u16), &last_sample, &current_sample)
+                    );
                 }
 
                 self.last_sample.replace(current_sample);
