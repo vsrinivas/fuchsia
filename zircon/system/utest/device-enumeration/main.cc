@@ -787,6 +787,7 @@ TEST_F(DeviceEnumerationTest, PinecrestTest) {
       "pinecrest-audio-in",
       "pinecrest-audio-out",
       "pinecrest-nna/as370-nna",
+      "wifi/nxpfmac_sdio-wlanphy/wlanphy",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
