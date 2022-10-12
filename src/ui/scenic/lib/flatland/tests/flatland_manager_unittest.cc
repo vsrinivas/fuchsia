@@ -501,6 +501,9 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   RunLoopUntil([&flatland] { return !flatland.is_bound(); });
   EXPECT_EQ(error_returned, FlatlandError::NO_PRESENTS_REMAINING);
 
+  // Wait until all Flatland threads are destroyed.
+  RunLoopUntil([this] { return manager_->GetAliveSessionCount() == 0; });
+
   // FlatlandManager::RemoveFlatlandInstance() will be posted on main thread and may not be run yet.
   RunLoopUntilIdle();
 }
@@ -524,6 +527,9 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
   // ultimately posts the destruction back onto the worker.
   RunLoopUntil([&flatland] { return !flatland.is_bound(); });
   EXPECT_EQ(error_returned, FlatlandError::BAD_OPERATION);
+
+  // Wait until all Flatland threads are destroyed.
+  RunLoopUntil([this] { return manager_->GetAliveSessionCount() == 0; });
 
   // FlatlandManager::RemoveFlatlandInstance() will be posted on main thread and may not be run
   // yet.

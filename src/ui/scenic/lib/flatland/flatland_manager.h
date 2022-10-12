@@ -74,7 +74,10 @@ class FlatlandManager : public scheduling::SessionUpdater {
       scheduling::PresentTimestamps present_times) override;
 
   // For validating test logic.
+  // Sessions still "owned" by FlatlandManager.
   size_t GetSessionCount() const;
+  // Sessions still alive (but which might have been remove from FlatlandManager).
+  size_t GetAliveSessionCount() const { return alive_sessions_; }
 
   // TODO(fxbug.dev/76985): This is a temporary method assuming that there are either 0 or 1
   // displays with attached Flatland content.  Used by TemporaryFrameRendererDelegator: if no
