@@ -164,79 +164,54 @@ impl Boot for FlashManifest {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::common::{IS_USERSPACE_VAR, REVISION_VAR};
+    use crate::common::{IS_USERSPACE_VAR, MAX_DOWNLOAD_SIZE_VAR, REVISION_VAR};
     use crate::test::{setup, TestResolver};
-    use serde_json::from_str;
+    use serde_json::{from_str, json};
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
 
-    const MINIMUM_MANIFEST: &'static str = r#"{
-        "hw_revision": "rev_test",
-        "products": [
-            {
-                "name": "zedboot",
-                "partitions": [
-                    {"name": "test1", "path": "path1"},
-                    {"name": "test2", "path": "path2"},
-                    {"name": "test3", "path": "path3"},
-                    {
-                        "name": "test4",
-                        "path": "path4",
-                        "condition": {
-                            "variable": "var",
-                            "value": "val"
-                        }
-                    }
-                ]
-            }
-        ]
-    }"#;
-
-    const FULL_MANIFEST: &'static str = r#"{
-        "hw_revision": "rev_test",
-        "products": [
-            {
-                "name": "zedboot",
-                "bootloader_partitions": [
-                    {"name": "test1", "path": "path1"},
-                    {"name": "test2", "path": "path2"},
-                    {"name": "test3", "path": "path3"},
-                    {
-                        "name": "test4",
-                        "path": "path4",
-                        "condition": {
-                            "variable": "var",
-                            "value": "val"
-                        }
-                    }
-                ],
-                "partitions": [
-                    {"name": "test1", "path": "path1"},
-                    {"name": "test2", "path": "path2"},
-                    {"name": "test3", "path": "path3"},
-                    {"name": "test4", "path": "path4"}
-                ],
-                "oem_files": [
-                    {"command": "test1", "path": "path1"},
-                    {"command": "test2", "path": "path2"},
-                    {"command": "test3", "path": "path3"},
-                    {"command": "test4", "path": "path4"}
-                ]
-            }
-        ]
-    }"#;
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_minimal_manifest_succeeds() -> Result<()> {
-        let v: FlashManifest = from_str(MINIMUM_MANIFEST)?;
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+
+        // Setup image files for flashing
+        let tmp_img_files = [(); 4].map(|_| NamedTempFile::new().expect("tmp access failed"));
+        let tmp_img_file_paths = tmp_img_files
+            .iter()
+            .map(|tmp| tmp.path().to_str().expect("non-unicode tmp path"))
+            .collect::<Vec<&str>>();
+
+        let manifest = json!({
+            "hw_revision": "rev_test",
+            "products": [
+                {
+                    "name": "zedboot",
+                    "partitions": [
+                        {"name": "test1", "path":tmp_img_file_paths[0]  },
+                        {"name": "test2", "path":tmp_img_file_paths[1]  },
+                        {"name": "test3", "path":tmp_img_file_paths[2]  },
+                        {
+                            "name": "test4",
+                            "path":tmp_img_file_paths[3],
+                            "condition": {
+                                "variable": "var",
+                                "value": "val"
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let v: FlashManifest = from_str(&manifest.to_string())?;
         let (state, proxy) = setup();
         {
             let mut state = state.lock().unwrap();
             state.set_var(REVISION_VAR.to_string(), "rev_test-b4".to_string());
             state.set_var(IS_USERSPACE_VAR.to_string(), "no".to_string());
             state.set_var("var".to_string(), "val".to_string());
+            state.set_var(MAX_DOWNLOAD_SIZE_VAR.to_string(), "8192".to_string());
         }
         let mut writer = Vec::<u8>::new();
         v.flash(
@@ -254,15 +229,58 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_full_manifest_succeeds() -> Result<()> {
-        let v: FlashManifest = from_str(FULL_MANIFEST)?;
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+
+        // Setup image files for flashing
+        let tmp_img_files = [(); 4].map(|_| NamedTempFile::new().expect("tmp access failed"));
+        let tmp_img_file_paths = tmp_img_files
+            .iter()
+            .map(|tmp| tmp.path().to_str().expect("non-unicode tmp path"))
+            .collect::<Vec<&str>>();
+
+        let manifest = json!({
+            "hw_revision": "rev_test",
+            "products": [
+                {
+                    "name": "zedboot",
+                    "bootloader_partitions": [
+                        {"name": "test1", "path": tmp_img_file_paths[0] },
+                        {"name": "test2", "path": tmp_img_file_paths[1] },
+                        {"name": "test3", "path": tmp_img_file_paths[2] },
+                        {
+                            "name": "test4",
+                            "path":  tmp_img_file_paths[3] ,
+                            "condition": {
+                                "variable": "var",
+                                "value": "val"
+                            }
+                        }
+                    ],
+                    "partitions": [
+                        {"name": "test1", "path": tmp_img_file_paths[0] },
+                        {"name": "test2", "path": tmp_img_file_paths[1] },
+                        {"name": "test3", "path": tmp_img_file_paths[2] },
+                        {"name": "test4", "path": tmp_img_file_paths[3] }
+                    ],
+                    "oem_files": [
+                        {"command": "test1", "path": tmp_img_file_paths[0] },
+                        {"command": "test2", "path": tmp_img_file_paths[1] },
+                        {"command": "test3", "path": tmp_img_file_paths[2] },
+                        {"command": "test4", "path": tmp_img_file_paths[3] }
+                    ]
+                }
+            ]
+        });
+
+        let v: FlashManifest = from_str(&manifest.to_string())?;
         let (state, proxy) = setup();
         {
             let mut state = state.lock().unwrap();
             state.set_var("var".to_string(), "val".to_string());
             state.set_var(IS_USERSPACE_VAR.to_string(), "no".to_string());
             state.set_var(REVISION_VAR.to_string(), "rev_test-b4".to_string());
+            state.set_var(MAX_DOWNLOAD_SIZE_VAR.to_string(), "8192".to_string());
         }
         let mut writer = Vec::<u8>::new();
         v.flash(

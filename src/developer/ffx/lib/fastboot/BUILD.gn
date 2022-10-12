@@ -29,7 +29,9 @@ if (is_host) {
       "//third_party/rust_crates:async-fs",
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:base64",
+      "//third_party/rust_crates:bincode",
       "//third_party/rust_crates:byteorder",
+      "//third_party/rust_crates:bytes",
       "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:flate2",
       "//third_party/rust_crates:futures",
@@ -47,6 +49,7 @@ if (is_host) {
 
     test_deps = [
       "//third_party/rust_crates:maplit",
+      "//third_party/rust_crates:rand",
       "//third_party/rust_crates:regex",
     ]
 
@@ -65,6 +68,7 @@ if (is_host) {
       "src/manifest/v1.rs",
       "src/manifest/v2.rs",
       "src/manifest/v3.rs",
+      "src/sparse/mod.rs",
       "src/unlock/mod.rs",
     ]
   }

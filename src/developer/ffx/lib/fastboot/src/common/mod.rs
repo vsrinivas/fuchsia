@@ -9,6 +9,7 @@ use {
             file::*,
         },
         manifest::{from_in_tree, from_path, from_sdk},
+        sparse::build_sparse_files,
     },
     anyhow::{anyhow, bail, Context, Error, Result},
     async_trait::async_trait,
@@ -105,6 +106,7 @@ pub const MISSING_PRODUCT: &str = "Manifest does not contain product";
 const LARGE_FILE: &str = "large file, please wait... ";
 pub const REVISION_VAR: &str = "hw-revision";
 pub const IS_USERSPACE_VAR: &str = "is-userspace";
+pub const MAX_DOWNLOAD_SIZE_VAR: &str = "max-download-size";
 
 pub const LOCKED_VAR: &str = "vx-locked";
 const LOCK_COMMAND: &str = "vx-lock";
@@ -236,19 +238,15 @@ pub async fn stage_file<W: Write, F: FileResolver + Sync>(
     })
 }
 
-pub async fn flash_partition<W: Write, F: FileResolver + Sync>(
+async fn do_flash<W: Write>(
     writer: &mut W,
-    file_resolver: &mut F,
     name: &str,
-    file: &str,
     fastboot_proxy: &FastbootProxy,
+    file_to_upload: &str,
 ) -> Result<()> {
     let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
-    let file_to_upload =
-        file_resolver.get_file(writer, file).await.context("reconciling file for upload")?;
-    writeln!(writer, "Preparing to upload {}", file_to_upload)?;
     try_join!(
-        fastboot_proxy.flash(name, &file_to_upload, prog_client).map_err(map_fidl_error),
+        fastboot_proxy.flash(name, file_to_upload, prog_client).map_err(map_fidl_error),
         handle_upload_progress_for_flashing(name, writer, prog_server),
     )
     .and_then(|(flash, prog)| {
@@ -265,6 +263,86 @@ pub async fn flash_partition<W: Write, F: FileResolver + Sync>(
             anyhow!("There was an error flashing \"{}\" - {}: {:?}", name, file_to_upload, e)
         })
     })
+}
+
+async fn flash_partition_sparse<W: Write>(
+    writer: &mut W,
+    name: &str,
+    file_to_upload: &str,
+    fastboot_proxy: &FastbootProxy,
+    max_download_size: u32,
+) -> Result<()> {
+    writeln!(writer, "Preparing to flash {} in sparse mode", file_to_upload)?;
+
+    let sparse_files = build_sparse_files(
+        writer,
+        name,
+        file_to_upload,
+        std::env::temp_dir().as_path(),
+        max_download_size,
+    )
+    .await?;
+    for tmp_file_path in sparse_files {
+        let tmp_file_name = tmp_file_path.to_str().unwrap();
+        writeln!(writer, "For partition: {}, flashing sparse image file {}", name, tmp_file_name)?;
+
+        do_flash(writer, name, fastboot_proxy, tmp_file_name).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn flash_partition<W: Write, F: FileResolver + Sync>(
+    writer: &mut W,
+    file_resolver: &mut F,
+    name: &str,
+    file: &str,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    let file_to_upload =
+        file_resolver.get_file(writer, file).await.context("reconciling file for upload")?;
+    writeln!(writer, "Preparing to upload {}", file_to_upload)?;
+
+    // If the given file to flash is bigger than what the device can download
+    // at once, we need to make a sparse image out of the given file
+    let file_handle = async_fs::File::open(&file_to_upload)
+        .await
+        .map_err(|e| anyhow!("Got error trying to open file \"{}\": {}", file_to_upload, e))?;
+    let file_size = file_handle
+        .metadata()
+        .await
+        .map_err(|e| {
+            anyhow!("Got error retrieving metadata for file \"{}\": {}", file_to_upload, e)
+        })?
+        .len();
+
+    let max_download_size_var = fastboot_proxy
+        .get_var(MAX_DOWNLOAD_SIZE_VAR)
+        .await
+        .map_err(map_fidl_error)?
+        .map_err(|e| anyhow!("Communication error with the device: {:?}", e))?;
+
+    tracing::trace!("Got max download size from device: {}", max_download_size_var);
+    let trimmed_max_download_size_var = max_download_size_var.trim_start_matches("0x");
+
+    let max_download_size: u32 = u32::from_str_radix(trimmed_max_download_size_var, 16)
+        .expect("Fastboot max download size var was not a valid u32");
+
+    tracing::trace!("Device Max Download Size: {}", max_download_size);
+    tracing::trace!("File size: {}", file_size);
+
+    if u64::from(max_download_size) < file_size {
+        writeln!(writer, "File size ({}) is bigger than device Max Download Size ({})... Flashing image in Sparse mode", file_size, max_download_size)?;
+        return flash_partition_sparse(
+            writer,
+            name,
+            &file_to_upload,
+            fastboot_proxy,
+            max_download_size,
+        )
+        .await;
+    }
+    do_flash(writer, name, fastboot_proxy, &file_to_upload).await
 }
 
 pub async fn verify_hardware(revision: &String, fastboot_proxy: &FastbootProxy) -> Result<()> {

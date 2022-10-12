@@ -151,27 +151,12 @@ impl Boot for FlashManifest {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::common::{IS_USERSPACE_VAR, LOCKED_VAR};
+    use crate::common::{IS_USERSPACE_VAR, LOCKED_VAR, MAX_DOWNLOAD_SIZE_VAR};
     use crate::test::{setup, TestResolver};
     use regex::Regex;
-    use serde_json::from_str;
+    use serde_json::{from_str, json};
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
-
-    const SIMPLE_MANIFEST: &'static str = r#"[
-            {
-                "name": "fuchsia",
-                "bootloader_partitions": [],
-                "partitions": [
-                    ["test1", "path1"],
-                    ["test2", "path2"],
-                    ["test3", "path3"],
-                    ["test4", "path4"],
-                    ["test5", "path5"]
-                ],
-                "oem_files": []
-            }
-    ]"#;
 
     const MANIFEST: &'static str = r#"[
         {
@@ -200,19 +185,6 @@ mod test {
                 ["test20", "path20"],
                 ["test30", "path30"]
             ],
-            "oem_files": []
-        }
-    ]"#;
-
-    const CONDITIONAL_MANIFEST: &'static str = r#"[
-        {
-            "name": "zedboot",
-            "bootloader_partitions": [
-                ["btest1", "bpath1", "var1", "value1"],
-                ["btest2", "bpath2", "var2", "value2"],
-                ["btest3", "bpath3", "var3", "value3"]
-            ],
-            "partitions": [],
             "oem_files": []
         }
     ]"#;
@@ -296,13 +268,54 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_should_succeed_if_product_found() -> Result<()> {
-        let v: FlashManifest = from_str(MANIFEST)?;
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+
+        // Setup image files for flashing
+        let tmp_img_files = [(); 3].map(|_| NamedTempFile::new().expect("tmp access failed"));
+        let tmp_img_file_paths = tmp_img_files
+            .iter()
+            .map(|tmp| tmp.path().to_str().expect("non-unicode tmp path"))
+            .collect::<Vec<&str>>();
+
+        let manifest = json!([
+            {
+                "name": "zedboot",
+                "bootloader_partitions": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ],
+                "partitions": [
+                    ["test1", "path1"],
+                    ["test2", "path2"],
+                    ["test3", "path3"],
+                    ["test4", "path4"],
+                    ["test5", "path5"]
+                ],
+                "oem_files": [
+                    ["test1", "path1"],
+                    ["test2", "path2"]
+                ]
+            },
+            {
+                "name": "fuchsia",
+                "bootloader_partitions": [],
+                "partitions": [
+                    ["test10",tmp_img_file_paths[0]],
+                    ["test20",tmp_img_file_paths[1]],
+                    ["test30",tmp_img_file_paths[2]]
+                ],
+                "oem_files": []
+            }
+        ]);
+
+        let v: FlashManifest = from_str(&manifest.to_string())?;
+
         let (state, proxy) = setup();
         {
             let mut state = state.lock().unwrap();
             state.set_var(IS_USERSPACE_VAR.to_string(), "yes".to_string());
+            state.set_var(MAX_DOWNLOAD_SIZE_VAR.to_string(), "8192".to_string());
         }
         let mut writer = Vec::<u8>::new();
         v.flash(
@@ -328,18 +341,42 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_oem_file_should_be_staged_from_command() -> Result<()> {
-        let v: FlashManifest = from_str(SIMPLE_MANIFEST)?;
-        let (state, proxy) = setup();
-        {
-            let mut state = state.lock().unwrap();
-            state.set_var(IS_USERSPACE_VAR.to_string(), "yes".to_string());
-        }
         let test_oem_cmd = "test-oem-cmd";
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         let test_staged_file = format!("{},{}", test_oem_cmd, tmp_file_name).parse::<OemFile>()?;
         let manifest_file = NamedTempFile::new().expect("tmp access failed");
         let manifest_file_name = manifest_file.path().to_string_lossy().to_string();
+
+        // Set up the temporary files to read
+        let tmp_img_files = [(); 5].map(|_| NamedTempFile::new().expect("tmp access failed"));
+        let tmp_img_file_paths = tmp_img_files
+            .iter()
+            .map(|tmp| tmp.path().to_str().expect("non-unicode tmp path"))
+            .collect::<Vec<&str>>();
+
+        let manifest = json!([
+                {
+                    "name": "fuchsia",
+                    "bootloader_partitions": [],
+                    "partitions": [
+                        ["test1", tmp_img_file_paths[0]],
+                        ["test2", tmp_img_file_paths[1]],
+                        ["test3", tmp_img_file_paths[2]],
+                        ["test4", tmp_img_file_paths[3]],
+                        ["test5", tmp_img_file_paths[4]]
+                    ],
+                    "oem_files": []
+                }
+        ]);
+
+        let v: FlashManifest = from_str(&manifest.to_string())?;
+        let (state, proxy) = setup();
+        {
+            let mut state = state.lock().unwrap();
+            state.set_var(IS_USERSPACE_VAR.to_string(), "yes".to_string());
+            state.set_var(MAX_DOWNLOAD_SIZE_VAR.to_string(), "8192".to_string());
+        }
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,
@@ -362,9 +399,26 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_should_upload_conditional_partitions_that_match() -> Result<()> {
-        let v: FlashManifest = from_str(CONDITIONAL_MANIFEST)?;
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+
+        // Setup images to flash
+        let temp_image_file_2 = NamedTempFile::new().expect("tmp access failed");
+        let tmp_image_file_2_name = temp_image_file_2.path().to_string_lossy().to_string();
+        let manifest = json!([
+                {
+                    "name": "zedboot",
+                    "bootloader_partitions": [
+                        ["btest1", "bpath1", "var1", "value1"],
+                        ["btest2", tmp_image_file_2_name, "var2", "value2"],
+                        ["btest3", "bpath3", "var3", "value3"]
+                    ],
+                    "partitions": [],
+                    "oem_files": []
+                }
+        ]);
+        let v: FlashManifest = from_str(&manifest.to_string())?;
+
         let (state, proxy) = setup();
         {
             let mut state = state.lock().unwrap();
@@ -372,6 +426,7 @@ mod test {
             state.set_var("var1".to_string(), "not_value1".to_string());
             state.set_var("var2".to_string(), "value2".to_string());
             state.set_var("var3".to_string(), "not_value3".to_string());
+            state.set_var(MAX_DOWNLOAD_SIZE_VAR.to_string(), "8192".to_string());
         }
         let mut writer = Vec::<u8>::new();
         v.flash(
@@ -398,13 +453,53 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_should_succeed_and_not_reboot_bootloader() -> Result<()> {
-        let v: FlashManifest = from_str(MANIFEST)?;
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+
+        let tmp_img_files = [(); 3].map(|_| NamedTempFile::new().expect("tmp access failed"));
+        let tmp_img_file_paths = tmp_img_files
+            .iter()
+            .map(|tmp| tmp.path().to_str().expect("non-unicode tmp path"))
+            .collect::<Vec<&str>>();
+
+        let manifest = json!([
+                {
+                    "name": "zedboot",
+                    "bootloader_partitions": [
+                        ["test1", "path1"],
+                        ["test2", "path2"]
+                    ],
+                    "partitions": [
+                        ["test1", "path1"],
+                        ["test2", "path2"],
+                        ["test3", "path3"],
+                        ["test4", "path4"],
+                        ["test5", "path5"]
+                    ],
+                    "oem_files": [
+                        ["test1", "path1"],
+                        ["test2", "path2"]
+                    ]
+                },
+                {
+                    "name": "fuchsia",
+                    "bootloader_partitions": [],
+                    "partitions": [
+                        ["test10", tmp_img_file_paths[0]],
+                        ["test20", tmp_img_file_paths[1]],
+                        ["test30", tmp_img_file_paths[2]]
+                    ],
+                    "oem_files": []
+                }
+            ]
+        );
+
+        let v: FlashManifest = from_str(&manifest.to_string())?;
         let (state, proxy) = setup();
         {
             let mut state = state.lock().unwrap();
             state.set_var(IS_USERSPACE_VAR.to_string(), "no".to_string());
+            state.set_var(MAX_DOWNLOAD_SIZE_VAR.to_string(), "8192".to_string());
         }
 
         let mut writer = Vec::<u8>::new();
