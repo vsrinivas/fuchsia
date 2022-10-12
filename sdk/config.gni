@@ -10,5 +10,5 @@ declare_args() {
   # rather than just the current host toolchains.
   # For example, if this is true then for instance if building on linux x64 then
   # you'll also build SDK host tools for linux arm64.
-  sdk_cross_compile_host_tools = true
+  sdk_cross_compile_host_tools = false
 }

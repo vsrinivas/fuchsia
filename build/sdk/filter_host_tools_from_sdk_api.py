@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 """Remove host tools that do not belong to a specific host CPU architecture
-From SDK API manifest files."""
+From SDK archive manifest."""
 
 import argparse
 import errno
@@ -32,11 +32,15 @@ def main():
         type=argparse.FileType('w'),
         required=True,
         help='Output API manifest file')
+    parser.add_argument(
+        '--host-tool-prefix',
+        required=True,
+        help='Line prefix for SDK host tool')
 
     args = parser.parse_args()
 
     # Any line that begins with this prefix is a candidate for rejection.
-    candidate_line_prefix = 'sdk://tools/'
+    candidate_line_prefix = args.host_tool_prefix
 
     # Any candidate line that begins with this prefix is accepted, all others
     # are rejected.

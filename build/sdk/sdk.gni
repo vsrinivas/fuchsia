@@ -131,6 +131,8 @@ template("sdk") {
           rebase_path(inputs[0], root_build_dir),
           "--output",
           rebase_path(outputs[0], root_build_dir),
+          "--host-tool-prefix",
+          "sdk://tools/",
         ]
       }
       api_reference = host_api

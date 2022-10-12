@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//sdk/config.gni")  # For sdk_cross_compile_host_tools
+
 # Generate golden file of the Fuchsia SDK directory layout.
 #
 # Parameters
@@ -44,6 +46,17 @@ template("generate_sdk_layout_golden_file") {
 #
 #   sdk_archive (required)
 #     A generated tarball of the local SDK archive.
+#     Type: GN path
+#
+#   golden_file (required)
+#     A golden file for the content of the SDK archive
+#     Type: GN path
+#
+#   filter_api_host_tools (optional)
+#     Boolean. Set to true to ignore host tools declarations in the api file
+#     that do not belong to the current host toolchain. Useful when
+#     host tools are not cross-compiled for several host architectures
+#     (see sdk_cross_compile_host_tools in //sdk/config.gni for details).
 #
 template("verify_sdk_compatibility") {
   assert(defined(invoker.sdk_archive), "SDK archive tarball is required.")
@@ -51,6 +64,28 @@ template("verify_sdk_compatibility") {
 
   # Nested function call to remove both parts of the archive's extension.
   idk_name = get_path_info(get_path_info(invoker.sdk_archive, "name"), "name")
+
+  if (!sdk_cross_compile_host_tools) {
+    # Remove host tools from other host CPU architectures from the golden file
+    _golden_file_target = "${target_name}.golden_file.host_tools_only"
+    _golden_file_deps = [ ":${_golden_file_target}" ]
+    _golden_file = "$target_gen_dir/${_golden_file_target}"
+
+    action(_golden_file_target) {
+      script = "//build/sdk/filter_host_tools_from_sdk_api.py"
+      sources = [ invoker.golden_file ]
+      outputs = [ _golden_file ]
+      args = [
+        "--host_cpu=${host_cpu}",
+        "--input=" + rebase_path(sources[0], root_build_dir),
+        "--output=" + rebase_path(outputs[0], root_build_dir),
+        "--host-tool-prefix=tools/",
+      ]
+    }
+  } else {
+    _golden_file = invoker.golden_file
+    _golden_file_deps = []
+  }
 
   action(target_name) {
     forward_variables_from(invoker, "*")
@@ -60,25 +95,27 @@ template("verify_sdk_compatibility") {
         "$target_gen_dir/${target_cpu}/sdk_directory_${idk_name}.golden_layout"
     stamp_file = "$target_gen_dir/$target_name.verified"
 
-    current = sdk_archive
-    golden = golden_file
-
     inputs = [
       sdk_archive,
-      golden_file,
+      _golden_file,
     ]
 
     outputs = [ stamp_file ]
 
     args = [
       "--golden",
-      rebase_path(golden, root_build_dir),
+      rebase_path(_golden_file, root_build_dir),
       "--current",
-      rebase_path(current, root_build_dir),
+      rebase_path(sdk_archive, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "--update_golden",
       rebase_path(updated_golden, root_build_dir),
     ]
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += _golden_file_deps
   }
 }
