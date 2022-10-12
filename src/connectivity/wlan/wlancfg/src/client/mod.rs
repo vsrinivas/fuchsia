@@ -9,7 +9,7 @@ use {
         config_management::{
             Credential, NetworkConfigError, NetworkIdentifier, SaveError, SavedNetworksManagerApi,
         },
-        mode_management::iface_manager_api::IfaceManagerApi,
+        mode_management::iface_manager_api::{ConnectAttemptRequest, IfaceManagerApi},
         telemetry::{TelemetryEvent, TelemetrySender},
         util::listener,
     },
@@ -243,14 +243,11 @@ async fn handle_client_request_connect(
         ssid: network_config.ssid.into(),
         type_: fidl_policy::SecurityType::from(network_config.security_type),
     };
-    let connect_req = client_types::ConnectRequest {
-        target: client_types::ConnectionCandidate {
-            network: network_id.into(),
-            credential: network_config.credential,
-            scanned: None,
-        },
-        reason: client_types::ConnectReason::FidlConnectRequest,
-    };
+    let connect_req = ConnectAttemptRequest::new(
+        network_id.into(),
+        network_config.credential,
+        client_types::ConnectReason::FidlConnectRequest,
+    );
 
     let mut iface_manager = iface_manager.lock().await;
     match iface_manager.connect(connect_req).await {
@@ -337,14 +334,11 @@ async fn handle_client_request_save_network(
     }
 
     // Attempt to connect to the new network if there is an idle client interface.
-    let connect_req = client_types::ConnectRequest {
-        target: client_types::ConnectionCandidate {
-            network: net_id,
-            credential: credential,
-            scanned: None,
-        },
-        reason: client_types::ConnectReason::NewSavedNetworkAutoconnect,
-    };
+    let connect_req = ConnectAttemptRequest::new(
+        net_id,
+        credential,
+        client_types::ConnectReason::NewSavedNetworkAutoconnect,
+    );
     match iface_manager.has_idle_client().await {
         Ok(true) => {
             info!("Idle interface available, will attempt connection to new saved network");
@@ -582,10 +576,7 @@ mod tests {
                 })
         }
 
-        async fn connect(
-            &mut self,
-            _connect_req: client_types::ConnectRequest,
-        ) -> Result<(), Error> {
+        async fn connect(&mut self, _connect_req: ConnectAttemptRequest) -> Result<(), Error> {
             let _ = self.disconnected_ifaces.pop();
             Ok(())
         }
@@ -1743,10 +1734,7 @@ mod tests {
             Err(format_err!("No ifaces"))
         }
 
-        async fn connect(
-            &mut self,
-            _connect_req: client_types::ConnectRequest,
-        ) -> Result<(), Error> {
+        async fn connect(&mut self, _connect_req: ConnectAttemptRequest) -> Result<(), Error> {
             Err(format_err!("No ifaces"))
         }
 

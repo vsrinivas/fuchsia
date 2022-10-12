@@ -21,6 +21,7 @@ pub type NetworkIdentifier = config_management::network_config::NetworkIdentifie
 pub type SecurityTypeDetailed = fidl_sme::Protection;
 pub type SecurityType = config_management::network_config::SecurityType;
 pub type ConnectionState = fidl_policy::ConnectionState;
+pub type ClientState = fidl_policy::WlanClientState;
 pub type DisconnectStatus = fidl_policy::DisconnectStatus;
 pub type Compatibility = fidl_policy::Compatibility;
 pub type WlanChan = wlan_common::channel::Channel;
@@ -120,24 +121,20 @@ impl Bss {
     }
 }
 
+// A candidate with data for one BSS observed in a scan.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScannedCandidate {
+    pub network: NetworkIdentifier,
+    pub credential: config_management::Credential,
     pub bss_description: fidl_internal::BssDescription,
     pub observation: ScanObservation,
     pub has_multiple_bss_candidates: bool,
     pub mutual_security_protocols: HashSet<SecurityDescriptor>,
 }
 
-/// Data for connecting to a specific network and keeping track of what is connected to.
+// All data required to connect to a particular BSS.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConnectionCandidate {
-    pub network: NetworkIdentifier,
-    pub credential: config_management::Credential,
-    pub scanned: Option<ScannedCandidate>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ConnectRequest {
-    pub target: ConnectionCandidate,
+pub struct ConnectSelection {
+    pub target: ScannedCandidate,
     pub reason: ConnectReason,
 }

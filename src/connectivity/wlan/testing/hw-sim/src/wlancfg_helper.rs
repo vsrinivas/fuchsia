@@ -178,7 +178,12 @@ pub async fn init_client_controller(
     // interface yet.  The policy layer enables client connections by default.  Wait until the
     // first update that indicates that client connections are enabled before proceeding.
     wait_until_client_state(&mut client_state_update_stream, |update| {
-        update.state == Some(fidl_policy::WlanClientState::ConnectionsEnabled)
+        if update.state == Some(fidl_policy::WlanClientState::ConnectionsEnabled) {
+            return true;
+        } else {
+            info!("Awaiting client state ConnectionsEnabled, got {:?}", update.state);
+            return false;
+        }
     })
     .await;
 

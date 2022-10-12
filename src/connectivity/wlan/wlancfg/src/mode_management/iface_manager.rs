@@ -15,7 +15,7 @@ use {
         },
         config_management::SavedNetworksManagerApi,
         mode_management::{
-            iface_manager_api::{IfaceManagerApi, SmeForScan},
+            iface_manager_api::{ConnectAttemptRequest, IfaceManagerApi, SmeForScan},
             iface_manager_types::*,
             phy_manager::{CreateClientIfacesReason, PhyManagerApi},
             Defect,
@@ -35,7 +35,7 @@ use {
         stream::FuturesUnordered,
         FutureExt, StreamExt,
     },
-    log::{error, info, warn},
+    log::{debug, error, info, warn},
     std::{sync::Arc, unimplemented},
     void::Void,
 };
@@ -84,8 +84,7 @@ async fn create_client_state_machine(
     dev_monitor_proxy: &mut fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     client_update_sender: listener::ClientListenerMessageSender,
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
-    network_selector: Arc<NetworkSelector>,
-    connect_req: Option<client_types::ConnectRequest>,
+    connect_selection: Option<client_types::ConnectSelection>,
     telemetry_sender: TelemetrySender,
     stats_sender: ConnectionStatsSender,
 ) -> Result<
@@ -95,7 +94,7 @@ async fn create_client_state_machine(
     ),
     Error,
 > {
-    if connect_req.is_some() {
+    if connect_selection.is_some() {
         telemetry_sender.send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
     }
 
@@ -117,8 +116,7 @@ async fn create_client_state_machine(
         receiver,
         client_update_sender,
         saved_networks,
-        connect_req,
-        network_selector,
+        connect_selection,
         telemetry_sender,
         stats_sender,
     );
@@ -140,11 +138,13 @@ pub(crate) struct IfaceManagerService {
     clients: Vec<ClientIfaceContainer>,
     aps: Vec<ApIfaceContainer>,
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
-    network_selector: Arc<NetworkSelector>,
     fsm_futures:
         FuturesUnordered<future_with_metadata::FutureWithMetadata<(), StateMachineMetadata>>,
     network_selection_futures:
-        FuturesUnordered<BoxFuture<'static, Option<client_types::ConnectionCandidate>>>,
+        FuturesUnordered<BoxFuture<'static, Option<client_types::ScannedCandidate>>>,
+    bss_selection_futures: FuturesUnordered<
+        BoxFuture<'static, (ConnectAttemptRequest, Option<client_types::ScannedCandidate>)>,
+    >,
     telemetry_sender: TelemetrySender,
     // A sender to be cloned for each connection to send periodic data about connection quality.
     stats_sender: ConnectionStatsSender,
@@ -157,7 +157,6 @@ impl IfaceManagerService {
         ap_update_sender: listener::ApListenerMessageSender,
         dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
         saved_networks: Arc<dyn SavedNetworksManagerApi>,
-        network_selector: Arc<NetworkSelector>,
         telemetry_sender: TelemetrySender,
         stats_sender: ConnectionStatsSender,
     ) -> Self {
@@ -169,9 +168,9 @@ impl IfaceManagerService {
             clients: Vec::new(),
             aps: Vec::new(),
             saved_networks: saved_networks,
-            network_selector,
             fsm_futures: FuturesUnordered::new(),
             network_selection_futures: FuturesUnordered::new(),
+            bss_selection_futures: FuturesUnordered::new(),
             telemetry_sender,
             stats_sender,
         }
@@ -421,25 +420,62 @@ impl IfaceManagerService {
         return fut.boxed();
     }
 
-    async fn connect(&mut self, connect_req: client_types::ConnectRequest) -> Result<(), Error> {
+    async fn handle_connect_request(
+        &mut self,
+        connect_request: ConnectAttemptRequest,
+        iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+        network_selector: Arc<NetworkSelector>,
+    ) -> Result<(), Error> {
+        // Check if already connected to requested network
+        if self.clients.iter().any(|client| match &client.config {
+            Some(config) => config == &connect_request.network,
+            None => false,
+        }) {
+            info!("Received connect request to already connected network.");
+            return Ok(());
+        };
+
         self.telemetry_sender
             .send(TelemetryEvent::StartEstablishConnection { reset_start_time: true });
 
+        // Send listener update that connection attempt is starting.
+        let networks = vec![listener::ClientNetworkState {
+            id: connect_request.network.clone(),
+            state: client_types::ConnectionState::Connecting,
+            status: None,
+        }];
+
+        let update = listener::ClientStateUpdate {
+            state: client_types::ClientState::ConnectionsEnabled,
+            networks: networks,
+        };
+        match self
+            .client_update_sender
+            .clone()
+            .unbounded_send(listener::Message::NotifyListeners(update))
+        {
+            Ok(_) => (),
+            Err(e) => error!("failed to send state update: {:?}", e),
+        };
+
+        initiate_bss_selection(connect_request, self, iface_manager_client, network_selector).await
+    }
+
+    async fn connect(&mut self, selection: client_types::ConnectSelection) -> Result<(), Error> {
         // Get a ClientIfaceContainer.
         let mut client_iface =
-            if connect_req.target.network.security_type == client_types::SecurityType::Wpa3 {
+            if selection.target.network.security_type == client_types::SecurityType::Wpa3 {
                 self.get_wpa3_capable_client(None).await?
             } else {
                 self.get_client(None).await?
             };
-
         // Set the new config on this client
-        client_iface.config = Some(connect_req.target.network.clone());
+        client_iface.config = Some(selection.target.network.clone());
 
         // Check if there's an existing state machine we can use
         match client_iface.client_state_machine.as_mut() {
             Some(existing_csm) => {
-                existing_csm.connect(connect_req)?;
+                existing_csm.connect(selection)?;
             }
             None => {
                 // Create the state machine and controller.
@@ -448,8 +484,7 @@ impl IfaceManagerService {
                     &mut self.dev_monitor_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
-                    self.network_selector.clone(),
-                    Some(connect_req),
+                    Some(selection),
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
                 )
@@ -519,7 +554,7 @@ impl IfaceManagerService {
     async fn attempt_client_reconnect(
         &mut self,
         iface_id: u16,
-        connect_req: client_types::ConnectRequest,
+        connect_selection: client_types::ConnectSelection,
     ) -> Result<(), Error> {
         for client in self.clients.iter_mut() {
             if client.iface_id == iface_id {
@@ -538,15 +573,14 @@ impl IfaceManagerService {
                     &mut self.dev_monitor_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
-                    self.network_selector.clone(),
-                    Some(connect_req.clone()),
+                    Some(connect_selection.clone()),
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
                 )
                 .await?;
 
                 self.fsm_futures.push(fut);
-                client.config = Some(connect_req.target.network);
+                client.config = Some(connect_selection.target.network);
                 client.client_state_machine = Some(new_client);
                 client.last_roam_time = fasync::Time::now();
                 break;
@@ -579,7 +613,6 @@ impl IfaceManagerService {
                     &mut self.dev_monitor_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
-                    self.network_selector.clone(),
                     None,
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
@@ -720,11 +753,11 @@ impl IfaceManagerService {
 
     async fn start_client_connections(&mut self) -> Result<(), Error> {
         let mut phy_manager = self.phy_manager.lock().await;
-        let lingering_ifaces = match phy_manager
+        let client_iface_ids = match phy_manager
             .create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections)
             .await
         {
-            Ok(lingering_ifaces) => lingering_ifaces,
+            Ok(client_iface_ids) => client_iface_ids,
             Err((_, phy_manager_error)) => {
                 return Err(format_err!(
                     "could not start client connection {:?}",
@@ -733,13 +766,14 @@ impl IfaceManagerService {
             }
         };
 
-        // Resume any lingering client interfaces.
+        // Resume client interfaces.
         drop(phy_manager);
-        for iface_id in lingering_ifaces {
+        for iface_id in client_iface_ids.clone() {
             if let Err(e) = self.handle_added_iface(iface_id).await {
                 error!("failed to resume client {}: {:?}", iface_id, e);
             };
         }
+
         Ok(())
     }
 
@@ -918,17 +952,40 @@ async fn initiate_network_selection(
     }
 }
 
+async fn initiate_bss_selection(
+    connect_request: ConnectAttemptRequest,
+    iface_manager: &mut IfaceManagerService,
+    iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    network_selector: Arc<NetworkSelector>,
+) -> Result<(), Error> {
+    // Create connection selection future and enqueue.
+    let fut = async move {
+        (
+            connect_request.clone(),
+            network_selector
+                .find_connection_candidate_for_network(
+                    iface_manager_client,
+                    connect_request.network,
+                )
+                .await,
+        )
+    };
+
+    iface_manager.bss_selection_futures.push(fut.boxed());
+    Ok(())
+}
+
 async fn handle_network_selection_results(
-    network_selection_result: Option<client_types::ConnectionCandidate>,
+    network_selection_result: Option<client_types::ScannedCandidate>,
     iface_manager: &mut IfaceManagerService,
     reconnect_monitor_interval: &mut i64,
     connectivity_monitor_timer: &mut fasync::Interval,
 ) {
-    if let Some(connection_candidate) = network_selection_result {
+    if let Some(scanned_candidate) = network_selection_result {
         *reconnect_monitor_interval = 1;
 
-        let connect_req = client_types::ConnectRequest {
-            target: connection_candidate,
+        let connect_selection = client_types::ConnectSelection {
+            target: scanned_candidate,
             reason: client_types::ConnectReason::IdleInterfaceAutoconnect,
         };
 
@@ -937,8 +994,9 @@ async fn handle_network_selection_results(
             // Any client interfaces that have recently presented as idle will be
             // reconnected.
             for iface_id in idle_clients.drain(..) {
-                if let Err(e) =
-                    iface_manager.attempt_client_reconnect(iface_id, connect_req.clone()).await
+                if let Err(e) = iface_manager
+                    .attempt_client_reconnect(iface_id, connect_selection.clone())
+                    .await
                 {
                     warn!("Could not reconnect iface {}: {:?}", iface_id, e);
                 }
@@ -951,6 +1009,62 @@ async fn handle_network_selection_results(
 
     *connectivity_monitor_timer =
         fasync::Interval::new(zx::Duration::from_seconds(*reconnect_monitor_interval));
+}
+
+async fn handle_bss_selection_for_connect_request_results(
+    bss_selection_result: (ConnectAttemptRequest, Option<client_types::ScannedCandidate>),
+    iface_manager: &mut IfaceManagerService,
+    iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    network_selector: Arc<NetworkSelector>,
+) {
+    let (mut request, selection_result) = bss_selection_result;
+    request.attempts += 1;
+    match selection_result {
+        Some(scanned_candidate) => {
+            let selection = client_types::ConnectSelection {
+                target: scanned_candidate,
+                reason: client_types::ConnectReason::FidlConnectRequest,
+            };
+            info!("Starting connection to {:?}", selection.target.network);
+            let _ = iface_manager.connect(selection).await;
+        }
+        None => {
+            if request.attempts < 3 {
+                debug!("No candidates found for connect request, queueing retrying.");
+                match initiate_bss_selection(
+                    request,
+                    iface_manager,
+                    iface_manager_client.clone(),
+                    network_selector.clone(),
+                )
+                .await
+                {
+                    Ok(_) => {}
+                    Err(e) => error!("Failed to initiate bss selection for scan retry: {:?}", e),
+                }
+            } else {
+                // Send connection failed update.
+                let networks = vec![listener::ClientNetworkState {
+                    id: request.network.clone(),
+                    state: client_types::ConnectionState::Failed,
+                    status: Some(client_types::DisconnectStatus::ConnectionFailed),
+                }];
+
+                let update = listener::ClientStateUpdate {
+                    state: client_types::ClientState::ConnectionsEnabled,
+                    networks: networks,
+                };
+                match iface_manager
+                    .client_update_sender
+                    .clone()
+                    .unbounded_send(listener::Message::NotifyListeners(update))
+                {
+                    Ok(_) => (),
+                    Err(e) => error!("failed to send connection_failed state update: {:?}", e),
+                };
+            }
+        }
+    }
 }
 
 async fn handle_terminated_state_machine(
@@ -1068,7 +1182,7 @@ fn handle_periodic_connection_stats(
     _iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     _network_selector: Arc<NetworkSelector>,
     roaming_search_futures: &mut FuturesUnordered<
-        BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
+        BoxFuture<'static, Option<client_types::ScannedCandidate>>,
     >,
 ) {
     // If a proactive network switch already being considered, ignore.
@@ -1157,6 +1271,16 @@ pub(crate) async fn serve_iface_manager_requests(
                     &mut connectivity_monitor_timer
                 ).await;
             },
+            bss_selection_result = iface_manager.bss_selection_futures.select_next_some() => {
+                // TODO(fxbug.dev/110825): There may be multiple reasons to do BSS selection,
+                // not just for connect requests. Create new enum.
+                handle_bss_selection_for_connect_request_results(
+                    bss_selection_result,
+                    &mut iface_manager,
+                    iface_manager_client.clone(),
+                    network_selector.clone(),
+                ).await;
+            },
             connection_stats = stats_receiver.select_next_some() => {
                 handle_periodic_connection_stats(
                     connection_stats,
@@ -1165,7 +1289,7 @@ pub(crate) async fn serve_iface_manager_requests(
                     network_selector.clone(),
                     &mut roaming_search_futures
                 );
-            }
+            },
             _connection_candidate = roaming_search_futures.select_next_some() => {
                 // TODO(fxbug.dev/84548): decide whether the best network found is better than the
                 // current network, and if so trigger a connection
@@ -1183,8 +1307,13 @@ pub(crate) async fn serve_iface_manager_requests(
                         operation_futures.push(disconnect_fut.boxed());
                     }
                     IfaceManagerRequest::Connect(ConnectRequest { request, responder }) => {
-                        if responder.send(iface_manager.connect(request).await).is_err() {
-                            error!("could not respond to ConnectRequest");
+                        let handle_connect_request_fut = iface_manager.handle_connect_request(
+                            request,
+                            iface_manager_client.clone(),
+                            network_selector.clone()
+                        );
+                        if responder.send(handle_connect_request_fut.await).is_err() {
+                            error!("could not respond to ScanForConnectionSelection");
                         }
                     }
                     IfaceManagerRequest::RecordIdleIface(RecordIdleIfaceRequest { iface_id, responder } ) => {
@@ -1328,26 +1457,24 @@ mod tests {
     pub static TEST_PASSWORD: &str = "test_password";
 
     /// Produces wlan network configuration objects to be used in tests.
-    pub fn create_connect_request(
+    pub fn create_connect_selection(
         ssid: &ap_types::Ssid,
         password: &str,
-    ) -> client_types::ConnectRequest {
+    ) -> client_types::ConnectSelection {
         let network = ap_types::NetworkIdentifier {
             ssid: ssid.clone(),
             security_type: ap_types::SecurityType::Wpa,
         };
         let credential = Credential::Password(password.as_bytes().to_vec());
 
-        client_types::ConnectRequest {
-            target: client_types::ConnectionCandidate {
-                network,
-                credential,
-                scanned: Some(client_types::ScannedCandidate {
-                    bss_description: random_fidl_bss_description!(Wpa1, ssid: ssid.clone()),
-                    observation: client_types::ScanObservation::Passive,
-                    has_multiple_bss_candidates: true,
-                    mutual_security_protocols: [SecurityDescriptor::WPA1].into_iter().collect(),
-                }),
+        client_types::ConnectSelection {
+            target: client_types::ScannedCandidate {
+                network: network,
+                credential: credential,
+                bss_description: random_fidl_bss_description!(Wpa1, ssid: ssid.clone()),
+                observation: client_types::ScanObservation::Passive,
+                has_multiple_bss_candidates: true,
+                mutual_security_protocols: [SecurityDescriptor::WPA1].into_iter().collect(),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         }
@@ -1562,19 +1689,19 @@ mod tests {
     struct FakeClient {
         disconnect_ok: bool,
         is_alive: bool,
-        expected_connect_request: Option<client_types::ConnectRequest>,
+        expected_connect_selection: Option<client_types::ConnectSelection>,
     }
 
     impl FakeClient {
         fn new() -> Self {
-            FakeClient { disconnect_ok: true, is_alive: true, expected_connect_request: None }
+            FakeClient { disconnect_ok: true, is_alive: true, expected_connect_selection: None }
         }
     }
 
     #[async_trait]
     impl client_fsm::ClientApi for FakeClient {
-        fn connect(&mut self, request: client_types::ConnectRequest) -> Result<(), Error> {
-            assert_eq!(Some(request), self.expected_connect_request);
+        fn connect(&mut self, selection: client_types::ConnectSelection) -> Result<(), Error> {
+            assert_eq!(Some(selection), self.expected_connect_selection);
             Ok(())
         }
         fn disconnect(
@@ -1664,7 +1791,6 @@ mod tests {
             test_values.ap_update_sender.clone(),
             test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
-            test_values.network_selector.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender.clone(),
         );
@@ -1721,7 +1847,6 @@ mod tests {
             test_values.ap_update_sender.clone(),
             test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
-            test_values.network_selector.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender.clone(),
         );
@@ -1783,20 +1908,20 @@ mod tests {
         let other_test_ssid = ap_types::Ssid::try_from("other_ssid_connecting").unwrap();
 
         // Create a configured ClientIfaceContainer.
-        let mut test_values = test_setup(&mut exec);
+        let test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Configure the mock CSM with the expected connect request
-        let connect_request = create_connect_request(&other_test_ssid, TEST_PASSWORD);
+        let connect_selection = create_connect_selection(&other_test_ssid, TEST_PASSWORD);
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: true,
-            expected_connect_request: Some(connect_request.clone()),
+            expected_connect_selection: Some(connect_selection.clone()),
         }));
 
         // Ask the IfaceManager to connect.
         {
-            let connect_fut = iface_manager.connect(connect_request);
+            let connect_fut = iface_manager.connect(connect_selection);
             pin_mut!(connect_fut);
 
             // Run the connect request to completion.
@@ -1808,13 +1933,8 @@ mod tests {
                 Poll::Pending => panic!("expected the connect request to finish"),
             };
         }
-
         // Start running the client state machine.
         run_state_machine_futures(&mut exec, &mut iface_manager);
-
-        // Verify that telemetry event has been sent.
-        let event = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
-        assert_variant!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: true });
 
         // Verify that the ClientIfaceContainer has the correct config.
         assert_eq!(iface_manager.clients.len(), 1);
@@ -1847,9 +1967,9 @@ mod tests {
         process_stash_write(&mut exec, &mut stash_server);
 
         {
-            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
+            let selection = create_connect_selection(&TEST_SSID, TEST_PASSWORD);
             {
-                let connect_fut = iface_manager.connect(config);
+                let connect_fut = iface_manager.connect(selection);
                 pin_mut!(connect_fut);
 
                 // Expect that we have requested a client SME proxy.
@@ -1878,7 +1998,6 @@ mod tests {
                     Poll::Pending => panic!("expected the connect request to finish"),
                 };
             }
-
             // Start running the client state machine.
             run_state_machine_futures(&mut exec, &mut iface_manager);
 
@@ -1937,14 +2056,14 @@ mod tests {
 
         // Add a network selection future which won't complete that should be canceled by a
         // connect request.
-        async fn blocking_fn() -> Option<client_types::ConnectionCandidate> {
+        async fn blocking_fn() -> Option<client_types::ScannedCandidate> {
             loop {}
         }
         iface_manager.network_selection_futures.push(blocking_fn().boxed());
 
         // Request a connect through IfaceManager and respond to requests needed to complete it.
         {
-            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
+            let config = create_connect_selection(&TEST_SSID, TEST_PASSWORD);
             let connect_fut = iface_manager.connect(config);
             pin_mut!(connect_fut);
 
@@ -2049,23 +2168,21 @@ mod tests {
         process_stash_write(&mut exec, &mut stash_server);
 
         {
-            let config = client_types::ConnectRequest {
-                target: client_types::ConnectionCandidate {
+            let selection = client_types::ConnectSelection {
+                target: client_types::ScannedCandidate {
                     network: network_id.clone().into(),
-                    credential,
-                    scanned: Some(client_types::ScannedCandidate {
-                        bss_description: random_fidl_bss_description!(Wpa3, ssid: TEST_SSID.clone()),
-                        observation: client_types::ScanObservation::Passive,
-                        has_multiple_bss_candidates: true,
-                        mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
-                            .into_iter()
-                            .collect(),
-                    }),
+                    credential: credential,
+                    bss_description: random_fidl_bss_description!(Wpa3, ssid: TEST_SSID.clone()),
+                    observation: client_types::ScanObservation::Passive,
+                    has_multiple_bss_candidates: true,
+                    mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
+                        .into_iter()
+                        .collect(),
                 },
                 reason: client_types::ConnectReason::FidlConnectRequest,
             };
             {
-                let connect_fut = iface_manager.connect(config);
+                let connect_fut = iface_manager.connect(selection);
                 pin_mut!(connect_fut);
 
                 // Expect that we have requested a client SME proxy.
@@ -2093,7 +2210,6 @@ mod tests {
                     Poll::Pending => panic!("expected the connect request to finish"),
                 };
             }
-
             // Start running the client state machine.
             run_state_machine_futures(&mut exec, &mut iface_manager);
 
@@ -2149,22 +2265,20 @@ mod tests {
         };
         let credential = Credential::Password(b"some_password".to_vec());
 
-        let config = client_types::ConnectRequest {
-            target: client_types::ConnectionCandidate {
-                network,
-                credential,
-                scanned: Some(client_types::ScannedCandidate {
-                    bss_description: random_fidl_bss_description!(Wpa3, ssid: ssid.clone()),
-                    observation: client_types::ScanObservation::Passive,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
-                        .into_iter()
-                        .collect(),
-                }),
+        let selection = client_types::ConnectSelection {
+            target: client_types::ScannedCandidate {
+                network: network,
+                credential: credential,
+                bss_description: random_fidl_bss_description!(Wpa3, ssid: ssid.clone()),
+                observation: client_types::ScanObservation::Passive,
+                has_multiple_bss_candidates: false,
+                mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
+                    .into_iter()
+                    .collect(),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         };
-        let connect_fut = iface_manager.connect(config);
+        let connect_fut = iface_manager.connect(selection);
 
         // Verify that the request to connect results in an error.
         pin_mut!(connect_fut);
@@ -2183,18 +2297,16 @@ mod tests {
             security_type: ap_types::SecurityType::Wpa3,
         };
         let credential = Credential::Password(b"password".to_vec());
-        let connect_request = client_types::ConnectRequest {
-            target: client_types::ConnectionCandidate {
+        let connect_selection = client_types::ConnectSelection {
+            target: client_types::ScannedCandidate {
                 network: network.clone(),
-                credential,
-                scanned: Some(client_types::ScannedCandidate {
-                    bss_description: random_fidl_bss_description!(Wpa3, ssid: ssid.clone()),
-                    observation: client_types::ScanObservation::Passive,
-                    has_multiple_bss_candidates: true,
-                    mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
-                        .into_iter()
-                        .collect(),
-                }),
+                credential: credential,
+                bss_description: random_fidl_bss_description!(Wpa3, ssid: ssid.clone()),
+                observation: client_types::ScanObservation::Passive,
+                has_multiple_bss_candidates: true,
+                mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
+                    .into_iter()
+                    .collect(),
             },
             reason: client_types::ConnectReason::FidlConnectRequest,
         };
@@ -2218,12 +2330,10 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: true,
-            expected_connect_request: Some(connect_request.clone()),
+            expected_connect_selection: Some(connect_selection.clone()),
         }));
-
-        // Ask the IfaceManager to connect to a new network.
         {
-            let connect_fut = iface_manager.connect(connect_request);
+            let connect_fut = iface_manager.connect(connect_selection);
             pin_mut!(connect_fut);
 
             // Run the connect request to completion.
@@ -2235,6 +2345,7 @@ mod tests {
                 Poll::Pending => panic!("expected the connect request to finish"),
             };
         }
+
         // Start running the client state machine.
         run_state_machine_futures(&mut exec, &mut iface_manager);
 
@@ -2262,14 +2373,13 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
 
         // Call connect on the IfaceManager
-        let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
-        let connect_fut = iface_manager.connect(config);
+        let selection = create_connect_selection(&TEST_SSID, TEST_PASSWORD);
+        let connect_fut = iface_manager.connect(selection);
 
         // Verify that the request to connect results in an error.
         pin_mut!(connect_fut);
@@ -2300,8 +2410,8 @@ mod tests {
             .is_none());
 
         // Ask the IfaceManager to connect and make sure that it fails.
-        let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
-        let connect_fut = iface_manager.connect(config);
+        let selection = create_connect_selection(&TEST_SSID, TEST_PASSWORD);
+        let connect_fut = iface_manager.connect(selection);
 
         pin_mut!(connect_fut);
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Err(_)));
@@ -2397,7 +2507,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -2428,7 +2537,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: true,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         // Call disconnect on the IfaceManager
@@ -2532,7 +2641,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -2561,7 +2669,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: true,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         // Create a PhyManager with a single, known client iface.
@@ -2644,7 +2752,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -2676,7 +2783,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: true,
             is_alive: false,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         assert!(iface_manager.clients[0].config.is_some());
@@ -2740,7 +2847,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: true,
             is_alive: false,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         assert!(!iface_manager.idle_clients().is_empty());
@@ -2774,7 +2881,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -2980,7 +3086,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3114,7 +3219,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3262,7 +3366,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3571,7 +3674,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3677,7 +3779,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -3747,7 +3848,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks,
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4001,11 +4101,11 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
     }
 
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: None},
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_selection: None},
         TestType::Pass; "successfully disconnects configured client")]
-    #[test_case(FakeClient {disconnect_ok: false, is_alive:true, expected_connect_request: None},
+    #[test_case(FakeClient {disconnect_ok: false, is_alive:true, expected_connect_selection: None},
         TestType::Fail; "fails to disconnect configured client")]
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: None},
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_selection: None},
         TestType::ClientError; "client drops receiver")]
     #[fuchsia::test(add_test_attr = false)]
     fn service_disconnect_test(fake_client: FakeClient, test_type: TestType) {
@@ -4039,9 +4139,9 @@ mod tests {
         );
     }
 
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: Some(create_connect_request(&TEST_SSID, TEST_PASSWORD))},
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_selection: Some(create_connect_selection(&TEST_SSID, TEST_PASSWORD))},
         TestType::Pass; "successfully connected a client")]
-    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_request: Some(create_connect_request(&TEST_SSID, TEST_PASSWORD))},
+    #[test_case(FakeClient {disconnect_ok: true, is_alive:true, expected_connect_selection: Some(create_connect_selection(&TEST_SSID, TEST_PASSWORD))},
         TestType::ClientError; "client drops receiver")]
     #[fuchsia::test(add_test_attr = false)]
     fn service_connect_test(fake_client: FakeClient, test_type: TestType) {
@@ -4050,12 +4150,19 @@ mod tests {
         // Create a configured ClientIfaceContainer.
         let test_values = test_setup(&mut exec);
         let (mut iface_manager, _stream) = create_iface_manager_with_client(&test_values, false);
-        let connect_req = fake_client.expected_connect_request.clone().unwrap();
+        let connect_selection = fake_client.expected_connect_selection.clone().unwrap();
         iface_manager.clients[0].client_state_machine = Some(Box::new(fake_client));
 
         // Send a connect request.
         let (ack_sender, ack_receiver) = oneshot::channel();
-        let req = ConnectRequest { request: connect_req, responder: ack_sender };
+        let req = ConnectRequest {
+            request: ConnectAttemptRequest::new(
+                connect_selection.target.network,
+                connect_selection.target.credential,
+                client_types::ConnectReason::FidlConnectRequest,
+            ),
+            responder: ack_sender,
+        };
         let req = IfaceManagerRequest::Connect(req);
 
         run_service_test(
@@ -4083,7 +4190,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: true,
             is_alive: false,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         // Create other components to run the service.
@@ -4247,10 +4354,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn connect(
-            &mut self,
-            _connect_req: client_types::ConnectRequest,
-        ) -> Result<(), Error> {
+        async fn connect(&mut self, _connect_req: ConnectAttemptRequest) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -4338,7 +4442,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4470,7 +4573,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
-            test_values.network_selector.clone(),
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4574,7 +4676,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
-            test_values.network_selector.clone(),
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4651,7 +4752,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
-            test_values.network_selector.clone(),
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4807,7 +4907,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: false,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         let (saved_networks, mut stash_server) =
@@ -4825,7 +4925,7 @@ mod tests {
 
         // Ask the IfaceManager to reconnect.
         let mut sme_stream = {
-            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
+            let config = create_connect_selection(&TEST_SSID, TEST_PASSWORD);
             let reconnect_fut =
                 iface_manager.attempt_client_reconnect(TEST_CLIENT_IFACE_ID, config);
             pin_mut!(reconnect_fut);
@@ -4908,7 +5008,6 @@ mod tests {
             test_values.ap_update_sender,
             test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
-            test_values.network_selector,
             test_values.telemetry_sender,
             test_values.stats_sender,
         );
@@ -4923,7 +5022,7 @@ mod tests {
 
         // Ask the IfaceManager to reconnect.
         {
-            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
+            let config = create_connect_selection(&TEST_SSID, TEST_PASSWORD);
             let reconnect_fut =
                 iface_manager.attempt_client_reconnect(TEST_CLIENT_IFACE_ID, config);
             pin_mut!(reconnect_fut);
@@ -4949,7 +5048,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: true,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         let (saved_networks, mut stash_server) =
@@ -4967,7 +5066,7 @@ mod tests {
 
         // Ask the IfaceManager to reconnect.
         {
-            let config = create_connect_request(&TEST_SSID, TEST_PASSWORD);
+            let config = create_connect_selection(&TEST_SSID, TEST_PASSWORD);
             let reconnect_fut =
                 iface_manager.attempt_client_reconnect(TEST_CLIENT_IFACE_ID, config);
             pin_mut!(reconnect_fut);
@@ -5021,7 +5120,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: true,
             is_alive: false,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
@@ -5045,7 +5144,7 @@ mod tests {
                 iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
                     disconnect_ok: true,
                     is_alive: true,
-                    expected_connect_request: None,
+                    expected_connect_selection: None,
                 }));
             }
             NetworkSelectionMissingAttribute::SavedNetwork => {
@@ -5158,7 +5257,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: true,
             is_alive: false,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         // Setup for a reconnection attempt.
@@ -5170,15 +5269,13 @@ mod tests {
         let ssid = TEST_SSID.clone();
         let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        let network = Some(client_types::ConnectionCandidate {
+        let network = Some(client_types::ScannedCandidate {
             network: network_id.into(),
-            credential,
-            scanned: Some(client_types::ScannedCandidate {
-                bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
-                observation: client_types::ScanObservation::Passive,
-                has_multiple_bss_candidates: true,
-                mutual_security_protocols: [SecurityDescriptor::OPEN].into_iter().collect(),
-            }),
+            credential: credential,
+            bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
+            observation: client_types::ScanObservation::Passive,
+            has_multiple_bss_candidates: true,
+            mutual_security_protocols: [SecurityDescriptor::OPEN].into_iter().collect(),
         });
 
         {
@@ -5230,7 +5327,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: true,
             is_alive: false,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         // Setup for a reconnection attempt.
@@ -5242,15 +5339,13 @@ mod tests {
         let ssid = TEST_SSID.clone();
         let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        let network = Some(client_types::ConnectionCandidate {
+        let network = Some(client_types::ScannedCandidate {
             network: network_id.into(),
-            credential,
-            scanned: Some(client_types::ScannedCandidate {
-                bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
-                observation: client_types::ScanObservation::Passive,
-                has_multiple_bss_candidates: true,
-                mutual_security_protocols: [SecurityDescriptor::OPEN].into_iter().collect(),
-            }),
+            credential: credential,
+            bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
+            observation: client_types::ScanObservation::Passive,
+            has_multiple_bss_candidates: true,
+            mutual_security_protocols: [SecurityDescriptor::OPEN].into_iter().collect(),
         });
 
         {
@@ -5273,6 +5368,63 @@ mod tests {
 
         // There should still be an idle client
         assert!(!iface_manager.idle_clients().is_empty());
+    }
+
+    #[fuchsia::test]
+    fn test_handle_bss_selection_for_connect_request_results() {
+        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec);
+
+        // Create an interface manager with an unconfigured client interface.
+        let (mut iface_manager, _sme_stream) =
+            create_iface_manager_with_client(&test_values, false);
+
+        let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+
+        // Create a request
+        let ssid = TEST_SSID.clone();
+        let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
+        let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
+        let request = ConnectAttemptRequest::new(
+            network_id.clone(),
+            credential.clone(),
+            client_types::ConnectReason::FidlConnectRequest,
+        );
+        let scanned_candidate = client_types::ScannedCandidate {
+            network: network_id.clone(),
+            credential: credential.clone(),
+            bss_description: random_fidl_bss_description!(Wpa1, bssid: [20, 30, 40, 50, 60, 70]),
+            observation: client_types::ScanObservation::Passive,
+            has_multiple_bss_candidates: true,
+            mutual_security_protocols: [SecurityDescriptor::WPA1].into_iter().collect(),
+        };
+
+        iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
+            disconnect_ok: true,
+            is_alive: true,
+            expected_connect_selection: Some(client_types::ConnectSelection {
+                target: scanned_candidate.clone(),
+                reason: client_types::ConnectReason::FidlConnectRequest,
+            }),
+        }));
+
+        assert!(!iface_manager.idle_clients().is_empty());
+
+        {
+            let fut = handle_bss_selection_for_connect_request_results(
+                (request, Some(scanned_candidate)),
+                &mut iface_manager,
+                iface_manager_client,
+                test_values.network_selector.clone(),
+            );
+            pin_mut!(fut);
+
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // There should not be any idle clients.
+        assert!(iface_manager.idle_clients().is_empty());
+        assert_eq!(iface_manager.clients[0].config, Some(network_id));
     }
 
     #[fuchsia::test]
@@ -5314,7 +5466,7 @@ mod tests {
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: true,
             is_alive: false,
-            expected_connect_request: None,
+            expected_connect_selection: None,
         }));
 
         // Create remaining boilerplate to call handle_terminated_state_machine.
@@ -5503,7 +5655,6 @@ mod tests {
             test_values.ap_update_sender.clone(),
             test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
-            test_values.network_selector.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender,
         );
@@ -5588,7 +5739,6 @@ mod tests {
             test_values.ap_update_sender.clone(),
             test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
-            test_values.network_selector.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender.clone(),
         );

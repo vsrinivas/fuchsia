@@ -24,7 +24,7 @@ pub struct DisconnectRequest {
 
 #[derive(Debug)]
 pub struct ConnectRequest {
-    pub request: client_types::ConnectRequest,
+    pub request: api::ConnectAttemptRequest,
     pub responder: oneshot::Sender<Result<(), Error>>,
 }
 

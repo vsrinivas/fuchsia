@@ -356,7 +356,10 @@ mod tests {
         super::*,
         crate::{
             client::types as client_types,
-            mode_management::{iface_manager_api::SmeForScan, Defect},
+            mode_management::{
+                iface_manager_api::{ConnectAttemptRequest, SmeForScan},
+                Defect,
+            },
             regulatory_manager::REGION_CODE_LEN,
         },
         async_trait::async_trait,
@@ -395,10 +398,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn connect(
-            &mut self,
-            _connect_req: client_types::ConnectRequest,
-        ) -> Result<(), Error> {
+        async fn connect(&mut self, _connect_req: ConnectAttemptRequest) -> Result<(), Error> {
             unimplemented!()
         }
 

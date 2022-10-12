@@ -22,7 +22,7 @@ Implemented in: [`mode_management/iface_manager.rs`](./src/mode_management/iface
 Responsiblities:
 
 - Asks Phy Manager to create interfaces as needed, creates a State Machine for each interface.
-- Examines FIDL requests (e.g. Connect()) and forwards them to a specific interface's State Machine.
+- Handles FIDL requests (e.g. Connect()) by taking action (e.g. starting scans, setting configs, etc.), and forwarding the call to a specific interface's State Machine.
 - Monitors State Machines, handles exits (e.g. bring up new interface, reconfigure existing networks).
     - When a Client State Machine exits, uses the Network Selection Manager to find a new network to connect to.
     - Periodically checks for idle Client State Machines, if any are present, triggers a reconnect.
@@ -110,9 +110,12 @@ The situations below illustrate how the modules cooperate to handle common scena
 
 - Application sends a "FIDL::Connect(network: foo)" request.
 - Main Loop dispatches it to Interface Manager.
-- Interface Manager asks Phy Manager for an interface.
-- Phy Manager selects a PHY and creates an interface for it, if needed, prefering unused interfaces.
-- Interface Manager uses the existing Client State Machine or creates a new Client State Machine to perform the connection, if needed.
+- Network Selection Manager scans for compatible APs on network "foo". If found:
+    - Interface Manager asks Phy Manager for an interface.
+    - Phy Manager selects a PHY and creates an interface for it, if needed, preferring unused interfaces.
+    - Interface Manager uses the existing Client State Machine or creates a new Client State Machine to perform the connection.
+- Else:
+    - Interface Manager may re-trigger scanning for an AP several times, eventually giving up.
 
 ### Interface Manager is notified of idle Client State Machine
 

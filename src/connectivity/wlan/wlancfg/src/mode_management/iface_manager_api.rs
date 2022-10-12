@@ -6,6 +6,7 @@ use {
     crate::{
         access_point::{state_machine as ap_fsm, types as ap_types},
         client::types as client_types,
+        config_management::network_config::Credential,
         mode_management::{iface_manager_types::*, Defect},
         regulatory_manager::REGION_CODE_LEN,
     },
@@ -28,7 +29,7 @@ pub trait IfaceManagerApi {
     /// Selects a client iface, ensures that a ClientSmeProxy and client connectivity state machine
     /// exists for the iface, and then issues a connect request to the client connectivity state
     /// machine.
-    async fn connect(&mut self, connect_req: client_types::ConnectRequest) -> Result<(), Error>;
+    async fn connect(&mut self, connect_req: ConnectAttemptRequest) -> Result<(), Error>;
 
     /// Marks an existing client interface as unconfigured.
     async fn record_idle_client(&mut self, iface_id: u16) -> Result<(), Error>;
@@ -97,7 +98,7 @@ impl IfaceManagerApi for IfaceManager {
         receiver.await?
     }
 
-    async fn connect(&mut self, connect_req: client_types::ConnectRequest) -> Result<(), Error> {
+    async fn connect(&mut self, connect_req: ConnectAttemptRequest) -> Result<(), Error> {
         let (responder, receiver) = oneshot::channel();
         let req = ConnectRequest { request: connect_req, responder };
         self.sender.try_send(IfaceManagerRequest::Connect(req))?;
@@ -227,14 +228,40 @@ impl SmeForScan {
     }
 }
 
+// A request to connect to a specific candidate, and count of attempts to find a BSS.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConnectAttemptRequest {
+    pub network: client_types::NetworkIdentifier,
+    pub credential: Credential,
+    pub reason: client_types::ConnectReason,
+    pub attempts: u8,
+}
+
+impl ConnectAttemptRequest {
+    pub fn new(
+        network: client_types::NetworkIdentifier,
+        credential: Credential,
+        reason: client_types::ConnectReason,
+    ) -> Self {
+        ConnectAttemptRequest { network, credential, reason, attempts: 0 }
+    }
+}
+
+impl From<client_types::ConnectSelection> for ConnectAttemptRequest {
+    fn from(selection: client_types::ConnectSelection) -> ConnectAttemptRequest {
+        ConnectAttemptRequest::new(
+            selection.target.network,
+            selection.target.credential,
+            selection.reason,
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::{
-            access_point::types, config_management::network_config::Credential,
-            mode_management::PhyFailure,
-        },
+        crate::{access_point::types, mode_management::PhyFailure},
         anyhow::format_err,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
@@ -447,17 +474,14 @@ mod tests {
         let mut test_values = test_setup();
 
         // Issue a connect command and wait for the command to be sent.
-        let req = client_types::ConnectRequest {
-            target: client_types::ConnectionCandidate {
-                network: client_types::NetworkIdentifier {
-                    ssid: Ssid::try_from("foo").unwrap(),
-                    security_type: client_types::SecurityType::None,
-                },
-                credential: Credential::None,
-                scanned: None,
+        let req = ConnectAttemptRequest::new(
+            client_types::NetworkIdentifier {
+                ssid: Ssid::try_from("foo").unwrap(),
+                security_type: client_types::SecurityType::None,
             },
-            reason: client_types::ConnectReason::FidlConnectRequest,
-        };
+            Credential::None,
+            client_types::ConnectReason::FidlConnectRequest,
+        );
         let connect_fut = test_values.iface_manager.connect(req.clone());
         pin_mut!(connect_fut);
 
@@ -489,17 +513,14 @@ mod tests {
         let mut test_values = test_setup();
 
         // Issue a connect command and wait for the command to be sent.
-        let req = client_types::ConnectRequest {
-            target: client_types::ConnectionCandidate {
-                network: client_types::NetworkIdentifier {
-                    ssid: Ssid::try_from("foo").unwrap(),
-                    security_type: client_types::SecurityType::None,
-                },
-                credential: Credential::None,
-                scanned: None,
+        let req = ConnectAttemptRequest::new(
+            client_types::NetworkIdentifier {
+                ssid: Ssid::try_from("foo").unwrap(),
+                security_type: client_types::SecurityType::None,
             },
-            reason: client_types::ConnectReason::FidlConnectRequest,
-        };
+            Credential::None,
+            client_types::ConnectReason::FidlConnectRequest,
+        );
         let connect_fut = test_values.iface_manager.connect(req.clone());
         pin_mut!(connect_fut);
 

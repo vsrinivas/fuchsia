@@ -38,7 +38,6 @@ pub fn create_iface_manager(
         ap_update_sender,
         dev_monitor_proxy,
         saved_networks,
-        network_selector.clone(),
         telemetry_sender,
         stats_sender,
     );

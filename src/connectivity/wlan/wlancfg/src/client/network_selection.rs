@@ -13,7 +13,7 @@ use {
             network_config::{AddAndGetRecent, PastConnectionsByBssid},
             ConnectFailure, Credential, FailureReason, SavedNetworksManagerApi,
         },
-        mode_management::iface_manager_api::{IfaceManagerApi, SmeForScan},
+        mode_management::iface_manager_api::IfaceManagerApi,
         telemetry::{self, TelemetryEvent, TelemetrySender},
     },
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
@@ -264,7 +264,7 @@ impl NetworkSelector {
         &self,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
-    ) -> Option<types::ConnectionCandidate> {
+    ) -> Option<types::ScannedCandidate> {
         // Log a metric for scan age
         let last_scan_result_time = *self.last_scan_result_time.lock().await;
         let scan_age = zx::Time::get_monotonic() - last_scan_result_time;
@@ -345,12 +345,12 @@ impl NetworkSelector {
     /// Find a suitable BSS for the given network.
     pub(crate) async fn find_connection_candidate_for_network(
         &self,
-        sme_proxy: SmeForScan,
+        iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         network: types::NetworkIdentifier,
-    ) -> Option<types::ConnectionCandidate> {
+    ) -> Option<types::ScannedCandidate> {
         // TODO: check if we have recent enough scan results that we can pull from instead?
         let scan_results = scan::perform_directed_active_scan(
-            &sme_proxy,
+            iface_manager,
             &network.ssid,
             None,
             Some(self.telemetry_sender.clone()),
@@ -371,16 +371,12 @@ impl NetworkSelector {
                 let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
                 let result =
                     select_best_connection_candidate(networks, &ignore_list, &mut inspect_node)
-                        .map(|(mut candidate, _, _)| {
+                        .map(|(mut scanned_candidate, _, _)| {
                             // Strip out the information about passive vs active scan, because we can't know
                             // if this network would have been observed in a passive scan (since we never
                             // performed a passive scan).
-                            if let Some(types::ScannedCandidate { ref mut observation, .. }) =
-                                candidate.scanned
-                            {
-                                *observation = types::ScanObservation::Unknown;
-                            }
-                            candidate
+                            scanned_candidate.observation = types::ScanObservation::Unknown;
+                            scanned_candidate
                         });
                 (result, num_candidates)
             }
@@ -439,7 +435,7 @@ fn select_best_connection_candidate<'a>(
     bss_list: Vec<InternalBss<'a>>,
     ignore_list: &Vec<types::NetworkIdentifier>,
     inspect_node: &mut AutoPersist<InspectBoundedListNode>,
-) -> Option<(types::ConnectionCandidate, types::WlanChan, types::Bssid)> {
+) -> Option<(types::ScannedCandidate, types::WlanChan, types::Bssid)> {
     if bss_list.is_empty() {
         info!("No saved networks to connect to");
     } else {
@@ -482,15 +478,13 @@ fn select_best_connection_candidate<'a>(
         };
 
         Some((
-            types::ConnectionCandidate {
+            types::ScannedCandidate {
                 network: bss.saved_network_info.network_id.clone(),
                 credential: bss.saved_network_info.credential.clone(),
-                scanned: Some(types::ScannedCandidate {
-                    bss_description: bss.scanned_bss.bss_description.clone(),
-                    observation: bss.scanned_bss.observation,
-                    has_multiple_bss_candidates: bss.multiple_bss_candidates,
-                    mutual_security_protocols,
-                }),
+                bss_description: bss.scanned_bss.bss_description.clone(),
+                observation: bss.scanned_bss.observation,
+                has_multiple_bss_candidates: bss.multiple_bss_candidates,
+                mutual_security_protocols,
             },
             bss.scanned_bss.channel,
             bss.scanned_bss.bssid,
@@ -503,29 +497,22 @@ fn select_best_connection_candidate<'a>(
 /// If a BSS was discovered via a passive scan, we need to perform an active scan on it to discover
 /// all the information potentially needed by the SME layer.
 async fn augment_bss_with_active_scan(
-    mut selected_network: types::ConnectionCandidate,
+    scanned_candidate: types::ScannedCandidate,
     channel: types::WlanChan,
     bssid: types::Bssid,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     telemetry_sender: TelemetrySender,
-) -> types::ConnectionCandidate {
+) -> types::ScannedCandidate {
     // This internal function encapsulates all the logic and has a Result<> return type, allowing us
     // to use the `?` operator inside it to reduce nesting.
     async fn get_enhanced_bss_description(
-        selected_network: &types::ConnectionCandidate,
+        scanned_candidate: &types::ScannedCandidate,
         channel: types::WlanChan,
         bssid: types::Bssid,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         telemetry_sender: TelemetrySender,
     ) -> Result<fidl_internal::BssDescription, ()> {
-        // Ensure that a scan is necessary. If this expression returns `Unknown`, then either the
-        // network has been scanned but the observation is unknown or the network has not be
-        // scanned at all.
-        let observation = selected_network
-            .scanned
-            .as_ref()
-            .map_or(types::ScanObservation::Unknown, |scanned| scanned.observation);
-        match observation {
+        match scanned_candidate.observation {
             types::ScanObservation::Passive => {
                 info!("Performing directed active scan on selected network")
             }
@@ -539,17 +526,10 @@ async fn augment_bss_with_active_scan(
             }
         }
 
-        // Get an SME proxy
-        let mut iface_manager_guard = iface_manager.lock().await;
-        let sme_proxy = iface_manager_guard.get_sme_proxy_for_scan().await.map_err(|e| {
-            info!("Failed to get an SME proxy for scan: {:?}", e);
-        })?;
-        drop(iface_manager_guard);
-
         // Perform the scan
         let mut directed_scan_result = scan::perform_directed_active_scan(
-            &sme_proxy,
-            &selected_network.network.ssid,
+            iface_manager,
+            &scanned_candidate.network.ssid,
             Some(vec![channel.primary]),
             Some(telemetry_sender),
         )
@@ -562,7 +542,7 @@ async fn augment_bss_with_active_scan(
         let bss_description = directed_scan_result
             .drain(..)
             .find_map(|mut network| {
-                if network.ssid == selected_network.network.ssid {
+                if network.ssid == scanned_candidate.network.ssid {
                     for bss in network.entries.drain(..) {
                         if bss.bssid == bssid {
                             return Some(bss.bss_description);
@@ -579,7 +559,7 @@ async fn augment_bss_with_active_scan(
     }
 
     match get_enhanced_bss_description(
-        &selected_network,
+        &scanned_candidate,
         channel,
         bssid,
         iface_manager,
@@ -588,12 +568,9 @@ async fn augment_bss_with_active_scan(
     .await
     {
         Ok(new_bss_description) => {
-            let combined_scanned = selected_network.scanned.take().map(|original_scanned| {
-                types::ScannedCandidate { bss_description: new_bss_description, ..original_scanned }
-            });
-            types::ConnectionCandidate { scanned: combined_scanned, ..selected_network }
+            types::ScannedCandidate { bss_description: new_bss_description, ..scanned_candidate }
         }
-        Err(()) => selected_network,
+        Err(()) => scanned_candidate,
     }
 }
 
@@ -697,7 +674,10 @@ mod tests {
                 network_config::{PastConnectionData, PastConnectionsByBssid},
                 SavedNetworksManager,
             },
-            mode_management::{iface_manager_api::SmeForScan, Defect},
+            mode_management::{
+                iface_manager_api::{ConnectAttemptRequest, SmeForScan},
+                Defect,
+            },
             telemetry::ScanIssue,
             util::testing::{
                 create_inspect_persistence_channel, create_wlan_hasher, generate_channel,
@@ -785,7 +765,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn connect(&mut self, _connect_req: types::ConnectRequest) -> Result<(), Error> {
+        async fn connect(&mut self, _connect_req: ConnectAttemptRequest) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -1321,15 +1301,13 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: bss_1.bss_description.clone(),
-                        observation: bss_1.observation,
-                        has_multiple_bss_candidates: true,
-                        mutual_security_protocols: [security_protocol_1].into_iter().collect(),
-                    }),
+                    bss_description: bss_1.bss_description.clone(),
+                    observation: bss_1.observation,
+                    has_multiple_bss_candidates: true,
+                    mutual_security_protocols: [security_protocol_1].into_iter().collect(),
                 },
                 bss_1.channel,
                 bss_1.bssid
@@ -1347,15 +1325,13 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: networks[2].scanned_bss.bss_description.clone(),
-                        observation: networks[2].scanned_bss.observation,
-                        has_multiple_bss_candidates: false,
-                        mutual_security_protocols: [security_protocol_3].into_iter().collect(),
-                    }),
+                    bss_description: networks[2].scanned_bss.bss_description.clone(),
+                    observation: networks[2].scanned_bss.observation,
+                    has_multiple_bss_candidates: false,
+                    mutual_security_protocols: [security_protocol_3].into_iter().collect(),
                 },
                 networks[2].scanned_bss.channel,
                 networks[2].scanned_bss.bssid
@@ -1435,17 +1411,13 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: bss_1.bss_description.clone(),
-                        observation: networks[0].scanned_bss.observation,
-                        has_multiple_bss_candidates: false,
-                        mutual_security_protocols: mutual_security_protocols_1
-                            .into_iter()
-                            .collect(),
-                    }),
+                    bss_description: bss_1.bss_description.clone(),
+                    observation: networks[0].scanned_bss.observation,
+                    has_multiple_bss_candidates: false,
+                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
                 },
                 bss_1.channel,
                 bss_1.bssid
@@ -1463,17 +1435,13 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: bss_2.bss_description.clone(),
-                        observation: networks[1].scanned_bss.observation,
-                        has_multiple_bss_candidates: false,
-                        mutual_security_protocols: mutual_security_protocols_2
-                            .into_iter()
-                            .collect(),
-                    }),
+                    bss_description: bss_2.bss_description.clone(),
+                    observation: networks[1].scanned_bss.observation,
+                    has_multiple_bss_candidates: false,
+                    mutual_security_protocols: mutual_security_protocols_2.into_iter().collect(),
                 },
                 bss_2.channel,
                 bss_2.bssid
@@ -1488,17 +1456,13 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: bss_1.bss_description.clone(),
-                        observation: networks[0].scanned_bss.observation,
-                        has_multiple_bss_candidates: false,
-                        mutual_security_protocols: mutual_security_protocols_1
-                            .into_iter()
-                            .collect(),
-                    }),
+                    bss_description: bss_1.bss_description.clone(),
+                    observation: networks[0].scanned_bss.observation,
+                    has_multiple_bss_candidates: false,
+                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
                 },
                 bss_1.channel,
                 bss_1.bssid
@@ -1598,17 +1562,13 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: bss_3.bss_description.clone(),
-                        observation: networks[2].scanned_bss.observation,
-                        has_multiple_bss_candidates: false,
-                        mutual_security_protocols: mutual_security_protocols_3
-                            .into_iter()
-                            .collect()
-                    }),
+                    bss_description: bss_3.bss_description.clone(),
+                    observation: networks[2].scanned_bss.observation,
+                    has_multiple_bss_candidates: false,
+                    mutual_security_protocols: mutual_security_protocols_3.into_iter().collect()
                 },
                 bss_3.channel,
                 bss_3.bssid
@@ -1626,17 +1586,13 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: networks[0].scanned_bss.bss_description.clone(),
-                        observation: networks[0].scanned_bss.observation,
-                        has_multiple_bss_candidates: true,
-                        mutual_security_protocols: mutual_security_protocols_1
-                            .into_iter()
-                            .collect(),
-                    }),
+                    bss_description: networks[0].scanned_bss.bss_description.clone(),
+                    observation: networks[0].scanned_bss.observation,
+                    has_multiple_bss_candidates: true,
+                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
                 },
                 networks[0].scanned_bss.channel,
                 networks[0].scanned_bss.bssid
@@ -1712,17 +1668,13 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: bss_2.bss_description.clone(),
-                        observation: networks[1].scanned_bss.observation,
-                        has_multiple_bss_candidates: false,
-                        mutual_security_protocols: mutual_security_protocols_2
-                            .into_iter()
-                            .collect(),
-                    }),
+                    bss_description: bss_2.bss_description.clone(),
+                    observation: networks[1].scanned_bss.observation,
+                    has_multiple_bss_candidates: false,
+                    mutual_security_protocols: mutual_security_protocols_2.into_iter().collect(),
                 },
                 bss_2.channel,
                 bss_2.bssid
@@ -1737,17 +1689,13 @@ mod tests {
                 &mut inspect_node
             ),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_1.clone(),
                     credential: credential_1.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: bss_1.bss_description.clone(),
-                        observation: networks[0].scanned_bss.observation,
-                        has_multiple_bss_candidates: false,
-                        mutual_security_protocols: mutual_security_protocols_1
-                            .into_iter()
-                            .collect(),
-                    }),
+                    bss_description: bss_1.bss_description.clone(),
+                    observation: networks[0].scanned_bss.observation,
+                    has_multiple_bss_candidates: false,
+                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
                 },
                 bss_1.channel,
                 bss_1.bssid
@@ -1845,17 +1793,13 @@ mod tests {
         assert_eq!(
             select_best_connection_candidate(networks.clone(), &vec![], &mut inspect_node),
             Some((
-                types::ConnectionCandidate {
+                types::ScannedCandidate {
                     network: test_id_2.clone(),
                     credential: credential_2.clone(),
-                    scanned: Some(types::ScannedCandidate {
-                        bss_description: bss_3.bss_description.clone(),
-                        observation: networks[2].scanned_bss.observation,
-                        has_multiple_bss_candidates: false,
-                        mutual_security_protocols: mutual_security_protocols_3
-                            .into_iter()
-                            .collect(),
-                    }),
+                    bss_description: bss_3.bss_description.clone(),
+                    observation: networks[2].scanned_bss.observation,
+                    has_multiple_bss_candidates: false,
+                    mutual_security_protocols: mutual_security_protocols_3.into_iter().collect(),
                 },
                 bss_3.channel,
                 bss_3.bssid
@@ -1916,19 +1860,17 @@ mod tests {
             channel: generate_channel(36),
             ..generate_random_bss()
         };
-        let connect_req = types::ConnectionCandidate {
+        let candidate = types::ScannedCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
-            scanned: Some(types::ScannedCandidate {
-                bss_description: bss_1.bss_description.clone(),
-                observation: types::ScanObservation::Active,
-                has_multiple_bss_candidates: false,
-                mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
-            }),
+            bss_description: bss_1.bss_description.clone(),
+            observation: types::ScanObservation::Active,
+            has_multiple_bss_candidates: false,
+            mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
         };
 
         let fut = augment_bss_with_active_scan(
-            connect_req.clone(),
+            candidate.clone(),
             bss_1.channel,
             bss_1.bssid,
             test_values.iface_manager.clone(),
@@ -1937,8 +1879,8 @@ mod tests {
         pin_mut!(fut);
 
         // The connect_req comes out the other side with no change
-        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(req) => {
-            assert_eq!(req, connect_req)}
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(res) => {
+            assert_eq!(res, candidate)}
         );
     }
 
@@ -1959,19 +1901,17 @@ mod tests {
             channel: generate_channel(36),
             ..generate_random_bss()
         };
-        let connect_req = types::ConnectionCandidate {
+        let scanned_candidate = types::ScannedCandidate {
             network: test_id_1.clone(),
             credential: credential_1.clone(),
-            scanned: Some(types::ScannedCandidate {
-                bss_description: bss_1.bss_description.clone(),
-                observation: types::ScanObservation::Passive,
-                has_multiple_bss_candidates: true,
-                mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
-            }),
+            bss_description: bss_1.bss_description.clone(),
+            observation: types::ScanObservation::Passive,
+            has_multiple_bss_candidates: true,
+            mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
         };
 
         let fut = augment_bss_with_active_scan(
-            connect_req.clone(),
+            scanned_candidate.clone(),
             bss_1.channel,
             bss_1.bssid,
             test_values.iface_manager.clone(),
@@ -2033,19 +1973,7 @@ mod tests {
         // The connect_req comes out the other side with the new bss_description
         assert_eq!(
             exec.run_singlethreaded(fut),
-            types::ConnectionCandidate {
-                scanned: Some(types::ScannedCandidate {
-                    bss_description: new_bss_desc,
-                    // The network was observed in a passive scan prior to the directed active
-                    // scan, so this should remain `Passive`.
-                    observation: types::ScanObservation::Passive,
-                    // Multiple BSSes were observed prior to the directed active scan, so this
-                    // field should remain `true`.
-                    has_multiple_bss_candidates: true,
-                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
-                }),
-                ..connect_req
-            }
+            types::ScannedCandidate { bss_description: new_bss_desc, ..scanned_candidate }
         );
     }
 
@@ -2273,17 +2201,15 @@ mod tests {
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
             results,
-            Some(types::ConnectionCandidate {
+            Some(types::ScannedCandidate {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
-                scanned: Some(types::ScannedCandidate {
-                    bss_description: bss_desc1_active,
-                    observation: types::ScanObservation::Passive,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
-                        .into_iter()
-                        .collect(),
-                }),
+                bss_description: bss_desc1_active,
+                observation: types::ScanObservation::Passive,
+                has_multiple_bss_candidates: false,
+                mutual_security_protocols: [SecurityDescriptor::WPA3_PERSONAL]
+                    .into_iter()
+                    .collect(),
             })
         );
 
@@ -2326,15 +2252,13 @@ mod tests {
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
             results,
-            Some(types::ConnectionCandidate {
+            Some(types::ScannedCandidate {
                 network: test_id_2.clone(),
                 credential: credential_2.clone(),
-                scanned: Some(types::ScannedCandidate {
-                    bss_description: bss_desc2_active,
-                    observation: types::ScanObservation::Passive,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: [SecurityDescriptor::WPA1].into_iter().collect(),
-                }),
+                bss_description: bss_desc2_active,
+                observation: types::ScanObservation::Passive,
+                has_multiple_bss_candidates: false,
+                mutual_security_protocols: [SecurityDescriptor::WPA1].into_iter().collect(),
             })
         );
 
@@ -2445,15 +2369,9 @@ mod tests {
             .unwrap()
             .is_none());
 
-        // get the sme proxy
-        let mut iface_manager_inner = exec.run_singlethreaded(test_values.iface_manager.lock());
-        let sme_proxy =
-            exec.run_singlethreaded(iface_manager_inner.get_sme_proxy_for_scan()).unwrap();
-        drop(iface_manager_inner);
-
         // Kick off network selection
-        let network_selection_fut =
-            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1.clone());
+        let network_selection_fut = network_selector
+            .find_connection_candidate_for_network(test_values.iface_manager, test_id_1.clone());
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
@@ -2510,17 +2428,15 @@ mod tests {
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
             results,
-            Some(types::ConnectionCandidate {
+            Some(types::ScannedCandidate {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
-                scanned: Some(types::ScannedCandidate {
-                    bss_description: bss_desc_1,
-                    // A passive scan is never performed in the tested code path, so the
-                    // observation mode cannot be known and this field should be `Unknown`.
-                    observation: types::ScanObservation::Unknown,
-                    has_multiple_bss_candidates: false,
-                    mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
-                }),
+                bss_description: bss_desc_1,
+                // A passive scan is never performed in the tested code path, so the
+                // observation mode cannot be known and this field should be `Unknown`.
+                observation: types::ScanObservation::Unknown,
+                has_multiple_bss_candidates: false,
+                mutual_security_protocols: mutual_security_protocols_1.into_iter().collect(),
             })
         );
 
@@ -2547,15 +2463,9 @@ mod tests {
             security_type: types::SecurityType::Wpa3,
         };
 
-        // get the sme proxy
-        let mut iface_manager_inner = exec.run_singlethreaded(test_values.iface_manager.lock());
-        let sme_proxy =
-            exec.run_singlethreaded(iface_manager_inner.get_sme_proxy_for_scan()).unwrap();
-        drop(iface_manager_inner);
-
         // Kick off network selection
-        let network_selection_fut =
-            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1);
+        let network_selection_fut = network_selector
+            .find_connection_candidate_for_network(test_values.iface_manager, test_id_1);
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 

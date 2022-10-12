@@ -270,17 +270,24 @@ async fn record_undirected_scan_results(
 
 /// Perform a directed active scan for a given network on given channels.
 pub(crate) async fn perform_directed_active_scan(
-    sme_proxy: &SmeForScan,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     ssid: &types::Ssid,
     channels: Option<Vec<u8>>,
     telemetry_sender: Option<TelemetrySender>,
 ) -> Result<Vec<types::ScanResult>, types::ScanError> {
+    let sme_proxy = match iface_manager.lock().await.get_sme_proxy_for_scan().await {
+        Ok(proxy) => proxy,
+        Err(_) => {
+            warn!("Failed to get sme proxy for directed active scan");
+            return Err(types::ScanError::GeneralError);
+        }
+    };
     let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
         ssids: vec![ssid.to_vec()],
         channels: channels.unwrap_or(vec![]),
     });
 
-    let sme_result = sme_scan(sme_proxy, scan_request, telemetry_sender).await;
+    let sme_result = sme_scan(&sme_proxy, scan_request, telemetry_sender).await;
     sme_result.map(|results| {
         let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
         insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
@@ -587,7 +594,10 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::network_config::Credential,
-            mode_management::{iface_manager_api::SmeForScan, Defect},
+            mode_management::{
+                iface_manager_api::{ConnectAttemptRequest, SmeForScan},
+                Defect,
+            },
             util::testing::{
                 fakes::FakeSavedNetworksManager, generate_random_sme_scan_result,
                 validate_sme_scan_request_and_send_results,
@@ -636,7 +646,7 @@ mod tests {
             unimplemented!()
         }
 
-        async fn connect(&mut self, _connect_req: types::ConnectRequest) -> Result<(), Error> {
+        async fn connect(&mut self, _connect_req: ConnectAttemptRequest) -> Result<(), Error> {
             unimplemented!()
         }
 
@@ -2266,15 +2276,14 @@ mod tests {
     #[fuchsia::test]
     fn directed_active_scan_filters_desired_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
-        let sme_proxy = SmeForScan::new(sme_proxy, 0);
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
 
         // Issue request to scan.
         let desired_ssid = types::Ssid::try_from("test_ssid").unwrap();
         let desired_channels = vec![1, 36];
         let scan_fut_desired_ssid = desired_ssid.clone();
         let scan_fut = perform_directed_active_scan(
-            &sme_proxy,
+            client,
             &scan_fut_desired_ssid,
             Some(desired_channels.clone()),
             None,
