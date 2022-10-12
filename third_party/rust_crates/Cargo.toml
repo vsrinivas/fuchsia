@@ -226,6 +226,8 @@ unicode-width = "0.1.3"
 unicode-xid = "0.2.0"
 utf8parse = "0.1"
 walkdir = "2.2.7"
+zerocopy = "0.7.0-alpha"
+zerocopy-derive = "0.3.2"
 zstd = "0.8.0+zstd.1.4.9"
 zstd-safe = "4.0.0+zstd.1.4.9"
 

@@ -1093,6 +1093,14 @@ group("xts-mode") {
   public_deps = [ ":xts-mode-v0_4_1" ]
 }
 
+group("zerocopy") {
+  public_deps = [ ":zerocopy-v0_7_0-alpha" ]
+}
+
+group("zerocopy-derive") {
+  public_deps = [ ":zerocopy-derive-v0_3_2($host_toolchain)" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("zip") {
     public_deps = [ ":zip-v0_5_5" ]
@@ -12363,6 +12371,51 @@ rust_library("yaml-rust-v0_4_5") {
     "--edition=2018",
     "-Cmetadata=35f1e10c7571231",
     "-Cextra-filename=-35f1e10c7571231",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("zerocopy-v0_7_0-alpha") {
+  crate_name = "zerocopy"
+  crate_root = "//third_party/rust_crates/vendor/zerocopy/src/lib.rs"
+  output_name = "zerocopy-de96fa8160f594d2"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":byteorder-v1_3_1" ]
+  deps += [ ":zerocopy-derive-v0_3_2($host_toolchain)" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=de96fa8160f594d2",
+    "-Cextra-filename=-de96fa8160f594d2",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_proc_macro("zerocopy-derive-v0_3_2") {
+  crate_name = "zerocopy_derive"
+  crate_root = "//third_party/rust_crates/vendor/zerocopy-derive/src/lib.rs"
+  output_name = "zerocopy_derive-ae6e7b0d09f2cf29"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":proc-macro2-v1_0_39" ]
+  deps += [ ":quote-v1_0_18" ]
+  deps += [ ":syn-v1_0_98" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=ae6e7b0d09f2cf29",
+    "-Cextra-filename=-ae6e7b0d09f2cf29",
   ]
 
   visibility = [ ":*" ]
