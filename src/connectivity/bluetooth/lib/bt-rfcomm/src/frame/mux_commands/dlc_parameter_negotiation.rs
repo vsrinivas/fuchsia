@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use bitfield::bitfield;
-use packet_encoding::{pub_decodable_enum, Decodable, Encodable};
+use packet_encoding::{decodable_enum, Decodable, Encodable};
 use std::convert::TryFrom;
 
 use crate::frame::FrameParseError;
@@ -17,12 +17,12 @@ const DLC_PARAMETER_NEGOTIATION_LENGTH: usize = 8;
 /// This is chosen as the maximum initial credits allowed as per RFCOMM 5.5.3.
 pub const DEFAULT_INITIAL_CREDITS: u8 = 7;
 
-pub_decodable_enum! {
+decodable_enum! {
     /// The Credit Based Flow Handshake variants defined in RFCOMM Table 5.3.
-    CreditBasedFlowHandshake<u8, FrameParseError, OutOfRange> {
-        Unsupported => 0x0,
-        SupportedRequest => 0xF,
-        SupportedResponse => 0xE,
+    pub enum CreditBasedFlowHandshake<u8, FrameParseError, OutOfRange> {
+        Unsupported = 0x0,
+        SupportedRequest = 0xF,
+        SupportedResponse = 0xE,
     }
 }
 

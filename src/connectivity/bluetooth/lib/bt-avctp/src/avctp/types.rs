@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    packet_encoding::{decodable_enum, Decodable, Encodable},
     std::convert::TryFrom,
 };
 
@@ -57,23 +57,23 @@ impl From<[u8; 2]> for ProfileId {
     }
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// Indicates whether this packet is part of a fragmented packet set.
     /// See Section 6.1
-    PacketType<u8, Error, OutOfRange> {
-        Single => 0x00,
-        Start => 0x01,
-        Continue => 0x02,
-        End => 0x03,
+    pub enum PacketType<u8, Error, OutOfRange> {
+        Single = 0x00,
+        Start = 0x01,
+        Continue = 0x02,
+        End = 0x03,
     }
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// Specifies the type of the packet as being either Command or Response
     /// See Section 6.1.1
-    MessageType<u8, Error, OutOfRange> {
-        Command => 0x00,
-        Response => 0x01,
+    pub enum MessageType<u8, Error, OutOfRange> {
+        Command = 0x00,
+        Response = 0x01,
     }
 }
 

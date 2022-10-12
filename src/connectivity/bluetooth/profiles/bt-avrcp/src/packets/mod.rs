@@ -5,7 +5,7 @@
 use {
     bt_avctp::AvcCommandType,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    packet_encoding::{decodable_enum, Decodable, Encodable},
     std::{convert::TryFrom, result},
     thiserror::Error,
 };
@@ -80,19 +80,19 @@ impl From<Error> for fidl_avrcp::BrowseControllerError {
 
 pub type PacketResult<T> = result::Result<T, Error>;
 
-pub_decodable_enum! {
+decodable_enum! {
     /// Common charset IDs from the MIB Enum we may see in AVRCP. See:
     /// https://www.iana.org/assignments/character-sets/character-sets.xhtml
     /// TODO(fxb/102060): we ideally would not want to return OutOfRange error
     /// but instead return a default value (i.e. 0 => Unknown).
-    CharsetId<u16, Error, OutOfRange> {
-        Ascii => 3,
-        Iso8859_1 => 4,
-        Utf8 => 106,
-        Ucs2 => 1000,
-        Utf16be => 1013,
-        Utf16le => 1014,
-        Utf16 => 1015,
+    pub enum CharsetId<u16, Error, OutOfRange> {
+        Ascii = 3,
+        Iso8859_1 = 4,
+        Utf8 = 106,
+        Ucs2 = 1000,
+        Utf16be = 1013,
+        Utf16le = 1014,
+        Utf16 = 1015,
     }
 }
 
@@ -105,26 +105,26 @@ impl CharsetId {
     }
 }
 
-pub_decodable_enum! {
-    Direction<u8, Error, InvalidDirection> {
-        FolderUp => 0,
-        FolderDown => 1,
+decodable_enum! {
+    pub enum Direction<u8, Error, InvalidDirection> {
+        FolderUp = 0,
+        FolderDown = 1,
     }
 }
 
 /// The size, in bytes, of an attributes id.
 pub const ATTRIBUTE_ID_LEN: usize = 4;
 
-pub_decodable_enum! {
-    MediaAttributeId<u8, Error, OutOfRange> {
-        Title => 0x1,
-        ArtistName => 0x2,
-        AlbumName => 0x3,
-        TrackNumber => 0x4,
-        TotalNumberOfTracks => 0x5,
-        Genre => 0x6,
-        PlayingTime => 0x7,
-        DefaultCoverArt => 0x8,
+decodable_enum! {
+    pub enum MediaAttributeId<u8, Error, OutOfRange> {
+        Title = 0x1,
+        ArtistName = 0x2,
+        AlbumName = 0x3,
+        TrackNumber = 0x4,
+        TotalNumberOfTracks = 0x5,
+        Genre = 0x6,
+        PlayingTime = 0x7,
+        DefaultCoverArt = 0x8,
     }
 }
 
@@ -143,84 +143,84 @@ impl From<&fidl_avrcp::MediaAttributeId> for MediaAttributeId {
     }
 }
 
-pub_decodable_enum! {
-    PduId<u8, Error, InvalidParameter> {
-        GetCapabilities => 0x10,
-        ListPlayerApplicationSettingAttributes => 0x11,
-        ListPlayerApplicationSettingValues => 0x12,
-        GetCurrentPlayerApplicationSettingValue => 0x13,
-        SetPlayerApplicationSettingValue => 0x14,
-        GetPlayerApplicationSettingAttributeText => 0x15,
-        GetPlayerApplicationSettingValueText => 0x16,
-        InformDisplayableCharacterSet => 0x17,
-        InformBatteryStatusOfCT => 0x18,
-        GetElementAttributes => 0x20,
-        GetPlayStatus => 0x30,
-        RegisterNotification => 0x31,
-        RequestContinuingResponse => 0x40,
-        AbortContinuingResponse => 0x41,
-        SetAbsoluteVolume => 0x50,
-        SetAddressedPlayer => 0x60,
-        SetBrowsedPlayer => 0x70,
-        GetFolderItems => 0x71,
-        ChangePath => 0x72,
-        PlayItem => 0x74,
-        GetTotalNumberOfItems => 0x75,
-        AddToNowPlaying => 0x90,
-        GeneralReject => 0xa0,
+decodable_enum! {
+    pub enum PduId<u8, Error, InvalidParameter> {
+        GetCapabilities = 0x10,
+        ListPlayerApplicationSettingAttributes = 0x11,
+        ListPlayerApplicationSettingValues = 0x12,
+        GetCurrentPlayerApplicationSettingValue = 0x13,
+        SetPlayerApplicationSettingValue = 0x14,
+        GetPlayerApplicationSettingAttributeText = 0x15,
+        GetPlayerApplicationSettingValueText = 0x16,
+        InformDisplayableCharacterSet = 0x17,
+        InformBatteryStatusOfCT = 0x18,
+        GetElementAttributes = 0x20,
+        GetPlayStatus = 0x30,
+        RegisterNotification = 0x31,
+        RequestContinuingResponse = 0x40,
+        AbortContinuingResponse = 0x41,
+        SetAbsoluteVolume = 0x50,
+        SetAddressedPlayer = 0x60,
+        SetBrowsedPlayer = 0x70,
+        GetFolderItems = 0x71,
+        ChangePath = 0x72,
+        PlayItem = 0x74,
+        GetTotalNumberOfItems = 0x75,
+        AddToNowPlaying = 0x90,
+        GeneralReject = 0xa0,
     }
 }
 
-pub_decodable_enum! {
-    PacketType<u8, Error, OutOfRange> {
-        Single => 0b00,
-        Start => 0b01,
-        Continue => 0b10,
-        Stop => 0b11,
+decodable_enum! {
+    pub enum PacketType<u8, Error, OutOfRange> {
+        Single = 0b00,
+        Start = 0b01,
+        Continue = 0b10,
+        Stop = 0b11,
     }
 }
 
-pub_decodable_enum! {
-    StatusCode<u8, Error, OutOfRange> {
-        InvalidCommand => 0x00,
-        InvalidParameter => 0x01,
-        ParameterContentError => 0x02,
-        InternalError => 0x03,
-        Success => 0x04,
-        UidChanged => 0x05,
-        InvalidDirection => 0x07,
-        NonDirectory => 0x08,
-        DoesNotExist => 0x09,
-        InvalidScope => 0x0a,
-        RangeOutOfBounds => 0x0b,
-        ItemNotPlayable => 0x0c,
-        MediaInUse => 0x0d,
-        InvalidPlayerId => 0x11,
-        PlayerNotBrowsable => 0x12,
-        PlayerNotAddressed => 0x13,
-        NoValidSearchResults => 0x14,
-        NoAvailablePlayers => 0x15,
-        AddressedPlayerChanged => 0x16,
+decodable_enum! {
+    pub enum StatusCode<u8, Error, OutOfRange> {
+        InvalidCommand = 0x00,
+        InvalidParameter = 0x01,
+        ParameterContentError = 0x02,
+        InternalError = 0x03,
+        Success = 0x04,
+        UidChanged = 0x05,
+        InvalidDirection = 0x07,
+        NonDirectory = 0x08,
+        DoesNotExist = 0x09,
+        InvalidScope = 0x0a,
+        RangeOutOfBounds = 0x0b,
+        ItemNotPlayable = 0x0c,
+        MediaInUse = 0x0d,
+        InvalidPlayerId = 0x11,
+        PlayerNotBrowsable = 0x12,
+        PlayerNotAddressed = 0x13,
+        NoValidSearchResults = 0x14,
+        NoAvailablePlayers = 0x15,
+        AddressedPlayerChanged = 0x16,
     }
 }
 
-pub_decodable_enum! {
-    ItemType<u8, Error, OutOfRange> {
-        MediaPlayer => 0x01,
-        Folder => 0x02,
-        MediaElement => 0x03,
+decodable_enum! {
+    pub enum ItemType<u8, Error, OutOfRange> {
+        MediaPlayer = 0x01,
+        Folder = 0x02,
+        MediaElement = 0x03,
     }
 }
 
-pub_decodable_enum! {
-    FolderType<u8, Error, OutOfRange> {
-        Mixed => 0x00,
-        Titles => 0x01,
-        Albums => 0x02,
-        Artists => 0x03,
-        Genres => 0x04,
-        Playlists => 0x05,
-        Years => 0x06,
+decodable_enum! {
+    pub enum FolderType<u8, Error, OutOfRange> {
+        Mixed = 0x00,
+        Titles = 0x01,
+        Albums = 0x02,
+        Artists = 0x03,
+        Genres = 0x04,
+        Playlists = 0x05,
+        Years = 0x06,
     }
 }
 
@@ -238,10 +238,10 @@ impl From<FolderType> for fidl_avrcp::FolderType {
     }
 }
 
-pub_decodable_enum! {
-    MediaType<u8, Error, OutOfRange> {
-        Audio => 0x00,
-        Video => 0x01,
+decodable_enum! {
+    pub enum MediaType<u8, Error, OutOfRange> {
+        Audio = 0x00,
+        Video = 0x01,
     }
 }
 
@@ -300,14 +300,14 @@ impl From<StatusCode> for fidl_avrcp::BrowseControllerError {
 }
 
 // Shared by get_play_status and notification
-pub_decodable_enum! {
-    PlaybackStatus<u8, Error, OutOfRange> {
-        Stopped => 0x00,
-        Playing => 0x01,
-        Paused => 0x02,
-        FwdSeek => 0x03,
-        RevSeek => 0x04,
-        Error => 0xff,
+decodable_enum! {
+    pub enum PlaybackStatus<u8, Error, OutOfRange> {
+        Stopped = 0x00,
+        Playing = 0x01,
+        Paused = 0x02,
+        FwdSeek = 0x03,
+        RevSeek = 0x04,
+        Error = 0xff,
     }
 }
 
@@ -337,12 +337,12 @@ impl From<PlaybackStatus> for fidl_avrcp::PlaybackStatus {
     }
 }
 
-pub_decodable_enum! {
-    PlayerApplicationSettingAttributeId<u8, Error, InvalidParameter> {
-        Equalizer => 0x01,
-        RepeatStatusMode => 0x02,
-        ShuffleMode => 0x03,
-        ScanMode => 0x04,
+decodable_enum! {
+    pub enum PlayerApplicationSettingAttributeId<u8, Error, InvalidParameter> {
+        Equalizer = 0x01,
+        RepeatStatusMode = 0x02,
+        ShuffleMode = 0x03,
+        ScanMode = 0x04,
     }
 }
 

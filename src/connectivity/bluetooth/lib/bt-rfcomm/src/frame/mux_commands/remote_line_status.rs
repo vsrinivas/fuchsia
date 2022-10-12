@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use bitfield::bitfield;
-use packet_encoding::{pub_decodable_enum, Decodable, Encodable};
+use packet_encoding::{decodable_enum, Decodable, Encodable};
 use std::convert::TryFrom;
 
 use crate::frame::FrameParseError;
@@ -27,16 +27,16 @@ impl RlsAddressField {
     }
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// The error types supported in the Remote Line Status command.
     /// See GSM 07.10 Section 5.4.6.3.10 for the defined variants.
-    RlsError<u8, FrameParseError, OutOfRange> {
+    pub enum RlsError<u8, FrameParseError, OutOfRange> {
         /// Received character overwrote an unread character.
-        Overrun => 0b001,
+        Overrun = 0b001,
         /// Received character's parity was incorrect.
-        Parity => 0b010,
+        Parity = 0b010,
         /// Received character did not terminate with a stop bit.
-        Framing => 0b100,
+        Framing = 0b100,
     }
 }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use packet_encoding::{pub_decodable_enum, Decodable, Encodable};
+use packet_encoding::{decodable_enum, Decodable, Encodable};
 
 /// The command or response classification used when parsing an RFCOMM frame.
 mod command_response;
@@ -22,16 +22,16 @@ use self::field::*;
 use self::mux_commands::MuxCommand;
 use crate::{Role, DLCI};
 
-pub_decodable_enum! {
+decodable_enum! {
     /// The type of frame provided in the Control field.
     /// The P/F bit is set to 0 for all frame types.
     /// See table 2, GSM 07.10 Section 5.2.1.3 and RFCOMM 4.2.
-    FrameTypeMarker<u8, FrameParseError, UnsupportedFrameType> {
-        SetAsynchronousBalancedMode => 0b00101111,
-        UnnumberedAcknowledgement => 0b01100011,
-        DisconnectedMode => 0b00001111,
-        Disconnect => 0b01000011,
-        UnnumberedInfoHeaderCheck => 0b11101111,
+    pub enum FrameTypeMarker<u8, FrameParseError, UnsupportedFrameType> {
+        SetAsynchronousBalancedMode = 0b00101111,
+        UnnumberedAcknowledgement = 0b01100011,
+        DisconnectedMode = 0b00001111,
+        Disconnect = 0b01000011,
+        UnnumberedInfoHeaderCheck = 0b11101111,
     }
 }
 

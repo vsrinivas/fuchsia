@@ -5,20 +5,27 @@
 //! Generic utilities for encoding/decoding packets.
 
 /// Generates an enum value where each variant can be converted into a constant in the given
-/// raw_type. The visibility of the generated enum is limited to the crate its defined in.
+/// raw_type.
+///
 /// For example:
 /// decodable_enum! {
-///     Color<u8, MyError, MyError::Variant> {
-///        Red => 1,
-///        Blue => 2,
-///        Green => 3,
+///     pub(crate) enum Color<u8, MyError, MyError::Variant> {
+///        Red = 1,
+///        Blue = 2,
+///        Green = 3,
 ///     }
 /// }
-/// Then Color::try_from(2) returns Color::Red, and u8::from(Color::Red) returns 1.
+///
+/// Color::try_from(2) -> Color::Red
+/// u8::from(&Color::Red) -> 1.
 #[macro_export]
 macro_rules! decodable_enum {
-    ($(#[$meta:meta])* $name:ident<$raw_type:ty,$error_type:ident,$error_path:ident> {
-        $($(#[$variant_meta:meta])* $variant:ident => $val:expr),*,
+    ($(#[$meta:meta])* $visibility:vis enum $name:ident<
+        $raw_type:ty,
+        $error_type:ident,
+        $error_path:ident
+    > {
+        $($(#[$variant_meta:meta])* $variant:ident = $val:expr),*,
     }) => {
         $(#[$meta])*
         #[derive(
@@ -28,71 +35,20 @@ macro_rules! decodable_enum {
             ::core::cmp::Eq,
             ::core::hash::Hash,
             ::core::cmp::PartialEq)]
-        pub(crate) enum $name {
+        $visibility enum $name {
             $($(#[$variant_meta])* $variant = $val),*
-        }
-
-        $crate::tofrom_decodable_enum! {
-            $name<$raw_type, $error_type, $error_path> {
-                $($variant => $val),*,
-            }
-        }
-    }
-}
-
-/// Generates an enum value where each variant can be converted into a constant in the given
-/// raw_type.  For example:
-/// pub_decodable_enum! {
-///     Color<u8, MyError, MyError::Variant> {
-///        Red => 1,
-///        Blue => 2,
-///        Green => 3,
-///     }
-/// }
-/// Then Color::try_from(2) returns Color::Red, and u8::from(Color::Red) returns 1.
-#[macro_export]
-macro_rules! pub_decodable_enum {
-    ($(#[$meta:meta])* $name:ident<$raw_type:ty,$error_type:ident,$error_path:ident> {
-        $($(#[$variant_meta:meta])* $variant:ident => $val:expr),*,
-    }) => {
-        $(#[$meta])*
-        #[derive(
-            ::core::clone::Clone,
-            ::core::marker::Copy,
-            ::core::fmt::Debug,
-            ::core::cmp::Eq,
-            ::core::hash::Hash,
-            ::core::cmp::PartialEq)]
-        pub enum $name {
-            $($(#[$variant_meta])* $variant = $val),*
-        }
-
-        $crate::tofrom_decodable_enum! {
-            $name<$raw_type, $error_type, $error_path> {
-                $($variant => $val),*,
-            }
         }
 
         impl $name {
             pub const VALUES : &'static [$raw_type] = &[$($val),*,];
             pub const VARIANTS : &'static [$name] = &[$($name::$variant),*,];
-
             pub fn name(&self) -> &'static ::core::primitive::str {
                 match self {
                     $($name::$variant => ::core::stringify!($variant)),*
                 }
             }
         }
-    }
-}
 
-/// A From<&$name> for $raw_type implementation and
-/// TryFrom<$raw_type> for $name implementation, used by (pub_)decodable_enum
-#[macro_export]
-macro_rules! tofrom_decodable_enum {
-    ($name:ident<$raw_type:ty, $error_type:ident, $error_path:ident> {
-        $($variant:ident => $val:expr),*,
-    }) => {
         impl ::core::convert::From<&$name> for $raw_type {
             fn from(v: &$name) -> $raw_type {
                 match v {
@@ -151,10 +107,10 @@ mod test {
     }
 
     decodable_enum! {
-        TestEnum<u16, TestError, OutOfRange> {
-            One => 1,
-            Two => 2,
-            Max => 65535,
+        pub(crate) enum TestEnum<u16, TestError, OutOfRange> {
+            One = 1,
+            Two = 2,
+            Max = 65535,
         }
     }
 
@@ -185,5 +141,30 @@ mod test {
         assert_eq!(2, raw);
         let raw = u16::from(&TestEnum::Max);
         assert_eq!(65535, raw);
+    }
+
+    #[test]
+    fn test_values() {
+        let v = TestEnum::VALUES.to_vec();
+        assert_eq!(3, v.len());
+        assert_eq!(1, v[0]);
+        assert_eq!(2, v[1]);
+        assert_eq!(65535, v[2]);
+    }
+
+    #[test]
+    fn test_variants() {
+        let v = TestEnum::VARIANTS.to_vec();
+        assert_eq!(3, v.len());
+        assert_eq!(TestEnum::One, v[0]);
+        assert_eq!(TestEnum::Two, v[1]);
+        assert_eq!(TestEnum::Max, v[2]);
+    }
+
+    #[test]
+    fn test_name() {
+        assert_eq!("One", TestEnum::One.name());
+        assert_eq!("Two", TestEnum::Two.name());
+        assert_eq!("Max", TestEnum::Max.name());
     }
 }

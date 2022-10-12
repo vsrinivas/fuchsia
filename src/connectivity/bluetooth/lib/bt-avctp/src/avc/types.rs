@@ -3,35 +3,35 @@
 // found in the LICENSE file.
 
 use {
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    packet_encoding::{decodable_enum, Decodable, Encodable},
     std::convert::TryFrom,
 };
 
 use crate::{Error, Result};
 
-pub_decodable_enum! {
+decodable_enum! {
     /// AV/C Command and Response types.
     /// See AV/C General Specification Section 5.3.1 and 5.3.2
-    CommandType<u8, Error, OutOfRange> {
-        Control => 0x00,
-        Status => 0x01,
-        SpecificInquiry => 0x02,
-        Notify => 0x03,
-        GeneralInquiry => 0x04, // Unused with bt?
+    pub enum CommandType<u8, Error, OutOfRange> {
+        Control = 0x00,
+        Status = 0x01,
+        SpecificInquiry = 0x02,
+        Notify = 0x03,
+        GeneralInquiry = 0x04, // Unused with bt?
     }
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// AV/C Command and Response types.
     /// See AV/C General Specification Section 5.3.1 and 5.3.2
-    ResponseType<u8, Error, OutOfRange> {
-        NotImplemented => 0x08,
-        Accepted => 0x09,
-        Rejected => 0x0a,
-        InTransition => 0x0b, // Unused with bt?
-        ImplementedStable => 0x0c,
-        Changed => 0x0d,
-        Interim => 0x0f,
+    pub enum ResponseType<u8, Error, OutOfRange> {
+        NotImplemented = 0x08,
+        Accepted = 0x09,
+        Rejected = 0x0a,
+        InTransition = 0x0b, // Unused with bt?
+        ImplementedStable = 0x0c,
+        Changed = 0x0d,
+        Interim = 0x0f,
     }
 }
 
@@ -58,23 +58,23 @@ impl PacketType {
     }
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// AV/C Op Codes
     /// See AV/C General Specification Section 5.3.1
-    OpCode<u8, Error, OutOfRange> {
-        VendorDependent => 0x00,
-        UnitInfo => 0x30,
-        SubUnitInfo => 0x31,
-        Passthrough => 0x7c,
+    pub enum OpCode<u8, Error, OutOfRange> {
+        VendorDependent = 0x00,
+        UnitInfo = 0x30,
+        SubUnitInfo = 0x31,
+        Passthrough = 0x7c,
     }
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// Most common subunits from the AV/C General Specification in AVRCP
     /// All AVRCP commands are transacted on the panel subunit according to the Panel Specification
-    SubunitType<u8, Error, OutOfRange> {
-        Panel => 0x09,
-        Unit => 0x1F,
+    pub enum SubunitType<u8, Error, OutOfRange> {
+        Panel = 0x09,
+        Unit = 0x1F,
     }
 }
 

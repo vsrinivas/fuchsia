@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    packet_encoding::{decodable_enum, Decodable, Encodable},
     std::convert::TryFrom,
 };
 
@@ -11,13 +11,13 @@ use crate::packets::{
     AvcCommandType, Error, PacketResult, PduId, VendorCommand, VendorDependentPdu,
 };
 
-pub_decodable_enum!(
+decodable_enum! {
     /// AVRCP 1.6.1 section 6.4.1 Table 6.5
-    GetCapabilitiesCapabilityId <u8, Error, InvalidParameter> {
-        CompanyId => 0x02,
-        EventsId => 0x03,
+    pub enum GetCapabilitiesCapabilityId <u8, Error, InvalidParameter> {
+        CompanyId = 0x02,
+        EventsId = 0x03,
     }
-);
+}
 
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.4 Capabilities PDUs - GetCapabilities

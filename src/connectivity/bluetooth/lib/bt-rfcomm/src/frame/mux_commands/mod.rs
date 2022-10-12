@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use bitfield::bitfield;
-use packet_encoding::{pub_decodable_enum, Decodable, Encodable};
+use packet_encoding::{decodable_enum, Decodable, Encodable};
 use std::convert::TryFrom;
 
 /// The DLC PN frame definition.
@@ -41,19 +41,19 @@ use crate::{
     DLCI,
 };
 
-pub_decodable_enum! {
+decodable_enum! {
     /// The supported Multiplexer Commands in RFCOMM. These commands are sent/received
     /// over the Multiplexer Control Channel (DLCI 0) and are 6 bits wide.
     /// See RFCOMM 4.3.
-    MuxCommandMarker<u8, FrameParseError, OutOfRange> {
-        ParameterNegotiation => 0b100000,
-        Test => 0b001000,
-        FlowControlOn => 0b101000,
-        FlowControlOff => 0b011000,
-        ModemStatus => 0b111000,
-        NonSupportedCommand => 0b000100,
-        RemotePortNegotiation => 0b100100,
-        RemoteLineStatus => 0b010100,
+    pub enum MuxCommandMarker<u8, FrameParseError, OutOfRange> {
+        ParameterNegotiation = 0b100000,
+        Test = 0b001000,
+        FlowControlOn = 0b101000,
+        FlowControlOff = 0b011000,
+        ModemStatus = 0b111000,
+        NonSupportedCommand = 0b000100,
+        RemotePortNegotiation = 0b100100,
+        RemoteLineStatus = 0b010100,
     }
 }
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, packet_encoding::pub_decodable_enum};
+use fidl_fuchsia_bluetooth_avrcp as fidl_avrcp;
+use packet_encoding::decodable_enum;
 
 pub mod get_attribute_text;
 pub mod get_current_settings;
@@ -16,14 +17,14 @@ pub use self::{
 };
 use crate::packets::Error;
 
-pub_decodable_enum!(
-    PlayerApplicationSettingAttributeId <u8, Error, InvalidParameter> {
-        Equalizer => 0x01,
-        RepeatStatusMode => 0x02,
-        ShuffleMode => 0x03,
-        ScanMode => 0x04,
+decodable_enum! {
+    pub enum PlayerApplicationSettingAttributeId <u8, Error, InvalidParameter> {
+        Equalizer = 0x01,
+        RepeatStatusMode = 0x02,
+        ShuffleMode = 0x03,
+        ScanMode = 0x04,
     }
-);
+}
 
 impl From<fidl_avrcp::PlayerApplicationSettingAttributeId> for PlayerApplicationSettingAttributeId {
     fn from(
@@ -67,14 +68,14 @@ impl From<PlayerApplicationSettingAttributeId> for fidl_avrcp::PlayerApplication
     }
 }
 
-pub_decodable_enum!(
-    RepeatStatusMode <u8, Error, OutOfRange> {
-        Off => 0x01,
-        SingleTrackRepeat => 0x02,
-        AllTrackRepeat => 0x03,
-        GroupRepeat => 0x04,
+decodable_enum! {
+    pub enum RepeatStatusMode <u8, Error, OutOfRange> {
+        Off = 0x01,
+        SingleTrackRepeat = 0x02,
+        AllTrackRepeat = 0x03,
+        GroupRepeat = 0x04,
     }
-);
+}
 
 impl From<fidl_avrcp::RepeatStatusMode> for RepeatStatusMode {
     fn from(src: fidl_avrcp::RepeatStatusMode) -> RepeatStatusMode {
@@ -98,13 +99,13 @@ impl From<RepeatStatusMode> for fidl_avrcp::RepeatStatusMode {
     }
 }
 
-pub_decodable_enum!(
-    ShuffleMode <u8, Error, OutOfRange> {
-        Off => 0x01,
-        AllTrackShuffle => 0x02,
-        GroupShuffle => 0x03,
+decodable_enum! {
+    pub enum ShuffleMode <u8, Error, OutOfRange> {
+        Off = 0x01,
+        AllTrackShuffle = 0x02,
+        GroupShuffle = 0x03,
     }
-);
+}
 
 impl From<fidl_avrcp::ShuffleMode> for ShuffleMode {
     fn from(src: fidl_avrcp::ShuffleMode) -> ShuffleMode {
@@ -126,13 +127,13 @@ impl From<ShuffleMode> for fidl_avrcp::ShuffleMode {
     }
 }
 
-pub_decodable_enum!(
-    ScanMode <u8, Error, OutOfRange> {
-        Off => 0x01,
-        AllTrackScan => 0x02,
-        GroupScan => 0x03,
+decodable_enum! {
+    pub enum ScanMode <u8, Error, OutOfRange> {
+        Off = 0x01,
+        AllTrackScan = 0x02,
+        GroupScan = 0x03,
     }
-);
+}
 
 impl From<fidl_avrcp::ScanMode> for ScanMode {
     fn from(src: fidl_avrcp::ScanMode) -> ScanMode {
@@ -154,12 +155,12 @@ impl From<ScanMode> for fidl_avrcp::ScanMode {
     }
 }
 
-pub_decodable_enum!(
-    Equalizer <u8, Error, OutOfRange> {
-        Off => 0x01,
-        On => 0x02,
+decodable_enum! {
+    pub enum Equalizer <u8, Error, OutOfRange> {
+        Off = 0x01,
+        On = 0x02,
     }
-);
+}
 
 impl From<fidl_avrcp::Equalizer> for Equalizer {
     fn from(src: fidl_avrcp::Equalizer) -> Equalizer {

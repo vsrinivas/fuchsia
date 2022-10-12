@@ -4,7 +4,7 @@
 
 use bitfield::bitfield;
 use fuchsia_bluetooth::types::Address;
-use packet_encoding::pub_decodable_enum;
+use packet_encoding::decodable_enum;
 use std::convert::{TryFrom, TryInto};
 use tracing::debug;
 
@@ -35,11 +35,11 @@ pub fn parse_key_based_pairing_request(
     Ok((encrypted_request, public_key))
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// The type of key-based pairing request.
-    MessageType<u8, Error, Packet> {
-        Pairing => 0x00,
-        DeviceAction => 0x10,
+    pub enum MessageType<u8, Error, Packet> {
+        Pairing = 0x00,
+        DeviceAction = 0x10,
     }
 }
 
@@ -126,10 +126,10 @@ pub fn decrypt_key_based_pairing_request(
     }
 }
 
-pub_decodable_enum! {
-    PasskeyType<u8, Error, Packet> {
-        Seeker => 0x02,
-        Provider => 0x03,
+decodable_enum! {
+    pub enum PasskeyType<u8, Error, Packet> {
+        Seeker = 0x02,
+        Provider = 0x03,
     }
 }
 

@@ -4,7 +4,7 @@
 
 use {
     fuchsia_zircon as zx,
-    packet_encoding::{decodable_enum, pub_decodable_enum, Decodable, Encodable},
+    packet_encoding::{decodable_enum, Decodable, Encodable},
     std::{
         convert::TryFrom,
         fmt,
@@ -103,34 +103,34 @@ pub enum Error {
     Other(#[from] anyhow::Error),
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// Error Codes that can be returned as part of a reject message.
     /// See Section 8.20.6
-    ErrorCode<u8, Error, OutOfRange> {
+    pub enum ErrorCode<u8, Error, OutOfRange> {
         // Header Error Codes
-        BadHeaderFormat => 0x01,
+        BadHeaderFormat = 0x01,
 
         // Payload Format Error Codes
-        BadLength => 0x11,
-        BadAcpSeid => 0x12,
-        SepInUse => 0x13,
-        SepNotInUse => 0x14,
-        BadServiceCategory => 0x17,
-        BadPayloadFormat => 0x18,
-        NotSupportedCommand => 0x19,
-        InvalidCapabilities => 0x1A,
+        BadLength = 0x11,
+        BadAcpSeid = 0x12,
+        SepInUse = 0x13,
+        SepNotInUse = 0x14,
+        BadServiceCategory = 0x17,
+        BadPayloadFormat = 0x18,
+        NotSupportedCommand = 0x19,
+        InvalidCapabilities = 0x1A,
 
         // Transport Service Capabilities Error Codes
-        BadRecoveryType => 0x22,
-        BadMediaTransportFormat => 0x23,
-        BadRecoveryFormat => 0x25,
-        BadRohcFormat => 0x26,
-        BadCpFormat => 0x27,
-        BadMultiplexingFormat => 0x28,
-        UnsupportedConfiguration => 0x29,
+        BadRecoveryType = 0x22,
+        BadMediaTransportFormat = 0x23,
+        BadRecoveryFormat = 0x25,
+        BadRohcFormat = 0x26,
+        BadCpFormat = 0x27,
+        BadMultiplexingFormat = 0x28,
+        UnsupportedConfiguration = 0x29,
 
         // Procedure Error Codes
-        BadState => 0x31,
+        BadState = 0x31,
     }
 }
 
@@ -167,26 +167,26 @@ impl From<&TxLabel> for usize {
     }
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// Type of media
     /// USed to specify the type of media on a stream endpoint.
     /// Part of the StreamInformation in Discovery Response.
     /// Defined in the Bluetooth Assigned Numbers
     /// https://www.bluetooth.com/specifications/assigned-numbers/audio-video
-    MediaType<u8, Error, OutOfRange> {
-        Audio => 0x00,
-        Video => 0x01,
-        Multimedia => 0x02,
+    pub enum MediaType<u8, Error, OutOfRange> {
+        Audio = 0x00,
+        Video = 0x01,
+        Multimedia = 0x02,
     }
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// Type of endpoint (source or sync)
     /// Part of the StreamInformation in Discovery Response.
     /// See Section 8.20.3
-    EndpointType<u8, Error, OutOfRange> {
-        Source => 0x00,
-        Sink => 0x01,
+    pub enum EndpointType<u8, Error, OutOfRange> {
+        Source = 0x00,
+        Sink = 0x01,
     }
 }
 
@@ -202,11 +202,11 @@ impl EndpointType {
 decodable_enum! {
     /// Indicated whether this packet is part of a fragmented packet set.
     /// See Section 8.4.2
-    SignalingPacketType<u8, Error, OutOfRange> {
-        Single => 0x00,
-        Start => 0x01,
-        Continue => 0x02,
-        End => 0x03,
+    pub(crate) enum SignalingPacketType<u8, Error, OutOfRange> {
+        Single = 0x00,
+        Start = 0x01,
+        Continue = 0x02,
+        End = 0x03,
     }
 }
 
@@ -214,11 +214,11 @@ decodable_enum! {
     /// Specifies the command type of each signaling command or the response
     /// type of each response packet.
     /// See Section 8.4.3
-    SignalingMessageType<u8, Error, OutOfRange> {
-        Command => 0x00,
-        GeneralReject => 0x01,
-        ResponseAccept => 0x02,
-        ResponseReject => 0x03,
+    pub(crate) enum SignalingMessageType<u8, Error, OutOfRange> {
+        Command = 0x00,
+        GeneralReject = 0x01,
+        ResponseAccept = 0x02,
+        ResponseReject = 0x03,
     }
 }
 
@@ -226,20 +226,20 @@ decodable_enum! {
     /// Indicates the signaling command on a command packet.  The same identifier is used on the
     /// response to that command packet.
     /// See Section 8.4.4
-    SignalIdentifier<u8, Error, OutOfRange> {
-        Discover => 0x01,
-        GetCapabilities => 0x02,
-        SetConfiguration => 0x03,
-        GetConfiguration => 0x04,
-        Reconfigure => 0x05,
-        Open => 0x06,
-        Start => 0x07,
-        Close => 0x08,
-        Suspend => 0x09,
-        Abort => 0x0A,
-        SecurityControl => 0x0B,
-        GetAllCapabilities => 0x0C,
-        DelayReport => 0x0D,
+    pub(crate) enum SignalIdentifier<u8, Error, OutOfRange> {
+        Discover = 0x01,
+        GetCapabilities = 0x02,
+        SetConfiguration = 0x03,
+        GetConfiguration = 0x04,
+        Reconfigure = 0x05,
+        Open = 0x06,
+        Start = 0x07,
+        Close = 0x08,
+        Suspend = 0x09,
+        Abort = 0x0A,
+        SecurityControl = 0x0B,
+        GetAllCapabilities = 0x0C,
+        DelayReport = 0x0D,
     }
 }
 
@@ -441,22 +441,23 @@ impl TryFrom<u16> for ContentProtectionType {
     }
 }
 
-pub_decodable_enum! {
+decodable_enum! {
     /// Indicates the signaling command on a command packet.  The same identifier is used on the
     /// response to that command packet.
     /// See Section 8.4.4
-    ServiceCategory<u8, Error, OutOfRange> {
-        None => 0x00,
-        MediaTransport => 0x01,
-        Reporting => 0x02,
-        Recovery => 0x03,
-        ContentProtection => 0x04,
-        HeaderCompression => 0x05,
-        Multiplexing => 0x06,
-        MediaCodec => 0x07,
-        DelayReporting => 0x08,
+    pub enum ServiceCategory<u8, Error, OutOfRange> {
+        None = 0x00,
+        MediaTransport = 0x01,
+        Reporting = 0x02,
+        Recovery = 0x03,
+        ContentProtection = 0x04,
+        HeaderCompression = 0x05,
+        Multiplexing = 0x06,
+        MediaCodec = 0x07,
+        DelayReporting = 0x08,
     }
 }
+
 /// Service Capabilities indicate possible services that can be provided by
 /// each stream endpoint.  See AVDTP Spec section 8.21.
 #[derive(Debug, PartialEq, Clone)]

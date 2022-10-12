@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    packet_encoding::{decodable_enum, Decodable, Encodable},
     std::convert::TryInto,
 };
 
@@ -19,14 +19,14 @@ pub use self::{
 };
 use crate::packets::{Error, PacketResult, PduId, StatusCode};
 
-pub_decodable_enum!(
-    Scope <u8, Error, OutOfRange> {
-        MediaPlayerList => 0x00,
-        MediaPlayerVirtualFilesystem => 0x01,
-        Search => 0x02,
-        NowPlaying => 0x03,
+decodable_enum! {
+    pub enum Scope <u8, Error, OutOfRange> {
+        MediaPlayerList = 0x00,
+        MediaPlayerVirtualFilesystem = 0x01,
+        Search = 0x02,
+        NowPlaying = 0x03,
     }
-);
+}
 
 /// The packet structure of a Browse channel command.
 pub struct BrowsePreamble {

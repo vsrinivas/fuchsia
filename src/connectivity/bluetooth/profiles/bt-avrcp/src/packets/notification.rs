@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
-    packet_encoding::{pub_decodable_enum, Decodable, Encodable},
+    packet_encoding::{decodable_enum, Decodable, Encodable},
     std::{
         convert::TryFrom,
         {u32, u64},
@@ -17,41 +17,41 @@ use crate::packets::{
     VendorDependentPdu,
 };
 
-pub_decodable_enum! {
+decodable_enum! {
     /// AVRCP 1.6.1 section 28 "Appendix H: list of defined notification events"
-    NotificationEventId<u8, Error, InvalidParameter> {
+    pub enum NotificationEventId<u8, Error, InvalidParameter> {
         /// Change in playback status of the current track.
-        EventPlaybackStatusChanged => 0x01,
+        EventPlaybackStatusChanged = 0x01,
         /// Change of current track
-        EventTrackChanged => 0x02,
+        EventTrackChanged = 0x02,
         /// Reached end of a track
-        EventTrackReachedEnd => 0x03,
+        EventTrackReachedEnd = 0x03,
         /// Reached start of a track
-        EventTrackReachedStart => 0x04,
+        EventTrackReachedStart = 0x04,
         /// Change in playback position. Returned after
         /// the specified playback notification change
         /// notification interval
-        EventPlaybackPosChanged => 0x05,
+        EventPlaybackPosChanged = 0x05,
         /// Change in battery status
-        EventBattStatusChanged => 0x06,
+        EventBattStatusChanged = 0x06,
         /// Change in system status
-        EventSystemStatusChanged => 0x07,
+        EventSystemStatusChanged = 0x07,
         /// Change in player application setting
-        EventPlayerApplicationSettingChanged => 0x08,
+        EventPlayerApplicationSettingChanged = 0x08,
         /// The content of the Now Playing list has
         /// changed, see Section 6.9.5.
-        EventNowPlayingContentChanged => 0x09,
+        EventNowPlayingContentChanged = 0x09,
         /// The available players have changed, see
         /// Section 6.9.4.
-        EventAvailablePlayersChanged => 0x0a,
+        EventAvailablePlayersChanged = 0x0a,
         /// The Addressed Player has been changed,
         /// see Section 6.9.2.
-        EventAddressedPlayerChanged => 0x0b,
+        EventAddressedPlayerChanged = 0x0b,
         /// The UIDs have changed, see Section
         /// 6.10.3.3.
-        EventUidsChanged => 0x0c,
+        EventUidsChanged = 0x0c,
         ///The volume has been changed locally on the TG, see Section 6.13.3.
-        EventVolumeChanged => 0x0d,
+        EventVolumeChanged = 0x0d,
         // 0x0e-0xff reserved
     }
 }
