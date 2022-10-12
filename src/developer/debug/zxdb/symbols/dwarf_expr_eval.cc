@@ -1049,8 +1049,17 @@ DwarfExprEval::Completion DwarfExprEval::OpEntryValue(const char* op_name) {
 
   // Get the data provider for the nested context.
   auto entry_data_provider = data_provider_->GetEntryDataProvider();
-  if (!entry_data_provider)
-    return ReportError("Can not compute function entry values in this context.");
+  if (!entry_data_provider) {
+    if (is_string_output()) {
+      // When doing string output, we don't actually need the entry data, we just need to be able
+      // to print the data. This needs to work to be able to print symbol debug information that
+      // might not be active. In this case, just use the same data provider for the entry data, it
+      // should be unused.
+      entry_data_provider = data_provider_;
+    } else {
+      return ReportError("Can not compute function entry values in this context.");
+    }
+  }
 
   FX_DCHECK(!nested_eval_);
   nested_eval_ = std::make_unique<DwarfExprEval>(unit_symbol_factory_,

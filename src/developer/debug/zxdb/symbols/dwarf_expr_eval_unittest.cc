@@ -1268,8 +1268,14 @@ TEST_F(DwarfExprEvalTest, EntryValue) {
   DoEvalTest(complex_program, true, DwarfExprEval::Completion::kAsync, DwarfStackEntry(kExpected),
              DwarfExprEval::ResultType::kPointer,
              "DW_OP_entry_value(DW_OP_breg6(49), DW_OP_deref), DW_OP_breg6(1), DW_OP_minus");
-
   eval().Clear();
+
+  // Sometimes the expressions are printed from debug commands where there is no entry data
+  // provider. Printing should still work in this case but evaluation should fail.
+  provider()->set_entry_provider(nullptr);
+  DoEvalTest(complex_program, false, DwarfExprEval::Completion::kSync, DwarfStackEntry(kExpected),
+             DwarfExprEval::ResultType::kPointer,
+             "DW_OP_entry_value(DW_OP_breg6(49), DW_OP_deref), DW_OP_breg6(1), DW_OP_minus");
 }
 
 TEST_F(DwarfExprEvalTest, ConstType) {
