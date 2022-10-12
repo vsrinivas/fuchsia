@@ -46,12 +46,12 @@ fuchsia_unittest_package("virtio_console_unittests") {
 }
 
 fuchsia_package("virtio_console") {
-  package_name = "virtio_console_rs"
+  package_name = "virtio_console"
   deps = [ ":virtio_console_component" ]
 }
 
 fuchsia_component("virtio_console_component") {
   manifest = "meta/virtio_console.cml"
   deps = [ ":virtio_console_bin" ]
-  component_name = "virtio_console_rs"
+  component_name = "virtio_console"
 }

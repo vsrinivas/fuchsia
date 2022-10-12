@@ -27,7 +27,6 @@ group("tests") {
 
 group("packages") {
   deps = [
-    ":virtio_console",
     ":virtio_magma",
     ":virtio_wl",
     "virtio_balloon",
@@ -81,19 +80,6 @@ source_set("virtio") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
   ]
-}
-
-executable("virtio_console_bin") {
-  visibility = [ ":*" ]
-
-  output_name = "virtio_console"
-  sources = [ "virtio_console.cc" ]
-  deps = [ ":virtio" ]
-}
-
-fuchsia_package_with_single_component("virtio_console") {
-  manifest = "../meta/virtio_console.cml"
-  deps = [ ":virtio_console_bin" ]
 }
 
 source_set("magma_image") {

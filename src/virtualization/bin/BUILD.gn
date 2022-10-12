@@ -6,9 +6,6 @@ import("//src/virtualization/bin/args.gni")
 
 config("args") {
   defines = []
-  if (rust_virtio_console) {
-    defines += [ "USE_RUST_VIRTIO_CONSOLE" ]
-  }
 }
 
 group("bin") {

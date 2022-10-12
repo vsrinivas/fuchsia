@@ -14,18 +14,10 @@ namespace {
 constexpr uint16_t kNumQueues = 2;
 constexpr uint16_t kQueueSize = 16;
 
-constexpr auto kCppComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
-constexpr auto kRustComponentUrl =
-    "fuchsia-pkg://fuchsia.com/virtio_console_rs#meta/virtio_console_rs.cm";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
 constexpr auto kComponentName = "virtio_console";
 
-struct VirtioConsoleTestParam {
-  std::string test_name;
-  std::string component_url;
-};
-
-class VirtioConsoleTest : public TestWithDevice,
-                          public ::testing::WithParamInterface<VirtioConsoleTestParam> {
+class VirtioConsoleTest : public TestWithDevice {
  protected:
   VirtioConsoleTest()
       : rx_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
@@ -40,7 +32,7 @@ class VirtioConsoleTest : public TestWithDevice,
     using component_testing::Route;
 
     auto realm_builder = RealmBuilder::Create();
-    realm_builder.AddChild(kComponentName, GetParam().component_url);
+    realm_builder.AddChild(kComponentName, kComponentUrl);
 
     realm_builder
         .AddRoute(Route{.capabilities =
@@ -95,14 +87,7 @@ class VirtioConsoleTest : public TestWithDevice,
   std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
-INSTANTIATE_TEST_SUITE_P(VirtioConsoleTestInstantiation, VirtioConsoleTest,
-                         ::testing::Values(VirtioConsoleTestParam{"cpp", kCppComponentUrl},
-                                           VirtioConsoleTestParam{"rust", kRustComponentUrl}),
-                         [](const ::testing::TestParamInfo<VirtioConsoleTestParam>& info) {
-                           return info.param.test_name;
-                         });
-
-TEST_P(VirtioConsoleTest, Receive) {
+TEST_F(VirtioConsoleTest, Receive) {
   void* data_1;
   void* data_2;
   zx_status_t status = DescriptorChainBuilder(rx_queue_)
@@ -126,7 +111,7 @@ TEST_P(VirtioConsoleTest, Receive) {
   EXPECT_STREQ("world", static_cast<char*>(data_2));
 }
 
-TEST_P(VirtioConsoleTest, Transmit) {
+TEST_F(VirtioConsoleTest, Transmit) {
   zx_status_t status = DescriptorChainBuilder(tx_queue_)
                            .AppendReadableDescriptor("hello ", sizeof("hello ") - 1)
                            .AppendReadableDescriptor("world", sizeof("world"))
