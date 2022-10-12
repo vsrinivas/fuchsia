@@ -9,16 +9,13 @@
 // types, e.g. `FakeFuzzer` in fuzzer.rs and `serve_manager` in manager.rs.
 
 use {
-    crate::fuzzer::test_fixtures::FakeFuzzer,
-    crate::manager::test_fixtures::serve_manager,
+    crate::controller::test_fixtures::FakeController,
     crate::util::{create_artifact_dir, create_corpus_dir},
     crate::writer::test_fixtures::BufferSink,
     crate::writer::{OutputSink, Writer},
     anyhow::{anyhow, bail, Context as _, Result},
-    fidl::endpoints::{create_proxy, ServerEnd},
-    fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_fuzzer as fuzz,
-    fuchsia_async as fasync,
-    futures::{Future, StreamExt},
+    fidl_fuchsia_fuzzer as fuzz, fuchsia_async as fasync,
+    futures::Future,
     serde_json::json,
     std::cell::RefCell,
     std::env,
@@ -44,14 +41,14 @@ pub const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/fake#meta/foo-fuzzer.cm";
 ///     its expectations.
 ///   * It can produce `Writer`s backed by its associated `BufferSink`.
 ///
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Test {
     // This temporary directory is used indirectly via `root_dir`, but must be kept in scope for
     // the duration of the test to avoid it being deleted prematurely.
-    _tmp_dir: Option<TempDir>,
+    _tmp_dir: Rc<Option<TempDir>>,
     root_dir: PathBuf,
-    task: Option<fasync::Task<()>>,
-    fuzzer: FakeFuzzer,
+    url: Rc<RefCell<Option<String>>>,
+    controller: FakeController,
     expected: Vec<Expectation>,
     actual: Rc<RefCell<Vec<u8>>>,
     writer: Writer<BufferSink>,
@@ -83,10 +80,10 @@ impl Test {
         let mut writer = Writer::new(BufferSink::new(Rc::clone(&actual)));
         writer.use_colors(false);
         Ok(Self {
-            _tmp_dir: tmp_dir,
+            _tmp_dir: Rc::new(tmp_dir),
             root_dir,
-            task: None,
-            fuzzer: FakeFuzzer::new(),
+            url: Rc::new(RefCell::new(None)),
+            controller: FakeController::new(),
             expected: Vec::new(),
             actual,
             writer,
@@ -224,19 +221,14 @@ impl Test {
         Ok(())
     }
 
-    /// Returns a proxy to the remote control service.
-    pub fn rcs(&mut self) -> Result<rcs::RemoteControlProxy> {
-        let (proxy, server_end) = create_proxy::<rcs::RemoteControlMarker>()?;
-        self.task = Some(create_task(
-            serve_rcs(server_end, self.fuzzer.clone(), self.writer.clone()),
-            self.writer.clone(),
-        ));
-        Ok(proxy)
+    /// Clones the `RefCell` holding the URL provided to the fake manager.
+    pub fn url(&self) -> Rc<RefCell<Option<String>>> {
+        self.url.clone()
     }
 
-    /// Clones the fake fuzzer "connected" by the fake manager.
-    pub fn fuzzer(&self) -> FakeFuzzer {
-        self.fuzzer.clone()
+    /// Clones the fake fuzzer controller "connected" by the fake manager.
+    pub fn controller(&self) -> FakeController {
+        self.controller.clone()
     }
 
     /// Adds an expectation that an output written to the `BufferSink` will exactly match `msg`.
@@ -303,45 +295,13 @@ impl Test {
     }
 }
 
-/// Starts serving the fake remote control service for this test.
-pub async fn serve_rcs(
-    server_end: ServerEnd<rcs::RemoteControlMarker>,
-    fuzzer: FakeFuzzer,
-    writer: Writer<BufferSink>,
-) -> Result<()> {
-    let mut stream = server_end.into_stream()?;
-    let mut task = None;
-    while let Some(request) = stream.next().await {
-        match request {
-            Ok(rcs::RemoteControlRequest::Connect { selector: _, service_chan, responder }) => {
-                let server_end = ServerEnd::<fuzz::ManagerMarker>::new(service_chan);
-                let mut response = Ok(rcs::ServiceMatch {
-                    moniker: vec!["moniker".to_string()],
-                    subdir: "subdir".to_string(),
-                    service: "service".to_string(),
-                });
-                responder.send(&mut response)?;
-                task = Some(create_task(
-                    serve_manager(server_end, fuzzer.clone(), writer.clone()),
-                    writer.clone(),
-                ));
-            }
-            Err(e) => return Err(anyhow!(e)),
-            _ => todo!("not yet implemented"),
-        }
-    }
-    if let Some(task) = task.take() {
-        task.await;
-    }
-    Ok(())
-}
-
 /// Wraps a given `future` to display any returned errors using the given `writer`.
-pub fn create_task<F, O>(future: F, writer: Writer<O>) -> fasync::Task<()>
+pub fn create_task<F, O>(future: F, writer: &Writer<O>) -> fasync::Task<()>
 where
     F: Future<Output = Result<()>> + 'static,
     O: OutputSink,
 {
+    let writer = writer.clone();
     let wrapped = || async move {
         if let Err(e) = future.await {
             writer.error(format!("task failed: {:?}", e));

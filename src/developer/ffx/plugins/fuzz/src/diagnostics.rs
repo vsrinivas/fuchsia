@@ -11,14 +11,13 @@ use {
     futures::{try_join, AsyncReadExt},
     serde_json::Deserializer,
     std::cell::RefCell,
-    std::path::{Path, PathBuf},
+    std::path::Path,
     std::rc::Rc,
 };
 
 /// Compostion of `SocketForwarder`s for standard output, standard errors, and system logs.
 #[derive(Debug)]
 pub struct Forwarder<O: OutputSink> {
-    logs_dir: PathBuf,
     stdout: Option<SocketForwarder<O>>,
     stderr: Option<SocketForwarder<O>>,
     syslog: Option<SocketForwarder<O>>,
@@ -34,43 +33,50 @@ impl<O: OutputSink> Forwarder<O> {
     ///   * fuzzer.stderr.txt
     ///   * fuzzer.syslog.json
     ///
-    pub fn try_new<P: AsRef<Path>>(logs_dir: P, writer: &Writer<O>) -> Result<Self> {
-        let logs_dir = logs_dir.as_ref().to_path_buf();
-        Ok(Self { logs_dir, stdout: None, stderr: None, syslog: None, writer: writer.clone() })
+    pub fn new(writer: &Writer<O>) -> Self {
+        Self { stdout: None, stderr: None, syslog: None, writer: writer.clone() }
     }
 
-    /// Registers the provided standard output socket.
-    pub fn set_stdout(&mut self, socket: fidl::Socket) -> Result<()> {
-        let forwarder = self.create_forwarder("stdout", "txt", socket, &self.writer)?;
-        self.stdout = Some(forwarder);
+    /// Registers the provided output socket.
+    pub fn set_output<P: AsRef<Path>>(
+        &mut self,
+        socket: fidl::Socket,
+        output: fuzz::TestOutput,
+        logs_dir: &Option<P>,
+    ) -> Result<()> {
+        match output {
+            fuzz::TestOutput::Stdout => {
+                let forwarder = self.create_forwarder(logs_dir, "stdout", "txt", socket)?;
+                self.stdout = Some(forwarder);
+            }
+            fuzz::TestOutput::Stderr => {
+                let forwarder = self.create_forwarder(logs_dir, "stderr", "txt", socket)?;
+                self.stderr = Some(forwarder);
+            }
+            fuzz::TestOutput::Syslog => {
+                let forwarder = self.create_forwarder(logs_dir, "syslog", "json", socket)?;
+                self.syslog = Some(forwarder);
+            }
+            _ => unreachable!(),
+        }
         Ok(())
     }
 
-    /// Registers the provided standard error socket.
-    pub fn set_stderr(&mut self, socket: fidl::Socket) -> Result<()> {
-        let forwarder = self.create_forwarder("stderr", "txt", socket, &self.writer)?;
-        self.stderr = Some(forwarder);
-        Ok(())
-    }
-
-    /// Registers the provided system log socket.
-    pub fn set_syslog(&mut self, socket: fidl::Socket) -> Result<()> {
-        let forwarder = self.create_forwarder("syslog", "json", socket, &self.writer)?;
-        self.syslog = Some(forwarder);
-        Ok(())
-    }
-
-    fn create_forwarder(
+    fn create_forwarder<P: AsRef<Path>>(
         &self,
+        logs_dir: &Option<P>,
         name: &str,
         extension: &str,
         socket: fidl::Socket,
-        writer: &Writer<O>,
     ) -> Result<SocketForwarder<O>> {
-        let writer = writer
-            .tee(&self.logs_dir, format!("fuzzer.{}.{}", name, extension))
-            .context(format!("failed to create file for {}", name))?;
-        let forwarder = SocketForwarder::try_new(socket, writer)
+        let writer = match logs_dir {
+            Some(logs_dir) => self
+                .writer
+                .tee(logs_dir, format!("fuzzer.{}.{}", name, extension))
+                .context(format!("failed to create file for {}", name)),
+            None => Ok(self.writer.clone()),
+        }?;
+        let forwarder = SocketForwarder::try_new(socket, &writer)
             .context(format!("failed to create forwarder for {}", name))?;
         Ok(forwarder)
     }
@@ -119,10 +125,10 @@ impl<O: OutputSink> Clone for SocketForwarder<O> {
 }
 
 impl<O: OutputSink> SocketForwarder<O> {
-    fn try_new(socket: fidl::Socket, writer: Writer<O>) -> Result<Self> {
+    fn try_new(socket: fidl::Socket, writer: &Writer<O>) -> Result<Self> {
         let socket = fidl::AsyncSocket::from_socket(socket).context("failed to convert socket")?;
         let (reader, _) = socket.split();
-        Ok(Self { reader: Rc::new(RefCell::new(reader)), writer })
+        Ok(Self { reader: Rc::new(RefCell::new(reader)), writer: writer.clone() })
     }
 
     async fn forward_text(&self, name: &str) -> Result<()> {
@@ -252,7 +258,7 @@ mod tests {
     async fn test_forward_text() -> Result<()> {
         let mut test = Test::try_new()?;
         let (tx, rx) = Socket::create(SocketOpts::STREAM)?;
-        let forwarder = SocketForwarder::try_new(rx, test.writer().clone())?;
+        let forwarder = SocketForwarder::try_new(rx, test.writer())?;
         let socket_fut = || async move {
             let mut tx = fidl::AsyncSocket::from_socket(tx)?;
             tx.write_all(b"hello\nworld!\n").await?;
@@ -270,7 +276,7 @@ mod tests {
     async fn test_forward_json() -> Result<()> {
         let mut test = Test::try_new()?;
         let (tx, rx) = Socket::create(SocketOpts::STREAM)?;
-        let forwarder = SocketForwarder::try_new(rx, test.writer().clone())?;
+        let forwarder = SocketForwarder::try_new(rx, test.writer())?;
         let socket_fut = || async move {
             let mut tx = fidl::AsyncSocket::from_socket(tx)?;
             send_log_entry(&mut tx, "hello world").await?;
@@ -286,16 +292,17 @@ mod tests {
     async fn test_forward_all() -> Result<()> {
         let mut test = Test::try_new()?;
         let logs_dir = test.create_dir("logs")?;
-        let mut forwarder = Forwarder::try_new(&logs_dir, test.writer())?;
+        let logs_dir = Some(logs_dir);
+        let mut forwarder = Forwarder::new(test.writer());
 
         let (stdout_tx, stdout_rx) = Socket::create(SocketOpts::STREAM)?;
-        forwarder.set_stdout(stdout_rx)?;
+        forwarder.set_output(stdout_rx, fuzz::TestOutput::Stdout, &logs_dir)?;
 
         let (stderr_tx, stderr_rx) = Socket::create(SocketOpts::STREAM)?;
-        forwarder.set_stderr(stderr_rx)?;
+        forwarder.set_output(stderr_rx, fuzz::TestOutput::Stderr, &logs_dir)?;
 
         let (syslog_tx, syslog_rx) = Socket::create(SocketOpts::STREAM)?;
-        forwarder.set_syslog(syslog_rx)?;
+        forwarder.set_output(syslog_rx, fuzz::TestOutput::Syslog, &logs_dir)?;
 
         let done_marker = format!("{}\n", fuzz::DONE_MARKER);
         let done_marker_bytes = done_marker.as_bytes();
@@ -337,16 +344,17 @@ mod tests {
         let test = Test::try_new()?;
 
         let logs_dir = test.create_dir("logs")?;
-        let mut forwarder = Forwarder::try_new(&logs_dir, test.writer())?;
+        let logs_dir = Some(logs_dir);
+        let mut forwarder = Forwarder::new(test.writer());
 
         let (stdout_tx, stdout_rx) = Socket::create(SocketOpts::STREAM)?;
-        forwarder.set_stdout(stdout_rx)?;
+        forwarder.set_output(stdout_rx, fuzz::TestOutput::Stdout, &logs_dir)?;
 
         let (stderr_tx, stderr_rx) = Socket::create(SocketOpts::STREAM)?;
-        forwarder.set_stderr(stderr_rx)?;
+        forwarder.set_output(stderr_rx, fuzz::TestOutput::Stderr, &logs_dir)?;
 
         let (syslog_tx, syslog_rx) = Socket::create(SocketOpts::STREAM)?;
-        forwarder.set_syslog(syslog_rx)?;
+        forwarder.set_output(syslog_rx, fuzz::TestOutput::Syslog, &logs_dir)?;
 
         let sockets_fut = || async move {
             let done_marker = format!("{}\n", fuzz::DONE_MARKER);
@@ -373,6 +381,7 @@ mod tests {
         };
         let sockets_fut = sockets_fut();
         try_join!(forwarder.forward_all(), sockets_fut)?;
+        let logs_dir = logs_dir.unwrap();
         assert_eq!(fs::read(logs_dir.join("fuzzer.stdout.txt"))?, b"hello world!\n");
         assert_eq!(fs::read(logs_dir.join("fuzzer.stderr.txt"))?, b"hello world!\n");
         let data = fs::read(logs_dir.join("fuzzer.syslog.json"))?;

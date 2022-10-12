@@ -6,7 +6,7 @@
 
 use {
     anyhow::{bail, Context as _, Result},
-    fidl_fuchsia_fuzzer as fuzz,
+    fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
     serde_json::Value,
     sha2::{Digest, Sha256},
     std::env,
@@ -48,14 +48,24 @@ pub fn create_corpus_dir<P: AsRef<Path>>(
 /// if provided, with the hex encoded SHA-256 digest of the `data`. This naming scheme is used both
 /// for inputs retrieved from a fuzzer corpus and for artifacts produced by the fuzzer.
 ///
-pub fn digest_path<P: AsRef<Path>>(out_dir: P, prefix: Option<&str>, data: &[u8]) -> PathBuf {
+pub fn digest_path<P: AsRef<Path>>(out_dir: P, result: Option<FuzzResult>, data: &[u8]) -> PathBuf {
     let mut path = PathBuf::from(out_dir.as_ref());
+    let prefix = match result {
+        None | Some(FuzzResult::NoErrors) => String::default(),
+        Some(FuzzResult::BadMalloc) => format!("alloc-"),
+        Some(FuzzResult::Crash) => format!("crash-"),
+        Some(FuzzResult::Death) => format!("death-"),
+        Some(FuzzResult::Exit) => format!("exit-"),
+        Some(FuzzResult::Leak) => format!("leak-"),
+        Some(FuzzResult::Oom) => format!("oom-"),
+        Some(FuzzResult::Timeout) => format!("timeout-"),
+        Some(FuzzResult::Cleansed) => format!("cleansed-"),
+        Some(FuzzResult::Minimized) => format!("minimized-"),
+        _ => unreachable!(),
+    };
     let mut digest = Sha256::new();
     digest.update(&data);
-    match prefix {
-        Some(prefix) => path.push(format!("{}-{:x}", prefix, digest.finalize())),
-        None => path.push(format!("{:x}", digest.finalize())),
-    };
+    path.push(format!("{}{:x}", prefix, digest.finalize()));
     path
 }
 

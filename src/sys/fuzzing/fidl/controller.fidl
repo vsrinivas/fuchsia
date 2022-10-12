@@ -16,7 +16,13 @@ type Input = resource struct {
     size uint64;
 };
 
-/// See |Controller.Execute| and |Controller.Fuzz|.
+/// Indicates the result of a long-running fuzzing workflow.
+///
+/// Fuzzers have several "long-running" workflows; that is, the fuzzer may perform actions for an
+/// indefinite period of time. Fuzzing itself is the most notable example, as the fuzzing engine may
+/// continuously generate new inputs until an error is found. This workflow is represented by the
+/// `Fuzz` method below. Other long-running workflows include `TryOne`, `Cleanse`, `Minimize` and
+/// `Merge`.
 type Result = flexible enum : uint32 {
     /// No errors encountered.
     NO_ERRORS = 1;
@@ -41,6 +47,18 @@ type Result = flexible enum : uint32 {
 
     /// A single run exceeded the configured limit.
     TIMEOUT = 8;
+
+    /// The associated input was produced by finding the shortest input that produces the same error
+    /// as an original input. See `Minimize`.
+    MINIMIZED = 9;
+
+    /// The associated input was produced by replacing bytes in an original input with PII-free
+    /// values while preserving the error produced. See `Cleanse`.
+    CLEANSED = 10;
+
+    /// The fuzzer corpus has been compacted to only include the shortest inputs that preserve
+    /// overall coverage. This workflow does not have an associated input. See `Merge`.
+    MERGED = 11;
 };
 
 /// Provides a |Controller| implementation.

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::constants::*,
     anyhow::{anyhow, bail, Error, Result},
     fidl_fuchsia_fuzzer as fuzz,
-    fuchsia_async::Duration,
     lazy_static::lazy_static,
     regex::Regex,
 };
@@ -202,13 +202,6 @@ fn parse_bool(value: &str) -> Result<bool> {
     value.parse::<bool>().map_err(Error::msg)
 }
 
-const NANOS_PER_MICRO: i64 = Duration::from_micros(1).as_nanos() as i64;
-const NANOS_PER_MILLI: i64 = Duration::from_millis(1).as_nanos() as i64;
-const NANOS_PER_SECOND: i64 = Duration::from_secs(1).as_nanos() as i64;
-const NANOS_PER_MINUTE: i64 = Duration::from_secs(60).as_nanos() as i64;
-const NANOS_PER_HOUR: i64 = Duration::from_secs(60 * 60).as_nanos() as i64;
-const NANOS_PER_DAY: i64 = Duration::from_secs(24 * 60 * 60).as_nanos() as i64;
-
 fn format_duration(nanos: Option<i64>) -> String {
     match nanos.unwrap() {
         0 => "0".to_string(),
@@ -264,10 +257,6 @@ fn parse_duration(value: &str) -> Result<i64> {
     bail!("failed to parse duration: {}", value);
 }
 
-const BYTES_PER_KB: u64 = 1 << 10;
-const BYTES_PER_MB: u64 = 1 << 20;
-const BYTES_PER_GB: u64 = 1 << 30;
-
 fn format_size(bytes: Option<u64>) -> String {
     match bytes.unwrap() {
         bytes if bytes == 0 => "0".to_string(),
@@ -306,42 +295,9 @@ fn parse_size(value: &str) -> Result<u64> {
 }
 
 #[cfg(test)]
-pub mod test_fixtures {
-    use super::*;
-
-    /// Add defaults values to an `Options` struct.
-    pub fn add_defaults(options: &mut fuzz::Options) {
-        options.runs = options.runs.or(Some(0));
-        options.max_total_time = options.max_total_time.or(Some(0));
-        options.seed = options.seed.or(Some(0));
-        options.max_input_size = options.max_input_size.or(Some(1 * BYTES_PER_MB));
-        options.mutation_depth = options.mutation_depth.or(Some(5));
-        options.dictionary_level = options.dictionary_level.or(Some(0));
-        options.detect_exits = options.detect_exits.or(Some(false));
-        options.detect_leaks = options.detect_leaks.or(Some(false));
-        options.run_limit = options.run_limit.or(Some(20 * NANOS_PER_MINUTE));
-        options.malloc_limit = options.malloc_limit.or(Some(2 * BYTES_PER_GB));
-        options.oom_limit = options.oom_limit.or(Some(2 * BYTES_PER_GB));
-        options.purge_interval = options.purge_interval.or(Some(1 * NANOS_PER_SECOND));
-        options.malloc_exitcode = options.malloc_exitcode.or(Some(2000));
-        options.death_exitcode = options.death_exitcode.or(Some(2001));
-        options.leak_exitcode = options.leak_exitcode.or(Some(2002));
-        options.oom_exitcode = options.oom_exitcode.or(Some(2003));
-        options.pulse_interval = options.pulse_interval.or(Some(20 * NANOS_PER_SECOND));
-        options.debug = options.debug.or(Some(false));
-        options.print_final_stats = options.print_final_stats.or(Some(false));
-        options.use_value_profile = options.use_value_profile.or(Some(false));
-        if options.sanitizer_options.is_none() {
-            options.sanitizer_options =
-                Some(fuzz::SanitizerOptions { name: String::default(), value: String::default() });
-        }
-    }
-}
-
-#[cfg(test)]
 mod tests {
-    use super::test_fixtures::add_defaults;
     use super::*;
+    use crate::controller::test_fixtures::add_defaults;
 
     #[test]
     fn test_format_duration() -> Result<()> {

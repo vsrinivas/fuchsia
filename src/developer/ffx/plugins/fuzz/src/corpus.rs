@@ -34,8 +34,8 @@ pub fn get_name(corpus_type: fuzz::Corpus) -> &'static str {
 /// Basic corpus information returned by `read`.
 #[derive(Debug, Default, PartialEq)]
 pub struct Stats {
-    pub num_inputs: usize,
-    pub total_size: usize,
+    pub num_inputs: u64,
+    pub total_size: u64,
 }
 
 /// Receives and saves inputs from a corpus.
@@ -50,8 +50,8 @@ pub async fn read<P: AsRef<Path>>(
 ) -> Result<Stats> {
     // Without these `RefCell`s, the compiler will complain about references in the async block
     // below that escape the closure.
-    let num_inputs: RefCell<usize> = RefCell::new(0);
-    let total_size: RefCell<usize> = RefCell::new(0);
+    let num_inputs: RefCell<u64> = RefCell::new(0);
+    let total_size: RefCell<u64> = RefCell::new(0);
     stream
         .try_for_each(|request| async {
             match request {
@@ -60,9 +60,9 @@ pub async fn read<P: AsRef<Path>>(
                         let mut num_inputs = num_inputs.borrow_mut();
                         let mut total_size = total_size.borrow_mut();
                         *num_inputs += 1;
-                        *total_size += test_input.size as usize;
+                        *total_size += test_input.size;
                     }
-                    let result = match save_input(test_input, out_dir.as_ref(), None).await {
+                    let result = match save_input(test_input, out_dir.as_ref()).await {
                         Ok(_) => zx::Status::OK,
                         Err(_) => zx::Status::IO,
                     };
@@ -81,7 +81,7 @@ pub async fn read<P: AsRef<Path>>(
 #[cfg(test)]
 mod test_fixtures {
     use {
-        crate::input::Input,
+        crate::input::InputPair,
         anyhow::{Error, Result},
         fidl_fuchsia_fuzzer as fuzz, fuchsia_zircon_status as zx,
     };
@@ -91,7 +91,8 @@ mod test_fixtures {
         corpus_reader: &fuzz::CorpusReaderProxy,
         data: Vec<u8>,
     ) -> Result<()> {
-        let (mut fidl_input, input) = Input::create(data)?;
+        let input_pair = InputPair::try_from_data(data)?;
+        let (mut fidl_input, input) = input_pair.as_tuple();
         let (response, _) = futures::try_join!(
             async move { corpus_reader.next(&mut fidl_input).await.map_err(Error::msg) },
             input.send(),

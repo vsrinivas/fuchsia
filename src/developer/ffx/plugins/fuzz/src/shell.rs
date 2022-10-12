@@ -9,12 +9,13 @@ use {
     crate::reader::{ParsedCommand, Reader},
     crate::util::get_fuzzer_urls,
     crate::writer::{OutputSink, Writer},
-    anyhow::{bail, Context as _, Result},
+    anyhow::{anyhow, bail, Context as _, Result},
     errors::ffx_bail,
     ffx_fuzz_args::*,
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_fuzzer as fuzz,
     fuchsia_async as fasync, fuchsia_zircon_status as zx,
     futures::{pin_mut, select, FutureExt},
+    selectors::{parse_selector, VerboseError},
     serde_json::json,
     std::cell::RefCell,
     std::convert::TryInto,
@@ -30,7 +31,7 @@ pub const DEFAULT_FUZZING_OUTPUT_VARIABLE: &str = "fuzzer.output";
 /// Interactive fuzzing shell.
 pub struct Shell<R: Reader, O: OutputSink> {
     tests_json: Option<String>,
-    rc: rcs::RemoteControlProxy,
+    remote_control: rcs::RemoteControlProxy,
     state: Arc<Mutex<FuzzerState>>,
     fuzzer: RefCell<Option<Fuzzer<O>>>,
     reader: RefCell<R>,
@@ -61,7 +62,7 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
     /// by examining the `tests_json`.
     pub fn new(
         tests_json: Option<String>,
-        rc: rcs::RemoteControlProxy,
+        remote_control: rcs::RemoteControlProxy,
         mut reader: R,
         writer: &Writer<O>,
     ) -> Self {
@@ -69,7 +70,7 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         reader.start(tests_json.clone(), Arc::clone(&state));
         Self {
             tests_json,
-            rc,
+            remote_control,
             state,
             fuzzer: RefCell::new(None),
             reader: RefCell::new(reader),
@@ -423,11 +424,9 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         // Pre-emptively pause, and then resume if the fuzzer is currently running.
         self.writer.pause();
         self.writer.println(format!("Attaching to '{}'...", url));
-        let manager = Manager::with_remote_control(&self.rc, &self.writer)
-            .await
-            .context("failed to connect to manager")?;
-        let mut fuzzer =
-            manager.connect(&url, output).await.context("failed to connect to fuzzer")?;
+        let manager = self.connect_to_manager().await.context("failed to connect to manager")?;
+        let controller = manager.connect(&url).await.context("failed to connect to fuzzer")?;
+        let mut fuzzer = Fuzzer::new(&url, controller, output, &self.writer);
         if !no_stdout {
             let output = fuzz::TestOutput::Stdout;
             let rx = manager.get_output(&url, output).await.context("failed to get stdout")?;
@@ -582,9 +581,7 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         let url = Url::parse(url).context("invalid fuzzer URL")?;
         self.writer.println(format!("Stopping '{}'...", url));
         self.set_state(FuzzerState::Detached);
-        let manager = Manager::with_remote_control(&self.rc, &self.writer)
-            .await
-            .context("failed to connect to manager")?;
+        let manager = self.connect_to_manager().await.context("failed to connect to manager")?;
         let stopped = manager.stop(&url).await.context("manager failed to stop fuzzer")?;
         if stopped {
             self.writer.println("Stopped.");
@@ -592,6 +589,21 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
             self.writer.println("Fuzzer is not running.");
         }
         Ok(())
+    }
+
+    async fn connect_to_manager(&self) -> Result<Manager> {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fuzz::ManagerMarker>()
+            .context("failed to create proxy for fuchsia.fuzzer.Manager")?;
+        let selector = "core/fuzz-manager:expose:fuchsia.fuzzer.Manager";
+        let parsed =
+            parse_selector::<VerboseError>(selector).context("failed to parse selector")?;
+        let result = self
+            .remote_control
+            .connect(parsed, server_end.into_channel())
+            .await
+            .context("fuchsia.developer.remotecontrol/Connect")?;
+        result.map_err(|e| anyhow!("{:?}", e)).context("failed to connect to fuzz-manager")?;
+        Ok(Manager::new(proxy))
     }
 
     // Helper functions to make it easier to access and mutate `Arc` and `RefCell` fields, and to
@@ -620,14 +632,18 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
 mod test_fixtures {
     use {
         super::Shell,
-        crate::fuzzer::test_fixtures::FakeFuzzer,
+        crate::controller::test_fixtures::FakeController,
+        crate::manager::test_fixtures::serve_manager,
         crate::reader::test_fixtures::ScriptReader,
-        crate::test_fixtures::{Test, TEST_URL},
+        crate::test_fixtures::{create_task, Test, TEST_URL},
         crate::writer::test_fixtures::BufferSink,
-        anyhow::{Context as _, Result},
+        anyhow::{anyhow, Context as _, Result},
         ffx_fuzz_args::FuzzerState,
-        fidl_fuchsia_fuzzer::Result_ as FuzzResult,
+        fidl::endpoints::{create_proxy, ServerEnd},
+        fidl_fuchsia_developer_remotecontrol as rcs,
+        fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
         fuchsia_async as fasync,
+        futures::StreamExt,
         std::fmt::Display,
         std::path::PathBuf,
         url::Url,
@@ -636,8 +652,8 @@ mod test_fixtures {
     /// Represents a set of test fakes used to test `Shell`.
     pub struct ShellScript {
         shell: Shell<ScriptReader, BufferSink>,
+        _rcs_task: fasync::Task<()>,
         state: FuzzerState,
-        url: Url,
         output_dir: PathBuf,
         runs_indefinitely: bool,
     }
@@ -651,20 +667,21 @@ mod test_fixtures {
                 .create_tests_json(urls.iter())
                 .context("failed to write URLs for shell script")?;
             let tests_json = Some(tests_json.to_string_lossy().to_string());
-            let proxy = test.rcs().context("failed to serve RCS")?;
+            let (proxy, server_end) = create_proxy::<rcs::RemoteControlMarker>()?;
+            let rcs_task = create_task(serve_rcs(server_end, test.clone()), test.writer());
             let reader = ScriptReader::new();
             let shell = Shell::new(tests_json, proxy, reader, test.writer());
             Ok(Self {
                 shell,
+                _rcs_task: rcs_task,
                 state: FuzzerState::Detached,
-                url,
                 output_dir: test.root_dir().to_path_buf(),
                 runs_indefinitely: false,
             })
         }
 
         /// Bootstraps the `ShellScript` to emulate having a fuzzer in a long-running workflow.
-        pub async fn create_running(test: &mut Test) -> Result<(Self, FakeFuzzer)> {
+        pub async fn create_running(test: &mut Test) -> Result<(Self, FakeController)> {
             let mut script = Self::try_new(test).context("failed to create shell script")?;
             script.runs_indefinitely = true;
             let fuzzer = script.attach(test);
@@ -676,19 +693,14 @@ mod test_fixtures {
             Ok((script, fuzzer))
         }
 
-        /// Returns the URL used for fake fuzzers.
-        pub fn url(&self) -> &Url {
-            &self.url
-        }
-
         /// Adds input commands and output expectations for attaching to a fuzzer.
-        pub fn attach(&mut self, test: &mut Test) -> FakeFuzzer {
-            let cmdline = format!("attach {} -o {}", self.url, self.output_dir.to_string_lossy());
+        pub fn attach(&mut self, test: &mut Test) -> FakeController {
+            let cmdline = format!("attach {} -o {}", TEST_URL, self.output_dir.to_string_lossy());
             self.add(test, cmdline);
-            test.output_matches(format!("Attaching to '{}'...", self.url));
+            test.output_matches(format!("Attaching to '{}'...", TEST_URL));
             test.output_matches("Attached; fuzzer is idle.");
             self.state = FuzzerState::Idle;
-            test.fuzzer()
+            test.controller()
         }
 
         /// Adds an input command to run as part of a test.
@@ -718,7 +730,7 @@ mod test_fixtures {
         /// Processes the previously `add`ed commands using the underlying `Shell`.
         pub async fn run(&mut self, test: &mut Test) -> Result<()> {
             // Handle the case where a workflow expected to fail.
-            if test.fuzzer().get_result().is_err() && self.state == FuzzerState::Running {
+            if test.controller().get_result().is_err() && self.state == FuzzerState::Running {
                 self.state = FuzzerState::Detached;
             }
 
@@ -751,7 +763,7 @@ mod test_fixtures {
         pub async fn detach(&mut self, test: &mut Test) {
             let state = self.state;
             self.add(test, "detach");
-            test.output_matches(format!("Detaching from '{}'...", self.url));
+            test.output_matches(format!("Detaching from '{}'...", TEST_URL));
             self.detach_from_state(test, state);
             test.output_matches("Detached.");
         }
@@ -767,6 +779,32 @@ mod test_fixtures {
             test.output_matches("To stop this fuzzer, use 'stop'. command");
         }
     }
+
+    async fn serve_rcs(server_end: ServerEnd<rcs::RemoteControlMarker>, test: Test) -> Result<()> {
+        let mut stream = server_end.into_stream()?;
+        let mut task = None;
+        while let Some(request) = stream.next().await {
+            match request {
+                Ok(rcs::RemoteControlRequest::Connect { selector: _, service_chan, responder }) => {
+                    let server_end = ServerEnd::<fuzz::ManagerMarker>::new(service_chan);
+                    let mut response = Ok(rcs::ServiceMatch {
+                        moniker: vec!["moniker".to_string()],
+                        subdir: "subdir".to_string(),
+                        service: "service".to_string(),
+                    });
+                    responder.send(&mut response)?;
+                    task =
+                        Some(create_task(serve_manager(server_end, test.clone()), test.writer()));
+                }
+                Err(e) => return Err(anyhow!(e)),
+                _ => todo!("not yet implemented"),
+            }
+        }
+        if let Some(task) = task.take() {
+            task.await;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -775,7 +813,7 @@ mod tests {
         super::test_fixtures::ShellScript,
         super::DEFAULT_FUZZING_OUTPUT_VARIABLE,
         crate::input::test_fixtures::verify_saved,
-        crate::test_fixtures::Test,
+        crate::test_fixtures::{Test, TEST_URL},
         crate::util::digest_path,
         anyhow::Result,
         fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
@@ -872,16 +910,12 @@ mod tests {
         let mut test = Test::try_new()?;
         let mut script = ShellScript::try_new(&mut test)?;
 
-        let output_dir = test.create_dir("output")?;
-        let test_files = vec!["test1"];
-        test.create_test_files(&output_dir, test_files.iter())?;
-
         // URL must be valid
         script.add(&mut test, "attach invalid-url");
         test.output_includes("invalid fuzzer URL");
 
         // Output directory must be provided or set in config.
-        script.add(&mut test, format!("attach {}", script.url()));
+        script.add(&mut test, format!("attach {}", TEST_URL));
         test.output_includes("output directory is not set");
         script.run(&mut test).await?;
         test.verify_output()?;
@@ -895,23 +929,26 @@ mod tests {
             .level(Some(ffx_config::ConfigLevel::User))
             .set(serde_json::json!(&badpath))
             .await?;
-        script.add(&mut test, format!("attach {}", script.url()));
+        script.add(&mut test, format!("attach {}", TEST_URL));
         test.output_includes("invalid output directory");
 
         // Provided output directory is checked.
-        script.add(&mut test, format!("attach -o {} {}", badpath.to_string_lossy(), script.url()));
+        script.add(&mut test, format!("attach -o {} {}", badpath.to_string_lossy(), TEST_URL));
         test.output_includes("invalid output directory");
 
         // Provided output directory must be a directory.
-        let cmdline = format!("attach -o {}/test1 {}", output_dir.to_string_lossy(), script.url());
+        let output_dir = test.create_dir("output")?;
+        let test_files = vec!["test1"];
+        test.create_test_files(&output_dir, test_files.iter())?;
+        let cmdline = format!("attach -o {}/test1 {}", output_dir.to_string_lossy(), TEST_URL);
         script.add(&mut test, cmdline);
-        test.output_includes("invalid output directory");
+        test.output_includes("not a directory");
 
         // Can 'attach' when detached.
         script.attach(&mut test);
 
         // Cannot 'attach' when attached.
-        let cmdline = format!("attach -o {} {}", output_dir.to_string_lossy(), script.url());
+        let cmdline = format!("attach -o {} {}", output_dir.to_string_lossy(), TEST_URL);
         script.add(&mut test, cmdline);
         test.output_includes("invalid command: a fuzzer is already attached.");
         script.run(&mut test).await?;
@@ -1056,7 +1093,7 @@ mod tests {
         fuzzer.set_result(Ok(FuzzResult::Death));
         fuzzer.set_input_to_send(b"hello");
         test.output_matches("An input to the fuzzer triggered a sanitizer violation.");
-        let artifact = digest_path(test.artifact_dir(), Some("death"), b"hello");
+        let artifact = digest_path(test.artifact_dir(), Some(FuzzResult::Death), b"hello");
         test.output_matches(format!("Input saved to '{}'", artifact.to_string_lossy()));
         script.run(&mut test).await?;
         let options = fuzzer.get_options();
@@ -1100,7 +1137,7 @@ mod tests {
         script.add(&mut test, format!("cleanse {}", hex::encode("hello")));
         test.output_matches("Attempting to cleanse an input of 5 bytes...");
         fuzzer.set_input_to_send(b"world");
-        let artifact = digest_path(test.artifact_dir(), Some("cleansed"), b"world");
+        let artifact = digest_path(test.artifact_dir(), Some(FuzzResult::Cleansed), b"world");
         test.output_matches(format!("Cleansed input written to '{}'", artifact.to_string_lossy()));
         script.run(&mut test).await?;
         verify_saved(&artifact, b"world")?;
@@ -1130,7 +1167,7 @@ mod tests {
         test.output_matches("Configuring fuzzer...");
         test.output_matches("Attempting to minimize an input of 5 bytes...");
         fuzzer.set_input_to_send(b"world");
-        let artifact = digest_path(test.artifact_dir(), Some("minimized"), b"world");
+        let artifact = digest_path(test.artifact_dir(), Some(FuzzResult::Minimized), b"world");
         test.output_matches(format!("Minimized input written to '{}'", artifact.to_string_lossy()));
         script.run(&mut test).await?;
         verify_saved(&artifact, b"world")?;
@@ -1214,7 +1251,7 @@ mod tests {
         // Can get 'status' when idle.
         let _fuzzer = script.attach(&mut test);
         script.add(&mut test, "status");
-        test.output_matches(format!("{} is idle.", script.url()));
+        test.output_matches(format!("{} is idle.", TEST_URL));
         script.run(&mut test).await?;
         test.verify_output()?;
 
@@ -1232,7 +1269,7 @@ mod tests {
         };
         fuzzer.set_status(status);
         script.add(&mut test, "status");
-        test.output_matches(format!("{} is running.", script.url()));
+        test.output_matches(format!("{} is running.", TEST_URL));
         test.output_matches("Runs performed: 1");
         test.output_matches("Time elapsed: 2 seconds");
         test.output_matches("Coverage: 3 PCs, 4 features");
@@ -1305,21 +1342,21 @@ mod tests {
         test.output_includes("invalid command: no fuzzer attached.");
 
         // Trying to 'stop'  a stopped fuzzer using its URL doesn't do anything.
-        script.add(&mut test, format!("stop {}", script.url()));
-        test.output_matches(format!("Stopping '{}'...", script.url()));
+        script.add(&mut test, format!("stop {}", TEST_URL));
+        test.output_matches(format!("Stopping '{}'...", TEST_URL));
         test.output_matches("Fuzzer is not running.");
 
         // Can 'stop' a detached fuzzer using its URL.
         script.attach(&mut test);
         script.detach(&mut test).await;
-        script.add(&mut test, format!("stop {}", script.url()));
-        test.output_matches(format!("Stopping '{}'...", script.url()));
+        script.add(&mut test, format!("stop {}", TEST_URL));
+        test.output_matches(format!("Stopping '{}'...", TEST_URL));
         test.output_matches("Stopped.");
 
         // Can 'stop' when idle.
         script.attach(&mut test);
         script.add(&mut test, "stop");
-        test.output_matches(format!("Stopping '{}'...", script.url()));
+        test.output_matches(format!("Stopping '{}'...", TEST_URL));
         test.output_matches("Stopped.");
         script.run(&mut test).await?;
         test.verify_output()?;
@@ -1327,7 +1364,7 @@ mod tests {
         // Can 'stop' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         script.add(&mut test, "stop");
-        test.output_matches(format!("Stopping '{}'...", script.url()));
+        test.output_matches(format!("Stopping '{}'...", TEST_URL));
         test.output_matches("Stopped.");
         script.run(&mut test).await?;
         test.verify_output()

@@ -9,7 +9,10 @@ ffx_plugin("ffx_fuzz") {
   edition = "2021"
   args_sources = [ "src/args.rs" ]
   sources = [
+    "src/artifact.rs",
     "src/autocomplete.rs",
+    "src/constants.rs",
+    "src/controller.rs",
     "src/corpus.rs",
     "src/diagnostics.rs",
     "src/fuzzer.rs",

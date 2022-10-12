@@ -12,21 +12,24 @@ use {
     std::path::{Path, PathBuf},
 };
 
-/// Represents a sequence of bytes, paired with a `fuchsia.fuzzer.Input`.
-///
-/// The `fuchsia.fuzzer.Input` FIDL struct is used to transport test inputs and artifacts between
-/// a target device running a fuzzer and a development host running the `ffx fuzz` plugin. This
-/// struct and that FIDL struct are created in pairs. The FIDL struct can be sent to the target
-/// device, and this struct can be used to transmit the actual test input data to the target
-/// device.
+/// Represents an `Input` that can send or read data from an associated `FidlInput`.
 #[derive(Debug)]
-pub struct Input {
-    socket: fidl::Socket,
-    data: Vec<u8>,
+pub struct InputPair {
+    /// Socket and size used to send input data to or receive input data from a fuzzer.
+    pub fidl_input: FidlInput,
+
+    /// Client-side representation of a fuzzer input.
+    pub input: Input,
 }
 
-impl Input {
-    /// Generates an `Input` from a  string.
+impl From<(FidlInput, Input)> for InputPair {
+    fn from(tuple: (FidlInput, Input)) -> Self {
+        InputPair { fidl_input: tuple.0, input: tuple.1 }
+    }
+}
+
+impl InputPair {
+    /// Generates an input pair from a  string.
     ///
     /// The `input` string can be either a file name or a hex-encoded value. This method also
     /// returns a `fuchsia.fuzzer.Input` that can be sent via FIDL calls to receive this object's
@@ -35,7 +38,7 @@ impl Input {
     ///
     /// Returns an error if the `input` string is neither valid hex nor a valid path to a file.
     ///
-    pub fn from_str<S, O>(input: S, writer: &Writer<O>) -> Result<(FidlInput, Input)>
+    pub fn try_from_str<S, O>(input: S, writer: &Writer<O>) -> Result<Self>
     where
         S: AsRef<str>,
         O: OutputSink,
@@ -58,75 +61,96 @@ impl Input {
             }
             (Err(_), Err(e)) => bail!("failed to read fuzzer input: {}", e),
         };
-        Input::create(input_data)
+        InputPair::try_from_data(input_data)
     }
 
-    /// Generates an `Input` from a filesystem path.
-    ///
-    /// This method also returns a `fuchsia.fuzzer.Input` that can be sent via FIDL calls to receive
-    /// this object's data.
+    /// Generates an input pair from a filesystem path.
     ///
     /// Returns an error if the `path` is invalid.
     ///
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<(FidlInput, Input)> {
+    pub fn try_from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
         let input_data = fs::read(path)
             .with_context(|| format!("failed to read '{}'", path.to_string_lossy()))?;
-        Input::create(input_data)
+        InputPair::try_from_data(input_data)
     }
 
-    /// Creates an `Input` from a sequence of bytes.
-    ///
-    /// This method also returns a `fuchsia.fuzzer.Input` that can be sent via FIDL calls to receive
-    /// this object's data.
-    pub fn create(input_data: Vec<u8>) -> Result<(FidlInput, Self)> {
+    /// Creates an input pair from a sequence of bytes.
+    pub fn try_from_data(input_data: Vec<u8>) -> Result<Self> {
         let (reader, writer) = fidl::Socket::create(fidl::SocketOpts::STREAM)
             .context("failed to create socket for fuzz input")?;
         let fidl_input = FidlInput { socket: reader, size: input_data.len() as u64 };
-        Ok((fidl_input, Self { socket: writer, data: input_data }))
+        let input = Input { socket: Some(writer), data: input_data };
+        Ok(InputPair::from((fidl_input, input)))
+    }
+
+    /// Destructures the object into a `FidlInput` and an `Input`.
+    pub fn as_tuple(self) -> (FidlInput, Input) {
+        (self.fidl_input, self.input)
     }
 
     /// Returns the length of this object's data.
     pub fn len(&self) -> usize {
-        self.data.len()
+        self.input.data.len()
     }
+}
 
+/// Represents a sequence of bytes, paired with a `fuchsia.fuzzer.Input`.
+///
+/// The `fuchsia.fuzzer.Input` FIDL struct is used to transport test inputs and artifacts between
+/// a target device running a fuzzer and a development host running the `ffx fuzz` plugin. This
+/// struct and that FIDL struct are created in pairs. The FIDL struct can be sent to the target
+/// device, and this struct can be used to transmit the actual test input data to the target
+/// device.
+#[derive(Debug)]
+pub struct Input {
+    socket: Option<fidl::Socket>,
+
+    /// The received data
+    pub data: Vec<u8>,
+}
+
+impl Input {
     /// Writes the object's data to its internal socket.
     ///
     /// This will deliver the data to the `fuchsia.fuzzer.Input` created with this object.
-    pub async fn send(self) -> Result<()> {
-        let mut writer = fidl::AsyncSocket::from_socket(self.socket)
+    pub async fn send(mut self) -> Result<()> {
+        let socket = self.socket.take().context("input already sent")?;
+        let mut writer = fidl::AsyncSocket::from_socket(socket)
             .context("failed to convert socket for sending fuzz input")?;
         writer.write(&self.data).await.context("failed to write fuzz input")?;
         Ok(())
     }
+
+    /// Reads the object's data from a `FidlInput`.
+    ///
+    /// Returns an error if unable to read from the underlying socket.
+    pub async fn try_receive(fidl_input: FidlInput) -> Result<Self> {
+        let mut data = Vec::new();
+        let reader = fidl::AsyncSocket::from_socket(fidl_input.socket)
+            .context("failed to convert socket for saving fuzz input")?;
+        reader
+            .take(fidl_input.size)
+            .read_to_end(&mut data)
+            .await
+            .context("failed to read fuzz input from socket")?;
+        Ok(Input { socket: None, data })
+    }
 }
 
-/// Reads data from a `fuchsia.fuzzer.Input` and saves it locally.
+/// Reads fuzzer input data from a `FidlInput` and saves it locally.
 ///
-/// Reads data from the `input` and saves it to a file within `out_dir` and with the given `prefix`,
-/// if provided. On success, returns the path to the file.
-///
-/// Returns an error if it fails to read the data from the `input` or if it fails to write the data
-/// to the file.
+/// Returns the path to the file on success. Returns an error if it fails to read the data from the
+/// `input` or if it fails to write the data to the file.
 ///
 /// See also `utils::digest_path`.
 ///
-pub async fn save_input<P>(input: FidlInput, out_dir: P, prefix: Option<&str>) -> Result<PathBuf>
-where
-    P: AsRef<Path>,
-{
-    let reader = fidl::AsyncSocket::from_socket(input.socket)
-        .context("failed to convert socket for saving fuzz input")?;
-    let mut data = Vec::new();
-    reader
-        .take(input.size)
-        .read_to_end(&mut data)
-        .await
-        .context("failed to read fuzz input from socket")?;
-    let path = digest_path(out_dir, prefix, &data);
-    fs::write(&path, data)
-        .with_context(|| format!("failed to write fuzz input to '{}'", path.to_string_lossy()))?;
+pub async fn save_input<P: AsRef<Path>>(fidl_input: FidlInput, out_dir: P) -> Result<PathBuf> {
+    let input =
+        Input::try_receive(fidl_input).await.context("failed to receive fuzzer input data")?;
+    let path = digest_path(out_dir, None, &input.data);
+    fs::write(&path, input.data)
+        .with_context(|| format!("failed to write fuzzer input to '{}'", path.to_string_lossy()))?;
     Ok(path)
 }
 
@@ -152,7 +176,7 @@ pub mod test_fixtures {
 mod tests {
     use {
         super::test_fixtures::verify_saved,
-        super::{save_input, Input},
+        super::{save_input, Input, InputPair},
         crate::test_fixtures::Test,
         crate::util::digest_path,
         anyhow::Result,
@@ -170,23 +194,26 @@ mod tests {
 
         // Missing file.
         let input1 = input_dir.join("input1");
-        let actual = format!("{:?}", Input::from_str(input1.to_string_lossy(), writer));
+        let actual = format!("{:?}", InputPair::try_from_str(input1.to_string_lossy(), writer));
         assert!(actual.contains("failed to read fuzzer input"));
 
         // Empty file.
         let mut file = File::create(&input1)?;
-        let (fidl_input, input) = Input::from_str(input1.to_string_lossy(), writer)?;
+        let input_pair = InputPair::try_from_str(input1.to_string_lossy(), writer)?;
+        let (fidl_input, input) = input_pair.as_tuple();
         assert_eq!(fidl_input.size, 0);
         assert!(input.data.is_empty());
 
         // File with data.
         file.write_all(b"data")?;
-        let (fidl_input, input) = Input::from_str(input1.to_string_lossy(), writer)?;
+        let input_pair = InputPair::try_from_str(input1.to_string_lossy(), writer)?;
+        let (fidl_input, input) = input_pair.as_tuple();
         assert_eq!(fidl_input.size, 4);
         assert_eq!(input.data, b"data");
 
         // Hex value.
-        let (fidl_input, input) = Input::from_str("64617461", writer)?;
+        let input_pair = InputPair::try_from_str("64617461", writer)?;
+        let (fidl_input, input) = input_pair.as_tuple();
         assert_eq!(fidl_input.size, 4);
         assert_eq!(input.data, b"data");
         Ok(())
@@ -197,15 +224,17 @@ mod tests {
         let test = Test::try_new()?;
         let mut path = test.create_dir("inputs")?;
         path.push("input");
-        assert!(Input::from_path(&path).is_err());
+        assert!(InputPair::try_from_path(&path).is_err());
 
         let mut file = File::create(&path)?;
-        let (fidl_input, input) = Input::from_path(&path)?;
+        let input_pair = InputPair::try_from_path(&path)?;
+        let (fidl_input, input) = input_pair.as_tuple();
         assert_eq!(fidl_input.size, 0);
         assert!(input.data.is_empty());
 
         file.write_all(b"data")?;
-        let (fidl_input, input) = Input::from_path(&path)?;
+        let input_pair = InputPair::try_from_path(&path)?;
+        let (fidl_input, input) = input_pair.as_tuple();
         assert_eq!(fidl_input.size, 4);
         assert_eq!(input.data, b"data");
         Ok(())
@@ -221,40 +250,30 @@ mod tests {
             assert_eq!(num_read as u64, fidl_input.size);
             assert_eq!(buf, expected);
         }
-        let (fidl_input, input) = Input::create(b"".to_vec())?;
+        let input_pair = InputPair::try_from_data(b"".to_vec())?;
+        let (fidl_input, input) = input_pair.as_tuple();
         assert!(join!(input.send(), recv(fidl_input, b"")).0.is_ok());
-        let (fidl_input, input) = Input::create(b"data".to_vec())?;
+        let input_pair = InputPair::try_from_data(b"data".to_vec())?;
+        let (fidl_input, input) = input_pair.as_tuple();
         assert!(join!(input.send(), recv(fidl_input, b"data")).0.is_ok());
         Ok(())
     }
 
     #[fuchsia::test]
-    async fn test_save() -> Result<()> {
+    async fn test_save_input() -> Result<()> {
         let test = Test::try_new()?;
         let saved_dir = test.create_dir("saved")?;
 
         let (reader, writer) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
         let fidl_input = FidlInput { socket: reader, size: 0 };
-        let input = Input { socket: writer, data: Vec::new() };
+        let input = Input { socket: Some(writer), data: Vec::new() };
         let send_fut = input.send();
-        let save_fut = save_input(fidl_input, &saved_dir, None);
+        let save_fut = save_input(fidl_input, &saved_dir);
         let results = join!(send_fut, save_fut);
         assert!(results.0.is_ok());
         assert!(results.1.is_ok());
         let saved = digest_path(&saved_dir, None, b"");
         verify_saved(&saved, b"")?;
-
-        let (reader, writer) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
-        let fidl_input = FidlInput { socket: reader, size: 4 };
-        let input = Input { socket: writer, data: b"data".to_vec() };
-        let send_fut = input.send();
-        let save_fut = save_input(fidl_input, &saved_dir, Some("test"));
-        let results = join!(send_fut, save_fut);
-        assert!(results.0.is_ok());
-        assert!(results.1.is_ok());
-        let saved = digest_path(&saved_dir, Some("test"), b"data");
-        verify_saved(&saved, b"data")?;
-
         Ok(())
     }
 }

@@ -12,7 +12,10 @@ use {
     fidl_fuchsia_developer_remotecontrol as rcs,
 };
 
+mod artifact;
 mod autocomplete;
+mod constants;
+mod controller;
 mod corpus;
 mod diagnostics;
 mod fuzzer;
