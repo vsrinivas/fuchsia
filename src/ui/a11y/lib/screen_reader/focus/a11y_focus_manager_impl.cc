@@ -49,7 +49,9 @@ std::optional<A11yFocusManager::A11yFocusInfo> A11yFocusManagerImpl::GetA11yFocu
 
 void A11yFocusManagerImpl::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
                                         SetA11yFocusCallback set_focus_callback) {
-  // We don't want to request a focus chain update if we're transferring focus
+  FX_DCHECK(koid != ZX_KOID_INVALID);
+
+  // We don't want to send a focus chain update request if we're transferring focus
   // within the same view OR the newly focused view contains a visible virtual
   // keyboard.
   if (koid == currently_focused_view_ ||
@@ -72,6 +74,8 @@ void A11yFocusManagerImpl::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
       std::move(view_ref),
       [this, koid, node_id, callback = std::move(set_focus_callback)](bool success) {
         if (!success) {
+          FX_LOGS(WARNING) << "Failed to send a focus chain update request for view " << koid
+                           << ". A11y focus will not be updated.";
           callback(false);
         } else {
           // Update current a11y focus to the given viewref and node_id.
@@ -105,11 +109,11 @@ void A11yFocusManagerImpl::OnViewFocus(zx_koid_t view_ref_koid) {
 }
 
 void A11yFocusManagerImpl::UpdateInspectProperties() {
+  // Why do we set inspect_property_current_focus_koid_ twice?
   // It's possible that the inspector could attempt to read these properties
-  // while we are updating them. By setting inspect_property_current_focus_koid_
-  // to a nonsense value of UINT64_MAX prior to updating, we ensure that we can
-  // recognize instances in which the inspector reads the properties during an
-  // update.
+  // while we are updating them. By setting it to a nonsense value of UINT64_MAX
+  // at the start of the update, we ensure that we can recognize instances in
+  // which the inspector reads the properties during an update.
   inspect_property_current_focus_koid_.Set(UINT64_MAX);
   inspect_property_current_focus_node_id_.Set(focused_node_in_view_map_[currently_focused_view_]);
   inspect_property_current_focus_koid_.Set(currently_focused_view_);

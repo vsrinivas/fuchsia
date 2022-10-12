@@ -18,14 +18,16 @@
 
 namespace a11y {
 
-// The A11yFocusManagerImpl keeps track of the a11y focus per view that is providing
-// semantics.
+// The A11yFocusManagerImpl keeps track of a11y focus, including a cache of the last focused node
+// for each view.
 //
 // The a11y focus is defined as the semantic node which is selected in a certain
-// view by the screen reader. There is only one active a11y focus, meaning that
-// the screen reader cares only about one node per time. If the system changes
-// the Focus Chain to a different view, the a11y focus also changes. This
-// manager caches all a11y focus in each view as well as the active a11y focus.
+// view by the screen reader. There is only (up to) one active a11y focus, meaning that
+// the screen reader cares only about (up to) one node per time.
+//
+// If the system changes the Focus Chain to a different view, the a11y focus
+// also changes: If a node was previously focused in that view, it
+// regains focus, otherwise the a11y focus will be lost.
 //
 // The a11y focus can be changed, which may trigger a Focus Chain Update if the active a11y focus is
 // moving to another view.
@@ -45,17 +47,21 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
   ~A11yFocusManagerImpl() override;
 
   // |A11yFocusManager|
+  //
+  // Returns the current a11y focus, if any.
   std::optional<A11yFocusInfo> GetA11yFocus() override;
 
   // |A11yFocusManager|
   //
   // Sets the a11y focus.
   //
-  // If the new focus is in a different view from the current focus, then the
-  // focus manager will request a focus chain update from scenic, unless:
+  // If the new focus is in a different view from the current focus, then
+  // this manager will send a focus chain update request to scenic -- unless the
+  // new view contains a visible virtual keyboard.
   //
-  // (1) The new view does not provide semantics.
-  // (2) The new view contains a visible virtual keyboard.
+  // If the scenic focus chain update either succeeds or was eschewed, we set
+  // the a11y focus to {koid, node_id} and call the callback with 'true'.
+  // Otherwise, we call the callback with 'false'.
   void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback) override;
 
   // |A11yFocusManager|
@@ -92,9 +98,7 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
   // regardless of whether the focus change occurs within the same view.
   void UpdateFocus(zx_koid_t newly_focused_view, uint32_t newly_focused_node);
 
-  // Removes current highlights (if any), and highlights node specified by identifier
-  // |{currently_focused_view,
-  // focused_node_in_view_map_[currently_focused_view_]}|.
+  // Removes current highlights (if any).
   void ClearHighlights();
 
   // Map for storing node_id which is in a11y focus for every viewref_koid.

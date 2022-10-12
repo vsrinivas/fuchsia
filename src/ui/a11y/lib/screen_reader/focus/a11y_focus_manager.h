@@ -10,20 +10,25 @@
 
 namespace a11y {
 
-// Entity that keeps track of a11y focus per semantic-providing view.
+// The A11yFocusManager keeps track of a11y focus, including a cache of the last focused node for
+// each view.
 //
 // The a11y focus is defined as the semantic node which is selected in a certain
-// view by the screen reader. There is only one active a11y focus, meaning that
-// the screen reader cares only about one node per time. If the system changes
-// the Focus Chain to a different view, the a11y focus also changes.
+// view by the screen reader. There is only (up to) one active a11y focus, meaning that
+// the screen reader cares only about (up to) one node per time.
 //
-// The a11y focus can be changed, which may trigger a Focus Chain Update if the
-// active a11y focus is moving to another view.
+// If the system changes the Focus Chain to a different view, the a11y focus
+// also changes: If a node was previously focused in that view, it
+// regains focus, otherwise the a11y focus will be lost.
+//
+// The a11y focus can be changed, which may trigger a Focus Chain Update if the active a11y focus is
+// moving to another view.
 class A11yFocusManager {
  public:
   // Defines which view is currently in a11y focus along with the node_id of the node inside that
   // view.
   struct A11yFocusInfo {
+    // Will never be ZX_KOID_INVALID.
     zx_koid_t view_ref_koid;
     uint32_t node_id;
   };
@@ -42,18 +47,13 @@ class A11yFocusManager {
 
   // Sets the a11y focus.
   //
-  // If the new focus is in a different view from the current focus, then this
-  // manager will usually request a focus chain update from scenic.
-  // However, this will be eschewed if both
-  // (1) The new view does not provide semantics, and
-  // (2) The new view contains a visible virtual keyboard.
+  // If the new focus is in a different view from the current focus, then
+  // this manager will send a focus chain update request to scenic -- unless the
+  // new view contains a visible virtual keyboard.
   //
-  // Then, calls the callback with 'true' if setting the focus succeeded, 'false'
-  // otherwise.
-  // Here, 'success' means that the scenic focus chain update either succeeded
-  // or was eschewed.
-  // 'Success' also means that the callback can assume that GetA11yFocus() would
-  // return {koid, node_id} at this time.
+  // If the scenic focus chain update either succeeds or was eschewed, we set
+  // the a11y focus to {koid, node_id} and call the callback with 'true'.
+  // Otherwise, we call the callback with 'false'.
   virtual void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback) = 0;
 
   // Clears existing a11y focus.
