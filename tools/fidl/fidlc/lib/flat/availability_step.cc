@@ -102,7 +102,7 @@ void AvailabilityStep::CompileAvailability(Element* element) {
     library()->platform = GetDefaultPlatform();
     default_added = Version::Head();
   }
-  bool valid = element->availability.Init(default_added, std::nullopt, std::nullopt);
+  bool valid = element->availability.Init({.added = default_added});
   ZX_ASSERT_MSG(valid, "initializing default availability should succeed");
   if (auto source = AvailabilityToInheritFrom(element)) {
     auto result = element->availability.Inherit(source.value());
@@ -145,7 +145,9 @@ void AvailabilityStep::CompileAvailabilityFromAttribute(Element* element, Attrib
   if (is_library) {
     library()->platform = GetPlatform(platform).value_or(GetDefaultPlatform());
   }
-  if (!element->availability.Init(GetVersion(added), GetVersion(deprecated), GetVersion(removed))) {
+  if (!element->availability.Init({.added = GetVersion(added),
+                                   .deprecated = GetVersion(deprecated),
+                                   .removed = GetVersion(removed)})) {
     Fail(ErrInvalidAvailabilityOrder, attribute->span);
     // Return early to avoid confusing error messages about inheritance
     // conflicts for an availability that isn't even self-consistent.

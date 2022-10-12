@@ -200,11 +200,11 @@ std::unique_ptr<Library> Library::CreateRootLibrary() {
   auto library = std::make_unique<Library>();
   library->name = {"fidl"};
   library->platform = Platform::Parse("fidl").value();
-  library->availability.Init(Version::Head(), std::nullopt, std::nullopt);
+  library->availability.Init({.added = Version::Head()});
   library->availability.Inherit(Availability::Unbounded());
   auto insert = [&](const char* name, Builtin::Identity id) {
     auto decl = std::make_unique<Builtin>(id, Name::CreateIntrinsic(library.get(), name));
-    decl->availability.Init(std::nullopt, std::nullopt, std::nullopt);
+    decl->availability.Init({});
     decl->availability.Inherit(library->availability);
     library->declarations.Insert(std::move(decl));
   };

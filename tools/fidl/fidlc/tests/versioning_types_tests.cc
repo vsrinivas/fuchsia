@@ -149,38 +149,40 @@ TEST(VersioningTypesTests, GoodVersionRangeIntersect) {
 
 TEST(VersioningTypesTests, GoodAvailabilityInitNone) {
   Availability availability;
-  ASSERT_TRUE(availability.Init(std::nullopt, std::nullopt, std::nullopt));
+  ASSERT_TRUE(availability.Init({}));
   EXPECT_EQ(availability.Debug(), "_ _ _");
 }
 
 TEST(VersioningTypesTests, GoodAvailabilityInitSome) {
   Availability availability;
-  ASSERT_TRUE(availability.Init(Version::From(1), std::nullopt, std::nullopt));
+  ASSERT_TRUE(availability.Init({.added = Version::From(1)}));
   EXPECT_EQ(availability.Debug(), "1 _ _");
 }
 
 TEST(VersioningTypesTests, GoodAvailabilityInitAll) {
   Availability availability;
-  ASSERT_TRUE(availability.Init(Version::From(1), Version::From(2), Version::From(3)));
+  ASSERT_TRUE(availability.Init(
+      {.added = Version::From(1), .deprecated = Version::From(2), .removed = Version::From(3)}));
   EXPECT_EQ(availability.Debug(), "1 2 3");
 }
 
 TEST(VersioningTypesTests, BadAvailabilityInitWrongOrder) {
   Availability availability;
-  EXPECT_FALSE(availability.Init(Version::From(1), std::nullopt, Version::From(1)));
+  EXPECT_FALSE(availability.Init({.added = Version::From(1), .removed = Version::From(1)}));
 }
 
 TEST(VersioningTypesTests, GoodAvailabilityInheritUnbounded) {
   Availability availability;
-  ASSERT_TRUE(availability.Init(std::nullopt, std::nullopt, std::nullopt));
+  ASSERT_TRUE(availability.Init({}));
   ASSERT_TRUE(availability.Inherit(Availability::Unbounded()).Ok());
   EXPECT_EQ(availability.Debug(), "-inf _ +inf");
 }
 
 TEST(VersioningTypesTests, GoodAvailabilityInheritUnset) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(Version::From(1), Version::From(2), Version::From(3)));
-  ASSERT_TRUE(child.Init(std::nullopt, std::nullopt, std::nullopt));
+  ASSERT_TRUE(parent.Init(
+      {.added = Version::From(1), .deprecated = Version::From(2), .removed = Version::From(3)}));
+  ASSERT_TRUE(child.Init({}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
   ASSERT_TRUE(child.Inherit(parent).Ok());
   EXPECT_EQ(parent.Debug(), "1 2 3");
@@ -189,8 +191,10 @@ TEST(VersioningTypesTests, GoodAvailabilityInheritUnset) {
 
 TEST(VersioningTypesTests, GoodAvailabilityInheritUnchanged) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(Version::From(1), Version::From(2), Version::From(3)));
-  ASSERT_TRUE(child.Init(Version::From(1), Version::From(2), Version::From(3)));
+  ASSERT_TRUE(parent.Init(
+      {.added = Version::From(1), .deprecated = Version::From(2), .removed = Version::From(3)}));
+  ASSERT_TRUE(child.Init(
+      {.added = Version::From(1), .deprecated = Version::From(2), .removed = Version::From(3)}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
   ASSERT_TRUE(child.Inherit(parent).Ok());
   EXPECT_EQ(parent.Debug(), "1 2 3");
@@ -199,8 +203,8 @@ TEST(VersioningTypesTests, GoodAvailabilityInheritUnchanged) {
 
 TEST(VersioningTypesTests, GoodAvailabilityInheritPartial) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(Version::From(1), std::nullopt, std::nullopt));
-  ASSERT_TRUE(child.Init(std::nullopt, std::nullopt, Version::From(2)));
+  ASSERT_TRUE(parent.Init({.added = Version::From(1)}));
+  ASSERT_TRUE(child.Init({.removed = Version::From(2)}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
   ASSERT_TRUE(child.Inherit(parent).Ok());
   EXPECT_EQ(parent.Debug(), "1 _ +inf");
@@ -209,8 +213,8 @@ TEST(VersioningTypesTests, GoodAvailabilityInheritPartial) {
 
 TEST(VersioningTypesTests, GoodAvailabilityInheritChangeDeprecation) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(Version::From(1), Version::From(1), std::nullopt));
-  ASSERT_TRUE(child.Init(Version::From(2), std::nullopt, std::nullopt));
+  ASSERT_TRUE(parent.Init({.added = Version::From(1), .deprecated = Version::From(1)}));
+  ASSERT_TRUE(child.Init({.added = Version::From(2)}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
   ASSERT_TRUE(child.Inherit(parent).Ok());
   EXPECT_EQ(parent.Debug(), "1 1 +inf");
@@ -219,8 +223,8 @@ TEST(VersioningTypesTests, GoodAvailabilityInheritChangeDeprecation) {
 
 TEST(VersioningTypesTests, GoodAvailabilityInheritEliminateDeprecation) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(Version::From(1), Version::From(2), std::nullopt));
-  ASSERT_TRUE(child.Init(std::nullopt, std::nullopt, Version::From(2)));
+  ASSERT_TRUE(parent.Init({.added = Version::From(1), .deprecated = Version::From(2)}));
+  ASSERT_TRUE(child.Init({.removed = Version::From(2)}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
   ASSERT_TRUE(child.Inherit(parent).Ok());
   EXPECT_EQ(parent.Debug(), "1 2 +inf");
@@ -229,8 +233,9 @@ TEST(VersioningTypesTests, GoodAvailabilityInheritEliminateDeprecation) {
 
 TEST(VersioningTypesTests, BadAvailabilityInheritBeforeParentCompletely) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(Version::From(3), std::nullopt, std::nullopt));
-  ASSERT_TRUE(child.Init(Version::From(1), Version::From(2), Version::From(3)));
+  ASSERT_TRUE(parent.Init({.added = Version::From(3)}));
+  ASSERT_TRUE(child.Init(
+      {.added = Version::From(1), .deprecated = Version::From(2), .removed = Version::From(3)}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
 
   auto status = child.Inherit(parent);
@@ -241,8 +246,9 @@ TEST(VersioningTypesTests, BadAvailabilityInheritBeforeParentCompletely) {
 
 TEST(VersioningTypesTests, BadAvailabilityInheritBeforeParentPartially) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(Version::From(3), std::nullopt, std::nullopt));
-  ASSERT_TRUE(child.Init(Version::From(1), Version::From(2), Version::From(4)));
+  ASSERT_TRUE(parent.Init({.added = Version::From(3)}));
+  ASSERT_TRUE(child.Init(
+      {.added = Version::From(1), .deprecated = Version::From(2), .removed = Version::From(4)}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
 
   auto status = child.Inherit(parent);
@@ -253,8 +259,9 @@ TEST(VersioningTypesTests, BadAvailabilityInheritBeforeParentPartially) {
 
 TEST(VersioningTypesTests, BadAvailabilityInheritAfterParentCompletely) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(std::nullopt, std::nullopt, Version::From(2)));
-  ASSERT_TRUE(child.Init(Version::From(2), Version::From(3), Version::From(4)));
+  ASSERT_TRUE(parent.Init({.removed = Version::From(2)}));
+  ASSERT_TRUE(child.Init(
+      {.added = Version::From(2), .deprecated = Version::From(3), .removed = Version::From(4)}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
 
   auto status = child.Inherit(parent);
@@ -265,8 +272,9 @@ TEST(VersioningTypesTests, BadAvailabilityInheritAfterParentCompletely) {
 
 TEST(VersioningTypesTests, BadAvailabilityInheritAfterParentPartially) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(std::nullopt, std::nullopt, Version::From(2)));
-  ASSERT_TRUE(child.Init(Version::From(1), Version::From(2), Version::From(3)));
+  ASSERT_TRUE(parent.Init({.removed = Version::From(2)}));
+  ASSERT_TRUE(child.Init(
+      {.added = Version::From(1), .deprecated = Version::From(2), .removed = Version::From(3)}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
 
   auto status = child.Inherit(parent);
@@ -277,8 +285,9 @@ TEST(VersioningTypesTests, BadAvailabilityInheritAfterParentPartially) {
 
 TEST(VersioningTypesTests, BadAvailabilityInheritAfterParentDeprecated) {
   Availability parent, child;
-  ASSERT_TRUE(parent.Init(std::nullopt, Version::From(2), std::nullopt));
-  ASSERT_TRUE(child.Init(Version::From(1), Version::From(3), Version::From(4)));
+  ASSERT_TRUE(parent.Init({.deprecated = Version::From(2)}));
+  ASSERT_TRUE(child.Init(
+      {.added = Version::From(1), .deprecated = Version::From(3), .removed = Version::From(4)}));
   ASSERT_TRUE(parent.Inherit(Availability::Unbounded()).Ok());
 
   auto status = child.Inherit(parent);
@@ -289,7 +298,7 @@ TEST(VersioningTypesTests, BadAvailabilityInheritAfterParentDeprecated) {
 
 TEST(VersioningTypesTests, GoodAvailabilityDecomposeWhole) {
   Availability availability;
-  ASSERT_TRUE(availability.Init(Version::From(1), std::nullopt, Version::From(2)));
+  ASSERT_TRUE(availability.Init({.added = Version::From(1), .removed = Version::From(2)}));
   ASSERT_TRUE(availability.Inherit(Availability::Unbounded()).Ok());
 
   availability.Narrow(range(1, 2));

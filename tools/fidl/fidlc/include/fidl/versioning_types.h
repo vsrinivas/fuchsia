@@ -210,11 +210,15 @@ class Availability final {
   // Explicitly mark the availability as failed. Must not have called Init yet.
   void Fail();
 
+  // Named arguments for Init.
+  struct InitArgs {
+    std::optional<Version> added, deprecated, removed;
+  };
+
   // Must be called first. Initializes the availability from @available fields.
   // Returns false if they do not satisfy `added <= deprecated < removed`. If
   // `deprecated` is set, it must be finite.
-  bool Init(std::optional<Version> added, std::optional<Version> deprecated,
-            std::optional<Version> removed);
+  bool Init(InitArgs args);
 
   struct InheritResult {
     enum class Status {

@@ -110,14 +110,15 @@ void Availability::Fail() {
   state_ = State::kFailed;
 }
 
-bool Availability::Init(std::optional<Version> added, std::optional<Version> deprecated,
-                        std::optional<Version> removed) {
+bool Availability::Init(InitArgs args) {
   ZX_ASSERT_MSG(state_ == State::kUnset, "called Init in the wrong order");
-  ZX_ASSERT_MSG(deprecated != Version::NegInf(), "deprecated version must be finite, got -inf");
-  ZX_ASSERT_MSG(deprecated != Version::PosInf(), "deprecated version must be finite, got +inf");
-  added_ = added;
-  deprecated_ = deprecated;
-  removed_ = removed;
+  ZX_ASSERT_MSG(args.deprecated != Version::NegInf(),
+                "deprecated version must be finite, got -inf");
+  ZX_ASSERT_MSG(args.deprecated != Version::PosInf(),
+                "deprecated version must be finite, got +inf");
+  added_ = args.added;
+  deprecated_ = args.deprecated;
+  removed_ = args.removed;
   bool valid = ValidOrder();
   state_ = valid ? State::kInitialized : State::kFailed;
   return valid;
