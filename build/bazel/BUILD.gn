@@ -100,6 +100,11 @@ action("generate_main_workspace") {
     "$target_gen_dir/generated-info.json",
   ]
 
+  args = [
+    "--gn_output_dir",
+    rebase_path(root_build_dir, root_build_dir),
+  ]
+
   # This cannot be hermetic since it creates a collection of
   # symlinks that depends on the state of the source tree.
   hermetic_deps = false

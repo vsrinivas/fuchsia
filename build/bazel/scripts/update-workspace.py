@@ -129,17 +129,22 @@ def create_clean_dir(path):
 
 
 def get_fx_build_dir(fuchsia_dir):
-    """Return the path to the Ninja build directory."""
+    """Return the path to the Ninja build directory set through 'fx set'.
+
+    Args:
+      fuchsia_dir: The Fuchsia top-level source directory.
+    Returns:
+      The path to the Ninja build directory, or None if it could not be
+      determined, which happens on infra bots which do not use 'fx set'
+      but 'fint set' directly.
+    """
     fx_build_dir_path = os.path.join(fuchsia_dir, '.fx-build-dir')
-    build_dir = None
-    if os.path.exists(fx_build_dir_path):
-        with open(fx_build_dir_path) as f:
-            build_dir = f.read().strip()
+    if not os.path.exists(fx_build_dir_path):
+        return None
 
-    if not build_dir:
-        build_dir = 'out/default'
-
-    return os.path.join(fuchsia_dir, build_dir)
+    with open(fx_build_dir_path) as f:
+        build_dir = f.read().strip()
+        return os.path.join(fuchsia_dir, build_dir)
 
 
 class GeneratedFiles(object):
@@ -284,6 +289,11 @@ def main():
 
     if not args.gn_output_dir:
         args.gn_output_dir = get_fx_build_dir(fuchsia_dir)
+        if not args.gn_output_dir:
+            parser.error(
+                'Could not auto-detect build directory, please use --gn_output_dir=DIR'
+            )
+            return 1
 
     gn_output_dir = os.path.abspath(args.gn_output_dir)
 
