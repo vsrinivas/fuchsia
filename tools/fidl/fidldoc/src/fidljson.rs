@@ -232,17 +232,15 @@ impl FidlJson {
 }
 
 pub struct FidlJsonPackageData {
-    pub declarations: Vec<String>,
     pub fidl_json_map: HashMap<String, FidlJson>,
 }
 
 impl FidlJsonPackageData {
     pub fn new() -> Self {
-        FidlJsonPackageData { declarations: Vec::new(), fidl_json_map: HashMap::new() }
+        FidlJsonPackageData { fidl_json_map: HashMap::new() }
     }
 
     pub fn insert(&mut self, mut fidl_json: FidlJson) {
-        self.declarations.append(&mut fidl_json.declaration_order);
         let package_name = fidl_json.name.clone();
         self.fidl_json_map
             .entry(package_name)

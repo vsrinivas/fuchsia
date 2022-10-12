@@ -216,12 +216,10 @@ mod test {
         };
 
         let fidl_config = json!(null);
-        let declarations: Vec<String> = Vec::new();
 
         let main_fidl_doc = json!({
             "table_of_contents": table_of_contents,
             "config": fidl_config,
-            "search": declarations,
             "url_path": "/",
         });
 
@@ -264,12 +262,10 @@ mod test {
         };
 
         let fidl_config = json!(null);
-        let declarations: Vec<String> = Vec::new();
 
         let main_fidl_doc = json!({
             "table_of_contents": table_of_contents,
             "config": fidl_config,
-            "search": declarations,
             "url_path": "/",
         });
 

@@ -128,8 +128,7 @@ fn run(opt: Opt) -> Result<(), Error> {
         .with_context(|| format!("Unable to create output directory {}", output_path.display()))?;
 
     // Parse input files to get declarations, package set and fidl json map
-    let FidlJsonPackageData { declarations, fidl_json_map } =
-        process_fidl_json_files(input_files.to_vec());
+    let FidlJsonPackageData { fidl_json_map } = process_fidl_json_files(input_files.to_vec());
 
     // The table of contents lists all packages in alphabetical order.
     let table_of_contents = create_toc(&fidl_json_map);
@@ -138,7 +137,6 @@ fn run(opt: Opt) -> Result<(), Error> {
     let main_fidl_doc = json!({
         "table_of_contents": table_of_contents,
         "config": fidl_config,
-        "search": declarations,
         "url_path": url_path,
     });
 
@@ -159,7 +157,6 @@ fn run(opt: Opt) -> Result<(), Error> {
                 &table_of_contents,
                 &fidl_config,
                 &tag,
-                &declarations,
                 &url_path,
                 &template_type,
                 &output_path,
@@ -205,7 +202,6 @@ fn render_fidl_library(
     table_of_contents: &TableOfContents,
     fidl_config: &Value,
     tag: &String,
-    declarations: &Vec<String>,
     url_path: &String,
     template_type: &TemplateType,
     output_path: &PathBuf,
@@ -228,7 +224,6 @@ fn render_fidl_library(
         "table_of_contents": table_of_contents,
         "config": fidl_config,
         "tag": tag,
-        "search": declarations,
         "url_path": url_path,
     });
 
