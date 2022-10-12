@@ -16,9 +16,6 @@ group("bringup") {
   # Add-assign should contain all deps of //bundles/bringup:tests.
   # TODO(fxbug.dev/110255): Remove the following add-assign when all tests in
   # //bundles/bringup:tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/106650): Add //src/tests/drivers_serial_log:bringup_tests to
-  # deps when all tests in //src/tests/drivers_serial_log:bringup_tests pass
-  # with DFv2 enabled.
   # TODO(fxbug.dev/108148): Add //src/tests/reboot/dm_reboot_bringup_test:tests
   # to deps when all tests in //src/tests/reboot/dm_reboot_bringup_test:tests
   # pass with DFv2 enabled.
@@ -35,6 +32,7 @@ group("bringup") {
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-bootfs-test",
     "//src/devices/usb/tests/usb:usb-bootfs-test",
     "//src/testing/runtests",
+    "//src/tests/drivers_serial_log:bringup_tests",
     "//src/zircon/tests/entropy:entropy-bootfs-test",
     "//src/zircon/tests/exception:exception-bootfs-test",
     "//src/zircon/tests/futex-ownership:futex-ownership-bootfs-test",

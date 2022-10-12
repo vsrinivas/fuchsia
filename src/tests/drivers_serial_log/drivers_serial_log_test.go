@@ -39,7 +39,7 @@ func TestSerialLogsAvailable(t *testing.T) {
 
 	// Wait for a log from driver framework (driver framework is just one of the many modules
 	// routed to serial logs).
-	i.WaitForLogMessage("Launching driver_host 'driver_host:sys'")
+	i.WaitForLogMessage("driver_manager main loop is running")
 }
 
 func execDir(t *testing.T) string {

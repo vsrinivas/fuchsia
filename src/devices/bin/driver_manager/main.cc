@@ -437,7 +437,6 @@ int main(int argc, char** argv) {
     ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
   }
 
-  // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   async::PostTask(loop.dispatcher(), [] { LOGF(INFO, "driver_manager main loop is running"); });
 
   coordinator.set_running(true);
