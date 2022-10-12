@@ -5,7 +5,7 @@
 {% include "docs/reference/fidl/language/error-catalog/label/_bad.md" %}
 
 ```fidl
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlc/tests/fidl/bad/TODO_NAME_OF_BAD_FIDL_FILE" exclude_regexp="\/\/ (Copyright 20|Use of|found in).*" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlc/tests/fidl/bad/fi-${num}.test.fidl" exclude_regexp="\/\/ (Copyright 20|Use of|found in).*" %}
 ```
 
 <!-- TODO: 1 or 2 lines explaining how to fix this in the general case -->:
@@ -13,7 +13,7 @@
 {% include "docs/reference/fidl/language/error-catalog/label/_good.md" %}
 
 ```fidl
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlc/tests/fidl/good/TODO_NAME_OF_GOOD_FIDL_FILE" exclude_regexp="\/\/ (Copyright 20|Use of|found in).*" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlc/tests/fidl/good/fi-${num}.test.fidl" exclude_regexp="\/\/ (Copyright 20|Use of|found in).*" %}
 ```
 
 <!-- TODO(RECOMMENDED): 1 paragraph summarizing strategies to avoid problem -->
