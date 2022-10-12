@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dlfcn.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.vulkan.loader/cpp/wire.h>
 #include <lib/fdio/namespace.h>
@@ -9,6 +10,7 @@
 #include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sys/component/cpp/service_client.h>
+#include <zircon/dlfcn.h>
 
 #include <set>
 
@@ -113,6 +115,10 @@ void ValidateSharedObject(const zx::vmo& vmo) {
   for (const std::string& warning : warnings) {
     ADD_FAILURE() << warning;
   }
+
+  void* dl = dlopen_vmo(vmo.get(), RTLD_NOW | RTLD_LOCAL);
+  EXPECT_TRUE(dl) << "Error " << dlerror();
+  dlclose(dl);
 }
 
 bool ValidateManifestJson(const rapidjson::GenericDocument<rapidjson::UTF8<>>& doc) {
