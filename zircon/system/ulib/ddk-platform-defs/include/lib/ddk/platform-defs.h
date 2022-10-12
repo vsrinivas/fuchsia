@@ -84,6 +84,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_GOLDFISH           0x0D
 #define PDEV_PID_MOTMOT             0x0E
 #define PDEV_PID_AV400              0x0F
+#define PDEV_PID_PINECREST          0x10
 
 #define PDEV_DID_GAUSS_AUDIO_IN     0x01
 #define PDEV_DID_GAUSS_AUDIO_OUT    0x02
