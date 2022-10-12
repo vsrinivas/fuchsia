@@ -21,6 +21,8 @@
 
 namespace zxcrypt {
 
+class Device;
+
 // |zxcrypt::DeviceManager| is a "wrapper" driver for zxcrypt volumes.  Each block device with valid
 // zxcrypt metadata will result in a wrapper being created, but the wrapper cannot perform any block
 // operations.  To perform block operations, |Unseal| must first be called with a valid key and
@@ -28,7 +30,8 @@ namespace zxcrypt {
 class DeviceManager;
 using DeviceManagerType =
     ddk::Device<DeviceManager, ddk::Unbindable,
-                ddk::Messageable<fuchsia_hardware_block_encrypted::DeviceManager>::Mixin>;
+                ddk::Messageable<fuchsia_hardware_block_encrypted::DeviceManager>::Mixin,
+                ddk::ChildPreReleaseable>;
 class DeviceManager final : public DeviceManagerType {
  public:
   explicit DeviceManager(zx_device_t* parent) : DeviceManagerType(parent), state_(kBinding) {}
@@ -43,6 +46,9 @@ class DeviceManager final : public DeviceManagerType {
   // ddk::Device methods; see ddktl/device.h
   void DdkUnbind(ddk::UnbindTxn txn) __TA_EXCLUDES(mtx_);
   void DdkRelease();
+
+  // ddk::ChildPreRelease methods
+  void DdkChildPreRelease(void* child_ctx) __TA_EXCLUDES(mtx_);
 
   // Formats the zxcrypt volume, destroying any data contained therein, and
   // enrolls the given key in the requested key slot.  Leaves the device sealed.
@@ -69,11 +75,14 @@ class DeviceManager final : public DeviceManagerType {
   // kSealed -> kUnsealed if Unseal called with correct key
   // kSealed -> kRemoved on DdkUnbind
   //
-  // kUnsealed -> kSealed if Seal called
+  // kUnsealed -> kSealing if Seal called
   // kUnsealed -> kUnsealedShredded if Shred called
   // kUnsealed -> kRemoved on DdkUnbind
   //
-  // kUnsealedShredded -> kSealed if Seal called
+  // kSealing -> kSealed when DdkChildPreRelease hook called
+  // kSealing -> kRemoved on DdkUnbind
+  //
+  // kUnsealedShredded -> kSealing if Seal called
   // kUnsealedShredded -> kRemoved on DdkUnbind
   //
   // kRemoved is terminal
@@ -82,6 +91,7 @@ class DeviceManager final : public DeviceManagerType {
     kSealed,
     kUnsealed,
     kUnsealedShredded,
+    kSealing,
     kRemoved,
   };
 
@@ -92,12 +102,27 @@ class DeviceManager final : public DeviceManagerType {
   // Unseals the zxcrypt volume and adds it as a |zxcrypt::Device| to the device tree.
   zx_status_t UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) __TA_REQUIRES(mtx_);
 
+  // Transition to the specified |state|.
+  void TransitionState(State state, std::optional<zxcrypt::Device*> child,
+                       std::optional<SealCompleter::Async> seal_completer) __TA_REQUIRES(mtx_);
+  void TransitionState(State state, std::optional<zxcrypt::Device*> child) __TA_REQUIRES(mtx_);
+  void TransitionState(State state) __TA_REQUIRES(mtx_);
+
   // Used to ensure calls to |Unseal|, |Seal|, and |Unbind| are exclusive to each
   // other, and protects access to |state_|.
   fbl::Mutex mtx_;
 
   // Used for debug state.
   inspect::Inspector inspect_;
+
+  // Child `unsealed` device, if present.  Owned by device_manager, but it'll send us a
+  // ChildPreRelease hook notification before it destroys it.
+  std::optional<zxcrypt::Device*> child_ __TA_GUARDED(mtx_);
+
+  // A place to hold a FIDL transaction completer so we can asynchronously
+  // complete the transaction when device_manager confirms the removal of the
+  // child device.
+  std::optional<SealCompleter::Async> seal_completer_ __TA_GUARDED(mtx_);
 
   State state_ __TA_GUARDED(mtx_);
 };

@@ -58,22 +58,63 @@ zx_status_t DeviceManager::Bind() {
                        .set_proto_id(ZX_PROTOCOL_ZXCRYPT)
                        .set_inspect_vmo(inspect_.DuplicateVmo()))) != ZX_OK) {
     zxlogf(ERROR, "failed to add device: %s", zx_status_get_string(rc));
-    state_ = kRemoved;
+    TransitionState(kRemoved);
     return rc;
   }
 
-  state_ = kSealed;
+  TransitionState(kSealed);
   return ZX_OK;
 }
 
 void DeviceManager::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&mtx_);
-  ZX_ASSERT(state_ == kSealed || state_ == kUnsealed || state_ == kUnsealedShredded);
-  state_ = kRemoved;
+  switch (state_) {
+    case kSealed:
+    case kUnsealed:
+    case kUnsealedShredded:
+    case kSealing:
+      break;
+    case kBinding:
+    case kRemoved:
+      ZX_PANIC("unexpected DdkUnbind, state=%d", state_);
+  }
+  TransitionState(kRemoved);
   txn.Reply();
 }
 
 void DeviceManager::DdkRelease() { delete this; }
+
+void DeviceManager::DdkChildPreRelease(void* child_ctx) {
+  fbl::AutoLock lock(&mtx_);
+  switch (state_) {
+    case kSealing:
+      // We initiated the removal of our child.
+      ZX_ASSERT(child_.has_value());
+      ZX_ASSERT(child_ctx == child_.value());
+      ZX_ASSERT(seal_completer_.has_value());
+      seal_completer_.value().Reply(ZX_OK);
+      TransitionState(kSealed);
+      break;
+    case kBinding:
+      ZX_PANIC("impossible to release a child before a child is bound");
+      break;
+    case kSealed:
+      ZX_PANIC("unexpected DdkChildPreRelease while sealed");
+      break;
+    case kUnsealed:
+    case kUnsealedShredded:
+      // These can be triggered if some other program explicitly unbound our
+      // child out from under us.  It's not expected, but let's handle it
+      // cleanly anyway and return the device to the Sealed state.
+      zxlogf(ERROR, "unexpected DdkChildPreRelease, state=%d", state_);
+      TransitionState(kSealed);
+      break;
+    case kRemoved:
+      // driver_manager initiated the removal of our child.  This may occur when
+      // driver_manager is tearing down if Seal() was never called.
+      break;
+  }
+}
 
 void DeviceManager::Format(FormatRequestView request, FormatCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
@@ -96,7 +137,6 @@ void DeviceManager::Unseal(UnsealRequestView request, UnsealCompleter::Sync& com
 }
 
 void DeviceManager::Seal(SealCompleter::Sync& completer) {
-  zx_status_t rc;
   fbl::AutoLock lock(&mtx_);
 
   if (state_ != kUnsealed && state_ != kUnsealedShredded) {
@@ -104,14 +144,11 @@ void DeviceManager::Seal(SealCompleter::Sync& completer) {
     completer.Reply(ZX_ERR_BAD_STATE);
     return;
   }
-  if ((rc = device_rebind(zxdev())) != ZX_OK) {
-    zxlogf(ERROR, "failed to rebind zxcrypt: %s", zx_status_get_string(rc));
-    completer.Reply(rc);
-    return;
-  }
 
-  state_ = kSealed;
-  completer.Reply(ZX_OK);
+  // Stash the completer somewhere so we can signal it when device manager confirms removal
+  // of the child.
+  TransitionState(kSealing, child_, completer.ToAsync());
+  child_.value()->DdkAsyncRemove();
 }
 
 void DeviceManager::Shred(ShredCompleter::Sync& completer) {
@@ -145,7 +182,7 @@ void DeviceManager::Shred(ShredCompleter::Sync& completer) {
   }
 
   if (state_ == kUnsealed) {
-    state_ = kUnsealedShredded;
+    TransitionState(kUnsealedShredded, child_);
   }
   completer.Reply(ZX_OK);
 }
@@ -222,10 +259,44 @@ zx_status_t DeviceManager::UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_
     return rc;
   }
 
-  // devmgr is now in charge of the memory for |device|
-  __UNUSED auto owned_by_devmgr_now = device.release();
-  state_ = kUnsealed;
+  // device_manager is now in charge of the memory for |device|.
+  TransitionState(kUnsealed, device.release());
   return ZX_OK;
+}
+
+void DeviceManager::TransitionState(State state, std::optional<zxcrypt::Device*> child,
+                                    std::optional<SealCompleter::Async> seal_completer) {
+  ZX_ASSERT_MSG(state_ != kRemoved, "can't transition out of kRemoved: state=%d", state);
+  switch (state) {
+    case kBinding:
+      ZX_PANIC("can't transition to kBinding");
+      break;
+    case kSealed:
+    case kRemoved:
+      ZX_ASSERT(!child.has_value());
+      ZX_ASSERT(!seal_completer.has_value());
+      break;
+    case kUnsealed:
+    case kUnsealedShredded:
+      ZX_ASSERT(child.has_value());
+      ZX_ASSERT(!seal_completer.has_value());
+      break;
+    case kSealing:
+      ZX_ASSERT(child.has_value());
+      ZX_ASSERT(seal_completer.has_value());
+      break;
+  }
+  state_ = state;
+  child_ = std::move(child);
+  seal_completer_ = std::move(seal_completer);
+}
+
+void DeviceManager::TransitionState(State state, std::optional<zxcrypt::Device*> child) {
+  TransitionState(state, child, std::nullopt);
+}
+
+void DeviceManager::TransitionState(State state) {
+  TransitionState(state, std::nullopt, std::nullopt);
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
