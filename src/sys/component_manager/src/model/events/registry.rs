@@ -108,57 +108,6 @@ impl RouteEventsResult {
     }
 }
 
-#[derive(Clone)]
-pub struct SubscriptionOptions {
-    /// Determines how event routing is done.
-    pub subscription_type: SubscriptionType,
-    /// Specifies the mode ComponentManager was started in.
-    pub execution_mode: ExecutionMode,
-}
-
-impl SubscriptionOptions {
-    pub fn new(subscription_type: SubscriptionType, execution_mode: ExecutionMode) -> Self {
-        Self { subscription_type, execution_mode }
-    }
-}
-
-impl Default for SubscriptionOptions {
-    fn default() -> SubscriptionOptions {
-        SubscriptionOptions {
-            subscription_type: SubscriptionType::Component(AbsoluteMoniker::root()),
-            execution_mode: ExecutionMode::Production,
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub enum SubscriptionType {
-    /// Indicates that a client above the root is subscribing to events (e.g. a test).
-    /// Event routing will be bypassed and all events can be subscribed.
-    AboveRoot,
-    /// Indicates that a component is subscribing to events and the target is
-    /// the provided AbsoluteMoniker.
-    Component(AbsoluteMoniker),
-}
-
-#[derive(Clone)]
-pub enum ExecutionMode {
-    /// Indicates that the component manager is running in Debug mode. This
-    /// enables some additional events such as CapabilityRouted.
-    Debug,
-    /// Indicates that the component manager is running in Production mode.
-    Production,
-}
-
-impl ExecutionMode {
-    pub fn is_debug(&self) -> bool {
-        match self {
-            ExecutionMode::Debug => true,
-            ExecutionMode::Production => false,
-        }
-    }
-}
-
 fn event_name_remap(value: &str) -> &str {
     value.trim_end_matches("_v2")
 }
@@ -218,7 +167,7 @@ impl EventRegistry {
     /// Subscribes to events of a provided set of EventTypes.
     pub async fn subscribe_v2(
         &self,
-        options: &SubscriptionOptions,
+        subscriber: &ExtendedMoniker,
         subscriptions: Vec<EventSubscription>,
     ) -> Result<EventStream, ModelError> {
         // Register event capabilities if any. It identifies the sources of these events (might be
@@ -231,8 +180,8 @@ impl EventRegistry {
             }
         }
 
-        let events = match &options.subscription_type {
-            SubscriptionType::AboveRoot => event_names
+        let events = match &subscriber {
+            ExtendedMoniker::ComponentManager => event_names
                 .iter()
                 .map(|(source_name, mode)| RoutedEvent {
                     source_name: source_name.clone(),
@@ -243,7 +192,7 @@ impl EventRegistry {
                     route: vec![],
                 })
                 .collect(),
-            SubscriptionType::Component(target_moniker) => {
+            ExtendedMoniker::ComponentInstance(target_moniker) => {
                 let route_result = self.route_events_v2(&target_moniker, &event_names).await?;
                 // Each target name that we routed, will have an associated scope. The number of
                 // scopes must be equal to the number of target names.
@@ -261,13 +210,13 @@ impl EventRegistry {
             }
         };
 
-        self.subscribe_with_routed_events(&options, events).await
+        self.subscribe_with_routed_events(&subscriber, events).await
     }
 
     /// Subscribes to events of a provided set of EventTypes.
     pub async fn subscribe(
         &self,
-        options: &SubscriptionOptions,
+        subscriber: &ExtendedMoniker,
         subscriptions: Vec<EventSubscription>,
     ) -> Result<EventStream, ModelError> {
         // Register event capabilities if any. It identifies the sources of these events (might be
@@ -282,8 +231,8 @@ impl EventRegistry {
                 return Err(EventsError::duplicate_event(subscription.event_name).into());
             }
         }
-        let events = match &options.subscription_type {
-            SubscriptionType::AboveRoot => event_names
+        let events = match &subscriber {
+            ExtendedMoniker::ComponentManager => event_names
                 .iter()
                 .map(|(source_name, mode)| RoutedEvent {
                     source_name: source_name.clone(),
@@ -294,7 +243,7 @@ impl EventRegistry {
                     route: vec![],
                 })
                 .collect(),
-            SubscriptionType::Component(target_moniker) => {
+            ExtendedMoniker::ComponentInstance(target_moniker) => {
                 let route_result = self.route_events(target_moniker, &event_names).await?;
                 // Each target name that we routed, will have an associated scope. The number of
                 // scopes must be equal to the number of target names.
@@ -313,12 +262,12 @@ impl EventRegistry {
             }
         };
 
-        self.subscribe_with_routed_events(&options, events).await
+        self.subscribe_with_routed_events(&subscriber, events).await
     }
 
     pub async fn subscribe_with_routed_events(
         &self,
-        options: &SubscriptionOptions,
+        subscriber: &ExtendedMoniker,
         mut events: Vec<RoutedEvent>,
     ) -> Result<EventStream, ModelError> {
         // TODO(fxbug.dev/48510): get rid of this channel and use FIDL directly.
@@ -334,7 +283,7 @@ impl EventRegistry {
                 // NOTE: This is for ALL events other than Running.
                 let dispatchers = dispatcher_map.entry(event.source_name.clone()).or_insert(vec![]);
                 let dispatcher = event_stream.create_dispatcher(
-                    options.clone(),
+                    subscriber.clone(),
                     event.mode.clone(),
                     event.scopes.clone(),
                     event.route.clone(),
@@ -661,23 +610,16 @@ mod tests {
     use {
         super::*,
         crate::model::{
-            component::ComponentInstance,
-            environment::Environment,
-            events::event::Event,
             hooks::{Event as ComponentEvent, EventError, EventErrorPayload, EventPayload},
             testing::test_helpers::{TestModelResult, *},
         },
-        ::routing::{
-            capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
-            error::ComponentInstanceError,
-        },
+        ::routing::error::ComponentInstanceError,
         assert_matches::assert_matches,
         cm_rust::{
             Availability, ChildDecl, ComponentDecl, DependencyType, DictionaryValue, OfferDecl,
-            OfferEventDecl, OfferSource, OfferTarget, ProtocolDecl, UseDecl, UseEventDecl,
-            UseSource,
+            OfferEventDecl, OfferSource, OfferTarget, UseDecl, UseEventDecl, UseSource,
         },
-        fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_component_decl as fdecl, fuchsia_zircon as zx,
         futures::StreamExt,
         maplit::hashmap,
         moniker::AbsoluteMoniker,
@@ -723,62 +665,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn capability_routed_dispatch() -> Result<(), ModelError> {
-        let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
-        let registry = EventRegistry::new(Arc::downgrade(&model));
-        let mut event_stream = registry
-            .subscribe(
-                &SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Debug),
-                vec![EventSubscription::new(EventType::CapabilityRouted.into(), EventMode::Sync)],
-            )
-            .await
-            .expect("subscribe succeeds");
-        assert_eq!(1, registry.dispatchers_per_event_type(EventType::CapabilityRouted).await);
-
-        let component = ComponentInstance::new_root(
-            Environment::empty(),
-            Weak::new(),
-            Weak::new(),
-            "test:///root".to_string(),
-        );
-        let capability = ComponentCapability::Protocol(ProtocolDecl {
-            name: "foo".into(),
-            source_path: Some("/svc/foo".parse().unwrap()),
-        });
-        let source = CapabilitySource::Component {
-            capability: capability.clone(),
-            component: component.as_weak(),
-        };
-        let capability_provider = Arc::new(Mutex::new(None));
-        let event = ComponentEvent::new_for_test(
-            AbsoluteMoniker::root(),
-            "fuchsia-pkg://root",
-            Ok(EventPayload::CapabilityRouted { source: source.clone(), capability_provider }),
-        );
-        fasync::Task::spawn(async move {
-            registry.dispatch(&event).await.expect("failed dispatch");
-        })
-        .detach();
-
-        let (event, _) = event_stream.next().await.expect("null event");
-        assert_matches!(event, Event {
-            event: ComponentEvent {
-                result: Ok(EventPayload::CapabilityRouted {
-                    source: CapabilitySource::Component {
-                        capability, ..
-                    },
-                    ..
-                }),
-                ..
-            },
-            scope_moniker,
-            ..
-        } if capability == capability && scope_moniker == AbsoluteMoniker::root().into());
-
-        Ok(())
-    }
-
-    #[fuchsia::test]
     async fn drop_dispatcher_when_event_stream_dropped() {
         let TestModelResult { model, .. } = TestEnvironmentBuilder::new().build().await;
         let event_registry = EventRegistry::new(Arc::downgrade(&model));
@@ -787,7 +673,7 @@ mod tests {
 
         let mut event_stream_a = event_registry
             .subscribe(
-                &SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Production),
+                &ExtendedMoniker::ComponentManager,
                 vec![EventSubscription::new(EventType::Discovered.into(), EventMode::Async)],
             )
             .await
@@ -797,7 +683,7 @@ mod tests {
 
         let mut event_stream_b = event_registry
             .subscribe(
-                &SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Production),
+                &ExtendedMoniker::ComponentManager,
                 vec![EventSubscription::new(EventType::Discovered.into(), EventMode::Async)],
             )
             .await
@@ -837,7 +723,7 @@ mod tests {
 
         let mut event_stream = event_registry
             .subscribe(
-                &SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Production),
+                &ExtendedMoniker::ComponentManager,
                 vec![EventSubscription::new(EventType::Resolved.into(), EventMode::Async)],
             )
             .await
@@ -871,12 +757,9 @@ mod tests {
             event_registry.dispatchers_per_event_type(EventType::CapabilityRequested).await
         );
 
-        let options =
-            SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Production);
-
         let mut event_stream_a = event_registry
             .subscribe(
-                &options,
+                &ExtendedMoniker::ComponentManager,
                 vec![EventSubscription::new(
                     EventType::CapabilityRequested.into(),
                     EventMode::Async,
@@ -892,7 +775,7 @@ mod tests {
 
         let mut event_stream_b = event_registry
             .subscribe(
-                &options,
+                &ExtendedMoniker::ComponentManager,
                 vec![EventSubscription::new(
                     EventType::CapabilityRequested.into(),
                     EventMode::Async,
@@ -1006,14 +889,12 @@ mod tests {
             event_registry.dispatchers_per_event_type(EventType::CapabilityRequested).await
         );
 
-        let options = SubscriptionOptions::new(
-            SubscriptionType::Component(AbsoluteMoniker::parse_str("/foo").unwrap()),
-            ExecutionMode::Production,
-        );
+        let subscriber =
+            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::parse_str("/foo").unwrap());
 
         let _event_stream = event_registry
             .subscribe(
-                &options,
+                &subscriber,
                 vec![
                     EventSubscription::new("bar_requested".into(), EventMode::Async),
                     EventSubscription::new("foo_requested".into(), EventMode::Async),

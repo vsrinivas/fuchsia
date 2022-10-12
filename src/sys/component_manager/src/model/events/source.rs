@@ -9,15 +9,11 @@ use {
             error::ModelError,
             events::{
                 error::EventsError,
-                registry::{
-                    EventRegistry, EventSubscription, ExecutionMode, SubscriptionOptions,
-                    SubscriptionType,
-                },
+                registry::{EventRegistry, EventSubscription},
                 serve::{serve_event_source_sync, serve_event_stream_v2},
                 stream::EventStream,
                 stream_provider::EventStreamProvider,
             },
-            model::Model,
         },
     },
     async_trait::async_trait,
@@ -56,14 +52,11 @@ impl EventSourceV2 {
         let mut static_streams = vec![];
         if let Some(stream_provider) = self.v1.stream_provider.upgrade() {
             for request in requests {
-                let moniker = match &self.v1.options.subscription_type {
-                    SubscriptionType::AboveRoot => ExtendedMoniker::ComponentManager,
-                    SubscriptionType::Component(abs_moniker) => {
-                        ExtendedMoniker::ComponentInstance(abs_moniker.clone())
-                    }
-                };
                 if let Some(res) = stream_provider
-                    .take_v2_static_event_stream(&moniker, request.event_name.to_string())
+                    .take_v2_static_event_stream(
+                        &self.v1.subscriber,
+                        request.event_name.to_string(),
+                    )
                     .await
                 {
                     static_streams.push(res);
@@ -77,13 +70,13 @@ impl EventSourceV2 {
                             "capability_requested cannot be taken twice.",
                         ));
                     }
-                    let stream = registry.subscribe_v2(&self.v1.options, vec![request]).await?;
+                    let stream = registry.subscribe_v2(&self.v1.subscriber, vec![request]).await?;
                     static_streams.push(stream);
                 }
             }
         }
         // Create an event stream for the given events
-        let mut stream = registry.subscribe_v2(&self.v1.options, vec![]).await?;
+        let mut stream = registry.subscribe_v2(&self.v1.subscriber, vec![]).await?;
         for mut request in static_streams {
             let mut tx = stream.sender();
             stream.tasks.push(fuchsia_async::Task::spawn(async move {
@@ -124,11 +117,6 @@ impl EventSourceV2 {
 /// A system responsible for implementing basic events functionality on a scoped realm.
 #[derive(Clone)]
 pub struct EventSource {
-    /// The component model, needed to route events.
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    model: Weak<Model>,
-
     /// A shared reference to the event registry used to subscribe and dispatch events.
     registry: Weak<EventRegistry>,
 
@@ -136,34 +124,24 @@ pub struct EventSource {
     /// server end of the static event streams.
     stream_provider: Weak<EventStreamProvider>,
 
-    /// The options used to subscribe to events.
-    options: SubscriptionOptions,
+    /// The moniker of the component subscribing to events.
+    subscriber: ExtendedMoniker,
 }
 
 impl EventSource {
-    /// Creates a new `EventSource` that will be used by the component identified with the given
-    /// `target_moniker`.
     pub async fn new(
-        model: Weak<Model>,
-        options: SubscriptionOptions,
+        subscriber: ExtendedMoniker,
         registry: Weak<EventRegistry>,
         stream_provider: Weak<EventStreamProvider>,
     ) -> Result<Self, ModelError> {
-        Ok(Self { registry, stream_provider, model, options })
+        Ok(Self { registry, stream_provider, subscriber })
     }
 
-    pub async fn new_for_debug(
-        model: Weak<Model>,
+    pub async fn new_for_above_root(
         registry: Weak<EventRegistry>,
         stream_provider: Weak<EventStreamProvider>,
     ) -> Result<Self, ModelError> {
-        Self::new(
-            model,
-            SubscriptionOptions::new(SubscriptionType::AboveRoot, ExecutionMode::Debug),
-            registry,
-            stream_provider,
-        )
-        .await
+        Self::new(ExtendedMoniker::ComponentManager, registry, stream_provider).await
     }
 
     /// Subscribes to events provided in the `requests` vector.
@@ -177,21 +155,15 @@ impl EventSource {
     ) -> Result<EventStream, ModelError> {
         let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
         // Create an event stream for the given events
-        registry.subscribe(&self.options, requests).await
+        registry.subscribe(&self.subscriber, requests).await
     }
 
     pub async fn take_static_event_stream(
         &self,
         target_path: String,
     ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
-        let moniker = match &self.options.subscription_type {
-            SubscriptionType::AboveRoot => ExtendedMoniker::ComponentManager,
-            SubscriptionType::Component(abs_moniker) => {
-                ExtendedMoniker::ComponentInstance(abs_moniker.clone())
-            }
-        };
         if let Some(stream_provider) = self.stream_provider.upgrade() {
-            return stream_provider.take_static_event_stream(&moniker, target_path).await;
+            return stream_provider.take_static_event_stream(&self.subscriber, target_path).await;
         }
         return None;
     }
@@ -216,12 +188,7 @@ impl CapabilityProvider for EventSourceV2 {
         let stream = ServerEnd::<fsys::EventStream2Marker>::new(server_end);
         task_scope
             .add_task(async move {
-                let moniker = match &self.v1.options.subscription_type {
-                    SubscriptionType::AboveRoot => ExtendedMoniker::ComponentManager,
-                    SubscriptionType::Component(abs_moniker) => {
-                        ExtendedMoniker::ComponentInstance(abs_moniker.clone())
-                    }
-                };
+                let moniker = self.v1.subscriber.clone();
                 if let Ok(Some(event_stream)) = self
                     .subscribe_all(moniker, relative_path.into_os_string().into_string().unwrap())
                     .await

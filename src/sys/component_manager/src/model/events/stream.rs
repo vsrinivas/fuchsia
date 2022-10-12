@@ -7,7 +7,7 @@ use {
         events::{
             dispatcher::{EventDispatcher, EventDispatcherScope},
             event::Event,
-            registry::{ComponentEventRoute, SubscriptionOptions},
+            registry::ComponentEventRoute,
         },
         hooks::{EventType, HasEventType},
     },
@@ -51,14 +51,14 @@ impl EventStream {
 
     pub fn create_dispatcher(
         &mut self,
-        options: SubscriptionOptions,
+        subscriber: ExtendedMoniker,
         mode: EventMode,
         scopes: Vec<EventDispatcherScope>,
         route: Vec<ComponentEventRoute>,
     ) -> Weak<EventDispatcher> {
         self.route = route.clone();
         let dispatcher = Arc::new(EventDispatcher::new_with_route(
-            options,
+            subscriber,
             mode,
             scopes,
             self.tx.clone(),

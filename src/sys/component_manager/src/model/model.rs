@@ -14,6 +14,7 @@ use {
     ::routing::{component_id_index::ComponentIdIndex, config::RuntimeConfig},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::sync::Arc,
+    tracing::warn,
 };
 
 /// Parameters for initializing a component model, particularly the root of the component
@@ -160,7 +161,12 @@ impl Model {
 
         // In debug mode, we don't start the component root. It must be started manually from
         // the lifecycle controller.
-        if !self.context.runtime_config().debug {
+        if self.context.runtime_config().debug {
+            warn!(
+                "In debug mode, the root component will not be started. Use the LifecycleController
+                protocol to start the root component."
+            );
+        } else {
             if let Err(e) = self.start_instance(&AbsoluteMoniker::root(), &StartReason::Root).await
             {
                 // If we fail to start the root, but the root is being shutdown, that's ok. The

@@ -2561,7 +2561,7 @@ pub mod tests {
         let mut event_source = test
             .builtin_environment
             .event_source_factory
-            .create_for_debug()
+            .create_for_above_root()
             .await
             .expect("create event source");
         let mut event_stream = event_source
@@ -2631,7 +2631,7 @@ pub mod tests {
             .lock()
             .await
             .event_source_factory
-            .create_for_debug()
+            .create_for_above_root()
             .await
             .expect("failed creating event source");
         let mut stop_event_stream = event_source

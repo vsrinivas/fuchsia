@@ -91,7 +91,7 @@ async fn bind_concurrent() {
         .lock()
         .await
         .event_source_factory
-        .create_for_debug()
+        .create_for_above_root()
         .await
         .expect("create event source");
 
@@ -391,7 +391,7 @@ async fn bind_action_sequence() {
         .lock()
         .await
         .event_source_factory
-        .create_for_debug()
+        .create_for_above_root()
         .await
         .expect("create event source");
     let mut event_stream = event_source

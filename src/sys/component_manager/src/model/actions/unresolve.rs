@@ -251,7 +251,7 @@ pub mod tests {
             .lock()
             .await
             .event_source_factory
-            .create_for_debug()
+            .create_for_above_root()
             .await
             .expect("create event source");
         let event_stream = event_source

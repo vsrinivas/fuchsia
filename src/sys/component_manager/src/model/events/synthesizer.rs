@@ -263,7 +263,7 @@ mod tests {
         super::*,
         crate::model::{
             events::{
-                registry::{EventRegistry, RoutedEvent, SubscriptionOptions},
+                registry::{EventRegistry, RoutedEvent},
                 stream::EventStream,
             },
             hooks::EventPayload,
@@ -470,7 +470,10 @@ mod tests {
             })
             .collect();
         args.registry
-            .subscribe_with_routed_events(&SubscriptionOptions::default(), events)
+            .subscribe_with_routed_events(
+                &ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+                events,
+            )
             .await
             .expect("subscribe to event stream")
     }

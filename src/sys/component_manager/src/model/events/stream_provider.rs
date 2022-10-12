@@ -7,10 +7,7 @@ use {
         error::ModelError,
         events::{
             error::EventsError,
-            registry::{
-                EventRegistry, EventSubscription, ExecutionMode, SubscriptionOptions,
-                SubscriptionType,
-            },
+            registry::{EventRegistry, EventSubscription},
             serve::serve_event_stream,
             stream::EventStream,
         },
@@ -81,13 +78,10 @@ pub struct EventStreamProvider {
     registry: Weak<EventRegistry>,
 
     state: Arc<Mutex<StreamState>>,
-
-    /// The mode in which component manager is running.
-    execution_mode: ExecutionMode,
 }
 
 impl EventStreamProvider {
-    pub fn new(registry: Weak<EventRegistry>, execution_mode: ExecutionMode) -> Self {
+    pub fn new(registry: Weak<EventRegistry>) -> Self {
         Self {
             registry,
             state: Arc::new(Mutex::new(StreamState {
@@ -95,7 +89,6 @@ impl EventStreamProvider {
                 streams_v2: HashMap::new(),
                 subscription_component_lookup: HashMap::new(),
             })),
-            execution_mode,
         }
     }
 
@@ -128,32 +121,25 @@ impl EventStreamProvider {
     /// conditions.
     pub async fn create_v2_static_event_stream(
         self: &Arc<Self>,
-        target_moniker: &ExtendedMoniker,
+        subscriber: &ExtendedMoniker,
         stream_name: String,
         subscription: EventSubscription,
         path: String,
     ) -> Result<(), ModelError> {
         let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
-        let subscription_type = match target_moniker {
-            ExtendedMoniker::ComponentManager => SubscriptionType::AboveRoot,
-            ExtendedMoniker::ComponentInstance(abs_moniker) => {
-                SubscriptionType::Component(abs_moniker.clone())
-            }
-        };
-        let options = SubscriptionOptions::new(subscription_type, self.execution_mode.clone());
-        let event_stream = registry.subscribe_v2(&options, vec![subscription]).await?;
-        let absolute_path = AbsolutePath { target_moniker: target_moniker.clone(), path };
+        let event_stream = registry.subscribe_v2(&subscriber, vec![subscription]).await?;
+        let absolute_path = AbsolutePath { target_moniker: subscriber.clone(), path };
         let mut state = self.state.lock().await;
-        if !state.subscription_component_lookup.contains_key(&target_moniker) {
-            state.subscription_component_lookup.insert(target_moniker.clone(), HashMap::new());
+        if !state.subscription_component_lookup.contains_key(&subscriber) {
+            state.subscription_component_lookup.insert(subscriber.clone(), HashMap::new());
         }
-        if let Some(subscriptions) = state.subscription_component_lookup.get_mut(&target_moniker) {
+        if let Some(subscriptions) = state.subscription_component_lookup.get_mut(&subscriber) {
             if !subscriptions.contains_key(&absolute_path) {
                 subscriptions.insert(absolute_path.clone(), vec![]);
             }
             let path_list = subscriptions.get_mut(&absolute_path).unwrap();
             path_list.push(stream_name.clone());
-            let event_streams = state.streams_v2.entry(target_moniker.clone()).or_insert(vec![]);
+            let event_streams = state.streams_v2.entry(subscriber.clone()).or_insert(vec![]);
             event_streams.push(EventStreamAttachmentV2 {
                 name: stream_name,
                 server_end: Some(event_stream),
@@ -204,21 +190,14 @@ impl EventStreamProvider {
     /// component and with the provided `target_path`.
     pub async fn create_static_event_stream(
         self: &Arc<Self>,
-        target_moniker: &ExtendedMoniker,
+        subscriber: &ExtendedMoniker,
         stream_name: String,
         subscriptions: Vec<EventSubscription>,
     ) -> Result<(), ModelError> {
         let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
-        let subscription_type = match target_moniker {
-            ExtendedMoniker::ComponentManager => SubscriptionType::AboveRoot,
-            ExtendedMoniker::ComponentInstance(abs_moniker) => {
-                SubscriptionType::Component(abs_moniker.clone())
-            }
-        };
-        let options = SubscriptionOptions::new(subscription_type, self.execution_mode.clone());
-        let event_stream = registry.subscribe(&options, subscriptions).await?;
+        let event_stream = registry.subscribe(&subscriber, subscriptions).await?;
         let mut state = self.state.lock().await;
-        let event_streams = state.streams.entry(target_moniker.clone()).or_insert(vec![]);
+        let event_streams = state.streams.entry(subscriber.clone()).or_insert(vec![]);
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();
         let task = fasync::Task::spawn(async move {
             serve_event_stream(event_stream, client_end).await;

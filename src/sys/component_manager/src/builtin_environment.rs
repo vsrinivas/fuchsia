@@ -54,7 +54,7 @@ use {
             error::ModelError,
             event_logger::EventLogger,
             events::{
-                registry::{EventRegistry, EventSubscription, ExecutionMode},
+                registry::{EventRegistry, EventSubscription},
                 running_provider::RunningProvider,
                 serve::serve_event_stream_v2_as_stream,
                 source_factory::EventSourceFactory,
@@ -423,7 +423,7 @@ pub struct BuiltinEnvironment {
     pub event_logger: Option<Arc<EventLogger>>,
     pub component_tree_stats: Arc<ComponentTreeStats<DiagnosticsTask>>,
     pub component_startup_time_stats: Arc<ComponentEarlyStartupTimeStats>,
-    pub execution_mode: ExecutionMode,
+    pub debug: bool,
     pub num_threads: usize,
     pub inspector: Inspector,
     pub realm_builder_resolver: Option<Arc<RealmBuilderResolver>>,
@@ -443,16 +443,7 @@ impl BuiltinEnvironment {
         inspector: Inspector,
         crash_records: CrashRecords,
     ) -> Result<BuiltinEnvironment, Error> {
-        let execution_mode = if runtime_config.debug {
-            warn!(
-                "Component Manager is in debug mode. In this mode, the root component will not \
-                be started. Use the LifecycleController protocol in the hub to start the root \
-                component."
-            );
-            ExecutionMode::Debug
-        } else {
-            ExecutionMode::Production
-        };
+        let debug = runtime_config.debug;
 
         let num_threads = runtime_config.num_threads.clone();
 
@@ -899,17 +890,13 @@ impl BuiltinEnvironment {
         };
         model.root().hooks.install(event_registry.hooks()).await;
 
-        let event_stream_provider = Arc::new(EventStreamProvider::new(
-            Arc::downgrade(&event_registry),
-            execution_mode.clone(),
-        ));
+        let event_stream_provider =
+            Arc::new(EventStreamProvider::new(Arc::downgrade(&event_registry)));
 
         // Set up the event source factory.
         let event_source_factory = Arc::new(EventSourceFactory::new(
-            Arc::downgrade(&model),
             Arc::downgrade(&event_registry),
             Arc::downgrade(&event_stream_provider),
-            execution_mode.clone(),
         ));
         model.root().hooks.install(event_source_factory.hooks()).await;
         model.root().hooks.install(event_stream_provider.hooks()).await;
@@ -962,7 +949,7 @@ impl BuiltinEnvironment {
             event_logger,
             component_tree_stats,
             component_startup_time_stats,
-            execution_mode,
+            debug,
             num_threads,
             inspector,
             realm_builder_resolver,
@@ -1018,9 +1005,9 @@ impl BuiltinEnvironment {
 
         // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
-        if self.execution_mode.is_debug() {
-            let event_source = self.event_source_factory.create_for_debug().await?;
-            let event_source_v2 = self.event_source_factory.create_v2_for_debug().await?;
+        if self.debug {
+            let event_source = self.event_source_factory.create_for_above_root().await?;
+            let event_source_v2 = self.event_source_factory.create_v2_for_above_root().await?;
             let scope = self.model.top_instance().task_scope().clone();
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();
