@@ -40,7 +40,7 @@ namespace {
 using FidlSnapshot = fuchsia::feedback::Snapshot;
 using fuchsia::feedback::CrashReport;
 
-constexpr zx::duration kSnapshotTimeout = zx::min(2);
+constexpr zx::duration kSnapshotTimeout = zx::min(1);
 
 // Returns what the initial ReportId should be, based on the contents of the report store in the
 // filesystem.

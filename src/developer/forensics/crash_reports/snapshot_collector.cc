@@ -162,9 +162,7 @@ SnapshotUuid SnapshotCollector::MakeNewSnapshotRequest(const zx::time start_time
   snapshot_store_->StartSnapshot(uuid);
 
   snapshot_requests_.back()->delayed_get_snapshot.set_handler([this, timeout, uuid]() {
-    // Give 15s for the packaging of the snapshot and the round-trip between the client and
-    // the server and the rest is given to each data collection.
-    zx::duration collection_timeout_per_data = timeout - zx::sec(15);
+    zx::duration collection_timeout_per_data = timeout;
     data_provider_->GetSnapshotInternal(
         collection_timeout_per_data,
         [this, uuid](feedback::Annotations annotations, fuchsia::feedback::Attachment archive) {
