@@ -393,6 +393,7 @@ TEST_F(RealmBuilderTest, ComponentCanStopAndBeRestarted) {
   bool started = false;
   bool got_response = false;
   bool destructed = false;
+  bool got_peer_closed = false;
   realm_builder.AddLocalChild(kEchoServer, [&]() {
     return std::make_unique<LocalEchoServer>(
         dispatcher(), /*on_start=*/
@@ -415,6 +416,9 @@ TEST_F(RealmBuilderTest, ComponentCanStopAndBeRestarted) {
   ASSERT_EQ(realm.Connect(echo.NewRequest()), ZX_OK);
   echo.set_error_handler([&](zx_status_t status) {
     FX_PLOGS(INFO, status) << "ComponentCanStopAndBeRestarted: Echo proxy error";
+    if (status == ZX_ERR_PEER_CLOSED) {
+      got_peer_closed = true;
+    }
   });
   echo->EchoString("hello", [&](fidl::StringPtr response) {
     FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: got_response = true, response = " << response;
@@ -422,31 +426,46 @@ TEST_F(RealmBuilderTest, ComponentCanStopAndBeRestarted) {
     ASSERT_EQ(response, "hello");
   });
 
-  FX_LOGS(INFO)
-      << "ComponentCanStopAndBeRestarted: waiting for started && got_response && destructed";
-  RunLoopUntil([&]() { return started && got_response && destructed; });
+  FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: waiting for started && got_response && "
+                   "destructed && got_peer_closed";
+  RunLoopUntil([&]() { return started && got_response && destructed && got_peer_closed; });
 
-  // reset the flags
-  started = false;
+  // When the local component exits (before the `while` loop), the
+  // `LocalComponentRunner` closes the component's `ComponentController`.
+  //
+  // It's possible (if rare) that a second call to `EchoString()` will not
+  // connect to a new LocalComponent instance, and a second `ERR_PEER_CLOSED`
+  // can occur, failing the `EchoString()` request. A theory is that component
+  // manager did not have a chance to observe the `ComponentController` closed
+  // event and/or fully stop the component in order to allow the component to
+  // re-start.
+  //
+  // To work around this failure, re-try until it succeeds.
+  //
+  // This approach is expected to fix an automatically-reported flake bug
+  // (fxbug.dev/111225).
+
   got_response = false;
-  destructed = false;
+  while (!got_response) {
+    FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: resetting the flags to call again";
+    started = false;
+    destructed = false;
+    got_peer_closed = false;
 
-  // The component destructed, but it will start up again when another request
-  // is made.
-  ASSERT_EQ(realm.Connect(echo.NewRequest()), ZX_OK);
-  echo.set_error_handler([&](zx_status_t status) {
-    FX_PLOGS(INFO, status) << "ComponentCanStopAndBeRestarted: Echo proxy error";
-  });
-  echo->EchoString("You're back!", [&](fidl::StringPtr response) {
-    FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: got_response = true, second response = "
-                  << response;
-    got_response = true;
-    ASSERT_EQ(response, "You're back!");
-  });
+    // The component destructed, but it will start up again when another request
+    // is made.
+    ASSERT_EQ(realm.Connect(echo.NewRequest()), ZX_OK);
+    echo->EchoString("You're back!", [&](fidl::StringPtr response) {
+      FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: got_response = true, second response = "
+                    << response;
+      got_response = true;
+      ASSERT_EQ(response, "You're back!");
+    });
 
-  FX_LOGS(INFO)
-      << "ComponentCanStopAndBeRestarted: waiting again for started && got_response && destructed";
-  RunLoopUntil([&]() { return started && got_response && destructed; });
+    FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: waiting again for started && got_response && "
+                     "destructed";
+    RunLoopUntil([&]() { return got_peer_closed || (started && got_response && destructed); });
+  }
   FX_LOGS(INFO) << "ComponentCanStopAndBeRestarted: done";
 }
 
