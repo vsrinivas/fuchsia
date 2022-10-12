@@ -35,6 +35,28 @@ enum Status {
     Stale,
 }
 
+fn is_valid(message: &LogMessage) -> bool {
+    // Check that the tags fit in FIDL.
+    if message.tags.len() > fidl_fuchsia_logger::MAX_TAGS.into() {
+        debug!("Unable to encode message, it exceeded our MAX_TAGS");
+        return false;
+    }
+    for tag in &message.tags {
+        if tag.len() > fidl_fuchsia_logger::MAX_TAG_LEN_BYTES.into() {
+            debug!("Unable to encode message, it exceeded our MAX_TAG_LEN_BYTES");
+            return false;
+        }
+    }
+
+    // If a message by itself is too big to fit into fidl, warn and skip.
+    let msg_size = message.measure().num_bytes;
+    if msg_size + FIDL_VECTOR_HEADER_BYTES > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
+        debug!("Unable to encode message, it exceeded our MAX_LOG_MANY_SIZE_BYTES by itself.");
+        return false;
+    }
+    true
+}
+
 impl Listener {
     /// Create a new `Listener`. Fails if `client` can't be converted into a `LogListenerProxy` or
     /// if `LogFilterOptions` are invalid.
@@ -120,13 +142,7 @@ impl Listener {
                 let legacy_msg: LogMessage = msg.as_ref().into();
                 let msg_size = legacy_msg.measure().num_bytes;
 
-                // If a message by itself is too big to fit into fidl, warn and skip.
-                if msg_size + FIDL_VECTOR_HEADER_BYTES
-                    > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize
-                {
-                    trace!(
-                    "Unable to encode message, it exceeded our MAX_LOG_MANY_SIZE_BYTES by itself."
-                );
+                if !is_valid(&legacy_msg) {
                     continue;
                 }
 
@@ -163,6 +179,9 @@ impl Listener {
     async fn send_log(&mut self, log_message: &LogsData) {
         if self.filter.should_send(log_message) {
             let mut to_send: LogMessage = log_message.into();
+            if !is_valid(&to_send) {
+                return;
+            }
             self.check_result(self.listener.log(&mut to_send).await);
         }
     }
