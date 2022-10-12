@@ -200,7 +200,7 @@ gvisor_tests = [
   "socket_ip_tcp_loopback_non_blocking_test",
 
   # "socket_ip_tcp_loopback_test",
-  # "socket_ip_tcp_udp_generic_loopback_test",
+  "socket_ip_tcp_udp_generic_loopback_test",
   "socket_ip_udp_loopback_non_blocking_test",
   "socket_ip_udp_loopback_test",
 
