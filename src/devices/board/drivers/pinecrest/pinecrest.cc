@@ -113,10 +113,6 @@ int Pinecrest::Thread() {
     zxlogf(ERROR, "%s: TouchInit() failed", __func__);
   }
 
-  if (NandInit() != ZX_OK) {
-    zxlogf(ERROR, "%s: NandInit() failed", __func__);
-  }
-
   if (NnaInit() != ZX_OK) {
     zxlogf(ERROR, "%s: NnaInit() failed", __func__);
   }

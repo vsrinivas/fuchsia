@@ -26,16 +26,17 @@
 namespace board_pinecrest {
 namespace fpbus = fuchsia_hardware_platform_bus;
 
-static const zx_bind_inst_t ref_out_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x31),
-};
-static const zx_bind_inst_t ref_out_codec_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MAXIM),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MAXIM_MAX98373),
-};
+// TODO(fxbug.dev/107645): Update these for the new codec.
+// static const zx_bind_inst_t ref_out_i2c_match[] = {
+//     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+//     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
+//     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x31),
+// };
+// static const zx_bind_inst_t ref_out_codec_match[] = {
+//     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
+//     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MAXIM),
+//     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MAXIM_MAX98373),
+// };
 static const zx_bind_inst_t dma_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SHARED_DMA),
 };
@@ -44,23 +45,23 @@ static const zx_bind_inst_t ref_out_clk0_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, as370::As370Clk::kClkAvpll0),
 };
 
-static const device_fragment_part_t ref_out_i2c_fragment[] = {
-    {std::size(ref_out_i2c_match), ref_out_i2c_match},
-};
-static const device_fragment_part_t ref_out_codec_fragment[] = {
-    {std::size(ref_out_codec_match), ref_out_codec_match},
-};
+// static const device_fragment_part_t ref_out_i2c_fragment[] = {
+//     {std::size(ref_out_i2c_match), ref_out_i2c_match},
+// };
+// static const device_fragment_part_t ref_out_codec_fragment[] = {
+//     {std::size(ref_out_codec_match), ref_out_codec_match},
+// };
 static const device_fragment_part_t dma_fragment[] = {
     {std::size(dma_match), dma_match},
 };
 
-static const zx_bind_inst_t ref_out_enable_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, 17),
-};
-static const device_fragment_part_t ref_out_enable_gpio_fragment[] = {
-    {std::size(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
-};
+// static const zx_bind_inst_t ref_out_enable_gpio_match[] = {
+//     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+//     BI_MATCH_IF(EQ, BIND_GPIO_PIN, 17),
+// };
+// static const device_fragment_part_t ref_out_enable_gpio_fragment[] = {
+//     {std::size(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
+// };
 static const device_fragment_part_t ref_out_clk0_fragment[] = {
     {std::size(ref_out_clk0_match), ref_out_clk0_match},
 };
@@ -87,14 +88,14 @@ constexpr device_fragment_part_t in_pdev_fragment[] = {
     {std::size(in_pdev_match), in_pdev_match},
 };
 
-static const device_fragment_t codec_fragments[] = {
-    {"i2c", std::size(ref_out_i2c_fragment), ref_out_i2c_fragment},
-    {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
-};
+// static const device_fragment_t codec_fragments[] = {
+//     {"i2c", std::size(ref_out_i2c_fragment), ref_out_i2c_fragment},
+//     {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+// };
 static const device_fragment_t controller_fragments[] = {
     {"pdev", std::size(controller_pdev_fragment), controller_pdev_fragment},
     {"dma", std::size(dma_fragment), dma_fragment},
-    {"codec", std::size(ref_out_codec_fragment), ref_out_codec_fragment},
+//    {"codec", std::size(ref_out_codec_fragment), ref_out_codec_fragment},
     {"clock", std::size(ref_out_clk0_fragment), ref_out_clk0_fragment},
 };
 static const device_fragment_t in_fragments[] = {
@@ -194,25 +195,26 @@ zx_status_t Pinecrest::AudioInit() {
   }
 
   // Output devices.
-  constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
-                                        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
-
-  const composite_device_desc_t comp_desc = {
-      .props = props,
-      .props_count = std::size(props),
-      .fragments = codec_fragments,
-      .fragments_count = std::size(codec_fragments),
-      .primary_fragment = "i2c",
-      .spawn_colocated = false,
-      .metadata_list = nullptr,
-      .metadata_count = 0,
-  };
-
-  zx_status_t status = DdkAddComposite("audio-max98373", &comp_desc);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
-    return status;
-  }
+  // TODO(fxbug.dev/107645): Update this for the new codec details.
+  // constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_MAXIM},
+  //                                       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
+  //
+  // const composite_device_desc_t comp_desc = {
+  //     .props = props,
+  //     .props_count = std::size(props),
+  //     .fragments = codec_fragments,
+  //     .fragments_count = std::size(codec_fragments),
+  //     .primary_fragment = "i2c",
+  //     .spawn_colocated = false,
+  //     .metadata_list = nullptr,
+  //     .metadata_count = 0,
+  // };
+  //
+  // zx_status_t status = DdkAddComposite("audio-max98373", &comp_desc);
+  // if (status != ZX_OK) {
+  //   zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
+  //   return status;
+  // }
 
   // Share devhost with DHub.
   {

@@ -36,7 +36,6 @@ fuchsia_driver("pinecrest-driver") {
     "pinecrest-gpio.cc",
     "pinecrest-i2c.cc",
     "pinecrest-light.cc",
-    "pinecrest-nand.cc",
     "pinecrest-nna.cc",
     "pinecrest-power.cc",
     "pinecrest-registers.cc",

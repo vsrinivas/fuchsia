@@ -44,7 +44,6 @@ class Pinecrest : public ddk::Device<Pinecrest> {
   zx_status_t AudioInit();
   zx_status_t ClockInit();
   zx_status_t LightInit();
-  zx_status_t NandInit();
   zx_status_t NnaInit();
   zx_status_t PowerInit();
   zx_status_t RegistersInit();
