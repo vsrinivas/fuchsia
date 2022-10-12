@@ -36,10 +36,6 @@ TEST(AliasWorkaround, Mappings) {
   // ConstVoidPtr
   CHECK_ARG("const void*", "c");
 
-  // MutableString
-  CHECK_ARG("char*", "d");
-  CHECK_ARG("size_t", "d_size");
-
   // MutableUint32
   CHECK_ARG("uint32_t*", "e");
 
@@ -93,7 +89,7 @@ TEST(AliasWorkaround, Mappings) {
 
 #undef CHECK_ARG
 
-  EXPECT_EQ(cur_arg, 28u);
+  EXPECT_EQ(cur_arg, 26u);
 }
 
 }  // namespace

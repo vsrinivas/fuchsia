@@ -17,9 +17,6 @@ alias ConstFutexPtr = int32;
 // TODO(fidlc): const void*
 alias ConstVoidPtr = uint64;
 
-// TODO(fidlc): mutable<string>
-alias MutableString = string;
-
 // TODO(fidlc): mutable<uint32>
 alias MutableUint32 = uint32;
 

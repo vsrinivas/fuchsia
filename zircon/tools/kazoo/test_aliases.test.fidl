@@ -16,7 +16,6 @@ type WaitItem = struct {};
 
 alias ConstFutexPtr = int32;
 alias ConstVoidPtr = uint64;
-alias MutableString = string;
 alias MutableUint32 = uint32;
 alias MutableUsize = usize;
 alias MutableVectorHandleDispositionU32Size = vector<HandleDisposition>;
@@ -37,7 +36,6 @@ protocol Aliases {
     SomeFunc(resource struct {
         b ConstFutexPtr;
         c ConstVoidPtr;
-        d MutableString;
         e MutableUint32;
         f MutableUsize;
         g MutableVectorHandleDispositionU32Size;

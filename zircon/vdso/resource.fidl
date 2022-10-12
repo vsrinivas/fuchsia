@@ -107,7 +107,7 @@ protocol Resource {
         options uint32;
         base uint64;
         size usize;
-        name string;
+        name vector<uchar>:MAX_NAME_LEN;
     }) -> (resource struct {
         resource_out handle:RESOURCE;
     }) error status;

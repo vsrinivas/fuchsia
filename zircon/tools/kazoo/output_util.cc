@@ -99,7 +99,7 @@ std::string CNameImpl(const Type& type) {
    public:
     void operator()(const std::monostate&) { ret = "<TODO!>"; }
     void operator()(const TypeBool&) { ret = "uint32_t"; }
-    void operator()(const TypeChar&) { ret = "char"; }
+    void operator()(const TypeUchar&) { ret = "char"; }
     void operator()(const TypeInt8&) { ret = "int8_t"; }
     void operator()(const TypeInt16&) { ret = "int16_t"; }
     void operator()(const TypeInt32&) { ret = "int32_t"; }
@@ -122,10 +122,6 @@ std::string CNameImpl(const Type& type) {
     }
     void operator()(const TypePointer& pointer) {
       ZX_ASSERT(false && "pointers should be handled by caller");
-      ret = "<!>";
-    }
-    void operator()(const TypeString&) {
-      ZX_ASSERT(false && "can't convert string to C directly");
       ret = "<!>";
     }
     void operator()(const TypeStruct& strukt) {
@@ -210,7 +206,7 @@ std::string GetGoNameImpl(const Type& type) {
    public:
     void operator()(const std::monostate&) { ret = "<TODO!>"; }
     void operator()(const TypeBool&) { ret = "uint32"; }
-    void operator()(const TypeChar&) { ret = "uint8"; }
+    void operator()(const TypeUchar&) { ret = "uint8"; }
     void operator()(const TypeInt8&) { ret = "int8"; }
     void operator()(const TypeInt16&) { ret = "int16"; }
     void operator()(const TypeInt32&) { ret = "int32"; }
@@ -233,10 +229,6 @@ std::string GetGoNameImpl(const Type& type) {
       } else {
         ret = "*" + GetGoName(pointer.pointed_to_type());
       }
-    }
-    void operator()(const TypeString&) {
-      ZX_ASSERT(false && "can't convert string directly");
-      ret = "<!>";
     }
     void operator()(const TypeStruct& strukt) {
       ret = "zx_" + strukt.struct_data().base_name() + "_t";

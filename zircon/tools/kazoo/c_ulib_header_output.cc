@@ -76,7 +76,7 @@ class Formatter {
           if constexpr (std::is_same_v<T, TypeBool>) {
             return "bool";
           }
-          if constexpr (std::is_same_v<T, TypeChar>) {
+          if constexpr (std::is_same_v<T, TypeUchar>) {
             return "char";
           }
           if constexpr (std::is_same_v<T, TypeInt8>) {
@@ -151,7 +151,7 @@ class Formatter {
           if constexpr (std::is_same_v<T, TypeUint64>) {
             return num_str + "ul";
           }
-          if constexpr (std::is_same_v<T, TypeChar>) {
+          if constexpr (std::is_same_v<T, TypeUchar>) {
             return num_str;
           }
           if constexpr (std::is_same_v<T, TypeInt8>) {

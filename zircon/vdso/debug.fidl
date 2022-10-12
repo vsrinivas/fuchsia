@@ -68,7 +68,7 @@ protocol Debug {
     Read(resource struct {
         handle handle:RESOURCE;
     }) -> (struct {
-        buffer string;
+        buffer vector<uchar>:MAX;
         actual usize;
     }) error status;
 
@@ -124,7 +124,7 @@ protocol Debug {
     /// [`zx_debuglog_read()`]: debuglog_read.md
     /// [`zx_debuglog_write()`]: debuglog_write.md
     Write(struct {
-        buffer string;
+        buffer vector<uchar>:MAX;
     }) -> (struct {}) error status;
 
     /// ## Summary
@@ -166,6 +166,6 @@ protocol Debug {
     /// TODO(fxbug.dev/32938)
     SendCommand(resource struct {
         resource handle:RESOURCE;
-        buffer string;
+        buffer vector<uchar>:MAX;
     }) -> (struct {}) error status;
 };

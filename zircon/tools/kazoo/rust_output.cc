@@ -45,7 +45,7 @@ class Formatter {
      public:
       void operator()(const std::monostate&) { ret = "<TODO!>"; }
       void operator()(const TypeBool&) { ret = "u32"; }
-      void operator()(const TypeChar&) { ret = "u8"; }
+      void operator()(const TypeUchar&) { ret = "u8"; }
       void operator()(const TypeInt8&) { ret = "i8"; }
       void operator()(const TypeInt16&) { ret = "i16"; }
       void operator()(const TypeInt32&) { ret = "i32"; }
@@ -73,10 +73,6 @@ class Formatter {
       void operator()(const TypePointer& pointer) {
         ret = StringPrintf("*%s %s", constness == Constness::kConst ? "const" : "mut",
                            formatter->RustName(pointer.pointed_to_type()).c_str());
-      }
-      void operator()(const TypeString&) {
-        ZX_ASSERT(false && "can't convert string directly");
-        ret = "<!>";
       }
       void operator()(const TypeStruct& strukt) {
         ret = formatter->Format(strukt.struct_data()).type_name;

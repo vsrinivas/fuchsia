@@ -15,10 +15,6 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypePointer(Type(TypeVoid{})), Constness::kConst);
     return true;
   }
-  if (name == "MutableString") {
-    *type = Type(TypeString{}, Constness::kMutable);
-    return true;
-  }
   if (name == "MutableUint32") {
     *type = Type(TypePointer(Type(TypeUint32{})), Constness::kMutable);
     return true;

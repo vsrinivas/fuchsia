@@ -147,7 +147,7 @@ protocol Process {
     /// [`zx_thread_start()`]: thread_start.md
     Create(resource struct {
         job handle:JOB;
-        name string;
+        name vector<uchar>:MAX_NAME_LEN;
         options uint32;
     }) -> (resource struct {
         proc_handle handle:PROCESS;
@@ -225,7 +225,7 @@ protocol Process {
     CreateShared(resource struct {
         shared_proc handle:PROCESS;
         options uint32;
-        name string;
+        name vector<uchar>:MAX_NAME_LEN;
     }) -> (resource struct {
         proc_handle handle:PROCESS;
         restricted_vmar_handle handle:VMAR;

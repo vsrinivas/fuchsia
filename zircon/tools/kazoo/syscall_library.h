@@ -24,7 +24,7 @@ class Struct;
 class SyscallLibrary;
 
 class TypeBool {};
-class TypeChar {};
+class TypeUchar {};
 class TypeInt8 {};
 class TypeInt16 {};
 class TypeInt32 {};
@@ -42,13 +42,12 @@ class TypeAlias;
 class TypeEnum;
 class TypeHandle;
 class TypePointer;
-class TypeString {};
 class TypeStruct;
 class TypeVector;
-using TypeData = std::variant<std::monostate, TypeBool, TypeChar, TypeInt8, TypeInt16, TypeInt32,
+using TypeData = std::variant<std::monostate, TypeBool, TypeUchar, TypeInt8, TypeInt16, TypeInt32,
                               TypeInt64, TypeUsize, TypeUint16, TypeUint32, TypeUint64, TypeUint8,
                               TypeUintptr, TypeVoid, TypeZxBasicAlias, TypeAlias, TypeEnum,
-                              TypeHandle, TypePointer, TypeString, TypeStruct, TypeVector>;
+                              TypeHandle, TypePointer, TypeStruct, TypeVector>;
 
 class Type;
 
@@ -182,16 +181,15 @@ class Type {
   Constness constness() const { return constness_; }
   void set_constness(Constness constness) { constness_ = constness; }
 
-  bool IsChar() const { return std::holds_alternative<TypeChar>(type_data_); }
+  bool IsChar() const { return std::holds_alternative<TypeUchar>(type_data_); }
   bool IsVoid() const { return std::holds_alternative<TypeVoid>(type_data_); }
   bool IsVector() const { return std::holds_alternative<TypeVector>(type_data_); }
   bool IsPointer() const { return std::holds_alternative<TypePointer>(type_data_); }
-  bool IsString() const { return std::holds_alternative<TypeString>(type_data_); }
   bool IsStruct() const { return std::holds_alternative<TypeStruct>(type_data_); }
   bool IsHandle() const { return std::holds_alternative<TypeHandle>(type_data_); }
   bool IsZxBasicAlias() const { return std::holds_alternative<TypeZxBasicAlias>(type_data_); }
   bool IsSignedInt() const {
-    return std::holds_alternative<TypeChar>(type_data_) ||
+    return std::holds_alternative<TypeUchar>(type_data_) ||
            std::holds_alternative<TypeInt8>(type_data_) ||
            std::holds_alternative<TypeInt16>(type_data_) ||
            std::holds_alternative<TypeInt32>(type_data_) ||
@@ -211,7 +209,7 @@ class Type {
     return std::get<TypeZxBasicAlias>(type_data_);
   }
 
-  bool IsSimpleType() const { return !IsVector() && !IsString() && !IsStruct(); }
+  bool IsSimpleType() const { return !IsVector() && !IsStruct(); }
 
  private:
   TypeData type_data_;

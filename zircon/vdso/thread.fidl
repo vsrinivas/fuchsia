@@ -132,7 +132,7 @@ protocol Thread {
     /// [`zx_thread_start()`]: thread_start.md
     Create(resource struct {
         process handle:PROCESS;
-        name string;
+        name vector<uchar>:MAX_NAME_LEN;
         options uint32;
     }) -> (resource struct {
         out handle:THREAD;
