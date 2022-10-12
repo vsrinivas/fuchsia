@@ -191,8 +191,7 @@ gvisor_tests = [
   # "socket_capability_test",
   "socket_domain_non_blocking_test",
   "socket_domain_test",
-
-  # "socket_filesystem_non_blocking_test",
+  "socket_filesystem_non_blocking_test",
   "socket_filesystem_test",
 
   # "socket_inet_loopback_isolated_test",
