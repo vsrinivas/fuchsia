@@ -1647,7 +1647,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetZbiSize) {
   container.type = ZBI_TYPE_CONTAINER;
   container.extra = ZBI_CONTAINER_MAGIC;
   container.magic = ZBI_ITEM_MAGIC;
-  container.flags = ZBI_FLAG_VERSION;
+  container.flags = ZBI_FLAGS_VERSION;
   container.crc32 = ZBI_ITEM_NO_CRC32;
   container.length = sizeof(zbi_header_t);
 

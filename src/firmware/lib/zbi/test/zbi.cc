@@ -61,7 +61,7 @@ static_assert(offsetof(test_zbi, bootfs_hdr) == offsetof(test_zbi, ramdisk_paylo
 static_assert(sizeof(test_zbi_t) % ZBI_ALIGNMENT == 0, "");
 
 static void init_zbi_header(zbi_header_t* hdr) {
-  hdr->flags = ZBI_FLAG_VERSION;
+  hdr->flags = ZBI_FLAGS_VERSION;
   hdr->reserved0 = 0;
   hdr->reserved1 = 0;
   hdr->magic = ZBI_ITEM_MAGIC;
@@ -226,7 +226,7 @@ TEST(ZbiTests, ZbiTestCheckContainerBadMagic) {
 
 TEST(ZbiTests, ZbiTestCheckContainerBadVersion) {
   zbi_header_t container = ZBI_CONTAINER_HEADER(0);
-  container.flags &= ~ZBI_FLAG_VERSION;
+  container.flags &= ~ZBI_FLAGS_VERSION;
 
   ASSERT_EQ(zbi_check(&container, nullptr), ZBI_RESULT_BAD_VERSION);
 }
@@ -234,7 +234,7 @@ TEST(ZbiTests, ZbiTestCheckContainerBadVersion) {
 TEST(ZbiTests, ZbiTestCheckContainerBadCrc32) {
   zbi_header_t container = ZBI_CONTAINER_HEADER(0);
   // Entries with no checksum must have the crc32 field set to ZBI_ITEM_NO_CRC32.
-  container.flags &= ~ZBI_FLAG_CRC32;
+  container.flags &= ~ZBI_FLAGS_CRC32;
   container.crc32 = 0;
 
   ASSERT_EQ(zbi_check(&container, nullptr), ZBI_RESULT_BAD_CRC);
@@ -298,7 +298,7 @@ TEST(ZbiTests, ZbiTestCheckTestZbiBadMagicWithErr) {
 
 TEST(ZbiTests, ZbiTestCheckTestZbiBadVersion) {
   test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
-  zbi->cmdline_hdr.flags &= ~ZBI_FLAG_VERSION;
+  zbi->cmdline_hdr.flags &= ~ZBI_FLAGS_VERSION;
 
   EXPECT_EQ(zbi_check(zbi, nullptr), ZBI_RESULT_BAD_VERSION);
 
@@ -307,7 +307,7 @@ TEST(ZbiTests, ZbiTestCheckTestZbiBadVersion) {
 
 TEST(ZbiTests, ZbiTestCheckTestZbiBadCrc32) {
   test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
-  zbi->cmdline_hdr.flags &= ~ZBI_FLAG_CRC32;
+  zbi->cmdline_hdr.flags &= ~ZBI_FLAGS_CRC32;
   zbi->cmdline_hdr.crc32 = 0;
 
   ASSERT_EQ(zbi_check(zbi, nullptr), ZBI_RESULT_BAD_CRC);
@@ -492,7 +492,7 @@ TEST(ZbiTests, ZbiTestCreateEntryTestZbi) {
 
   // Verify the header and confirm the flag version was added.
   EXPECT_EQ(zbi.entry_header.type, ZBI_TYPE_CONTAINER);
-  EXPECT_EQ(zbi.entry_header.flags & ZBI_FLAG_VERSION, ZBI_FLAG_VERSION);
+  EXPECT_EQ(zbi.entry_header.flags & ZBI_FLAGS_VERSION, ZBI_FLAGS_VERSION);
 
   // Verify the pointer points to the newly created entry payload.
   EXPECT_EQ(payload, zbi.entry_payload);
@@ -516,7 +516,7 @@ TEST(ZbiTests, ZbiTestCreateEntryTestZbiCrc32NotSupported) {
   single_entry_test_zbi_t zbi;
   void* payload = nullptr;
 
-  ASSERT_EQ(zbi_create_entry(&zbi, sizeof(zbi), 0, 0, ZBI_FLAG_CRC32, 0, &payload),
+  ASSERT_EQ(zbi_create_entry(&zbi, sizeof(zbi), 0, 0, ZBI_FLAGS_CRC32, 0, &payload),
             ZBI_RESULT_ERROR);
 }
 
@@ -595,7 +595,7 @@ TEST(ZbiTests, ZbiTestCreateEntryWithPayloadTestZbiCrc32NotSupported) {
   zbi_header_t container = ZBI_CONTAINER_HEADER(0);
   void* payload = nullptr;
 
-  ASSERT_EQ(zbi_create_entry_with_payload(&container, 0, 0, 0, ZBI_FLAG_CRC32, &payload, 0),
+  ASSERT_EQ(zbi_create_entry_with_payload(&container, 0, 0, 0, ZBI_FLAGS_CRC32, &payload, 0),
             ZBI_RESULT_ERROR);
 }
 

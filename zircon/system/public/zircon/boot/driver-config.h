@@ -140,9 +140,7 @@ typedef struct {
   uint32_t set_mask;
 } zbi_dcfg_generic32_watchdog_action_t;
 
-// TODO(fxbug.dev/111453): Update singular naming for better modeling as a FIDL
-// bits declaration.
-#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_FLAG_ENABLED ((uint32_t)0x00000001)
+#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_FLAGS_ENABLED ((uint32_t)0x00000001)
 
 // 1ms
 #define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_MIN_PERIOD ((int64_t)(1000000))

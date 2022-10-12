@@ -111,13 +111,13 @@ static int header_check(void* image, size_t sz, uint64_t* _entry, size_t* _flen,
   size_t flen, klen;
   uint64_t entry;
 
-  if (!(bd->flags & ZBI_FLAG_VERSION)) {
+  if (!(bd->flags & ZBI_FLAGS_VERSION)) {
     printf("boot: v1 bootdata kernel no longer supported\n");
     return -1;
   }
   zircon_kernel_t* kernel = image;
   if ((sz < sizeof(zircon_kernel_t)) || (kernel->hdr_kernel.type != MY_ARCH_KERNEL_TYPE) ||
-      ((kernel->hdr_kernel.flags & ZBI_FLAG_VERSION) == 0)) {
+      ((kernel->hdr_kernel.flags & ZBI_FLAGS_VERSION) == 0)) {
     printf("boot: invalid zircon kernel header\n");
     return -1;
   }
@@ -169,7 +169,7 @@ static int item_check(zbi_header_t* bd, size_t sz) {
     // disallow 2GB+ items to avoid wrap on align issues
     return -1;
   }
-  if ((bd->magic != ZBI_ITEM_MAGIC) || ((bd->flags & ZBI_FLAG_VERSION) == 0) ||
+  if ((bd->magic != ZBI_ITEM_MAGIC) || ((bd->flags & ZBI_FLAGS_VERSION) == 0) ||
       (ZBI_ALIGN(bd->length) > sz)) {
     return -1;
   } else {
@@ -256,7 +256,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
 
   zbi_header_t* hdr0 = ramdisk;
   if ((hdr0->type != ZBI_TYPE_CONTAINER) || (hdr0->extra != ZBI_CONTAINER_MAGIC) ||
-      !(hdr0->flags & ZBI_FLAG_VERSION)) {
+      !(hdr0->flags & ZBI_FLAGS_VERSION)) {
     printf("boot: ramdisk has invalid bootdata header\n");
     return -1;
   }

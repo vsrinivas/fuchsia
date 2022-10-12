@@ -39,7 +39,7 @@ fbl::Array<uint8_t> CreateZbiHeader(Arch arch, size_t payload_size, zircon_kerne
   header->hdr_file.type = ZBI_TYPE_CONTAINER;
   header->hdr_file.extra = ZBI_CONTAINER_MAGIC;
   header->hdr_file.magic = ZBI_ITEM_MAGIC;
-  header->hdr_file.flags = ZBI_FLAG_VERSION;
+  header->hdr_file.flags = ZBI_FLAGS_VERSION;
   header->hdr_file.crc32 = ZBI_ITEM_NO_CRC32;
   header->hdr_file.length =
       static_cast<uint32_t>(sizeof(zbi_header_t) + sizeof(zbi_kernel_t) + payload_size);
@@ -47,7 +47,7 @@ fbl::Array<uint8_t> CreateZbiHeader(Arch arch, size_t payload_size, zircon_kerne
   // Set up header for inner ZBI header.
   header->hdr_kernel.type = (arch == Arch::kX64) ? ZBI_TYPE_KERNEL_X64 : ZBI_TYPE_KERNEL_ARM64;
   header->hdr_kernel.magic = ZBI_ITEM_MAGIC;
-  header->hdr_kernel.flags = ZBI_FLAG_VERSION;
+  header->hdr_kernel.flags = ZBI_FLAGS_VERSION;
   header->hdr_kernel.crc32 = ZBI_ITEM_NO_CRC32;
   header->hdr_kernel.length = static_cast<uint32_t>(sizeof(zbi_kernel_t) + payload_size);
 
@@ -122,7 +122,7 @@ TEST(IsValidKernelZbi, ValidCrc) {
   cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 0, &header, &data);
-  header->hdr_kernel.flags |= ZBI_FLAG_CRC32;
+  header->hdr_kernel.flags |= ZBI_FLAGS_CRC32;
   header->data_kernel.entry = 0x1122334455667788;
   header->data_kernel.reserve_memory_size = 0xaabbccdd12345678;
   header->hdr_kernel.crc32 = 0x8b8e6cfc;  // == crc32({header->data_kernel})
@@ -133,7 +133,7 @@ TEST(IsValidKernelZbi, InvalidCrc) {
   cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 0, &header, &data);
-  header->hdr_kernel.flags |= ZBI_FLAG_CRC32;
+  header->hdr_kernel.flags |= ZBI_FLAGS_CRC32;
   header->data_kernel.entry = 0x1122334455667788;
   header->data_kernel.reserve_memory_size = 0xaabbccdd12345678;
   header->hdr_kernel.crc32 = 0xffffffff;

@@ -578,7 +578,7 @@ class View {
   // Verifies that a given View iterator points to an item with a valid CRC32.
   fit::result<Error, bool> CheckCrc32(iterator it) {
     auto [header, payload] = *it;
-    if (!(header->flags & ZBI_FLAG_CRC32)) {
+    if (!(header->flags & ZBI_FLAGS_CRC32)) {
       return fit::ok(true);
     }
 
@@ -1058,7 +1058,7 @@ class View {
 
   static constexpr std::optional<uint32_t> IsCompressedStorage(const zbi_header_t& header) {
     const bool compressible = TypeIsStorage(header.type);
-    const bool compressed = header.flags & ZBI_FLAG_STORAGE_COMPRESSED;
+    const bool compressed = header.flags & ZBI_FLAGS_STORAGE_COMPRESSED;
     if (compressible && compressed) {
       return header.extra;
     }

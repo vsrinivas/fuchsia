@@ -88,9 +88,9 @@ zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, voi
 // The new entry is aligned to ZBI_ALIGNMENT. The capacity of the base ZBI must
 // be large enough to fit the new entry.
 //
-// The ZBI_FLAG_VERSION is unconditionally set for the new entry.
+// The ZBI_FLAGS_VERSION is unconditionally set for the new entry.
 //
-// The ZBI_FLAG_CRC32 flag yields an error because CRC computation is not yet
+// The ZBI_FLAGS_CRC32 flag yields an error because CRC computation is not yet
 // supported.
 //
 // Parameters:
@@ -115,9 +115,9 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
 // The new entry is aligned to ZBI_ALIGNMENT. The capacity of the base ZBI must
 // be large enough to fit the new entry.
 //
-// The ZBI_FLAG_VERSION is unconditionally set for the new entry.
+// The ZBI_FLAGS_VERSION is unconditionally set for the new entry.
 //
-// The ZBI_FLAG_CRC32 flag yields an error because CRC computation is not yet
+// The ZBI_FLAGS_CRC32 flag yields an error because CRC computation is not yet
 // supported.
 //
 // Parameters:

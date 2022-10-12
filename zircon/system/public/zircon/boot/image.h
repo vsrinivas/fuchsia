@@ -58,13 +58,13 @@ constexpr
 #define ZBI_ITEM_MAGIC (0xb5781729)
 
 // This flag is always required.
-#define ZBI_FLAG_VERSION (0x00010000)
+#define ZBI_FLAGS_VERSION (0x00010000)
 
 // ZBI items with the CRC32 flag must have a valid crc32.
 // Otherwise their crc32 field must contain ZBI_ITEM_NO_CRC32
-#define ZBI_FLAG_CRC32 (0x00020000)
+#define ZBI_FLAGS_CRC32 (0x00020000)
 
-// Value for zbi_header_t.crc32 when ZBI_FLAG_CRC32 is not set.
+// Value for zbi_header_t.crc32 when ZBI_FLAGS_CRC32 is not set.
 #define ZBI_ITEM_NO_CRC32 (0x4a87e8d6)
 
 #ifndef __ASSEMBLER__
@@ -83,8 +83,8 @@ typedef struct {
   // field; see below.  When not explicitly specified, it should be zero.
   uint32_t extra;
 
-  // Flags for this item.  This must always include ZBI_FLAG_VERSION.
-  // It should contain ZBI_FLAG_CRC32 for any item where it's feasible
+  // Flags for this item.  This must always include ZBI_FLAGS_VERSION.
+  // It should contain ZBI_FLAGS_CRC32 for any item where it's feasible
   // to compute the CRC32 at build time.  Other flags are specific to
   // each type; see below.
   uint32_t flags;
@@ -96,7 +96,7 @@ typedef struct {
   // Must be ZBI_ITEM_MAGIC.
   uint32_t magic;
 
-  // Must be the CRC32 of payload if ZBI_FLAG_CRC32 is set,
+  // Must be the CRC32 of payload if ZBI_FLAGS_CRC32 is set,
   // otherwise must be ZBI_ITEM_NO_CRC32.
   uint32_t crc32;
 } zbi_header_t;
@@ -145,7 +145,7 @@ typedef struct {
 //                      It does not include the container header itself.
 //                      Must be a multiple of ZBI_ALIGNMENT.
 //     extra:           Must be ZBI_CONTAINER_MAGIC.
-//     flags:           Must be ZBI_FLAG_VERSION and no other flags.
+//     flags:           Must be ZBI_FLAGS_VERSION and no other flags.
 #define ZBI_TYPE_CONTAINER (0x544f4f42)  // BOOT
 
 // Define a container header in assembly code.  The symbol name is defined
@@ -159,7 +159,7 @@ typedef struct {
         .int ZBI_TYPE_CONTAINER;                \
         .int (length);                          \
         .int ZBI_CONTAINER_MAGIC;               \
-        .int ZBI_FLAG_VERSION;                  \
+        .int ZBI_FLAGS_VERSION;                  \
         .int 0;                                 \
         .int 0;                                 \
         .int ZBI_ITEM_MAGIC;                    \
@@ -168,10 +168,10 @@ typedef struct {
     .type symbol, %object
 // clang-format on
 #else
-#define ZBI_CONTAINER_HEADER(length)                                                           \
-  {                                                                                            \
-    ZBI_TYPE_CONTAINER, (length), ZBI_CONTAINER_MAGIC, ZBI_FLAG_VERSION, 0, 0, ZBI_ITEM_MAGIC, \
-        ZBI_ITEM_NO_CRC32,                                                                     \
+#define ZBI_CONTAINER_HEADER(length)                                                            \
+  {                                                                                             \
+    ZBI_TYPE_CONTAINER, (length), ZBI_CONTAINER_MAGIC, ZBI_FLAGS_VERSION, 0, 0, ZBI_ITEM_MAGIC, \
+        ZBI_ITEM_NO_CRC32,                                                                      \
   }
 #endif
 
@@ -273,7 +273,7 @@ typedef struct {
 //
 // The zbi_header_t.extra field always gives the exact size of the
 // original, uncompressed payload.  That equals zbi_header_t.length when
-// the payload is not compressed.  If ZBI_FLAG_STORAGE_COMPRESSED is set in
+// the payload is not compressed.  If ZBI_FLAGS_STORAGE_COMPRESSED is set in
 // zbi_header_t.flags, then the payload is compressed.
 //
 // **Note:** Magic-number and header bytes at the start of the compressed
@@ -284,7 +284,7 @@ typedef struct {
 //    only support one particular compression format.
 //  - The `zbi` tool will usually retain the ability to compress and
 //    decompress for old formats, and can be used to convert between formats.
-#define ZBI_FLAG_STORAGE_COMPRESSED (0x00000001)
+#define ZBI_FLAGS_STORAGE_COMPRESSED (0x00000001)
 
 // A virtual disk image.  This is meant to be treated as if it were a
 // storage device.  The payload (after decompression) is the contents of
@@ -311,7 +311,7 @@ typedef struct {
 // loader to the kernel.  Usually these are synthesized in memory by the
 // boot loader, but they can also be included in a ZBI along with the
 // kernel and BOOTFS.  Some boot loaders may set the zbi_header_t flags
-// and crc32 fields to zero, though setting them to ZBI_FLAG_VERSION and
+// and crc32 fields to zero, though setting them to ZBI_FLAGS_VERSION and
 // ZBI_ITEM_NO_CRC32 is specified.  The kernel doesn't check.
 
 // A kernel command line fragment, a UTF-8 string that need not be

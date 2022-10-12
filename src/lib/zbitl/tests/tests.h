@@ -227,7 +227,7 @@ inline void TestIteration(TestDataZbiType type) {
     EXPECT_EQ(expected, actual);
 
     const uint32_t flags = header->flags;
-    EXPECT_TRUE(flags & ZBI_FLAG_VERSION) << "flags: 0x" << std::hex << flags;
+    EXPECT_TRUE(flags & ZBI_FLAGS_VERSION) << "flags: 0x" << std::hex << flags;
 
     // Let's verify CRC32 while we're at it.
     auto crc_result = view.CheckCrc32(it);
@@ -532,7 +532,7 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
       EXPECT_EQ(expected, actual);
 
       const uint32_t flags = header->flags;
-      EXPECT_TRUE(flags & ZBI_FLAG_VERSION) << "flags: 0x" << std::hex << flags;
+      EXPECT_TRUE(flags & ZBI_FLAGS_VERSION) << "flags: 0x" << std::hex << flags;
     }
     EXPECT_EQ(1u, idx);
 
@@ -572,7 +572,7 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
       EXPECT_EQ(expected, actual);
 
       const uint32_t flags = header->flags;
-      EXPECT_TRUE(flags & ZBI_FLAG_VERSION) << "flags: 0x" << std::hex << flags;
+      EXPECT_TRUE(flags & ZBI_FLAGS_VERSION) << "flags: 0x" << std::hex << flags;
     }
     EXPECT_EQ(GetExpectedNumberOfItems(type), idx);
 
@@ -976,7 +976,7 @@ void TestAppending() {
     auto append_result = image.Append(
         zbi_header_t{
             .type = kItemType,
-            .flags = ZBI_FLAG_CRC32,
+            .flags = ZBI_FLAGS_CRC32,
         },
         zbitl::ByteView{reinterpret_cast<const std::byte*>(bytes.data()), bytes.size()});
     ASSERT_FALSE(append_result.is_error())
@@ -1002,8 +1002,8 @@ void TestAppending() {
     EXPECT_EQ(kItemType, header->type);
     EXPECT_EQ(bytes.size(), header->length);
     EXPECT_EQ(ZBI_ITEM_MAGIC, header->magic);
-    EXPECT_TRUE(ZBI_FLAG_VERSION & header->flags);
-    EXPECT_FALSE(ZBI_FLAG_CRC32 & header->flags);  // We did not bother to set it.
+    EXPECT_TRUE(ZBI_FLAGS_VERSION & header->flags);
+    EXPECT_FALSE(ZBI_FLAGS_CRC32 & header->flags);  // We did not bother to set it.
     EXPECT_EQ(static_cast<uint32_t>(ZBI_ITEM_NO_CRC32), header->crc32);
 
     if (!bytes.empty()) {
@@ -1022,12 +1022,12 @@ void TestAppending() {
       EXPECT_EQ(kItemType, header->type);
       EXPECT_EQ(to_append[i].size(), header->length);  // Auto-computed in append-with-payload.
       EXPECT_EQ(ZBI_ITEM_MAGIC, header->magic);
-      EXPECT_TRUE(ZBI_FLAG_VERSION & header->flags);
+      EXPECT_TRUE(ZBI_FLAGS_VERSION & header->flags);
       // That we are using a CRC-checking image guarantees that the right
       // CRC32 values are computed.
       switch (variation) {
         case 0: {  // append-with-payload
-          EXPECT_TRUE(ZBI_FLAG_CRC32 & header->flags);
+          EXPECT_TRUE(ZBI_FLAGS_CRC32 & header->flags);
 
           // Verify that the CRC32 was properly auto-computed.
           auto crc_result = image.CheckCrc32(it);
@@ -1036,7 +1036,7 @@ void TestAppending() {
           break;
         }
         case 1: {  // append-with-deferred-write
-          EXPECT_FALSE(ZBI_FLAG_CRC32 & header->flags);
+          EXPECT_FALSE(ZBI_FLAGS_CRC32 & header->flags);
           break;
         }
       };

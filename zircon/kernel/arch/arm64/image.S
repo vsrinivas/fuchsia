@@ -37,7 +37,7 @@ DATA(_zbi_kernel_header)
     .int ZBI_TYPE_KERNEL_ARM64
     .int boot_load_end - _zbi_kernel_payload
     .int 0
-    .int ZBI_FLAG_VERSION
+    .int ZBI_FLAGS_VERSION
     .int 0
     .int 0
     .int ZBI_ITEM_MAGIC

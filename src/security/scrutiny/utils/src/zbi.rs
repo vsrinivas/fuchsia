@@ -27,7 +27,7 @@ const ZBI_HEADER_SIZE: u64 = 32;
 /// Set in the flags if the section is compressed. We assume all compression
 /// is ZSTD. If this flag is set ZbiHeader.extra will be the uncompressed
 /// size of the image.
-const ZBI_FLAG_STORAGE_COMPRESSED: u32 = 0x00000001;
+const ZBI_FLAGS_STORAGE_COMPRESSED: u32 = 0x00000001;
 
 /// Magic number for the vboot structure which can encase a ZBI.
 const VBOOT_MAGIC: u64 = 0x534f454d4f524843;
@@ -171,7 +171,8 @@ impl ZbiReader {
             self.cursor.read_exact(&mut section_data)?;
 
             // Decompress the block.
-            if (section_header.flags & ZBI_FLAG_STORAGE_COMPRESSED) == ZBI_FLAG_STORAGE_COMPRESSED {
+            if (section_header.flags & ZBI_FLAGS_STORAGE_COMPRESSED) == ZBI_FLAGS_STORAGE_COMPRESSED
+            {
                 let decompressed_data = zstd::decompress(&section_data, section_header.extra)?;
                 zbi_sections.push(ZbiSection { section_type, buffer: decompressed_data });
             } else {
@@ -335,7 +336,7 @@ mod tests {
             zbi_type: ZbiType::Discard as u32,
             length: u32::try_from(section_data.len()).unwrap(),
             extra: 4096,
-            flags: ZBI_FLAG_STORAGE_COMPRESSED,
+            flags: ZBI_FLAGS_STORAGE_COMPRESSED,
             reserved_0: 0,
             reserved_1: 0,
             magic: ZBI_ITEM_MAGIC,

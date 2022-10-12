@@ -42,7 +42,7 @@ class Image : public View<Storage> {
   // the caller's responsibility to write the desired data to the payload
   // offset (accessible via the iterator).
   //
-  // If `header.flags` has `ZBI_FLAG_CRC32` set, then it is the caller's
+  // If `header.flags` has `ZBI_FLAGS_CRC32` set, then it is the caller's
   // further responsibility to ensure that `header.crc32` is correct or to use
   // `EditHeader` later on the returned iterator with a correct value.
   fit::result<Error, iterator> Append(const zbi_header_t& new_header) {
@@ -115,12 +115,12 @@ class Image : public View<Storage> {
 
   // A simpler variation of Append, in which the provided header and payload
   // data are written to underlying storage up front. `header.length` will
-  // automatically be set as `data.size()`. Moreover, if the ZBI_FLAG_CRC32
+  // automatically be set as `data.size()`. Moreover, if the ZBI_FLAGS_CRC32
   // flag is provided, the CRC32 will be automatically computed and set as
   // well.
   fit::result<Error> Append(zbi_header_t header, ByteView data) {
     header.length = static_cast<uint32_t>(data.size());
-    if (header.flags & ZBI_FLAG_CRC32) {
+    if (header.flags & ZBI_FLAGS_CRC32) {
       // An item's CRC32 is computed as the hash of its sanitized header with
       // its crc32 field set to 0, combined with the hash of its payload.
       header = SanitizeHeader(header);

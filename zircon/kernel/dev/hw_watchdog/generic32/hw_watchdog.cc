@@ -184,7 +184,7 @@ void GenericWatchdog32::InitEarly(const zbi_dcfg_generic32_watchdog_t& config) {
   TranslatePAddr(&cfg_.disable_action.addr);
 
   // Record our initial enabled/disabled state.
-  is_enabled_ = (cfg_.flags & ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_FLAG_ENABLED) != 0;
+  is_enabled_ = (cfg_.flags & ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_FLAGS_ENABLED) != 0;
 
   // If we are currently enabled, be sure to pet the dog ASAP.  We don't want it
   // to fire while we are bringing up the kernel to the point where we can do

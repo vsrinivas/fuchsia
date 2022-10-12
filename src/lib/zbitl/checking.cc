@@ -14,10 +14,10 @@ fit::result<std::string_view> CheckItemHeader(const zbi_header_t& header) {
   if (header.magic != ZBI_ITEM_MAGIC) {
     return fit::error{"bad item magic number"sv};
   }
-  if (!(header.flags & ZBI_FLAG_VERSION)) {
+  if (!(header.flags & ZBI_FLAGS_VERSION)) {
     return fit::error{"bad item header version"sv};
   }
-  if (!(header.flags & ZBI_FLAG_CRC32) && header.crc32 != ZBI_ITEM_NO_CRC32) {
+  if (!(header.flags & ZBI_FLAGS_CRC32) && header.crc32 != ZBI_ITEM_NO_CRC32) {
     return fit::error{"bad crc32 field in item without CRC"sv};
   }
 
@@ -34,7 +34,7 @@ fit::result<std::string_view> CheckContainerHeader(const zbi_header_t& header) {
   if (header.extra != ZBI_CONTAINER_MAGIC) {
     return fit::error("bad container magic"sv);
   }
-  if (header.flags & ZBI_FLAG_CRC32) {
+  if (header.flags & ZBI_FLAGS_CRC32) {
     return fit::error("container header has CRC32 flag"sv);
   }
   if (header.length % ZBI_ALIGNMENT != 0) {

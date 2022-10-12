@@ -162,7 +162,7 @@ mod tests {
         byteorder::LittleEndian,
         fuchsia_async as fasync,
         fuchsia_zbi::{
-            zbi_header_t, ZbiType, ZBI_CONTAINER_MAGIC, ZBI_FLAG_VERSION, ZBI_ITEM_MAGIC,
+            zbi_header_t, ZbiType, ZBI_CONTAINER_MAGIC, ZBI_FLAGS_VERSION, ZBI_ITEM_MAGIC,
             ZBI_ITEM_NO_CRC32,
         },
         std::convert::TryFrom,
@@ -202,7 +202,7 @@ mod tests {
                 zbi_type: U32::<LittleEndian>::new(zbi_type as u32),
                 length: U32::<LittleEndian>::new(length),
                 extra: U32::<LittleEndian>::new(extra),
-                flags: U32::<LittleEndian>::new(ZBI_FLAG_VERSION),
+                flags: U32::<LittleEndian>::new(ZBI_FLAGS_VERSION),
                 reserved_0: U32::<LittleEndian>::new(0),
                 reserved_1: U32::<LittleEndian>::new(0),
                 magic: U32::<LittleEndian>::new(ZBI_ITEM_MAGIC),

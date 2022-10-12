@@ -25,7 +25,7 @@ ZBI_CONTAINER_HEADER(kZbiContainerHeader, PHYS_LOAD_END - kZbiItemHeader)
 #endif
   .int PHYS_LOAD_END - kZbiKernelHeader // length
   .int 0                                // extra
-  .int ZBI_FLAG_VERSION                 // flags
+  .int ZBI_FLAGS_VERSION                 // flags
   .int 0, 0                             // reserved0, reserved1
   .int ZBI_ITEM_MAGIC                   // magic
   .int ZBI_ITEM_NO_CRC32                // crc32

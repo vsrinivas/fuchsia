@@ -252,7 +252,7 @@ void TestLargeFileDecompression() {
     const zbi_header_t header{
         .type = ZBI_TYPE_STORAGE_RAMDISK,
         .extra = kLargeZstdUncompressedSize,
-        .flags = ZBI_FLAG_STORAGE_COMPRESSED,
+        .flags = ZBI_FLAGS_STORAGE_COMPRESSED,
     };
     auto result = image.Append(header, zbitl::AsBytes(compressed));
     ASSERT_FALSE(result.is_error()) << zbitl::ViewErrorString(result.error_value());

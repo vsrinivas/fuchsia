@@ -78,7 +78,7 @@ bool SimpleZbiTest() {
         EXPECT_EQ(0, memcmp(kHelloWorld, payload.data(), payload.size()));
         break;
     }
-    EXPECT_TRUE(header->flags & ZBI_FLAG_VERSION);
+    EXPECT_TRUE(header->flags & ZBI_FLAGS_VERSION);
   }
   EXPECT_EQ(1u, num_items);
 
@@ -131,7 +131,7 @@ bool MutationTest() {
         ASSERT_TRUE(zbi.EditHeader(it, discard).is_ok());
         break;
     }
-    EXPECT_TRUE(header->flags & ZBI_FLAG_VERSION);
+    EXPECT_TRUE(header->flags & ZBI_FLAGS_VERSION);
   }
   EXPECT_EQ(1u, num_items);
 
@@ -144,7 +144,7 @@ bool MutationTest() {
         EXPECT_EQ(0, memcmp(kHelloWorld, payload.data(), payload.size()));
         break;
     }
-    EXPECT_TRUE(header->flags & ZBI_FLAG_VERSION);
+    EXPECT_TRUE(header->flags & ZBI_FLAGS_VERSION);
   }
   EXPECT_EQ(1u, num_items);
 

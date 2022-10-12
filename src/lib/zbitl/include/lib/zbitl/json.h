@@ -44,7 +44,7 @@ void JsonWriteHeader(Writer&& writer, const zbi_header_t& header,
 
   // Storage types have uncompressed_size.  Otherwise write generic "extra",
   // but elide it when zero.
-  if (TypeIsStorage(header) && (header.flags & ZBI_FLAG_STORAGE_COMPRESSED)) {
+  if (TypeIsStorage(header) && (header.flags & ZBI_FLAGS_STORAGE_COMPRESSED)) {
     writer.Key("uncompressed_size");
     writer.Uint(header.extra);
   } else {
@@ -58,11 +58,11 @@ void JsonWriteHeader(Writer&& writer, const zbi_header_t& header,
   }
 
   // Write exact flags if it has anything unusual.
-  uint32_t known_flags = ZBI_FLAG_CRC32 | ZBI_FLAG_VERSION;
+  uint32_t known_flags = ZBI_FLAGS_CRC32 | ZBI_FLAGS_VERSION;
   if (TypeIsStorage(header)) {
-    known_flags |= ZBI_FLAG_STORAGE_COMPRESSED;
+    known_flags |= ZBI_FLAGS_STORAGE_COMPRESSED;
   }
-  if (!(header.flags & ZBI_FLAG_VERSION) || (header.flags & ~known_flags)) {
+  if (!(header.flags & ZBI_FLAGS_VERSION) || (header.flags & ~known_flags)) {
     writer.Key("flags");
     writer.Uint(header.flags);
   }
@@ -78,7 +78,7 @@ void JsonWriteHeader(Writer&& writer, const zbi_header_t& header,
 
   // The "crc32" field isn't mentioned when it's disabled, even if it doesn't
   // have the canonical ZBI_ITEM_NO_CRC32 value.
-  if (header.flags & ZBI_FLAG_CRC32) {
+  if (header.flags & ZBI_FLAGS_CRC32) {
     writer.Key("crc32");
     writer.Uint(header.crc32);
   }

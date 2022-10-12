@@ -103,7 +103,7 @@ void CheckInvalidPayloadSizeDetected(uint32_t claimed_size, uint32_t actual_size
     const zbi_header_t header = {
         .type = ZBI_TYPE_IMAGE_ARGS,
         .length = claimed_size,
-        .flags = ZBI_FLAG_VERSION,
+        .flags = ZBI_FLAGS_VERSION,
         .magic = ZBI_ITEM_MAGIC,
         .crc32 = ZBI_ITEM_NO_CRC32,
     };

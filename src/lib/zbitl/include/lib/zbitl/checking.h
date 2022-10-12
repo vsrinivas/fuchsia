@@ -23,8 +23,8 @@ fit::result<std::string_view> CheckContainerHeader(const zbi_header_t& header);
 // items from a designated initializer that omits uninteresting bits.
 inline constexpr zbi_header_t SanitizeHeader(zbi_header_t header) {
   header.magic = ZBI_ITEM_MAGIC;
-  header.flags |= ZBI_FLAG_VERSION;
-  if (!(header.flags & ZBI_FLAG_CRC32)) {
+  header.flags |= ZBI_FLAGS_VERSION;
+  if (!(header.flags & ZBI_FLAGS_CRC32)) {
     header.crc32 = ZBI_ITEM_NO_CRC32;
   }
   return header;

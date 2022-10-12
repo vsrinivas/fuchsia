@@ -23,9 +23,9 @@ static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload, void*
 
   if (hdr->magic != ZBI_ITEM_MAGIC) {
     result = ZBI_RESULT_BAD_MAGIC;
-  } else if ((hdr->flags & ZBI_FLAG_VERSION) == 0) {
+  } else if ((hdr->flags & ZBI_FLAGS_VERSION) == 0) {
     result = ZBI_RESULT_BAD_VERSION;
-  } else if ((hdr->flags & ZBI_FLAG_CRC32) == 0 && hdr->crc32 != ZBI_ITEM_NO_CRC32) {
+  } else if ((hdr->flags & ZBI_FLAGS_CRC32) == 0 && hdr->crc32 != ZBI_ITEM_NO_CRC32) {
     result = ZBI_RESULT_BAD_CRC;
   }
 
@@ -49,9 +49,9 @@ zbi_result_t zbi_check(const void* base, zbi_header_t** err) {
     res = ZBI_RESULT_BAD_TYPE;
   } else if (header->extra != ZBI_CONTAINER_MAGIC || header->magic != ZBI_ITEM_MAGIC) {
     res = ZBI_RESULT_BAD_MAGIC;
-  } else if ((header->flags & ZBI_FLAG_VERSION) == 0) {
+  } else if ((header->flags & ZBI_FLAGS_VERSION) == 0) {
     res = ZBI_RESULT_BAD_VERSION;
-  } else if ((header->flags & ZBI_FLAG_CRC32) == 0 && header->crc32 != ZBI_ITEM_NO_CRC32) {
+  } else if ((header->flags & ZBI_FLAGS_CRC32) == 0 && header->crc32 != ZBI_ITEM_NO_CRC32) {
     res = ZBI_RESULT_BAD_CRC;
   }
 
@@ -132,7 +132,7 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
   }
 
   // We don't support CRC computation (yet?)
-  if (flags & ZBI_FLAG_CRC32) {
+  if (flags & ZBI_FLAGS_CRC32) {
     return ZBI_RESULT_ERROR;
   }
 
@@ -158,7 +158,7 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
       .type = type,
       .length = payload_length,
       .extra = extra,
-      .flags = flags | ZBI_FLAG_VERSION,
+      .flags = flags | ZBI_FLAGS_VERSION,
       .magic = ZBI_ITEM_MAGIC,
       .crc32 = ZBI_ITEM_NO_CRC32,
   };

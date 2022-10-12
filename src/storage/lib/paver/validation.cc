@@ -30,7 +30,7 @@ constexpr std::string_view kChromeOsMagicHeader = "CHROMEOS";
 // We require that the "hdr" has "hdr->length" valid bytes after it.
 bool ZbiHeaderCrcValid(const zbi_header_t* hdr) {
   // If we don't have the CRC32 flag set, ensure no crc32 value is given.
-  if ((hdr->flags & ZBI_FLAG_CRC32) == 0) {
+  if ((hdr->flags & ZBI_FLAGS_CRC32) == 0) {
     return (hdr->crc32 == ZBI_ITEM_NO_CRC32);
   }
 
@@ -55,7 +55,7 @@ bool ExtractZbiPayload(cpp20::span<const uint8_t> data, const zbi_header_t** hea
     ERROR("ZBI header has incorrect magic value.\n");
     return false;
   }
-  if ((zbi_header->flags & ZBI_FLAG_VERSION) != ZBI_FLAG_VERSION) {
+  if ((zbi_header->flags & ZBI_FLAGS_VERSION) != ZBI_FLAGS_VERSION) {
     ERROR("ZBI header has invalid version.\n");
     return false;
   }

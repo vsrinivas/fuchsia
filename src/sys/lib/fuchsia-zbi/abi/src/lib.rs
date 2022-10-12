@@ -17,11 +17,11 @@ pub const ZBI_CONTAINER_MAGIC: u32 = 0x868c_f7e6;
 pub const ZBI_ITEM_MAGIC: u32 = 0xb578_1729;
 
 /// Always required.
-pub const ZBI_FLAG_VERSION: u32 = 0x0001_0000;
+pub const ZBI_FLAGS_VERSION: u32 = 0x0001_0000;
 
 /// If the header contains this flag, the CRC32 field must contain a valid CRC32. Otherwise, the
 /// CRC32 field must contain ZBI_ITEM_NO_CRC32.
-pub const ZBI_FLAG_CRC32: u32 = 0x0002_0000;
+pub const ZBI_FLAGS_CRC32: u32 = 0x0002_0000;
 
 /// The CRC32 field must be set to this when not using CRC32.
 pub const ZBI_ITEM_NO_CRC32: u32 = 0x4a87_e8d6;
@@ -101,7 +101,7 @@ pub fn zbi_container_header(length: u32) -> zbi_header_t {
         zbi_type: U32::<LittleEndian>::new(ZbiType::Container.into_raw()),
         length: U32::<LittleEndian>::new(length),
         extra: U32::<LittleEndian>::new(ZBI_CONTAINER_MAGIC),
-        flags: U32::<LittleEndian>::new(ZBI_FLAG_VERSION),
+        flags: U32::<LittleEndian>::new(ZBI_FLAGS_VERSION),
         reserved_0: U32::<LittleEndian>::new(0),
         reserved_1: U32::<LittleEndian>::new(0),
         magic: U32::<LittleEndian>::new(ZBI_ITEM_MAGIC),

@@ -24,7 +24,7 @@ constexpr uint32_t kNonKernelType = 2u;
 
 static constexpr zbi_header_t kValidItemHeader = {
     .length = ZBI_ALIGNMENT,
-    .flags = ZBI_FLAG_VERSION | ZBI_FLAG_CRC32,
+    .flags = ZBI_FLAGS_VERSION | ZBI_FLAGS_CRC32,
     .magic = ZBI_ITEM_MAGIC,
     .crc32 = 123,
 };
@@ -149,7 +149,7 @@ TEST(ZbitlHeaderTests, BadContainerType) {
 TEST(ZbitlHeaderTests, ContainerCrc) {
   // No CRC flag must be set.
   zbi_header_t header = kValidContainerHeader;
-  header.flags |= ZBI_FLAG_CRC32;
+  header.flags |= ZBI_FLAGS_CRC32;
   EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
 }
 

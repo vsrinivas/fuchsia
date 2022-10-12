@@ -96,14 +96,14 @@ int RamctlWatcher(void* arg) {
                    << zx_status_get_string(status);
     return -1;
   }
-  if (!(header.flags & ZBI_FLAG_VERSION) || header.magic != ZBI_ITEM_MAGIC ||
+  if (!(header.flags & ZBI_FLAGS_VERSION) || header.magic != ZBI_ITEM_MAGIC ||
       header.type != ZBI_TYPE_STORAGE_RAMDISK) {
     FX_LOGS(ERROR) << "invalid ZBI_TYPE_STORAGE_RAMDISK item header";
     return -1;
   }
 
   zx::vmo vmo;
-  if (header.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
+  if (header.flags & ZBI_FLAGS_STORAGE_COMPRESSED) {
     status = zx::vmo::create(header.extra, 0, &vmo);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "cannot create VMO for uncompressed RAMDISK: "

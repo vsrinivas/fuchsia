@@ -250,7 +250,7 @@ void GetExpectedPayloadWithHeader(TestDataZbiType type, size_t idx, Bytes* conte
   zbi_header_t header{};
   header.type = ZBI_TYPE_IMAGE_ARGS;
   header.magic = ZBI_ITEM_MAGIC;
-  header.flags = ZBI_FLAG_VERSION | ZBI_FLAG_CRC32;
+  header.flags = ZBI_FLAGS_VERSION | ZBI_FLAGS_CRC32;
   header.length = static_cast<uint32_t>(payload.size());
   header.crc32 = crc;
 

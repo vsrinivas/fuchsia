@@ -745,8 +745,8 @@ class Compressor final {
 
 void Compressor::Init(OutputStream* out, const zbi_header_t& header) {
   header_ = header;
-  assert(header_.flags & ZBI_FLAG_STORAGE_COMPRESSED);
-  assert(header_.flags & ZBI_FLAG_CRC32);
+  assert(header_.flags & ZBI_FLAGS_STORAGE_COMPRESSED);
+  assert(header_.flags & ZBI_FLAGS_CRC32);
 
   // Write a place-holder for the header, which we will go back
   // and fill in once we know the payload length and CRC.
@@ -1447,7 +1447,7 @@ Extracted items use the file names shown below:\n\
   uint32_t TotalSize() const { return sizeof(header_) + ZBI_ALIGN(PayloadSize()); }
 
   zbi_header_t CheckHeader() const {
-    if (header_.flags & ZBI_FLAG_CRC32) {
+    if (header_.flags & ZBI_FLAGS_CRC32) {
       Checksummer crc;
       crc.Write(payload_);
       zbi_header_t check_header = header_;
@@ -1472,7 +1472,7 @@ Extracted items use the file names shown below:\n\
     } else {
       printf("%08x: %08x %s\n", pos, header.length, type_name);
     }
-    if (header.flags & ZBI_FLAG_CRC32) {
+    if (header.flags & ZBI_FLAGS_CRC32) {
       printf("        :          MAGIC=%08x CRC=%08x\n", header.magic, header.crc32);
     } else {
       printf("        :          MAGIC=%08x NO CRC\n", header.magic);
@@ -1480,7 +1480,7 @@ Extracted items use the file names shown below:\n\
   }
 
   bool AlreadyCompressed() const {
-    return (header_.flags & ZBI_FLAG_STORAGE_COMPRESSED) && !compress_;
+    return (header_.flags & ZBI_FLAGS_STORAGE_COMPRESSED) && !compress_;
   }
 
   // Whether the payload is both uncompressed and in BOOTFS format.
@@ -1653,14 +1653,14 @@ Extracted items use the file names shown below:\n\
                                       Compressor::Config compress = Compressor::Config::None()) {
     assert(compressed.AlreadyCompressed());
     auto item = MakeItem(compressed.header_, compress);
-    item->header_.flags &= ~ZBI_FLAG_STORAGE_COMPRESSED;
+    item->header_.flags &= ~ZBI_FLAGS_STORAGE_COMPRESSED;
     item->header_.length = item->header_.extra;
     auto buffer = Decompress(compressed.payload_, item->header_.length);
     item->payload_.emplace_front(Iovec(buffer.get(), item->header_.length));
     item->OwnBuffer(std::move(buffer));
     if (compress) {
       // This item will be compressed afresh on output.
-      item->header_.flags |= ZBI_FLAG_STORAGE_COMPRESSED;
+      item->header_.flags |= ZBI_FLAGS_STORAGE_COMPRESSED;
     }
     return item;
   }
@@ -1869,14 +1869,14 @@ Extracted items use the file names shown below:\n\
 
   static constexpr zbi_header_t NewHeader(uint32_t type, uint32_t size) {
     return {
-        type,                               // type
-        size,                               // length
-        0,                                  // extra
-        ZBI_FLAG_VERSION | ZBI_FLAG_CRC32,  // flags
-        0,                                  // reserved0
-        0,                                  // reserved1
-        ZBI_ITEM_MAGIC,                     // magic
-        0,                                  // crc32
+        type,                                 // type
+        size,                                 // length
+        0,                                    // extra
+        ZBI_FLAGS_VERSION | ZBI_FLAGS_CRC32,  // flags
+        0,                                    // reserved0
+        0,                                    // reserved1
+        ZBI_ITEM_MAGIC,                       // magic
+        0,                                    // crc32
     };
   }
 
@@ -1884,7 +1884,7 @@ Extracted items use the file names shown below:\n\
       : header_(header), compress_(compress) {
     if (compress_) {
       // We'll compress and checksum on the way out.
-      header_.flags |= ZBI_FLAG_STORAGE_COMPRESSED;
+      header_.flags |= ZBI_FLAGS_STORAGE_COMPRESSED;
     }
   }
 

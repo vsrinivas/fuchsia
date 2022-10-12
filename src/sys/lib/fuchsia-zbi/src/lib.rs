@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_zbi_abi::{ZBI_ALIGNMENT_BYTES, ZBI_FLAG_CRC32},
+    fuchsia_zbi_abi::{ZBI_ALIGNMENT_BYTES, ZBI_FLAGS_CRC32},
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
     std::{
@@ -17,7 +17,7 @@ use {
 };
 
 pub use fuchsia_zbi_abi::{
-    zbi_container_header, zbi_header_t, ZbiType, ZBI_CONTAINER_MAGIC, ZBI_FLAG_VERSION,
+    zbi_container_header, zbi_header_t, ZbiType, ZBI_CONTAINER_MAGIC, ZBI_FLAGS_VERSION,
     ZBI_ITEM_MAGIC, ZBI_ITEM_NO_CRC32,
 };
 
@@ -55,7 +55,7 @@ pub enum ZbiParserError {
     )]
     InvalidContainerHeaderExtraMagic { actual: u32 },
 
-    #[error("Header flags {:#b} missing flag version {:#b}", flags, ZBI_FLAG_VERSION)]
+    #[error("Header flags {:#b} missing flag version {:#b}", flags, ZBI_FLAGS_VERSION)]
     MissingZbiVersionFlag { flags: u32 },
 
     #[error("ZBI header contains a bad CRC32")]
@@ -149,11 +149,12 @@ impl ZbiParser {
             return Err(ZbiParserError::InvalidHeaderMagic { actual: header.magic.get() });
         }
 
-        if header.flags.get() & ZBI_FLAG_VERSION == 0 {
+        if header.flags.get() & ZBI_FLAGS_VERSION == 0 {
             return Err(ZbiParserError::MissingZbiVersionFlag { flags: header.flags.get() });
         }
 
-        if (header.flags.get() & ZBI_FLAG_CRC32 == 0) && (header.crc32.get() != ZBI_ITEM_NO_CRC32) {
+        if (header.flags.get() & ZBI_FLAGS_CRC32 == 0) && (header.crc32.get() != ZBI_ITEM_NO_CRC32)
+        {
             return Err(ZbiParserError::BadCRC32);
         }
 
@@ -532,7 +533,7 @@ mod tests {
                 } else {
                     0
                 }),
-                flags: U32::<LittleEndian>::new(ZBI_FLAG_VERSION),
+                flags: U32::<LittleEndian>::new(ZBI_FLAGS_VERSION),
                 reserved_0: U32::<LittleEndian>::new(0),
                 reserved_1: U32::<LittleEndian>::new(0),
                 magic: U32::<LittleEndian>::new(ZBI_ITEM_MAGIC),
@@ -660,7 +661,7 @@ mod tests {
     async fn invalid_header_flags() {
         let mut header = ZbiBuilder::simple_header(ZbiType::Container, 0);
 
-        // Remove the required ZBI_FLAG_VERSION flag.
+        // Remove the required ZBI_FLAGS_VERSION flag.
         header.flags = U32::<LittleEndian>::new(0);
 
         let (zbi, _builder) =
