@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/components/fuchsia_package_archive.gni")
 import("//sdk/ctf/build/ctf_element.gni")
+import("//sdk/ctf/build/ctf_test_release_archive.gni")
 import("//sdk/ctf/build/ctf_version.gni")
 import("//sdk/ctf/build/write_ctf_file.gni")
 
@@ -25,17 +26,8 @@ import("//sdk/ctf/build/write_ctf_file.gni")
 # Parameters
 #
 #   plasa_element (optional)
-#     The ID of the plasa element that is tested by this test. This should be
-#     unique among all CTF tests (although this is not checked) and follow the
-#     syntax: <api_kind>/<elem>. The API kind serves as a namespace for elem
-#     and clarifies which plasa element elem refers to. Defaults to the empty
-#     string.
-#
-#     If api_kind is "fidl", <elem> must be the name of a FIDL protocol member.
-#     For example: "fidl/fuchsia.diagnostics/ArchiveAccessor".
-#     TODO(kjharland): Explain the usage for shared libraries.
-#
-#     Type: string
+#     The ID of the plasa element that is tested by this test.
+#     See the documentation in ctf_test.gni
 #
 #   uses_experimental_fidl (optional)
 #     Package contains a test component using an "experimental" sdk_category FIDL.
@@ -43,7 +35,15 @@ import("//sdk/ctf/build/write_ctf_file.gni")
 #     development. Prevents the CTF from releasing this test.
 #     Type: bool
 template("ctf_fuchsia_test_package") {
+  not_needed(invoker, [ "plasa_element" ])
+
   if (current_toolchain == default_toolchain) {
+    main_target_name = target_name
+
+    # Whether this test can be included in the next CTF release.
+    is_releaseable = !defined(invoker.uses_experimental_fidl) ||
+                     !invoker.uses_experimental_fidl
+
     if (!defined(invoker.package_name)) {
       invoker.package_name = target_name
     }
@@ -51,109 +51,64 @@ template("ctf_fuchsia_test_package") {
       invoker.package_name += "_$cts_version"
     }
 
-    uses_experimental_fidl = defined(invoker.uses_experimental_fidl) &&
-                             invoker.uses_experimental_fidl
-
-    # Ensure that deps and test_components are CTF targets.
-    invoker_deps = []
-    if (defined(invoker.deps)) {
-      invoker_deps += invoker.deps
-    }
-    if (defined(invoker.test_components)) {
-      invoker_deps += invoker.test_components
-    }
-
-    if (invoker_deps != [] && cts_version == "") {
-      verify_target = target_name + "_verify_deps"
-    }
-
-    if (defined(verify_target)) {
-      ctf_element(verify_target) {
-        deps_to_verify = invoker_deps
-        invoker_label =
-            get_label_info(invoker.target_name, "label_no_toolchain")
+    ctf_element_target = target_name + "_verify_deps"
+    ctf_element(ctf_element_target) {
+      deps_to_verify = []
+      if (defined(invoker.deps)) {
+        deps_to_verify += invoker.deps
       }
+      if (defined(invoker.test_components)) {
+        deps_to_verify += invoker.test_components
+      }
+      invoker_label = get_label_info(main_target_name, "label_no_toolchain")
     }
 
     write_file_target = target_name + "_ctf_file"
     write_ctf_file(write_file_target) {
     }
 
-    package_target_name = target_name + "_pkg"
-    fuchsia_test_package(package_target_name) {
+    fuchsia_test_package_target = target_name + "_pkg"
+    fuchsia_test_package(fuchsia_test_package_target) {
       forward_variables_from(invoker, "*")
-      if (!defined(deps)) {
-        deps = []
-      }
+    }
 
-      if (defined(verify_target)) {
-        deps += [ ":$verify_target" ]
-      }
-      deps += [ ":$write_file_target" ]
+    if (is_releaseable) {
+      _test_components = invoker.test_components
+      _manifest_name = get_target_outputs(_test_components[0])
+      _manifest_name = get_path_info(_manifest_name[0], "file")
 
-      # Generate the test_manifest.json metadata entry for this test.
-      # This json file controls how this test's test_spec will be
-      # defined in the prebuilt_test_manifest GN template.
-      if (!uses_experimental_fidl) {
-        _test_components = invoker.test_components
-        _manifest_name = get_target_outputs(_test_components[0])
-        _manifest_name = get_path_info(_manifest_name[0], "file")
-        _test_manifest_metadata = {
-          archive_name = target_name
-          package = invoker.package_name
-          component_name = _manifest_name
-          plasa_element = ""
-          if (defined(invoker.plasa_element)) {
-            plasa_element = invoker.plasa_element
-          }
-        }
+      ctf_test_release_archive_target = "${target_name}_release_archive"
+      ctf_test_release_archive(ctf_test_release_archive_target) {
+        package = ":$fuchsia_test_package_target"
+        package_name = invoker.package_name
+        archive_name = main_target_name
+        component_name = _manifest_name
         if (defined(invoker.test_specs)) {
           _test_specs = invoker.test_specs
-          _test_manifest_metadata.log_settings = _test_specs.log_settings
+          log_settings = _test_specs.log_settings
         }
-        metadata = {
-          test_manifest = [ _test_manifest_metadata ]
+        plasa_element = ""
+        if (defined(invoker.plasa_element)) {
+          plasa_element = invoker.plasa_element
         }
       }
     }
 
-    if (!uses_experimental_fidl) {
-      archive_target_name = "${target_name}_archive"
-      fuchsia_package_archive(archive_target_name) {
-        testonly = true
-        package = ":${package_target_name}"
-        archive_name = invoker.target_name
-      }
-
-      copy_target_name = target_name + "_copy"
-      copy(copy_target_name) {
-        forward_variables_from(invoker, [ "metadata" ])
-        testonly = true
-        sources = get_target_outputs(":$archive_target_name")
-        outputs = []
-        foreach(file, get_path_info(sources, "file")) {
-          outputs += [ "$root_out_dir/cts/$file" ]
-        }
-        deps = [ ":$archive_target_name" ]
-        metadata = {
-          cts_artifacts = rebase_path(outputs, root_out_dir)
-        }
-      }
-    }
-    group(target_name) {
+    group(main_target_name) {
       testonly = true
-      deps = [ ":$package_target_name" ]
-      if (!uses_experimental_fidl) {
-        deps += [ ":$copy_target_name" ]
+      deps = [
+        ":$ctf_element_target",
+        ":$fuchsia_test_package_target",
+        ":$write_file_target",
+      ]
+      if (is_releaseable) {
+        deps += [ ":$ctf_test_release_archive_target" ]
       }
     }
   } else {
     group(target_name) {
       testonly = true
-      deps = [
-        "$target_name($default_toolchain)",
-        "${target_name}_copy",
-      ]
+      deps = []
     }
     not_needed(invoker, "*")
   }

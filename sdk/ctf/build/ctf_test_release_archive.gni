@@ -1,0 +1,115 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/components/fuchsia_package_archive.gni")
+import("//sdk/ctf/build/ctf_element.gni")
+
+# Declares a CTF test that should be included in the next CTF release.
+#
+# This template generates the metadata for this test's CTF test manifest entry
+# and the list of artifacts to store in the CTF release.
+#
+# The test manifest is a JSON list of objects. Each test's object has the
+# following properties:
+#
+#    archive_name (string)
+#       The basename to use for the FAR archive.
+#
+#    package_name (string)
+#       The name to give the package within the FAR archive.
+#
+#    component_name (string)
+#       The name of the test component inside the package, including the .cm
+#       suffix.
+#
+#    log_settings (object)
+#       Fuchsia platform-specific log settings for when this test is run in
+#       CI/CQ in the future. End users outside the Fuchsia platform can
+#       ignore this field.
+#
+#    plasa_element (string)
+#      The ID of the plasa element that is tested by this test. This should be
+#      unique among all CTF tests (although this is not checked) and follow the
+#      syntax: <api_kind>/<elem>. The API kind serves as a namespace for elem
+#      and clarifies which plasa element elem refers to. Defaults to the empty
+#      string.
+#
+#      If api_kind is "fidl", <elem> must be the name of a FIDL protocol member.
+#      For example: "fidl/fuchsia.diagnostics/ArchiveAccessor".
+#      TODO(kjharland): Explain the usage for shared libraries.
+#
+# Parameters
+#
+#   archive_name (required)
+#     See 'archive_name' from above.
+#     Type: string
+#
+#   component_name (required)
+#     See 'component_name' from above.
+#     Type: string
+#
+#   log_settings (optional)
+#     See 'log_settings' from above.
+#     Type: scope
+#
+#   package (required)
+#     The label of the Fuchsia package containing the CTF test component.
+#     The package must be declared earlier in the same BUILD file.
+#     Type: label
+#
+#   package_name (required)
+#     See 'package_name' from above.
+#     Type: string
+#
+#   plasa_element (required)
+#     See 'plasa_element' from above.
+#     Type: string
+template("ctf_test_release_archive") {
+  assert(defined(invoker.plasa_element), "plasa_element is required")
+  assert(defined(invoker.package), "package is required")
+  assert(defined(invoker.package_name), "package_name is required")
+  assert(defined(invoker.archive_name), "archive_name is required")
+  assert(defined(invoker.component_name), "component_name is required")
+
+  fuchsia_package_archive_target = "${target_name}_archive"
+  fuchsia_package_archive(fuchsia_package_archive_target) {
+    testonly = true
+    package = invoker.package
+    archive_name = invoker.archive_name
+  }
+
+  _copy_srcs = get_target_outputs(":$fuchsia_package_archive_target")
+  _copy_dsts = [ "$root_out_dir/cts/{{source_file_part}}" ]
+  copy_target = "${target_name}_copy"
+  copy(copy_target) {
+    testonly = true
+    sources = _copy_srcs
+    outputs = _copy_dsts
+    deps = [ ":$fuchsia_package_archive_target" ]
+  }
+
+  group(target_name) {
+    testonly = true
+    deps = [ ":$copy_target" ]
+
+    metadata = {
+      cts_artifacts = rebase_path(_copy_dsts, root_out_dir)
+      test_manifest = [
+        {
+          # TODO(kjharland): Delete `package` after updating compatibility_test_suite.gni.
+          # Prefer fields with consistent "_name" suffixes.
+          package = invoker.package_name
+          archive_name = invoker.archive_name
+          component_name = invoker.component_name
+          package_name = invoker.package_name
+          plasa_element = invoker.plasa_element
+          if (defined(invoker.log_settings)) {
+            log_settings = invoker.log_settings
+          }
+        },
+      ]
+    }
+  }
+}
