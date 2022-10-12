@@ -9,7 +9,7 @@ prog_python = import('python').find_installation('python3')
 magma_json = files('include/magma/magma.json')
 
 inc_configuration = include_directories(['.', 'src'])
-inc_magma = include_directories('include/magma')
+inc_magma = include_directories('include')
 inc_platform = include_directories('src/magma_util/platform')
 inc_magma_util = include_directories('src/magma_util')
 inc_msd_intel_gen = include_directories('../../drivers/msd-intel-gen/include')
