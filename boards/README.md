@@ -10,4 +10,4 @@ contains `arm64.gni` and `x64.gni` which are imported into other `<board>.gni`
 files.
 
 Further details can be found at
-[Boards and Products](https://fuchsia.dev/fuchsia-src/concepts/build_system/boards_and_products?hl=en)
+[Boards and Products](https://fuchsia.dev/fuchsia-src/development/build/build_system/boards_and_products)
