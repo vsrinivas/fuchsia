@@ -32,7 +32,9 @@ class MockFullmacIfc : public ::ddk::WlanFullmacImplIfcProtocol<MockFullmacIfc> 
     on_connect_conf.Call(resp);
   }
   void WlanFullmacImplIfcAuthInd(const wlan_fullmac_auth_ind_t* ind) { on_auth_ind_conf.Call(ind); }
-  void WlanFullmacImplIfcDeauthConf(const wlan_fullmac_deauth_confirm_t* resp) {}
+  void WlanFullmacImplIfcDeauthConf(const wlan_fullmac_deauth_confirm_t* resp) {
+    on_deauth_conf.Call(resp);
+  }
   void WlanFullmacImplIfcDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
     on_deauth_ind_conf.Call(ind);
   }
@@ -51,7 +53,9 @@ class MockFullmacIfc : public ::ddk::WlanFullmacImplIfcProtocol<MockFullmacIfc> 
   }
   void WlanFullmacImplIfcEapolConf(const wlan_fullmac_eapol_confirm_t* resp) {}
   void WlanFullmacImplIfcOnChannelSwitch(const wlan_fullmac_channel_switch_info_t* ind) {}
-  void WlanFullmacImplIfcSignalReport(const wlan_fullmac_signal_report_indication_t* ind) {}
+  void WlanFullmacImplIfcSignalReport(const wlan_fullmac_signal_report_indication_t* ind) {
+    on_signal_report.Call(ind);
+  }
   void WlanFullmacImplIfcEapolInd(const wlan_fullmac_eapol_indication_t* ind) {}
   void WlanFullmacImplIfcRelayCapturedFrame(const wlan_fullmac_captured_frame_result_t* result) {}
   void WlanFullmacImplIfcOnPmkAvailable(const wlan_fullmac_pmk_info_t* info) {}
@@ -69,6 +73,9 @@ class MockFullmacIfc : public ::ddk::WlanFullmacImplIfcProtocol<MockFullmacIfc> 
   mock_function::MockFunction<void, const wlan_fullmac_deauth_indication_t*> on_deauth_ind_conf;
   mock_function::MockFunction<void, const wlan_fullmac_assoc_ind_t*> on_assoc_ind_conf;
   mock_function::MockFunction<void, const wlan_fullmac_disassoc_indication_t*> on_disassoc_ind_conf;
+  mock_function::MockFunction<void, const wlan_fullmac_deauth_confirm_t*> on_deauth_conf;
+  mock_function::MockFunction<void, const wlan_fullmac_signal_report_indication_t*>
+      on_signal_report;
 
  private:
   wlan_fullmac_impl_ifc_protocol_t proto_;

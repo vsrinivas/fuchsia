@@ -17,7 +17,9 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/data_plane.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mlan_mocks.h"
@@ -26,6 +28,7 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/test_data_plane.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
+using wlan::nxpfmac::DeviceContext;
 using wlan::nxpfmac::WlanInterface;
 
 namespace {
@@ -34,6 +37,66 @@ constexpr char kFullmacClientDeviceName[] = "test-client-fullmac-ifc";
 constexpr char kFullmacSoftApDeviceName[] = "test-softap-fullmac-ifc";
 constexpr uint8_t kClientMacAddress[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
 constexpr uint8_t kSoftApMacAddress[] = {0x05, 0x04, 0x03, 0x02, 0x01, 0x00};
+
+using wlan::nxpfmac::Device;
+
+// Barebones Device Class (at this time mainly for the dispatcher to handle timers)
+struct TestDevice : public Device {
+ public:
+  static zx_status_t Create(zx_device_t* parent, async_dispatcher_t* dispatcher,
+                            sync_completion_t* destruction_compl, TestDevice** out_device) {
+    auto device = new TestDevice(parent, dispatcher, destruction_compl);
+
+    *out_device = device;
+    return ZX_OK;
+  }
+
+  ~TestDevice() {
+    if (ifc_) {
+      ifc_->Remove([ddk_done = ddk_done_]() mutable {
+        if (ddk_done)
+          sync_completion_signal(ddk_done);
+      });
+      ifc_ = nullptr;
+    }
+  }
+
+  zx_status_t CreateInterface(zx_device_t* parent, const char* name, uint32_t iface_index,
+                              wlan_mac_role_t role, DeviceContext* context,
+                              const uint8_t mac_address[ETH_ALEN], zx::channel&& mlme_channel) {
+    zx_status_t status = WlanInterface::Create(parent, name, iface_index, role, context,
+                                               mac_address, std::move(mlme_channel), &ifc_);
+    return status;
+  }
+  WlanInterface* GetInterface() { return ifc_; }
+
+  async_dispatcher_t* GetDispatcher() override { return dispatcher_; }
+
+ private:
+  TestDevice(zx_device_t* parent, async_dispatcher_t* dispatcher,
+             sync_completion_t* destructor_done)
+      : Device(parent) {
+    ddk_done_ = destructor_done;
+    dispatcher_ = dispatcher;
+  }
+
+ protected:
+  zx_status_t Init(mlan_device* mlan_dev, wlan::nxpfmac::BusInterface** out_bus) override {
+    return ZX_OK;
+  }
+  zx_status_t LoadFirmware(const char* path, zx::vmo* out_fw, size_t* out_size) override {
+    return ZX_OK;
+  }
+  void Shutdown() override {}
+
+  sync_completion_t* ddk_done_ = nullptr;
+  async_dispatcher_t* dispatcher_;
+  WlanInterface* ifc_ = nullptr;
+  DeviceContext context_;
+  wlan::nxpfmac::MockBus bus_;
+
+ public:
+};
 
 struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneIfc {
   void SetUp() override {
@@ -47,16 +110,34 @@ struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneI
     auto ioctl_adapter = wlan::nxpfmac::IoctlAdapter::Create(mlan_mocks_.GetAdapter(), &mock_bus_);
     ASSERT_OK(ioctl_adapter.status_value());
     ioctl_adapter_ = std::move(ioctl_adapter.value());
+    // dispatcher_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
+    // ASSERT_OK(dispatcher_loop_->StartThread("test-timer-worker", nullptr));
+    ASSERT_OK(TestDevice::Create(parent_.get(), env_.GetDispatcher(), &device_destructed_,
+                                 &test_device_));
     context_.event_handler_ = &event_handler_;
     context_.ioctl_adapter_ = ioctl_adapter_.get();
     context_.data_plane_ = test_data_plane_->GetDataPlane();
+    context_.device_ = test_device_;
   }
 
   void TearDown() override {
     // Destroy the dataplane before the mock device. This ensures a safe destruction before the
     // parent device of the NetworkDeviceImpl device goes away.
     test_data_plane_.reset();
+    delete context_.device_;
+    context_.device_ = nullptr;
+    parent_.reset();
   }
+
+  zx_status_t CreateDeviceInterface(zx_device_t* parent, const char* name, uint32_t iface_index,
+                                    wlan_mac_role_t role, DeviceContext* context,
+                                    const uint8_t mac_address[ETH_ALEN],
+                                    zx::channel&& mlme_channel) {
+    return test_device_->CreateInterface(parent, name, iface_index, role, context, mac_address,
+                                         std::move(mlme_channel));
+  }
+
+  WlanInterface* GetInterface() { return test_device_->GetInterface(); }
 
   void SetupNetDevice(zx_device* net_device) {
     // Because WlanInterface creates a port for the netdevice we need to provide a limited
@@ -100,12 +181,16 @@ struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneI
   sync_completion_t on_eapol_transmitted_called_;
   sync_completion_t on_eapol_received_called_;
 
+  wlan::simulation::Environment env_;
+  // std::unique_ptr<async::Loop> dispatcher_loop_ = {};
+  TestDevice* test_device_ = nullptr;
+  sync_completion_t device_destructed_;
   wlan::nxpfmac::EventHandler event_handler_;
   wlan::nxpfmac::MockBus mock_bus_;
   wlan::nxpfmac::MlanMockAdapter mlan_mocks_;
   std::unique_ptr<wlan::nxpfmac::IoctlAdapter> ioctl_adapter_;
   std::unique_ptr<wlan::nxpfmac::TestDataPlane> test_data_plane_;
-  wlan::nxpfmac::DeviceContext context_;
+  DeviceContext context_;
   // This data member MUST BE LAST, because it needs to be destroyed first, ensuring that whatever
   // interface lifetimes are managed by it are destroyed before other data members.
   std::shared_ptr<MockDevice> parent_;
@@ -115,9 +200,8 @@ TEST_F(WlanInterfaceTest, Construct) {
   // Test that an interface can be constructed and that its lifetime is managed correctly by the
   // mock device parent. It will call release on the interface and destroy it that way.
 
-  WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, kClientMacAddress, zx::channel(), &ifc));
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, zx::channel()));
 }
 
 TEST_F(WlanInterfaceTest, WlanFullmacImplStartClient) {
@@ -125,14 +209,14 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStartClient) {
 
   zx::channel in_client_mlme_channel;
   zx::channel unused;
+  WlanInterface* ifc;
   ASSERT_OK(zx::channel::create(0, &in_client_mlme_channel, &unused));
 
   const zx_handle_t client_mlme_channel_handle = in_client_mlme_channel.get();
 
-  WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, kClientMacAddress, std::move(in_client_mlme_channel),
-                                  &ifc));
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, std::move(in_client_mlme_channel)));
+  ifc = GetInterface();
 
   const wlan_fullmac_impl_ifc_protocol_t fullmac_ifc{.ops = nullptr, .ctx = this};
   zx::channel out_client_mlme_channel;
@@ -151,14 +235,13 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStartSoftAp) {
 
   const zx_handle_t softap_mlme_channel_handle = in_softap_mlme_channel.get();
 
-  WlanInterface* softap_ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacSoftApDeviceName, 0, WLAN_MAC_ROLE_AP,
-                                  &context_, kSoftApMacAddress, std::move(in_softap_mlme_channel),
-                                  &softap_ifc));
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacSoftApDeviceName, 0, WLAN_MAC_ROLE_AP,
+                                  &context_, kSoftApMacAddress, std::move(in_softap_mlme_channel)));
+  WlanInterface* ifc = GetInterface();
 
   const wlan_fullmac_impl_ifc_protocol_t fullmac_ifc{.ops = nullptr, .ctx = this};
   zx::channel out_softap_mlme_channel;
-  softap_ifc->WlanFullmacImplStart(&fullmac_ifc, &out_softap_mlme_channel);
+  ifc->WlanFullmacImplStart(&fullmac_ifc, &out_softap_mlme_channel);
 
   // Verify that the channel we get back from starting is the same we passed in during construction.
   // The one passed in during construction will be the one passed through wlanphy and we have to
@@ -176,9 +259,9 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplQuery) {
   constexpr size_t kNum5gChannels = 26;
 
   constexpr wlan_mac_role_t kRole = WLAN_MAC_ROLE_AP;
-  WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, kRole, &context_,
-                                  kSoftApMacAddress, zx::channel(), &ifc));
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacClientDeviceName, 0, kRole, &context_,
+                                  kSoftApMacAddress, zx::channel()));
+  WlanInterface* ifc = GetInterface();
 
   mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
     if (req->req_id == MLAN_IOCTL_BSS && req->action == MLAN_ACT_GET) {
@@ -220,9 +303,9 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplQuery) {
 TEST_F(WlanInterfaceTest, WlanFullmacImplQueryMacSublayerSupport) {
   // Test that the most important values are configured in the mac sublayer support.
 
-  WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, kClientMacAddress, zx::channel(), &ifc));
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, zx::channel()));
+  WlanInterface* ifc = GetInterface();
 
   mac_sublayer_support_t sublayer_support;
   ifc->WlanFullmacImplQueryMacSublayerSupport(&sublayer_support);
@@ -262,9 +345,9 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStartScan) {
   zx::channel unused;
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
-  WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, kClientMacAddress, std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, std::move(in_mlme_channel)));
+  WlanInterface* ifc = GetInterface();
 
   zx::channel out_mlme_channel;
   ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
@@ -293,10 +376,15 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStartScan) {
   mock_fullmac_ifc.on_scan_end.VerifyAndClear();
 }
 
-TEST_F(WlanInterfaceTest, WlanFullmacImplConnectReq) {
-  // Test that a connect request issues the correct connect request. More detailed tests exist in
+TEST_F(WlanInterfaceTest, WlanFullmacImplConnectDisconnectReq) {
+  // Test that a connect request results in a successful connection. Also verify that a signal
+  // report indication is received after a successful connection. And verify the client
+  // disconnects when a local disconnect request is injected. More detailed tests exist in
   // the dedicated ClientConnection tests.
 
+  constexpr int8_t kTestRssi = -64;
+  constexpr int8_t kTestSnr = 28;
+  constexpr zx::duration kSignalLogTimeout = zx::sec(30);
   wlan::nxpfmac::MockFullmacIfc mock_fullmac_ifc;
 
   mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
@@ -304,6 +392,15 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectReq) {
       // Connect request, must complete asynchronously.
       ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
       return MLAN_STATUS_PENDING;
+    } else if (req->action == MLAN_ACT_GET && req->req_id == MLAN_IOCTL_GET_INFO) {
+      auto signal_info = reinterpret_cast<mlan_ds_get_info*>(req->pbuf);
+      if (signal_info->sub_command == MLAN_OID_GET_SIGNAL) {
+        // Get signal request, must return asynchronously.
+        signal_info->param.signal.data_snr_avg = kTestSnr;
+        signal_info->param.signal.data_rssi_avg = kTestRssi;
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        return MLAN_STATUS_PENDING;
+      }
     }
     // Return success for everything else.
     return MLAN_STATUS_SUCCESS;
@@ -313,13 +410,110 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectReq) {
   zx::channel unused;
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
-  WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, kClientMacAddress, std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, std::move(in_mlme_channel)));
+  WlanInterface* ifc = GetInterface();
 
   zx::channel out_mlme_channel;
   ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
 
+  sync_completion_t on_connect_conf_called;
+  mock_fullmac_ifc.on_connect_conf.ExpectCallWithMatcher(
+      [&](const wlan_fullmac_connect_confirm_t* resp) {
+        sync_completion_signal(&on_connect_conf_called);
+      });
+
+  // Prepare and send the connect request.
+  constexpr uint8_t kIesWithSsid[] = {"\x00\x04Test"};
+  constexpr uint8_t kTestChannel = 1;
+  const wlan_fullmac_connect_req_t connect_request = {
+      .selected_bss{.ies_list = kIesWithSsid,
+                    .ies_count = sizeof(kIesWithSsid),
+                    .channel{.primary = kTestChannel}},
+      .auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM};
+
+  ifc->WlanFullmacImplConnectReq(&connect_request);
+
+  sync_completion_t on_signal_ind_called;
+  mock_fullmac_ifc.on_signal_report.ExpectCallWithMatcher(
+      [&](const wlan_fullmac_signal_report_indication_t* report) {
+        EXPECT_EQ(report->rssi_dbm, kTestRssi);
+        EXPECT_EQ(report->snr_db, kTestSnr);
+        sync_completion_signal(&on_signal_ind_called);
+      });
+
+  // Wait until the timer has been scheduled.
+  while (1) {
+    if (env_.GetLatestEventTime().get() >= kSignalLogTimeout.to_nsecs()) {
+      break;
+    }
+  }
+  // Let the timer run
+  env_.Run(kSignalLogTimeout);
+
+  // Check to see if connect confirmation and signal indication were received.
+  ASSERT_OK(sync_completion_wait(&on_connect_conf_called, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&on_signal_ind_called, ZX_TIME_INFINITE));
+
+  // Prepare and send a deauth request and verify deauth confirmation was received.
+  sync_completion_t on_deauth_conf_called;
+  mock_fullmac_ifc.on_deauth_conf.ExpectCallWithMatcher(
+      [&](const wlan_fullmac_deauth_confirm_t* conf) {
+        sync_completion_signal(&on_deauth_conf_called);
+      });
+
+  const wlan_fullmac_deauth_req deauth_req = {
+      .peer_sta_address = {1, 2, 3, 4, 5, 6},
+      .reason_code = 0,
+  };
+  ifc->WlanFullmacImplDeauthReq(&deauth_req);
+  ASSERT_OK(sync_completion_wait(&on_deauth_conf_called, ZX_TIME_INFINITE));
+}
+
+TEST_F(WlanInterfaceTest, WlanFullmacImplConnectRemoteDisconnectReq) {
+  // Test that a connect request results in a successful connection. Also verify that a signal
+  // report indication is received after a successful connection. And verify the client
+  // disconnects when a FW disconnect event is injected. More detailed tests exist in
+  // the dedicated ClientConnection tests.
+
+  constexpr int8_t kTestRssi = -64;
+  constexpr int8_t kTestSnr = 28;
+  constexpr uint8_t kBssIndex = 0;
+  constexpr zx::duration kSignalLogTimeout = zx::sec(30);
+  wlan::nxpfmac::MockFullmacIfc mock_fullmac_ifc;
+
+  mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
+    if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_BSS) {
+      // Connect request, must complete asynchronously.
+      ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+      return MLAN_STATUS_PENDING;
+    } else if (req->action == MLAN_ACT_GET && req->req_id == MLAN_IOCTL_GET_INFO) {
+      auto signal_info = reinterpret_cast<mlan_ds_get_info*>(req->pbuf);
+      if (signal_info->sub_command == MLAN_OID_GET_SIGNAL) {
+        // Get signal request, must return asynchronously.
+        signal_info->param.signal.data_snr_avg = kTestSnr;
+        signal_info->param.signal.data_rssi_avg = kTestRssi;
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        return MLAN_STATUS_PENDING;
+      }
+    }
+    // Return success for everything else.
+    return MLAN_STATUS_SUCCESS;
+  });
+
+  zx::channel in_mlme_channel;
+  zx::channel unused;
+  ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
+
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacClientDeviceName, kBssIndex,
+                                  WLAN_MAC_ROLE_CLIENT, &context_, kClientMacAddress,
+                                  std::move(in_mlme_channel)));
+  WlanInterface* ifc = GetInterface();
+
+  zx::channel out_mlme_channel;
+  ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
+
+  // Prepare and send the connect request.
   sync_completion_t on_connect_conf_called;
   mock_fullmac_ifc.on_connect_conf.ExpectCallWithMatcher(
       [&](const wlan_fullmac_connect_confirm_t* resp) {
@@ -336,7 +530,45 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectReq) {
 
   ifc->WlanFullmacImplConnectReq(&connect_request);
 
+  sync_completion_t on_signal_ind_called;
+  mock_fullmac_ifc.on_signal_report.ExpectCallWithMatcher(
+      [&](const wlan_fullmac_signal_report_indication_t* report) {
+        EXPECT_EQ(report->rssi_dbm, kTestRssi);
+        EXPECT_EQ(report->snr_db, kTestSnr);
+        sync_completion_signal(&on_signal_ind_called);
+      });
+
+  // Wait until the timer has been scheduled.
+  while (1) {
+    if (env_.GetLatestEventTime().get() >= kSignalLogTimeout.to_nsecs()) {
+      break;
+    }
+  }
+  // Let the timer run
+  env_.Run(kSignalLogTimeout);
+
+  // Verify connect confirmation and signal indication were received.
   ASSERT_OK(sync_completion_wait(&on_connect_conf_called, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&on_signal_ind_called, ZX_TIME_INFINITE));
+
+  // Simulate a remote disconnect by injecting a FW DISCONNECTED event.
+  sync_completion_t on_deauth_ind_called;
+  mock_fullmac_ifc.on_deauth_ind_conf.ExpectCallWithMatcher(
+      [&](const wlan_fullmac_deauth_indication_t* conf) {
+        sync_completion_signal(&on_deauth_ind_called);
+      });
+
+  constexpr uint16_t kDisconnectReasonCode = 1;
+  uint8_t event_buf[sizeof(mlan_event) + ETH_ALEN + 2];
+  auto event = reinterpret_cast<pmlan_event>(event_buf);
+  event->event_id = MLAN_EVENT_ID_FW_DISCONNECTED;
+  memcpy(event->event_buf, &kDisconnectReasonCode, sizeof(kDisconnectReasonCode));
+  event->event_len = sizeof(kDisconnectReasonCode);
+  event->bss_index = kBssIndex;
+  event_handler_.OnEvent(event);
+
+  // confirm that the deauth indication was received.
+  ASSERT_OK(sync_completion_wait(&on_deauth_ind_called, ZX_TIME_INFINITE));
 }
 
 TEST_F(WlanInterfaceTest, MacSetMode) {
@@ -384,9 +616,9 @@ TEST_F(WlanInterfaceTest, MacSetMode) {
   zx::channel unused;
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
-  WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
-                                  &context_, kClientMacAddress, std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacClientDeviceName, 0, WLAN_MAC_ROLE_CLIENT,
+                                  &context_, kClientMacAddress, std::move(in_mlme_channel)));
+  WlanInterface* ifc = GetInterface();
 
   constexpr mode_t kMacModes[] = {MODE_MULTICAST_FILTER, MODE_MULTICAST_PROMISCUOUS,
                                   MODE_PROMISCUOUS};
@@ -432,9 +664,9 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplStartReq) {
   zx::channel unused;
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
-  WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacSoftApDeviceName, 0, WLAN_MAC_ROLE_AP,
-                                  &context_, kSoftApMacAddress, std::move(in_mlme_channel), &ifc));
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacSoftApDeviceName, 0, WLAN_MAC_ROLE_AP,
+                                  &context_, kSoftApMacAddress, std::move(in_mlme_channel)));
+  WlanInterface* ifc = GetInterface();
 
   zx::channel out_mlme_channel;
   ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);
@@ -509,10 +741,10 @@ TEST_F(WlanInterfaceTest, SoftApStaConnectDisconnect) {
   zx::channel unused;
   ASSERT_OK(zx::channel::create(0, &in_mlme_channel, &unused));
 
-  WlanInterface* ifc = nullptr;
-  ASSERT_OK(WlanInterface::Create(parent_.get(), kFullmacSoftApDeviceName, kBssIndex,
+  ASSERT_OK(CreateDeviceInterface(parent_.get(), kFullmacSoftApDeviceName, kBssIndex,
                                   WLAN_MAC_ROLE_AP, &context_, kSoftApMacAddress,
-                                  std::move(in_mlme_channel), &ifc));
+                                  std::move(in_mlme_channel)));
+  WlanInterface* ifc = GetInterface();
 
   zx::channel out_mlme_channel;
   ifc->WlanFullmacImplStart(mock_fullmac_ifc.proto(), &out_mlme_channel);

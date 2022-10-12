@@ -121,6 +121,7 @@ zx_status_t Environment::ScheduleNotification(std::function<void()> fn, zx::dura
           }
         },
         deadline, id);
+    latest_event_deadline_ = std::max(latest_event_deadline_, deadline);
   }
 
   if (id_out != nullptr) {
@@ -146,6 +147,11 @@ zx::time Environment::GetTime() const {
   return time_;
 }
 
+zx::time Environment::GetLatestEventTime() const {
+  std::lock_guard lock(event_mutex_);
+  return latest_event_deadline_;
+}
+
 zx_status_t Environment::PostTask(async_task_t* task) {
   uint64_t id = 0;
   {
@@ -162,6 +168,7 @@ zx_status_t Environment::PostTask(async_task_t* task) {
           task->handler(dispatcher, task, status);
         },
         zx::time(task->deadline), id);
+    latest_event_deadline_ = std::max(latest_event_deadline_, zx::time(task->deadline));
   }
 
   task->state.reserved[0] = id;

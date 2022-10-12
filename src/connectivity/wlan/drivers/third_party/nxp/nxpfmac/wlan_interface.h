@@ -100,6 +100,7 @@ class WlanInterface : public WlanInterfaceDeviceType,
 
   // ClientConnectionIfc implementation.
   void OnDisconnectEvent(uint16_t reason_code) override;
+  void SignalQualityIndication(int8_t rssi, int8_t snr) override;
 
   // SoftApIfc implementation.
   void OnStaConnectEvent(uint8_t* sta_mac_addr, uint8_t* ies, uint32_t ie_length) override;

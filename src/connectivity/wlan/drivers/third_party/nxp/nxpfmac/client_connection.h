@@ -21,6 +21,8 @@
 
 #include <mutex>
 
+#include <wlan/drivers/timer/timer.h>
+
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_request.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
@@ -37,6 +39,8 @@ class ClientConnectionIfc {
   virtual ~ClientConnectionIfc() = default;
 
   virtual void OnDisconnectEvent(uint16_t reason_code) = 0;
+
+  virtual void SignalQualityIndication(int8_t rssi, int8_t snr) = 0;
 };
 
 class ClientConnection {
@@ -78,7 +82,10 @@ class ClientConnection {
       __TA_REQUIRES(mutex_);
   void CompleteConnection(StatusCode status_code, const uint8_t* ies = nullptr, size_t ies_size = 0)
       __TA_REQUIRES(mutex_);
+  void IndicateSignalQuality();
 
+  // Periodic timer to log client stats, etc.
+  std::unique_ptr<wlan::drivers::timer::Timer> log_timer_;
   ClientConnectionIfc* ifc_ = nullptr;
   DeviceContext* context_ = nullptr;
   KeyRing* key_ring_ = nullptr;

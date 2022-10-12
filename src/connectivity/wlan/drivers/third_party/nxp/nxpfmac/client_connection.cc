@@ -18,6 +18,7 @@
 #include <netinet/if_ether.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ies.h"
@@ -26,8 +27,10 @@
 
 namespace wlan::nxpfmac {
 
+using wlan::drivers::timer::Timer;
 constexpr zx_duration_t kConnectionTimeout = ZX_MSEC(6000);
 constexpr zx_duration_t kDisconnectTimeout = ZX_MSEC(1000);
+constexpr zx_duration_t kLogTimerTimeout = ZX_SEC(30);
 
 ClientConnection::ClientConnection(ClientConnectionIfc* ifc, DeviceContext* context,
                                    KeyRing* key_ring, uint32_t bss_index)
@@ -40,9 +43,13 @@ ClientConnection::ClientConnection(ClientConnectionIfc* ifc, DeviceContext* cont
       MLAN_EVENT_ID_FW_DISCONNECTED, bss_index, [this](pmlan_event event) {
         OnDisconnect(*reinterpret_cast<const uint16_t*>(event->event_buf));
       });
+  log_timer_ = std::make_unique<Timer>(context_->device_->GetDispatcher(),
+                                       [this]() { IndicateSignalQuality(); });
 }
 
 ClientConnection::~ClientConnection() {
+  // Stop the periodic log timer unconditionally.
+  log_timer_->Stop();
   // Cancel any ongoing connection attempt.
   zx_status_t status = CancelConnect();
   if (status != ZX_OK && status != ZX_ERR_NOT_FOUND) {
@@ -247,6 +254,9 @@ zx_status_t ClientConnection::Disconnect(
     return ZX_ERR_ALREADY_EXISTS;
   }
 
+  // Stop the log timer unconditionally.
+  log_timer_->Stop();
+
   auto request = std::make_unique<IoctlRequest<mlan_ds_bss>>(
       MLAN_IOCTL_BSS, MLAN_ACT_SET, bss_index_,
       mlan_ds_bss{.sub_command = MLAN_OID_BSS_STOP,
@@ -309,6 +319,8 @@ void ClientConnection::OnDisconnect(uint16_t reason_code) {
     return;
   }
   connected_ = false;
+  // Stop the log timer since the client is disconnected.
+  log_timer_->Stop();
   ifc_->OnDisconnectEvent(reason_code);
 }
 
@@ -479,5 +491,26 @@ void ClientConnection::CompleteConnection(StatusCode status_code, const uint8_t*
   connect_in_progress_ = false;
 
   TriggerConnectCallback(status_code, ies, ies_size);
+  // Start periodic timer to update logs/stats every 30 seconds if the connection was successful.
+  if (connected_) {
+    log_timer_->StartPeriodic(kLogTimerTimeout);
+  }
 }
+
+void ClientConnection::IndicateSignalQuality() {
+  IoctlRequest<mlan_ds_get_info> signal_req(MLAN_IOCTL_GET_INFO, MLAN_ACT_GET, bss_index_,
+                                            {.sub_command = MLAN_OID_GET_SIGNAL});
+  auto& signal_info = signal_req.UserReq().param.signal;
+
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&signal_req);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Get signal info req failed: %d", io_status);
+    return;
+  }
+  NXPF_INFO("Client connection rssi %d snr %d", signal_info.data_rssi_avg,
+            signal_info.data_snr_avg);
+  ifc_->SignalQualityIndication((int8_t)signal_info.data_rssi_avg,
+                                (int8_t)signal_info.data_snr_avg);
+}
+
 }  // namespace wlan::nxpfmac

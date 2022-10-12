@@ -18,17 +18,22 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mlan_mocks.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/test/mock_bus.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
 using wlan::nxpfmac::ClientConnection;
 using wlan::nxpfmac::ClientConnectionIfc;
+using wlan::nxpfmac::Device;
+using wlan::nxpfmac::DeviceContext;
 
 constexpr uint8_t kIesWithSsid[] = {"\x00\x04Test"};
 constexpr uint8_t kTestChannel = 6;
@@ -39,8 +44,44 @@ constexpr wlan_fullmac_connect_req_t kMinimumConnectReq = {
                   .channel{.primary = kTestChannel}},
     .auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM};
 
+// Barebones Device Class (at this time mainly for the dispatcher to handle timers)
+struct TestDevice : public Device {
+ public:
+  static zx_status_t Create(zx_device_t *parent, async_dispatcher_t *dispatcher,
+                            sync_completion_t *destruction_compl, TestDevice **out_device) {
+    auto device = new TestDevice(parent, dispatcher, destruction_compl);
+
+    *out_device = device;
+    return ZX_OK;
+  }
+  ~TestDevice() {}
+
+  async_dispatcher_t *GetDispatcher() override { return dispatcher_; }
+
+ private:
+  TestDevice(zx_device_t *parent, async_dispatcher_t *dispatcher,
+             sync_completion_t *destructor_done)
+      : Device(parent) {
+    dispatcher_ = dispatcher;
+  }
+
+ protected:
+  zx_status_t Init(mlan_device *mlan_dev, wlan::nxpfmac::BusInterface **out_bus) override {
+    return ZX_OK;
+  }
+  zx_status_t LoadFirmware(const char *path, zx::vmo *out_fw, size_t *out_size) override {
+    return ZX_OK;
+  }
+  void Shutdown() override {}
+
+  async_dispatcher_t *dispatcher_;
+  wlan::nxpfmac::DeviceContext context_;
+  wlan::nxpfmac::MockBus bus_;
+};
+
 class TestClientConnectionIfc : public ClientConnectionIfc {
   void OnDisconnectEvent(uint16_t reason_code) override {}
+  void SignalQualityIndication(int8_t rssi, int8_t snr) override {}
 };
 
 struct ClientConnectionTest : public zxtest::Test {
@@ -49,10 +90,22 @@ struct ClientConnectionTest : public zxtest::Test {
     ASSERT_OK(ioctl_adapter.status_value());
     ioctl_adapter_ = std::move(ioctl_adapter.value());
     key_ring_ = std::make_unique<wlan::nxpfmac::KeyRing>(ioctl_adapter_.get(), kTestBssIndex);
-    context_ = wlan::nxpfmac::DeviceContext{.event_handler_ = &event_handler_,
+    parent_ = MockDevice::FakeRootParent();
+    ASSERT_OK(TestDevice::Create(parent_.get(), env_.GetDispatcher(), &device_destructed_,
+                                 &test_device_));
+
+    context_ = wlan::nxpfmac::DeviceContext{.device_ = test_device_,
+                                            .event_handler_ = &event_handler_,
                                             .ioctl_adapter_ = ioctl_adapter_.get()};
   }
 
+  void TearDown() override {
+    delete context_.device_;
+    context_.device_ = nullptr;
+  }
+
+  wlan::simulation::Environment env_ = {};
+  TestDevice *test_device_ = nullptr;
   wlan::nxpfmac::MlanMockAdapter mocks_;
   wlan::nxpfmac::MockBus mock_bus_;
   wlan::nxpfmac::EventHandler event_handler_;
@@ -60,6 +113,8 @@ struct ClientConnectionTest : public zxtest::Test {
   std::unique_ptr<wlan::nxpfmac::IoctlAdapter> ioctl_adapter_;
   std::unique_ptr<wlan::nxpfmac::KeyRing> key_ring_;
   TestClientConnectionIfc test_ifc_;
+  sync_completion_t device_destructed_;
+  std::shared_ptr<MockDevice> parent_;
 };
 
 TEST_F(ClientConnectionTest, Constructible) {
@@ -68,13 +123,35 @@ TEST_F(ClientConnectionTest, Constructible) {
 
 TEST_F(ClientConnectionTest, Connect) {
   constexpr uint8_t kBss[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+  constexpr uint8_t kStaAddr[] = {0x0e, 0x0d, 0x16, 0x28, 0x3a, 0x4c};
   constexpr uint32_t kBssIndex = 0;
+  constexpr int8_t kTestRssi = -64;
+  constexpr int8_t kTestSnr = 28;
+  constexpr zx::duration kSignalLogTimeout = zx::sec(30);
 
   wlan_fullmac_connect_req_t request = kMinimumConnectReq;
   memcpy(request.selected_bss.bssid, kBss, sizeof(kBss));
 
   sync_completion_t ioctl_completion;
 
+  class TestClientConnectionIfc : public ClientConnectionIfc {
+    void OnDisconnectEvent(uint16_t reason_code) override {}
+    void SignalQualityIndication(int8_t rssi, int8_t snr) override {
+      ind_rssi = rssi;
+      ind_snr = snr;
+    }
+
+   public:
+    int8_t get_ind_rssi() { return ind_rssi; }
+
+    int8_t get_ind_snr() { return ind_snr; }
+
+    int8_t ind_rssi = 0;
+    int8_t ind_snr = 0;
+  };
+
+  TestClientConnectionIfc test_ifc;
+  sync_completion_t signal_ioctl_received;
   auto on_ioctl = [&](t_void *, pmlan_ioctl_req req) -> mlan_status {
     if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_BSS) {
       auto bss = reinterpret_cast<const mlan_ds_bss *>(req->pbuf);
@@ -86,7 +163,7 @@ TEST_F(ClientConnectionTest, Connect) {
         EXPECT_EQ(MLAN_IOCTL_BSS, request->IoctlReq().req_id);
         EXPECT_EQ(MLAN_ACT_SET, request->IoctlReq().action);
 
-        EXPECT_EQ(MLAN_OID_BSS_START, user_req.sub_command);
+        // EXPECT_EQ(MLAN_OID_BSS_START, user_req.sub_command);
         EXPECT_EQ(kBssIndex, user_req.param.ssid_bssid.idx);
         EXPECT_EQ(kTestChannel, user_req.param.ssid_bssid.channel);
         EXPECT_BYTES_EQ(kBss, user_req.param.ssid_bssid.bssid, ETH_ALEN);
@@ -94,7 +171,19 @@ TEST_F(ClientConnectionTest, Connect) {
         ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
 
         sync_completion_signal(&ioctl_completion);
-
+        return MLAN_STATUS_PENDING;
+      }
+      if (bss->sub_command == MLAN_OID_BSS_STOP) {
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        return MLAN_STATUS_PENDING;
+      }
+    } else if (req->action == MLAN_ACT_GET && req->req_id == MLAN_IOCTL_GET_INFO) {
+      auto signal_info = reinterpret_cast<mlan_ds_get_info *>(req->pbuf);
+      if (signal_info->sub_command == MLAN_OID_GET_SIGNAL) {
+        signal_info->param.signal.data_snr_avg = kTestSnr;
+        signal_info->param.signal.data_rssi_avg = kTestRssi;
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        sync_completion_signal(&signal_ioctl_received);
         return MLAN_STATUS_PENDING;
       }
     }
@@ -104,7 +193,7 @@ TEST_F(ClientConnectionTest, Connect) {
 
   mocks_.SetOnMlanIoctl(std::move(on_ioctl));
 
-  ClientConnection connection(&test_ifc_, &context_, key_ring_.get(), kBssIndex);
+  ClientConnection connection(&test_ifc, &context_, key_ring_.get(), kBssIndex);
 
   sync_completion_t connect_completion;
   auto on_connect = [&](ClientConnection::StatusCode status_code, const uint8_t *ies,
@@ -117,6 +206,23 @@ TEST_F(ClientConnectionTest, Connect) {
 
   ASSERT_OK(sync_completion_wait(&ioctl_completion, ZX_TIME_INFINITE));
   ASSERT_OK(sync_completion_wait(&connect_completion, ZX_TIME_INFINITE));
+
+  // Wait until the timer has been scheduled.
+  while (1) {
+    if (env_.GetLatestEventTime().get() >= kSignalLogTimeout.to_nsecs()) {
+      break;
+    }
+  }
+  // Let the timer run
+  env_.Run(kSignalLogTimeout);
+  ASSERT_OK(sync_completion_wait(&signal_ioctl_received, ZX_TIME_INFINITE));
+  // Ensure the Signal quality indication was called.
+  EXPECT_EQ(test_ifc.ind_rssi, kTestRssi);
+  EXPECT_EQ(test_ifc.ind_snr, kTestSnr);
+
+  ASSERT_OK(connection.Disconnect(kStaAddr, 0, [&](wlan::nxpfmac::IoctlStatus status) {
+    EXPECT_EQ(wlan::nxpfmac::IoctlStatus::Success, status);
+  }));
 }
 
 TEST_F(ClientConnectionTest, CancelConnect) {
@@ -183,7 +289,8 @@ TEST_F(ClientConnectionTest, Disconnect) {
         return MLAN_STATUS_PENDING;
       }
     }
-    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG) {
+    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG ||
+        req->req_id == MLAN_IOCTL_GET_INFO) {
       // Connecting performs security and IE (MISC ioctl) configuration, make sure it succeeds.
       return MLAN_STATUS_SUCCESS;
     }
@@ -304,7 +411,8 @@ TEST_F(ClientConnectionTest, DisconnectAsyncFailure) {
         return MLAN_STATUS_PENDING;
       }
     }
-    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG) {
+    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG ||
+        req->req_id == MLAN_IOCTL_GET_INFO) {
       // Connecting performs security and IE (MISC ioctl) configuration, make sure it succeeds.
       return MLAN_STATUS_SUCCESS;
     }
@@ -356,7 +464,8 @@ TEST_F(ClientConnectionTest, DisconnectWhileDisconnectInProgress) {
         return MLAN_STATUS_PENDING;
       }
     }
-    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG) {
+    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG ||
+        req->req_id == MLAN_IOCTL_GET_INFO) {
       // Connecting performs security and IE (MISC ioctl) configuration, make sure it succeeds.
       return MLAN_STATUS_SUCCESS;
     }

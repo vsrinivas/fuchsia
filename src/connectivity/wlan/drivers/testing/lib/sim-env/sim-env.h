@@ -92,6 +92,7 @@ class Environment {
 
   // Get simulation absolute time
   zx::time GetTime() const;
+  zx::time GetLatestEventTime() const;
 
   // The notification schedule/cancel API, as an async_dispatcher_t.
   zx_status_t PostTask(async_task_t* task);
@@ -140,7 +141,9 @@ class Environment {
   uint64_t event_id_ = 1;
 
   // Current time
-  zx::time time_;
+  zx::time time_ = {};
+
+  zx::time latest_event_deadline_ = {};
 
   // Dispatcher instance.
   Dispatcher dispatcher_;

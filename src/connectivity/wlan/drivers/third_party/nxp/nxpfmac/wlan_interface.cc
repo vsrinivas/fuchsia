@@ -541,6 +541,12 @@ void WlanInterface::OnDisconnectEvent(uint16_t reason_code) {
   fullmac_ifc_.DeauthInd(&ind);
 }
 
+void WlanInterface::SignalQualityIndication(int8_t rssi, int8_t snr) {
+  std::lock_guard lock(mutex_);
+  wlan_fullmac_signal_report_indication signal_ind = {.rssi_dbm = rssi, .snr_db = snr};
+  fullmac_ifc_.SignalReport(&signal_ind);
+}
+
 // Handle STA connect event for SoftAP.
 void WlanInterface::OnStaConnectEvent(uint8_t* sta_mac_addr, uint8_t* ies, uint32_t ie_length) {
   // This is the only event from FW for STA connect. Indicate both auth and assoc to SME.
