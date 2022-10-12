@@ -259,6 +259,14 @@ test_deps = []
 # Defines test targets and unittest packages based on the
 # provided suite name for all versions of the Netstack under
 # test.
+#
+# Parameters
+#
+#   run_with_fast_udp (optional)
+#     Identifies whether or not the suite should be run against Netstack2
+#     with Fast UDP enabled.
+#     Type: bool
+#     Default: true
 template("syscall_test_suite") {
   not_needed([ "invoker" ])
   suite_label = target_name
@@ -287,13 +295,6 @@ template("syscall_test_suite") {
 
   stacks = [
     {
-      label = "netstack2_fastudp"
-      component =
-          "//src/connectivity/network/netstack:component-with-fast-udp-debug"
-      expectations = ":${netstack2_expectations_target}"
-      manifest = "meta/netstack2/fastudp/${suite_label}_syscall_tests.cml"
-    },
-    {
       label = "netstack2_syncudp"
       component = "//src/connectivity/network/netstack:component-debug"
       expectations = ":${netstack2_expectations_target}"
@@ -306,6 +307,23 @@ template("syscall_test_suite") {
       manifest = "meta/netstack3/${suite_label}_syscall_tests.cml"
     },
   ]
+
+  run_with_fast_udp = true
+  if (defined(invoker.run_with_fast_udp)) {
+    run_with_fast_udp = invoker.run_with_fast_udp
+  }
+
+  if (run_with_fast_udp) {
+    stacks += [
+      {
+        label = "netstack2_fastudp"
+        component =
+            "//src/connectivity/network/netstack:component-with-fast-udp-debug"
+        expectations = ":${netstack2_expectations_target}"
+        manifest = "meta/netstack2/fastudp/${suite_label}_syscall_tests.cml"
+      },
+    ]
+  }
 
   test_deps = []
   foreach(stack, stacks) {
@@ -352,6 +370,7 @@ syscall_test_suite(udp_test_label) {
 syscall_test_suite(udp_unbound_test_label) {
 }
 syscall_test_suite(tcp_test_label) {
+  run_with_fast_udp = false
 }
 
 group("tests") {
