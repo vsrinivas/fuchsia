@@ -78,11 +78,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3>Client</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_wire/client/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_natural/client/main.cc" %}</pre>
         </section>
         <section>
           <h3>Server</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_wire/server/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_natural/server/main.cc" %}</pre>
         </section>
       </devsite-selector>
     </section>
@@ -92,11 +92,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3>Client</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_natural/client/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_wire/client/main.cc" %}</pre>
         </section>
         <section>
           <h3>Server</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_natural/server/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_wire/server/main.cc" %}</pre>
         </section>
       </devsite-selector>
     </section>
