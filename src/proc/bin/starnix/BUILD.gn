@@ -72,7 +72,6 @@ if (target_cpu == "x64" && !is_asan) {
       "//src/lib/ui/fuchsia-vulkan",
       "//src/lib/ui/wayland/server",
       "//src/lib/vulkan",
-      "//src/lib/zerocopy",
       "//src/lib/zircon/rust:fuchsia-zircon",
       "//src/proc/lib/linux_uapi",
       "//src/proc/lib/magma",
@@ -98,6 +97,7 @@ if (target_cpu == "x64" && !is_asan) {
       "//third_party/rust_crates:tracing",
       "//third_party/rust_crates:utf8parse",
       "//third_party/rust_crates:vk-sys",
+      "//third_party/rust_crates:zerocopy",
     ]
 
     if (is_debug) {

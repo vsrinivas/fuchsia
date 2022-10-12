@@ -53,8 +53,8 @@ rustc_test("wayland_scanner_back_end_test") {
   deps = [
     ":test_protocol_server_protocol",
     "//src/lib/ui/wayland/core",
-    "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:zerocopy",
   ]
   source_root = "tests/back_end_test.rs"
 

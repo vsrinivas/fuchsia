@@ -12,10 +12,10 @@ rustc_library("ieee80211") {
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_rust",
-    "//src/lib/zerocopy",
     "//third_party/rust_crates:arbitrary",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:zerocopy",
   ]
 
   test_deps = [ "//third_party/rust_crates:lazy_static" ]

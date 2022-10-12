@@ -10,9 +10,9 @@ rustc_library("fuchsia-archive") {
   edition = "2021"
   deps = [
     "//src/lib/fuchsia-fs",
-    "//src/lib/zerocopy",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:zerocopy",
   ]
   test_deps = [
     "//src/lib/fuchsia-async",

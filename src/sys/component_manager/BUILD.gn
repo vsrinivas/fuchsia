@@ -223,7 +223,6 @@ template("component_manager") {
         "//src/lib/fuchsia",
         "//src/lib/process_builder:test-util-fidl_rust",
         "//src/lib/scoped_task",
-        "//src/lib/zerocopy",
         "//src/sys/lib/cm_rust/testing",
         "//src/sys/lib/component_id_index",
         "//src/sys/lib/library_loader",
@@ -236,6 +235,7 @@ template("component_manager") {
         "//third_party/rust_crates:serde_json",
         "//third_party/rust_crates:tempfile",
         "//third_party/rust_crates:test-case",
+        "//third_party/rust_crates:zerocopy",
       ]
     }
   } else {

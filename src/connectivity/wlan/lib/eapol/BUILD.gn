@@ -11,10 +11,10 @@ rustc_library("eapol") {
   deps = [
     "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
-    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:zerocopy",
   ]
 
   sources = [ "src/lib.rs" ]

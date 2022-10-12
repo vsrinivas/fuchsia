@@ -11,5 +11,5 @@ rustc_library("magma") {
     "src/magma.rs",
   ]
 
-  deps = [ "//src/lib/zerocopy" ]
+  deps = [ "//third_party/rust_crates:zerocopy" ]
 }

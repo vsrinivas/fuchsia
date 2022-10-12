@@ -64,13 +64,13 @@ if (is_host) {
     test_deps = [
       "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//src/lib/fuchsia",
-      "//src/lib/zerocopy",
       "//src/security/scrutiny/testing",
       "//src/sys/lib/fuchsia-zbi/abi",
       "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:sha2",
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:uuid",
+      "//third_party/rust_crates:zerocopy",
       "//tools/lib/cml",
     ]
 

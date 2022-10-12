@@ -28,7 +28,6 @@ rustc_test("bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/network/netsvc-proto",
     "//src/lib/network/packet",
-    "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:arrayvec",
@@ -36,6 +35,7 @@ rustc_test("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:test-case",
+    "//third_party/rust_crates:zerocopy",
   ]
   sources = [ "src/lib.rs" ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]

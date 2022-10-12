@@ -21,7 +21,6 @@ if (is_host) {
       "//src/lib/fuchsia-async",
       "//src/lib/mdns/rust:mdns",
       "//src/lib/network/packet",
-      "//src/lib/zerocopy",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-channel",
       "//third_party/rust_crates:async-io",
@@ -32,6 +31,7 @@ if (is_host) {
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:socket2",
       "//third_party/rust_crates:tracing",
+      "//third_party/rust_crates:zerocopy",
     ]
 
     sources = [

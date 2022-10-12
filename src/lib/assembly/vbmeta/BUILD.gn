@@ -14,7 +14,6 @@ if (is_host) {
 
     deps = [
       "//src/lib/mundane",
-      "//src/lib/zerocopy",
       "//third_party/modinv",
       "//third_party/rust_crates:byteorder",
       "//third_party/rust_crates:hex",
@@ -23,6 +22,7 @@ if (is_host) {
       "//third_party/rust_crates:ring",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:thiserror",
+      "//third_party/rust_crates:zerocopy",
     ]
 
     test_deps = [

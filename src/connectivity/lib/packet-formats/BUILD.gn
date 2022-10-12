@@ -13,11 +13,11 @@ _common_deps = [
   "//src/connectivity/lib/net-types",
   "//src/connectivity/network/lib/explicit",
   "//src/lib/network/packet",
-  "//src/lib/zerocopy",
   "//third_party/rust_crates:arrayvec",
   "//third_party/rust_crates:log",
   "//third_party/rust_crates:nonzero_ext",
   "//third_party/rust_crates:thiserror",
+  "//third_party/rust_crates:zerocopy",
 ]
 
 _common_sources = [
@@ -98,9 +98,9 @@ rustc_fuzzer("fuzz-parse-packet") {
     "//src/lib/mdns/rust:mdns",
     "//src/lib/network/netsvc-proto",
     "//src/lib/network/packet",
-    "//src/lib/zerocopy",
     "//third_party/rust_crates:arbitrary",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:zerocopy",
   ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

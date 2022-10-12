@@ -8,7 +8,7 @@ import("//build/rust/rustc_macro.gni")
 
 common_deps = [
   ":net-types-macros",
-  "//src/lib/zerocopy",
+  "//third_party/rust_crates:zerocopy",
 ]
 common_sources = [
   "src/ethernet.rs",

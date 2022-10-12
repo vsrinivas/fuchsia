@@ -24,7 +24,6 @@ rustc_library("wlan-common") {
     "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/lib/mundane",
-    "//src/lib/zerocopy",
     "//third_party/boringssl/rust/boringssl-sys",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
@@ -37,6 +36,7 @@ rustc_library("wlan-common") {
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:zerocopy",
   ]
 
   sources = [

@@ -35,7 +35,6 @@ rustc_library("lib") {
     "//src/lib/network/netsvc-proto",
     "//src/lib/network/packet",
     "//src/lib/usb_bulk/rust:lib",
-    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:async-fs",
@@ -55,6 +54,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:zerocopy",
   ]
 
   test_deps = [

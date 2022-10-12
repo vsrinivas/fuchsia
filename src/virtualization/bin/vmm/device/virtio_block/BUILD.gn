@@ -38,7 +38,6 @@ rustc_binary("virtio_block_bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/block_client/rust:remote-block-device",
-    "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/virtualization/lib/machina-virtio-device",
@@ -51,6 +50,7 @@ rustc_binary("virtio_block_bin") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:zerocopy",
   ]
 
   test_deps = [

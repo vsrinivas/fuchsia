@@ -66,9 +66,9 @@ wlandevicemonitor_test_deps = [
   "//src/connectivity/wlan/lib/common/rust/:wlan-common",
   "//src/connectivity/wlan/lib/ieee80211",
   "//src/connectivity/wlan/testing/wlantap-client",
-  "//src/lib/zerocopy",
   "//third_party/rust_crates:tempfile",
   "//third_party/rust_crates:test-case",
+  "//third_party/rust_crates:zerocopy",
 ]
 
 # Because the IsolatedDevMgr works differently in Components Framework v2, a separate build rule is

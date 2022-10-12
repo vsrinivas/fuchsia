@@ -67,7 +67,3 @@
 * [shared-buffer/](/src/lib/shared-buffer/)
 
     Utilities for safely operating on memory shared between untrusting processes
-
-* [zerocopy/](/src/lib/zerocopy/)
-
-    Work with values contained in raw Byte strings without copying

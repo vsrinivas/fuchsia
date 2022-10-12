@@ -12,12 +12,12 @@ rustc_library("disk_extractor_lib") {
   edition = "2021"
 
   deps = [
-    "//src/lib/zerocopy",
     "//src/storage/lib/interval_tree",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:crc",
     "//third_party/rust_crates:flate2",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:zerocopy",
   ]
 
   test_deps = [ "//third_party/rust_crates:tempfile" ]

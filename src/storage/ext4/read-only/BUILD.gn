@@ -19,13 +19,13 @@ rustc_library("ext4-read-only") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/vfs/rust:vfs",
-    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:zerocopy",
   ]
 
   test_deps = [

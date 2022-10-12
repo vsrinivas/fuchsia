@@ -13,11 +13,11 @@ rustc_library("ping") {
     "src/lib.rs",
   ]
   deps = [
-    "//src/lib/zerocopy",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:zerocopy",
   ]
   if (is_fuchsia) {
     deps += [

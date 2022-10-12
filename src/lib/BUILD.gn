@@ -58,7 +58,6 @@ group("lib") {
     "versioning",
     "vmo_store",
     "zbitl",
-    "zerocopy",
     "zxdump",
   ]
 }
@@ -160,7 +159,6 @@ group("tests") {
     "vulkan:tests",
     "watch_handler:tests",
     "zbitl:tests",
-    "zerocopy:tests",
     "zircon:tests",
     "zxc:tests",
     "zxdump:tests",

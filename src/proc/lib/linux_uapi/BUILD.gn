@@ -12,7 +12,7 @@ rustc_library("linux_uapi") {
     "src/x86_64_types.rs",
   ]
 
-  deps = [ "//src/lib/zerocopy" ]
+  deps = [ "//third_party/rust_crates:zerocopy" ]
 
   disable_clippy = true
 }

@@ -10,7 +10,6 @@ import("//build/rust/rustc_test.gni")
 
 fidl_rust_deps = [
   "//src/lib/fuchsia-async",
-  "//src/lib/zerocopy",
   "//src/lib/zircon/rust:fuchsia-zircon-status",
   "//third_party/rust_crates:bitflags",
   "//third_party/rust_crates:futures",
@@ -19,6 +18,7 @@ fidl_rust_deps = [
   "//third_party/rust_crates:static_assertions",
   "//third_party/rust_crates:thiserror",
   "//third_party/rust_crates:tracing",
+  "//third_party/rust_crates:zerocopy",
 ]
 
 if (is_fuchsia) {

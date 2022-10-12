@@ -13,9 +13,9 @@ rustc_library("ppp_packet") {
   deps = [
     "//src/lib/network/packet",
     "//src/lib/syslog/rust:syslog",
-    "//src/lib/zerocopy",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:zerocopy",
   ]
 
   sources = [
@@ -33,9 +33,9 @@ rustc_test("ppp_packet_test_bin") {
   deps = [
     "//src/lib/network/packet",
     "//src/lib/syslog/rust:syslog",
-    "//src/lib/zerocopy",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:zerocopy",
   ]
 
   sources = [

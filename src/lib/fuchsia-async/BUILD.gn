@@ -39,12 +39,12 @@ rustc_library("fuchsia-async") {
   ]
   if (is_fuchsia) {
     deps += [
-      "//src/lib/zerocopy",
       "//src/lib/zircon/rust:fuchsia-zircon",
       "//third_party/rust_crates:crossbeam",
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:parking_lot",
       "//third_party/rust_crates:socket2",
+      "//third_party/rust_crates:zerocopy",
     ]
     if (fuchsia_async_trace_level_logging) {
       configs += [ ":trace_level_logging" ]
