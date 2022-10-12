@@ -45,10 +45,6 @@ pub const fn bit_field_lens<const TW: usize, const TH: usize>() -> [usize; 7] {
     bit_field_lens
 }
 
-const fn mask_for<const TW: usize, const TH: usize>(bit_field_index: usize) -> u64 {
-    ((1 << bit_field_lens::<TW, TH>()[bit_field_index]) - 1) as u64
-}
-
 const fn shift_left_for<const TW: usize, const TH: usize>(bit_field_index: usize) -> u32 {
     let mut amount = 0;
     let mut i = 0;
@@ -77,6 +73,8 @@ macro_rules! extract {
 pub struct PixelSegment<const TW: usize, const TH: usize>(u64);
 
 impl<const TW: usize, const TH: usize> PixelSegment<TW, TH> {
+    const BIT_FIELD_LENGTH: [usize; 7] = bit_field_lens::<TW, TH>();
+
     #[inline]
     pub fn new(
         layer_id: u32,
@@ -89,25 +87,25 @@ impl<const TW: usize, const TH: usize> PixelSegment<TW, TH> {
     ) -> Self {
         let mut val = 0;
 
-        val |= mask_for::<TW, TH>(0) & (tile_y + TILE_BIAS).max(0) as u64;
+        val |= ((1 << Self::BIT_FIELD_LENGTH[0]) - 1) & (tile_y + TILE_BIAS).max(0) as u64;
 
-        val <<= bit_field_lens::<TW, TH>()[1];
-        val |= mask_for::<TW, TH>(1) & (tile_x + TILE_BIAS).max(0) as u64;
+        val <<= Self::BIT_FIELD_LENGTH[1];
+        val |= ((1 << Self::BIT_FIELD_LENGTH[1]) - 1) as u64 & (tile_x + TILE_BIAS).max(0) as u64;
 
-        val <<= bit_field_lens::<TW, TH>()[2];
-        val |= mask_for::<TW, TH>(2) & u64::from(layer_id);
+        val <<= Self::BIT_FIELD_LENGTH[2];
+        val |= ((1 << Self::BIT_FIELD_LENGTH[2]) - 1) as u64 & u64::from(layer_id);
 
-        val <<= bit_field_lens::<TW, TH>()[3];
-        val |= mask_for::<TW, TH>(3) & u64::from(local_x);
+        val <<= Self::BIT_FIELD_LENGTH[3];
+        val |= ((1 << Self::BIT_FIELD_LENGTH[3]) - 1) as u64 & u64::from(local_x);
 
-        val <<= bit_field_lens::<TW, TH>()[4];
-        val |= mask_for::<TW, TH>(4) & u64::from(local_y);
+        val <<= Self::BIT_FIELD_LENGTH[4];
+        val |= ((1 << Self::BIT_FIELD_LENGTH[4]) - 1) as u64 & u64::from(local_y);
 
-        val <<= bit_field_lens::<TW, TH>()[5];
-        val |= mask_for::<TW, TH>(5) & u64::from(double_area_multiplier);
+        val <<= Self::BIT_FIELD_LENGTH[5];
+        val |= ((1 << Self::BIT_FIELD_LENGTH[5]) - 1) as u64 & u64::from(double_area_multiplier);
 
-        val <<= bit_field_lens::<TW, TH>()[6];
-        val |= mask_for::<TW, TH>(6) & cover as u64;
+        val <<= Self::BIT_FIELD_LENGTH[6];
+        val |= ((1 << Self::BIT_FIELD_LENGTH[6]) - 1) as u64 & cover as u64;
 
         Self(val)
     }

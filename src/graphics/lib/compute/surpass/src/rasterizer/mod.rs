@@ -115,16 +115,18 @@ impl<const TW: usize, const TH: usize> Rasterizer<TW, TH> {
             .collect_into_vec(&mut self.segments);
     }
 
+    const BIT_FIELD_LENGTH: [usize; 7] = bit_field_lens::<TW, TH>();
+
     #[inline]
     pub fn sort(&mut self) {
         // Sort by (tile_y, tile_x, layer_id).
+        let offset = Self::BIT_FIELD_LENGTH[3]
+            + Self::BIT_FIELD_LENGTH[4]
+            + Self::BIT_FIELD_LENGTH[5]
+            + Self::BIT_FIELD_LENGTH[6];
         self.segments.par_sort_unstable_by_key(|segment| {
             let segment: u64 = segment.into();
-            segment
-                >> (bit_field_lens::<TW, TH>()[3]
-                    + bit_field_lens::<TW, TH>()[4]
-                    + bit_field_lens::<TW, TH>()[5]
-                    + bit_field_lens::<TW, TH>()[6])
+            segment >> offset
         });
     }
 }
