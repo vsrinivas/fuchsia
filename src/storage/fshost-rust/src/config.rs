@@ -8,7 +8,9 @@ pub fn default_config() -> fshost_config::Config {
         allow_legacy_data_partition_names: false,
         apply_limits_to_ramdisk: false,
         blobfs: true,
+        blobfs_initial_inodes: 0,
         blobfs_max_bytes: 0,
+        blobfs_use_deprecated_padded_format: false,
         bootpart: true,
         data: true,
         data_filesystem_format: String::new(),
@@ -20,6 +22,7 @@ pub fn default_config() -> fshost_config::Config {
         check_filesystems: true,
         fvm: true,
         fvm_ramdisk: false,
+        fvm_slice_size: 1024 * 1024, // Default to 1 MiB slice size for tests.
         gpt: true,
         gpt_all: false,
         mbr: false,

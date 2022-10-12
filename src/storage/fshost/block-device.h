@@ -32,6 +32,9 @@ std::string GetTopologicalPath(int fd);
 fs_management::MountOptions GetBlobfsMountOptions(const fshost_config::Config& config,
                                                   const FshostBootArgs* boot_args);
 
+// Similar to GetBlobfsMountOptions but intended for use within a recovery context.
+fs_management::MountOptions GetBlobfsMountOptionsForRecovery(const fshost_config::Config& config);
+
 // A concrete implementation of the block device interface.
 //
 // Used by fshost to attach either drivers or filesystems to incoming block devices.

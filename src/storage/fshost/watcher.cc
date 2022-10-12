@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/storage/fshost/block-device-manager.h"
+#include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/nand-device.h"
 
@@ -26,8 +27,8 @@ zx_status_t AddDeviceImpl(BlockDeviceManager& manager, FilesystemMounter* mounte
 
 std::vector<Watcher> Watcher::CreateWatchers() {
   std::pair<const char*, AddDeviceCallback> types[] = {
-      {"/dev/class/block", AddDeviceImpl<BlockDevice>},
-      {"/dev/class/nand", AddDeviceImpl<NandDevice>},
+      {kBlockDeviceClassPrefix.data(), AddDeviceImpl<BlockDevice>},
+      {kNandDeviceClassPrefix.data(), AddDeviceImpl<NandDevice>},
   };
   std::vector<Watcher> ret;
   for (auto& [path, callback] : types) {

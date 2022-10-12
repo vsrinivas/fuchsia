@@ -39,6 +39,12 @@ class BlockWatcher {
   // Decrement the pause count for the block watcher.
   zx_status_t Resume();
 
+  // True if the watcher is currently paused, false otherwise.
+  // TODO(fxbug.dev/110342): This is **not** a reliable method for allowing multiple users of the
+  // BlockWatcher API to coordinate with each other. Even if this returns false, calls to |Pause()|
+  // may still fail due to TOCTOU issues with this implementation.
+  bool IsPaused() const;
+
   // Shut down the block watcher.  This will block until complete.
   void ShutDown();
 
@@ -55,9 +61,9 @@ class BlockWatcher {
   // occurred. |buf| should be a buffer of size |buf_len|. |read_len| will be updated to contain the
   // actual number of bytes read.
   zx_signals_t WaitForWatchMessages(cpp20::span<Watcher> watchers, cpp20::span<uint8_t>& buf,
-                                    Watcher** selected);
+                                    Watcher** selected) const;
 
-  std::mutex lock_;
+  mutable std::mutex lock_;
   bool should_pause_ __TA_GUARDED(lock_) = false;
   // Notified when watcher thread should resume, or when watcher thread is paused.
   std::condition_variable_any pause_condition_;

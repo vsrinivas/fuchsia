@@ -18,14 +18,6 @@
 
 namespace fshost {
 
-constexpr char kFVMDriverPath[] = "fvm.so";
-constexpr char kGPTDriverPath[] = "gpt.so";
-constexpr char kMBRDriverPath[] = "mbr.so";
-constexpr char kZxcryptDriverPath[] = "zxcrypt.so";
-constexpr char kBootpartDriverPath[] = "bootpart.so";
-constexpr char kBlockVerityDriverPath[] = "block-verity.so";
-constexpr char kNandBrokerDriverPath[] = "nand-broker.so";
-
 // An abstract class representing the operations which may be performed
 // on a block device, from the perspective of fshost.
 class BlockDeviceInterface {
