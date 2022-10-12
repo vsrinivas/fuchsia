@@ -7,6 +7,8 @@ import("//build/test.gni")
 
 source_set("expectations") {
   sources = [
+    "expects/common.cc",
+    "expects/common.h",
     "expects/expectations.cc",
     "expects/expectations.h",
   ]
@@ -94,6 +96,7 @@ udp_test_label = "udp"
 udp_unbound_test_label = "udp_unbound"
 generic_test_label = "generic"
 tcp_test_label = "tcp"
+tcp_blocking_test_label = "tcp_blocking"
 
 source_set("${raw_packet_test_label}_socket_tests") {
   sources = [
@@ -192,13 +195,35 @@ source_set("${tcp_test_label}_socket_tests") {
     "gvisor/test/syscalls/linux/socket_ip_tcp_generic.h",
     "gvisor/test/syscalls/linux/socket_ip_tcp_generic_loopback.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_loopback.cc",
-    "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_blocking.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_nonblock.cc",
     "gvisor/test/syscalls/linux/socket_non_blocking.cc",
     "gvisor/test/syscalls/linux/socket_non_blocking.h",
+    "gvisor/test/syscalls/linux/tcp_socket.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.h",
+  ]
+  deps = [
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/strings:str_format",
+    "//third_party/abseil-cpp/absl/time",
+  ]
+
+  testonly = true
+}
+
+source_set("${tcp_blocking_test_label}_socket_tests") {
+  sources = [
+    "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/ip_socket_test_util.h",
+    "gvisor/test/syscalls/linux/socket_generic.h",
+    "gvisor/test/syscalls/linux/socket_generic_test_cases.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_generic.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_generic.h",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_generic_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_loopback.cc",
+    "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_blocking.cc",
     "gvisor/test/syscalls/linux/socket_stream_blocking.cc",
     "gvisor/test/syscalls/linux/socket_stream_blocking.h",
-    "gvisor/test/syscalls/linux/tcp_socket.cc",
     "gvisor/test/syscalls/linux/unix_domain_socket_test_util.cc",
     "gvisor/test/syscalls/linux/unix_domain_socket_test_util.h",
   ]
@@ -372,6 +397,9 @@ syscall_test_suite(udp_unbound_test_label) {
 syscall_test_suite(tcp_test_label) {
   run_with_fast_udp = false
 }
+syscall_test_suite(tcp_blocking_test_label) {
+  run_with_fast_udp = false
+}
 
 group("tests") {
   testonly = true
@@ -388,6 +416,7 @@ group("local-testing") {
   public_deps = [
     ":${generic_test_label}",
     ":${raw_packet_test_label}",
+    ":${tcp_blocking_test_label}",
     ":${tcp_test_label}",
     ":${udp_test_label}",
     ":${udp_unbound_test_label}",

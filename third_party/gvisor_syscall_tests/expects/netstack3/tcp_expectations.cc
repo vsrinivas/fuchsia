@@ -12,9 +12,8 @@ void AddNonPassingTests(TestMap& tests) {
   // Netstack3 does not support TCP (yet).
 
   // Skip tests that will otherwise hang forever.
-  // TODO(b/245940107): un-skip some of these when the data path is ready.
+  // TODO(https://fxbug.dev/111877): un-skip some of these when the data path is ready.
   SkipTest(tests, "AllTCPSockets/*.*/*");
-  SkipTest(tests, "BlockingTCPSockets/*.*/*");
   SkipTest(tests, "AllUnixDomainSockets/*.*/*");
   SkipTest(tests, "AllInetTests/SimpleTcpSocketTest.*/*");
 

@@ -1,0 +1,9 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//third_party/gvisor_syscall_tests/meta/netstack2/syncudp/syscall_tests.shard.cml" ],
+    program: {
+        binary: "test/netstack2_syncudp_tcp_blocking_socket_tests",
+    },
+}
