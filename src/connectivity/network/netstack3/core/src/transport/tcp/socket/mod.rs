@@ -83,7 +83,7 @@ const DEFAULT_MAXIMUM_SEGMENT_SIZE: u32 = 536;
 
 /// Timer ID for TCP connections.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct TimerId(ConnectionId, IpVersion);
+pub struct TimerId(MaybeClosedConnectionid, IpVersion);
 
 /// Non-sync context for TCP.
 ///
@@ -210,7 +210,7 @@ struct TcpSocketSpec<Ip, Device, NonSyncContext>(PhantomData<(Ip, Device, NonSyn
 
 impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> SocketMapStateSpec for TcpSocketSpec<I, D, C> {
     type ListenerId = MaybeListenerId;
-    type ConnId = ConnectionId;
+    type ConnId = MaybeClosedConnectionid;
 
     type ListenerState = MaybeListener<C::ReturnedBuffers>;
     type ConnState =
@@ -221,7 +221,7 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> SocketMapStateSpec for TcpSo
     type AddrVecTag = SocketAddrTypeTag<()>;
 
     type ListenerAddrState = MaybeListenerId;
-    type ConnAddrState = ConnectionId;
+    type ConnAddrState = MaybeClosedConnectionid;
 }
 
 impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext>
@@ -272,7 +272,7 @@ impl<A: IpAddress, D, LI> Tagged<ListenerAddr<A, D, LI>> for MaybeListenerId {
     }
 }
 
-impl<A: IpAddress, D, LI, RI> Tagged<ConnAddr<A, D, LI, RI>> for ConnectionId {
+impl<A: IpAddress, D, LI, RI> Tagged<ConnAddr<A, D, LI, RI>> for MaybeClosedConnectionid {
     type Tag = SocketAddrTypeTag<()>;
     fn tag(&self, address: &ConnAddr<A, D, LI, RI>) -> Self::Tag {
         (address, ()).into()
@@ -412,9 +412,44 @@ pub struct BoundId(usize);
 /// The ID to a listener socket.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ListenerId(usize);
-/// The ID to a connection socket.
+/// The ID to a connection socket that might have been defunct.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct MaybeClosedConnectionid(usize);
+/// The ID to a connection socket that has never been closed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ConnectionId(usize);
+
+impl ConnectionId {
+    fn get_from_socketmap<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext>(
+        self,
+        socketmap: &BoundSocketMap<IpPortSpec<I, D>, TcpSocketSpec<I, D, C>>,
+    ) -> (
+        &Connection<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer, C::ProvidedBuffers>,
+        (),
+        &ConnAddr<I::Addr, D, NonZeroU16, NonZeroU16>,
+    ) {
+        let (conn, (), addr) =
+            socketmap.conns().get_by_id(&self.into()).expect("invalid ConnectionId: not found");
+        assert!(!conn.defunct, "invalid ConnectionId: already defunct");
+        (conn, (), addr)
+    }
+
+    fn get_from_socketmap_mut<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext>(
+        self,
+        socketmap: &mut BoundSocketMap<IpPortSpec<I, D>, TcpSocketSpec<I, D, C>>,
+    ) -> (
+        &mut Connection<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer, C::ProvidedBuffers>,
+        (),
+        &ConnAddr<I::Addr, D, NonZeroU16, NonZeroU16>,
+    ) {
+        let (conn, (), addr) = socketmap
+            .conns_mut()
+            .get_by_id_mut(&self.into())
+            .expect("invalid ConnectionId: not found");
+        assert!(!conn.defunct, "invalid ConnectionId: already defunct");
+        (conn, (), addr)
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct MaybeListenerId(usize);
@@ -440,15 +475,15 @@ impl SocketMapAddrStateSpec for MaybeListenerId {
     }
 }
 
-impl SocketMapAddrStateSpec for ConnectionId {
-    type Id = ConnectionId;
+impl SocketMapAddrStateSpec for MaybeClosedConnectionid {
+    type Id = MaybeClosedConnectionid;
     type SharingState = ();
 
-    fn new((): &(), id: ConnectionId) -> Self {
+    fn new((): &(), id: MaybeClosedConnectionid) -> Self {
         id
     }
 
-    fn remove_by_id(&mut self, id: ConnectionId) -> RemoveResult {
+    fn remove_by_id(&mut self, id: MaybeClosedConnectionid) -> RemoveResult {
         assert_eq!(self, &id);
         RemoveResult::IsLast
     }
@@ -456,7 +491,7 @@ impl SocketMapAddrStateSpec for ConnectionId {
     fn try_get_dest<'a, 'b>(
         &'b mut self,
         (): &'a (),
-    ) -> Result<&'b mut Vec<ConnectionId>, IncompatibleError> {
+    ) -> Result<&'b mut Vec<MaybeClosedConnectionid>, IncompatibleError> {
         Err(IncompatibleError)
     }
 }
@@ -507,8 +542,8 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
     fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr, Self::DeviceId>;
     fn get_listener_info(&self, id: ListenerId) -> BoundInfo<I::Addr, Self::DeviceId>;
     fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr, Self::DeviceId>;
-    fn do_send(&mut self, ctx: &mut C, conn_id: ConnectionId);
-    fn handle_timer(&mut self, ctx: &mut C, conn_id: ConnectionId);
+    fn do_send(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionid);
+    fn handle_timer(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionid);
 }
 
 impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<I, C> for SC {
@@ -595,11 +630,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
             let listener = sockets.get_listener_by_id_mut(id).expect("invalid listener id");
             let (conn_id, client_buffers) =
                 listener.ready.pop_front().ok_or(AcceptError::WouldBlock)?;
-            let (conn, _, conn_addr): (_, &(), _) = sockets
-                .socketmap
-                .conns_mut()
-                .get_by_id_mut(&conn_id)
-                .expect("failed to retrieve the connection state");
+            let (conn, (), conn_addr) = conn_id.get_from_socketmap_mut(&mut sockets.socketmap);
             conn.acceptor = None;
             let (remote_ip, remote_port) = conn_addr.ip.remote;
             Ok((conn_id, SocketAddr { ip: remote_ip, port: remote_port }, client_buffers))
@@ -699,11 +730,9 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
 
     fn shutdown_conn(&mut self, ctx: &mut C, id: ConnectionId) -> Result<(), NoConnection> {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
-            let (conn, (), addr) =
-                sockets.socketmap.conns_mut().get_by_id_mut(&id.into()).expect("invalid conn ID");
-            assert!(!conn.defunct);
+            let (conn, (), addr) = id.get_from_socketmap_mut(&mut sockets.socketmap);
             match conn.state.close() {
-                Ok(()) => Ok(do_send_inner(id, conn, addr, ip_transport_ctx, ctx)),
+                Ok(()) => Ok(do_send_inner(id.into(), conn, addr, ip_transport_ctx, ctx)),
                 Err(CloseError::NoConnection) => Err(NoConnection),
                 Err(CloseError::Closing) => Ok(()),
             }
@@ -712,9 +741,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
 
     fn close_conn(&mut self, ctx: &mut C, id: ConnectionId) {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
-            let (conn, (), addr) =
-                sockets.socketmap.conns_mut().get_by_id_mut(&id.into()).expect("invalid conn ID");
-            assert!(!conn.defunct);
+            let (conn, (), addr) = id.get_from_socketmap_mut(&mut sockets.socketmap);
             conn.defunct = true;
             let already_closed = match conn.state.close() {
                 Err(CloseError::NoConnection) => true,
@@ -722,11 +749,11 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                 Ok(()) => matches!(conn.state, State::Closed(_)),
             };
             if already_closed {
-                assert_matches!(sockets.socketmap.conns_mut().remove(&id), Some(_));
-                let _: Option<_> = ctx.cancel_timer(TimerId(id, I::VERSION));
+                assert_matches!(sockets.socketmap.conns_mut().remove(&id.into()), Some(_));
+                let _: Option<_> = ctx.cancel_timer(TimerId(id.into(), I::VERSION));
                 return;
             }
-            do_send_inner(id, conn, addr, ip_transport_ctx, ctx)
+            do_send_inner(id.into(), conn, addr, ip_transport_ctx, ctx)
         })
     }
 
@@ -772,15 +799,13 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
 
     fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr, SC::DeviceId> {
         self.with_tcp_sockets(|sockets| {
-            let (conn, (), addr): &(Connection<_, _, _, _, _, _>, _, _) =
-                sockets.socketmap.conns().get_by_id(&id.into()).expect("invalid conn ID");
-            assert!(!conn.defunct);
+            let (conn, (), addr) = id.get_from_socketmap(&sockets.socketmap);
             addr.clone()
         })
         .into()
     }
 
-    fn do_send(&mut self, ctx: &mut C, conn_id: ConnectionId) {
+    fn do_send(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionid) {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
             if let Some((conn, (), addr)) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id) {
                 do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx);
@@ -788,7 +813,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
         })
     }
 
-    fn handle_timer(&mut self, ctx: &mut C, conn_id: ConnectionId) {
+    fn handle_timer(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionid) {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
             if let Some((conn, (), addr)) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id) {
                 do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx);
@@ -802,7 +827,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
 }
 
 fn do_send_inner<I, SC, C>(
-    conn_id: ConnectionId,
+    conn_id: MaybeClosedConnectionid,
     conn: &mut Connection<
         I,
         SC::DeviceId,
@@ -1045,7 +1070,10 @@ where
             ConnectError::NoRoute
         })?;
     assert_eq!(ctx.schedule_timer_instant(poll_send_at, TimerId(conn_id, I::VERSION)), None);
-    Ok(conn_id)
+    // This conversion Ok because `conn_id` is newly created; No one should
+    // have called close on it.
+    let MaybeClosedConnectionid(id) = conn_id;
+    Ok(ConnectionId(id))
 }
 
 /// Closes the connection. The user has promised that they will not use `id`
@@ -1197,7 +1225,7 @@ pub fn get_connection_info<I: Ip, C: NonSyncContext>(
 /// - A retransmission timer fires.
 /// - An ack received from peer so that our send window is enlarged.
 /// - The user puts data into the buffer and we are notified.
-pub fn do_send<I, C>(mut sync_ctx: &SyncCtx<C>, ctx: &mut C, conn_id: ConnectionId)
+pub fn do_send<I, C>(mut sync_ctx: &SyncCtx<C>, ctx: &mut C, conn_id: MaybeClosedConnectionid)
 where
     I: IpExt,
     C: NonSyncContext,
@@ -1244,7 +1272,7 @@ impl Into<usize> for MaybeListenerId {
     }
 }
 
-impl From<usize> for ConnectionId {
+impl From<usize> for MaybeClosedConnectionid {
     fn from(x: usize) -> Self {
         Self(x)
     }
@@ -1257,10 +1285,16 @@ impl Into<usize> for ListenerId {
     }
 }
 
-impl Into<usize> for ConnectionId {
+impl Into<usize> for MaybeClosedConnectionid {
     fn into(self) -> usize {
         let Self(x) = self;
         x
+    }
+}
+
+impl From<ConnectionId> for MaybeClosedConnectionid {
+    fn from(ConnectionId(id): ConnectionId) -> Self {
+        Self(id)
     }
 }
 
@@ -1743,16 +1777,10 @@ mod tests {
         }
 
         let mut assert_connected = |name: &'static str, conn_id: ConnectionId| {
-            let (state, (), _): (_, _, &ConnAddr<_, _, _, _>) = net
-                .sync_ctx(name)
-                .outer
-                .sockets
-                .socketmap
-                .conns_mut()
-                .get_by_id_mut(&conn_id)
-                .expect("failed to retrieve the client socket");
+            let (conn, (), _): (_, _, &ConnAddr<_, _, _, _>) =
+                conn_id.get_from_socketmap(&net.sync_ctx(name).outer.sockets.socketmap);
             assert_matches!(
-                state,
+                conn,
                 Connection {
                     acceptor: None,
                     state: State::Established(_),
@@ -1771,7 +1799,7 @@ mod tests {
 
         for (c, id) in [(LOCAL, client), (REMOTE, accepted)] {
             net.with_context(c, |TcpCtx { sync_ctx, non_sync_ctx }| {
-                TcpSocketHandler::<I, _>::do_send(sync_ctx, non_sync_ctx, id)
+                TcpSocketHandler::<I, _>::do_send(sync_ctx, non_sync_ctx, id.into())
             })
         }
         net.run_until_idle(&mut maybe_drop_frame, handle_timer);
@@ -1908,16 +1936,10 @@ mod tests {
 
         net.run_until_idle(handle_frame, handle_timer);
         // Finally, the connection should be reset.
-        let (state, (), _): &(_, _, ConnAddr<_, _, _, _>) = net
-            .sync_ctx(LOCAL)
-            .outer
-            .sockets
-            .socketmap
-            .conns()
-            .get_by_id(&client)
-            .expect("failed to retrieve the client socket");
+        let (conn, (), _): (_, _, &ConnAddr<_, _, _, _>) =
+            client.get_from_socketmap(&net.sync_ctx(LOCAL).outer.sockets.socketmap);
         assert_matches!(
-            state,
+            conn,
             Connection {
                 acceptor: None,
                 state: State::Closed(Closed { reason: UserError::ConnectionReset }),
@@ -2044,7 +2066,7 @@ mod tests {
         net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
             sync_ctx.with_tcp_sockets(|sockets| {
                 let (conn, (), _addr) =
-                    sockets.socketmap.conns().get_by_id(&remote).expect("invalid conn ID");
+                    sockets.socketmap.conns().get_by_id(&remote.into()).expect("invalid conn ID");
                 assert_matches!(conn.state, State::FinWait2(_));
             })
         });
@@ -2056,7 +2078,7 @@ mod tests {
         for (name, id) in [(LOCAL, local), (REMOTE, remote)] {
             net.with_context(name, |TcpCtx { sync_ctx, non_sync_ctx }| {
                 sync_ctx.with_tcp_sockets(|sockets| {
-                    assert_matches!(sockets.socketmap.conns().get_by_id(&id), None);
+                    assert_matches!(sockets.socketmap.conns().get_by_id(&id.into()), None);
                 })
             });
         }
@@ -2079,8 +2101,7 @@ mod tests {
                     Ok(())
                 );
                 sync_ctx.with_tcp_sockets(|sockets| {
-                    let (conn, (), _addr) =
-                        sockets.socketmap.conns().get_by_id(&remote).expect("invalid conn ID");
+                    let (conn, (), _addr) = remote.get_from_socketmap(&sockets.socketmap);
                     assert_matches!(conn.state, State::FinWait1(_));
                 });
                 assert_matches!(
@@ -2093,13 +2114,12 @@ mod tests {
         for (name, id) in [(LOCAL, local), (REMOTE, remote)] {
             net.with_context(name, |TcpCtx { sync_ctx, non_sync_ctx }| {
                 sync_ctx.with_tcp_sockets(|sockets| {
-                    let (conn, (), _addr) =
-                        sockets.socketmap.conns().get_by_id(&remote).expect("invalid conn ID");
+                    let (conn, (), _addr) = remote.get_from_socketmap(&sockets.socketmap);
                     assert_matches!(conn.state, State::Closed(_));
                 });
                 TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, id);
                 sync_ctx.with_tcp_sockets(|sockets| {
-                    assert_matches!(sockets.socketmap.conns().get_by_id(&id), None);
+                    assert_matches!(sockets.socketmap.conns().get_by_id(&id.into()), None);
                 })
             });
         }

@@ -32,9 +32,9 @@ use crate::{
         segment::Segment,
         seqnum::WindowSize,
         socket::{
-            do_send_inner, Acceptor, Connection, ConnectionId, ListenerId, MaybeListener,
-            SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSocketHandler, TcpSockets,
-            TcpSyncContext, TimerId,
+            do_send_inner, Acceptor, Connection, ConnectionId, ListenerId, MaybeClosedConnectionid,
+            MaybeListener, SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSocketHandler,
+            TcpSockets, TcpSyncContext, TimerId,
         },
         state::{BufferProvider, Closed, Initial, ListenOnSegmentDisposition, State},
         Control, UserError,
@@ -176,7 +176,7 @@ where
                             let pos = acceptor
                                 .pending
                                 .iter()
-                                .position(|x| x == &conn_id)
+                                .position(|x| MaybeClosedConnectionid::from(*x) == conn_id)
                                 .expect("acceptee is not found in acceptor's pending queue");
                             let conn = acceptor.pending.swap_remove(pos);
                             acceptor.ready.push_back((conn, passive_open));
@@ -298,7 +298,11 @@ where
                                         );
                                     }
                                     MaybeListener::Listener(listener) => {
-                                        listener.pending.push(conn_id);
+                                        // This conversion is fine because
+                                        // `conn_id` is newly created; No one
+                                        // should have called close on it.
+                                        let MaybeClosedConnectionid(id) = conn_id;
+                                        listener.pending.push(ConnectionId(id));
                                     }
                                 }
                                 Some(syn_ack)
