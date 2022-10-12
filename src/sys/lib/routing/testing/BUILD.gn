@@ -35,7 +35,6 @@ rustc_library("routing_test_helpers") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tempfile",
   ]

@@ -19,7 +19,6 @@ use {
         model::{
             actions::{ActionSet, DestroyAction, DestroyChildAction, ShutdownAction},
             error::ModelError,
-            events::registry::EventSubscription,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             routing::{RouteRequest, RouteSource, RoutingError},
             testing::{routing_test_helpers::*, test_helpers::*},
@@ -242,30 +241,14 @@ async fn capability_requested_event_at_parent() {
                     dependency_type: DependencyType::Strong,
                     availability: Availability::Required,
                 }))
-                .use_(UseDecl::Protocol(UseProtocolDecl {
-                    dependency_type: DependencyType::Strong,
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                    availability: Availability::Required,
-                }))
-                .use_(UseDecl::Event(UseEventDecl {
-                    dependency_type: DependencyType::Strong,
-                    source: UseSource::Framework,
                     source_name: "capability_requested".into(),
-                    target_name: "capability_requested".into(),
+                    scope: None,
+                    target_path: CapabilityPath::try_from("/events/capability_requested").unwrap(),
                     filter: Some(hashmap!{"name".to_string() => DictionaryValue::Str("foo_svc".to_string())}),
                     availability: Availability::Required,
                 }))
-                // TODO: This shouldn't be necessary
-                // .use_(UseDecl::Event(UseEventDecl {
-                //     dependency_type: DependencyType::Strong,
-                //     source: UseSource::Framework,
-                //     source_name: "resolved".into(),
-                //     target_name: "resolved".into(),
-                //     filter: None,
-                //     mode: cm_rust::EventMode::Sync,
-                // }))
                 .add_lazy_child("b")
                 .build(),
         ),
@@ -283,20 +266,18 @@ async fn capability_requested_event_at_parent() {
         ),
     ];
     let test = RoutingTestBuilder::new("a", components)
-        .set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
-            name: "fuchsia.sys2.EventSource".into(),
-            source_path: None,
+        .set_builtin_capabilities(vec![CapabilityDecl::EventStream(EventStreamDecl {
+            name: "capability_requested".into(),
         })])
         .build()
         .await;
 
     let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
-    let mut event_stream = capability_util::subscribe_to_event(
+    let event_stream = capability_util::connect_to_svc_in_namespace::<fsys::EventStream2Marker>(
         &namespace_root,
-        EventSubscription::new("capability_requested".into(), EventMode::Async),
+        &"/events/capability_requested".try_into().unwrap(),
     )
-    .await
-    .unwrap();
+    .await;
 
     let namespace_b = test.bind_and_get_namespace(vec!["b"].into()).await;
     let _echo_proxy = capability_util::connect_to_svc_in_namespace::<echo::EchoMarker>(
@@ -305,10 +286,7 @@ async fn capability_requested_event_at_parent() {
     )
     .await;
 
-    let event = match event_stream.next().await {
-        Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) => event,
-        _ => panic!("Event not found"),
-    };
+    let event = event_stream.get_next().await.unwrap().into_iter().next().unwrap();
 
     // 'b' is the target and 'a' is receiving the event so the relative moniker
     // is './b'.
@@ -1645,19 +1623,12 @@ async fn use_runner_from_environment_failed() {
                     source_path: Some(CapabilityPath::try_from("/svc/runner").unwrap()),
                 })
                 // For Stopped event
-                .use_(UseDecl::Event(UseEventDecl {
-                    dependency_type: DependencyType::Strong,
-                    source: UseSource::Framework,
-                    source_name: "stopped".into(),
-                    target_name: "stopped".into(),
-                    filter: None,
-                    availability: Availability::Required,
-                }))
-                .use_(UseDecl::Protocol(UseProtocolDecl {
-                    dependency_type: DependencyType::Strong,
+                .use_(UseDecl::EventStream(UseEventStreamDecl {
                     source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
+                    source_name: "stopped".into(),
+                    scope: None,
+                    target_path: CapabilityPath::try_from("/events/stopped").unwrap(),
+                    filter: None,
                     availability: Availability::Required,
                 }))
                 .build(),
@@ -1705,9 +1676,8 @@ async fn use_runner_from_environment_failed() {
     // Set a capability provider for the runner that closes the server end.
     // `ComponentRunner.Start` to fail.
     let test = RoutingTestBuilder::new("a", components)
-        .set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
-            name: "fuchsia.sys2.EventSource".into(),
-            source_path: None,
+        .set_builtin_capabilities(vec![CapabilityDecl::EventStream(EventStreamDecl {
+            name: "stopped".into(),
         })])
         .build()
         .await;
@@ -1723,22 +1693,18 @@ async fn use_runner_from_environment_failed() {
         )])
         .await;
     let namespace_root = test.bind_and_get_namespace(AbsoluteMoniker::root()).await;
-    let mut event_stream = capability_util::subscribe_to_event(
+    let event_stream = capability_util::connect_to_svc_in_namespace::<fsys::EventStream2Marker>(
         &namespace_root,
-        EventSubscription::new("stopped".into(), EventMode::Async),
+        &"/events/stopped".try_into().unwrap(),
     )
-    .await
-    .unwrap();
+    .await;
 
     // Even though we expect the runner to fail, bind should succeed. This is because the failure
     // is propagated via the controller channel, separately from the Start action.
     test.start_instance(&vec!["b"].into()).await.unwrap();
 
     // Since the controller should have closed, expect a Stopped event.
-    let event = match event_stream.next().await {
-        Some(Ok(fsys::EventStreamRequest::OnEvent { event, .. })) => event,
-        _ => panic!("Event not found"),
-    };
+    let event = event_stream.get_next().await.unwrap().into_iter().next().unwrap();
     assert_matches!(&event,
         fsys::Event {
             header: Some(fsys::EventHeader {

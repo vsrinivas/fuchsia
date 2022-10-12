@@ -15,13 +15,12 @@ use {
     cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
         Availability, CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ChildRef,
-        ComponentDecl, DependencyType, DictionaryValue, EventDecl, EventMode, EventScope,
-        EventStreamDecl, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeRunnerDecl,
-        ExposeServiceDecl, ExposeSource, ExposeTarget, NameMapping, OfferDecl, OfferDirectoryDecl,
-        OfferEventDecl, OfferEventStreamDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl,
-        OfferSource, OfferTarget, ProgramDecl, ProtocolDecl, RegistrationSource, RunnerDecl,
-        RunnerRegistration, ServiceDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
-        UseEventStreamDecl, UseProtocolDecl, UseServiceDecl, UseSource,
+        ComponentDecl, DependencyType, EventScope, EventStreamDecl, ExposeDecl,
+        ExposeDirectoryDecl, ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource,
+        ExposeTarget, NameMapping, OfferDecl, OfferDirectoryDecl, OfferEventStreamDecl,
+        OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferTarget,
+        ProgramDecl, ProtocolDecl, RegistrationSource, RunnerDecl, RunnerRegistration, ServiceDecl,
+        UseDecl, UseDirectoryDecl, UseEventStreamDecl, UseProtocolDecl, UseServiceDecl, UseSource,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -30,7 +29,6 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_data as fdata, fuchsia_zircon_status as zx,
-    maplit::hashmap,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker,
         RelativeMonikerBase,
@@ -339,20 +337,14 @@ macro_rules! instantiate_common_routing_tests {
             test_use_protocol_partial_chain_allowed_by_capability_policy,
             test_use_protocol_component_provided_capability_policy,
             test_use_from_component_manager_namespace_denied_by_policy,
-            test_use_event_from_framework_denied_by_capability_policy,
             test_use_protocol_component_provided_debug_capability_policy_at_root_from_self,
             test_use_protocol_component_provided_debug_capability_policy_from_self,
             test_use_protocol_component_provided_debug_capability_policy_from_child,
             test_use_protocol_component_provided_debug_capability_policy_from_grandchild,
             test_use_protocol_component_provided_wildcard_debug_capability_policy,
-            test_use_event_from_framework,
             test_use_event_stream_from_above_root,
             test_use_event_stream_from_above_root_and_downscoped,
             test_can_offer_capability_requested_event,
-            test_use_event_from_parent,
-            test_use_event_from_grandparent,
-            test_event_filter_routing,
-            test_use_builtin_event,
             test_route_service_from_parent,
             test_route_service_from_child,
             test_route_service_from_sibling,
@@ -3160,112 +3152,19 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
     ///    \
     ///     b
     ///
-    /// b: uses framework events "started", and "capability_requested"
-    pub async fn test_use_event_from_framework(&self) {
-        let components = vec![
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target: OfferTarget::static_child("b".to_string()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .add_lazy_child("b")
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        source: UseSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        source: UseSource::Framework,
-                        source_name: "capability_requested".into(),
-                        target_name: "capability_requested".into(),
-                        filter: None,
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        source: UseSource::Framework,
-                        source_name: "started".into(),
-                        target_name: "started".into(),
-                        filter: None,
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        source: UseSource::Framework,
-                        source_name: "resolved".into(),
-                        target_name: "resolved".into(),
-                        filter: None,
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-            ),
-        ];
-
-        let mut builder = T::new("a", components);
-        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
-            name: "fuchsia.sys2.EventSource".into(),
-            source_path: None,
-        })]);
-        let model = builder.build().await;
-
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("capability_requested".into(), EventMode::Sync),
-                    expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("started".into(), EventMode::Sync),
-                    expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-    }
-
-    ///   a
-    ///    \
-    ///     b
-    ///
     /// a; attempts to offer event "capability_requested" to b.
     pub async fn test_can_offer_capability_requested_event(&self) {
         let components = vec![
             (
                 "a",
                 ComponentDeclBuilder::new()
-                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    .offer(OfferDecl::EventStream(OfferEventStreamDecl {
                         source: OfferSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target: OfferTarget::static_child("b".to_string()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .offer(OfferDecl::Event(OfferEventDecl {
-                        source: OfferSource::Framework,
                         source_name: "capability_requested".into(),
                         target_name: "capability_requested_on_a".into(),
                         target: OfferTarget::static_child("b".to_string()),
                         filter: None,
+                        scope: None,
                         availability: Availability::Required,
                     }))
                     .add_lazy_child("b")
@@ -3274,27 +3173,13 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             (
                 "b",
                 ComponentDeclBuilder::new()
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        source: UseSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
                         source: UseSource::Parent,
                         source_name: "capability_requested_on_a".into(),
-                        target_name: "capability_requested_from_parent".into(),
+                        target_path: CapabilityPath::from_str("/svc/fuchsia.component.EventStream")
+                            .unwrap(),
                         filter: None,
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        source: UseSource::Framework,
-                        source_name: "resolved".into(),
-                        target_name: "resolved".into(),
-                        filter: None,
-                        dependency_type: DependencyType::Strong,
+                        scope: None,
                         availability: Availability::Required,
                     }))
                     .build(),
@@ -3302,535 +3187,19 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut builder = T::new("a", components);
-        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
-            name: "fuchsia.sys2.EventSource".into(),
-            source_path: None,
+        builder.set_builtin_capabilities(vec![CapabilityDecl::EventStream(EventStreamDecl {
+            name: "capability_requested".into(),
         })]);
         let model = builder.build().await;
 
         model
             .check_use(
                 vec!["b"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new(
-                        "capability_requested_from_parent".into(),
-                        EventMode::Sync,
-                    ),
+                CheckUse::EventStream {
                     expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-    }
-
-    ///   a
-    ///    \
-    ///     b
-    ///
-    /// a: uses framework event "started" and offers to b as "started_on_a"
-    /// b: uses framework event "started_on_a" as "started"
-    pub async fn test_use_event_from_parent(&self) {
-        let components = vec![
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .offer(OfferDecl::Event(OfferEventDecl {
-                        source: OfferSource::Framework,
-                        source_name: "started".into(),
-                        target_name: "started_on_a".into(),
-                        target: OfferTarget::static_child("b".to_string()),
-                        filter: None,
-                        availability: Availability::Required,
-                    }))
-                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target: OfferTarget::static_child("b".to_string()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .add_lazy_child("b")
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        source: UseSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        source: UseSource::Parent,
-                        source_name: "started_on_a".into(),
-                        target_name: "started".into(),
-                        filter: None,
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        source: UseSource::Framework,
-                        source_name: "resolved".into(),
-                        target_name: "resolved".into(),
-                        filter: None,
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-            ),
-        ];
-
-        let mut builder = T::new("a", components);
-        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
-            name: "fuchsia.sys2.EventSource".into(),
-            source_path: None,
-        })]);
-        let model = builder.build().await;
-
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("started".into(), EventMode::Sync),
-                    expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-    }
-
-    ///   a
-    ///    \
-    ///     b
-    ///      \
-    ///       c
-    ///
-    /// a: uses framework event "started" and offers to b as "started_on_a"
-    /// a: uses framework event "stopped" and offers to b as "stopped_on_a"
-    /// b: offers realm event "started_on_a" to c
-    /// b: offers realm event "destroyed" from framework
-    /// c: uses realm event "started_on_a"
-    /// c: uses realm event "destroyed"
-    /// c: uses realm event "stopped_on_a" but fails to do so
-    pub async fn test_use_event_from_grandparent(&self) {
-        let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferSource::Framework,
-                    source_name: "started".into(),
-                    target_name: "started_on_a".into(),
-                    target: OfferTarget::static_child("b".to_string()),
-                    filter: None,
-                    availability: Availability::Required,
-                }))
-                .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                    target: OfferTarget::static_child("b".to_string()),
-                    dependency_type: DependencyType::Strong,
-                    availability: Availability::Required,
-                }))
-                .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferSource::Framework,
-                    source_name: "stopped".into(),
-                    target_name: "stopped_on_b".into(),
-                    target: OfferTarget::static_child("b".to_string()),
-                    filter: None,
-                    availability: Availability::Required,
-                }))
-                .add_lazy_child("b")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferSource::Parent,
-                    source_name: "started_on_a".into(),
-                    target_name: "started_on_a".into(),
-                    target: OfferTarget::static_child("c".to_string()),
-                    filter: None,
-                    availability: Availability::Required,
-                }))
-                .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferSource::Parent,
-                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                    target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                    target: OfferTarget::static_child("c".to_string()),
-                    dependency_type: DependencyType::Strong,
-                    availability: Availability::Required,
-                }))
-                .offer(OfferDecl::Event(OfferEventDecl {
-                    source: OfferSource::Framework,
-                    source_name: "destroyed".into(),
-                    target_name: "destroyed".into(),
-                    target: OfferTarget::static_child("c".to_string()),
-                    filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
-                    availability: Availability::Required,
-                }))
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                    dependency_type: DependencyType::Strong,
-                    availability: Availability::Required,
-                }))
-                .use_(UseDecl::Event(UseEventDecl {
-                    source: UseSource::Parent,
-                    source_name: "started_on_a".into(),
-                    target_name: "started".into(),
-                    filter: None,
-                    dependency_type: DependencyType::Strong,
-
-                    availability: Availability::Required,
-                }))
-                .use_(UseDecl::Event(UseEventDecl {
-                    source: UseSource::Parent,
-                    source_name: "destroyed".into(),
-                    target_name: "destroyed".into(),
-                    filter: Some(hashmap!{"path".to_string() => DictionaryValue::Str("/diagnostics".to_string())}),
-                    dependency_type: DependencyType::Strong,
-                    availability: Availability::Required,
-                }))
-                .use_(UseDecl::Event(UseEventDecl {
-                    source: UseSource::Parent,
-                    source_name: "stopped_on_a".into(),
-                    target_name: "stopped".into(),
-                    filter: None,
-                    dependency_type: DependencyType::Strong,
-                    availability: Availability::Required,
-                }))
-                .use_(UseDecl::Event(UseEventDecl {
-                    source: UseSource::Framework,
-                    source_name: "resolved".into(),
-                    target_name: "resolved".into(),
-                    filter: None,
-                    dependency_type: DependencyType::Strong,
-                    availability: Availability::Required,
-                }))
-                .build(),
-        )];
-
-        let mut builder = T::new("a", components);
-        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
-            name: "fuchsia.sys2.EventSource".into(),
-            source_path: None,
-        })]);
-        let model = builder.build().await;
-
-        model
-            .check_use(
-                vec!["b", "c"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("started".into(), EventMode::Sync),
-                    expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-        model
-            .check_use(
-                vec!["b", "c"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("destroyed".into(), EventMode::Sync),
-                    expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-        model
-            .check_use(
-                vec!["b", "c"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("stopped".into(), EventMode::Sync),
-                    expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
-                },
-            )
-            .await;
-    }
-
-    ///   a
-    ///   |
-    ///   b
-    ///  / \
-    /// c   d
-    ///
-    /// a: offer framework event "directory_ready" with filters "/foo", "/bar", "/baz" to b
-    /// b: uses realm event "directory_ready" with filters "/foo"
-    /// b: offers realm event "capabilty_ready" with filters "/foo", "/bar" to c, d
-    /// c: uses realm event "directory_ready" with filters "/foo", "/bar"
-    /// d: uses realm event "directory_ready" with filters "/baz" (fails)
-    pub async fn test_event_filter_routing(&self) {
-        let components = vec![
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .offer(OfferDecl::Event(OfferEventDecl {
-                        source: OfferSource::Framework,
-                        source_name: "directory_ready".into(),
-                        target_name: "directory_ready".into(),
-                        target: OfferTarget::static_child("b".to_string()),
-                        filter: Some(hashmap! {
-                            "name".to_string() => DictionaryValue::StrVec(vec![
-                                "foo".to_string(), "bar".to_string(), "baz".to_string()
-                            ])
-                        }),
-                        availability: Availability::Required,
-                    }))
-                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target: OfferTarget::static_child("b".to_string()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .add_lazy_child("b")
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        source: UseSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Parent,
-                        source_name: "directory_ready".into(),
-                        target_name: "directory_ready_foo".into(),
-                        filter: Some(hashmap! {
-                            "name".to_string() => DictionaryValue::Str("foo".into()),
-                        }),
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "resolved".into(),
-                        target_name: "resolved".into(),
-                        filter: None,
-                        availability: Availability::Required,
-                    }))
-                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target: OfferTarget::static_child("c".to_string()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target: OfferTarget::static_child("d".to_string()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .offer(OfferDecl::Event(OfferEventDecl {
-                        source: OfferSource::Parent,
-                        source_name: "directory_ready".into(),
-                        target_name: "directory_ready".into(),
-                        target: OfferTarget::static_child("c".to_string()),
-                        filter: Some(hashmap! {
-                            "name".to_string() => DictionaryValue::StrVec(vec![
-                                "foo".to_string(), "bar".to_string()
-                            ])
-                        }),
-                        availability: Availability::Required,
-                    }))
-                    .offer(OfferDecl::Event(OfferEventDecl {
-                        source: OfferSource::Parent,
-                        source_name: "directory_ready".into(),
-                        target_name: "directory_ready".into(),
-                        target: OfferTarget::static_child("d".to_string()),
-                        filter: Some(hashmap! {
-                            "name".to_string() => DictionaryValue::StrVec(vec![
-                                "foo".to_string(), "bar".to_string()
-                            ])
-                        }),
-                        availability: Availability::Required,
-                    }))
-                    .add_lazy_child("c")
-                    .add_lazy_child("d")
-                    .build(),
-            ),
-            (
-                "c",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Parent,
-                        source_name: "directory_ready".into(),
-                        target_name: "directory_ready_foo_bar".into(),
-                        filter: Some(hashmap! {
-                            "name".to_string() => DictionaryValue::StrVec(vec![
-                                "foo".to_string(), "bar".to_string()
-                            ])
-                        }),
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "resolved".into(),
-                        target_name: "resolved".into(),
-                        filter: None,
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-            ),
-            (
-                "d",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Parent,
-                        source_name: "directory_ready".into(),
-                        target_name: "directory_ready_baz".into(),
-                        filter: Some(hashmap! {
-                            "name".to_string() => DictionaryValue::Str("baz".into()),
-                        }),
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "resolved".into(),
-                        target_name: "resolved".into(),
-                        filter: None,
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-            ),
-        ];
-
-        let mut builder = T::new("a", components);
-        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
-            name: "fuchsia.sys2.EventSource".into(),
-            source_path: None,
-        })]);
-        let model = builder.build().await;
-
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("directory_ready_foo".into(), EventMode::Sync),
-                    expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-        model
-            .check_use(
-                vec!["b", "c"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new(
-                        "directory_ready_foo_bar".into(),
-                        EventMode::Sync,
-                    ),
-                    expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-        model
-            .check_use(
-                vec!["b", "d"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("directory_ready_baz".into(), EventMode::Sync),
-                    expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
-                },
-            )
-            .await;
-    }
-
-    ///   a
-    ///
-    /// a: uses registered built-in event "directory_ready"
-    /// b: uses unregistered event "unregistered" as a built-in; should fail
-    pub async fn test_use_builtin_event(&self) {
-        let components = vec![(
-            "a",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Event(UseEventDecl {
-                    dependency_type: DependencyType::Strong,
-                    source: UseSource::Parent,
-                    source_name: "directory_ready".into(),
-                    target_name: "directory_ready".into(),
-                    filter: None,
-                    availability: Availability::Required,
-                }))
-                .use_(UseDecl::Protocol(UseProtocolDecl {
-                    dependency_type: DependencyType::Strong,
-                    source: UseSource::Parent,
-                    source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                    target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                    availability: Availability::Required,
-                }))
-                .use_(UseDecl::Event(UseEventDecl {
-                    dependency_type: DependencyType::Strong,
-                    source: UseSource::Parent,
-                    source_name: "unregistered".into(),
-                    target_name: "unregistered".into(),
-                    filter: None,
-                    availability: Availability::Required,
-                }))
-                .build(),
-        )];
-
-        let mut builder = T::new("a", components);
-        builder.set_builtin_capabilities(vec![
-            CapabilityDecl::Protocol(ProtocolDecl {
-                name: "fuchsia.sys2.EventSource".into(),
-                source_path: None,
-            }),
-            CapabilityDecl::Event(EventDecl { name: "directory_ready".into() }),
-        ]);
-        let model = builder.build().await;
-
-        model
-            .check_use(
-                vec![].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("directory_ready".into(), EventMode::Async),
-                    expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-
-        model
-            .check_use(
-                vec![].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("unregistered".into(), EventMode::Async),
-                    expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+                    path: CapabilityPath::from_str("/svc/fuchsia.component.EventStream").unwrap(),
+                    scope: vec![ComponentEventRoute { component: "/".to_string(), scope: None }],
+                    name: "capability_requested_on_a".into(),
                 },
             )
             .await;
@@ -4207,123 +3576,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 },
             )
             .await;
-    }
-
-    ///   a
-    ///    \
-    ///     b
-    ///
-    /// b: uses framework events "started", and "capability_requested".
-    /// Capability policy denies the route from being allowed for started but
-    /// not for capability_requested.
-    pub async fn test_use_event_from_framework_denied_by_capability_policy(&self) {
-        let components = vec![
-            (
-                "a",
-                ComponentDeclBuilder::new()
-                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                        source: OfferSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target: OfferTarget::static_child("b".to_string()),
-                        dependency_type: DependencyType::Strong,
-                        availability: Availability::Required,
-                    }))
-                    .add_lazy_child("b")
-                    .build(),
-            ),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::Protocol(UseProtocolDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Parent,
-                        source_name: "fuchsia.sys2.EventSource".try_into().unwrap(),
-                        target_path: "/svc/fuchsia.sys2.EventSource".try_into().unwrap(),
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "capability_requested".into(),
-                        target_name: "capability_requested".into(),
-                        filter: None,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "started".into(),
-                        target_name: "started".into(),
-                        filter: None,
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::Event(UseEventDecl {
-                        dependency_type: DependencyType::Strong,
-                        source: UseSource::Framework,
-                        source_name: "resolved".into(),
-                        target_name: "resolved".into(),
-                        filter: None,
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-            ),
-        ];
-
-        let mut allowlist = HashSet::new();
-        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b"])));
-
-        let mut builder = T::new("a", components);
-        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
-            name: "fuchsia.sys2.EventSource".into(),
-            source_path: None,
-        })]);
-        builder.add_capability_policy(
-            CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b",
-                ])),
-                source_name: CapabilityName::from("started"),
-                source: CapabilityAllowlistSource::Framework,
-                capability: CapabilityTypeName::Event,
-            },
-            HashSet::new(),
-        );
-        builder.add_capability_policy(
-            CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b",
-                ])),
-                source_name: CapabilityName::from("capability_requested"),
-                source: CapabilityAllowlistSource::Framework,
-                capability: CapabilityTypeName::Event,
-            },
-            allowlist,
-        );
-        let model = builder.build().await;
-
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new(
-                        "capability_requested".into(),
-                        EventMode::Async,
-                    ),
-                    expected_res: ExpectedResult::Ok,
-                },
-            )
-            .await;
-
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::Event {
-                    request: EventSubscription::new("started".into(), EventMode::Async),
-                    expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
-                },
-            )
-            .await
     }
 
     ///   a
