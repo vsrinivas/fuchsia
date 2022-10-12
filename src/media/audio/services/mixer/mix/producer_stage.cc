@@ -19,7 +19,7 @@ ProducerStage::ProducerStage(Args args)
     : PipelineStage(args.name, args.format, args.reference_clock),
       internal_source_(std::move(args.internal_source)),
       pending_start_stop_command_(std::move(args.pending_start_stop_command)),
-      start_stop_control_(args.format, args.reference_clock) {
+      start_stop_control_(args.format, args.media_ticks_per_ns, args.reference_clock) {
   FX_CHECK(internal_source_);
   FX_CHECK(internal_source_->format() == format());
   FX_CHECK(internal_source_->reference_clock() == reference_clock());

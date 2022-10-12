@@ -48,6 +48,7 @@ TEST(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
       .pipeline_direction = PipelineDirection::kInput,
       .format = kFormat,
       .reference_clock = DefaultClock(),
+      .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = stream_sink->server_ptr(),
       .detached_thread = graph.detached_thread(),
   });
@@ -79,6 +80,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
       .pipeline_direction = PipelineDirection::kInput,
       .format = kFormat,
       .reference_clock = clock,
+      .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = stream_sink->server_ptr(),
       .detached_thread = graph.detached_thread(),
   });
@@ -109,7 +111,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
   // Start the producer's internal frame timeline.
   producer->Start(ProducerStage::StartCommand{
       .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
-      .start_frame = Fixed(0),
+      .start_position = Fixed(0),
   });
 
   // Also start the producer's downstream frame timeline.
@@ -179,6 +181,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
       .pipeline_direction = PipelineDirection::kInput,
       .format = kFormat,
       .reference_clock = clock,
+      .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = ring_buffer,
       .detached_thread = graph.detached_thread(),
   });
@@ -204,7 +207,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
   // Start the producer's internal frame timeline.
   producer->Start({
       .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
-      .start_frame = Fixed(0),
+      .start_position = Fixed(0),
   });
 
   // Also start the producer's downstream frame timeline. This is normally updated by the Consumer.
@@ -253,6 +256,7 @@ TEST(ProducerNodeTest, StopCancelsStart) {
       .format = kFormat,
       .reference_clock =
           RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true),
+      .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = stream_sink->server_ptr(),
       .detached_thread = graph.detached_thread(),
   });
@@ -261,7 +265,7 @@ TEST(ProducerNodeTest, StopCancelsStart) {
   bool canceled = false;
   producer->Start(ProducerStage::StartCommand{
       .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
-      .start_frame = Fixed(0),
+      .start_position = Fixed(0),
       .callback =
           [&canceled](auto result) {
             ASSERT_TRUE(result.is_error());
@@ -290,6 +294,7 @@ TEST(ProducerNodeTest, StartCancelsStop) {
       .pipeline_direction = PipelineDirection::kInput,
       .format = kFormat,
       .reference_clock = clock,
+      .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = stream_sink->server_ptr(),
       .detached_thread = graph.detached_thread(),
   });
@@ -297,7 +302,7 @@ TEST(ProducerNodeTest, StartCancelsStop) {
   // Start the producer's internal frame timeline.
   producer->Start(ProducerStage::StartCommand{
       .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
-      .start_frame = Fixed(0),
+      .start_position = Fixed(0),
   });
 
   // Also start the producer's downstream frame timeline.
@@ -320,7 +325,7 @@ TEST(ProducerNodeTest, StartCancelsStop) {
   });
   producer->Start(ProducerStage::StartCommand{
       .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0) + zx::msec(100)},
-      .start_frame = Fixed(1000),
+      .start_position = Fixed(1000),
   });
 
   EXPECT_TRUE(canceled);

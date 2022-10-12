@@ -5,9 +5,9 @@
 ## Reference time, media time, and frame time
 
 **TODO (fxbug.dev/87651): consider renaming "media time" and "frame time" to
-"media units" and "frame units", reserving "time" for values read from an actual
-clock. (If we do this, TBD if we will use "media timestamp" to refer to a single
-point on the media timeline.)**
+"media units" or "media ticks" and "frame units", reserving "time" for values
+read from an actual clock. (If we do this, TBD if we will use "media timestamp"
+to refer to a single point on the media timeline.)**
 
 Every edge in the mix graph represents a single audio stream, where each audio
 stream contains a sequence of timestamped frames. We measure the progress of

@@ -76,6 +76,9 @@ class ProducerStage : public PipelineStage {
     // Reference clock of this stage's output stream.
     UnreadableClock reference_clock;
 
+    // Ticks of media time per nanoseconds of reference time.
+    TimelineRate media_ticks_per_ns;
+
     // Slot to hold a pending start/stop command.
     std::shared_ptr<PendingStartStopCommand> pending_start_stop_command;
 

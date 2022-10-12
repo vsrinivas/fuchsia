@@ -31,6 +31,7 @@ struct ConsumerStageWrapper {
         .presentation_delay = presentation_delay,
         .format = format,
         .reference_clock = std::move(reference_clock),
+        .media_ticks_per_ns = format.frames_per_ns(),
         .pending_start_stop_command = pending_start_stop_command,
         .writer = writer,
     });

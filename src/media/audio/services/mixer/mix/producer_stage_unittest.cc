@@ -42,6 +42,7 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
         producer_stage_({
             .format = kFormat,
             .reference_clock = DefaultUnreadableClock(),
+            .media_ticks_per_ns = kFormat.frames_per_ns(),
             .pending_start_stop_command = pending_start_stop_command_,
             .internal_source = std::make_shared<SimplePacketQueueProducerStage>(
                 SimplePacketQueueProducerStage::Args{
@@ -70,7 +71,7 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
   void SendStartCommand(zx::time start_presentation_time, Fixed start_frame) {
     pending_start_stop_command_->set_must_be_empty(ProducerStage::StartCommand{
         .start_time = RealTime{.clock = WhichClock::Reference, .time = start_presentation_time},
-        .start_frame = start_frame,
+        .start_position = start_frame,
     });
   }
 
@@ -487,6 +488,7 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
         producer_stage_({
             .format = kFormat,
             .reference_clock = DefaultUnreadableClock(),
+            .media_ticks_per_ns = kFormat.frames_per_ns(),
             .pending_start_stop_command = pending_start_stop_command_,
             .internal_source =
                 std::make_shared<SimpleRingBufferProducerStage>("InternalSource", ring_buffer_),
@@ -497,7 +499,7 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
   void SendStartCommand(zx::time start_presentation_time, Fixed start_frame) {
     pending_start_stop_command_->set_must_be_empty(ProducerStage::StartCommand{
         .start_time = RealTime{.clock = WhichClock::Reference, .time = start_presentation_time},
-        .start_frame = start_frame,
+        .start_position = start_frame,
     });
   }
 

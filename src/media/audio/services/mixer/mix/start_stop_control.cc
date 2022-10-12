@@ -15,8 +15,13 @@ namespace {
 using When = StartStopControl::When;
 }  // namespace
 
-StartStopControl::StartStopControl(const Format& format, UnreadableClock reference_clock)
-    : format_(format), reference_clock_(reference_clock) {}
+StartStopControl::StartStopControl(const Format& format, TimelineRate media_ticks_per_ns,
+                                   UnreadableClock reference_clock)
+    : format_(format),
+      media_ticks_per_ns_(media_ticks_per_ns),
+      frac_frames_per_media_ticks_(
+          TimelineRate::Product(format_.frac_frames_per_ns(), media_ticks_per_ns.Inverse())),
+      reference_clock_(reference_clock) {}
 
 // static
 void StartStopControl::CancelCommand(Command& command) {
@@ -127,7 +132,7 @@ std::pair<When, bool> StartStopControl::PendingCommand(
 When StartStopControl::PendingStartCommand(const ClockSnapshot& ref_clock, const StartCommand& cmd,
                                            zx::time reference_time_for_immediate) const {
   When when;
-  when.frame = cmd.start_frame;
+  SetMediaPositions(when, MediaPositionToFrame(cmd.start_position));
 
   // If the start time is not specified, it happens right now.
   if (!cmd.start_time) {
@@ -163,8 +168,8 @@ When StartStopControl::PendingStopCommand(const ClockSnapshot& ref_clock, const 
 
   // If the stop time is at a specific frame, and that frame translates to a fractional nanosecond,
   // round up to the first reference time after the frame is presented.
-  if (cmd.when && std::holds_alternative<Fixed>(*cmd.when)) {
-    when.frame = std::get<Fixed>(*cmd.when);
+  if (cmd.when && std::holds_alternative<MediaPosition>(*cmd.when)) {
+    SetMediaPositions(when, MediaPositionToFrame(std::get<MediaPosition>(*cmd.when)));
     when.reference_time = last_start_reference_time +
                           format_.duration_per(when.frame - last_start_frame,
                                                ::media::TimelineRate::RoundingMode::Ceiling);
@@ -192,10 +197,32 @@ When StartStopControl::PendingStopCommand(const ClockSnapshot& ref_clock, const 
     }
   }
 
-  when.frame =
-      last_start_frame + format_.frac_frames_per(when.reference_time - last_start_reference_time,
-                                                 ::media::TimelineRate::RoundingMode::Floor);
+  SetMediaPositions(when, last_start_frame + format_.frac_frames_per(
+                                                 when.reference_time - last_start_reference_time,
+                                                 ::media::TimelineRate::RoundingMode::Floor));
   return when;
+}
+
+// Media position rounding rules: when converting between a frame and media time/ticks, round so the
+// media time/ticks are not before the frame. Going from frame to media time/ticks, round up. In the
+// other direction, round down.
+
+void StartStopControl::SetMediaPositions(When& when, Fixed frame) const {
+  when.media_time = format_.duration_per(frame, TimelineRate::RoundingMode::Ceiling);
+  when.media_ticks = frac_frames_per_media_ticks_.Inverse().Scale(
+      frame.raw_value(), TimelineRate::RoundingMode::Ceiling);
+  when.frame = frame;
+}
+
+Fixed StartStopControl::MediaPositionToFrame(MediaPosition pos) const {
+  if (std::holds_alternative<zx::duration>(pos)) {
+    return format_.frac_frames_per(std::get<zx::duration>(pos), TimelineRate::RoundingMode::Floor);
+  }
+  if (std::holds_alternative<MediaTicks>(pos)) {
+    return Fixed::FromRaw(frac_frames_per_media_ticks_.Scale(std::get<MediaTicks>(pos).value,
+                                                             TimelineRate::RoundingMode::Floor));
+  }
+  return std::get<Fixed>(pos);
 }
 
 }  // namespace media_audio

@@ -69,6 +69,7 @@ ConsumerNodeTest::TestHarness ConsumerNodeTest::MakeTestHarness(FakeGraph::Args 
       .pipeline_direction = kPipelineDirection,
       .format = kFormat,
       .reference_clock = h.clock,
+      .media_ticks_per_ns = kFormat.frames_per_ns(),
       .writer = h.consumer_writer,
       .thread = h.mix_thread,
   });
@@ -175,7 +176,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
               .clock = StartStopControl::WhichClock::Reference,
               .time = zx::time(0),
           },
-      .start_frame = Fixed(0),
+      .start_position = Fixed(0),
   });
 
   // Feed data into the source, including data for the second mix job -- later, we'll verify we

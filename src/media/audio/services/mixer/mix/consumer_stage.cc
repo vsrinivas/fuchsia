@@ -21,7 +21,7 @@ ConsumerStage::ConsumerStage(Args args)
       presentation_delay_(args.presentation_delay),
       writer_(std::move(args.writer)),
       pending_start_stop_command_(std::move(args.pending_start_stop_command)),
-      start_stop_control_(args.format, args.reference_clock) {}
+      start_stop_control_(args.format, args.media_ticks_per_ns, args.reference_clock) {}
 
 ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
                                                const zx::time mix_job_start_time,

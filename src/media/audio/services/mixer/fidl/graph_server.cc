@@ -79,6 +79,7 @@ struct StreamSinkInfo {
   std::shared_ptr<MemoryMappedBuffer> payload_buffer;
   Format format;
   std::shared_ptr<Clock> reference_clock;
+  TimelineRate media_ticks_per_ns;
 };
 template <typename ProducerConsumerT>
 fpromise::result<StreamSinkInfo, fuchsia_audio_mixer::CreateNodeError>  //
@@ -135,6 +136,9 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
       .payload_buffer = std::move(payload_buffer_result.value()),
       .format = format_result.value(),
       .reference_clock = clock_result.value(),
+      .media_ticks_per_ns =
+          TimelineRate(stream_sink.media_ticks_per_second_numerator(),
+                       stream_sink.media_ticks_per_second_denominator() * 1'000'000'000),
   });
 }
 
@@ -268,6 +272,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
   std::optional<ProducerNode::DataSource> source;
   std::optional<Format> format;
   std::shared_ptr<Clock> reference_clock;
+  TimelineRate media_ticks_per_ns;
 
   if (request->data_source().is_stream_sink()) {
     auto& stream_sink = request->data_source().stream_sink();
@@ -280,13 +285,13 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
 
     reference_clock = result.value().reference_clock;
     format = result.value().format;
+    media_ticks_per_ns = result.value().media_ticks_per_ns;
 
     auto server = StreamSinkServer::Create(
         realtime_fidl_thread_, std::move(stream_sink.server_end()),
         StreamSinkServer::Args{
             .format = *format,
-            .media_ticks_per_ns = TimelineRate(stream_sink.media_ticks_per_second_numerator(),
-                                               stream_sink.media_ticks_per_second_denominator()),
+            .media_ticks_per_ns = media_ticks_per_ns,
             .payload_buffers = {{0, std::move(result.value().payload_buffer)}},
         });
     AddChildServer(server);
@@ -301,9 +306,10 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
       return;
     }
 
-    reference_clock = std::move(result.value().reference_clock);
-    format = result.value().format;
     source = std::move(result.value().ring_buffer);
+    format = result.value().format;
+    reference_clock = std::move(result.value().reference_clock);
+    media_ticks_per_ns = format->frames_per_ns();
 
   } else {
     FX_LOGS(WARNING) << "Unsupported ProducerDataSource: "
@@ -318,6 +324,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
       .pipeline_direction = request->direction(),
       .format = *format,
       .reference_clock = std::move(reference_clock),
+      .media_ticks_per_ns = media_ticks_per_ns,
       .data_source = std::move(*source),
       .detached_thread = detached_thread_,
   });
@@ -351,6 +358,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
   std::shared_ptr<ConsumerStage::Writer> writer;
   std::optional<Format> format;
   std::shared_ptr<Clock> reference_clock;
+  TimelineRate media_ticks_per_ns;
 
   if (request->data_source().is_stream_sink()) {
     auto& stream_sink = request->data_source().stream_sink();
@@ -363,6 +371,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
 
     reference_clock = std::move(result.value().reference_clock);
     format = result.value().format;
+    media_ticks_per_ns = result.value().media_ticks_per_ns;
 
     // Packet size defaults to the mix period or the buffer size, whichever is smaller.
     const int64_t frames_per_mix_period = format->integer_frames_per(
@@ -389,8 +398,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     // This keeps `client` alive implicitly via the callbacks.
     writer = std::make_shared<StreamSinkConsumerWriter>(StreamSinkConsumerWriter::Args{
         .format = *format,
-        .media_ticks_per_ns = TimelineRate(stream_sink.media_ticks_per_second_numerator(),
-                                           stream_sink.media_ticks_per_second_denominator()),
+        .media_ticks_per_ns = media_ticks_per_ns,
         .call_put_packet = [client](auto packet) { client->PutPacket(std::move(packet)); },
         .call_end = [client]() { client->End(); },
         .recycled_packet_queue = packet_queue,
@@ -405,9 +413,10 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
       return;
     }
 
-    reference_clock = std::move(result.value().reference_clock);
-    format = result.value().format;
     writer = std::make_shared<RingBufferConsumerWriter>(result.value().ring_buffer);
+    format = result.value().format;
+    reference_clock = std::move(result.value().reference_clock);
+    media_ticks_per_ns = format->frames_per_ns();
 
   } else {
     FX_LOGS(WARNING) << "Unsupported ConsumerDataSource: "
@@ -422,6 +431,7 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
       .pipeline_direction = request->direction(),
       .format = *format,
       .reference_clock = std::move(reference_clock),
+      .media_ticks_per_ns = media_ticks_per_ns,
       .writer = std::move(writer),
       .thread = mix_thread,
   });

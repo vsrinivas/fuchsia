@@ -39,6 +39,9 @@ class ProducerNode : public Node {
     // Reference clock of this nodes's destination streams.
     std::shared_ptr<Clock> reference_clock;
 
+    // Ticks of media time per nanoseconds of reference time.
+    TimelineRate media_ticks_per_ns;
+
     // Object from which to produce data.
     DataSource data_source;
 

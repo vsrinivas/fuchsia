@@ -30,6 +30,9 @@ class ConsumerNode : public Node {
     // Reference clock used by this consumer.
     std::shared_ptr<Clock> reference_clock;
 
+    // Ticks of media time per nanoseconds of reference time.
+    TimelineRate media_ticks_per_ns;
+
     // How to write all consumed packets.
     std::shared_ptr<ConsumerStage::Writer> writer;
 

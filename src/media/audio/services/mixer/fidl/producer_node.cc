@@ -58,6 +58,7 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
       .name = args.name,
       .format = args.format,
       .reference_clock = UnreadableClock(args.reference_clock),
+      .media_ticks_per_ns = args.media_ticks_per_ns,
       .pending_start_stop_command = pending_start_stop_command,
       .internal_source = std::move(internal_source),
   });
