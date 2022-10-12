@@ -617,8 +617,16 @@ function fx-standard-switches {
 }
 
 function fx-choose-build-concurrency {
-  if grep -q "use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"; then
-    # The recommendation from the Goma team is to use 10*cpu-count.
+  # If any remote execution is enabled (e.g. via Goma or RBE),
+  # allow ninja to launch many more concurrent actions than what local
+  # resources can support.
+  # This covers GN args: cxx_rbe_enable, rust_rbe_enable.
+  # Kludge: grep-ing the args.gn like this is admittedly brittle, and prone
+  # to error when we enable remote execution on new tools.
+  if grep -q -e "use_goma = true" \
+      -e "_rbe_enable = true" \
+      "${FUCHSIA_BUILD_DIR}/args.gn"; then
+    # The recommendation from the Goma team is to use 10*cpu-count for C++.
     local cpus
     cpus="$(fx-cpu-count)"
     echo $((cpus * 10))
