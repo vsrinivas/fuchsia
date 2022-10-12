@@ -82,7 +82,7 @@ pub async fn load_product_bundle(
 }
 
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
-pub async fn update_metadata_all<I>(output_dir: &Path, _ui: &mut I) -> Result<()>
+pub async fn update_metadata_all<I>(output_dir: &Path, ui: &mut I) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
 {
@@ -98,6 +98,7 @@ where
             &repo_url,
             &output_dir.join(pb_dir_name(&repo_url)),
             &mut |_d, _f| Ok(ProgressResponse::Continue),
+            ui,
         )
         .await
         .context("fetching product metadata")?;
@@ -109,15 +110,20 @@ where
 pub async fn update_metadata_from<I>(
     product_url: &url::Url,
     output_dir: &Path,
-    _ui: &mut I,
+    ui: &mut I,
 ) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
 {
     tracing::debug!("update_metadata_from");
-    fetch_product_metadata(&product_url, output_dir, &mut |_d, _f| Ok(ProgressResponse::Continue))
-        .await
-        .context("fetching product metadata")
+    fetch_product_metadata(
+        &product_url,
+        output_dir,
+        &mut |_d, _f| Ok(ProgressResponse::Continue),
+        ui,
+    )
+    .await
+    .context("fetching product metadata")
 }
 
 /// Gather a list of PBM reference URLs which include the product bundle entry

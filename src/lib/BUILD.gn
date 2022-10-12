@@ -142,6 +142,7 @@ group("tests") {
     "security:tests",
     "shared-buffer:tests",
     "storage:tests",
+    "structured_ui:tests",
     "symbolizer-markup:tests",
     "syslog:tests",
     "tcp-stream-ext:tests",

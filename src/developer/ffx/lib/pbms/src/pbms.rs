@@ -43,13 +43,15 @@ pub(crate) const GS_SCHEME: &str = "gs";
 ///
 /// Expandable tags (e.g. "{foo}") in `repos` must already be expanded, do not
 /// pass in repo URIs with expandable tags.
-pub(crate) async fn fetch_product_metadata<F>(
+pub(crate) async fn fetch_product_metadata<F, I>(
     repo: &url::Url,
     output_dir: &Path,
-    progress: &mut F,
+    progress: &F,
+    ui: &I,
 ) -> Result<()>
 where
-    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+    F: Fn(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     tracing::info!("Getting product metadata for {:?}", repo);
     async_fs::create_dir_all(&output_dir).await.context("create directory")?;
@@ -59,7 +61,9 @@ where
     info.save(&output_dir.join("info"))?;
     tracing::debug!("Wrote info to {:?}", output_dir);
 
-    fetch_bundle_uri(&repo, output_dir, progress).await.context("fetch product bundle by URL")?;
+    fetch_bundle_uri(&repo, output_dir, progress, ui)
+        .await
+        .context("fetch product bundle by URL")?;
     Ok(())
 }
 
@@ -196,7 +200,7 @@ pub(crate) fn url_sans_fragment(product_url: &url::Url) -> Result<url::Url> {
 pub(crate) async fn get_product_data_from_gcs<I>(
     product_url: &url::Url,
     local_repo_dir: &std::path::Path,
-    ui: &mut I,
+    ui: &I,
 ) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
@@ -206,7 +210,7 @@ where
     let product_name = product_url.fragment().expect("URL with trailing product_name fragment.");
     let url = url_sans_fragment(product_url)?;
 
-    fetch_product_metadata(&url, local_repo_dir, &mut |_d, _f| Ok(ProgressResponse::Continue))
+    fetch_product_metadata(&url, local_repo_dir, &mut |_d, _f| Ok(ProgressResponse::Continue), ui)
         .await
         .context("fetching metadata")?;
 
@@ -226,7 +230,7 @@ pub async fn fetch_data_for_product_bundle_v1<I>(
     product_bundle: &sdk_metadata::ProductBundleV1,
     product_url: &url::Url,
     local_repo_dir: &std::path::Path,
-    ui: &mut I,
+    ui: &I,
 ) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
@@ -247,18 +251,24 @@ where
 
             let base_url =
                 make_remote_url(product_url, &image.base_uri).context("image.base_uri")?;
-            if !exists_in_gcs(&base_url.as_str()).await? {
+            if !exists_in_gcs(&base_url.as_str(), ui).await? {
                 tracing::warn!("The base_uri does not exist: {}", base_url);
             }
-            fetch_by_format(&image.format, &base_url, &local_dir, &mut |d, f| {
-                let mut progress = structured_ui::Progress::builder();
-                progress.title(&product_bundle.name);
-                progress.entry("Image data", /*at=*/ 1, /*of=*/ 2, "steps");
-                progress.entry(&d.url, d.at, d.of, "files");
-                progress.entry(&f.url, f.at, f.of, "bytes");
-                ui.present(&structured_ui::Presentation::Progress(progress))?;
-                Ok(ProgressResponse::Continue)
-            })
+            fetch_by_format(
+                &image.format,
+                &base_url,
+                &local_dir,
+                &|d, f| {
+                    let mut progress = structured_ui::Progress::builder();
+                    progress.title(&product_bundle.name);
+                    progress.entry("Image data", /*at=*/ 1, /*of=*/ 2, "steps");
+                    progress.entry(&d.url, d.at, d.of, "files");
+                    progress.entry(&f.url, f.at, f.of, "bytes");
+                    ui.present(&structured_ui::Presentation::Progress(progress))?;
+                    Ok(ProgressResponse::Continue)
+                },
+                ui,
+            )
             .await
             .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
         }
@@ -275,12 +285,11 @@ where
             product_bundle.name,
             local_dir
         );
-
         fetch_package_repository_from_mirrors(
             product_url,
             &local_dir,
             &product_bundle.packages,
-            &mut |d, f| {
+            &|d, f| {
                 let mut progress = structured_ui::Progress::builder();
                 progress.title(&product_bundle.name);
                 progress.entry("Package data", /*at=*/ 2, /*at=*/ 2, "steps");
@@ -289,6 +298,7 @@ where
                 ui.present(&structured_ui::Presentation::Progress(progress))?;
                 Ok(ProgressResponse::Continue)
             },
+            ui,
         )
         .await
         .with_context(|| {
@@ -327,19 +337,21 @@ pub(crate) fn pb_dir_name(gcs_url: &url::Url) -> String {
 ///
 /// This will try to download a package repository from each mirror in the list, stopping on the
 /// first success. Otherwise it will return the last error encountered.
-async fn fetch_package_repository_from_mirrors<F>(
+async fn fetch_package_repository_from_mirrors<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
     packages: &[PackageBundle],
-    progress: &mut F,
+    progress: &F,
+    ui: &I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     // The packages list is a set of mirrors. Try downloading the packages from each one. Only error
     // out if we can't download the packages from any mirror.
     for (i, package) in packages.iter().enumerate() {
-        let res = fetch_package_repository(product_url, local_dir, package, progress).await;
+        let res = fetch_package_repository(product_url, local_dir, package, progress, ui).await;
 
         match res {
             Ok(()) => {
@@ -358,14 +370,16 @@ where
 }
 
 /// Fetch packages from this package bundle and write them to `local_dir`.
-async fn fetch_package_repository<F>(
+async fn fetch_package_repository<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
     package: &PackageBundle,
-    progress: &mut F,
+    progress: &F,
+    ui: &I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     tracing::debug!(
         "product_url {:?}, local_dir {:?}, package {:?}",
@@ -409,6 +423,7 @@ where
                 repo_metadata_uri,
                 repo_blobs_uri,
                 progress,
+                ui,
             )
             .await
             .context("fetch_package_repository_from_files")
@@ -419,7 +434,7 @@ where
                 unimplemented!();
             }
 
-            fetch_package_repository_from_tgz(local_dir, repo_metadata_uri, progress).await
+            fetch_package_repository_from_tgz(local_dir, repo_metadata_uri, progress, ui).await
         }
         _ =>
         // The schema currently defines only "files" or "tgz" (see RFC-100).
@@ -443,15 +458,17 @@ where
 /// * `http://`
 /// * `https://`
 /// * `gs://`
-async fn fetch_package_repository_from_files<F>(
+async fn fetch_package_repository_from_files<F, I>(
     local_dir: &Path,
     repo_keys_uri: Url,
     repo_metadata_uri: Url,
     repo_blobs_uri: Url,
-    progress: &mut F,
+    progress: &F,
+    ui: &I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     match (repo_metadata_uri.scheme(), repo_blobs_uri.scheme()) {
         (GS_SCHEME, GS_SCHEME) => {
@@ -477,13 +494,14 @@ where
                 repo_blobs_uri.clone(),
                 backend,
                 progress,
+                ui,
             )
             .await
             {
                 return Ok(());
             }
 
-            let boto_path = get_boto_path().await?;
+            let boto_path = get_boto_path(ui).await?;
             let client =
                 get_gcs_client_with_auth(&boto_path).context("get_gcs_client_with_auth")?;
 
@@ -500,6 +518,7 @@ where
                 repo_blobs_uri.clone(),
                 backend,
                 progress,
+                ui,
             )
             .await
             .context("fetch_package_repository_from_backend")
@@ -519,6 +538,7 @@ where
                 repo_blobs_uri,
                 backend,
                 progress,
+                ui,
             )
             .await
             .context("fetch_package_repository_from_backend")
@@ -533,16 +553,18 @@ where
     }
 }
 
-async fn fetch_package_repository_from_backend<'a, F>(
+async fn fetch_package_repository_from_backend<'a, F, I>(
     local_dir: &'a Path,
     repo_keys_uri: Url,
     repo_metadata_uri: Url,
     repo_blobs_uri: Url,
     backend: Box<dyn RepoProvider>,
-    progress: &'a mut F,
+    progress: &'a F,
+    ui: &'a I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     tracing::debug!(
         "creating package repository, repo_metadata_uri {}, repo_blobs_uri {}",
@@ -563,15 +585,15 @@ where
     let blobs_dir = metadata_dir.join("blobs");
 
     // Download the repository private keys.
-    fetch_bundle_uri(&repo_keys_uri.join("timestamp.json")?, keys_dir.as_std_path(), progress)
+    fetch_bundle_uri(&repo_keys_uri.join("timestamp.json")?, keys_dir.as_std_path(), progress, ui)
         .await
         .context("fetch_bundle_uri timestamp.json")?;
 
-    fetch_bundle_uri(&repo_keys_uri.join("snapshot.json")?, keys_dir.as_std_path(), progress)
+    fetch_bundle_uri(&repo_keys_uri.join("snapshot.json")?, keys_dir.as_std_path(), progress, ui)
         .await
         .context("fetch_bundle_uri snapshot.json")?;
 
-    fetch_bundle_uri(&repo_keys_uri.join("targets.json")?, keys_dir.as_std_path(), progress)
+    fetch_bundle_uri(&repo_keys_uri.join("targets.json")?, keys_dir.as_std_path(), progress, ui)
         .await
         .context("fetch_bundle_uri targets.json")?;
 
@@ -647,15 +669,17 @@ where
 
 /// Fetch a package repository using the `tgz` package bundle format, and automatically expand the
 /// tarball into the `local_dir` directory.
-async fn fetch_package_repository_from_tgz<F>(
+async fn fetch_package_repository_from_tgz<F, I>(
     local_dir: &Path,
     repo_uri: Url,
-    progress: &mut F,
+    progress: &F,
+    ui: &I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
-    fetch_bundle_uri(&repo_uri, &local_dir, progress)
+    fetch_bundle_uri(&repo_uri, &local_dir, progress, ui)
         .await
         .with_context(|| format!("downloading repo URI {}", repo_uri))
 }
@@ -664,18 +688,20 @@ where
 ///
 /// For a directory, all files in the directory are downloaded.
 /// For a .tgz file, the file is downloaded and expanded.
-async fn fetch_by_format<F>(
+async fn fetch_by_format<F, I>(
     format: &str,
     uri: &url::Url,
     local_dir: &Path,
-    progress: &mut F,
+    progress: &F,
+    ui: &I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     tracing::debug!("fetch_by_format");
     match format {
-        "files" | "tgz" => fetch_bundle_uri(uri, &local_dir, progress).await,
+        "files" | "tgz" => fetch_bundle_uri(uri, &local_dir, progress, ui).await,
         _ =>
         // The schema currently defines only "files" or "tgz" (see RFC-100).
         // This error could be a typo in the product bundle or a new image
@@ -695,17 +721,19 @@ where
 /// Bundle, "bundle_uri".
 ///
 /// Currently: "pattern": "^(?:http|https|gs|file):\/\/"
-async fn fetch_bundle_uri<F>(
+async fn fetch_bundle_uri<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
-    progress: &mut F,
+    progress: &F,
+    ui: &I,
 ) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
     tracing::debug!("fetch_bundle_uri");
     if product_url.scheme() == GS_SCHEME {
-        fetch_from_gcs(product_url.as_str(), local_dir, progress)
+        fetch_from_gcs(product_url.as_str(), local_dir, progress, ui)
             .await
             .context("Downloading from GCS.")?;
     } else if product_url.scheme() == "http" || product_url.scheme() == "https" {
@@ -719,13 +747,9 @@ where
     Ok(())
 }
 
-async fn fetch_from_web<F>(
-    _product_uri: &url::Url,
-    _local_dir: &Path,
-    _progress: &mut F,
-) -> Result<()>
+async fn fetch_from_web<F>(_product_uri: &url::Url, _local_dir: &Path, _progress: &F) -> Result<()>
 where
-    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     // TODO(fxbug.dev/93850): implement pbms.
     unimplemented!();
@@ -823,9 +847,14 @@ mod tests {
     #[should_panic(expected = "Unexpected image format")]
     async fn test_fetch_by_format() {
         let url = url::Url::parse("fake://foo").expect("url");
-        fetch_by_format("bad", &url, &Path::new("unused"), &mut |_d, _f| {
-            Ok(ProgressResponse::Continue)
-        })
+        let ui = structured_ui::MockUi::new();
+        fetch_by_format(
+            "bad",
+            &url,
+            &Path::new("unused"),
+            &mut |_d, _f| Ok(ProgressResponse::Continue),
+            &ui,
+        )
         .await
         .expect("bad fetch");
     }
@@ -834,9 +863,15 @@ mod tests {
     #[should_panic(expected = "Unexpected URI scheme")]
     async fn test_fetch_bundle_uri() {
         let url = url::Url::parse("fake://foo").expect("url");
-        fetch_bundle_uri(&url, &Path::new("unused"), &mut |_d, _f| Ok(ProgressResponse::Continue))
-            .await
-            .expect("bad fetch");
+        let ui = structured_ui::MockUi::new();
+        fetch_bundle_uri(
+            &url,
+            &Path::new("unused"),
+            &mut |_d, _f| Ok(ProgressResponse::Continue),
+            &ui,
+        )
+        .await
+        .expect("bad fetch");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

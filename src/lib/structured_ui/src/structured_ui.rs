@@ -15,7 +15,7 @@ use {
     anyhow::Result,
     atty,
     serde::{Deserialize, Serialize},
-    std::io::{Read, Write},
+    std::io::{BufRead, BufReader, Read, Write},
 };
 
 // Magic terminal escape codes.
@@ -71,7 +71,7 @@ pub struct Progress {
 
 impl Progress {
     pub fn builder() -> Self {
-        Progress::default()
+        Progress { kind: "progress".to_string(), ..Default::default() }
     }
 
     /// A label shown prominently, such as the dialog or window title in a GUI.
@@ -95,12 +95,47 @@ impl Progress {
 }
 
 /// A basic presentation used for alerts and short prompts for data.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct SimplePresentation {
+    /// One of "string_prompt" or "alert".
     kind: String,
-    title: String,
-    message: String,
+
+    /// A overall description. E.g. "Copying files".
+    title: Option<String>,
+
+    /// The body of the message to the user.
+    message: Option<String>,
+
+    /// The specific question or call-to-action to the user.
     prompt: String,
+}
+
+impl SimplePresentation {
+    pub fn builder() -> Self {
+        SimplePresentation { kind: "string_prompt".to_string(), ..Default::default() }
+    }
+
+    /// A label shown prominently, such as the dialog or window title in a GUI.
+    pub fn title<'a, S>(&'a mut self, title: S) -> &'a mut Self
+    where
+        S: Into<String>,
+    {
+        self.title = Some(title.into());
+        self
+    }
+
+    pub fn message<'a, S>(&'a mut self, message: S) -> &'a mut Self
+    where
+        S: Into<String>,
+    {
+        self.message = Some(message.into());
+        self
+    }
+
+    pub fn prompt<'a>(&'a mut self, prompt: &'a str) -> &'a mut Self {
+        self.prompt = prompt.to_string();
+        self
+    }
 }
 
 /// A single horizontal row of a table.
@@ -249,11 +284,11 @@ pub enum Response {
 }
 
 pub trait Interface: Send + Sync {
-    fn present(&mut self, output: &Presentation) -> Result<Response>;
+    fn present(&self, output: &Presentation) -> Result<Response>;
 }
 
 /// A text based UI, likely a terminal.
-pub struct TextUi<'a> {
+pub struct InnerTextUi<'a> {
     /// E.g. stdin.
     #[allow(unused)]
     input: &'a mut (dyn Read + Send + Sync + 'a),
@@ -270,6 +305,10 @@ pub struct TextUi<'a> {
     progress_needs_to_scroll: bool,
 }
 
+pub struct TextUi<'a> {
+    inner: std::sync::Mutex<InnerTextUi<'a>>,
+}
+
 impl<'a> TextUi<'a> {
     pub fn new<R, W, E>(input: &'a mut R, output: &'a mut W, error_output: &'a mut E) -> Self
     where
@@ -277,64 +316,127 @@ impl<'a> TextUi<'a> {
         W: Write + Send + Sync + 'a,
         E: Write + Send + Sync + 'a,
     {
-        Self { input, output, error_output, progress_needs_to_scroll: true }
+        Self {
+            inner: std::sync::Mutex::new(InnerTextUi {
+                input,
+                output,
+                error_output,
+                progress_needs_to_scroll: true,
+            }),
+        }
     }
 
-    fn present_progress(&mut self, progress: &Progress) -> Result<Response> {
-        // We only print the progress text if it's going to a TTY terminal, since the shell
-        // control sequences don't make sense otherwise.
+    fn present_progress(&self, progress: &Progress) -> Result<Response> {
+        // We only print the progress text if it's going to a TTY terminal,
+        // since the shell control sequences don't make sense otherwise.
         if atty::is(atty::Stream::Stdout) {
-            // Move back to overwrite the previous progress rendering.
-            if !self.progress_needs_to_scroll {
-                cursor_move_up(self.output, 1 + progress.entries.len() * 2)?;
-            } else {
-                self.progress_needs_to_scroll = false;
-            }
-            write!(self.output, "Progress for \"{}\"{}\n", progress.title, CLEAR_TO_EOL)?;
-            for entry in &progress.entries {
-                write!(self.output, "  {}{}\n", entry.name, CLEAR_TO_EOL)?;
-                write!(
-                    self.output,
-                    "    {} of {} {} ({:.2}%){}\n",
-                    entry.at,
-                    entry.of,
-                    entry.units,
-                    progress_percentage(entry.at, entry.of),
-                    CLEAR_TO_EOL
-                )?;
-            }
+            return Ok(Response::Default);
+        }
+        let mut inner = self.inner.lock().expect("present_progress lock");
+        // Move back to overwrite the previous progress rendering.
+        if !inner.progress_needs_to_scroll {
+            cursor_move_up(inner.output, 1 + progress.entries.len() * 2)?;
+        } else {
+            inner.progress_needs_to_scroll = false;
+        }
+        write!(inner.output, "Progress for \"{}\"{}\n", progress.title, CLEAR_TO_EOL)?;
+        for entry in &progress.entries {
+            write!(inner.output, "  {}{}\n", entry.name, CLEAR_TO_EOL)?;
+            write!(
+                inner.output,
+                "    {} of {} {} ({:.2}%){}\n",
+                entry.at,
+                entry.of,
+                entry.units,
+                progress_percentage(entry.at, entry.of),
+                CLEAR_TO_EOL
+            )?;
         }
         Ok(Response::Default)
     }
 
-    fn present_table(&mut self, table: &TableRows) -> Result<Response> {
+    fn present_string_prompt(&self, element: &SimplePresentation) -> Result<Response> {
+        if atty::is(atty::Stream::Stdout) {
+            // If the terminal is non-interactive, it's not reasonable to prompt
+            // the user.
+            return Ok(Response::NoChoice);
+        }
+        let mut inner = self.inner.lock().expect("present_string_prompt lock");
+        if let Some(title) = &element.title {
+            writeln!(inner.output, "{}", title)?;
+        }
+        if let Some(message) = &element.message {
+            writeln!(inner.output, "{}", message)?;
+        }
+        writeln!(inner.output, "{}: ", element.prompt)?;
+        let mut buf_reader = BufReader::new(&mut inner.input);
+        let mut choice = String::new();
+        buf_reader.read_line(&mut choice).expect("reading string input line");
+        if choice.is_empty() {
+            Ok(Response::Default)
+        } else {
+            Ok(Response::Choice(choice))
+        }
+    }
+
+    fn present_table(&self, table: &TableRows) -> Result<Response> {
+        let mut inner = self.inner.lock().expect("present_table lock");
         if let Some(title) = &table.title {
-            writeln!(self.output, "{}", title)?;
+            writeln!(inner.output, "{}", title)?;
         }
         if let Some(message) = &table.message {
-            self.output.write_all(message.as_bytes())?;
+            inner.output.write_all(message.as_bytes())?;
         }
         for row in &table.rows {
             for column in &row.columns {
-                write!(self.output, "{} ", column)?;
+                write!(inner.output, "{} ", column)?;
             }
-            writeln!(self.output, "")?;
+            writeln!(inner.output, "")?;
         }
         if let Some(note) = &table.note {
-            self.output.write_all(note.as_bytes())?;
+            inner.output.write_all(note.as_bytes())?;
         }
         Ok(Response::Default)
     }
 }
 
 impl<'a> Interface for TextUi<'a> {
-    fn present(&mut self, presentation: &Presentation) -> Result<Response> {
+    fn present(&self, presentation: &Presentation) -> Result<Response> {
         match presentation {
-            Presentation::Progress(p) => return self.present_progress(p),
-            Presentation::StringPrompt(_) => (),
-            Presentation::Table(p) => return self.present_table(p),
+            Presentation::Progress(p) => self.present_progress(p),
+            Presentation::StringPrompt(p) => self.present_string_prompt(p),
+            Presentation::Table(p) => self.present_table(p),
         }
+    }
+}
+
+pub struct MockUi {}
+
+impl MockUi {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    fn present_progress(&self, _progress: &Progress) -> Result<Response> {
         Ok(Response::Default)
+    }
+
+    fn present_string_prompt(&self, _element: &SimplePresentation) -> Result<Response> {
+        Ok(Response::Default)
+    }
+
+    fn present_table(&self, _table: &TableRows) -> Result<Response> {
+        Ok(Response::Default)
+    }
+}
+
+impl Interface for MockUi {
+    fn present(&self, presentation: &Presentation) -> Result<Response> {
+        match presentation {
+            Presentation::Progress(p) => self.present_progress(p),
+            Presentation::StringPrompt(p) => self.present_string_prompt(p),
+            Presentation::Table(p) => self.present_table(p),
+        }
     }
 }
 
@@ -347,7 +449,7 @@ mod tests {
         let mut input = "".as_bytes();
         let mut output: Vec<u8> = Vec::new();
         let mut err_out: Vec<u8> = Vec::new();
-        let mut ui = TextUi::new(&mut input, &mut output, &mut err_out);
+        let ui = TextUi::new(&mut input, &mut output, &mut err_out);
         let mut progress = Progress::builder();
         progress.title("foo");
         progress.entry("bushel", /*at=*/ 20, /*of=*/ 100, "pieces");
@@ -366,7 +468,7 @@ mod tests {
         let mut input = "".as_bytes();
         let mut output: Vec<u8> = Vec::new();
         let mut err_out: Vec<u8> = Vec::new();
-        let mut ui = TextUi::new(&mut input, &mut output, &mut err_out);
+        let ui = TextUi::new(&mut input, &mut output, &mut err_out);
         let mut table = TableRows::builder();
         table.title("foo");
         table.header(vec!["type", "count", "notes"]);

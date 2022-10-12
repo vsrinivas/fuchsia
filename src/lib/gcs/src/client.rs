@@ -155,11 +155,11 @@ impl Client {
         bucket: &str,
         prefix: &str,
         output_dir: P,
-        progress: &mut F,
+        progress: &F,
     ) -> Result<()>
     where
         P: AsRef<Path>,
-        F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+        F: Fn(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
     {
         let objects = self
             .token_store
@@ -194,7 +194,7 @@ impl Client {
                 let url = format!("gs://{}/", bucket);
                 count += 1;
                 let dir_progress = ProgressState { url: &url, at: count, of: total };
-                self.write(bucket, &object, &mut file, &mut |file_progress| {
+                self.write(bucket, &object, &mut file, &|file_progress| {
                     assert!(
                         file_progress.at <= file_progress.of,
                         "At {} of {}",
@@ -228,11 +228,11 @@ impl Client {
         bucket: &str,
         object: &str,
         output: P,
-        progress: &mut F,
+        progress: &F,
     ) -> ProgressResult
     where
         P: AsRef<Path>,
-        F: FnMut(ProgressState<'_>) -> ProgressResult,
+        F: Fn(ProgressState<'_>) -> ProgressResult,
     {
         let mut file = File::create(output.as_ref())?;
         self.write(bucket, object, &mut file, progress).await
@@ -266,11 +266,11 @@ impl Client {
         bucket: &str,
         object: &str,
         writer: &mut W,
-        progress: &mut F,
+        progress: &F,
     ) -> ProgressResult
     where
         W: Write + Sync,
-        F: FnMut(ProgressState<'_>) -> ProgressResult,
+        F: Fn(ProgressState<'_>) -> ProgressResult,
     {
         let mut res = self.stream(bucket, object).await?;
         if res.status() == StatusCode::OK {
