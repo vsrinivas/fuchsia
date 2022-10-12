@@ -89,38 +89,11 @@ TEST(AliasWorkaround, Mappings) {
   // VoidPtr
   CHECK_ARG("void*", "q");
 
-  // Optionality only shows up in __NONNULL() header markup, not the actual type info when it's
-  // converted to a C type, so check that setting specifically for the optional outputs.
-#define CHECK_IS_OPTIONAL() \
-  EXPECT_TRUE(sc->kernel_arguments()[cur_arg].type().optionality() == Optionality::kOutputOptional);
-
-  CHECK_IS_OPTIONAL();
-  CHECK_ARG("zx_pci_bar_t*", "r");
-
-  CHECK_IS_OPTIONAL();
-  CHECK_ARG("zx_port_packet_t*", "s");
-
-  CHECK_IS_OPTIONAL();
-  CHECK_ARG("zx_koid_t*", "t");
-
-  CHECK_IS_OPTIONAL();
-  CHECK_ARG("zx_signals_t*", "u");
-
-  CHECK_IS_OPTIONAL();
-  CHECK_ARG("zx_time_t*", "v");
-
-  CHECK_IS_OPTIONAL();
-  CHECK_ARG("uint32_t*", "w");
-
-  CHECK_IS_OPTIONAL();
-  CHECK_ARG("size_t*", "x");
-
   CHECK_ARG("zx_string_view_t*", "y");
 
-#undef CHECK_IS_OPTIONAL
 #undef CHECK_ARG
 
-  EXPECT_EQ(cur_arg, 35u);  // 25 fidl args + 11 that expand to pointer+size.
+  EXPECT_EQ(cur_arg, 28u);
 }
 
 }  // namespace

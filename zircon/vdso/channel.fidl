@@ -234,8 +234,8 @@ protocol Channel {
     }) -> (resource struct {
         bytes VectorVoidU32Size;
         handles VectorHandleU32Size;
-        actual_bytes OptionalUint32;
-        actual_handles OptionalUint32;
+        actual_bytes uint32;
+        actual_handles uint32;
     }) error status;
 
     /// ## Summary
@@ -351,8 +351,8 @@ protocol Channel {
     }) -> (resource struct {
         bytes VectorVoidU32Size;
         handles VectorHandleInfoU32Size;
-        actual_bytes OptionalUint32;
-        actual_handles OptionalUint32;
+        actual_bytes uint32;
+        actual_handles uint32;
     }) error status;
 
     /// ## Summary

@@ -106,7 +106,7 @@ protocol Object {
         signals signals;
         deadline time;
     }) -> (struct {
-        observed OptionalSignals;
+        observed signals;
     }) error status;
 
     /// ## Summary
@@ -1939,8 +1939,8 @@ protocol Object {
         topic uint32;
     }) -> (struct {
         buffer VectorVoid;
-        actual OptionalUsize;
-        avail OptionalUsize;
+        actual Usize;
+        avail Usize;
     }) error status;
 
     /// ## Summary

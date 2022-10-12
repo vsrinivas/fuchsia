@@ -24,13 +24,6 @@ alias MutableVectorWaitItem = vector<WaitItem>;
 alias MutableVectorHandleU32Size = vector<handle>;
 alias MutableVectorVoid = vector<byte>;
 alias MutableVectorVoidU32Size = vector<byte>;
-alias OptionalPciBar = PciBar;
-alias OptionalPortPacket = PortPacket;
-alias OptionalKoid = koid;
-alias OptionalSignals = signals;
-alias OptionalTime = time;
-alias OptionalUint32 = uint32;
-alias OptionalUsize = Usize;
 alias VectorHandleInfoU32Size = vector<HandleInfo>;
 alias VectorHandleU32Size = vector<handle>;
 alias VectorPaddr = vector<paddr>;
@@ -59,13 +52,6 @@ protocol Aliases {
         p VectorVoidU32Size;
         q VoidPtr;
     }) -> (struct {
-        r OptionalPciBar;
-        s OptionalPortPacket;
-        t OptionalKoid;
-        u OptionalSignals;
-        v OptionalTime;
-        w OptionalUint32;
-        x OptionalUsize;
         y StringView;
     }) error status;
 };

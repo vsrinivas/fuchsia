@@ -185,7 +185,7 @@ protocol Stream {
         options uint32;
         vector VectorIovec;
     }) -> (struct {
-        actual OptionalUsize;
+        actual Usize;
     }) error status;
 
     /// ## Summary
@@ -278,7 +278,7 @@ protocol Stream {
         offset off;
         vector VectorIovec;
     }) -> (struct {
-        actual OptionalUsize;
+        actual Usize;
     }) error status;
 
     /// ## Summary
@@ -361,7 +361,7 @@ protocol Stream {
         options uint32;
     }) -> (struct {
         vector VectorIovec;
-        actual OptionalUsize;
+        actual Usize;
     }) error status;
 
     /// ## Summary
@@ -444,7 +444,7 @@ protocol Stream {
         offset off;
     }) -> (struct {
         vector VectorIovec;
-        actual OptionalUsize;
+        actual Usize;
     }) error status;
 
     /// ## Summary
@@ -525,6 +525,6 @@ protocol Stream {
         whence StreamSeekOrigin;
         offset int64;
     }) -> (struct {
-        out_seek OptionalOff;
+        out_seek off;
     }) error status;
 };

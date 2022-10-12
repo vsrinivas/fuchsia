@@ -61,41 +61,6 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypeVector(Type(TypeVoid{}), UseUint32ForVectorSizeTag{}), Constness::kMutable);
     return true;
   }
-  if (name == "OptionalPciBar") {
-    *type = Type(library.TypeFromIdentifier("zx/PciBar").type_data(), Constness::kUnspecified,
-                 Optionality::kOutputOptional);
-    return true;
-  }
-  if (name == "OptionalPortPacket") {
-    *type = Type(library.TypeFromIdentifier("zx/PortPacket").type_data(), Constness::kUnspecified,
-                 Optionality::kOutputOptional);
-    return true;
-  }
-  if (name == "OptionalKoid") {
-    *type = Type(TypeZxBasicAlias("koid"), Constness::kUnspecified, Optionality::kOutputOptional);
-    return true;
-  }
-  if (name == "OptionalSignals") {
-    *type =
-        Type(TypeZxBasicAlias("Signals"), Constness::kUnspecified, Optionality::kOutputOptional);
-    return true;
-  }
-  if (name == "OptionalTime") {
-    *type = Type(TypeZxBasicAlias("time"), Constness::kUnspecified, Optionality::kOutputOptional);
-    return true;
-  }
-  if (name == "OptionalUint32") {
-    *type = Type(TypeUint32{}, Constness::kUnspecified, Optionality::kOutputOptional);
-    return true;
-  }
-  if (name == "OptionalUsize") {
-    *type = Type(TypeSizeT{}, Constness::kUnspecified, Optionality::kOutputOptional);
-    return true;
-  }
-  if (name == "OptionalOff") {
-    *type = Type(TypeZxBasicAlias("off"), Constness::kUnspecified, Optionality::kOutputOptional);
-    return true;
-  }
   if (name == "VectorHandleInfoU32Size") {
     *type = Type(
         TypeVector(Type(library.TypeFromIdentifier("zx/HandleInfo")), UseUint32ForVectorSizeTag{}),

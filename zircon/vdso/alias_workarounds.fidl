@@ -51,30 +51,6 @@ alias MutableVectorVoid = vector<byte>;
 // TODO(fidlc): mutable<vector<void>>
 alias MutableVectorVoidU32Size = vector<byte>;
 
-// TODO(fidlc): optional<PciBar>
-alias OptionalPciBar = PciBar;
-
-// TODO(fidlc): optional<PortPacket>
-alias OptionalPortPacket = PortPacket;
-
-// TODO(fidlc): optional<koid>
-alias OptionalKoid = koid;
-
-// TODO(fidlc): optional<Signals>
-alias OptionalSignals = signals;
-
-// TODO(fidlc): optional<time>
-alias OptionalTime = time;
-
-// TODO(fidlc): optional<uint32>
-alias OptionalUint32 = uint32;
-
-// TODO(fidlc): optional<Usize>
-alias OptionalUsize = Usize;
-
-// TODO(fidlc): optional<off>
-alias OptionalOff = off;
-
 // TODO(fidlc): uint32 size
 // TODO(fidlc): vector<HandleInfo>
 alias VectorHandleInfoU32Size = vector<HandleInfo>;

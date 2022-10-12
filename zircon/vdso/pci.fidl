@@ -222,7 +222,7 @@ protocol Pci {
         offset uint16;
         width Usize;
     }) -> (struct {
-        out_val OptionalUint32;
+        out_val uint32;
     }) error status;
 
     /// ## Summary
@@ -360,7 +360,7 @@ protocol Pci {
         handle handle:PCI_DEVICE;
         bar_num uint32;
     }) -> (resource struct {
-        out_bar OptionalPciBar;
+        out_bar PciBar;
         out_handle handle;
     }) error status;
 

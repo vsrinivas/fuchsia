@@ -269,7 +269,7 @@ protocol Interrupt {
     Wait(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
-        out_timestamp OptionalTime;
+        out_timestamp time;
     }) error status;
 
     // TODO(fxbug.dev/32803): No DESTROY rights here.

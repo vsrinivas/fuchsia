@@ -429,6 +429,6 @@ protocol Futexfuncs {
     FutexGetOwner(struct {
         value_ptr ConstFutexPtr;
     }) -> (struct {
-        koid OptionalKoid;
+        koid koid;
     }) error status;
 };

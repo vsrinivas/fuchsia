@@ -149,7 +149,7 @@ protocol Fifo {
         elem_size Usize;
     }) -> (struct {
         data VectorVoid;
-        actual_count OptionalUsize;
+        actual_count Usize;
     }) error status;
 
     /// ## Summary
@@ -226,6 +226,6 @@ protocol Fifo {
         data ConstVoidPtr;
         count Usize;
     }) -> (struct {
-        actual_count OptionalUsize;
+        actual_count Usize;
     }) error status;
 };

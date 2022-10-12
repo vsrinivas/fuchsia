@@ -7,7 +7,6 @@ library zx;
 // header generator.
 
 alias MutableVectorVoid = vector<handle>;
-alias OptionalUint32 = uint32;
 alias VectorHandleU32Size = vector<byte>;
 alias VectorPaddr = vector<paddr>;
 alias VectorVoidU32Size = vector<byte>;
@@ -48,8 +47,8 @@ protocol KernelCases {
     }) -> (struct {
         bytes VectorVoidU32Size;
         handles VectorHandleU32Size;
-        actual_bytes OptionalUint32;
-        actual_handles OptionalUint32;
+        actual_bytes uint32;
+        actual_handles uint32;
     }) error status;
 
     @testonly

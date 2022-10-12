@@ -399,7 +399,7 @@ protocol Port {
         handle handle:PORT;
         deadline time;
     }) -> (struct {
-        packet OptionalPortPacket;
+        packet PortPacket;
     }) error status;
 
     /// ## Summary
