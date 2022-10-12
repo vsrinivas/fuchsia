@@ -68,7 +68,9 @@ async fn find_cr50() -> Result<TpmDeviceProxy, Error> {
     .context("Opening TPM directory")?;
 
     let mut stream = Box::pin(
-        device_watcher::watch_for_files(&proxy).await.context("Starting watch for TPM devices")?,
+        device_watcher::watch_for_files(Clone::clone(&proxy))
+            .await
+            .context("Starting watch for TPM devices")?,
     );
 
     while let Some(entry) = stream

@@ -7,8 +7,8 @@ use {
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_io as fio,
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
-    futures::stream::{Stream, TryStreamExt},
-    std::path::{Path, PathBuf},
+    futures::stream::{Stream, StreamExt as _, TryStreamExt as _},
+    std::path::PathBuf,
 };
 
 /// Waits for a device to appear within `dev_dir` that has a topological path
@@ -19,73 +19,92 @@ pub async fn wait_for_device_topo_path(
     dev_dir: &fio::DirectoryProxy,
     topo_path: &str,
 ) -> Result<String, anyhow::Error> {
-    let mut watcher = fuchsia_vfs_watcher::Watcher::new(fuchsia_fs::clone_directory(
-        dev_dir,
-        fio::OpenFlags::RIGHT_READABLE,
-    )?)
-    .await?;
+    wait_for_device_with(dev_dir, |DeviceInfo { filename, topological_path }| {
+        (topological_path == topo_path).then(|| filename.to_string())
+    })
+    .await
+}
 
-    while let Some(msg) = watcher.try_next().await? {
-        if msg.event != fuchsia_vfs_watcher::WatchEvent::EXISTING
-            && msg.event != fuchsia_vfs_watcher::WatchEvent::ADD_FILE
-        {
-            continue;
+// Device metadata.
+pub struct DeviceInfo<'a> {
+    // The device's file name within the directory in which it was found.
+    pub filename: &'a str,
+    // The device's topological path.
+    pub topological_path: String,
+}
+
+/// Watches the directory for a device for which the predicate returns `Some(t)`
+/// and returns `t`.
+pub async fn wait_for_device_with<T>(
+    dev_dir: &fio::DirectoryProxy,
+    predicate: impl Fn(DeviceInfo<'_>) -> Option<T>,
+) -> Result<T, anyhow::Error> {
+    let stream = watch_for_files(Clone::clone(dev_dir)).await?;
+    let stream = stream.try_filter_map(|filename| {
+        let predicate = &predicate;
+        async move {
+            let filename = filename.to_str().ok_or(format_err!("to_str for filename failed"))?;
+
+            let (controller_proxy, server_end) =
+                fidl::endpoints::create_proxy::<ControllerMarker>()?;
+            let () = dev_dir
+                .open(
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                    fio::MODE_TYPE_SERVICE,
+                    filename,
+                    server_end.into_channel().into(),
+                )
+                .with_context(|| format!("failed to open \"{}\"", filename))?;
+
+            let topological_path = controller_proxy.get_topological_path().await;
+            let topological_path = match topological_path {
+                Ok(topological_path) => topological_path,
+                // Special case PEER_CLOSED; the peer is expected to close the
+                // connection if it doesn't implement the controller protocol.
+                Err(err) => match err {
+                    fidl::Error::ClientChannelClosed { .. } => return Ok(None),
+                    err => {
+                        return Err(err).with_context(|| {
+                            format!("failed to send get_topological_path on \"{}\"", filename)
+                        })
+                    }
+                },
+            };
+            let topological_path = topological_path
+                .map_err(fuchsia_zircon_status::Status::from_raw)
+                .with_context(|| format!("failed to get topological path on \"{}\"", filename))?;
+
+            Ok(predicate(DeviceInfo { filename, topological_path }))
         }
-        if msg.filename == Path::new(".") {
-            continue;
-        }
-
-        let filename = msg.filename.to_str().ok_or(format_err!("to_str for filename failed"))?;
-
-        let (controller_proxy, server_end) = fidl::endpoints::create_proxy::<ControllerMarker>()?;
-        dev_dir
-            .open(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-                0,
-                filename,
-                server_end.into_channel().into(),
-            )
-            .with_context(|| format!("Failed to open \"{}\"", filename))?;
-
-        if let Ok(Ok(path)) = controller_proxy.get_topological_path().await {
-            if path == topo_path {
-                return Ok(filename.to_string());
-            }
-        }
-    }
-    unreachable!();
+    });
+    futures::pin_mut!(stream);
+    let item = stream.try_next().await?;
+    item.ok_or(format_err!("stream ended prematurely"))
 }
 
 /// Returns a stream that contains the paths of any existing files and
 /// directories in `dir` and any new files or directories created after this
 /// function was invoked. These paths are relative to `dir`.
 pub async fn watch_for_files(
-    dir: &fio::DirectoryProxy,
+    dir: fio::DirectoryProxy,
 ) -> Result<impl Stream<Item = Result<PathBuf>>> {
-    let watcher = Watcher::new(fuchsia_fs::clone_directory(dir, fio::OpenFlags::RIGHT_READABLE)?)
-        .await
-        .context("Failed to create watcher")?;
-    Ok(watcher
-        .map_err(|err| anyhow::anyhow!("Failed to get watcher event: {}", err))
-        .try_filter_map(|msg| async move {
-            match msg.event {
-                WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
-                    if msg.filename == Path::new(".") {
-                        return Ok(None);
-                    }
-                    Ok(Some(msg.filename))
+    let watcher = Watcher::new(dir).await.context("failed to create watcher")?;
+    Ok(watcher.map(|result| result.context("failed to get watcher event")).try_filter_map(|msg| {
+        futures::future::ok(match msg.event {
+            WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
+                if msg.filename == std::path::Path::new(".") {
+                    None
+                } else {
+                    Some(msg.filename)
                 }
-                _ => Ok(None),
             }
-        }))
+            _ => None,
+        })
+    }))
 }
 
-async fn wait_for_file(dir: &fio::DirectoryProxy, name: &str) -> Result<()> {
-    let mut watcher = fuchsia_vfs_watcher::Watcher::new(fuchsia_fs::clone_directory(
-        dir,
-        fio::OpenFlags::RIGHT_READABLE,
-    )?)
-    .await?;
+async fn wait_for_file(dir: fio::DirectoryProxy, name: &str) -> Result<()> {
+    let mut watcher = fuchsia_vfs_watcher::Watcher::new(dir).await?;
     while let Some(msg) = watcher.try_next().await? {
         if msg.event != fuchsia_vfs_watcher::WatchEvent::EXISTING
             && msg.event != fuchsia_vfs_watcher::WatchEvent::ADD_FILE
@@ -99,48 +118,47 @@ async fn wait_for_file(dir: &fio::DirectoryProxy, name: &str) -> Result<()> {
     unreachable!();
 }
 
-/// Open the path `name` within `initial_dir`. This function waits for each
-/// directory to be available before it opens it. If the path never appears
-/// this function will wait forever.
-pub async fn recursive_wait_and_open_node_with_flags(
-    initial_dir: &fio::DirectoryProxy,
+/// Open the path `name` within `dir`. This function waits for each directory to
+/// be available before it opens it. If the path never appears this function
+/// will wait forever.
+async fn recursive_wait_and_open_node_with_flags(
+    mut dir: fio::DirectoryProxy,
     name: &str,
     flags: fio::OpenFlags,
     mode: u32,
 ) -> Result<fio::NodeProxy> {
-    let mut dir = fuchsia_fs::clone_directory(initial_dir, flags)?;
     let path = std::path::Path::new(name);
-    let components = path.components().collect::<Vec<_>>();
-    for i in 0..(components.len() - 1) {
-        let component = &components[i];
-        match component {
-            std::path::Component::Normal(file) => {
-                wait_for_file(&dir, file.to_str().unwrap()).await?;
-                dir = fuchsia_fs::open_directory(&dir, std::path::Path::new(file), flags)?;
+    let mut components = path.components().peekable();
+    loop {
+        let component = components.next().ok_or(format_err!("cannot wait for empty path"))?;
+        let file = match component {
+            std::path::Component::Normal(file) => file,
+            component => {
+                return Err(format_err!("path contains non-normal component {:?}", component))
             }
-            _ => panic!("Path must contain only normal components"),
+        };
+        let () = wait_for_file(Clone::clone(&dir), file.to_str().unwrap()).await?;
+        let file = std::path::Path::new(file);
+        if components.peek().is_some() {
+            dir = fuchsia_fs::open_directory(&dir, file, flags)?;
+        } else {
+            break fuchsia_fs::open_node(&dir, file, flags, mode);
         }
-    }
-    match components[components.len() - 1] {
-        std::path::Component::Normal(file) => {
-            wait_for_file(&dir, file.to_str().unwrap()).await?;
-            fuchsia_fs::open_node(&dir, std::path::Path::new(file), flags, mode)
-        }
-        _ => panic!("Path must contain only normal components"),
     }
 }
 
-/// Open the path `name` within `initial_dir`. This function waits for each
-/// directory to be available before it opens it. If the path never appears
-/// this function will wait forever.
+/// Open the path `name` within `dir`. This function waits for each directory to
+/// be available before it opens it. If the path never appears this function
+/// will wait forever.
+///
 /// This function opens node as a RW service. This has the correct permissions
 /// to connect to a driver's API.
 pub async fn recursive_wait_and_open_node(
-    initial_dir: &fio::DirectoryProxy,
+    dir: &fio::DirectoryProxy,
     name: &str,
 ) -> Result<fio::NodeProxy> {
     recursive_wait_and_open_node_with_flags(
-        initial_dir,
+        Clone::clone(dir),
         name,
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         fio::MODE_TYPE_SERVICE,
@@ -215,7 +233,7 @@ mod tests {
             fidl::endpoints::ServerEnd::new(remote.into_channel()),
         );
 
-        let stream = watch_for_files(&dir_proxy).await.unwrap();
+        let stream = watch_for_files(dir_proxy).await.unwrap();
         futures::pin_mut!(stream);
         let actual: HashSet<PathBuf> =
             vec![stream.next().await.unwrap().unwrap(), stream.next().await.unwrap().unwrap()]
@@ -274,7 +292,7 @@ mod tests {
         fasync::Task::spawn(async move { fs_scope.wait().await }).detach();
 
         recursive_wait_and_open_node_with_flags(
-            &client,
+            client,
             "test/dir",
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
             0,

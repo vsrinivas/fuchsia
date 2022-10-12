@@ -16,6 +16,7 @@ rustc_library("rust") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/fuchsia-vfs-watcher",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
