@@ -27,9 +27,6 @@ use std::collections::{btree_map::Entry as BTreeMapEntry, BTreeMap, BTreeSet, Ve
 use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
-/// The largest mapping of shared memory allowed by the binder driver.
-const MAX_MMAP_SIZE: usize = 4 * 1024 * 1024;
-
 /// Android's binder kernel driver implementation.
 pub struct BinderDev {
     driver: Arc<BinderDriver>,
@@ -121,10 +118,10 @@ impl FileOps for BinderDevInstance {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        length: Option<usize>,
+        _length: Option<usize>,
         _prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
-        self.driver.get_vmo(length.unwrap_or(MAX_MMAP_SIZE))
+        panic!("get_vmo should never be called directly.");
     }
 
     fn mmap(
@@ -2300,10 +2297,6 @@ impl BinderDriver {
         Ok(transaction_state)
     }
 
-    fn get_vmo(&self, length: usize) -> Result<zx::Vmo, Errno> {
-        zx::Vmo::create(length as u64).map_err(|_| errno!(ENOMEM))
-    }
-
     fn mmap(
         &self,
         current_task: &CurrentTask,
@@ -2321,7 +2314,7 @@ impl BinderDriver {
         }
 
         // Create a VMO that will be shared between the driver and the client process.
-        let vmo = Arc::new(self.get_vmo(length)?);
+        let vmo = Arc::new(zx::Vmo::create(length as u64).map_err(|_| errno!(ENOMEM))?);
 
         // Map the VMO into the binder process' address space.
         let user_address = current_task.mm.map(
