@@ -7,7 +7,6 @@ import("//build/config/compiler.gni")
 import("//build/config/zircon/levels.gni")
 import("//build/toolchain/breakpad.gni")
 import("//build/toolchain/ccache.gni")
-import("//build/toolchain/concurrent_jobs.gni")
 import("//build/toolchain/default_tools.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/rbe.gni")
@@ -188,10 +187,8 @@ template("zircon_toolchain") {
     }
     compiler_prefix += " -- "
     not_needed([ "use_goma" ])
-    _cxx_concurrent_jobs = concurrent_jobs.remote
   } else if (use_goma) {
     compiler_prefix = rebase_path(goma_dir, root_build_dir) + "/gomacc"
-    _cxx_concurrent_jobs = concurrent_jobs.remote
   } else {
     if (defined(invoker.use_ccache)) {
       use_ccache = invoker.use_ccache
@@ -199,7 +196,6 @@ template("zircon_toolchain") {
     if (use_ccache) {
       compiler_prefix = "ccache "
     }
-    _cxx_concurrent_jobs = concurrent_jobs.local
   }
 
   # Compute what will be the value of `toolchain_variant` for this instance.
@@ -404,7 +400,6 @@ template("zircon_toolchain") {
   }
 
   _compile_common = {
-    forward_variables_from(_cxx_concurrent_jobs, "*")
     outputs =
         [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
     depfile = "{{output}}.d"
