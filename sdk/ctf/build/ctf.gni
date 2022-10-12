@@ -1,7 +1,18 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
+# The complete, user-facing CTF build API.
+#
+# This file is for CTF templates that authors use to write tests.
+# Do _not_ import anything from ./internal nor from any of the SDK
+# verification helpers like verify_deps_in_sdk.gni.
+#
+# Please keep the list sorted alphabetically.
+import("//sdk/ctf/build/ctf_dart_library.gni")
+import("//sdk/ctf/build/ctf_dart_test.gni")
 import("//sdk/ctf/build/ctf_executable.gni")
+import("//sdk/ctf/build/ctf_fidl.gni")
 import("//sdk/ctf/build/ctf_fuchsia_component.gni")
 import("//sdk/ctf/build/ctf_fuchsia_package.gni")
 import("//sdk/ctf/build/ctf_fuchsia_test_package.gni")
@@ -9,11 +20,7 @@ import("//sdk/ctf/build/ctf_fuchsia_unittest_component.gni")
 import("//sdk/ctf/build/ctf_host_test.gni")
 import("//sdk/ctf/build/ctf_host_test_data.gni")
 import("//sdk/ctf/build/ctf_resource.gni")
+import("//sdk/ctf/build/ctf_rustc_binary.gni")
+import("//sdk/ctf/build/ctf_rustc_library.gni")
+import("//sdk/ctf/build/ctf_rustc_test.gni")
 import("//sdk/ctf/build/ctf_source_set.gni")
-import("//sdk/ctf/build/ctf_version.gni")
-import("//sdk/ctf/build/dart/ctf_dart_library.gni")
-import("//sdk/ctf/build/dart/ctf_dart_test.gni")
-import("//sdk/ctf/build/fidl/ctf_fidl.gni")
-import("//sdk/ctf/build/rust/ctf_rustc_binary.gni")
-import("//sdk/ctf/build/rust/ctf_rustc_library.gni")
-import("//sdk/ctf/build/rust/ctf_rustc_test.gni")

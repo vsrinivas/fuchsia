@@ -33,7 +33,7 @@ See existing tests under `//sdk/ctf/tests` for examples.
 
 Note: The CTF build templates verify that dependencies are released in an SDK.
 If your test needs an exception, [file a bug] in `DeveloperExperience>CTF`. The
-allow list can be found [here](/sdk/ctf/build/allowed_ctf_deps.gni).
+allow list can be found [here][allow list]
 
 In your test directory's `BUILD.gn` file, create a test executable using CTF
 build templates.
@@ -228,7 +228,7 @@ The CTF verifies that its dependencies are in the SDK. To avoid build time
 errors, your FIDL must be added to the CTF [allow list].
 
 ```
-# //sdk/ctf/build/allowed_ctf_deps.gni
+# //sdk/ctf/build/internal/allowed_ctf_deps.gni
 ALLOWED_EXPERIMENTAL_FIDL = [
   ...,
   "//absolute/path/to/experimental:fidl"
@@ -276,4 +276,4 @@ Please see the FAQ section about [disabling tests].
 [CTF bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
 [disabling tests]: /docs/development/testing/ctf/faq.md#disable-a-test
 [retiring tests]: /docs/development/testing/ctf/faq.md#retire-a-test
-[allow list]: /sdk/ctf/build/allowed_ctf_deps.gni
+[allow list]: /sdk/ctf/build/internal/allowed_ctf_deps.gni

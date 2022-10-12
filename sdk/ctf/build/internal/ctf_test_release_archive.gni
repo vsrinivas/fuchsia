@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import("//build/components/fuchsia_package_archive.gni")
-import("//sdk/ctf/build/ctf_element.gni")
+import("//sdk/ctf/build/internal/ctf_element.gni")
 
 # Declares a CTF test that should be included in the next CTF release.
 #

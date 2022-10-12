@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//sdk/ctf/build/ctf_element.gni")
-import("//sdk/ctf/build/ctf_version.gni")
-import("//sdk/ctf/build/write_ctf_file.gni")
+import("//sdk/ctf/build/internal/ctf_element.gni")
+import("//sdk/ctf/build/internal/ctf_version.gni")
+import("//sdk/ctf/build/internal/write_ctf_file.gni")
 
 # A Fuchsia component that can be used in CTF.
 #

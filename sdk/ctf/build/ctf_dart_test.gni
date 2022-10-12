@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/dart/test.gni")
-import("//sdk/ctf/build/ctf_element.gni")
-import("//sdk/ctf/build/ctf_version.gni")
-import("//sdk/ctf/build/write_ctf_file.gni")
+import("//sdk/ctf/build/internal/ctf_element.gni")
+import("//sdk/ctf/build/internal/ctf_version.gni")
+import("//sdk/ctf/build/internal/write_ctf_file.gni")
 
 template("ctf_dart_test") {
   invoker_deps = []

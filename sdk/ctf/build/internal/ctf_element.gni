@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//sdk/ctf/build/allowed_ctf_deps.gni")
+import("//sdk/ctf/build/internal/allowed_ctf_deps.gni")
 import("//sdk/ctf/build/verify_deps_in_sdk.gni")
 
 # Defines a CTF element.
