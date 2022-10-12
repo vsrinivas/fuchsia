@@ -101,7 +101,4 @@ source_set("src") {
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/inspect",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

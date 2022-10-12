@@ -21,7 +21,7 @@ void PerformanceCounters::SetGpuFeatures(const GpuFeatures& gpu_features) {
   // Determine the index of the highest set bit to determine the core count.  With discontiguous
   // cores, bits that aren't set take space in the output but aren't filled in.
   if (gpu_features.shader_present) {
-    core_count = 32 - __builtin_clz(gpu_features.shader_present);
+    core_count = 64 - __builtin_clzl(gpu_features.shader_present);
   }
   constexpr uint32_t kJmBlockCount = 1;
   uint32_t kTilerBlockCount = 1;

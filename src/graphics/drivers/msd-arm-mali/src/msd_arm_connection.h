@@ -146,7 +146,7 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
     // Bin ID of the region. Bin IDs must match for the region to be reused.
     uint8_t bin_id;
     // Usage ID of the region. Usage ID preferably matches.
-    uint8_t usage_id;
+    uint16_t usage_id;
     uint64_t gpu_address;
     // Number of initial committed pages requested. The region may grow in size
     // while in use, and may be shrunk when freed.

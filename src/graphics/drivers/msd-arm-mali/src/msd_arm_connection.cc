@@ -621,7 +621,7 @@ MsdArmConnection::JitMemoryRegion* MsdArmConnection::FindBestJitRegionAddressWit
       // Try to pick the allocation with the closest number of initial committed pages as we need.
       // This is more useful when check_usage is false, because when check_usage is true the initial
       // sizes of all buffers with the same usage is generally the same.
-      uint32_t new_committed_page_difference = committed_pages > info.committed_page_count
+      uint64_t new_committed_page_difference = committed_pages > info.committed_page_count
                                                    ? committed_pages - info.committed_page_count
                                                    : info.committed_page_count - committed_pages;
       if (!best_region || (committed_page_difference > new_committed_page_difference)) {
@@ -672,8 +672,9 @@ std::optional<ArmMaliResultCode> MsdArmConnection::AllocateNewJitMemoryRegion(
       DLOG("No JIT memory allocator created");
       return {kArmMaliResultJobInvalid};
     }
-    bool result = jit_allocator_->Alloc(info.va_page_count * magma::page_size(),
-                                        magma::page_shift(), &current_address);
+    bool result =
+        jit_allocator_->Alloc(info.va_page_count * magma::page_size(),
+                              static_cast<uint8_t>(magma::page_shift()), &current_address);
     if (!result) {
       DLOG("Can't allocate jit memory region because of lack of address space.");
       return {};
