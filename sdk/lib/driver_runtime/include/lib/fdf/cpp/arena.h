@@ -12,8 +12,14 @@
 
 namespace fdf {
 
-// C++ wrapper for an arena, with RAII semantics. Automatically frees
-// all allocated memory when it goes out of scope.
+// C++ wrapper for an arena, with RAII semantics. Automatically destroys
+// the reference to the runtime arena object when it goes out of scope.
+// If there are no more references to the arena, all memory associated with
+// the arena will be freed.
+//
+// |fdf::Arena::Create| will return a reference to a newly created runtime arena object.
+// Passing an arena to |fdf::Channel::Write| will create and transfer a new reference to
+// that same arena, and does not take ownership of your arena reference.
 //
 // # Thread safety
 //

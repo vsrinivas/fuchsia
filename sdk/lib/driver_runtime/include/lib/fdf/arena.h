@@ -12,7 +12,12 @@ __BEGIN_CDECLS
 // An arena which supports allocation of memory.
 //
 // The arena owns all the allocated memory. Allocated memory can be freed
-// by calling |fdf_arena_free|, or will be freed when the arena is destroyed.
+// by calling |fdf_arena_free|, or will be freed when all references to
+// the underlying runtime arena object are destroyed.
+//
+// |fdf_arena_create| will return a reference to a newly created runtime arena object.
+// Passing an arena to |fdf_channel_write| will create and transfer a new reference to
+// that same arena, and does not take ownership of your arena reference.
 //
 // # Thread safety
 //
@@ -61,7 +66,9 @@ void fdf_arena_free(fdf_arena_t* arena, void* ptr);
 // within memory managed by the |arena|.
 bool fdf_arena_contains(fdf_arena_t* arena, const void* ptr, size_t num_bytes);
 
-// Frees all memory associated with the arena.
+// Destroys the reference to the underlying runtime arena object.
+// If there are no more references to the arena, all memory associated with
+// the arena will be freed.
 void fdf_arena_destroy(fdf_arena_t* arena);
 
 __END_CDECLS
