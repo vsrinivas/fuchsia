@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <lib/zxio/types.h>
 #include <limits.h>
 #include <zircon/types.h>
@@ -36,11 +37,15 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(LocalVnode);
 
-  // Initializes a new vnode, and attaches a reference to it inside an
-  // (optional) parent.
-  static fbl::RefPtr<LocalVnode> Create(fbl::RefPtr<LocalVnode> parent,
-                                        fidl::ClientEnd<fuchsia_io::Directory> remote,
-                                        fbl::String name);
+  // Initializes a new vnode with a remote node_type, and attaches a reference to it
+  // inside an (optional) parent.
+  static zx::status<fbl::RefPtr<LocalVnode>> Create(fbl::RefPtr<LocalVnode> parent,
+                                                    fidl::ClientEnd<fuchsia_io::Directory> remote,
+                                                    fbl::String name);
+
+  // Initializes a new vnode with a Intermediate node_type, and attaches a reference to it
+  // inside an (optional) parent.
+  static fbl::RefPtr<LocalVnode> Create(fbl::RefPtr<LocalVnode> parent, fbl::String name);
 
   // Recursively unlinks this Vnode's children, and detaches this node from
   // its parent.
@@ -49,50 +54,18 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
   // Detaches this vnode from its parent. The Vnode's own children are not unlinked.
   void UnlinkFromParent();
 
-  // Invoke |Fn()| on all children of this LocalVnode.
-  // May be used as a const visitor-pattern for all children.
-  //
-  // Any status other than ZX_OK returned from |Fn()| will halt iteration
-  // immediately and return.
-  template <typename Fn>
-  zx_status_t ForAllChildren(Fn fn) const {
-    for (const Entry& entry : entries_by_id_) {
-      zx_status_t status = fn(*entry.node());
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-    return ZX_OK;
-  }
-
-  // Returns a child if it has the name |name|.
-  // Otherwise, returns nullptr.
-  fbl::RefPtr<LocalVnode> Lookup(std::string_view name) const;
-
   // Returns the next child vnode from the list of children, assuming that
   // |last_seen| is the ID of the last returned vnode. At the same time,
   // |last_seen| is updated to reflect the current ID.
   //
   // If the end of iteration is reached, |out_vnode| is set to nullptr.
-  void Readdir(uint64_t* last_seen, fbl::RefPtr<LocalVnode>* out_vnode) const;
+  zx_status_t Readdir(uint64_t* last_seen, fbl::RefPtr<LocalVnode>* out_vnode) const;
 
-  // Remote is "set-once". If it is valid, this class guarantees that
-  // the value of |Remote()| will not change for the lifetime of |LocalVnode|.
-  bool RemoteValid() const { return remote_valid_; }
-  zxio_t* Remote() const { return const_cast<zxio_t*>(&remote_storage_.io); }
+  // Invoke |func| on the (path, channel) pairs for all remote nodes found in the
+  // node hierarchy rooted at `this`.
+  zx_status_t EnumerateRemotes(const EnumerateCallback& func) const;
+
   const fbl::String& Name() const { return name_; }
-
-  bool has_children() const { return !entries_by_id_.is_empty(); }
-
- private:
-  friend class fbl::RefPtr<LocalVnode>;
-
-  void AddEntry(fbl::RefPtr<LocalVnode> vn);
-  void RemoveEntry(LocalVnode* vn);
-  void UnlinkChildren();
-  LocalVnode(fbl::RefPtr<LocalVnode> parent, fidl::ClientEnd<fuchsia_io::Directory> remote,
-             fbl::String name);
-  ~LocalVnode();
 
   struct IdTreeTag {};
   struct NameTreeTag {};
@@ -130,20 +103,61 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
       fbl::TaggedWAVLTree<uint64_t, std::unique_ptr<Entry>, IdTreeTag, KeyByIdTraits>;
   using EntryByNameMap = fbl::TaggedWAVLTree<fbl::String, Entry*, NameTreeTag, KeyByNameTraits>;
 
-  uint64_t next_node_id_ = 1;
-  EntryByIdMap entries_by_id_;
-  EntryByNameMap entries_by_name_;
+  class Intermediate {
+   public:
+    bool has_children() const { return !entries_by_id_.is_empty(); }
+    void AddEntry(fbl::RefPtr<LocalVnode> vn);
+    void RemoveEntry(LocalVnode* vn);
+    void UnlinkEntries();
 
+    const EntryByIdMap& GetEntriesById() const { return entries_by_id_; }
+
+    // Returns a child if it has the name |name|.
+    // Otherwise, returns nullptr.
+    fbl::RefPtr<LocalVnode> Lookup(std::string_view name) const;
+
+    // Invoke |Fn()| on all entries in this Intermediate node_type.
+    // May be used as a const visitor-pattern for all entries.
+    //
+    // Any status other than ZX_OK returned from |Fn()| will halt iteration
+    // immediately and return.
+    template <typename Fn>
+    zx_status_t ForAllEntries(Fn fn) const;
+
+   private:
+    uint64_t next_node_id_ = 1;
+    EntryByNameMap entries_by_name_;
+    EntryByIdMap entries_by_id_;
+  };
+
+  class Remote {
+   public:
+    explicit Remote(zxio_storage_t remote_storage) : remote_storage_(remote_storage) {}
+    zxio_t* Connection() const { return const_cast<zxio_t*>(&remote_storage_.io); }
+
+   private:
+    const zxio_storage_t remote_storage_;
+  };
+
+  std::variant<Intermediate, Remote>& NodeType() { return node_type_; }
+
+ private:
+  friend class fbl::RefPtr<LocalVnode>;
+
+  zx_status_t AddChild(fbl::RefPtr<LocalVnode> child);
+  zx_status_t RemoveChild(LocalVnode* child);
+
+  zx_status_t EnumerateInternal(fbl::StringBuffer<PATH_MAX>* path,
+                                const EnumerateCallback& func) const;
+
+  LocalVnode(fbl::RefPtr<LocalVnode> parent, std::variant<Intermediate, Remote> node_type,
+             fbl::String name);
+  ~LocalVnode();
+
+  std::variant<Intermediate, Remote> node_type_;
   fbl::RefPtr<LocalVnode> parent_;
-  bool remote_valid_;
-  const zxio_storage_t remote_storage_;
   const fbl::String name_;
 };
-
-// Invoke |func| on the (path, channel) pairs for all remotes contained within |vn|.
-//
-// The path supplied to |func| is the full prefix from |vn|.
-zx_status_t EnumerateRemotes(const LocalVnode& vn, const EnumerateCallback& func);
 
 }  // namespace fdio_internal
 
