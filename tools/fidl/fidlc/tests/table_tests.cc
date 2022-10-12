@@ -280,13 +280,13 @@ type Example = table {
 
 TEST(TableTests, Good64OrdinalsMaxIsTable) {
   TestLibrary library;
-  library.AddFile("good/max_ordinal_table.test.fidl");
+  library.AddFile("good/fi-0093.test.fidl");
   ASSERT_COMPILED(library);
 }
 
 TEST(TableTests, BadMaxOrdinalNotTable) {
   TestLibrary library;
-  library.AddFile("bad/max_ordinal_not_table.test.fidl");
+  library.AddFile("bad/fi-0093.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMaxOrdinalNotTable);
 }
 
@@ -450,7 +450,7 @@ type Example = table {
 // TODO(fxbug.dev/35218): This should work once recursive types are fully supported.
 TEST(TableTests, BadRecursionDisallowed) {
   TestLibrary library;
-  library.AddFile("bad/self_referential_table.test.fidl");
+  library.AddFile("bad/fi-0057-d.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "table 'MySelf' -> table 'MySelf'");

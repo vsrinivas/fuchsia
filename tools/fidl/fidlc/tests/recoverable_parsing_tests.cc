@@ -389,25 +389,25 @@ const str3 string:1 = "\297";
 
 TEST(RecoverableParsingTests, UnexpextedLineBreakInLiteral) {
   TestLibrary library;
-  library.AddFile("bad/unexpected_linebreak.test.fidl");
+  library.AddFile("bad/fi-0002.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedLineBreak);
 }
 
 TEST(RecoverableParsingTests, InvalidHexDigit) {
   TestLibrary library;
-  library.AddFile("bad/invalid_hex_digit.test.fidl");
+  library.AddFile("bad/fi-0004.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidHexDigit);
 }
 
 TEST(RecoverableParsingTests, InvalidOctDigit) {
   TestLibrary library;
-  library.AddFile("bad/invalid_oct_digit.test.fidl");
+  library.AddFile("bad/fi-0005.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidOctDigit);
 }
 
 TEST(RecoverableParsingTests, ExpectedDeclaration) {
   TestLibrary library;
-  library.AddFile("bad/expected_declaration.test.fidl");
+  library.AddFile("bad/fi-0006.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
 }
 

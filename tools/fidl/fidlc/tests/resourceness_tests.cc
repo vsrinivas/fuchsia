@@ -92,7 +92,7 @@ type Three = resource resource resource struct {}; // line 6
 TEST(ResourcenessTests, GoodResourceSimple) {
   TestLibrary library;
   library.UseLibraryZx();
-  library.AddFile("good/simple_resourceness.test.fidl");
+  library.AddFile("good/fi-0110.test.fidl");
 
   ASSERT_COMPILED(library);
 }
@@ -100,7 +100,7 @@ TEST(ResourcenessTests, GoodResourceSimple) {
 TEST(ResourcenessTests, BadResourceModifierMissing) {
   TestLibrary library;
   library.UseLibraryZx();
-  library.AddFile("bad/missing_resourceness.test.fidl");
+  library.AddFile("bad/fi-0110.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
 }

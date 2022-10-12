@@ -1,5 +1,0 @@
-library test.bad.errormethodabsentresponse;
-
-protocol MyProtocol {
-    MyMethod() -> () error uint32;
-};

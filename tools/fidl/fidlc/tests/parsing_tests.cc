@@ -457,14 +457,14 @@ TEST(ParsingTests, BadInvalidCharacterTest) {
   TestLibrary library;
   // This is all alphanumeric in the appropriate locale, but not a valid
   // identifier.
-  library.AddFile("bad/invalid_character.test.fidl");
+  library.AddFile("bad/fi-0001.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrInvalidCharacter,
                                       fidl::ErrInvalidCharacter);
 }
 
 TEST(ParsingTests, GoodEmptyStructTest) {
   TestLibrary library;
-  library.AddFile("good/empty_struct.test.fidl");
+  library.AddFile("good/fi-0012.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -513,7 +513,7 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
 
 TEST(ParsingTests, GoodSimpleDocComment) {
   TestLibrary library;
-  library.AddFile("good/simple_doc_comment.test.fidl");
+  library.AddFile("good/fi-0027-a.test.fidl");
 
   std::unique_ptr<fidl::raw::File> ast;
   ASSERT_TRUE(library.Parse(&ast));
@@ -560,14 +560,14 @@ TEST(ParsingTests, GoodMultilineDocCommentHasCorrectContents) {
 
 TEST(ParsingTests, WarnDocCommentBlankLineTest) {
   TestLibrary library;
-  library.AddFile("bad/blank_line_inside_doc_comment.test.fidl");
+  library.AddFile("bad/fi-0027.test.fidl");
 
   ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
 TEST(ParsingTests, WarnCommentInsideDocCommentTest) {
   TestLibrary library;
-  library.AddFile("bad/comment_inside_doc_comment.test.fidl");
+  library.AddFile("bad/fi-0026.test.fidl");
 
   ASSERT_WARNED_TWICE_DURING_COMPILE(library, fidl::WarnCommentWithinDocCommentBlock,
                                      fidl::WarnBlankLinesWithinDocCommentBlock);
@@ -590,14 +590,14 @@ type Empty = struct {};
 
 TEST(ParsingTests, BadDocCommentNotAllowedOnParams) {
   TestLibrary library;
-  library.AddFile("bad/doc_comment_on_parameter_list.test.fidl");
+  library.AddFile("bad/fi-0024.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters);
 }
 
 TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
   TestLibrary library;
-  library.AddFile("good/comments_around_doc_comment.test.fidl");
+  library.AddFile("good/fi-0026.test.fidl");
 
   library.set_warnings_as_errors(true);
   ASSERT_COMPILED(library);
@@ -605,7 +605,7 @@ TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
 
 TEST(ParsingTests, GoodBlankLinesAfterDocCommentTest) {
   TestLibrary library;
-  library.AddFile("good/blank_line_after_doc_comment.test.fidl");
+  library.AddFile("good/fi-0027-a.test.fidl");
 
   library.set_warnings_as_errors(true);
   ASSERT_COMPILED(library);
@@ -628,7 +628,7 @@ type Empty = struct {};
 
 TEST(ParsingTests, WarnTrailingDocCommentTest) {
   TestLibrary library;
-  library.AddFile("bad/orphaned_doc_comment.test.fidl");
+  library.AddFile("bad/fi-0028.test.fidl");
 
   ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnDocCommentMustBeFollowedByDeclaration);
 }
@@ -731,7 +731,7 @@ type Foo = struct : uint32 {};
 
 TEST(ParsingTests, BadLayoutClass) {
   TestLibrary library;
-  library.AddFile("bad/invalid_layout.test.fidl");
+  library.AddFile("bad/fi-0012.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLayoutClass);
 }
 
@@ -819,7 +819,7 @@ type Foo = struct {
 
 TEST(ParsingTests, BadMissingEqualsValueEnum) {
   TestLibrary library;
-  library.AddFile("bad/unexpected_token_of_kind.test.fidl");
+  library.AddFile("bad/fi-0008.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 

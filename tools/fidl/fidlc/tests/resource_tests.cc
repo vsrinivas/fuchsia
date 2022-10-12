@@ -16,7 +16,7 @@ namespace {
 
 TEST(ResourceTests, GoodValid) {
   TestLibrary library;
-  library.AddFile("good/simple_resource_definition.test.fidl");
+  library.AddFile("good/fi-0029.test.fidl");
   ASSERT_COMPILED(library);
 
   auto resource = library.LookupResource("SomeResource");
@@ -79,7 +79,7 @@ resource_definition SomeResource : uint32 {
 
 TEST(ResourceTests, BadNoProperties) {
   TestLibrary library;
-  library.AddFile("bad/resource_definition_no_properties.test.fidl");
+  library.AddFile("bad/fi-0029.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneProperty);
 }
 

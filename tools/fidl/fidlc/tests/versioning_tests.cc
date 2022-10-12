@@ -1410,25 +1410,25 @@ type FOO = table {};
 
 TEST(VersioningTests, BadOverlappingNamesSimple) {
   TestLibrary library;
-  library.AddFile("bad/name_overlap.test.fidl");
+  library.AddFile("bad/fi-0036.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameOverlap);
 }
 
 TEST(VersioningTests, GoodOverlappingNamesSimpleFixAvailability) {
   TestLibrary library;
-  library.AddFile("good/name_overlap_fix_availability.test.fidl");
+  library.AddFile("good/fi-0036.test.fidl");
   ASSERT_COMPILED(library);
 }
 
 TEST(VersioningTests, BadOverlappingNamesCanonicalSimple) {
   TestLibrary library;
-  library.AddFile("bad/name_overlap_canonical.test.fidl");
+  library.AddFile("bad/fi-0037.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameOverlapCanonical);
 }
 
 TEST(VersioningTests, GoodOverlappingNamesCanonicalSimpleFixRename) {
   TestLibrary library;
-  library.AddFile("good/name_overlap_canonical_fix_rename.test.fidl");
+  library.AddFile("good/fi-0037.test.fidl");
   ASSERT_COMPILED(library);
 }
 

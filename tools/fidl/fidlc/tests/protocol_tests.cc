@@ -527,7 +527,7 @@ protocol Narcisse {
 
 TEST(ProtocolTests, BadCannotMutuallyCompose) {
   TestLibrary library;
-  library.AddFile("bad/recursive_protocol_reference.test.fidl");
+  library.AddFile("bad/fi-0057-b.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
@@ -889,26 +889,26 @@ protocol MyProtocol {
 
 TEST(ProtocolTests, BadMethodEmptyPayloadStruct) {
   TestLibrary library;
-  library.AddFile("bad/method_empty_struct_payload.test.fidl");
+  library.AddFile("bad/fi-0077-a.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs,
                                       fidl::ErrEmptyPayloadStructs);
 }
 
 TEST(ProtocolTests, GoodMethodAbsentPayloadStruct) {
   TestLibrary library;
-  library.AddFile("good/method_absent_payload.test.fidl");
+  library.AddFile("good/fi-0077-a.test.fidl");
   ASSERT_COMPILED(library);
 }
 
 TEST(ProtocolTests, BadEventEmptyPayloadStruct) {
   TestLibrary library;
-  library.AddFile("bad/event_empty_struct_payload.test.fidl");
+  library.AddFile("bad/fi-0077-b.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
 }
 
 TEST(ProtocolTests, GoodEventAbsentPayloadStruct) {
   TestLibrary library;
-  library.AddFile("good/event_absent_payload.test.fidl");
+  library.AddFile("good/fi-0077-b.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -928,13 +928,13 @@ protocol MyProtocol {
 
 TEST(ProtocolTests, BadMethodAbsentResponseWithError) {
   TestLibrary library;
-  library.AddFile("bad/error_method_absent_response.test.fidl");
+  library.AddFile("bad/fi-0076.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
 }
 
 TEST(ProtocolTests, GoodMethodEmptyStructResponseWithError) {
   TestLibrary library;
-  library.AddFile("good/error_method_empty_struct_response.test.fidl");
+  library.AddFile("good/fi-0076.test.fidl");
   ASSERT_COMPILED(library);
 }
 

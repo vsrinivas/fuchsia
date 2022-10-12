@@ -1,6 +1,0 @@
-// Copyright 2022 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-library test.bad.invalidhexdigit;
-
-const BAD_HEX string:1 = "\xOF"; // 'O' (not 0) is an invalid hex digit.

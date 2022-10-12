@@ -1,5 +1,0 @@
-library test.good.errormethodemptystructresponse;
-
-protocol MyProtocol {
-    MyMethod() -> (struct {}) error uint32;
-};

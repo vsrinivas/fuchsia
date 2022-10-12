@@ -11,7 +11,7 @@ namespace {
 
 TEST(TransportTests, GoodChannelTransportWithChannelTransportEnd) {
   TestLibrary library;
-  library.AddFile("good/simple_transports.test.fidl");
+  library.AddFile("good/fi-0167.test.fidl");
 
   ASSERT_COMPILED(library);
 }
@@ -265,7 +265,7 @@ protocol P {
 
 TEST(TransportTests, BadCannotReassignTransport) {
   TestLibrary library;
-  library.AddFile("bad/transports_reassigned.test.fidl");
+  library.AddFile("bad/fi-0167.test.fidl");
 
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConstrainTwice,
                                       fidl::ErrCannotConstrainTwice);

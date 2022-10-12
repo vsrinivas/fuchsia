@@ -38,7 +38,7 @@ type Three = strict strict strict union { 1: b bool; }; // line 6
 
 TEST(StrictnessTests, BadConflictingModifiers) {
   TestLibrary library;
-  library.AddFile("bad/conflicting_modifiers.test.fidl");
+  library.AddFile("bad/fi-0033.test.fidl");
 
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConflictingModifier,
                                       fidl::ErrConflictingModifier);
@@ -136,7 +136,7 @@ type StrictFoo = strict table {};
 
 TEST(StrictnessTests, GoodUnionStrictness) {
   TestLibrary library;
-  library.AddFile("good/simple_strictness.test.fidl");
+  library.AddFile("good/fi-0033.test.fidl");
 
   ASSERT_COMPILED(library);
   EXPECT_EQ(library.LookupUnion("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);

@@ -586,7 +586,7 @@ protocol HasMethod {
 // off when unknown interactions are always-on.
 TEST(MethodTests, GoodValidNormalMethodWithoutUnknownInteractions) {
   TestLibrary library;
-  library.AddFile("good/simple_one_way_method.test.fidl");
+  library.AddFile("good/fi-0024.test.fidl");
   ASSERT_COMPILED(library);
 
   auto protocol = library.LookupProtocol("Example");

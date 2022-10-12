@@ -1,0 +1,10 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+@available(added=1)
+library test.bad.fi0037;
+
+const COLOR string = "red";
+
+@available(added=2)
+protocol Color {};

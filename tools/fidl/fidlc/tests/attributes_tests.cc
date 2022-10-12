@@ -352,7 +352,7 @@ protocol A {
 
 TEST(AttributesTests, GoodDocAttribute) {
   TestLibrary library;
-  library.AddFile("good/doc_attribute.test.fidl");
+  library.AddFile("good/fi-0028.test.fidl");
 
   ASSERT_COMPILED(library);
 }
@@ -392,7 +392,7 @@ library fidl.test.dupattributes;
 // Test that a close attribute is caught.
 TEST(AttributesTests, WarnOnCloseToOfficialAttribute) {
   TestLibrary library;
-  library.AddFile("bad/attribute_typo.test.fidl");
+  library.AddFile("bad/fi-0145.test.fidl");
 
   ASSERT_WARNED_DURING_COMPILE(library, fidl::WarnAttributeTypo);
   EXPECT_SUBSTR(library.warnings()[0]->msg.c_str(), "duc");
@@ -401,7 +401,7 @@ TEST(AttributesTests, WarnOnCloseToOfficialAttribute) {
 
 TEST(AttributesTests, GoodNotTooCloseUnofficialAttribute) {
   TestLibrary library;
-  library.AddFile("good/unofficial_attribute.test.fidl");
+  library.AddFile("good/fi-0145.test.fidl");
 
   ASSERT_COMPILED(library);
   auto example_protocol = library.LookupProtocol("Example");

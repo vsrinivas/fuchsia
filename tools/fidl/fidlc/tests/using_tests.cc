@@ -25,7 +25,7 @@ type Bar = struct {
   ASSERT_COMPILED(dependency);
 
   TestLibrary library(&shared);
-  library.AddFile("good/simple_import.test.fidl");
+  library.AddFile("good/fi-0178.test.fidl");
 
   ASSERT_COMPILED(library);
 }
@@ -309,7 +309,7 @@ TEST(UsingTests, BadUnusedUsing) {
   ASSERT_COMPILED(dependency);
 
   TestLibrary library(&shared);
-  library.AddFile("bad/unused_import.test.fidl");
+  library.AddFile("bad/fi-0178.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnusedImport);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");

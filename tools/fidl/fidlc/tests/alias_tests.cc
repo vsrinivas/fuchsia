@@ -251,7 +251,7 @@ alias alias_of_vector_of_string = vector<string>;
 
 TEST(AliasTests, GoodUnboundedVectorBoundTwice) {
   TestLibrary library;
-  library.AddFile("good/unbounded_vector_bound_twice.test.fidl");
+  library.AddFile("good/fi-0158.test.fidl");
 
   ASSERT_COMPILED(library);
 }
@@ -335,7 +335,7 @@ alias alias_of_vector_of_string = vector<string>;
 
 TEST(AliasTests, BadCannotBoundTwice) {
   TestLibrary library;
-  library.AddFile("bad/vector_bound_twice.test.fidl");
+  library.AddFile("bad/fi-0158.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBoundTwice);
 }

@@ -50,13 +50,13 @@ const C_BINARY_L uint32 = 0B101010111100110111101111;
 
 TEST(ConstsTests, GoodHexLiteralTest) {
   TestLibrary library;
-  library.AddFile("good/simple_hex_literal.test.fidl");
+  library.AddFile("good/fi-0004.test.fidl");
   ASSERT_COMPILED(library);
 }
 
 TEST(ConstsTests, GoodOctLiteralTest) {
   TestLibrary library;
-  library.AddFile("good/simple_oct_literal.test.fidl");
+  library.AddFile("good/fi-0005.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -131,13 +131,13 @@ const c int32 = true;
 
 TEST(ConstsTests, GoodConstTestInt64) {
   TestLibrary library;
-  library.AddFile("good/simple_int_const.test.fidl");
+  library.AddFile("good/fi-0066-b.test.fidl");
   ASSERT_COMPILED(library);
 }
 
 TEST(ConstsTests, GoodConstTesUint64) {
   TestLibrary library;
-  library.AddFile("good/simple_uint_const.test.fidl");
+  library.AddFile("good/fi-0066-a.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -152,7 +152,7 @@ const b uint64 = a;
 
 TEST(ConstsTests, BadConstTestUint64Negative) {
   TestLibrary library;
-  library.AddFile("bad/uint_overflow.test.fidl");
+  library.AddFile("bad/fi-0066.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantOverflowsType,
                                       fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-42");
@@ -218,7 +218,7 @@ const b float32 = -3.41e38;
 
 TEST(ConstsTests, GoodConstTestString) {
   TestLibrary library;
-  library.AddFile("good/simple_string_literal.test.fidl");
+  library.AddFile("good/fi-0002.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -545,19 +545,19 @@ TEST(ConstsTests, BadConstTestAssignBuiltinNonType) {
 
 TEST(ConstsTests, BadNameCollision) {
   TestLibrary library;
-  library.AddFile("bad/name_collision.test.fidl");
+  library.AddFile("bad/fi-0034.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
 TEST(ConstsTests, GoodFixNameCollisionRename) {
   TestLibrary library;
-  library.AddFile("good/name_collision_fix_rename.test.fidl");
+  library.AddFile("good/fi-0034-b.test.fidl");
   ASSERT_COMPILED(library);
 }
 
 TEST(ConstsTests, GoodFixNameCollisionRemove) {
   TestLibrary library;
-  library.AddFile("good/name_collision_fix_remove.test.fidl");
+  library.AddFile("good/fi-0034-a.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -790,7 +790,7 @@ TEST(ConstsTests, BadConstReferencesInvalidConst) {
 
 TEST(ConstsTests, GoodDeclaration) {
   TestLibrary library;
-  library.AddFile("good/simple_declaration.test.fidl");
+  library.AddFile("good/fi-0006.test.fidl");
   ASSERT_COMPILED(library);
 }
 

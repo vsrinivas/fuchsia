@@ -72,7 +72,7 @@ type Foo = flexible union {
 
 TEST(UnionTests, GoodStrictUnion) {
   TestLibrary library;
-  library.AddFile("good/strict_union.test.fidl");
+  library.AddFile("good/fi-0018.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -217,7 +217,7 @@ type Duplicates = strict union {
 
 TEST(UnionTests, BadCannotStartAtZero) {
   TestLibrary library;
-  library.AddFile("bad/cannot_start_at_zero.test.fidl");
+  library.AddFile("bad/fi-0018.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 

@@ -16,16 +16,16 @@ namespace {
 
 TEST(LibraryTests, GoodLibraryMultipleFiles) {
   TestLibrary library;
-  library.AddFile("good/library_multiple_files_1.test.fidl");
-  library.AddFile("good/library_multiple_files_2.test.fidl");
+  library.AddFile("good/fi-0040-a.test.fidl");
+  library.AddFile("good/fi-0040-b.test.fidl");
 
   ASSERT_COMPILED(library);
 }
 
 TEST(LibraryTests, BadFilesDisagreeOnLibraryName) {
   TestLibrary library;
-  library.AddFile("bad/files_disagree_on_library_name_1.test.fidl");
-  library.AddFile("bad/files_disagree_on_library_name_2.test.fidl");
+  library.AddFile("bad/fi-0040-a.test.fidl");
+  library.AddFile("bad/fi-0040-b.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFilesDisagreeOnLibraryName);
 }

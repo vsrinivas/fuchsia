@@ -12,7 +12,7 @@ namespace {
 
 TEST(StructsTests, GoodSimpleStruct) {
   TestLibrary library;
-  library.AddFile("good/simple_struct.test.fidl");
+  library.AddFile("good/fi-0001.test.fidl");
 
   ASSERT_COMPILED(library);
 }
@@ -250,7 +250,7 @@ type MyStruct = struct {
 
 TEST(StructsTests, BadMutuallyRecursive) {
   TestLibrary library;
-  library.AddFile("bad/recursive_struct_reference.test.fidl");
+  library.AddFile("bad/fi-0057-a.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct 'Yang' -> struct 'Yin' -> struct 'Yang'");
@@ -258,7 +258,7 @@ TEST(StructsTests, BadMutuallyRecursive) {
 
 TEST(StructsTests, BadSelfRecursive) {
   TestLibrary library;
-  library.AddFile("bad/self_referential_struct.test.fidl");
+  library.AddFile("bad/fi-0057-c.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct 'MySelf' -> struct 'MySelf'");
@@ -266,7 +266,7 @@ TEST(StructsTests, BadSelfRecursive) {
 
 TEST(StructsTests, GoodOptionalityAllowsRecursion) {
   TestLibrary library;
-  library.AddFile("good/recursive_type.test.fidl");
+  library.AddFile("good/fi-0057.test.fidl");
 
   ASSERT_COMPILED(library);
 }

@@ -154,19 +154,19 @@ type E = enum {};
 
 TEST(EnumsTests, GoodEnumTestNoMembersAllowedWhenFlexible) {
   TestLibrary library;
-  library.AddFile("good/empty_flexible_enum.test.fidl");
+  library.AddFile("good/fi-0019-a.test.fidl");
   ASSERT_COMPILED(library);
 }
 
 TEST(EnumsTests, GoodEnumTestStrictWithMembers) {
   TestLibrary library;
-  library.AddFile("good/simple_strict_enum.test.fidl");
+  library.AddFile("good/fi-0019-b.test.fidl");
   ASSERT_COMPILED(library);
 }
 
 TEST(EnumsTests, BadEnumTestNoMembersWhenStrict) {
   TestLibrary library;
-  library.AddFile("bad/empty_strict_enum.test.fidl");
+  library.AddFile("bad/fi-0019.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
 }
 
@@ -214,7 +214,7 @@ type Struct = struct {
 
 TEST(EnumsTests, GoodSimpleEnum) {
   TestLibrary library;
-  library.AddFile("good/simple_enum.test.fidl");
+  library.AddFile("good/fi-0008.test.fidl");
   ASSERT_COMPILED(library);
 }
 

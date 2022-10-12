@@ -1,0 +1,12 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.good.fi0033;
+
+type FlexibleFoo = flexible union {
+    1: i int32;
+};
+
+type StrictBar = strict union {
+    1: i int32;
+};

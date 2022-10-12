@@ -11,7 +11,7 @@ namespace {
 
 TEST(BitsTests, GoodSimple) {
   TestLibrary library;
-  library.AddFile("good/simple_bits.test.fidl");
+  library.AddFile("good/fi-0067-a.test.fidl");
 
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupBits("Fruit");
@@ -166,14 +166,14 @@ type Fruit = bits : uint64 {
 
 TEST(BitsTests, BadNonPowerOfTwo) {
   TestLibrary library;
-  library.AddFile("bad/bits_non_power_of_two.test.fidl");
+  library.AddFile("bad/fi-0067.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBitsMemberMustBePowerOfTwo);
 }
 
 TEST(BitsTests, GoodWithMask) {
   TestLibrary library;
-  library.AddFile("good/masked_bits.test.fidl");
+  library.AddFile("good/fi-0067-b.test.fidl");
 
   ASSERT_COMPILED(library);
 
