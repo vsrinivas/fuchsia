@@ -136,15 +136,15 @@ import("//tools/configc/build/config.gni")
 #   testonly
 #   visibility
 template("fuchsia_package") {
-  repository = "fuchsia.com"
-  if (defined(invoker.repository)) {
-    repository = invoker.repository
-  }
-
   if (current_toolchain == target_toolchain) {
     package_name = target_name
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
+    }
+
+    repository = "fuchsia.com"
+    if (defined(invoker.repository)) {
+      repository = invoker.repository
     }
 
     shell_commands_manifest_target = "${target_name}.shell_commands_manifest"
@@ -377,6 +377,5 @@ template("fuchsia_package") {
 
     # Suppress unused variable warnings.
     not_needed(invoker, "*")
-    not_needed([ "repository" ])
   }
 }
