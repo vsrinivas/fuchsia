@@ -5,33 +5,62 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/hdmi-display.h"
 
 #include <cstdint>
+#include <optional>
 
 #include <gtest/gtest.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 
 namespace i915_tgl {
 
 namespace {
 
+TEST(CreateDpllFrequencyDividerConfigTest, AllDivisors) {
+  for (const int8_t& divider : DpllSupportedFrequencyDividers()) {
+    SCOPED_TRACE(testing::Message() << "Divider: " << int{divider});
+
+    const DpllFrequencyDividerConfig divider_config = CreateDpllFrequencyDividerConfig(divider);
+    EXPECT_EQ(divider, divider_config.p0_p_divider * divider_config.p1_q_divider *
+                           divider_config.p2_k_divider);
+  }
+}
+
+TEST(CreateDpllOscillatorConfigForFrequencyTest, PrmExample1) {
+  // Values from IHD-OS-KBL-Vol 12-1.17 section "Example of DVI on DDIB using
+  // 113.309 MHz symbol "clock", page 137.
+
+  const DpllOscillatorConfig dco_config = CreateDpllOscillatorConfig(113'309 * 5);
+  EXPECT_EQ(9'000'000, dco_config.center_frequency_khz);
+  EXPECT_EQ(16, dco_config.frequency_divider);
+  EXPECT_EQ(113'309 * 5 * 16, dco_config.frequency_khz);
+}
+
+TEST(CreateDpllOscillatorConfigForFrequencyTest, PrmExample2) {
+  // Values from IHD-OS-KBL-Vol 12-1.17 section "Example of HDMI on DDIC using
+  // 296.703 MHz symbol clock", pages 137-138.
+
+  const DpllOscillatorConfig dco_config = CreateDpllOscillatorConfig(296'703 * 5);
+  EXPECT_EQ(9'000'000, dco_config.center_frequency_khz);
+  EXPECT_EQ(6, dco_config.frequency_divider);
+  EXPECT_EQ(296'703 * 5 * 6, dco_config.frequency_khz);
+}
+
 TEST(ComputeDpllConfigurationForHdmiTest, PrmExample1) {
   // Values from IHD-OS-KBL-Vol 12-1.17 section "Example of DVI on DDIB using
   // 113.309 MHz symbol "clock", page 137.
 
   const uint32_t symbol_clock_khz = 113'309;
-  uint16_t dco_int, dco_frac;
-  uint8_t q, q_mode, k, p, cf;
-  const bool success = ComputeDpllConfigurationForHdmi(symbol_clock_khz, &dco_int, &dco_frac, &q,
-                                                       &q_mode, &k, &p, &cf);
-  ASSERT_TRUE(success);
+  std::optional<HdmiDpllState> result = ComputeDpllConfigurationForHdmi(symbol_clock_khz);
+  ASSERT_TRUE(result.has_value());
 
-  EXPECT_EQ(377u, dco_int);
-  EXPECT_EQ(22828u, dco_frac);
-  EXPECT_EQ(4u, q);
-  EXPECT_EQ(1u, q_mode);
-  EXPECT_EQ(tgl_registers::DpllConfig2::kKdiv2, k);
-  EXPECT_EQ(tgl_registers::DpllConfig2::kPdiv2, p);
-  EXPECT_EQ(tgl_registers::DpllConfig2::k9000Mhz, cf);
+  EXPECT_EQ(377u, result->dco_int);
+  EXPECT_EQ(22828u, result->dco_frac);
+  EXPECT_EQ(4u, result->q);
+  EXPECT_EQ(1u, result->q_mode);
+  EXPECT_EQ(tgl_registers::DpllConfig2::kKdiv2, result->k);
+  EXPECT_EQ(tgl_registers::DpllConfig2::kPdiv2, result->p);
+  EXPECT_EQ(tgl_registers::DpllConfig2::k9000Mhz, result->cf);
 }
 
 TEST(ComputeDpllConfigurationForHdmiTest, PrmExample2) {
@@ -48,19 +77,16 @@ TEST(ComputeDpllConfigurationForHdmiTest, PrmExample2) {
   // the OpenBSD i915 driver code.
 
   const uint32_t symbol_clock_khz = 296'703;
-  uint16_t dco_int, dco_frac;
-  uint8_t q, q_mode, k, p, cf;
-  const bool success = ComputeDpllConfigurationForHdmi(symbol_clock_khz, &dco_int, &dco_frac, &q,
-                                                       &q_mode, &k, &p, &cf);
-  ASSERT_TRUE(success);
+  std::optional<HdmiDpllState> result = ComputeDpllConfigurationForHdmi(symbol_clock_khz);
+  ASSERT_TRUE(result.has_value());
 
-  EXPECT_EQ(370u, dco_int);
-  EXPECT_EQ(28794u, dco_frac);
-  EXPECT_EQ(1u, q);
-  EXPECT_EQ(0u, q_mode);
-  EXPECT_EQ(tgl_registers::DpllConfig2::kKdiv3, k);
-  EXPECT_EQ(tgl_registers::DpllConfig2::kPdiv2, p);
-  EXPECT_EQ(tgl_registers::DpllConfig2::k9000Mhz, cf);
+  EXPECT_EQ(370u, result->dco_int);
+  EXPECT_EQ(28794u, result->dco_frac);
+  EXPECT_EQ(1u, result->q);
+  EXPECT_EQ(0u, result->q_mode);
+  EXPECT_EQ(tgl_registers::DpllConfig2::kKdiv3, result->k);
+  EXPECT_EQ(tgl_registers::DpllConfig2::kPdiv2, result->p);
+  EXPECT_EQ(tgl_registers::DpllConfig2::k9000Mhz, result->cf);
 }
 
 }  // namespace
