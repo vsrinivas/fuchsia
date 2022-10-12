@@ -105,6 +105,11 @@ bool Availability::is_deprecated() const {
   return deprecated_.has_value();
 }
 
+void Availability::Fail() {
+  ZX_ASSERT_MSG(state_ == State::kUnset, "called Fail in the wrong order");
+  state_ = State::kFailed;
+}
+
 bool Availability::Init(std::optional<Version> added, std::optional<Version> deprecated,
                         std::optional<Version> removed) {
   ZX_ASSERT_MSG(state_ == State::kUnset, "called Init in the wrong order");

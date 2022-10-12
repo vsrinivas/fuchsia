@@ -790,6 +790,22 @@ type Foo = struct {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingLibraryAvailability);
 }
 
+TEST(VersioningTests, BadUseInUnversionedLibraryReportedOncePerAttribute) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@available(added=1)
+type Foo = struct {
+    @available(added=2)
+    member1 bool;
+    member2 bool;
+};
+)FIDL");
+  // Note: Only twice, not a third time for member2.
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMissingLibraryAvailability,
+                                      fidl::ErrMissingLibraryAvailability);
+}
+
 TEST(VersioningTests, BadAddedEqualsRemoved) {
   TestLibrary library(R"FIDL(
 @available(added=1, removed=1)

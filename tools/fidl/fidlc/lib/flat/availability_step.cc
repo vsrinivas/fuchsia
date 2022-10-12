@@ -138,6 +138,7 @@ void AvailabilityStep::CompileAvailabilityFromAttribute(Element* element, Attrib
     Fail(ErrMissingLibraryAvailability, attribute->span, library()->name);
     // Return early to avoid confusing error messages about inheritance
     // conflicts with the default @available(added=HEAD) on the library.
+    element->availability.Fail();
     return;
   }
 
