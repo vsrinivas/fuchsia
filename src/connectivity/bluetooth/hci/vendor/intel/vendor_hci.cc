@@ -157,7 +157,7 @@ void VendorHci::EnterManufacturerMode() {
 
   auto packet = CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
   auto params = packet->mutable_payload<MfgModeChangeCommandParams>();
-  params->enable = bt::hci_spec::GenericEnableParam::kEnable;
+  params->enable = bt::hci_spec::GenericEnableParam::ENABLE;
   params->disable_mode = MfgDisableMode::kNoPatches;
 
   SendCommand(packet->view());
@@ -178,7 +178,7 @@ bool VendorHci::ExitManufacturerMode(MfgDisableMode mode) {
 
   auto packet = CommandPacket::New(kMfgModeChange, sizeof(MfgModeChangeCommandParams));
   auto params = packet->mutable_payload<MfgModeChangeCommandParams>();
-  params->enable = bt::hci_spec::GenericEnableParam::kDisable;
+  params->enable = bt::hci_spec::GenericEnableParam::DISABLE;
   params->disable_mode = mode;
 
   SendCommand(packet->view());

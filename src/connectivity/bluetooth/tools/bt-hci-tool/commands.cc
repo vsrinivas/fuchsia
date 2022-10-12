@@ -351,9 +351,9 @@ bool HandleLESetAdvEnable(const CommandData* cmd_data, const fxl::CommandLine& c
   ::bt::hci_spec::GenericEnableParam value;
   std::string cmd_arg = cmd_line.positional_args()[0];
   if (cmd_arg == "enable") {
-    value = ::bt::hci_spec::GenericEnableParam::kEnable;
+    value = ::bt::hci_spec::GenericEnableParam::ENABLE;
   } else if (cmd_arg == "disable") {
-    value = ::bt::hci_spec::GenericEnableParam::kDisable;
+    value = ::bt::hci_spec::GenericEnableParam::DISABLE;
   } else {
     std::cout << "  Unrecognized parameter: " << cmd_arg << std::endl;
     std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
@@ -570,17 +570,16 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     return false;
   }
 
-  ::bt::hci_spec::GenericEnableParam filter_duplicates =
-      ::bt::hci_spec::GenericEnableParam::kEnable;
+  ::bt::hci_spec::GenericEnableParam filter_duplicates = ::bt::hci_spec::GenericEnableParam::ENABLE;
   if (cmd_line.HasOption("no-dedup")) {
-    filter_duplicates = ::bt::hci_spec::GenericEnableParam::kDisable;
+    filter_duplicates = ::bt::hci_spec::GenericEnableParam::DISABLE;
   }
 
   constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::LESetScanEnableCommandParams);
   auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kLESetScanEnable, kPayloadSize);
 
   auto params = packet->mutable_payload<::bt::hci_spec::LESetScanEnableCommandParams>();
-  params->scanning_enabled = ::bt::hci_spec::GenericEnableParam::kEnable;
+  params->scanning_enabled = ::bt::hci_spec::GenericEnableParam::ENABLE;
   params->filter_duplicates = filter_duplicates;
 
   // Event handler to log when we receive advertising reports
@@ -619,8 +618,8 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
                           cmd_data]() mutable {
     auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kLESetScanEnable, kPayloadSize);
     auto params = packet->mutable_payload<::bt::hci_spec::LESetScanEnableCommandParams>();
-    params->scanning_enabled = ::bt::hci_spec::GenericEnableParam::kDisable;
-    params->filter_duplicates = ::bt::hci_spec::GenericEnableParam::kDisable;
+    params->scanning_enabled = ::bt::hci_spec::GenericEnableParam::DISABLE;
+    params->filter_duplicates = ::bt::hci_spec::GenericEnableParam::DISABLE;
 
     auto id = SendCommand(cmd_data, std::move(packet), std::move(final_cb), std::move(cleanup_cb));
 
@@ -704,14 +703,13 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     max_responses = uint8_t(responses);
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::InquiryCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kInquiry, kPayloadSize);
-  auto params = packet->mutable_payload<::bt::hci_spec::InquiryCommandParams>();
-
-  params->lap = ::bt::hci_spec::kGIAC;
+  bt::hci::EmbossCommandPacket packet =
+      bt::hci::EmbossCommandPacket::New<::bt::hci_spec::InquiryCommandView>(bt::hci_spec::kInquiry);
+  auto view = packet.view<::bt::hci_spec::InquiryCommandWriter>();
+  view.lap().Write(::bt::hci_spec::InquiryAccessCode::GIAC);
   // Always use the maximum inquiry length, we will time it more accurately.
-  params->inquiry_length = ::bt::hci_spec::kInquiryLengthMax;
-  params->num_responses = max_responses;
+  view.inquiry_length().Write(::bt::hci_spec::kInquiryLengthMax);
+  view.num_responses().Write(max_responses);
 
   auto event_handler_ids = std::make_shared<std::vector<bt::hci::CommandChannel::EventHandlerId>>();
   fit::closure cleanup_cb = [complete_cb = std::move(complete_cb), event_handler_ids,

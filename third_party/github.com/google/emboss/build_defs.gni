@@ -1,6 +1,8 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 template("emboss_cc_library") {
-  assert(defined(invoker.source),
-         "Need source arg for emboss_cc_library")
+  assert(defined(invoker.source), "Need source arg for emboss_cc_library")
   source = get_path_info(invoker.source, "file")
 
   # The --output-path arg to the embossc script only specifies the
@@ -29,14 +31,52 @@ template("emboss_cc_library") {
   output_path = root_gen_dir + path_sep + string_join(path_sep, fakedirs)
 
   action(target_name + "_header") {
-    script = "//third_party/github.com/google/emboss/src/embossc"
-    inputs = [ source ]
+    script = "//third_party/github.com/google/emboss/embossc_runner.py"
     args = [
+      rebase_path("//third_party/github.com/google/emboss/src/embossc", root_build_dir),
       "--generate",
       "cc",
       "--output-path",
       rebase_path(output_path, root_build_dir),
       rebase_path(source, root_build_dir),
+    ]
+    inputs = [
+      source,
+      "//third_party/github.com/google/emboss/src/embossc",
+      "//third_party/github.com/google/emboss/src/compiler/back_end/__init__.py",
+      "//third_party/github.com/google/emboss/src/compiler/back_end/cpp/__init__.py",
+      "//third_party/github.com/google/emboss/src/compiler/back_end/cpp/emboss_codegen_cpp.py",
+      "//third_party/github.com/google/emboss/src/compiler/back_end/cpp/generated_code_templates",
+      "//third_party/github.com/google/emboss/src/compiler/back_end/cpp/header_generator.py",
+      "//third_party/github.com/google/emboss/src/compiler/back_end/util/__init__.py",
+      "//third_party/github.com/google/emboss/src/compiler/back_end/util/code_template.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/__init__.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/attribute_checker.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/attributes.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/constraints.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/dependency_checker.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/emboss_front_end.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/error_examples",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/expression_bounds.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/glue.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/lr1.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/module_ir.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/parser.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/prelude.emb",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/reserved_words",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/symbol_resolver.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/synthetics.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/tokenizer.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/type_check.py",
+      "//third_party/github.com/google/emboss/src/compiler/front_end/write_inference.py",
+      "//third_party/github.com/google/emboss/src/compiler/util/error.py",
+      "//third_party/github.com/google/emboss/src/compiler/util/expression_parser.py",
+      "//third_party/github.com/google/emboss/src/compiler/util/ir_pb2.py",
+      "//third_party/github.com/google/emboss/src/compiler/util/ir_util.py",
+      "//third_party/github.com/google/emboss/src/compiler/util/name_conversion.py",
+      "//third_party/github.com/google/emboss/src/compiler/util/parser_types.py",
+      "//third_party/github.com/google/emboss/src/compiler/util/simple_memoizer.py",
+      "//third_party/github.com/google/emboss/src/compiler/util/traverse_ir.py",
     ]
     outputs = [ compiled_header_path ]
   }

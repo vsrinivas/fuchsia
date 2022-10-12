@@ -66,7 +66,7 @@ class MfgModeEnabler {
       bool enable, MfgDisableMode disable_mode = MfgDisableMode::kNoPatches) {
     auto packet = CommandPacket::New(kMfgModeChange, sizeof(IntelMfgModeChangeCommandParams));
     auto params = packet->mutable_payload<IntelMfgModeChangeCommandParams>();
-    params->enable = enable ? GenericEnableParam::kEnable : GenericEnableParam::kDisable;
+    params->enable = enable ? GenericEnableParam::ENABLE : GenericEnableParam::DISABLE;
     params->disable_mode = disable_mode;
     return packet;
   }
@@ -80,7 +80,7 @@ void LogCommandComplete(StatusCode status) {
 std::string PrintByte(uint8_t byte) { return fxl::StringPrintf("%u (0x%02x)", byte, byte); }
 
 std::string EnableParamToString(GenericEnableParam param) {
-  return (param == GenericEnableParam::kEnable) ? "enabled" : "disabled";
+  return (param == GenericEnableParam::ENABLE) ? "enabled" : "disabled";
 }
 
 std::string FirmwareVariantToString(uint8_t fw_variant) {

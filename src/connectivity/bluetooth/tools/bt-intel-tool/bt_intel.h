@@ -65,7 +65,7 @@ enum class MfgDisableMode : uint8_t {
 };
 
 struct IntelMfgModeChangeCommandParams {
-  bt::hci_spec::GenericEnableParam enable;
+  ::bt::hci_spec::GenericEnableParam enable;
   MfgDisableMode disable_mode;
 } __PACKED;
 
