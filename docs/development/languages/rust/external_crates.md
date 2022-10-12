@@ -120,10 +120,9 @@ To add an external crate, do the following:
 
 ## Updating an external crate
 
-Warning: You must receive approval from the OSRB _before_ pushing a commit to
-Gerrit if updating an external crate changes the license or pulls in a new crate
-as a dependency. Do not request a code review until you have approval from the
-OSRB in these circumstances.
+Warning: If updating an external crate changes the license or pulls in a new crate as a dependency,
+you must receive approval from the OSRB _before_ uploading a CL (e.g. work in progress) to Gerrit.
+Do not request a code review until you have approval from the OSRB in these circumstances.
 
 To update an external crate, do the following:
 
@@ -150,7 +149,9 @@ To update an external crate, do the following:
       fx set core.x64 && fx build
       ```
 
-   1. Request OSRB approval by doing the following:
+   1. Examine the changes for any changes in license or dependencies. If there
+      are these types of changes, you must go through the OSRB approval process.
+      Request OSRB approval by doing the following:
       - Create an issue with the
       [Open Source Review Board (OSRB) template](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Open+Source+Review+Board+).
       - In the issue, do the following:
@@ -170,23 +171,11 @@ To update an external crate, do the following:
       [Importing a subset of files in a crate](#importing_a_subset_of_files_in_a_crate)
       for more information.
 
-   1. If you receive OSRB approval, upload the change for review to
+   1. If/when you receive OSRB approval, upload the change for review to
       Gerrit. Include the OSRB Issue ID number in the change.
 
-   1. Add an [OWNER][owners-file]
-   of the external rust crate repository as a code reviewer. You must get a
-   `Code Review Label +2` from one of the repository's owners.
-
-   1. If you have the ability to submit an approved change to the
-      Commit Queue (CQ), [submit your change](https://gerrit-review.googlesource.com/Documentation/intro-user.html#submit)
-      to merge that change into [third_party/rust_crates][external-crates].
-
-      If you don't have the ability to submit an approved change, reply to your
-      Gerrit change and request that one of the repository owners submit your
-      change.
-
-      For more information about the associated actions for each contributor
-      role, see [Role matrix](/docs/contribute/community/contributor-roles.md).
+   1. If there are no license or dependency changes, you may upload the change
+      for review without going through the OSRB approval process.
 
 ## Adding a new mirror
 
