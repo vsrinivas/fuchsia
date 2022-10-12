@@ -4,6 +4,7 @@
 
 use {
     crate::corpus::get_type as get_corpus_type,
+    crate::duration::Duration,
     crate::fuzzer::Fuzzer,
     crate::manager::Manager,
     crate::reader::{ParsedCommand, Reader},
@@ -13,12 +14,11 @@ use {
     errors::ffx_bail,
     ffx_fuzz_args::*,
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_fuzzer as fuzz,
-    fuchsia_async as fasync, fuchsia_zircon_status as zx,
+    fuchsia_zircon_status as zx,
     futures::{pin_mut, select, FutureExt},
     selectors::{parse_selector, VerboseError},
     serde_json::json,
     std::cell::RefCell,
-    std::convert::TryInto,
     std::fs,
     std::sync::{Arc, Mutex},
     termion::{self, clear, cursor},
@@ -483,12 +483,10 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
                     self.writer.println(format!("  Runs performed: {}", runs));
                 };
                 if let Some(elapsed) = status.elapsed {
-                    let elapsed: Option<u64> = elapsed.try_into().ok();
-                    if let Some(elapsed) = elapsed {
-                        let duration = fasync::Duration::from_nanos(elapsed);
-                        self.writer
-                            .println(format!("    Time elapsed: {} seconds", duration.as_secs()));
-                    }
+                    self.writer.println(format!(
+                        "    Time elapsed: {} seconds",
+                        Duration::from_nanos(elapsed).into_seconds()
+                    ));
                 };
                 if let (Some(covered_pcs), Some(covered_features)) =
                     (status.covered_pcs, status.covered_features)
@@ -633,6 +631,7 @@ mod test_fixtures {
     use {
         super::Shell,
         crate::controller::test_fixtures::FakeController,
+        crate::duration::Duration,
         crate::manager::test_fixtures::serve_manager,
         crate::reader::test_fixtures::ScriptReader,
         crate::test_fixtures::{create_task, Test, TEST_URL},
@@ -739,7 +738,7 @@ mod test_fixtures {
             // workflow that runs to completion.
             if !self.runs_indefinitely && self.state == FuzzerState::Running {
                 let mut reader = self.shell.reader.borrow_mut();
-                reader.interrupt(fasync::Duration::from_millis(10)).await;
+                reader.interrupt(Duration::from_millis(10)).await;
                 test.output_matches("Workflow complete. Press any key to continue...");
                 self.state = FuzzerState::Idle;
             }
@@ -754,7 +753,7 @@ mod test_fixtures {
         /// Simulates the user pressing a key to interrupt output from a long-running workflow.
         pub async fn interrupt(&self, test: &mut Test) {
             let mut reader = self.shell.reader.borrow_mut();
-            reader.interrupt(fasync::Duration::from_millis(10)).await;
+            reader.interrupt(Duration::from_millis(10)).await;
             test.output_matches("Fuzzer output has been paused.");
             test.output_matches("To resume output, use the `resume` command.");
         }
@@ -812,13 +811,13 @@ mod tests {
     use {
         super::test_fixtures::ShellScript,
         super::DEFAULT_FUZZING_OUTPUT_VARIABLE,
+        crate::duration::Duration,
         crate::input::test_fixtures::verify_saved,
         crate::test_fixtures::{Test, TEST_URL},
         crate::util::digest_path,
         anyhow::Result,
         fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
-        fuchsia_async as fasync, fuchsia_zircon_status as zx,
-        std::convert::TryInto,
+        fuchsia_zircon_status as zx,
         std::path::PathBuf,
     };
 
@@ -1260,7 +1259,7 @@ mod tests {
         let status = fuzz::Status {
             // running: Some(true),
             runs: Some(1),
-            elapsed: Some(fasync::Duration::from_secs(2).as_nanos().try_into().unwrap()),
+            elapsed: Some(Duration::from_seconds(2).into_nanos()),
             covered_pcs: Some(3),
             covered_features: Some(4),
             corpus_num_inputs: Some(5),

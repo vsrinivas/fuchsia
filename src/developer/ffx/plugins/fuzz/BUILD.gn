@@ -15,6 +15,7 @@ ffx_plugin("ffx_fuzz") {
     "src/controller.rs",
     "src/corpus.rs",
     "src/diagnostics.rs",
+    "src/duration.rs",
     "src/fuzzer.rs",
     "src/input.rs",
     "src/lib.rs",

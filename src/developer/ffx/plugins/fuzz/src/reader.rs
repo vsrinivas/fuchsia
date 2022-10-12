@@ -215,6 +215,7 @@ async fn shell_read_loop(
 pub mod test_fixtures {
     use {
         super::{parse, ParsedCommand, Reader},
+        crate::duration::{deadline_after, Duration},
         anyhow::{bail, Result},
         async_trait::async_trait,
         fuchsia_async as fasync,
@@ -226,8 +227,8 @@ pub mod test_fixtures {
     /// The ScriptReader represents canned input for a unit test.
     pub struct ScriptReader {
         commands: LinkedList<String>,
-        sender: mpsc::UnboundedSender<fasync::Duration>,
-        receiver: mpsc::UnboundedReceiver<fasync::Duration>,
+        sender: mpsc::UnboundedSender<Duration>,
+        receiver: mpsc::UnboundedReceiver<Duration>,
     }
 
     impl ScriptReader {
@@ -236,7 +237,7 @@ pub mod test_fixtures {
         /// This object is similar to `CommandReader` except that it allows commands to be `add`ed
         /// to by unit test after its creation.
         pub fn new() -> Self {
-            let (sender, receiver) = mpsc::unbounded::<fasync::Duration>();
+            let (sender, receiver) = mpsc::unbounded::<Duration>();
             Self { commands: LinkedList::new(), sender, receiver }
         }
 
@@ -246,7 +247,7 @@ pub mod test_fixtures {
         }
 
         /// Indicates a call to `until_enter` should return `after` a certain duration.
-        pub async fn interrupt(&mut self, after: fasync::Duration) {
+        pub async fn interrupt(&mut self, after: Duration) {
             self.sender.send(after).await.expect("failed to send interrupt");
         }
     }
@@ -263,8 +264,10 @@ pub mod test_fixtures {
         }
 
         async fn pause(&mut self) -> Result<()> {
-            match self.receiver.next().await {
-                Some(delay) => fasync::Timer::new(delay).await,
+            let timeout = self.receiver.next().await;
+            let timeout = timeout.map(|duration| duration.into_nanos());
+            match deadline_after(timeout) {
+                Some(deadline) => fasync::Timer::new(deadline).await,
                 None => bail!("receiver closed"),
             };
             Ok(())

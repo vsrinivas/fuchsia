@@ -6,12 +6,13 @@ use {
     crate::artifact::Artifact,
     crate::corpus,
     crate::diagnostics::Forwarder,
+    crate::duration::deadline_after,
     crate::input::{Input, InputPair},
     crate::writer::{OutputSink, Writer},
     anyhow::{bail, Context as _, Error, Result},
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
-    fuchsia_async::{Duration, DurationExt, Timer},
+    fuchsia_async::Timer,
     fuchsia_zircon_status as zx,
     futures::future::{pending, Either},
     futures::{pin_mut, select, try_join, Future, FutureExt},
@@ -371,11 +372,8 @@ impl<O: OutputSink> Controller<O> {
         };
         let send_fut = send_fut().fuse();
         let forward_fut = self.forwarder.forward_all().fuse();
-        let timer_fut = match self.timeout.take() {
-            Some(timeout) => {
-                let deadline = Duration::from_nanos(timeout as u64).after_now();
-                Either::Left(Timer::new(deadline))
-            }
+        let timer_fut = match deadline_after(self.timeout.take()) {
+            Some(deadline) => Either::Left(Timer::new(deadline)),
             None => Either::Right(pending()),
         };
         let timer_fut = timer_fut.fuse();

@@ -18,6 +18,7 @@ mod constants;
 mod controller;
 mod corpus;
 mod diagnostics;
+mod duration;
 mod fuzzer;
 mod input;
 mod manager;
