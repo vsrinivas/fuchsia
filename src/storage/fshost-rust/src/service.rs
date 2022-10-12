@@ -68,13 +68,6 @@ pub fn fshost_admin() -> Arc<service::Service> {
                         },
                     );
                 }
-                Ok(fshost::AdminRequest::WipeStorage { responder, .. }) => {
-                    responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw())).unwrap_or_else(
-                        |e| {
-                            tracing::error!("failed to send WipeStorage response. error: {:?}", e);
-                        },
-                    );
-                }
                 Err(e) => {
                     tracing::error!("admin server failed: {:?}", e);
                     return;

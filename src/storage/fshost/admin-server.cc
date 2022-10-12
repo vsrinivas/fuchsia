@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.device/cpp/markers.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/markers.h>
-#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/default.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
@@ -34,7 +33,6 @@
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fxfs.h"
-#include "src/storage/fshost/storage-wiper.h"
 #include "src/storage/fshost/utils.h"
 
 namespace fshost {
@@ -47,19 +45,17 @@ constexpr zx_duration_t kOpenPartitionDuration = ZX_SEC(10);
 
 fbl::RefPtr<fs::Service> AdminServer::Create(FsManager* fs_manager,
                                              const fshost_config::Config& config,
-                                             async_dispatcher* dispatcher,
-                                             BlockWatcher& block_watcher) {
-  return fbl::MakeRefCounted<fs::Service>([dispatcher, fs_manager, config, &block_watcher](
-                                              fidl::ServerEnd<fuchsia_fshost::Admin> chan) {
-    zx_status_t status = fidl::BindSingleInFlightOnly(
-        dispatcher, std::move(chan),
-        std::make_unique<AdminServer>(fs_manager, config, block_watcher));
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to bind admin service: " << zx_status_get_string(status);
-      return status;
-    }
-    return ZX_OK;
-  });
+                                             async_dispatcher* dispatcher) {
+  return fbl::MakeRefCounted<fs::Service>(
+      [dispatcher, fs_manager, config](fidl::ServerEnd<fuchsia_fshost::Admin> chan) {
+        zx_status_t status = fidl::BindSingleInFlightOnly(
+            dispatcher, std::move(chan), std::make_unique<AdminServer>(fs_manager, config));
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "failed to bind admin service: " << zx_status_get_string(status);
+          return status;
+        }
+        return ZX_OK;
+      });
 }
 
 void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& completer) {
@@ -402,79 +398,6 @@ zx::status<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
   }
 
   return zx::ok();
-}
-
-void AdminServer::WipeStorage(WipeStorageRequestView request,
-                              WipeStorageCompleter::Sync& completer) {
-  if (!config_.fvm_ramdisk()) {
-    // WipeStorage should only be invoked during recovery (when `fvm_ramdisk` will be set).
-    FX_LOGS(ERROR) << "WipeStorage can only be invoked from a recovery context.";
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-
-  if (!request->blobfs_root.is_valid()) {
-    FX_LOGS(ERROR) << "Invalid directory handle passed to WipeStorage.";
-    completer.ReplyError(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  // We need to pause the block watcher to make sure fshost doesn't try to mount or format any of
-  // the newly provisioned volumes in the FVM.
-  if (!block_watcher_.IsPaused()) {
-    FX_LOGS(INFO) << "Pausing block watcher.";
-    if (const zx_status_t status = block_watcher_.Pause(); status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to pause block watcher: " << zx_status_get_string(status);
-      completer.ReplyError(status);
-      return;
-    }
-  } else {
-    FX_LOGS(INFO) << "Block watcher already paused.";
-  }
-
-  // Find the first non-ramdisk FVM partition to wipe.
-  ZX_DEBUG_ASSERT(!config_.ramdisk_prefix().empty());
-  zx::status<fbl::unique_fd> fvm_device =
-      storage_wiper::GetFvmBlockDevice(config_.ramdisk_prefix());
-  if (fvm_device.is_error()) {
-    FX_LOGS(ERROR) << "Failed get FVM block device: " << fvm_device.status_string();
-    completer.ReplyError(fvm_device.status_value());
-    return;
-  }
-
-  // Wipe and reprovision the FVM partition with the product/board configured values.
-  zx::status<fs_management::StartedSingleVolumeFilesystem> blobfs =
-      storage_wiper::WipeStorage(*std::move(fvm_device), config_);
-  if (blobfs.is_error()) {
-    FX_LOGS(ERROR) << "WipeStorage failed: " << blobfs.status_string();
-    completer.ReplyError(blobfs.error_value());
-    return;
-  }
-
-  zx::status blob_data_root = blobfs->DataRoot();
-  if (blob_data_root.is_error()) {
-    FX_LOGS(ERROR) << "Failed to obtain Blobfs data root: " << blob_data_root.status_string();
-    completer.ReplyError(blob_data_root.error_value());
-    return;
-  }
-  ZX_ASSERT(blob_data_root->is_valid());
-
-  fidl::ServerEnd<fuchsia_io::Node> server_end{request->blobfs_root.TakeChannel()};
-
-  if (const auto clone_result =
-          fidl::WireCall(blob_data_root.value())
-              ->Clone(fuchsia_io::OpenFlags::kCloneSameRights, std::move(server_end));
-      !clone_result.ok()) {
-    FX_LOGS(ERROR) << "Failed to Clone Blobfs data root: " << clone_result.status_string();
-    completer.ReplyError(clone_result.status());
-    return;
-  }
-
-  completer.ReplySuccess();
-
-  // Release Blobfs handle so it doesn't get shutdown when the |blobfs| variable goes out of scope.
-  // Blobfs will be shutdown when the fshost component collection is shutdown by component manager.
-  blobfs->Release();
 }
 
 }  // namespace fshost

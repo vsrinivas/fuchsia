@@ -1126,7 +1126,7 @@ mod tests {
 
         std::thread::spawn(move || {
             let _remote_block_device =
-                RemoteBlockClientSync::new(client).expect("RemoteBlockClientSync::new failed");
+                RemoteBlockClientSync::new(client).expect("RemoteBlockDevice::new failed");
             // The drop here should cause CloseFifo to be sent.
         });
 

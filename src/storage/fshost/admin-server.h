@@ -19,14 +19,13 @@ class FsManager;
 
 class AdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
  public:
-  AdminServer(FsManager* fs_manager, const fshost_config::Config& config,
-              BlockWatcher& block_watcher)
-      : fs_manager_(fs_manager), config_(config), block_watcher_(block_watcher) {}
+  AdminServer(FsManager* fs_manager, const fshost_config::Config& config)
+      : fs_manager_(fs_manager), config_(config) {}
 
   // Creates a new fs::Service backed by a new AdminServer, to be inserted into
   // a pseudo fs.
   static fbl::RefPtr<fs::Service> Create(FsManager* fs_manager, const fshost_config::Config& config,
-                                         async_dispatcher* dispatcher, BlockWatcher& block_watcher);
+                                         async_dispatcher* dispatcher);
 
   void Mount(MountRequestView request, MountCompleter::Sync& completer) override;
 
@@ -38,14 +37,11 @@ class AdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
   void WriteDataFile(WriteDataFileRequestView request,
                      WriteDataFileCompleter::Sync& completer) override;
 
-  void WipeStorage(WipeStorageRequestView request, WipeStorageCompleter::Sync& completer) override;
-
  private:
   zx::status<> WriteDataFileInner(WriteDataFileRequestView request);
 
   FsManager* fs_manager_;
   const fshost_config::Config& config_;
-  BlockWatcher& block_watcher_;
 };
 
 }  // namespace fshost

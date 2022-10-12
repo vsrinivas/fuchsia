@@ -99,15 +99,5 @@
         // Disables the block watcher. This prevents fshost from binding drivers and launching
         // filesystems using devices that appear in /dev.
         disable_block_watcher: { type: "bool" },
-
-        // Slice size of the FVM partition used when reprovisioning storage.
-        fvm_slice_size: { type: "uint64" },
-
-        // Initial number of inodes to format Blobfs with when reprovisioning storage. If set to
-        // zero, the default value in Blobfs is used instead.
-        blobfs_initial_inodes: { type: "uint64" },
-
-        // If true, use derecated blob format (padded Merkle tree at start) when formatting Blobfs.
-        blobfs_use_deprecated_padded_format: { type: "bool" },
     },
 }

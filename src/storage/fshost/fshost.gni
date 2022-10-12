@@ -157,6 +157,4 @@ default_integration_test_options = {
   allow_legacy_data_partition_names = true
 
   use_native_fxfs_crypto = true
-
-  blobfs_use_deprecated_padded_format = false
 }

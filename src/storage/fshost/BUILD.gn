@@ -104,7 +104,6 @@ source_set("block-watcher") {
     "filesystem-mounter.cc",
     "fxfs.cc",
     "nand-device.cc",
-    "storage-wiper.cc",
     "utils.cc",
     "watcher.cc",
   ]

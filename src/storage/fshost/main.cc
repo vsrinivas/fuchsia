@@ -206,7 +206,7 @@ int Main() {
   zx::vmo ramdisk_vmo;
   status = get_ramdisk(&ramdisk_vmo);
   if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "failed to get ramdisk.";
+    FX_LOGS(ERROR) << "failed to get ramdisk" << zx_status_get_string(status);
   } else if (ramdisk_vmo.is_valid()) {
     thrd_t t;
 

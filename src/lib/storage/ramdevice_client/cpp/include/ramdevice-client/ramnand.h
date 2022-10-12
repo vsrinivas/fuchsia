@@ -16,7 +16,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
-#include <fbl/unique_fd.h>
 
 namespace ramdevice_client {
 

@@ -60,7 +60,6 @@
 #include "src/lib/storage/fs_management/cpp/options.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
-#include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/fxfs.h"
 #include "src/storage/fshost/utils.h"
 #include "src/storage/fvm/format.h"
@@ -255,16 +254,6 @@ fs_management::MountOptions GetBlobfsMountOptions(const fshost_config::Config& c
     }
   }
   return options;
-}
-
-fs_management::MountOptions GetBlobfsMountOptionsForRecovery(const fshost_config::Config& config) {
-  return {
-      .readonly = false,
-      .wait_until_ready = true,
-      .write_compression_level = -1,
-      .sandbox_decompression = config.sandbox_decompression(),
-      .component_child_name = "blobfs",
-  };
 }
 
 BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
