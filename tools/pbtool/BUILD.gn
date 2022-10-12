@@ -24,7 +24,10 @@ rustc_binary("pbtool") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [
+    "src/build_archive.rs",
+    "src/main.rs",
+  ]
 }
 
 group("tests") {
