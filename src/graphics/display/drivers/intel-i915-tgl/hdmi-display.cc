@@ -580,17 +580,20 @@ DpllFrequencyDividerConfig CreateDpllFrequencyDividerConfig(int8_t dco_divider) 
     return {
         .p0_p_divider = 3, .p1_q_divider = 1, .p2_k_divider = static_cast<int8_t>(dco_divider / 3)};
   }
-  if (dco_divider == 5 || dco_divider == 7) {
-    return {.p0_p_divider = dco_divider, .p1_q_divider = 1, .p2_k_divider = 1};
+  // The pseudocode uses the P0 (P) divider for 5 and 7. That is incorrect,
+  // because the P0 divider can only do 1/2/3/7.
+  //
+  // Taking a step back, there is a single solution that meets all the (P, Q, K)
+  // constraints for all odd dividers that include 5 or 7 in their prime factor
+  // decomposition. Q must be 1 because we can't set K to 2. So the 5 / 7 prime
+  // factor must be set in P / K.
+  if (dco_divider == 5 || dco_divider == 15 || dco_divider == 35) {
+    return {
+        .p0_p_divider = static_cast<int8_t>(dco_divider / 5), .p1_q_divider = 1, .p2_k_divider = 5};
   }
-  if (dco_divider == 15) {
-    return {.p0_p_divider = 3, .p1_q_divider = 1, .p2_k_divider = 5};
-  }
-  if (dco_divider == 21) {
-    return {.p0_p_divider = 7, .p1_q_divider = 1, .p2_k_divider = 3};
-  }
-  if (dco_divider == 35) {
-    return {.p0_p_divider = 7, .p1_q_divider = 1, .p2_k_divider = 5};
+  if (dco_divider == 7 || dco_divider == 21) {
+    return {
+        .p0_p_divider = 7, .p1_q_divider = 1, .p2_k_divider = static_cast<int8_t>(dco_divider / 7)};
   }
   ZX_ASSERT_MSG(false, "Unhandled divider %d", dco_divider);
 }
