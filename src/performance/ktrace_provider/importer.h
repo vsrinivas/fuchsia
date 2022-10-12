@@ -100,12 +100,6 @@ class Importer {
   bool HandleProcessStart(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t affected_thread,
                           zx_koid_t affected_process);
   bool HandleProcessExit(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t affected_process);
-  bool HandleChannelCreate(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t channel0,
-                           zx_koid_t channel1, uint32_t flags);
-  bool HandleChannelWrite(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t channel,
-                          uint32_t num_bytes, uint32_t num_handles);
-  bool HandleChannelRead(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t channel,
-                         uint32_t num_bytes, uint32_t num_handles);
   bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,
                    bool cpu_trace);
   bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t event_name_id,

@@ -80,14 +80,9 @@ zx_status_t sys_channel_create(uint32_t options, user_out_handle* out0, user_out
   if (result != ZX_OK)
     return result;
 
-  uint64_t id0 = handle0.dispatcher()->get_koid();
-  uint64_t id1 = handle1.dispatcher()->get_koid();
-
   result = out0->make(ktl::move(handle0), rights);
   if (result == ZX_OK)
     result = out1->make(ktl::move(handle1), rights);
-  if (result == ZX_OK)
-    ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, options, 0);
   return result;
 }
 
@@ -195,7 +190,6 @@ static zx_status_t channel_read(zx_handle_t handle_value, uint32_t options,
   }
 
   record_recv_msg_sz(num_bytes);
-  ktrace(TAG_CHANNEL_READ, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
   return result;
 }
 
@@ -354,7 +348,6 @@ static zx_status_t channel_write(zx_handle_t handle_value, uint32_t options,
   if (status != ZX_OK)
     return status;
 
-  ktrace(TAG_CHANNEL_WRITE, (uint32_t)channel->get_koid(), num_bytes, num_handles, 0);
   return ZX_OK;
 }
 

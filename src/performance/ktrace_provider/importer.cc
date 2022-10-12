@@ -369,12 +369,6 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
     }
     case KTRACE_EVENT(TAG_OBJECT_DELETE):
       return HandleObjectDelete(record->ts, record->tid, record->a);
-    case KTRACE_EVENT(TAG_CHANNEL_CREATE):
-      return HandleChannelCreate(record->ts, record->tid, record->a, record->b, record->c);
-    case KTRACE_EVENT(TAG_CHANNEL_WRITE):
-      return HandleChannelWrite(record->ts, record->tid, record->a, record->b, record->c);
-    case KTRACE_EVENT(TAG_CHANNEL_READ):
-      return HandleChannelRead(record->ts, record->tid, record->a, record->b, record->c);
     case KTRACE_EVENT(TAG_VCPU_ENTER):
       return HandleVcpuEnter(record->ts, record->tid);
     case KTRACE_EVENT(TAG_VCPU_EXIT):
@@ -901,54 +895,6 @@ bool Importer::HandleObjectDelete(trace_ticks_t event_time, zx_koid_t thread, zx
     channels_.message_counters_.erase(it->second);
   }
 
-  return true;
-}
-
-bool Importer::HandleChannelCreate(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t channel0,
-                                   zx_koid_t channel1, uint32_t flags) {
-  if (channels_.ids_.count(channel0) != 0 || channels_.ids_.count(channel1) != 0) {
-    FX_LOGS(WARNING) << "Channel creation for an already known channel was requested, "
-                     << "ignoring the request.";
-    return false;
-  }
-
-  channels_.ids_[channel0] = channels_.ids_[channel1] = channels_.next_id_++;
-  return true;
-}
-
-bool Importer::HandleChannelWrite(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t channel,
-                                  uint32_t num_bytes, uint32_t num_handles) {
-  auto it = channels_.ids_.find(channel);
-  if (it == channels_.ids_.end())
-    return false;
-
-  auto counter = std::get<Channels::kWriteCounterIndex>(channels_.message_counters_[it->second])++;
-
-  trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_arg_t args[2] = {
-      trace_make_arg(num_bytes_name_ref_, trace_make_uint32_arg_value(num_bytes)),
-      trace_make_arg(num_handles_name_ref_, trace_make_uint32_arg_value(num_handles))};
-  trace_context_write_flow_begin_event_record(context_, event_time, &thread_ref,
-                                              &channel_category_ref_, &channel_write_name_ref_,
-                                              counter, args, std::size(args));
-  return true;
-}
-
-bool Importer::HandleChannelRead(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t channel,
-                                 uint32_t num_bytes, uint32_t num_handles) {
-  auto it = channels_.ids_.find(channel);
-  if (it == channels_.ids_.end())
-    return false;
-
-  auto counter = std::get<Channels::kReadCounterIndex>(channels_.message_counters_[it->second])++;
-
-  trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_arg_t args[2] = {
-      trace_make_arg(num_bytes_name_ref_, trace_make_uint32_arg_value(num_bytes)),
-      trace_make_arg(num_handles_name_ref_, trace_make_uint32_arg_value(num_handles))};
-  trace_context_write_flow_end_event_record(context_, event_time, &thread_ref,
-                                            &channel_category_ref_, &channel_read_name_ref_,
-                                            counter, args, std::size(args));
   return true;
 }
 
