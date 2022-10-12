@@ -743,7 +743,12 @@ impl SimpleAllocator {
         self.inner.lock().unwrap().unavailable_bytes() >= self.device_size
     }
 
-    // TODO(fxbug.dev/107753): Privatize this method, it allows back doors to going over quota.
+    fn is_system_store(&self, owner_object_id: u64) -> bool {
+        let fs = self.filesystem.upgrade().unwrap();
+        owner_object_id == fs.object_manager().root_store_object_id()
+            || owner_object_id == fs.object_manager().root_parent_store_object_id()
+    }
+
     /// Updates the accounting to track that a byte reservation has been moved out of an owner to
     /// the unattributed pool.
     pub fn disown_reservation(&self, old_owner_object_id: Option<u64>, amount: u64) {
@@ -788,13 +793,12 @@ impl Allocator for SimpleAllocator {
 
         // Make sure we have space reserved before we try and find the space.
         let reservation = if let Some(reservation) = transaction.allocator_reservation {
-            // The reservation, if it has an owner, should not be different than the allocating
-            // owner.
-            assert_eq!(
-                owner_object_id,
-                reservation.owner_object_id().unwrap_or(owner_object_id),
-                "The reservation should either have no owner or the same owner as the allocation."
-            );
+            match reservation.owner_object_id {
+                // If there is no owner, this must be a system store that we're allocating for.
+                None => assert!(self.is_system_store(owner_object_id)),
+                // If it has an owner, it should not be different than the allocating owner.
+                Some(res_owner_object_id) => assert_eq!(owner_object_id, res_owner_object_id),
+            };
             let r = reservation.reserve_at_most(len);
             len = r.amount();
             Left(r)
@@ -965,6 +969,8 @@ impl Allocator for SimpleAllocator {
         owner_object_id: u64,
         bytes: u64,
     ) -> Result<(), Error> {
+        // System stores cannot be given limits.
+        assert!(!self.is_system_store(owner_object_id));
         transaction.add(
             self.object_id(),
             Mutation::Allocator(AllocatorMutation::SetLimit { owner_object_id, bytes }),
