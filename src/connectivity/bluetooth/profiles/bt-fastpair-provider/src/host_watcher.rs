@@ -99,9 +99,19 @@ impl HostWatcher {
         return Ok(event);
     }
 
-    /// Returns the address of the active Host, or None if not set.
-    pub fn address(&self) -> Option<Address> {
-        self.active_host.as_ref().map(|host| host.address)
+    /// Returns all the known addresses of the active Host, or None if not set.
+    pub fn addresses(&self) -> Option<Vec<Address>> {
+        self.active_host.as_ref().map(|host| host.addresses.clone())
+    }
+
+    /// Returns the public address of the active Host, or None if not set.
+    pub fn public_address(&self) -> Option<Address> {
+        self.active_host
+            .as_ref()
+            .map(|host| {
+                host.addresses.iter().find(|addr| matches!(addr, Address::Public(_))).copied()
+            })
+            .flatten()
     }
 
     /// Returns the current discoverable state of the active Host, or None if not set.

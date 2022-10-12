@@ -180,7 +180,7 @@ impl Provider {
         };
 
         // There must be an active local Host and PairingManager to facilitate pairing.
-        let local_address = if let Some(addr) = self.host_watcher.address() {
+        let local_public_address = if let Some(addr) = self.host_watcher.public_address() {
             addr
         } else {
             warn!("No active local Host available to start key-based pairing");
@@ -199,16 +199,14 @@ impl Provider {
         // TODO(fxbug.dev/96217): Track the salt in `request` to prevent replay attacks.
         match request.action {
             KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address } => {
-                if local_address.bytes() != &received_provider_address {
-                    // TODO(fxbug.dev/107656): Currently, we don't know the local device's random LE
-                    // address. `local_address` will always be the public address. The remote peer
-                    // can either send the public address or random address.
-                    // Reject the key-based pairing request when the `sys.HostWatcher` API supports
-                    // reporting the random address.
+                let addresses = self.host_watcher.addresses().expect("active host");
+                if !addresses.iter().any(|addr| addr.bytes() == &received_provider_address) {
                     warn!(
-                        "Received address doesn't match local ({:?} != {:?})",
-                        received_provider_address, local_address,
+                        "Received address ({:?}) doesn't match any local ({:?})",
+                        received_provider_address, addresses,
                     );
+                    response(Err(gatt::Error::WriteRequestRejected));
+                    return;
                 }
             }
             KeyBasedPairingAction::ProviderInitiatesPairing { .. } => {
@@ -222,7 +220,7 @@ impl Provider {
         // Notify the GATT service that the write request was successfully processed.
         response(Ok(()));
 
-        let encrypted_response = key_based_pairing_response(&key, local_address);
+        let encrypted_response = key_based_pairing_response(&key, local_public_address);
         if let Err(e) = self.gatt.notify_key_based_pairing(peer_id, encrypted_response) {
             warn!("Error notifying GATT characteristic: {:?}", e);
             return;
@@ -449,7 +447,7 @@ mod tests {
         HostWatcherRequestStream, InputCapability, OutputCapability, PairingDelegateMarker,
     };
     use fuchsia_async as fasync;
-    use fuchsia_bluetooth::types::HostId;
+    use fuchsia_bluetooth::types::{Address, HostId};
     use futures::{pin_mut, FutureExt, SinkExt};
     use std::convert::{TryFrom, TryInto};
 
@@ -912,6 +910,67 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn public_key_pairing_request_with_ble_address_succeeds() {
+        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            setup_provider().await;
+
+        // Give the active host an additional random BLE address.
+        let mut example_host =
+            example_host(HostId(1), /* active= */ true, /* discoverable= */ true);
+        let ble_address = Address::Random([2, 3, 2, 3, 2, 3]);
+        example_host.addresses.as_mut().unwrap().push(ble_address.into());
+        provider.host_watcher.set_active_host(example_host.try_into().unwrap());
+        let (_sender, _provider_server) = server_task(provider);
+
+        // The provided Provider address is the known BLE address - the request should succeed.
+
+        // Bytes 2-7 correspond to the address (in BE).
+        let mut request_with_ble_address = KEY_BASED_PAIRING_REQUEST;
+        let mut address_bytes = ble_address.bytes().clone();
+        address_bytes.reverse();
+        request_with_ble_address[2..8].copy_from_slice(&address_bytes[..]);
+        let mut encrypted_buf = keys::tests::encrypt_message(&request_with_ble_address);
+        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
+        gatt_write_results_in_expected_notification(
+            &gatt,
+            KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
+            encrypted_buf,
+            Ok(()),
+            /* expect_item= */ true,
+        )
+        .await;
+    }
+
+    #[fuchsia::test]
+    async fn public_key_pairing_request_with_invalid_provider_address_fails() {
+        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            setup_provider().await;
+        provider.host_watcher.set_active_host(
+            example_host(HostId(1), /* active= */ true, /* discoverable= */ true)
+                .try_into()
+                .unwrap(),
+        );
+        let (_sender, _provider_server) = server_task(provider);
+
+        // The provided Provider address is incorrect - therefore the key based pairing request
+        // should be rejected.
+
+        // Bytes 2-7 correspond to the address.
+        let mut request_with_invalid_address = KEY_BASED_PAIRING_REQUEST;
+        request_with_invalid_address[4] = 0xff;
+        let mut encrypted_buf = keys::tests::encrypt_message(&request_with_invalid_address);
+        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
+        gatt_write_results_in_expected_notification(
+            &gatt,
+            KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
+            encrypted_buf,
+            Err(gatt::Error::WriteRequestRejected),
+            /* expect_item= */ false,
+        )
+        .await;
+    }
+
+    #[fuchsia::test]
     async fn public_key_pairing_request_with_not_discoverable_host() {
         let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
             setup_provider().await;
@@ -948,8 +1007,9 @@ mod tests {
         );
         let (_sender, _provider_server) = server_task(provider);
 
-        // Initiating a key-based pairing request should be handled gracefully. Because there are no
-        // saved Account Keys, pairing should not continue.
+        // Initiating a key-based pairing request should be handled gracefully. Pairing should not
+        // continue because the `encrypted_buf` doesn't contain the peer's public key and there are
+        // no locally saved Account Keys.
         let encrypted_buf = keys::tests::encrypt_message(&KEY_BASED_PAIRING_REQUEST);
         gatt_write_results_in_expected_notification(
             &gatt,

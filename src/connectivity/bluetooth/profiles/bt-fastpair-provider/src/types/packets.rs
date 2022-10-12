@@ -102,6 +102,9 @@ pub fn decrypt_key_based_pairing_request(
             if flags.provider_initiates_bonding() || flags.retroactive_write() {
                 let mut seeker_address_bytes = [0; 6];
                 seeker_address_bytes.copy_from_slice(&request[8..14]);
+                // Received in Big Endian. All BT addresses saved in the Sapphire stack are in
+                // Little Endian.
+                seeker_address_bytes.reverse();
                 let seeker_address = Address::Public(seeker_address_bytes);
                 let action = if flags.provider_initiates_bonding() {
                     KeyBasedPairingAction::ProviderInitiatesPairing { seeker_address }
@@ -286,7 +289,7 @@ pub(crate) mod tests {
     /// Example Key-based pairing request with a fixed address of 0x123456.
     pub(crate) const KEY_BASED_PAIRING_REQUEST: [u8; 16] = [
         0x00, 0x00, // Key Pairing request, Flags are empty
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // Provider address
+        0x06, 0x05, 0x04, 0x03, 0x02, 0x01, // Provider address (sent in big-endian)
         0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd, // Salt
     ];
 
@@ -306,7 +309,7 @@ pub(crate) mod tests {
         let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
             .expect("successful decryption");
         // Received provider address should be saved in Little Endian.
-        let received_provider_address = [0x06, 0x05, 0x04, 0x03, 0x02, 0x01];
+        let received_provider_address = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
         let expected_request = KeyBasedPairingRequest {
             action: KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address },
             _salt: vec![0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd],
@@ -327,7 +330,8 @@ pub(crate) mod tests {
         let expected_request = KeyBasedPairingRequest {
             action: KeyBasedPairingAction::RetroactiveWrite {
                 // Seeker address is the first 6 bytes of the salt in `KEY_BASED_PAIRING_REQUEST.
-                seeker_address: Address::Public([0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc]),
+                // Received in BE but stored as LE per Sapphire stack.
+                seeker_address: Address::Public([0xcc, 0xcc, 0xbb, 0xbb, 0xaa, 0xaa]),
             },
             _salt: vec![0xdd, 0xdd],
         };
@@ -347,7 +351,8 @@ pub(crate) mod tests {
         let expected_request = KeyBasedPairingRequest {
             action: KeyBasedPairingAction::ProviderInitiatesPairing {
                 // Seeker address is the first 6 bytes of the salt in `KEY_BASED_PAIRING_REQUEST.
-                seeker_address: Address::Public([0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc]),
+                // Received in BE but stored as LE per Sapphire stack.
+                seeker_address: Address::Public([0xcc, 0xcc, 0xbb, 0xbb, 0xaa, 0xaa]),
             },
             _salt: vec![0xdd, 0xdd],
         };
