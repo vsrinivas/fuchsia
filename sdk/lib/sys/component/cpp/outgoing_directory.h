@@ -78,9 +78,12 @@ class OutgoingDirectory final {
 
   ~OutgoingDirectory();
 
-  // Starts serving the outgoing directory on the given channel. This should
-  // be invoked after the outgoing directory has been populated, e.g. via
-  // |AddProtocol|.
+  // Starts serving the outgoing directory on the given channel.
+  //
+  // This should be invoked after the outgoing directory has been populated, i.e. after
+  // |AddProtocol|. While |OutgoingDirectory| does not require calling |AddProtocol|
+  // before |Serve|, if you call them in the other order there is a chance that requests
+  // that arrive in between will be dropped.
   //
   // This object will implement the |fuchsia.io.Directory| interface using this
   // channel. Note that this method returns immediately and that the |dispatcher|
