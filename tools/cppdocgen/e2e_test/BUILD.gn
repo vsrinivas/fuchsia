@@ -14,6 +14,7 @@ cpp_docgen("docgen_e2e_docs") {
     "grouping.h",
     "namespace.h",
   ]
+  overview = "README.md"
 
   include_dir = ".."
   library_name = "e2e"

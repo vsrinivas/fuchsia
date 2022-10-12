@@ -27,6 +27,10 @@ type WriteSettings struct {
 	// links.
 	RepoBaseUrl string
 
+	// Contents of the toplevel documentation (typically from a README.md file) if any.
+	// If nonempty, this data will be inserted at the top of the index.
+	OverviewContents []byte
+
 	// The absolute doc path where the docs will be installed on devsite. This is used to
 	// generate the paths in _toc.yaml which must be absolute. It will end in a slash.
 	TocPath string

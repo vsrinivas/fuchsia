@@ -17,16 +17,17 @@ import (
 )
 
 var flags struct {
-	inDir       string
-	inZip       string
-	outDir      string
-	outZip      string
-	libName     string
-	sourceRoot  string
-	buildDir    string
-	includeDir  string
-	repoBaseUrl string
-	tocPath     string
+	inDir        string
+	inZip        string
+	outDir       string
+	outZip       string
+	libName      string
+	sourceRoot   string
+	buildDir     string
+	includeDir   string
+	repoBaseUrl  string
+	tocPath      string
+	overviewFile string
 }
 
 func init() {
@@ -44,6 +45,8 @@ func init() {
 		"URL of code repo for paths will be appended to for generating source links.")
 	flag.StringVar(&flags.tocPath, "toc-path", "",
 		"Absolute path on devsite where this code will be hosted, for paths in _toc.yaml.")
+	flag.StringVar(&flags.overviewFile, "overview", "",
+		"Path of the file that will comprise the top of the index.")
 }
 
 func main() {
@@ -77,6 +80,15 @@ func main() {
 		tocPath += "/"
 	}
 
+	var overviewContents []byte
+	if flags.overviewFile != "" {
+		inContents, err := os.ReadFile(flags.overviewFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		overviewContents = inContents
+	}
+
 	buildRelSourceRoot, err := filepath.Rel(flags.buildDir, flags.sourceRoot)
 	if err != nil {
 		log.Fatal("Can't rebase source root: %s", err)
@@ -91,6 +103,7 @@ func main() {
 		BuildRelIncludeDir: buildRelIncludeDir,
 		RepoBaseUrl:        flags.repoBaseUrl,
 		TocPath:            tocPath,
+		OverviewContents:   overviewContents,
 	}
 
 	// All other args are the list of headers we want to index.

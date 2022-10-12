@@ -92,7 +92,14 @@ func writeEnumIndex(index *Index, f io.Writer) {
 }
 
 func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
-	fmt.Fprintf(f, "# %s\n\n", settings.LibName)
+	if len(settings.OverviewContents) > 0 {
+		// The overview will comprise the top of the index and we will also take the
+		// page title from that.
+		f.Write(settings.OverviewContents)
+		fmt.Fprintf(f, "\n")
+	} else {
+		fmt.Fprintf(f, "# %s\n\n", settings.LibName)
+	}
 
 	fmt.Fprintf(f, "## Header files\n\n")
 

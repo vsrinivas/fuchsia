@@ -36,6 +36,25 @@ out/<BUILD-DIR>/host_x64/cppdocgen --indir=<TEMP-DIR-FROM-ABOVE>
 
 ## Controlling the output
 
+### Index overview
+
+You can supply content that goes at the top of the generated "index.md" file. It
+is recommended this just be the README.md file at the toplevel of your library.
+This should give an introduction to the library and it will be followed by the
+generated header file and function indices. The title of this file will also
+define the title of the generated index.md file.
+
+To specify the overview file, use the `overview` variable in the cppdocgen GN
+template. This file path is relative to the BUILD.gn directory.
+
+```
+cpp_docgen("my_docs") {
+  headers = [ ... ]
+  overview = "README.md"
+  ...
+}
+```
+
 ### Per-header documentation
 
 You can supply markdown text to be included at the top of the reference for a

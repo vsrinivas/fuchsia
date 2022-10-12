@@ -12,6 +12,11 @@ import("//tools/cppdocgen/clang_doc.gni")
 #   headers [list of strings] (required)
 #       Paths to the public headers you want to document.
 #
+#   overview [file name] (optional)
+#       If set, the contents of this file (typically called README.md) will be inserted at the top
+#       of the index.md output file. This would typically contain an overview of the library
+#       functionality. This file's title will also provide the title for the output index.
+#
 #   library_name [string] (required)
 #       User-visible library name (not a file name). This is used for titles to name the library.
 #
@@ -92,6 +97,13 @@ template("cpp_docgen") {
       "--toc-path",
       invoker.toc_path,
     ]
+
+    if (defined(invoker.overview)) {
+      args += [
+        "--overview",
+        rebase_path(invoker.overview, root_build_dir),
+      ]
+    }
 
     if (defined(invoker.out_zip)) {
       # Normal zip file output.
