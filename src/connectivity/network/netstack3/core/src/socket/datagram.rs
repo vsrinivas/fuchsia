@@ -187,16 +187,43 @@ fn leave_all_joined_groups<
     sync_ctx: &mut SC,
     ctx: &mut C,
     memberships: MulticastMemberships<A::IpAddr, A::DeviceId>,
-) {
+) where
+    Bound<S>: Tagged<AddrVec<A>>,
+{
     for (addr, device) in memberships {
         sync_ctx.leave_multicast_group(ctx, &device, addr)
     }
 }
 
-pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
+pub(crate) trait LocalIdentifierAllocator<A: SocketMapAddrSpec, C, S: SocketMapStateSpec>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+{
+    fn try_alloc_local_id(
+        &mut self,
+        bound: &BoundSocketMap<A, S>,
+        ctx: &mut C,
+        flow: DatagramFlowId<A::IpAddr, A::RemoteIdentifier>,
+    ) -> Option<A::LocalIdentifier>;
+}
+
+pub(crate) struct DatagramFlowId<A: IpAddress, RI> {
+    pub(crate) local_ip: SpecifiedAddr<A>,
+    pub(crate) remote_ip: SpecifiedAddr<A>,
+    pub(crate) remote_id: RI,
+}
+
+pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S: SocketMapStateSpec>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+{
     /// The synchronized context passed to the callback provided to
     /// `with_sockets_mut`.
     type IpSocketsCtx: TransportIpContext<A::IpVersion, C, DeviceId = A::DeviceId>;
+
+    /// The additional allocator passed to the callback provided to
+    /// `with_sockets_mut`.
+    type LocalIdAllocator: LocalIdentifierAllocator<A, C, S>;
 
     /// Requests that the specified device join the given multicast group.
     ///
@@ -230,7 +257,14 @@ pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
     ) -> O;
 
     /// Calls the function with a mutable reference to the datagram sockets.
-    fn with_sockets_mut<O, F: FnOnce(&mut Self::IpSocketsCtx, &mut DatagramSockets<A, S>) -> O>(
+    fn with_sockets_mut<
+        O,
+        F: FnOnce(
+            &mut Self::IpSocketsCtx,
+            &mut DatagramSockets<A, S>,
+            &mut Self::LocalIdAllocator,
+        ) -> O,
+    >(
         &mut self,
         cb: F,
     ) -> O;
@@ -300,7 +334,7 @@ pub(crate) fn create_unbound<
 where
     Bound<S>: Tagged<AddrVec<A>>,
 {
-    sync_ctx.with_sockets_mut(|_sync_ctx, DatagramSockets { unbound, bound: _ }| {
+    sync_ctx.with_sockets_mut(|_sync_ctx, DatagramSockets { unbound, bound: _ }, _allocator| {
         unbound.push(UnboundSocketState::default()).into()
     })
 }
@@ -318,7 +352,7 @@ pub(crate) fn remove_unbound<
     Bound<S>: Tagged<AddrVec<A>>,
 {
     let UnboundSocketState { device: _, sharing: _, ip_options } =
-        sync_ctx.with_sockets_mut(|_sync_ctx, state| {
+        sync_ctx.with_sockets_mut(|_sync_ctx, state, _allocator| {
             let DatagramSockets { unbound, bound: _ } = state;
             unbound.remove(id.into()).expect("invalid UDP unbound ID")
         });
@@ -342,12 +376,13 @@ where
     S::ListenerAddrState:
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
 {
-    let (ListenerState { ip_options }, addr) = sync_ctx.with_sockets_mut(|_sync_ctx, state| {
-        let DatagramSockets { bound, unbound: _ } = state;
-        let (state, _, addr): (_, S::ListenerSharingState, _) =
-            bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
-        (state, addr)
-    });
+    let (ListenerState { ip_options }, addr) =
+        sync_ctx.with_sockets_mut(|_sync_ctx, state, _allocator| {
+            let DatagramSockets { bound, unbound: _ } = state;
+            let (state, _, addr): (_, S::ListenerSharingState, _) =
+                bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
+            (state, addr)
+        });
     let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
 
     leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
@@ -370,7 +405,7 @@ where
     A::IpVersion: IpExt,
 {
     let (ConnState { socket, clear_device_on_disconnect: _ }, addr) =
-        sync_ctx.with_sockets_mut(|_sync_ctx, state| {
+        sync_ctx.with_sockets_mut(|_sync_ctx, state, _allocator| {
             let DatagramSockets { bound, unbound: _ } = state;
             let (state, _sharing, addr): (_, S::ConnSharingState, _) =
                 bound.conns_mut().remove(&id).expect("UDP connection not found");
@@ -433,7 +468,7 @@ where
     S::UnboundSharingState: Clone + Into<S::ListenerSharingState>,
     S::ListenerSharingState: Default,
 {
-    sync_ctx.with_sockets_mut(|sync_ctx, DatagramSockets { bound, unbound }| {
+    sync_ctx.with_sockets_mut(|sync_ctx, DatagramSockets { bound, unbound }, _allocator| {
             let identifier = match local_id {
                 Some(local_id) => Ok(local_id),
                 None => {
@@ -523,6 +558,95 @@ where
     )
 }
 
+/// An error when attempting to create a datagram socket.
+#[derive(Error, Copy, Clone, Debug, Eq, PartialEq)]
+pub enum SockCreationError {
+    /// An error was encountered creating an IP socket.
+    #[error("{}", _0)]
+    Ip(#[from] IpSockCreationError),
+    /// No local port was specified, and none could be automatically allocated.
+    #[error("a local port could not be allocated")]
+    CouldNotAllocateLocalPort,
+    /// The specified socket addresses (IP addresses and ports) conflict with an
+    /// existing socket.
+    #[error("the socket's IP address and port conflict with an existing socket")]
+    SockAddrConflict,
+    /// There was a problem with the provided address relating to its zone.
+    #[error("{}", _0)]
+    Zone(#[from] ZonedAddressError),
+}
+
+pub(crate) fn connect<
+    A: SocketMapAddrSpec,
+    C: DatagramStateNonSyncContext<A>,
+    SC: DatagramStateContext<A, C, S>,
+    S: DatagramSocketSpec<A>,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: S::UnboundId,
+    remote_ip: ZonedAddr<A::IpAddr, A::DeviceId>,
+    remote_id: A::RemoteIdentifier,
+    proto: IpProto,
+) -> Result<S::ConnId, SockCreationError>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+    S::UnboundSharingState: Clone + Into<S::ConnSharingState>,
+{
+    sync_ctx.with_sockets_mut(|sync_ctx, state, allocator| {
+        let DatagramSockets { bound, unbound } = state;
+        let occupied = match unbound.entry(id.clone().into()) {
+            IdMapEntry::Vacant(_) => panic!("unbound socket {:?} not found", id),
+            IdMapEntry::Occupied(o) => o,
+        };
+        let UnboundSocketState { device, sharing, ip_options: _ } = occupied.get();
+
+        let (remote_ip, socket_device) = resolve_addr_with_device(remote_ip, device.as_ref())
+            .map_err(SockCreationError::Zone)?;
+
+        let device = socket_device.as_ref();
+
+        let ip_sock = sync_ctx
+            .new_ip_socket(ctx, None, None, remote_ip, proto.into(), Default::default())
+            .map_err(|(e, _ip_options): (_, IpOptions<_, _>)| e)?;
+
+        let local_ip = *ip_sock.local_ip();
+        let remote_ip = *ip_sock.remote_ip();
+
+        let local_id = match allocator.try_alloc_local_id(
+            bound,
+            ctx,
+            DatagramFlowId { local_ip, remote_ip, remote_id: remote_id.clone() },
+        ) {
+            Some(x) => x,
+            None => {
+                return Err(SockCreationError::CouldNotAllocateLocalPort);
+            }
+        };
+
+        let c = ConnAddr {
+            ip: ConnIpAddr { local: (local_ip, local_id), remote: (remote_ip, remote_id) },
+            device: device.cloned(),
+        };
+        match bound.conns_mut().try_insert(
+            c,
+            ConnState { socket: ip_sock, clear_device_on_disconnect: false },
+            sharing.clone().into(),
+        ) {
+            Ok(mut entry) => {
+                let UnboundSocketState { device: _, sharing: _, ip_options } = occupied.remove();
+                *entry.get_state_mut().socket.options_mut() = ip_options;
+                Ok(entry.id())
+            }
+            Err(e) => {
+                let _: (InsertError, ConnState<_, _>, S::ConnSharingState) = e;
+                Err(SockCreationError::SockAddrConflict)
+            }
+        }
+    })
+}
+
 /// Error returned when [`connect_listener`] fails.
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum ConnectListenerError {
@@ -558,7 +682,7 @@ where
     S::UnboundSharingState: Clone + Into<S::ListenerSharingState>,
     S::ListenerSharingState: Into<S::ConnSharingState>,
 {
-    sync_ctx.with_sockets_mut(|sync_ctx, state| {
+    sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
         let DatagramSockets { bound, unbound: _ } = state;
         let entry = bound.listeners_mut().entry(&id).expect("Invalid listener ID");
         let (_, _, ListenerAddr { ip, device }): &(
@@ -636,7 +760,7 @@ where
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     S::UnboundSharingState: Clone + Into<S::ListenerSharingState>,
 {
-    sync_ctx.with_sockets_mut(|sync_ctx, state| {
+    sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
         let DatagramSockets { bound, unbound: _ } = state;
         let entry = bound.conns_mut().entry(&id).expect("Invalid conn ID");
         let (
@@ -714,7 +838,7 @@ pub(crate) fn set_unbound_device<
 ) where
     Bound<S>: Tagged<AddrVec<A>>,
 {
-    sync_ctx.with_sockets_mut(|_sync_ctx, state| {
+    sync_ctx.with_sockets_mut(|_sync_ctx, state, _allocator| {
         let DatagramSockets { unbound, bound: _ } = state;
         let UnboundSocketState { ref mut device, sharing: _, ip_options: _ } =
             unbound.get_mut(id.into()).expect("unbound UDP socket not found");
@@ -739,7 +863,7 @@ where
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     S::ConnSharingState: Into<S::ListenerSharingState>,
 {
-    sync_ctx.with_sockets_mut(|_sync_ctx, state| {
+    sync_ctx.with_sockets_mut(|_sync_ctx, state, _allocator| {
         let DatagramSockets { bound, unbound: _ } = state;
         let (state, sharing, addr): (_, S::ConnSharingState, _) =
             bound.conns_mut().remove(&id).expect("connection not found");
@@ -786,7 +910,7 @@ where
     S::ListenerAddrState:
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
 {
-    sync_ctx.with_sockets_mut(|_sync_ctx, DatagramSockets { unbound: _, bound }| {
+    sync_ctx.with_sockets_mut(|_sync_ctx, DatagramSockets { unbound: _, bound }, _allocator| {
         // Don't allow changing the device if one of the IP addresses in the socket
         // address vector requires a zone (scope ID).
         let (_, _, addr): &(S::ListenerState, S::ListenerSharingState, _) = bound
@@ -828,7 +952,7 @@ where
     Bound<S>: Tagged<AddrVec<A>>,
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
 {
-    sync_ctx.with_sockets_mut(|sync_ctx, DatagramSockets { bound, unbound: _ }| {
+    sync_ctx.with_sockets_mut(|sync_ctx, DatagramSockets { bound, unbound: _ }, _allocator| {
         // Don't allow changing the device if one of the IP addresses in the socket
         // address vector requires a zone (scope ID).
         let (state, _, addr): &(_, S::ConnSharingState, _) =
@@ -1043,7 +1167,7 @@ where
 {
     let id = id.into();
 
-    let (change, interface) = sync_ctx.with_sockets_mut(|sync_ctx, state| {
+    let (change, interface) = sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
         let interface = pick_matching_interface(sync_ctx, interface)?;
         let DatagramSockets { bound, unbound } = state;
         let bound_device = match id.clone() {
@@ -1215,7 +1339,7 @@ pub(crate) fn update_ip_hop_limit<
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     A::IpVersion: IpExt,
 {
-    sync_ctx.with_sockets_mut(|_sync_ctx, sockets| {
+    sync_ctx.with_sockets_mut(|_sync_ctx, sockets, _allocator| {
         let options = get_options_mut(sockets, id.into());
 
         update(&mut options.hop_limits)
@@ -1401,6 +1525,7 @@ mod test {
         for DummyDatagramState<I, D>
     {
         type IpSocketsCtx = DummyIpSocketCtx<I, D>;
+        type LocalIdAllocator = ();
 
         fn join_multicast_group(
             &mut self,
@@ -1439,13 +1564,14 @@ mod test {
             F: FnOnce(
                 &mut Self::IpSocketsCtx,
                 &mut DatagramSockets<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>,
+                &mut Self::LocalIdAllocator,
             ) -> O,
         >(
             &mut self,
             cb: F,
         ) -> O {
             let Self { sockets, state } = self;
-            cb(state, sockets)
+            cb(state, sockets, &mut ())
         }
     }
 
@@ -1456,6 +1582,35 @@ mod test {
         ) -> Option<<DummyAddrSpec<I, DummyDeviceId> as SocketMapAddrSpec>::LocalIdentifier>
         {
             unimplemented!("not required for any existing tests")
+        }
+    }
+
+    impl<I: DatagramIpExt, D: IpDeviceId + 'static>
+        LocalIdentifierAllocator<DummyAddrSpec<I, D>, DummyNonSyncCtx, DummyStateSpec<I, D>>
+        for ()
+    {
+        fn try_alloc_local_id(
+            &mut self,
+            bound: &BoundSocketMap<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>,
+            _ctx: &mut DummyNonSyncCtx,
+            _flow: DatagramFlowId<
+                <DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr,
+                <DummyAddrSpec<I, D> as SocketMapAddrSpec>::RemoteIdentifier,
+            >,
+        ) -> Option<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::LocalIdentifier> {
+            (0..u8::MAX).find_map(|identifier| {
+                bound
+                    .listeners()
+                    .could_insert(
+                        &ListenerAddr {
+                            device: None,
+                            ip: ListenerIpAddr { addr: None, identifier },
+                        },
+                        &Default::default(),
+                    )
+                    .is_ok()
+                    .then_some(identifier)
+            })
         }
     }
 

@@ -38,13 +38,13 @@ use netstack3_core::{
     ip::{icmp, socket::IpSockSendError, IpExt},
     socket::datagram::{
         ConnectListenerError, MulticastInterfaceSelector, MulticastMembershipInterfaceSelector,
-        SetMulticastMembershipError,
+        SetMulticastMembershipError, SockCreationError,
     },
     sync::Mutex,
     transport::udp::{
         self as core_udp, BufferUdpContext, UdpBoundId, UdpConnId, UdpConnInfo, UdpContext,
-        UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError,
-        UdpSocketId, UdpUnboundId,
+        UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSocketId,
+        UdpUnboundId,
     },
     BufferNonSyncContext, Ctx, NonSyncContext, SyncCtx,
 };
@@ -425,7 +425,7 @@ impl OptionFromU16 for NonZeroU16 {
 }
 
 impl<I: IpExt> TransportState<I> for Udp {
-    type CreateConnError = UdpSockCreationError;
+    type CreateConnError = SockCreationError;
     type CreateListenerError = LocalAddressError;
     type ConnectListenerError = ConnectListenerError;
     type ReconnectConnError = ConnectListenerError;

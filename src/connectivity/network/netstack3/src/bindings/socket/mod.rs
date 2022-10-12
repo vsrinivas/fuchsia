@@ -24,8 +24,8 @@ use net_types::{
 use netstack3_core::{
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
-    socket::datagram::{ConnectListenerError, SetMulticastMembershipError},
-    transport::udp::{UdpSendError, UdpSendListenerError, UdpSockCreationError},
+    socket::datagram::{ConnectListenerError, SetMulticastMembershipError, SockCreationError},
+    transport::udp::{UdpSendError, UdpSendListenerError},
     Ctx,
 };
 
@@ -495,13 +495,13 @@ impl IntoErrno for UdpSendListenerError {
     }
 }
 
-impl IntoErrno for UdpSockCreationError {
+impl IntoErrno for SockCreationError {
     fn into_errno(self) -> Errno {
         match self {
-            UdpSockCreationError::Ip(err) => err.into_errno(),
-            UdpSockCreationError::Zone(err) => err.into_errno(),
-            UdpSockCreationError::CouldNotAllocateLocalPort => Errno::Eaddrnotavail,
-            UdpSockCreationError::SockAddrConflict => Errno::Eaddrinuse,
+            Self::Ip(err) => err.into_errno(),
+            Self::Zone(err) => err.into_errno(),
+            Self::CouldNotAllocateLocalPort => Errno::Eaddrnotavail,
+            Self::SockAddrConflict => Errno::Eaddrinuse,
         }
     }
 }
