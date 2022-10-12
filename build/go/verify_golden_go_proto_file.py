@@ -71,7 +71,7 @@ def main():
     parser.add_argument(
         '--stamp', help='Path to the victory file', required=True)
     parser.add_argument(
-        '--bless',
+        '--update',
         help="Overwrites candidate with golden if they don't match.",
         action='store_true')
     args = parser.parse_args()
@@ -80,7 +80,7 @@ def main():
     candidate = read_file(args.candidate)
 
     if golden != candidate:
-        if args.bless:
+        if args.update:
             shutil.copyfile(args.candidate, args.golden)
         else:
             # Compute paths relative to the Fuchsia directory for the message

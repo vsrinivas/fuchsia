@@ -5,5 +5,12 @@
 declare_args() {
   # Set to true for the golden_file template to implicitly write updated goldens
   # instead of failing the action or test.
+  update_goldens = false
+
+  # TODO(fxbug.dev/100321): delete bless_goldens, to give users time to switch to new gn arg, update_goldens
   bless_goldens = false
 }
+
+assert(
+    !bless_goldens,
+    "bless_goldens has been renamed to update_goldens. Please update `fx args`.")

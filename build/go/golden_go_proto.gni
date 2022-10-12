@@ -53,8 +53,8 @@ template("_golden_go_proto_file") {
       rebase_path("//", root_build_dir),
     ]
 
-    if (bless_goldens) {
-      args += [ "--bless" ]
+    if (update_goldens) {
+      args += [ "--update" ]
     }
   }
 }
