@@ -8,5 +8,8 @@ pub mod capability;
 pub mod copy;
 pub mod io;
 pub mod list;
+pub mod path;
 pub mod show;
 pub mod storage;
+#[cfg(test)]
+pub mod test_utils;

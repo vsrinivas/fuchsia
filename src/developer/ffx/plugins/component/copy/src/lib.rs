@@ -2,11 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Result, ffx_component_copy_args::CopyComponentCommand, ffx_core::ffx_plugin};
+use {
+    anyhow::Result, component_hub::copy::copy, ffx_component::connect_to_realm_query,
+    ffx_component_copy_args::CopyComponentCommand, ffx_core::ffx_plugin,
+    fidl_fuchsia_developer_remotecontrol as rc,
+};
 
 #[ffx_plugin("copy")]
-pub async fn copy(cmd: CopyComponentCommand) -> Result<()> {
-    println!("{:?}", cmd);
-    println!("Welcome to this function! I am not sure why you are here, but this feature is currently in progress");
+pub async fn component_copy(
+    rcs_proxy: rc::RemoteControlProxy,
+    cmd: CopyComponentCommand,
+) -> Result<()> {
+    println!("Warning! This is an experimental command.");
+    let query_proxy = connect_to_realm_query(&rcs_proxy).await?;
+    let CopyComponentCommand { source_path, destination_path } = cmd;
+    copy(&query_proxy, source_path, destination_path).await?;
     Ok(())
 }

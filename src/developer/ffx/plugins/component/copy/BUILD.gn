@@ -7,7 +7,11 @@ import("../../../build/ffx_plugin.gni")
 ffx_plugin("ffx_component_copy") {
   version = "0.1.0"
   edition = "2021"
-  deps = []
+  deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//src/developer/ffx/plugins/component/common:ffx_component",
+    "//src/lib/component_hub",
+  ]
   args_sources = [ "src/args.rs" ]
   sources = [ "src/lib.rs" ]
 }

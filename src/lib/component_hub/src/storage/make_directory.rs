@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::RemotePath,
-    crate::io::Directory,
+    crate::{io::Directory, path::RemotePath},
     anyhow::{anyhow, bail, Result},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio,
@@ -29,7 +28,7 @@ pub async fn make_directory(storage_admin: StorageAdminProxy, path: String) -> R
 
     // Open the storage
     storage_admin
-        .open_component_storage_by_id(&remote_path.instance_id, server.into())
+        .open_component_storage_by_id(&remote_path.remote_id, server.into())
         .await?
         .map_err(|e| anyhow!("Could not open component storage: {:?}", e))?;
 

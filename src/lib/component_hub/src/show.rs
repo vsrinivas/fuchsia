@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::io::Directory,
-    crate::list::{get_all_instances, Instance as ListInstance},
+    crate::{
+        io::Directory,
+        list::{get_all_instances, Instance as ListInstance},
+    },
     anyhow::{bail, format_err, Context, Result},
     cm_rust::{ExposeDecl, ExposeDeclCommon, FidlIntoNative, UseDecl},
     fidl_fuchsia_component_config as fconfig, fidl_fuchsia_sys2 as fsys,

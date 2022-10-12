@@ -39,6 +39,7 @@ rustc_library("component_hub") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:test-case",
   ]
 
   sources = [
@@ -47,12 +48,14 @@ rustc_library("component_hub") {
     "src/io.rs",
     "src/lib.rs",
     "src/list.rs",
+    "src/path.rs",
     "src/show.rs",
     "src/storage/copy.rs",
     "src/storage/delete.rs",
     "src/storage/list.rs",
     "src/storage/make_directory.rs",
     "src/storage/mod.rs",
+    "src/test_utils.rs",
   ]
 }
 
