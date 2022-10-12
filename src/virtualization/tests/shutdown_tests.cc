@@ -6,33 +6,9 @@
 
 namespace {
 
-template <typename T>
-class RestartableGuest : public T {
- public:
-  explicit RestartableGuest(async::Loop& loop) : T(loop) {}
-
-  zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override {
-    zx_status_t status = T::BuildLaunchInfo(launch_info);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    // TODO(fxbug.dev/111315): Remove once the test UI stack can create a second view.
-    if (std::is_same<T, DebianEnclosedGuest>::value) {
-      launch_info->config.set_virtio_gpu(false);
-    }
-
-    return ZX_OK;
-  }
-};
-
-using RestartableGuests =
-    ::testing::Types<RestartableGuest<DebianEnclosedGuest>, RestartableGuest<ZirconEnclosedGuest>,
-                     RestartableGuest<TerminaEnclosedGuest>>;
-
 template <class T>
 using RestartableGuestTest = GuestTest<T>;
-TYPED_TEST_SUITE(RestartableGuestTest, RestartableGuests, GuestTestNameGenerator);
+TYPED_TEST_SUITE(RestartableGuestTest, AllGuestTypes, GuestTestNameGenerator);
 
 TYPED_TEST(RestartableGuestTest, ForceRestartGuestInRealm) {
   GuestLaunchInfo guest_launch_info;
