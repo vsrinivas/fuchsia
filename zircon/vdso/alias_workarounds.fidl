@@ -70,6 +70,3 @@ alias VectorVoidU32Size = vector<byte>;
 
 // TODO(fidlc): (mutable) void*
 alias VoidPtr = uint64;
-
-// This is <zircon/StringView.h>'s zx_string_view_t in C/C++.
-alias StringView = uint64;

@@ -85,11 +85,9 @@ TEST(AliasWorkaround, Mappings) {
   // VoidPtr
   CHECK_ARG("void*", "q");
 
-  CHECK_ARG("zx_string_view_t*", "y");
-
 #undef CHECK_ARG
 
-  EXPECT_EQ(cur_arg, 26u);
+  EXPECT_EQ(cur_arg, 25u);
 }
 
 }  // namespace

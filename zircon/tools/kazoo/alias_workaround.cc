@@ -24,24 +24,24 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     return true;
   }
   if (name == "MutableVectorHandleDispositionU32Size") {
-    *type = Type(TypeVector(Type(library.TypeFromIdentifier("zx/HandleDisposition")),
+    *type = Type(TypeVector(Type(*library.TypeFromIdentifier("zx/HandleDisposition")),
                             UseUint32ForVectorSizeTag{}),
                  Constness::kMutable);
     return true;
   }
   if (name == "MutableVectorHandleInfoU32Size") {
     *type = Type(
-        TypeVector(Type(library.TypeFromIdentifier("zx/HandleInfo")), UseUint32ForVectorSizeTag{}),
+        TypeVector(Type(*library.TypeFromIdentifier("zx/HandleInfo")), UseUint32ForVectorSizeTag{}),
         Constness::kMutable);
     return true;
   }
   if (name == "MutableChannelCallEtcArgs") {
-    *type = Type(TypePointer(Type(library.TypeFromIdentifier("zx/ChannelCallEtcArgs"))),
+    *type = Type(TypePointer(Type(*library.TypeFromIdentifier("zx/ChannelCallEtcArgs"))),
                  Constness::kMutable);
     return true;
   }
   if (name == "MutableVectorWaitItem") {
-    *type = Type(TypeVector(Type(library.TypeFromIdentifier("zx/WaitItem"))), Constness::kMutable);
+    *type = Type(TypeVector(Type(*library.TypeFromIdentifier("zx/WaitItem"))), Constness::kMutable);
     return true;
   }
   if (name == "MutableVectorHandleU32Size") {
@@ -59,7 +59,7 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
   }
   if (name == "VectorHandleInfoU32Size") {
     *type = Type(
-        TypeVector(Type(library.TypeFromIdentifier("zx/HandleInfo")), UseUint32ForVectorSizeTag{}),
+        TypeVector(Type(*library.TypeFromIdentifier("zx/HandleInfo")), UseUint32ForVectorSizeTag{}),
         Constness::kConst);
     return true;
   }
@@ -86,10 +86,6 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
   }
   if (name == "VoidPtr") {
     *type = Type(TypePointer(Type(TypeVoid{})), Constness::kMutable);
-    return true;
-  }
-  if (name == "StringView") {
-    *type = Type(TypeZxBasicAlias("StringView"));
     return true;
   }
   return false;

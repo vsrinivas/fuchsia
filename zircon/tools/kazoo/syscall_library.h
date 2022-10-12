@@ -209,7 +209,7 @@ class Type {
     return std::get<TypeZxBasicAlias>(type_data_);
   }
 
-  bool IsSimpleType() const { return !IsVector() && !IsStruct(); }
+  bool IsSimpleType() const;
 
  private:
   TypeData type_data_;
@@ -309,7 +309,7 @@ class Syscall {
 
  private:
   friend class SyscallLibraryLoader;
-  bool MapRequestResponseToKernelAbi();
+  bool MapRequestResponseToKernelAbi(SyscallLibrary* library);
   bool HandleArgReorder();
 
   std::string id_;          // "zx/Object"
@@ -422,8 +422,8 @@ class SyscallLibrary {
   const std::vector<std::unique_ptr<Alias>>& aliases() const { return aliases_; }
   const std::vector<std::unique_ptr<Table>>& tables() const { return tables_; }
 
-  Type TypeFromIdentifier(const std::string& id) const;
-  Type TypeFromName(const std::string& name) const;
+  std::optional<Type> TypeFromIdentifier(const std::string& id) const;
+  std::optional<Type> TypeFromName(const std::string& name) const;
 
   void FilterSyscalls(const std::set<std::string>& attributes_to_exclude);
 

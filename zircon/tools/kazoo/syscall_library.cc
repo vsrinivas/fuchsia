@@ -172,7 +172,7 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
       return workaround_type;
     }
 
-    return library.TypeFromIdentifier(full_name);
+    return *library.TypeFromIdentifier(full_name);
   }
 
   if (!type.HasMember("kind")) {
@@ -188,12 +188,15 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     return PrimitiveTypeFromName(subtype).value();
   } else if (kind == "identifier") {
     std::string id = type["identifier"].GetString();
-    return library.TypeFromIdentifier(type["identifier"].GetString());
+    return *library.TypeFromIdentifier(type["identifier"].GetString());
   } else if (kind == "handle") {
     return Type(TypeHandle(type["subtype"].GetString()));
   } else if (kind == "vector") {
     Type contained_type = TypeFromJson(library, type["element_type"], nullptr);
     return Type(TypeVector(contained_type));
+  } else if (kind == "experimental_pointer") {
+    Type pointee_type = TypeFromJson(library, type["pointee_type"], nullptr);
+    return Type(TypePointer(pointee_type));
   }
 
   ZX_ASSERT_MSG(false, "TODO: kind=%s", kind.c_str());
@@ -205,6 +208,13 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
 TypeZxBasicAlias::TypeZxBasicAlias(const std::string& name)
     : name_(std::string(1, static_cast<char>(toupper(name[0]))) + name.substr(1)),
       c_name_("zx_" + CamelToSnake(name) + "_t") {}
+
+bool Type::IsSimpleType() const {
+  if (IsStruct()) {
+    return DataAsStruct().struct_data().id() == "zx/StringView";
+  }
+  return !IsVector();
+}
 
 bool Syscall::HasAttribute(const char* attrib_name) const {
   return attributes_.find(CamelToSnake(attrib_name)) != attributes_.end();
@@ -220,7 +230,7 @@ std::string Syscall::GetAttribute(const char* attrib_name) const {
 // - vector to pointer+size
 // - structs become pointer-to-struct (const on input, mutable on output)
 // - etc.
-bool Syscall::MapRequestResponseToKernelAbi() {
+bool Syscall::MapRequestResponseToKernelAbi(SyscallLibrary* library) {
   ZX_ASSERT(kernel_arguments_.empty());
 
   // Used for input arguments, which default to const unless alread specified mutable.
@@ -287,10 +297,15 @@ bool Syscall::MapRequestResponseToKernelAbi() {
   if (error_type_) {
     kernel_return_type_ = *error_type_;
     start_at = 0;
+  } else if (auto resp_type = library->TypeFromIdentifier(response_.id());
+             resp_type && resp_type->IsSimpleType()) {
+    kernel_return_type_ = *resp_type;
+    start_at = response_.members().size();
   } else if (response_.members().size() == 0 || !response_.members()[0].type().IsSimpleType()) {
     kernel_return_type_ = Type(TypeVoid{});
     start_at = 0;
   } else {
+    Type resp_type = Type(TypeStruct{&response_});
     const auto& first_type = response_.members()[0].type();
     if (first_type.IsZxBasicAlias() && first_type.DataAsZxBasicAlias().name() == "Status") {
       ZX_PANIC("%s.%s: `status` should be specified as `error status`", id().c_str(),
@@ -385,7 +400,7 @@ const EnumMember& Enum::ValueForMember(const std::string& member_name) const {
   return members_.find(member_name)->second;
 }
 
-Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
+std::optional<Type> SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
   for (const auto& bits : bits_) {
     if (bits->id() == id) {
       // TODO(scottmg): Consider if we need to separate bits from enum here.
@@ -411,12 +426,10 @@ Type SyscallLibrary::TypeFromIdentifier(const std::string& id) const {
     }
   }
 
-  // TODO: Load struct, union, usings and return one of them here!
-  ZX_ASSERT_MSG(false, "unhandled TypeFromIdentifier for %s", id.c_str());
-  return Type();
+  return {};
 }
 
-Type SyscallLibrary::TypeFromName(const std::string& name) const {
+std::optional<Type> SyscallLibrary::TypeFromName(const std::string& name) const {
   if (auto primitive = PrimitiveTypeFromName(name); primitive.has_value()) {
     return primitive.value();
   }
@@ -562,7 +575,7 @@ bool SyscallLibraryLoader::ExtractPayload(Struct& payload, const std::string& ty
             }
           }
         }
-
+        payload.id_ = type_name;
         return true;
       }
     }
@@ -629,7 +642,6 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
       ZX_ASSERT(method["has_request"].GetBool());  // Events are not expected in syscalls.
 
       Struct& req = syscall->request_;
-      req.id_ = syscall->name() + "#request";
       if (method.HasMember("maybe_request_payload")) {
         if (!ExtractPayload(req, method["maybe_request_payload"]["identifier"].GetString(),
                             document, library)) {
@@ -639,7 +651,6 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
 
       if (method["has_response"].GetBool()) {
         Struct& resp = syscall->response_;
-        resp.id_ = syscall->name() + "#response";
         if (method.HasMember("maybe_response_success_type")) {
           if (!ExtractPayload(resp, method["maybe_response_success_type"]["identifier"].GetString(),
                               document, library)) {
@@ -666,7 +677,7 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
         }
       }
 
-      if (!syscall->MapRequestResponseToKernelAbi()) {
+      if (!syscall->MapRequestResponseToKernelAbi(library)) {
         return false;
       }
 

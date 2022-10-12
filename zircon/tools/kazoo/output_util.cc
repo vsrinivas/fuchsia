@@ -298,7 +298,7 @@ std::string GetGoName(const Type& type) {
     return "int";
   if (name == "zx_wait_item_t")
     return "WaitItem";
-  if (name == "StringView")
+  if (name == "zx_string_view_t")
     return "unsafe.Pointer";
   return name;
 }
@@ -336,7 +336,7 @@ std::string GetNativeGoName(const Type& type) {
     return "uintptr";
   if (name == "VmOption")
     return "uint32";
-  if (name == "StringView")
+  if (name == "zx_string_view_t")
     return "unsafe.Pointer";
   if (name == "zx_channel_call_args_t")
     return "uintptr";

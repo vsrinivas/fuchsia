@@ -282,7 +282,7 @@ __BEGIN_CDECLS
     auto names = formatter.Format(*alias);
     PrintDocComments(alias->description(), writer);
     writer->Printf("typedef %s %s;\n",
-                   formatter.TypeName(library.TypeFromName(alias->partial_type_ctor())).c_str(),
+                   formatter.TypeName(*library.TypeFromName(alias->partial_type_ctor())).c_str(),
                    names.type_name.c_str());
     writer->Puts("\n");
   }

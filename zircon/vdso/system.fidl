@@ -20,6 +20,11 @@ type SystemPowerctlArg = struct {
         //};
         };
 
+type StringView = struct {
+    c_str experimental_pointer<uchar>;
+    length usize;
+};
+
 @transport("Syscall")
 protocol System {
     /// ## Summary
@@ -150,9 +155,7 @@ protocol System {
     ///
     @const
     @vdsocall
-    GetVersionString() -> (struct {
-        version StringView;
-    });
+    GetVersionString() -> (StringView);
 
     /// ## Summary
     ///

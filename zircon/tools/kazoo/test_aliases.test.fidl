@@ -29,7 +29,6 @@ alias VectorPaddr = vector<paddr>;
 alias VectorVoid = vector<byte>;
 alias VectorVoidU32Size = vector<byte>;
 alias VoidPtr = uint64;
-alias StringView = uint64;
 
 @transport("Syscall")
 protocol Aliases {
@@ -49,7 +48,5 @@ protocol Aliases {
         o VectorVoid;
         p VectorVoidU32Size;
         q VoidPtr;
-    }) -> (struct {
-        y StringView;
-    }) error status;
+    }) -> (struct {}) error status;
 };
