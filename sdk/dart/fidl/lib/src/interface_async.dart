@@ -193,12 +193,12 @@ abstract class AsyncBinding<T> extends _Stateful {
   void _writeEpitaph(int statusCode) {
     var bytes = ByteData(24)
       ..setUint32(0, 0) // txid (0 because not tracking this on server side)
-      ..setUint8(4, 0) // flags
+      ..setUint8(4, kWireFormatV2FlagMask) // flags
       ..setUint8(5, 0) // flags
       ..setUint8(6, 0) // flags
-      ..setUint8(7, 0) // magic byte
-      ..setUint64(8, epitaphOrdinal) // ordinal
-      ..setInt32(16, statusCode); // body (epitaph struct)
+      ..setUint8(7, kMagicNumberInitial) // magic byte
+      ..setUint64(8, epitaphOrdinal, Endian.little) // ordinal
+      ..setInt32(16, statusCode, Endian.little); // body (epitaph struct)
     _reader.channel?.write(bytes, []);
   }
 
@@ -471,7 +471,7 @@ class AsyncProxyController<T> extends _Stateful {
       final epitaphCallback = onEpitaphReceived;
       final responseCallback = onResponse;
       if (message.ordinal == epitaphOrdinal) {
-        int statusCode = message.data.getInt32(16);
+        int statusCode = message.data.getInt32(16, Endian.little);
         if (epitaphCallback != null) {
           epitaphCallback(statusCode);
         }

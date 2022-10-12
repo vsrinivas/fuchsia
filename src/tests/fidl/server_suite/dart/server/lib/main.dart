@@ -215,8 +215,6 @@ class RunnerImpl extends Runner {
       // These tests are currently out of spec and disabled across all bindings.
       case Test.badAtRestFlagsCausesClose:
       case Test.badDynamicFlagsCausesClose:
-      // fxbug.dev/111260: Dart bindings send epitaphs incorrectly.
-      case Test.serverSendsEpitaph:
       // fxbug.dev/111266: Dart bindings don't validate TXIDs.
       case Test.oneWayWithNonZeroTxid:
       case Test.twoWayNoPayloadWithZeroTxid:
