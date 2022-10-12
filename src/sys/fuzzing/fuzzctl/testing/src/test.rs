@@ -2,20 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This file contains test fixtures for emulating a development host with a source tree and a target
-// device that includes the remote control service and fuzz-manager components.
-//
-// Additional test fixtures that are related to other `ffx fuzz` types are co-located with those
-// types, e.g. `FakeFuzzer` in fuzzer.rs and `serve_manager` in manager.rs.
-
 use {
-    crate::controller::test_fixtures::FakeController,
-    crate::util::{create_artifact_dir, create_corpus_dir},
-    crate::writer::test_fixtures::BufferSink,
-    crate::writer::{OutputSink, Writer},
+    crate::controller::FakeController,
+    crate::writer::BufferSink,
     anyhow::{anyhow, bail, Context as _, Result},
-    fidl_fuchsia_fuzzer as fuzz, fuchsia_async as fasync,
-    futures::Future,
+    fidl_fuchsia_fuzzer as fuzz,
+    fuchsia_fuzzctl::{create_artifact_dir, create_corpus_dir, Writer},
     serde_json::json,
     std::cell::RefCell,
     std::env,
@@ -293,19 +285,4 @@ impl Test {
     pub fn writer(&self) -> &Writer<BufferSink> {
         &self.writer
     }
-}
-
-/// Wraps a given `future` to display any returned errors using the given `writer`.
-pub fn create_task<F, O>(future: F, writer: &Writer<O>) -> fasync::Task<()>
-where
-    F: Future<Output = Result<()>> + 'static,
-    O: OutputSink,
-{
-    let writer = writer.clone();
-    let wrapped = || async move {
-        if let Err(e) = future.await {
-            writer.error(format!("task failed: {:?}", e));
-        }
-    };
-    fasync::Task::local(wrapped())
 }

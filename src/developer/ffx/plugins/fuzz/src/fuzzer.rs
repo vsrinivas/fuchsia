@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::controller::Controller,
-    crate::corpus,
-    crate::input::InputPair,
     crate::options,
-    crate::util::{create_artifact_dir, create_corpus_dir, create_dir_at},
-    crate::writer::{OutputSink, Writer},
     anyhow::{Context as _, Result},
     fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
+    fuchsia_fuzzctl::{
+        create_artifact_dir, create_corpus_dir, create_dir_at, get_corpus_name, Controller,
+        InputPair, OutputSink, Writer,
+    },
     fuchsia_zircon_status as zx,
     std::path::{Path, PathBuf},
     url::Url,
@@ -158,7 +157,7 @@ impl<O: OutputSink> Fuzzer<O> {
             1 => "input",
             _ => "inputs",
         };
-        let corpus_name = corpus::get_name(corpus_type);
+        let corpus_name = get_corpus_name(corpus_type);
         self.writer.println(format!(
             "Added {} {} totaling {} bytes to the {} corpus.",
             corpus_stats.num_inputs, units, corpus_stats.total_size, corpus_name
@@ -342,7 +341,7 @@ impl<O: OutputSink> Fuzzer<O> {
             1 => "input",
             _ => "inputs",
         };
-        let corpus_name = corpus::get_name(corpus_type);
+        let corpus_name = get_corpus_name(corpus_type);
         self.writer.println(format!(
             "Retrieved {} {} totaling {} bytes from the {} corpus.",
             corpus_stats.num_inputs, units, corpus_stats.total_size, corpus_name
@@ -391,27 +390,25 @@ fn get_result(result: &FuzzResult) -> &str {
 }
 
 #[cfg(test)]
-mod test_fixtures {
+mod tests {
     use {
-        super::Fuzzer,
-        crate::controller::test_fixtures::{serve_controller, FakeController},
-        crate::test_fixtures::{create_task, Test, TEST_URL},
-        crate::writer::test_fixtures::BufferSink,
+        super::{get_run_result, get_try_result, Fuzzer},
+        crate::options,
         anyhow::{Context as _, Result},
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_fuzzer as fuzz, fuchsia_async as fasync,
+        fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
+        fuchsia_async as fasync,
+        fuchsia_fuzzctl::digest_path,
+        fuchsia_fuzzctl_test::{
+            add_defaults, create_task, serve_controller, verify_saved, BufferSink, FakeController,
+            Test, TEST_URL,
+        },
+        fuchsia_zircon_status as zx,
         url::Url,
     };
 
-    /// Creates a test setup suitable for unit testing `Fuzzer`.
-    ///
-    /// On success, returns a tuple of a `FakeController`, a `Fuzzer`, and a `Task`. The task will
-    /// serve a `fuchsia.fuzzer.Controller` stream until it is dropped. The fuzzer holds the other
-    /// end of this FIDL channel in its `controller` field.
-    ///
-    /// Returns an error if it fails to create or associate any of the objects with each other.
-    ///
-    pub fn perform_test_setup(
+    // Creates a test setup suitable for unit testing `Fuzzer`.
+    fn perform_test_setup(
         test: &Test,
     ) -> Result<(FakeController, Fuzzer<BufferSink>, fasync::Task<()>)> {
         let url = Url::parse(TEST_URL)?;
@@ -423,23 +420,6 @@ mod test_fixtures {
         let task = create_task(serve_controller(stream, fake.clone()), test.writer());
         Ok((fake, fuzzer, task))
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        super::test_fixtures::perform_test_setup,
-        super::{get_run_result, get_try_result, Fuzzer},
-        crate::controller::test_fixtures::{add_defaults, FakeController},
-        crate::input::test_fixtures::verify_saved,
-        crate::options,
-        crate::test_fixtures::Test,
-        crate::util::digest_path,
-        crate::writer::test_fixtures::BufferSink,
-        anyhow::Result,
-        fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
-        fuchsia_zircon_status as zx,
-    };
 
     #[fuchsia::test]
     async fn test_get_one() -> Result<()> {

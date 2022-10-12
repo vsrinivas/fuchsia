@@ -67,9 +67,13 @@ impl Artifact {
 #[cfg(test)]
 mod tests {
     use {
-        super::Artifact, crate::input::test_fixtures::verify_saved, crate::input::InputPair,
-        crate::test_fixtures::Test, crate::util::digest_path, anyhow::Result,
-        fidl_fuchsia_fuzzer::Result_ as FuzzResult, futures::join,
+        super::Artifact,
+        crate::input::InputPair,
+        crate::util::digest_path,
+        anyhow::Result,
+        fidl_fuchsia_fuzzer::Result_ as FuzzResult,
+        fuchsia_fuzzctl_test::{verify_saved, Test},
+        futures::join,
     };
 
     #[fuchsia::test]

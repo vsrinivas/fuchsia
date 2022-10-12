@@ -5,31 +5,18 @@
 use {
     crate::reader::{CommandReader, ShellReader},
     crate::shell::Shell,
-    crate::writer::{StdioSink, Writer},
     anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_fuzz_args::{FuzzCommand, Session},
     fidl_fuchsia_developer_remotecontrol as rcs,
+    fuchsia_fuzzctl::{StdioSink, Writer},
 };
 
-mod artifact;
 mod autocomplete;
-mod constants;
-mod controller;
-mod corpus;
-mod diagnostics;
-mod duration;
 mod fuzzer;
-mod input;
-mod manager;
 mod options;
 mod reader;
 mod shell;
-mod util;
-mod writer;
-
-#[cfg(test)]
-mod test_fixtures;
 
 /// The `ffx fuzz` plugin.
 ///

@@ -79,18 +79,20 @@ pub async fn read<P: AsRef<Path>>(
 }
 
 #[cfg(test)]
-mod test_fixtures {
+mod tests {
     use {
+        super::{get_name, get_type, read, Stats},
         crate::input::InputPair,
+        crate::util::digest_path,
         anyhow::{Error, Result},
-        fidl_fuchsia_fuzzer as fuzz, fuchsia_zircon_status as zx,
+        fidl_fuchsia_fuzzer as fuzz,
+        fuchsia_fuzzctl_test::{verify_saved, Test},
+        fuchsia_zircon_status as zx,
+        futures::join,
     };
 
-    /// Writes a test input using the given `corpus_reader`.
-    pub async fn send_one_input(
-        corpus_reader: &fuzz::CorpusReaderProxy,
-        data: Vec<u8>,
-    ) -> Result<()> {
+    // Writes a test input using the given `corpus_reader`.
+    async fn send_one_input(corpus_reader: &fuzz::CorpusReaderProxy, data: Vec<u8>) -> Result<()> {
         let input_pair = InputPair::try_from_data(data)?;
         let (mut fidl_input, input) = input_pair.as_tuple();
         let (response, _) = futures::try_join!(
@@ -99,20 +101,6 @@ mod test_fixtures {
         )?;
         zx::Status::ok(response).map_err(Error::msg)
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        super::test_fixtures::send_one_input,
-        super::{get_name, get_type, read, Stats},
-        crate::input::test_fixtures::verify_saved,
-        crate::test_fixtures::Test,
-        crate::util::digest_path,
-        anyhow::{Error, Result},
-        fidl_fuchsia_fuzzer as fuzz,
-        futures::join,
-    };
 
     #[test]
     fn test_get_type() -> Result<()> {

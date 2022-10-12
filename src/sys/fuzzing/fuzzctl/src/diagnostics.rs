@@ -112,8 +112,9 @@ impl<O: OutputSink> Forwarder<O> {
     }
 }
 
+/// Forwarder for a single output stream.
 #[derive(Debug)]
-struct SocketForwarder<O: OutputSink> {
+pub struct SocketForwarder<O: OutputSink> {
     reader: Rc<RefCell<ReadHalf<fidl::AsyncSocket>>>,
     writer: Writer<O>,
 }
@@ -125,13 +126,17 @@ impl<O: OutputSink> Clone for SocketForwarder<O> {
 }
 
 impl<O: OutputSink> SocketForwarder<O> {
-    fn try_new(socket: fidl::Socket, writer: &Writer<O>) -> Result<Self> {
+    /// Converts a a socket into a SocketForwarder.
+    ///
+    /// Returns an error if conversion to an async socket fails.
+    pub fn try_new(socket: fidl::Socket, writer: &Writer<O>) -> Result<Self> {
         let socket = fidl::AsyncSocket::from_socket(socket).context("failed to convert socket")?;
         let (reader, _) = socket.split();
         Ok(Self { reader: Rc::new(RefCell::new(reader)), writer: writer.clone() })
     }
 
-    async fn forward_text(&self, name: &str) -> Result<()> {
+    /// Continuously forwards messages from the socket to the writer until the socket is closed.
+    pub async fn forward_text(&self, name: &str) -> Result<()> {
         let mut reader = self.reader.borrow_mut();
         let mut buf: [u8; 2048] = [0; 2048];
         let mut raw = Vec::new();
@@ -164,7 +169,8 @@ impl<O: OutputSink> SocketForwarder<O> {
         }
     }
 
-    async fn forward_json(&self, name: &str) -> Result<()> {
+    /// Continuously forwards JSON data from the socket to the writer until the socket is closed.
+    pub async fn forward_json(&self, name: &str) -> Result<()> {
         let mut reader = self.reader.borrow_mut();
         let mut buf: [u8; 2048] = [0; 2048];
         let mut raw = Vec::new();
@@ -205,51 +211,14 @@ impl<O: OutputSink> SocketForwarder<O> {
 }
 
 #[cfg(test)]
-pub mod test_fixtures {
-    use {
-        anyhow::Result,
-        diagnostics_data::{BuilderArgs, LogsDataBuilder, Severity},
-        futures::AsyncWriteExt,
-    };
-
-    /// Generates a system log entry from the given `msg` and sends it to the given `socket`.
-    ///
-    /// This mimics logs generated using //src/lib/diagnostics/data. These logs include:
-    ///   * A timestamp in nanoseconds when the log was generated.
-    ///   * The URL of the component generating the log.
-    ///   * The component moniker (https://fuchsia.dev/fuchsia-src/reference/components/moniker)
-    ///   * The log severity, e.g. fatal, error, warning, etc.
-    ///   * The log message.
-    ///
-    /// See also `writer::Writer::log` which formats these entries for display.
-    pub async fn send_log_entry<S: AsRef<str>>(
-        socket: &mut fidl::AsyncSocket,
-        msg: S,
-    ) -> Result<()> {
-        let builder_args = BuilderArgs {
-            timestamp_nanos: 0.into(),
-            component_url: Some(String::default()),
-            moniker: "moniker".to_string(),
-            severity: Severity::Info,
-        };
-        let builder = LogsDataBuilder::new(builder_args);
-        let logs_data = vec![builder.set_message(msg.as_ref()).build()];
-        let bytes = serde_json::to_vec(&logs_data)?;
-        socket.write_all(&bytes).await?;
-        Ok(())
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use {
-        super::test_fixtures::send_log_entry,
-        super::{Forwarder, SocketForwarder},
-        crate::test_fixtures::Test,
         anyhow::{Error, Result},
         diagnostics_data::LogsData,
         fidl::{Socket, SocketOpts},
         fidl_fuchsia_fuzzer as fuzz,
+        fuchsia_fuzzctl::{Forwarder, SocketForwarder},
+        fuchsia_fuzzctl_test::{send_log_entry, Test},
         futures::{try_join, AsyncWriteExt},
         std::fs,
     };

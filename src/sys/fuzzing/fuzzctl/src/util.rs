@@ -140,8 +140,8 @@ fn parse_tests_json(json_data: String) -> Result<Vec<Url>> {
 mod tests {
     use {
         super::{get_fuzzer_urls, test_json_path},
-        crate::test_fixtures::Test,
         anyhow::Result,
+        fuchsia_fuzzctl_test::Test,
         serde_json::json,
     };
 

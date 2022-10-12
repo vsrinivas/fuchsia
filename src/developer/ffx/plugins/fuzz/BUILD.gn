@@ -9,44 +9,31 @@ ffx_plugin("ffx_fuzz") {
   edition = "2021"
   args_sources = [ "src/args.rs" ]
   sources = [
-    "src/artifact.rs",
     "src/autocomplete.rs",
-    "src/constants.rs",
-    "src/controller.rs",
-    "src/corpus.rs",
-    "src/diagnostics.rs",
-    "src/duration.rs",
     "src/fuzzer.rs",
-    "src/input.rs",
     "src/lib.rs",
-    "src/manager.rs",
     "src/options.rs",
     "src/reader.rs",
     "src/shell.rs",
-    "src/test_fixtures.rs",
-    "src/util.rs",
-    "src/writer.rs",
   ]
   args_deps = [ "shell_args" ]
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/errors:lib",
-    "//src/lib/diagnostics/data",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer_rust",
+    "//src/sys/fuzzing/fuzzctl:lib",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
-    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:sha2",
     "//third_party/rust_crates:termion",
     "//third_party/rust_crates:url",
     "//third_party/rust_crates:walkdir",
@@ -57,6 +44,7 @@ ffx_plugin("ffx_fuzz") {
   with_unit_tests = true
   test_deps = [
     "//src/lib/fuchsia",
-    "//third_party/rust_crates:tempfile",
+    "//src/sys/fuzzing/fuzzctl/testing",
+    "//third_party/rust_crates:hex",
   ]
 }

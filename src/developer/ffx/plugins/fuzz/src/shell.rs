@@ -3,17 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::corpus::get_type as get_corpus_type,
-    crate::duration::Duration,
     crate::fuzzer::Fuzzer,
-    crate::manager::Manager,
     crate::reader::{ParsedCommand, Reader},
-    crate::util::get_fuzzer_urls,
-    crate::writer::{OutputSink, Writer},
     anyhow::{anyhow, bail, Context as _, Result},
     errors::ffx_bail,
     ffx_fuzz_args::*,
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_fuzzer as fuzz,
+    fuchsia_fuzzctl::{get_corpus_type, get_fuzzer_urls, Duration, Manager, OutputSink, Writer},
     fuchsia_zircon_status as zx,
     futures::{pin_mut, select, FutureExt},
     selectors::{parse_selector, VerboseError},
@@ -483,10 +479,8 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
                     self.writer.println(format!("  Runs performed: {}", runs));
                 };
                 if let Some(elapsed) = status.elapsed {
-                    self.writer.println(format!(
-                        "    Time elapsed: {} seconds",
-                        Duration::from_nanos(elapsed).into_seconds()
-                    ));
+                    let seconds = Duration::from_nanos(elapsed).into_seconds();
+                    self.writer.println(format!("    Time elapsed: {} seconds", seconds));
                 };
                 if let (Some(covered_pcs), Some(covered_features)) =
                     (status.covered_pcs, status.covered_features)
@@ -630,18 +624,17 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
 mod test_fixtures {
     use {
         super::Shell,
-        crate::controller::test_fixtures::FakeController,
-        crate::duration::Duration,
-        crate::manager::test_fixtures::serve_manager,
         crate::reader::test_fixtures::ScriptReader,
-        crate::test_fixtures::{create_task, Test, TEST_URL},
-        crate::writer::test_fixtures::BufferSink,
         anyhow::{anyhow, Context as _, Result},
         ffx_fuzz_args::FuzzerState,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
         fuchsia_async as fasync,
+        fuchsia_fuzzctl::Duration,
+        fuchsia_fuzzctl_test::{
+            create_task, serve_manager, BufferSink, FakeController, Test, TEST_URL,
+        },
         futures::StreamExt,
         std::fmt::Display,
         std::path::PathBuf,
@@ -811,12 +804,10 @@ mod tests {
     use {
         super::test_fixtures::ShellScript,
         super::DEFAULT_FUZZING_OUTPUT_VARIABLE,
-        crate::duration::Duration,
-        crate::input::test_fixtures::verify_saved,
-        crate::test_fixtures::{Test, TEST_URL},
-        crate::util::digest_path,
         anyhow::Result,
         fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
+        fuchsia_fuzzctl::{digest_path, Duration},
+        fuchsia_fuzzctl_test::{verify_saved, Test, TEST_URL},
         fuchsia_zircon_status as zx,
         std::path::PathBuf,
     };

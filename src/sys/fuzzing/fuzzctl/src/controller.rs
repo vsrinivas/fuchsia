@@ -406,391 +406,35 @@ impl<O: OutputSink> Controller<O> {
 }
 
 #[cfg(test)]
-pub mod test_fixtures {
-    use {
-        super::Controller,
-        crate::constants::*,
-        crate::diagnostics::test_fixtures::send_log_entry,
-        crate::input::InputPair,
-        crate::test_fixtures::{create_task, Test},
-        crate::writer::test_fixtures::BufferSink,
-        anyhow::{anyhow, Context as _, Result},
-        fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_fuzzer::{self as fuzz, Input as FidlInput, Result_ as FuzzResult},
-        fuchsia_async as fasync, fuchsia_zircon_status as zx,
-        futures::{join, AsyncReadExt, AsyncWriteExt, StreamExt},
-        std::cell::RefCell,
-        std::rc::Rc,
-    };
-
-    /// Creates a test setup suitable for unit testing `Controller`.
-    ///
-    /// On success, returns a tuple of a `FakeController`, a `Controller`, and a `Task`. The task
-    /// will serve a `fuchsia.fuzzer.Controller` stream until it is dropped. The controller holds
-    /// the other end of this FIDL channel in its `proxy` field. The test fake has various fields
-    /// that it shares with the controller task; these can be accessed or mutated by unit tests to
-    /// check what was sent via FIDL requests or what should be sent in FIDL responses. Both the
-    /// test fake and the controller are configured to write to the test `output`.
-    ///
-    /// Returns an error if it fails to create or associate any of the objects with each other.
-    ///
-    pub fn perform_test_setup(
-        test: &Test,
-    ) -> Result<(FakeController, Controller<BufferSink>, fasync::Task<()>)> {
-        let (proxy, stream) = create_proxy_and_stream::<fuzz::ControllerMarker>()
-            .context("failed to create FIDL connection")?;
-        let fake = FakeController::new();
-        let controller = Controller::new(proxy, test.writer());
-        let task = create_task(serve_controller(stream, fake.clone()), test.writer());
-        Ok((fake, controller, task))
-    }
-
-    /// Add defaults values to an `Options` struct.
-    pub fn add_defaults(options: &mut fuzz::Options) {
-        options.runs = options.runs.or(Some(0));
-        options.max_total_time = options.max_total_time.or(Some(0));
-        options.seed = options.seed.or(Some(0));
-        options.max_input_size = options.max_input_size.or(Some(1 * BYTES_PER_MB));
-        options.mutation_depth = options.mutation_depth.or(Some(5));
-        options.dictionary_level = options.dictionary_level.or(Some(0));
-        options.detect_exits = options.detect_exits.or(Some(false));
-        options.detect_leaks = options.detect_leaks.or(Some(false));
-        options.run_limit = options.run_limit.or(Some(20 * NANOS_PER_MINUTE));
-        options.malloc_limit = options.malloc_limit.or(Some(2 * BYTES_PER_GB));
-        options.oom_limit = options.oom_limit.or(Some(2 * BYTES_PER_GB));
-        options.purge_interval = options.purge_interval.or(Some(1 * NANOS_PER_SECOND));
-        options.malloc_exitcode = options.malloc_exitcode.or(Some(2000));
-        options.death_exitcode = options.death_exitcode.or(Some(2001));
-        options.leak_exitcode = options.leak_exitcode.or(Some(2002));
-        options.oom_exitcode = options.oom_exitcode.or(Some(2003));
-        options.pulse_interval = options.pulse_interval.or(Some(20 * NANOS_PER_SECOND));
-        options.debug = options.debug.or(Some(false));
-        options.print_final_stats = options.print_final_stats.or(Some(false));
-        options.use_value_profile = options.use_value_profile.or(Some(false));
-        if options.sanitizer_options.is_none() {
-            options.sanitizer_options =
-                Some(fuzz::SanitizerOptions { name: String::default(), value: String::default() });
-        }
-    }
-
-    /// Test fake that allows configuring how to respond to `fuchsia.fuzzer.Controller` methods.
-    ///
-    /// These fields are Rc<RefCell<_>> in order to be cloned and shared with the `Task` serving the
-    /// controller. Unit tests can use this object to query values passed in FIDL requests and set
-    /// values returned by FIDL responses.
-    #[derive(Debug)]
-    pub struct FakeController {
-        corpus_type: Rc<RefCell<fuzz::Corpus>>,
-        input_to_send: Rc<RefCell<Vec<u8>>>,
-        options: Rc<RefCell<fuzz::Options>>,
-        received_input: Rc<RefCell<Vec<u8>>>,
-        result: Rc<RefCell<Result<FuzzResult, zx::Status>>>,
-        status: Rc<RefCell<fuzz::Status>>,
-        stdout: Rc<RefCell<Option<fasync::Socket>>>,
-        stderr: Rc<RefCell<Option<fasync::Socket>>>,
-        syslog: Rc<RefCell<Option<fasync::Socket>>>,
-        canceled: Rc<RefCell<bool>>,
-    }
-
-    impl FakeController {
-        /// Creates a fake controller that can serve `fuchsia.fuzzer.Controller`.
-        pub fn new() -> Self {
-            let status = fuzz::Status { running: Some(false), ..fuzz::Status::EMPTY };
-            let mut options = fuzz::Options::EMPTY;
-            add_defaults(&mut options);
-            Self {
-                corpus_type: Rc::new(RefCell::new(fuzz::Corpus::Seed)),
-                input_to_send: Rc::new(RefCell::new(Vec::new())),
-                options: Rc::new(RefCell::new(options)),
-                received_input: Rc::new(RefCell::new(Vec::new())),
-                result: Rc::new(RefCell::new(Ok(FuzzResult::NoErrors))),
-                status: Rc::new(RefCell::new(status)),
-                stdout: Rc::new(RefCell::new(None)),
-                stderr: Rc::new(RefCell::new(None)),
-                syslog: Rc::new(RefCell::new(None)),
-                canceled: Rc::new(RefCell::new(false)),
-            }
-        }
-
-        /// Simulates a call to `fuchsia.fuzzer.Manager/GetOutput` without a `fuzz-manager`.
-        pub fn set_output(&self, output: fuzz::TestOutput, socket: fidl::Socket) -> zx::Status {
-            let socket = fasync::Socket::from_socket(socket).expect("failed to create sockets");
-            match output {
-                fuzz::TestOutput::Stdout => {
-                    let mut stdout_mut = self.stdout.borrow_mut();
-                    *stdout_mut = Some(socket);
-                }
-                fuzz::TestOutput::Stderr => {
-                    let mut stderr_mut = self.stderr.borrow_mut();
-                    *stderr_mut = Some(socket);
-                }
-                fuzz::TestOutput::Syslog => {
-                    let mut syslog_mut = self.syslog.borrow_mut();
-                    *syslog_mut = Some(socket);
-                }
-                _ => todo!("not supported"),
-            }
-            zx::Status::OK
-        }
-
-        /// Returns the type of corpus received via FIDL requests.
-        pub fn get_corpus_type(&self) -> fuzz::Corpus {
-            self.corpus_type.borrow().clone()
-        }
-
-        /// Sets the type of corpus to return via FIDL responses.
-        pub fn set_corpus_type(&self, corpus_type: fuzz::Corpus) {
-            let mut corpus_type_mut = self.corpus_type.borrow_mut();
-            *corpus_type_mut = corpus_type;
-        }
-
-        /// Returns the test input to be sent via a FIDL response.
-        pub fn get_input_to_send(&self) -> Vec<u8> {
-            self.input_to_send.borrow().clone()
-        }
-
-        /// Sets the test input to be sent via a FIDL response.
-        pub fn set_input_to_send(&self, input_to_send: &[u8]) {
-            let mut input_to_send_mut = self.input_to_send.borrow_mut();
-            *input_to_send_mut = input_to_send.to_vec();
-        }
-
-        /// Returns the options received via FIDL requests.
-        pub fn get_options(&self) -> fuzz::Options {
-            self.options.borrow().clone()
-        }
-
-        /// Sets the options to return via FIDL responses.
-        pub fn set_options(&self, mut options: fuzz::Options) {
-            add_defaults(&mut options);
-            let mut options_mut = self.options.borrow_mut();
-            *options_mut = options;
-        }
-
-        /// Returns the test input received via FIDL requests.
-        pub fn get_received_input(&self) -> Vec<u8> {
-            self.received_input.borrow().clone()
-        }
-
-        /// Reads test input data from a `fuchsia.fuzzer.Input` from a FIDL request.
-        async fn receive_input(&self, input: FidlInput) -> Result<()> {
-            let mut received_input = Vec::new();
-            let mut reader = fidl::AsyncSocket::from_socket(input.socket)?;
-            reader.read_to_end(&mut received_input).await?;
-            let mut received_input_mut = self.received_input.borrow_mut();
-            *received_input_mut = received_input;
-            Ok(())
-        }
-
-        /// Returns the fuzzing result to be sent via a FIDL response.
-        pub fn get_result(&self) -> Result<FuzzResult, zx::Status> {
-            self.result.borrow().clone()
-        }
-
-        /// Sets the fuzzing result to be sent via a FIDL response.
-        pub fn set_result(&self, result: Result<FuzzResult, zx::Status>) {
-            let mut result_mut = self.result.borrow_mut();
-            *result_mut = result;
-        }
-
-        /// Gets the fuzzer status to be sent via FIDL responses.
-        pub fn get_status(&self) -> fuzz::Status {
-            self.status.borrow().clone()
-        }
-
-        /// Sets the fuzzer status to be sent via FIDL responses.
-        pub fn set_status(&self, status: fuzz::Status) {
-            let mut status_mut = self.status.borrow_mut();
-            *status_mut = status;
-        }
-
-        // Simulates sending a `msg` to a fuzzer's standard output, standard error, and system log.
-        async fn send_output(&self, msg: &str) -> Result<()> {
-            let msg_str = format!("{}\n", msg);
-            {
-                let mut stdout_mut = self.stdout.borrow_mut();
-                if let Some(mut stdout) = stdout_mut.take() {
-                    stdout.write_all(msg_str.as_bytes()).await?;
-                    *stdout_mut = Some(stdout);
-                }
-            }
-            {
-                let mut stderr_mut = self.stderr.borrow_mut();
-                if let Some(mut stderr) = stderr_mut.take() {
-                    stderr.write_all(msg_str.as_bytes()).await?;
-                    *stderr_mut = Some(stderr);
-                }
-            }
-            {
-                let mut syslog_mut = self.syslog.borrow_mut();
-                if let Some(mut syslog) = syslog_mut.take() {
-                    send_log_entry(&mut syslog, msg).await?;
-                    *syslog_mut = Some(syslog);
-                }
-            }
-            Ok(())
-        }
-
-        /// Simulates a long-running workflow being canceled by `fuchsia.fuzzer.Manager/Stop`.
-        pub fn cancel(&self) {
-            let mut canceled_mut = self.canceled.borrow_mut();
-            *canceled_mut = true;
-        }
-
-        /// Get whether a simulated call to `fuchsia.fuzzer.Manager/Stop` has been made.
-        pub fn is_canceled(&self) -> bool {
-            *self.canceled.borrow()
-        }
-    }
-
-    impl Clone for FakeController {
-        fn clone(&self) -> Self {
-            Self {
-                corpus_type: Rc::clone(&self.corpus_type),
-                input_to_send: Rc::clone(&self.input_to_send),
-                options: Rc::clone(&self.options),
-                received_input: Rc::clone(&self.received_input),
-                result: Rc::clone(&self.result),
-                status: Rc::clone(&self.status),
-                stdout: Rc::clone(&self.stdout),
-                stderr: Rc::clone(&self.stderr),
-                syslog: Rc::clone(&self.syslog),
-                canceled: Rc::clone(&self.canceled),
-            }
-        }
-    }
-
-    /// Serves `fuchsia.fuzzer.Controller` using test fakes.
-    pub async fn serve_controller(
-        mut stream: fuzz::ControllerRequestStream,
-        fake: FakeController,
-    ) -> Result<()> {
-        let mut _responder = None;
-        loop {
-            let request = stream.next().await;
-            if fake.is_canceled() {
-                break;
-            }
-            match request {
-                Some(Ok(fuzz::ControllerRequest::Configure { options, responder })) => {
-                    fake.set_options(options);
-                    responder.send(zx::Status::OK.into_raw())?;
-                }
-                Some(Ok(fuzz::ControllerRequest::GetOptions { responder })) => {
-                    let options = fake.get_options();
-                    responder.send(options)?;
-                }
-                Some(Ok(fuzz::ControllerRequest::AddToCorpus { corpus, input, responder })) => {
-                    fake.receive_input(input).await?;
-                    fake.set_corpus_type(corpus);
-                    responder.send(zx::Status::OK.into_raw())?;
-                }
-                Some(Ok(fuzz::ControllerRequest::ReadCorpus {
-                    corpus,
-                    corpus_reader,
-                    responder,
-                })) => {
-                    fake.set_corpus_type(corpus);
-                    let corpus_reader = corpus_reader.into_proxy()?;
-                    let input_pair = InputPair::try_from_data(fake.get_input_to_send())?;
-                    let (mut fidl_input, input) = input_pair.as_tuple();
-                    let corpus_fut = corpus_reader.next(&mut fidl_input);
-                    let input_fut = input.send();
-                    let results = join!(corpus_fut, input_fut);
-                    assert!(results.0.is_ok());
-                    assert!(results.1.is_ok());
-                    responder.send()?;
-                }
-                Some(Ok(fuzz::ControllerRequest::GetStatus { responder })) => {
-                    let status = fake.get_status();
-                    responder.send(status)?;
-                }
-                Some(Ok(fuzz::ControllerRequest::Execute { test_input, responder })) => {
-                    fake.receive_input(test_input).await?;
-                    match fake.get_result() {
-                        Ok(fuzz_result) => {
-                            responder.send(&mut Ok(fuzz_result))?;
-                            fake.send_output(fuzz::DONE_MARKER).await?;
-                        }
-                        Err(status) => {
-                            responder.send(&mut Err(status.into_raw()))?;
-                        }
-                    }
-                }
-                Some(Ok(fuzz::ControllerRequest::Minimize { test_input, responder })) => {
-                    fake.receive_input(test_input).await?;
-                    let input_pair = InputPair::try_from_data(fake.get_input_to_send())?;
-                    let (fidl_input, input) = input_pair.as_tuple();
-                    responder.send(&mut Ok(fidl_input))?;
-                    input.send().await?;
-                    fake.send_output(fuzz::DONE_MARKER).await?;
-                }
-                Some(Ok(fuzz::ControllerRequest::Cleanse { test_input, responder })) => {
-                    fake.receive_input(test_input).await?;
-                    let input_pair = InputPair::try_from_data(fake.get_input_to_send())?;
-                    let (fidl_input, input) = input_pair.as_tuple();
-                    responder.send(&mut Ok(fidl_input))?;
-                    input.send().await?;
-                    fake.send_output(fuzz::DONE_MARKER).await?;
-                }
-                Some(Ok(fuzz::ControllerRequest::Fuzz { responder })) => {
-                    // As special cases, fuzzing indefinitely without any errors or fuzzing with an
-                    // explicit error of `SHOULD_WAIT` will imitate a FIDL call that does not
-                    // complete. These can be interrupted by the shell or allowed to timeout.
-                    let result = fake.get_result();
-                    let options = fake.get_options();
-                    match (options.runs, options.max_total_time, result) {
-                        (Some(0), Some(0), Ok(FuzzResult::NoErrors))
-                        | (_, _, Err(zx::Status::SHOULD_WAIT)) => {
-                            let mut status = fake.get_status();
-                            status.running = Some(true);
-                            fake.set_status(status);
-                            // Prevent the responder being dropped and closing the stream.
-                            _responder = Some(responder);
-                        }
-                        (_, _, Ok(fuzz_result)) => {
-                            let input_pair = InputPair::try_from_data(fake.get_input_to_send())?;
-                            let (fidl_input, input) = input_pair.as_tuple();
-                            let mut response = Ok((fuzz_result, fidl_input));
-                            responder.send(&mut response)?;
-                            input.send().await?;
-                            fake.send_output(fuzz::DONE_MARKER).await?;
-                        }
-                        (_, _, Err(status)) => {
-                            responder.send(&mut Err(status.into_raw()))?;
-                        }
-                    };
-                }
-                Some(Ok(fuzz::ControllerRequest::Merge { responder })) => {
-                    responder.send(zx::Status::OK.into_raw())?;
-                    fake.send_output(fuzz::DONE_MARKER).await?;
-                }
-                Some(Err(e)) => return Err(anyhow!(e)),
-                None => break,
-                _ => todo!("not yet implemented"),
-            };
-        }
-        Ok(())
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use {
-        super::test_fixtures::perform_test_setup,
-        crate::input::test_fixtures::verify_saved,
-        crate::input::InputPair,
-        crate::test_fixtures::Test,
         crate::util::digest_path,
-        anyhow::Result,
+        anyhow::{Context as _, Result},
+        fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
+        fuchsia_async as fasync,
+        fuchsia_fuzzctl::{Controller, InputPair},
+        fuchsia_fuzzctl_test::{create_task, serve_controller, verify_saved, FakeController, Test},
         fuchsia_zircon_status as zx,
     };
+
+    // Creates a test setup suitable for unit testing `Controller`.
+    fn perform_test_setup(
+        test: &Test,
+    ) -> Result<(FakeController, fuzz::ControllerProxy, fasync::Task<()>)> {
+        let fake = FakeController::new();
+        let (proxy, stream) = create_proxy_and_stream::<fuzz::ControllerMarker>()
+            .context("failed to create FIDL connection")?;
+        let task = create_task(serve_controller(stream, fake.clone()), test.writer());
+        Ok((fake, proxy, task))
+    }
 
     #[fuchsia::test]
     async fn test_configure() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
+
         // Modify all the options that start with 'd'.
         let expected = fuzz::Options {
             dictionary_level: Some(1),
@@ -807,13 +451,16 @@ mod tests {
         assert_eq!(actual.detect_leaks, expected.detect_leaks);
         assert_eq!(actual.death_exitcode, expected.death_exitcode);
         assert_eq!(actual.debug, expected.debug);
+
         Ok(())
     }
 
     #[fuchsia::test]
     async fn test_get_options() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
+
         // Modify all the options that start with 'm'.
         let expected = fuzz::Options {
             max_total_time: Some(20000),
@@ -830,13 +477,15 @@ mod tests {
         assert_eq!(actual.mutation_depth, expected.mutation_depth);
         assert_eq!(actual.malloc_limit, expected.malloc_limit);
         assert_eq!(actual.malloc_exitcode, expected.malloc_exitcode);
+
         Ok(())
     }
 
     #[fuchsia::test]
     async fn test_read_corpus() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
 
         let seed_dir = test.create_dir("seed")?;
         fake.set_input_to_send(b"foo");
@@ -862,7 +511,8 @@ mod tests {
     #[fuchsia::test]
     async fn test_add_to_corpus() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
 
         let input_pairs: Vec<InputPair> = vec![b"foo".to_vec(), b"bar".to_vec(), b"baz".to_vec()]
             .into_iter()
@@ -889,7 +539,9 @@ mod tests {
     #[fuchsia::test]
     async fn test_get_status() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
+
         let expected = fuzz::Status {
             running: Some(true),
             runs: Some(1),
@@ -904,13 +556,15 @@ mod tests {
         fake.set_status(expected.clone());
         let actual = controller.get_status().await?;
         assert_eq!(actual, expected);
+
         Ok(())
     }
 
     #[fuchsia::test]
     async fn test_execute() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
 
         let input_pair = InputPair::try_from_data(b"foo".to_vec())?;
         let artifact = controller.execute(input_pair).await?;
@@ -927,13 +581,15 @@ mod tests {
         let input_pair = InputPair::try_from_data(b"baz".to_vec())?;
         let artifact = controller.execute(input_pair).await?;
         assert_eq!(artifact.status, zx::Status::CANCELED);
+
         Ok(())
     }
 
     #[fuchsia::test]
     async fn test_fuzz() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
         let artifact_dir = test.create_dir("artifacts")?;
 
         let options = fuzz::Options { runs: Some(10), ..fuzz::Options::EMPTY };
@@ -954,13 +610,15 @@ mod tests {
         fake.cancel();
         let artifact = controller.fuzz(&artifact_dir).await?;
         assert_eq!(artifact.status, zx::Status::CANCELED);
+
         Ok(())
     }
 
     #[fuchsia::test]
     async fn test_cleanse() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
         let artifact_dir = test.create_dir("artifacts")?;
 
         fake.set_input_to_send(b"   bar   ");
@@ -976,13 +634,15 @@ mod tests {
         let input_pair = InputPair::try_from_data(b"foobarbaz".to_vec())?;
         let artifact = controller.cleanse(input_pair, &artifact_dir).await?;
         assert_eq!(artifact.status, zx::Status::CANCELED);
+
         Ok(())
     }
 
     #[fuchsia::test]
     async fn test_minimize() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
         let artifact_dir = test.create_dir("artifacts")?;
 
         fake.set_input_to_send(b"foo");
@@ -998,13 +658,15 @@ mod tests {
         let input_pair = InputPair::try_from_data(b"bar".to_vec())?;
         let artifact = controller.minimize(input_pair, &artifact_dir).await?;
         assert_eq!(artifact.status, zx::Status::CANCELED);
+
         Ok(())
     }
 
     #[fuchsia::test]
     async fn test_merge() -> Result<()> {
         let test = Test::try_new()?;
-        let (fake, controller, _task) = perform_test_setup(&test)?;
+        let (fake, proxy, _task) = perform_test_setup(&test)?;
+        let controller = Controller::new(proxy, test.writer());
 
         let artifact = controller.merge().await?;
         assert_eq!(artifact.status, zx::Status::OK);
@@ -1013,6 +675,7 @@ mod tests {
         fake.cancel();
         let artifact = controller.merge().await?;
         assert_eq!(artifact.status, zx::Status::CANCELED);
+
         Ok(())
     }
 }

@@ -53,6 +53,7 @@ mod platform {
 #[cfg(target_os = "fuchsia")]
 mod platform {
     pub use fuchsia_async::Duration;
+    use fuchsia_async::DurationExt;
 
     /// Provides a deadline after `timeout` nanoseconds that a `fuchsia_async::Timer` can wait until.
     pub fn deadline_after(timeout: Option<i64>) -> Option<fuchsia_async::Time> {

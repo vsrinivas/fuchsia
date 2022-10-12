@@ -155,32 +155,14 @@ pub async fn save_input<P: AsRef<Path>>(fidl_input: FidlInput, out_dir: P) -> Re
 }
 
 #[cfg(test)]
-pub mod test_fixtures {
-    use {
-        anyhow::{Context as _, Result},
-        std::fs,
-        std::path::Path,
-    };
-
-    /// Verifies that the input was actually written and matches its expected contents.
-    pub fn verify_saved<P: AsRef<Path>>(saved: P, data: &[u8]) -> Result<()> {
-        let saved = saved.as_ref();
-        let actual = fs::read(saved)
-            .with_context(|| format!("failed to read '{}'", saved.to_string_lossy()))?;
-        assert_eq!(actual, data);
-        Ok(())
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use {
-        super::test_fixtures::verify_saved,
-        super::{save_input, Input, InputPair},
-        crate::test_fixtures::Test,
+        super::{save_input, Input},
         crate::util::digest_path,
         anyhow::Result,
         fidl_fuchsia_fuzzer::Input as FidlInput,
+        fuchsia_fuzzctl::InputPair,
+        fuchsia_fuzzctl_test::{verify_saved, Test},
         futures::{join, AsyncReadExt},
         std::fs::File,
         std::io::Write,

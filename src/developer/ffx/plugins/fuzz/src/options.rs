@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::*,
     anyhow::{anyhow, bail, Error, Result},
     fidl_fuchsia_fuzzer as fuzz,
+    fuchsia_fuzzctl::constants::*,
     lazy_static::lazy_static,
     regex::Regex,
 };
@@ -297,7 +297,7 @@ fn parse_size(value: &str) -> Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::controller::test_fixtures::add_defaults;
+    use fuchsia_fuzzctl_test::add_defaults;
 
     #[test]
     fn test_format_duration() -> Result<()> {

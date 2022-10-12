@@ -215,10 +215,10 @@ async fn shell_read_loop(
 pub mod test_fixtures {
     use {
         super::{parse, ParsedCommand, Reader},
-        crate::duration::{deadline_after, Duration},
         anyhow::{bail, Result},
         async_trait::async_trait,
         fuchsia_async as fasync,
+        fuchsia_fuzzctl::{deadline_after, Duration},
         futures::channel::mpsc,
         futures::{SinkExt, StreamExt},
         std::collections::LinkedList,
