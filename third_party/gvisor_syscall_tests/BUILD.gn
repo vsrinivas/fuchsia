@@ -253,35 +253,19 @@ source_set("gtest_main") {
   testonly = true
 }
 
-tests = [
-  {
-    label = generic_test_label
-    cq = false
-  },
-  {
-    label = raw_packet_test_label
-    cq = true
-  },
-  {
-    label = udp_test_label
-    cq = false
-  },
-  {
-    label = udp_unbound_test_label
-    cq = false
-  },
-  {
-    label = tcp_test_label
-    cq = false
-  },
-]
-
-test_deps = []
 local_test_deps = []
+test_deps = []
 
-foreach(test, tests) {
-  source_set("netstack3_${test.label}_expectations") {
-    sources = [ "expects/netstack3/${test.label}_expectations.cc" ]
+# Defines test targets and unittest packages based on the
+# provided suite name for all versions of the Netstack under
+# test.
+template("syscall_test_suite") {
+  not_needed([ "invoker" ])
+  suite_label = target_name
+
+  netstack3_expectations_target = "${suite_label}_netstack3_expectations"
+  source_set(netstack3_expectations_target) {
+    sources = [ "expects/netstack3/${suite_label}_expectations.cc" ]
     deps = [
       ":expectations",
       ":gvisor_test_util",
@@ -290,8 +274,9 @@ foreach(test, tests) {
     testonly = true
   }
 
-  source_set("netstack2_${test.label}_expectations") {
-    sources = [ "expects/netstack2/${test.label}_expectations.cc" ]
+  netstack2_expectations_target = "${suite_label}_netstack2_expectations"
+  source_set(netstack2_expectations_target) {
+    sources = [ "expects/netstack2/${suite_label}_expectations.cc" ]
     deps = [
       ":expectations",
       ":gvisor_test_util",
@@ -300,37 +285,36 @@ foreach(test, tests) {
     testonly = true
   }
 
-  # Clear the list before overwriting it to satisfy GN.
-  stacks = []
   stacks = [
     {
       label = "netstack2_fastudp"
       component =
           "//src/connectivity/network/netstack:component-with-fast-udp-debug"
-      expectations = ":netstack2_${test.label}_expectations"
-      manifest = "meta/netstack2/fastudp/${test.label}_syscall_tests.cml"
+      expectations = ":${netstack2_expectations_target}"
+      manifest = "meta/netstack2/fastudp/${suite_label}_syscall_tests.cml"
     },
     {
       label = "netstack2_syncudp"
       component = "//src/connectivity/network/netstack:component-debug"
-      expectations = ":netstack2_${test.label}_expectations"
-      manifest = "meta/netstack2/syncudp/${test.label}_syscall_tests.cml"
+      expectations = ":${netstack2_expectations_target}"
+      manifest = "meta/netstack2/syncudp/${suite_label}_syscall_tests.cml"
     },
     {
       label = "netstack3"
       component = "//src/connectivity/network/netstack3:component"
-      expectations = ":netstack3_${test.label}_expectations"
-      manifest = "meta/netstack3/${test.label}_syscall_tests.cml"
+      expectations = ":${netstack3_expectations_target}"
+      manifest = "meta/netstack3/${suite_label}_syscall_tests.cml"
     },
   ]
 
+  test_deps = []
   foreach(stack, stacks) {
-    combined_label = "${stack.label}_${test.label}"
+    combined_label = "${stack.label}_${suite_label}"
 
-    socket_tests_label = "${combined_label}_socket_tests"
-    test(socket_tests_label) {
+    test_target_label = "${combined_label}_socket_tests"
+    test(test_target_label) {
       deps = [
-        ":${test.label}_socket_tests",
+        ":${suite_label}_socket_tests",
         ":gtest_main",
         stack.expectations,
       ]
@@ -340,26 +324,39 @@ foreach(test, tests) {
       disable_syslog_backend = true
     }
 
-    syscall_tests_label = "${combined_label}_syscall_tests"
-    fuchsia_unittest_package(syscall_tests_label) {
-      package_name = syscall_tests_label
+    test_package_label = "${combined_label}_syscall_tests"
+    fuchsia_unittest_package(test_package_label) {
+      package_name = test_package_label
       manifest = stack.manifest
       deps = [
-        ":${socket_tests_label}",
+        ":${test_target_label}",
         stack.component,
       ]
     }
 
-    local_test_deps += [ ":${syscall_tests_label}" ]
-    if (test.cq) {
-      test_deps += [ ":${syscall_tests_label}" ]
-    }
+    test_deps += [ ":${test_package_label}" ]
   }
+
+  group(suite_label) {
+    testonly = true
+    public_deps = test_deps
+  }
+}
+
+syscall_test_suite(generic_test_label) {
+}
+syscall_test_suite(raw_packet_test_label) {
+}
+syscall_test_suite(udp_test_label) {
+}
+syscall_test_suite(udp_unbound_test_label) {
+}
+syscall_test_suite(tcp_test_label) {
 }
 
 group("tests") {
   testonly = true
-  public_deps = test_deps
+  public_deps = [ ":${raw_packet_test_label}" ]
 }
 
 # This target contains all tests, including those currently too long
@@ -369,5 +366,11 @@ group("tests") {
 # TODO(https://fxbug.dev/110881): Remove once all tests run in CQ.
 group("local-testing") {
   testonly = true
-  public_deps = local_test_deps
+  public_deps = [
+    ":${generic_test_label}",
+    ":${raw_packet_test_label}",
+    ":${tcp_test_label}",
+    ":${udp_test_label}",
+    ":${udp_unbound_test_label}",
+  ]
 }
