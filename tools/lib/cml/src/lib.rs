@@ -1773,6 +1773,7 @@ pub struct Capability {
     /// (`directory` only) The maximum [directory rights][doc-directory-rights] that may be set
     /// when using this directory.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[reference_doc(json_type = "array of string")]
     pub rights: Option<Rights>,
 
     /// (`storage` only) The source component of an existing directory capability backing this

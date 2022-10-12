@@ -353,7 +353,7 @@ One and only one of the capability type keys (`protocol`, `directory`, `service`
 
   For `resolver`, the target of the path MUST be a channel and MUST speak
   the protocol `fuchsia.component.resolution.Resolver`.
-- `rights`: (_optional `string`_) (`directory` only) The maximum [directory rights][doc-directory-rights] that may be set
+- `rights`: (_optional `array of string`_) (`directory` only) The maximum [directory rights][doc-directory-rights] that may be set
   when using this directory.
 - `from`: (_optional `string`_) (`storage` only) The source component of an existing directory capability backing this
   storage capability, one of:
