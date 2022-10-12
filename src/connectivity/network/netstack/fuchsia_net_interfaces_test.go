@@ -528,15 +528,12 @@ func TestInterfacesWatcherDeepCopyAddresses(t *testing.T) {
 				time.Hour.Nanoseconds(),
 				(time.Hour * 2).Nanoseconds(),
 			}
-			eventChan <- validUntilChanged{
-				nicid:      tcpip.NICID(testId),
-				subnet:     addr.GetAddr(),
-				validUntil: time.Monotonic(validUntil[0]),
-			}
-			eventChan <- validUntilChanged{
-				nicid:      tcpip.NICID(testId),
-				subnet:     addr.GetAddr(),
-				validUntil: time.Monotonic(validUntil[1]),
+			for _, validUntil := range validUntil {
+				eventChan <- validUntilChanged{
+					nicid:      tcpip.NICID(testId),
+					subnet:     addr.GetAddr(),
+					validUntil: time.Monotonic(validUntil),
+				}
 			}
 
 			// Read all the queued events.
@@ -557,20 +554,15 @@ func TestInterfacesWatcherDeepCopyAddresses(t *testing.T) {
 				watcher.expectIdleEvent(t)
 			}
 
-			var wantChange interfaces.Properties
-			wantChange.SetId(testId)
-			addr.SetValidUntil(validUntil[0])
-			wantChange.SetAddresses([]interfaces.Address{addr})
-			event, err = watcher.Watch(context.Background())
-			if err := assertWatchResult(event, err, interfaces.EventWithChanged(wantChange)); err != nil {
-				t.Fatal(err)
-			}
-
-			addr.SetValidUntil(validUntil[1])
-			wantChange.SetAddresses([]interfaces.Address{addr})
-			event, err = watcher.Watch(context.Background())
-			if err := assertWatchResult(event, err, interfaces.EventWithChanged(wantChange)); err != nil {
-				t.Fatal(err)
+			for i, validUntil := range validUntil {
+				var wantChange interfaces.Properties
+				wantChange.SetId(testId)
+				addr.SetValidUntil(validUntil)
+				wantChange.SetAddresses([]interfaces.Address{addr})
+				event, err = watcher.Watch(context.Background())
+				if err := assertWatchResult(event, err, interfaces.EventWithChanged(wantChange)); err != nil {
+					t.Fatalf("valid-until change index %d mismatch: %s", i, err)
+				}
 			}
 		})
 	}
