@@ -9,9 +9,9 @@
 namespace f2fs {
 
 #ifdef __Fuchsia__
-VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : PagedVnode(fs->vfs()), ino_(ino), fs_(fs) {}
+VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : PagedVnode(*fs->vfs()), ino_(ino), fs_(fs) {}
 #else   // __Fuchsia__
-VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : Vnode(fs->vfs()), ino_(ino), fs_(fs) {}
+VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : ino_(ino), fs_(fs) {}
 #endif  // __Fuchsia__
 
 fs::VnodeProtocolSet VnodeF2fs::GetProtocols() const {
@@ -180,8 +180,10 @@ void VnodeF2fs::VmoRead(uint64_t offset, uint64_t length) {
     return;
   }
 
+  std::optional vfs = this->vfs();
+  ZX_ASSERT(vfs.has_value());
   if (auto ret =
-          paged_vfs()->SupplyPages(paged_vmo(), offset, length, std::move(vmo_or.value()), 0);
+          vfs.value().get().SupplyPages(paged_vmo(), offset, length, std::move(vmo_or.value()), 0);
       ret.is_error()) {
     FX_LOGS(ERROR) << "Failed to supply a VMO to " << offset << " + " << length << ", "
                    << vmo_or.status_string();
@@ -242,7 +244,9 @@ void VnodeF2fs::OnNoPagedVmoClones() {
 
 void VnodeF2fs::ReportPagerError(const uint64_t offset, const uint64_t length,
                                  const zx_status_t err) {
-  if (auto result = paged_vfs()->ReportPagerError(paged_vmo(), offset, length, err);
+  std::optional vfs = this->vfs();
+  ZX_ASSERT(vfs.has_value());
+  if (auto result = vfs.value().get().ReportPagerError(paged_vmo(), offset, length, err);
       result.is_error()) {
     FX_LOGS(ERROR) << "Failed to report pager error to kernel: " << result.status_string();
   }

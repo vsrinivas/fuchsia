@@ -32,11 +32,6 @@ std::mutex Vnode::gLockAccess;
 std::map<const Vnode*, std::shared_ptr<file_lock::FileLock>> Vnode::gLockMap;
 #endif
 
-Vnode::Vnode(PlatformVfs* vfs) : vfs_(vfs) {
-  if (vfs_)  // Vfs pointer is optional.
-    vfs_->RegisterVnode(this);
-}
-
 Vnode::~Vnode() {
   std::lock_guard lock(mutex_);
 
@@ -47,9 +42,6 @@ Vnode::~Vnode() {
   ZX_DEBUG_ASSERT_MSG(gLockMap.find(this) == gLockMap.end(),
                       "lock entry in gLockMap not cleaned up for Vnode");
 #endif
-
-  if (vfs_)
-    vfs_->UnregisterVnode(this);
 }
 
 #ifdef __Fuchsia__
@@ -97,13 +89,6 @@ zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
 void Vnode::Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) {}
 
 #endif  // __Fuchsia__
-
-void Vnode::WillDestroyVfs() {
-  std::lock_guard lock(mutex_);
-
-  ZX_DEBUG_ASSERT(vfs_);  // Shouldn't be deleting more than once.
-  vfs_ = nullptr;
-}
 
 bool Vnode::Supports(VnodeProtocolSet protocols) const {
   return (GetProtocols() & protocols).any();

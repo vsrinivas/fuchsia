@@ -14,8 +14,8 @@ namespace f2fs {
 
 ComponentRunner::ComponentRunner(async_dispatcher_t* dispatcher)
     : fs::PagedVfs(dispatcher), dispatcher_(dispatcher) {
-  outgoing_ = fbl::MakeRefCounted<fs::PseudoDir>(this);
-  auto startup = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  outgoing_ = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto startup = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing_->AddEntry("startup", startup);
 
   FX_LOGS(INFO) << "setting up startup service";
@@ -113,11 +113,11 @@ zx::status<> ComponentRunner::Configure(std::unique_ptr<Bcache> bcache,
       });
   // Add the diagnostics directory straight to the outgoing directory. Nothing should be relying on
   // the diagnostics directory queuing incoming requests.
-  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing_->AddEntry("diagnostics", diagnostics_dir);
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
-  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   svc_dir->AddEntry(
       fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
       fbl::MakeRefCounted<AdminService>(dispatcher_, [this](fs::FuchsiaVfs::ShutdownCallback cb) {

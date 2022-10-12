@@ -56,7 +56,7 @@ class Vfs {
   class TraversePathResult;
 
   Vfs();
-  virtual ~Vfs();
+  virtual ~Vfs() = default;
 
   // Traverse the path to the target vnode, and create / open it using the underlying filesystem
   // functions (lookup, create, open).
@@ -83,17 +83,9 @@ class Vfs {
   TraversePathResult TraversePathFetchVnode(fbl::RefPtr<Vnode> vndir, std::string_view path)
       __TA_EXCLUDES(vfs_lock_);
 
-  // The VFS tracks all live Vnodes associated with it.
-  void RegisterVnode(Vnode* vnode);
-  void UnregisterVnode(Vnode* vnode);
-
  protected:
   // Whether this file system is read-only.
   bool ReadonlyLocked() const __TA_REQUIRES(vfs_lock_) { return readonly_; }
-
-  // Derived classes may want to unregister vnodes differently than this one. This function removes
-  // the vnode from the live node map.
-  void UnregisterVnodeLocked(Vnode* vnode) __TA_REQUIRES(live_nodes_lock_);
 
   OpenResult OpenLocked(fbl::RefPtr<Vnode> vn, std::string_view path,
                         VnodeConnectionOptions options, Rights parent_rights, uint32_t mode)
@@ -143,10 +135,6 @@ class Vfs {
       __TA_REQUIRES(vfs_lock_);
 
   bool readonly_ = false;
-
-  // The live Vnodes associated with this Vfs. Nodes (un)register using [Un]RegisterVnode(). This
-  // /list is cleared by ShutdownLiveNodes().
-  std::set<Vnode*> live_nodes_ __TA_GUARDED(live_nodes_lock_);
 };
 
 class Vfs::OpenResult {

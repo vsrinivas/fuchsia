@@ -24,8 +24,8 @@ namespace blobfs {
 
 ComponentRunner::ComponentRunner(async::Loop& loop, ComponentOptions config)
     : fs::PagedVfs(loop.dispatcher()), loop_(loop), config_(config) {
-  outgoing_ = fbl::MakeRefCounted<fs::PseudoDir>(this);
-  auto startup = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  outgoing_ = fbl::MakeRefCounted<fs::PseudoDir>();
+  auto startup = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing_->AddEntry("startup", startup);
 
   FX_LOGS(INFO) << "setting up services";
@@ -195,11 +195,11 @@ zx::status<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
 
   // Add the diagnostics directory straight to the outgoing directory. Nothing should be relying on
   // the diagnostics directory queuing incoming requests.
-  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing_->AddEntry("diagnostics", diagnostics_dir);
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
-  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
   svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
                     fbl::MakeRefCounted<HealthCheckService>(loop_.dispatcher(), *blobfs_));

@@ -11,7 +11,7 @@ namespace memfs {
 
 class VnodeVmo final : public Vnode {
  public:
-  VnodeVmo(PlatformVfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length);
+  VnodeVmo(zx_handle_t vmo, zx_off_t offset, zx_off_t length);
   ~VnodeVmo() override;
 
   fs::VnodeProtocolSet GetProtocols() const final;

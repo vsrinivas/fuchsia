@@ -44,23 +44,6 @@ zx_status_t PrevalidateOptions(VnodeConnectionOptions options) {
 
 Vfs::Vfs() = default;
 
-Vfs::~Vfs() {
-  // Keep owning references to each vnode in case the callbacks cause any nodes to be deleted.
-  std::vector<fbl::RefPtr<Vnode>> nodes_to_notify;
-  {
-    // This lock should not be necessary since the destructor should be single-threaded but is good
-    // for completeness.
-    std::lock_guard lock(vfs_lock_);
-    nodes_to_notify.reserve(live_nodes_.size());
-    for (auto& node_ptr : live_nodes_)
-      nodes_to_notify.emplace_back(node_ptr);
-  }
-
-  // Notify all nodes that we're getting deleted.
-  for (auto& node : nodes_to_notify)
-    node->WillDestroyVfs();
-}
-
 Vfs::OpenResult Vfs::Open(fbl::RefPtr<Vnode> vndir, std::string_view path,
                           VnodeConnectionOptions options, Rights parent_rights, uint32_t mode) {
   std::lock_guard lock(vfs_lock_);
@@ -212,25 +195,6 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, bool mu
     }
   }
   return ZX_OK;
-}
-
-void Vfs::RegisterVnode(Vnode* vnode) {
-  std::lock_guard lock(live_nodes_lock_);
-
-  // Should not be registered twice.
-  ZX_DEBUG_ASSERT(live_nodes_.find(vnode) == live_nodes_.end());
-  live_nodes_.insert(vnode);
-}
-
-void Vfs::UnregisterVnode(Vnode* vnode) {
-  std::lock_guard lock(live_nodes_lock_);
-  UnregisterVnodeLocked(vnode);
-}
-
-void Vfs::UnregisterVnodeLocked(Vnode* vnode) {
-  auto found = live_nodes_.find(vnode);
-  ZX_DEBUG_ASSERT(found != live_nodes_.end());  // Should always be registered first.
-  live_nodes_.erase(found);
 }
 
 zx::status<bool> Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,

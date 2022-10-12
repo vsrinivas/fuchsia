@@ -158,12 +158,12 @@ uint64_t Blob::FileSize() const {
 }
 
 Blob::Blob(Blobfs* bs, const digest::Digest& digest, CompressionAlgorithm data_format)
-    : CacheNode(bs->vfs(), digest), blobfs_(bs), write_info_(std::make_unique<WriteInfo>()) {
+    : CacheNode(*bs->vfs(), digest), blobfs_(bs), write_info_(std::make_unique<WriteInfo>()) {
   write_info_->data_format = data_format;
 }
 
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
-    : CacheNode(bs->vfs(), digest::Digest(inode.merkle_root_hash)),
+    : CacheNode(*bs->vfs(), digest::Digest(inode.merkle_root_hash)),
       blobfs_(bs),
       state_(BlobState::kReadable),
       syncing_state_(SyncingState::kDone),
@@ -1179,10 +1179,13 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
 
   ZX_DEBUG_ASSERT(IsDataLoaded());
 
+  std::optional vfs_opt = vfs();
+  ZX_ASSERT(vfs_opt.has_value());
+  fs::PagedVfs& vfs = vfs_opt.value().get();
+
   if (is_corrupt_) {
     FX_LOGS(ERROR) << "Blobfs failing page request because blob was previously found corrupt.";
-    if (auto error_result =
-            paged_vfs()->ReportPagerError(paged_vmo(), offset, length, ZX_ERR_BAD_STATE);
+    if (auto error_result = vfs.ReportPagerError(paged_vmo(), offset, length, ZX_ERR_BAD_STATE);
         error_result.is_error()) {
       FX_LOGS(ERROR) << "Failed to report pager error to kernel: " << error_result.status_string();
     }
@@ -1190,17 +1193,17 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
   }
 
   auto page_supplier = PageLoader::PageSupplier(
-      [paged_vfs = paged_vfs(), dest_vmo = &paged_vmo()](
-          uint64_t offset, uint64_t length, const zx::vmo& aux_vmo, uint64_t aux_offset) {
-        return paged_vfs->SupplyPages(*dest_vmo, offset, length, aux_vmo, aux_offset);
+      [&vfs, &dest_vmo = paged_vmo()](uint64_t offset, uint64_t length, const zx::vmo& aux_vmo,
+                                      uint64_t aux_offset) {
+        return vfs.SupplyPages(dest_vmo, offset, length, aux_vmo, aux_offset);
       });
   PagerErrorStatus pager_error_status =
       blobfs_->page_loader().TransferPages(page_supplier, offset, length, loader_info_);
   if (pager_error_status != PagerErrorStatus::kOK) {
     FX_LOGS(ERROR) << "Pager failed to transfer pages to the blob, error: "
                    << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));
-    if (auto error_result = paged_vfs()->ReportPagerError(
-            paged_vmo(), offset, length, static_cast<zx_status_t>(pager_error_status));
+    if (auto error_result = vfs.ReportPagerError(paged_vmo(), offset, length,
+                                                 static_cast<zx_status_t>(pager_error_status));
         error_result.is_error()) {
       FX_LOGS(ERROR) << "Failed to report pager error to kernel: " << error_result.status_string();
     }

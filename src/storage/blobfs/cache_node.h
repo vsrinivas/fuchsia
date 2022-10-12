@@ -32,7 +32,7 @@ class CacheNode : public fs::PagedVnode,
                   private fbl::Recyclable<CacheNode>,
                   public fbl::WAVLTreeContainable<CacheNode*> {
  public:
-  explicit CacheNode(fs::PagedVfs* vfs, const Digest& digest,
+  explicit CacheNode(fs::PagedVfs& vfs, const Digest& digest,
                      std::optional<CachePolicy> override_cache_policy = std::nullopt);
   virtual ~CacheNode() = default;
 

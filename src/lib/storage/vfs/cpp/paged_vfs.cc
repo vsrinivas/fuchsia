@@ -43,7 +43,6 @@ PagedVfs::~PagedVfs() {
     for (auto& [id, raw] : paged_nodes_) {
       auto node = fbl::MakeRefPtrUpgradeFromRaw(raw, live_nodes_lock_);
       if (node) {
-        UnregisterVnodeLocked(node.get());
         local_nodes.push_back(std::move(node));
       }
     }

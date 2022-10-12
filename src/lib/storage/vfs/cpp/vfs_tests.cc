@@ -29,17 +29,11 @@ class TestNode : public fs::Vnode {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  bool HasVfsPointer() {
-    std::lock_guard lock(mutex_);
-    return !!vfs();
-  }
-
  private:
   friend fbl::internal::MakeRefCountedHelper<TestNode>;
   friend fbl::RefPtr<TestNode>;
 
-  explicit TestNode(fs::FuchsiaVfs* vfs) : Vnode(vfs) {}
-  ~TestNode() override {}
+  ~TestNode() override = default;
 };
 
 }  // namespace
@@ -113,16 +107,4 @@ TEST(SynchronousVfs, CloseAllConnectionsForVnodeWithoutAnyConnections) {
   vfs.CloseAllConnectionsForVnode(*dir, [&closed]() { closed = true; });
   loop.RunUntilIdle();
   ASSERT_TRUE(closed);
-}
-
-TEST(SynchronousVfs, DeletesNodeVfsPointers) {
-  async::TestLoop loop;
-  auto vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
-
-  auto file = fbl::MakeRefCounted<TestNode>(vfs.get());
-  EXPECT_TRUE(file->HasVfsPointer());
-
-  // Delete the Vfs while keeping the file alive after it.
-  vfs.reset();
-  EXPECT_FALSE(file->HasVfsPointer());
 }

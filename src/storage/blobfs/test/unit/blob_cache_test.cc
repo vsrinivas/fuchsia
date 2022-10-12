@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/blob_cache.h"
 
+#include <lib/async-loop/cpp/loop.h>
 #include <zircon/compiler.h>
 
 #include <iterator>
@@ -24,8 +25,8 @@ namespace {
 // from memory when references are closed.
 class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
  public:
-  explicit TestNode(const Digest& digest, BlobCache* cache)
-      : CacheNode(nullptr, digest), cache_(cache) {}
+  explicit TestNode(fs::PagedVfs& vfs, const Digest& digest, BlobCache* cache)
+      : CacheNode(vfs, digest), cache_(cache) {}
 
   // Required for memory management, see the class comment above Vnode for more.
   void fbl_recycle() { RecycleNode(); }
@@ -74,7 +75,16 @@ void CheckNothingOpenHelper(BlobCache* cache) {
   cache->ForAllOpenNodes([](const fbl::RefPtr<CacheNode>&) -> zx_status_t { ZX_ASSERT(false); });
 }
 
-TEST(BlobCacheTest, Null) {
+class BlobCacheTest : public testing::Test {
+ protected:
+  fs::PagedVfs& vfs() { return vfs_; }
+
+ private:
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
+  fs::PagedVfs vfs_{loop_.dispatcher()};
+};
+
+TEST_F(BlobCacheTest, Null) {
   BlobCache cache;
 
   CheckNothingOpenHelper(&cache);
@@ -85,16 +95,16 @@ TEST(BlobCacheTest, Null) {
   fbl::RefPtr<CacheNode> missing_node;
   ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
   ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, &missing_node));
-  auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+  auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
   ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Evict(node));
   node->SetCache(false);
 }
 
-TEST(BlobCacheTest, AddLookupEvict) {
+TEST_F(BlobCacheTest, AddLookupEvict) {
   // Add a node to the cache.
   BlobCache cache;
   Digest digest = GenerateDigest(0);
-  auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+  auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
   ASSERT_EQ(cache.Add(node), ZX_OK);
   ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, cache.Add(node));
 
@@ -112,12 +122,12 @@ TEST(BlobCacheTest, AddLookupEvict) {
 // ShouldCache = false, Evicted = false.
 //
 // This results in the node being deleted from the cache.
-TEST(BlobCacheTest, StopCaching) {
+TEST_F(BlobCacheTest, StopCaching) {
   BlobCache cache;
   Digest digest = GenerateDigest(0);
   // The node is also deleted if we stop caching it, instead of just evicting.
   {
-    auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+    auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
     ASSERT_EQ(cache.Add(node), ZX_OK);
     ASSERT_EQ(cache.Lookup(digest, nullptr), ZX_OK);
     node->SetCache(false);
@@ -128,12 +138,12 @@ TEST(BlobCacheTest, StopCaching) {
 // ShouldCache = false, Evicted = True.
 //
 // This results in the node being deleted from the cache.
-TEST(BlobCacheTest, EvictNoCache) {
+TEST_F(BlobCacheTest, EvictNoCache) {
   BlobCache cache;
   Digest digest = GenerateDigest(0);
   // The node is also deleted if we stop caching it, instead of just evicting.
   {
-    auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+    auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
     ASSERT_EQ(cache.Add(node), ZX_OK);
     ASSERT_EQ(cache.Lookup(digest, nullptr), ZX_OK);
     ASSERT_EQ(cache.Evict(node), ZX_OK);
@@ -144,13 +154,13 @@ TEST(BlobCacheTest, EvictNoCache) {
 // ShouldCache = true, Evicted = true.
 //
 // This results in the node being deleted from the cache.
-TEST(BlobCacheTest, EvictWhileCaching) {
+TEST_F(BlobCacheTest, EvictWhileCaching) {
   BlobCache cache;
   Digest digest = GenerateDigest(0);
   // The node is automatically deleted if it wants to be cached, but has been
   // evicted.
   {
-    auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+    auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
     ASSERT_EQ(cache.Add(node), ZX_OK);
     ASSERT_EQ(cache.Lookup(digest, nullptr), ZX_OK);
     ASSERT_EQ(cache.Evict(node), ZX_OK);
@@ -171,14 +181,14 @@ void CheckExistsAloneInOpenCache(BlobCache* cache, void* node_ptr) {
   ASSERT_EQ(1, node_count);
 }
 
-TEST(BlobCacheTest, CacheAfterRecycle) {
+TEST_F(BlobCacheTest, CacheAfterRecycle) {
   BlobCache cache;
   Digest digest = GenerateDigest(0);
   void* node_ptr = nullptr;
 
   // Add a node to the cache.
   {
-    auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+    auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
     node_ptr = node.get();
     ASSERT_EQ(cache.Add(node), ZX_OK);
     ASSERT_EQ(cache.Lookup(digest, nullptr), ZX_OK);
@@ -215,12 +225,12 @@ TEST(BlobCacheTest, CacheAfterRecycle) {
   ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
 }
 
-TEST(BlobCacheTest, ResetClosed) {
+TEST_F(BlobCacheTest, ResetClosed) {
   BlobCache cache;
   // Create a node which exists in the closed cache.
   Digest digest = GenerateDigest(0);
   {
-    auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+    auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
     ASSERT_EQ(cache.Add(node), ZX_OK);
   }
   ASSERT_EQ(cache.Lookup(digest, nullptr), ZX_OK);
@@ -230,11 +240,11 @@ TEST(BlobCacheTest, ResetClosed) {
   ASSERT_EQ(ZX_ERR_NOT_FOUND, cache.Lookup(digest, nullptr));
 }
 
-TEST(BlobCacheTest, ResetOpen) {
+TEST_F(BlobCacheTest, ResetOpen) {
   BlobCache cache;
   // Create a node which exists in the open cache.
   Digest digest = GenerateDigest(0);
-  auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+  auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
   node->SetHighMemory();
   ASSERT_EQ(cache.Add(node), ZX_OK);
 
@@ -244,10 +254,10 @@ TEST(BlobCacheTest, ResetOpen) {
   ASSERT_TRUE(node->UsingMemory());
 }
 
-TEST(BlobCacheTest, Destructor) {
+TEST_F(BlobCacheTest, Destructor) {
   auto cache = std::make_unique<BlobCache>();
   Digest open_digest = GenerateDigest(0);
-  fbl::RefPtr<TestNode> open_node = fbl::MakeRefCounted<TestNode>(open_digest, cache.get());
+  fbl::RefPtr<TestNode> open_node = fbl::MakeRefCounted<TestNode>(vfs(), open_digest, cache.get());
   ASSERT_EQ(cache->Add(open_node), ZX_OK);
   if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
     // Destroying the cache with a node that's still open will trip a debug assert.
@@ -255,23 +265,23 @@ TEST(BlobCacheTest, Destructor) {
   }
 }
 
-TEST(BlobCacheTest, ForAllOpenNodes) {
+TEST_F(BlobCacheTest, ForAllOpenNodes) {
   BlobCache cache;
 
   // Add a bunch of open nodes to the cache.
   fbl::RefPtr<TestNode> open_nodes[10];
   for (size_t i = 0; i < std::size(open_nodes); i++) {
-    open_nodes[i] = fbl::MakeRefCounted<TestNode>(GenerateDigest(i), &cache);
+    open_nodes[i] = fbl::MakeRefCounted<TestNode>(vfs(), GenerateDigest(i), &cache);
     ASSERT_EQ(cache.Add(open_nodes[i]), ZX_OK);
   }
 
   // For fun, add some nodes to the cache which will become non-open:
   // One which runs out of strong references, and another which is evicted.
   {
-    auto node = fbl::MakeRefCounted<TestNode>(GenerateDigest(0xDEAD), &cache);
+    auto node = fbl::MakeRefCounted<TestNode>(vfs(), GenerateDigest(0xDEAD), &cache);
     ASSERT_EQ(cache.Add(node), ZX_OK);
   }
-  auto node = fbl::MakeRefCounted<TestNode>(GenerateDigest(0xBEEF), &cache);
+  auto node = fbl::MakeRefCounted<TestNode>(vfs(), GenerateDigest(0xBEEF), &cache);
   ASSERT_EQ(cache.Add(node), ZX_OK);
   ASSERT_EQ(cache.Evict(node), ZX_OK);
 
@@ -293,13 +303,13 @@ TEST(BlobCacheTest, ForAllOpenNodes) {
   ASSERT_EQ(std::size(open_nodes), node_index);
 }
 
-TEST(BlobCacheTest, CachePolicyEvictImmediately) {
+TEST_F(BlobCacheTest, CachePolicyEvictImmediately) {
   BlobCache cache;
   Digest digest = GenerateDigest(0);
 
   cache.SetCachePolicy(CachePolicy::EvictImmediately);
   {
-    auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+    auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
     node->SetHighMemory();
     ASSERT_EQ(cache.Add(node), ZX_OK);
     ASSERT_TRUE(node->UsingMemory());
@@ -311,13 +321,13 @@ TEST(BlobCacheTest, CachePolicyEvictImmediately) {
   ASSERT_FALSE(node->UsingMemory());
 }
 
-TEST(BlobCacheTest, CachePolicyNeverEvict) {
+TEST_F(BlobCacheTest, CachePolicyNeverEvict) {
   BlobCache cache;
   Digest digest = GenerateDigest(0);
 
   cache.SetCachePolicy(CachePolicy::NeverEvict);
   {
-    auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+    auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
     node->SetHighMemory();
     ASSERT_EQ(cache.Add(node), ZX_OK);
     ASSERT_TRUE(node->UsingMemory());
@@ -329,13 +339,13 @@ TEST(BlobCacheTest, CachePolicyNeverEvict) {
   ASSERT_TRUE(node->UsingMemory());
 }
 
-TEST(BlobCacheTest, CachePolicyOverrideSettingsRespected) {
+TEST_F(BlobCacheTest, CachePolicyOverrideSettingsRespected) {
   BlobCache cache;
   Digest digest = GenerateDigest(0);
 
   cache.SetCachePolicy(CachePolicy::NeverEvict);
   {
-    auto node = fbl::MakeRefCounted<TestNode>(digest, &cache);
+    auto node = fbl::MakeRefCounted<TestNode>(vfs(), digest, &cache);
     node->SetHighMemory();
     node->set_overridden_cache_policy(CachePolicy::EvictImmediately);
     ASSERT_EQ(cache.Add(node), ZX_OK);

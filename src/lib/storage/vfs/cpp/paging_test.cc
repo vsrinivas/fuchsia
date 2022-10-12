@@ -94,21 +94,29 @@ class PagingTestFile : public PagedVnode {
 
     if (vmo_read_status_ != ZX_OK) {
       // We're supposed to report errors.
-      EXPECT_TRUE(paged_vfs()
-                      ->ReportPagerError(paged_vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY)
-                      .is_ok());
+      std::optional vfs = this->vfs();
+      ASSERT_TRUE(vfs.has_value());
+      const zx::status result =
+          vfs.value().get().ReportPagerError(paged_vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY);
+      ASSERT_OK(result.status_value());
       return;
     }
 
     zx::vmo transfer;
     if (zx::vmo::create(length, 0, &transfer) != ZX_OK) {
-      ASSERT_TRUE(
-          paged_vfs()->ReportPagerError(paged_vmo(), offset, length, ZX_ERR_BAD_STATE).is_ok());
-      return;
+      std::optional vfs = this->vfs();
+      ASSERT_TRUE(vfs.has_value());
+      const zx::status result =
+          vfs.value().get().ReportPagerError(paged_vmo(), offset, length, ZX_ERR_BAD_STATE);
+      ASSERT_OK(result.status_value());
     }
 
     transfer.write(&data_[offset], 0, std::min(data_.size() - offset, length));
-    ASSERT_TRUE(paged_vfs()->SupplyPages(paged_vmo(), offset, length, transfer, 0).is_ok());
+    std::optional vfs = this->vfs();
+    ASSERT_TRUE(vfs.has_value());
+    const zx::status result =
+        vfs.value().get().SupplyPages(paged_vmo(), offset, length, transfer, 0);
+    ASSERT_OK(result.status_value());
   }
 
   void VmoDirty(uint64_t offset, uint64_t length) override {
@@ -116,13 +124,18 @@ class PagingTestFile : public PagedVnode {
 
     if (vmo_dirty_status_ != ZX_OK) {
       // We're supposed to report errors.
-      EXPECT_TRUE(paged_vfs()
-                      ->ReportPagerError(paged_vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY)
-                      .is_ok());
+      std::optional vfs = this->vfs();
+      ASSERT_TRUE(vfs.has_value());
+      const zx::status result =
+          vfs.value().get().ReportPagerError(paged_vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY);
+      ASSERT_OK(result.status_value());
       return;
     }
 
-    ASSERT_TRUE(paged_vfs()->DirtyPages(paged_vmo(), offset, length).is_ok());
+    std::optional vfs = this->vfs();
+    ASSERT_TRUE(vfs.has_value());
+    const zx::status result = vfs.value().get().DirtyPages(paged_vmo(), offset, length);
+    ASSERT_OK(result.status_value());
   }
 
   // Vnode implementation:
@@ -179,7 +192,7 @@ class PagingTestFile : public PagedVnode {
   friend fbl::RefPtr<PagingTestFile>;
   friend fbl::internal::MakeRefCountedHelper<PagingTestFile>;
 
-  PagingTestFile(PagedVfs* vfs, std::shared_ptr<SharedFileState> shared, std::vector<uint8_t> data)
+  PagingTestFile(PagedVfs& vfs, std::shared_ptr<SharedFileState> shared, std::vector<uint8_t> data)
       : PagedVnode(vfs), shared_(std::move(shared)), data_(std::move(data)) {}
 
   ~PagingTestFile() override = default;
@@ -247,17 +260,17 @@ class PagingTest : public zxtest::Test {
     root_ = fbl::MakeRefCounted<PseudoDir>();
 
     file1_shared_ = std::make_shared<SharedFileState>();
-    file1_ = fbl::MakeRefCounted<PagingTestFile>(vfs_.get(), file1_shared_, file1_contents_);
+    file1_ = fbl::MakeRefCounted<PagingTestFile>(*vfs_, file1_shared_, file1_contents_);
     root_->AddEntry(kFile1Name, file1_);
 
     file_err_shared_ = std::make_shared<SharedFileState>();
-    file_err_ = fbl::MakeRefCounted<PagingTestFile>(vfs_.get(), file_err_shared_, file1_contents_);
+    file_err_ = fbl::MakeRefCounted<PagingTestFile>(*vfs_, file_err_shared_, file1_contents_);
     file_err_->set_read_status(ZX_ERR_IO_DATA_INTEGRITY);
     root_->AddEntry(kFileErrName, file_err_);
 
     file_dirty_err_shared_ = std::make_shared<SharedFileState>();
     file_dirty_err_ =
-        fbl::MakeRefCounted<PagingTestFile>(vfs_.get(), file_dirty_err_shared_, file1_contents_);
+        fbl::MakeRefCounted<PagingTestFile>(*vfs_, file_dirty_err_shared_, file1_contents_);
     file_dirty_err_->set_dirty_status(ZX_ERR_IO_DATA_INTEGRITY);
     root_->AddEntry(kFileDirtyErrName, file_dirty_err_);
 

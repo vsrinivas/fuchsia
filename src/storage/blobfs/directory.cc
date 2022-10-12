@@ -23,7 +23,7 @@
 
 namespace blobfs {
 
-Directory::Directory(Blobfs* bs) : Vnode(bs->vfs()), blobfs_(bs) {}
+Directory::Directory(Blobfs* bs) : blobfs_(bs) {}
 
 Directory::~Directory() = default;
 

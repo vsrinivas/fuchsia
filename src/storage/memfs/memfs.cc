@@ -75,7 +75,7 @@ zx_status_t Memfs::CreateWithOptions(async_dispatcher_t* dispatcher, std::string
                                      fbl::RefPtr<VnodeDir>* out_root) {
   auto fs = std::unique_ptr<memfs::Memfs>(new memfs::Memfs(dispatcher));
 
-  fbl::RefPtr<VnodeDir> root = fbl::MakeRefCounted<VnodeDir>(fs.get(), options.max_file_size);
+  fbl::RefPtr<VnodeDir> root = fbl::MakeRefCounted<VnodeDir>(options.max_file_size);
   std::unique_ptr<Dnode> dn = Dnode::Create(fs_name, root);
   root->dnode_ = dn.get();
   root->dnode_parent_ = dn.get()->GetParent();

@@ -9,8 +9,7 @@
 
 namespace memfs {
 
-VnodeFile::VnodeFile(PlatformVfs* vfs, uint64_t max_file_size)
-    : Vnode(vfs), max_file_size_(max_file_size) {}
+VnodeFile::VnodeFile(uint64_t max_file_size) : max_file_size_(max_file_size) {}
 
 VnodeFile::~VnodeFile() = default;
 

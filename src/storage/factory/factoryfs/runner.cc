@@ -57,7 +57,7 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   }
 
   fbl::RefPtr<fs::Vnode> export_root;
-  auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
+  auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
 
   outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,

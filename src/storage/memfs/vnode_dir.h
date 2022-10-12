@@ -12,7 +12,7 @@ namespace memfs {
 
 class VnodeDir final : public Vnode {
  public:
-  VnodeDir(PlatformVfs* vfs, uint64_t max_file_size);
+  explicit VnodeDir(uint64_t max_file_size);
   ~VnodeDir() override;
 
   fs::VnodeProtocolSet GetProtocols() const final;

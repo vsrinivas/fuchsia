@@ -14,25 +14,25 @@
 
 namespace fs {
 
-PagedVnode::PagedVnode(PagedVfs* vfs) : Vnode(vfs), clone_watcher_(this) {}
-
-PagedVnode::~PagedVnode() {}
+PagedVnode::PagedVnode(PagedVfs& vfs) : clone_watcher_(this), vfs_(vfs) {}
 
 void PagedVnode::VmoDirty(uint64_t offset, uint64_t length) {
   ZX_ASSERT_MSG(false, "Filesystem does not support VmoDirty() (maybe read-only filesystem).");
 }
 
 zx::status<> PagedVnode::EnsureCreatePagedVmo(uint64_t size, uint32_t options) {
-  if (paged_vmo())
+  if (paged_vmo_info_.vmo.is_valid()) {
     return zx::ok();
-
-  if (!paged_vfs())
+  }
+  if (!vfs_.has_value()) {
     return zx::error(ZX_ERR_BAD_STATE);  // Currently shutting down.
+  }
 
-  auto info_or = paged_vfs()->CreatePagedNodeVmo(this, size, options);
-  if (info_or.is_error())
+  zx::status info_or = vfs_.value().get().CreatePagedNodeVmo(this, size, options);
+  if (info_or.is_error()) {
     return info_or.take_error();
-  paged_vmo_info_ = std::move(info_or).value();
+  }
+  paged_vmo_info_ = std::move(info_or.value());
 
   return zx::ok();
 }
@@ -57,8 +57,9 @@ fbl::RefPtr<Vnode> PagedVnode::FreePagedVmo() {
   // Need to stop watching before deleting the VMO or there will be no handle to stop watching.
   StopWatchingForZeroVmoClones();
 
-  if (paged_vfs() && paged_vmo())
-    paged_vfs()->FreePagedVmo(std::move(paged_vmo_info_));
+  if (vfs_.has_value()) {
+    vfs_.value().get().FreePagedVmo(std::move(paged_vmo_info_));
+  }
 
   // Reset to known-state after moving (or in case the paged_vfs was destroyed and we skipped
   // moving out of it).
@@ -97,8 +98,9 @@ void PagedVnode::OnNoPagedVmoClonesMessage(async_dispatcher_t* dispatcher, async
 
     ZX_DEBUG_ASSERT(has_clones());
 
-    if (!paged_vfs())
+    if (!vfs_.has_value()) {
       return;  // Called during tear-down.
+    }
 
     // The kernel signal delivery could have raced with us creating a new clone. Validate that there
     // are still no clones before tearing down.
@@ -129,7 +131,9 @@ void PagedVnode::OnNoPagedVmoClonesMessage(async_dispatcher_t* dispatcher, async
 void PagedVnode::WatchForZeroVmoClones() {
   clone_watcher_.set_object(paged_vmo().get());
   clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
-  clone_watcher_.Begin(paged_vfs()->dispatcher());
+  if (vfs_.has_value()) {
+    clone_watcher_.Begin(vfs_.value().get().dispatcher());
+  }
 }
 
 void PagedVnode::StopWatchingForZeroVmoClones() {
@@ -137,6 +141,11 @@ void PagedVnode::StopWatchingForZeroVmoClones() {
   if (clone_watcher_.is_pending())
     clone_watcher_.Cancel();
   clone_watcher_.set_object(ZX_HANDLE_INVALID);
+}
+
+void PagedVnode::WillDestroyVfs() {
+  std::lock_guard lock(mutex_);
+  vfs_.reset();
 }
 
 void PagedVnode::TearDown() {

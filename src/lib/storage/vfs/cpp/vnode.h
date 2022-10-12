@@ -360,16 +360,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // Creates a hard link to the 'target' vnode with a provided name in vndir
   virtual zx_status_t Link(std::string_view name, fbl::RefPtr<Vnode> target);
 
-  // Called when the Vfs associated with this node is shutting down. The associated VFS will still
-  // be valid at the time of the call.
-  //
-  // Derived classes can implement this to do cleanup that requires the Vfs. Because Vnodes are
-  // reference-counted, they can outlive their associated Vfs.
-  //
-  // The default implementation will clear the vfs_ back-pointer, it should always be called by
-  // overridden implementations.
-  virtual void WillDestroyVfs();
-
   // Returns true if this is a remote filesystem mount point. This is only relevant on Fuchsia
   // builds (the remote handling below is all Fuchsia-only) but this can exist and just return false
   // on host builds to simplify platform handling.
@@ -431,23 +421,11 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   }
   virtual zx_status_t CloseNode() __TA_EXCLUDES(mutex_) { return ZX_OK; }
 
-  // The associated Vfs pointer is optional. Subclasses should require this if they need to access
-  // the Vfs, but can leave null if not. See vfs() getter for more.
-  explicit Vnode(PlatformVfs* vfs = nullptr);
+  Vnode() = default;
 
   // Mutex for the data of this vnode. This is a shared mutex to support derived classes
   // implementing multiple simultaneous readers if desired.
   mutable SharedMutex mutex_;
-
-  // The Vfs associated with this node, if any.
-  //
-  // The Vfs doesn't need to be set. It is tracked on the Vnode because some subclasses need it,
-  // but it is not directly used by the Vnode. Therefore, subclasses should enforce through their
-  // own constructors whether the vfs_ is set or not during construction.
-  //
-  // Additionally, this will be null when the Vfs is destroyed (since Vnodes are reference-counted
-  // they can outlive the Vfs). Uses should always be inside the mutex_.
-  PlatformVfs* vfs() __TA_REQUIRES_SHARED(mutex_) { return vfs_; }
 
   // Returns the number of open connections, not counting node_reference connections. See Open().
   size_t open_count() const __TA_REQUIRES_SHARED(mutex_) { return open_count_; }
@@ -466,7 +444,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 #endif
 
  private:
-  PlatformVfs* vfs_ __TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
   size_t inflight_transactions_ __TA_GUARDED(mutex_) = 0;
   size_t open_count_ __TA_GUARDED(mutex_) = 0;
 #ifdef __Fuchsia__

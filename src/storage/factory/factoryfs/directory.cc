@@ -15,7 +15,7 @@
 namespace factoryfs {
 
 Directory::Directory(factoryfs::Factoryfs& fs, std::string_view path)
-    : Vnode(fs.vfs()), factoryfs_(fs), path_(path) {
+    : factoryfs_(fs), path_(path) {
   factoryfs_.DidOpen(path_, *this);
 }
 

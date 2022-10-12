@@ -99,22 +99,21 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   // CreatePagedNodeVmo().
   virtual void VmoDirty(uint64_t offset, uint64_t length);
 
+  // Called when the VFS associated with this node is shutting down. The associated VFS will still
+  // be valid at the time of the call.
+  void WillDestroyVfs();
+
   // This is called by PagedVfs to tear down the node.
   void TearDown();
 
  protected:
   friend fbl::RefPtr<PagedVnode>;
 
-  explicit PagedVnode(PagedVfs* vfs);
+  explicit PagedVnode(PagedVfs& vfs);
 
-  ~PagedVnode() override;
-
-  // This will be null if the Vfs has shut down. Since Vnodes are refcounted, it's possible for them
-  // to outlive their associated Vfs. Always null check before using. If there is no Vfs associated
-  // with this object, all operations are expected to fail.
-  PagedVfs* paged_vfs() __TA_REQUIRES_SHARED(mutex_) {
-    // Since we were constructed with a PagedVfs, we know it's safe to up-cast back to that.
-    return static_cast<PagedVfs*>(vfs());
+  // has_value iff the vfs hasn't been shut down.
+  std::optional<std::reference_wrapper<PagedVfs>> vfs() __TA_REQUIRES_SHARED(mutex_) {
+    return vfs_;
   }
 
   // Returns the vmo associated with the paging system, if any. This will be a null handle if there
@@ -205,6 +204,8 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   // signal. See WatchForZeroChildren().
   async::WaitMethod<PagedVnode, &PagedVnode::OnNoPagedVmoClonesMessage> clone_watcher_
       __TA_GUARDED(mutex_);
+
+  std::optional<std::reference_wrapper<PagedVfs>> vfs_ __TA_GUARDED(mutex_);
 };
 
 }  // namespace fs

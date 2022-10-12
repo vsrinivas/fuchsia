@@ -44,7 +44,7 @@ class Vnode : public fs::Vnode {
   uint32_t link_count_ = 0;
 
  protected:
-  explicit Vnode(PlatformVfs* vfs);
+  Vnode();
 
   uint64_t ino_ = 0;
   uint64_t create_time_ = 0;

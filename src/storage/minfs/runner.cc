@@ -98,10 +98,10 @@ zx::status<> Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
         return ZX_OK;
       });
 
-  auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing->AddEntry("root", *std::move(vn));
 
-  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing->AddEntry("diagnostics", diagnostics_dir);
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 

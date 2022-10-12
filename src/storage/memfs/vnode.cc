@@ -11,9 +11,7 @@ namespace memfs {
 std::atomic<uint64_t> Vnode::ino_ctr_ = 0;
 std::atomic<uint64_t> Vnode::deleted_ino_ctr_ = 0;
 
-Vnode::Vnode(PlatformVfs* vfs)
-    : fs::Vnode(vfs), ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)) {
-  ZX_DEBUG_ASSERT(vfs);
+Vnode::Vnode() : ino_(ino_ctr_.fetch_add(1, std::memory_order_relaxed)) {
   std::timespec ts;
   if (std::timespec_get(&ts, TIME_UTC)) {
     create_time_ = modify_time_ = zx_time_from_timespec(ts);

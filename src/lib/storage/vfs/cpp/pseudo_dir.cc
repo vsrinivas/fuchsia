@@ -18,8 +18,7 @@ namespace fio = fuchsia_io;
 
 namespace fs {
 
-PseudoDir::PseudoDir(PlatformVfs* vfs, bool has_dot_entry)
-    : Vnode(vfs), has_dot_entry_(has_dot_entry) {}
+PseudoDir::PseudoDir(bool has_dot_entry) : has_dot_entry_(has_dot_entry) {}
 
 PseudoDir::~PseudoDir() {
   entries_by_name_.clear_unsafe();
