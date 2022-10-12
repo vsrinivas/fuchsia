@@ -14,22 +14,5 @@
     use: [
         { protocol: "examples.canvas.addlinemetered.Instance" },
     ],
-    config: {
-        // A script for the client to follow. Entries in the script may take one of two forms: a
-        // pair of signed-integer coordinates like "-2,15:4,5", or the string "WAIT". The former
-        // calls `AddLine(...)`, while the latter pauses execution until the next `->OnDrawn(...)`
-        // event is received.
-        //
-        // TODO(fxbug.dev/96264): It would absolve individual language implementations of a great
-        //   deal of string parsing if we were able to use a vector of `union { Point; WaitEnum}`
-        //   here.
-        script: {
-            type: "vector",
-            max_count: 100,
-            element: {
-                type: "string",
-                max_size: 64,
-            },
-        },
-    },
+    config: {},
 }

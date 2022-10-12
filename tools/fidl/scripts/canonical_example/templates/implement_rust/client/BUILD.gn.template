@@ -19,6 +19,7 @@ rustc_binary("bin") {
   output_dir = target_out_dir + "/rust"
   edition = "2021"
   sources = [ "src/main.rs" ]
+  source_root = "src/main.rs"
   deps = [
     ":config",
     "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/fidl:examples.${series_flat_case}.${variant_flat_case}_rust",

@@ -60,14 +60,13 @@ Client and server implementations can then be written in any supported language:
     <section style="padding: 0px;">
       <h3>Rust</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
-        <!-- TODO(fxbug.dev/111275): Add region based highlight "now_has_response" when possible -->
         <section>
           <h3>Client</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/rust/client/src/main.rs" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/rust/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
           <h3>Server</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/rust/server/src/main.rs" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/rust/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>
     </section>

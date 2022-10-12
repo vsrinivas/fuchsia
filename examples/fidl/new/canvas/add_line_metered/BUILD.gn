@@ -19,7 +19,6 @@ fuchsia_component_manifest("client_manifest") {
 fuchsia_structured_config_values("client_config_values") {
   cm_label = ":client_manifest"
   values = {
-    script = []
   }
 }
 
@@ -27,5 +26,5 @@ group("tests") {
   testonly = true
 
   # TODO(fxbug.dev/111273): Add per-binding `:tests` target after building out each implementation.
-  deps = [ "rust:tests" ]
+  deps = []
 }
