@@ -5,10 +5,10 @@
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
-# fuchsia-tpm is a library implementation of the protocols defined
+# fuchsia-tpm-protocol is a library implementation of the protocols defined
 # in fuchsia.tpm. This allows code to be shared across the cr50_agent
 # and the tpm_agent both of which support TCG TPM 2.0 commands.
-rustc_library("fuchsia-tpm") {
+rustc_library("fuchsia-tpm-protocol") {
   version = "1.0.0"
   edition = "2021"
   with_unit_tests = true

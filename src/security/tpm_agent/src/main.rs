@@ -12,7 +12,7 @@ use fidl_fuchsia_tpm::{
 };
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::{component, health::Reporter};
-use fuchsia_tpm::Tpm;
+use fuchsia_tpm_protocol::TpmProtocol;
 use futures::prelude::*;
 use std::sync::Arc;
 use tracing;
@@ -58,7 +58,7 @@ async fn main() -> Result<(), anyhow::Error> {
     component::health().set_ok();
     tracing::debug!("Initialized");
 
-    let tpm = Tpm::new(ClientEnd::<TpmDeviceMarker>::new(
+    let tpm = TpmProtocol::new(ClientEnd::<TpmDeviceMarker>::new(
         tpm_device_proxy.into_channel().map_err(|e| anyhow!("{:?}", e))?.into_zx_channel(),
     ))?;
     let tpm_ref = &tpm;
