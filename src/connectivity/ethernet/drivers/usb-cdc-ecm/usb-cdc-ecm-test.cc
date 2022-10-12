@@ -6,7 +6,11 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.ethernet/cpp/wire.h>
+#include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
@@ -16,8 +20,11 @@
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <zircon/device/ethernet.h>
+#include <zircon/device/network.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <vector>
 
 #include <fbl/string.h>
@@ -26,12 +33,15 @@
 #include <usb/usb.h>
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/lib/network-device/cpp/network_device_client.h"
+
 namespace usb_virtual_bus {
 namespace {
 namespace ethernet = fuchsia_hardware_ethernet;
 constexpr const char kManufacturer[] = "Google";
 constexpr const char kProduct[] = "CDC Ethernet";
 constexpr const char kSerial[] = "ebfd5ad49d2a";
+constexpr size_t kEthernetMtu = 1500;
 
 zx_status_t GetTopologicalPath(int fd, std::string* out) {
   size_t path_len;
@@ -56,31 +66,30 @@ zx_status_t GetTopologicalPath(int fd, std::string* out) {
 }
 
 struct DevicePaths {
-  std::optional<std::string> peripheral_path;
-  std::optional<std::string> host_path;
+  std::optional<std::string> path;
+  std::string subdir;
+  std::string query;
 };
 
-zx_status_t WaitForHostAndPeripheral([[maybe_unused]] int dirfd, int event, const char* name,
-                                     void* cookie) {
+zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) {
   if (std::string_view{name} == ".") {
     return ZX_OK;
   }
   if (event != WATCH_EVENT_ADD_FILE) {
     return ZX_OK;
   }
-  fbl::unique_fd dev_fd(openat(dirfd, name, O_RDONLY));
+  fbl::unique_fd fd(openat(dirfd, name, O_RDONLY));
+  if (!fd.is_valid()) {
+    return ZX_ERR_BAD_HANDLE;
+  }
   std::string topological_path;
-  zx_status_t status = GetTopologicalPath(dev_fd.get(), &topological_path);
+  zx_status_t status = GetTopologicalPath(fd.get(), &topological_path);
   if (status != ZX_OK) {
     return status;
   }
-  DevicePaths& device_paths = *reinterpret_cast<DevicePaths*>(cookie);
-  if (topological_path.find("/usb-peripheral/function-001") != std::string::npos) {
-    device_paths.peripheral_path.emplace(name);
-  } else if (topological_path.find("/usb-bus/") != std::string::npos) {
-    device_paths.host_path.emplace(name);
-  }
-  if (device_paths.host_path.has_value() && device_paths.peripheral_path.has_value()) {
+  DevicePaths* paths = reinterpret_cast<DevicePaths*>(cookie);
+  if (topological_path.find(paths->query) != std::string::npos) {
+    paths->path = paths->subdir + std::string{name};
     return ZX_ERR_STOP;
   }
   return ZX_OK;
@@ -126,17 +135,22 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 
     ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
-    constexpr char kClassEthernet[] = "class/ethernet";
-    fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), kClassEthernet, O_RDONLY));
-    DevicePaths device_paths;
-    ASSERT_STATUS(
-        fdio_watch_directory(fd.get(), WaitForHostAndPeripheral, ZX_TIME_INFINITE, &device_paths),
-        ZX_ERR_STOP);
-    ASSERT_TRUE(device_paths.peripheral_path.has_value());
-    *peripheral_path =
-        std::string(kClassEthernet) + '/' + std::move(device_paths.peripheral_path.value());
-    ASSERT_TRUE(device_paths.host_path.has_value());
-    *host_path = std::string(kClassEthernet) + '/' + std::move(device_paths.host_path.value());
+    const auto wait_for_device = [this](DevicePaths& paths) {
+      fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), paths.subdir.c_str(), O_RDONLY));
+      ASSERT_TRUE(fd.is_valid());
+      ASSERT_STATUS(fdio_watch_directory(fd.get(), WaitForDevice, ZX_TIME_INFINITE, &paths),
+                    ZX_ERR_STOP);
+    };
+    DevicePaths host_device_paths{.subdir = "class/network/", .query = "/usb-bus/"};
+    // Attach to function-001, because it implements usb-cdc-ecm.
+    DevicePaths peripheral_device_paths{.subdir = "class/ethernet/",
+                                        .query = "/usb-peripheral/function-001"};
+
+    wait_for_device(host_device_paths);
+    wait_for_device(peripheral_device_paths);
+
+    *host_path = host_device_paths.path.value();
+    *peripheral_path = peripheral_device_paths.path.value();
   }
 };
 
@@ -236,6 +250,8 @@ class EthernetInterface {
 
   uint32_t tx_depth() const { return tx_depth_; }
 
+  uint32_t rx_depth() const { return rx_depth_; }
+
  private:
   fidl::WireSyncClient<ethernet::Device> ethernet_client_;
   zx::fifo tx_fifo_;
@@ -248,6 +264,141 @@ class EthernetInterface {
   size_t io_buffer_size_ = 0;
   size_t io_buffer_offset_ = 0;
   fzl::VmoMapper mapper_;
+};
+
+class NetworkDeviceInterface : public ::loop_fixture::RealLoop {
+ public:
+  explicit NetworkDeviceInterface(fbl::unique_fd fd) {
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+    ASSERT_OK(endpoints.status_value());
+    auto [client_end, server_end] = *std::move(endpoints);
+
+    zx::status<fidl::ClientEnd<fuchsia_hardware_network::DeviceInstance>> status =
+        fdio_cpp::FdioCaller(std::move(fd)).take_as<fuchsia_hardware_network::DeviceInstance>();
+    ASSERT_OK(status.status_value());
+    fidl::WireClient<fuchsia_hardware_network::DeviceInstance> wire_client(
+        std::move(status.value()), dispatcher());
+    fidl::Status device_status = wire_client->GetDevice(std::move(server_end));
+    ASSERT_OK(device_status.status());
+
+    netdevice_client_.emplace(std::move(client_end), dispatcher());
+    network::client::NetworkDeviceClient& client = netdevice_client_.value();
+    {
+      std::optional<zx_status_t> result;
+      client.OpenSession("usb-cdc-ecm-test", [&result](zx_status_t status) { result = status; });
+      RunLoopUntil([&result] { return result.has_value(); });
+      ASSERT_OK(result.value());
+    }
+    ASSERT_TRUE(client.HasSession());
+    client.SetRxCallback([&](network::client::NetworkDeviceClient::Buffer buf) {
+      rx_queue_.emplace(std::move(buf));
+    });
+    {
+      client.GetPorts(
+          [this](zx::status<std::vector<network::client::netdev::wire::PortId>> ports_status) {
+            ASSERT_OK(ports_status.status_value());
+            std::vector<network::client::netdev::wire::PortId> ports =
+                std::move(ports_status.value());
+            ASSERT_EQ(ports.size(), 1);
+            port_id_ = ports[0];
+          });
+      RunLoopUntil([this] { return port_id_.has_value(); });
+    }
+    {
+      std::optional<zx_status_t> result;
+      client.AttachPort(port_id_.value(), {fuchsia_hardware_network::wire::FrameType::kEthernet},
+                        [&result](zx_status_t status) { result = status; });
+      RunLoopUntil([&result] { return result.has_value(); });
+      ASSERT_OK(result.value());
+    }
+
+    network::client::DeviceInfo device_info = client.device_info();
+    tx_depth_ = device_info.tx_depth;
+    rx_depth_ = device_info.rx_depth;
+
+    {
+      bool checked_mtu = false;
+      zx::status<std::unique_ptr<network::client::NetworkDeviceClient::StatusWatchHandle>> result =
+          client.WatchStatus(
+              port_id_.value(),
+              [this, &checked_mtu](fuchsia_hardware_network::wire::PortStatus status) {
+                if (status.has_mtu()) {
+                  mtu_ = status.mtu();
+                }
+                checked_mtu = true;
+              });
+      RunLoopUntil([&checked_mtu] { return checked_mtu; });
+      ASSERT_TRUE(mtu_.has_value());
+    }
+  }
+
+  zx_status_t SendData(std::vector<uint8_t>& data) {
+    network::client::NetworkDeviceClient::Buffer buffer = netdevice_client_.value().AllocTx();
+    if (!buffer.is_valid()) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    // Populate the buffer data and metadata
+    buffer.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    buffer.data().SetPortId(port_id_.value());
+    EXPECT_EQ(buffer.data().Write(data.data(), data.size()), data.size());
+    zx_status_t status = buffer.Send();
+
+    // Run the loop to give the Netdevice client an opportunity to send.
+    RunLoopUntilIdle();
+
+    return status;
+  }
+
+  zx::status<std::vector<uint8_t>> ReceiveData() {
+    // Wait for the read callback registered with the Netdevice client to fill the queue.
+    RunLoopUntil([&] { return !rx_queue_.empty(); });
+
+    network::client::NetworkDeviceClient::Buffer buffer = std::move(rx_queue_.front());
+    rx_queue_.pop();
+    if (!buffer.is_valid()) {
+      return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+    }
+    // Check that the port ID and frame type match what we expect.
+    if ((buffer.data().port_id().base != port_id_.value().base) ||
+        (buffer.data().port_id().salt != port_id_.value().salt) ||
+        (buffer.data().frame_type() != fuchsia_hardware_network::wire::FrameType::kEthernet)) {
+      ADD_FAILURE(
+          "Frame metadata does not match. Received frame port ID base: %hu \
+                  Expected base: %hu \
+                  Received frame port ID salt: %hu \
+                  Expected salt: %hu \
+                  Received frame type: %hu\
+                  Expected frame type: %hu",
+          buffer.data().port_id().base, port_id_.value().base, buffer.data().port_id().salt,
+          buffer.data().port_id().salt, buffer.data().frame_type(),
+          fuchsia_hardware_network::wire::FrameType::kEthernet);
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+    std::vector<uint8_t> output;
+    output.resize(buffer.data().len());
+    size_t read = buffer.data().Read(output.data(), output.size());
+    if (read != output.size()) {
+      return zx::error(ZX_ERR_INTERNAL);
+    }
+    return zx::ok(std::move(output));
+  }
+
+  uint32_t tx_depth() { return tx_depth_; }
+
+  uint32_t rx_depth() { return rx_depth_; }
+
+  size_t mtu() { return mtu_.value(); }
+
+ private:
+  std::optional<network::client::NetworkDeviceClient> netdevice_client_;
+  // Since the client receives data in a callback, we need to store the frames we receive.
+  std::queue<network::client::NetworkDeviceClient::Buffer> rx_queue_;
+
+  std::optional<network::client::netdev::wire::PortId> port_id_;
+  uint32_t tx_depth_;
+  uint32_t rx_depth_;
+  std::optional<size_t> mtu_;
 };
 
 class UsbCdcEcmTest : public zxtest::Test {
@@ -267,61 +418,64 @@ class UsbCdcEcmTest : public zxtest::Test {
   std::string host_path_;
 };
 
-// Test sending data from peripheral to host.
 TEST_F(UsbCdcEcmTest, PeripheralTransmitsToHost) {
-  EthernetInterface peripheral_ethernet(
+  EthernetInterface peripheral(
       fbl::unique_fd(openat(bus_.GetRootFd(), peripheral_path_.c_str(), O_RDWR)));
-  EthernetInterface host_ethernet(
-      fbl::unique_fd(openat(bus_.GetRootFd(), host_path_.c_str(), O_RDWR)));
+  NetworkDeviceInterface host(fbl::unique_fd(openat(bus_.GetRootFd(), host_path_.c_str(), O_RDWR)));
+
+  const uint32_t fifo_depth = std::min(peripheral.tx_depth(), host.rx_depth());
+  ASSERT_EQ(peripheral.mtu(), kEthernetMtu);
+  ASSERT_EQ(host.mtu(), kEthernetMtu);
+
   uint8_t fill_data = 0;
-  for (size_t i = 0; i < peripheral_ethernet.tx_depth(); i++) {
+  for (size_t i = 0; i < fifo_depth; ++i) {
     std::vector<uint8_t> data;
-    for (size_t j = 0; j < peripheral_ethernet.mtu(); j++) {
-      data.push_back(fill_data);
-      fill_data++;
+    for (size_t j = 0; j < kEthernetMtu; ++j) {
+      data.push_back(fill_data++);
     }
-    ASSERT_OK(peripheral_ethernet.SendData(data));
+    ASSERT_OK(peripheral.SendData(data));
   }
 
-  std::vector<uint8_t> received_data;
-  while (received_data.size() < peripheral_ethernet.tx_depth() * peripheral_ethernet.mtu()) {
-    ASSERT_OK(host_ethernet.ReceiveData(received_data));
+  size_t received_bytes = 0;
+  uint8_t read_data = 0;
+  while (received_bytes < fifo_depth * kEthernetMtu) {
+    zx::status<std::vector<uint8_t>> received_data = host.ReceiveData();
+    ASSERT_OK(received_data.status_value());
+    ASSERT_EQ(kEthernetMtu, received_data.value().size());
+    const std::vector<uint8_t>& data = received_data.value();
+    received_bytes += data.size();
+    for (const auto& b : data) {
+      ASSERT_EQ(b, read_data++);
+    }
   }
-  fill_data = 0;
-  for (size_t i = 0; i < received_data.size(); i++) {
-    ASSERT_EQ(received_data[i], fill_data);
-    fill_data++;
-  }
-
   ASSERT_NO_FATAL_FAILURE();
 }
 
-// Test sending data from host to peripheral.
 TEST_F(UsbCdcEcmTest, HostTransmitsToPeripheral) {
-  EthernetInterface peripheral_ethernet(
+  EthernetInterface peripheral(
       fbl::unique_fd(openat(bus_.GetRootFd(), peripheral_path_.c_str(), O_RDWR)));
-  EthernetInterface host_ethernet(
-      fbl::unique_fd(openat(bus_.GetRootFd(), host_path_.c_str(), O_RDWR)));
+  NetworkDeviceInterface host(fbl::unique_fd(openat(bus_.GetRootFd(), host_path_.c_str(), O_RDWR)));
+
+  const uint32_t fifo_depth = std::min(peripheral.rx_depth(), host.tx_depth());
+  ASSERT_EQ(peripheral.mtu(), kEthernetMtu);
+  ASSERT_EQ(host.mtu(), kEthernetMtu);
+
   uint8_t fill_data = 0;
-  for (size_t i = 0; i < host_ethernet.tx_depth(); i++) {
+  for (size_t i = 0; i < fifo_depth; ++i) {
     std::vector<uint8_t> data;
-    for (size_t j = 0; j < host_ethernet.mtu(); j++) {
-      data.push_back(fill_data);
-      fill_data++;
+    for (size_t j = 0; j < kEthernetMtu; ++j) {
+      data.push_back(fill_data++);
     }
-    ASSERT_OK(host_ethernet.SendData(data));
+    ASSERT_OK(host.SendData(data));
   }
 
   std::vector<uint8_t> received_data;
-  while (received_data.size() < host_ethernet.tx_depth() * host_ethernet.mtu()) {
-    ASSERT_OK(peripheral_ethernet.ReceiveData(received_data));
+  while (received_data.size() < fifo_depth * kEthernetMtu) {
+    ASSERT_OK(peripheral.ReceiveData(received_data));
   }
-  fill_data = 0;
-  for (size_t i = 0; i < received_data.size(); i++) {
-    ASSERT_EQ(received_data[i], fill_data);
-    fill_data++;
+  for (size_t i = 0; i < received_data.size(); ++i) {
+    ASSERT_EQ(received_data[i], i % 256);
   }
-
   ASSERT_NO_FATAL_FAILURE();
 }
 
