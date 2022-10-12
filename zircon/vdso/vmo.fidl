@@ -987,7 +987,7 @@ protocol Vmo {
     /// TODO(fxbug.dev/32938)
     CreateContiguous(resource struct {
         bti handle:BTI;
-        size Usize;
+        size usize;
         alignment_log2 uint32;
     }) -> (resource struct {
         out handle:VMO;
@@ -1088,7 +1088,7 @@ protocol Vmo {
     CreatePhysical(resource struct {
         resource handle:RESOURCE;
         paddr paddr;
-        size Usize;
+        size usize;
     }) -> (resource struct {
         out handle:VMO;
     }) error status;

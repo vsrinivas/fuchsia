@@ -23,8 +23,8 @@ alias MutableString = string;
 // TODO(fidlc): mutable<uint32>
 alias MutableUint32 = uint32;
 
-// TODO(fidlc): mutable<Usize>
-alias MutableUsize = Usize;
+// TODO(fidlc): mutable<usize>
+alias Mutableusize = usize;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): mutable<vector<HandleDisposition>

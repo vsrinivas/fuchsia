@@ -292,7 +292,7 @@ protocol Misc {
     VmarUnmapHandleCloseThreadExit(resource struct {
         vmar_handle handle:VMAR;
         addr vaddr;
-        size Usize;
+        size usize;
         @release
         close_handle handle;
     }) -> (struct {}) error status;

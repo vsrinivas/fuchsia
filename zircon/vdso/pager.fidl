@@ -573,8 +573,8 @@ protocol Pager {
         length uint64;
     }) -> (struct {
         buffer VectorVoid;
-        actual Usize;
-        avail Usize;
+        actual usize;
+        avail usize;
     }) error status;
 
     /// ## NAME

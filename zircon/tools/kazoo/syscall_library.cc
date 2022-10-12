@@ -138,6 +138,12 @@ std::optional<Type> PrimitiveTypeFromName(std::string subtype) {
   if (subtype == "char") {
     return Type(TypeChar{});
   }
+  if (subtype == "uintptr") {
+    return Type(TypeUintptr{});
+  }
+  if (subtype == "usize") {
+    return Type(TypeUsize{});
+  }
 
   return std::nullopt;
 }
@@ -161,14 +167,6 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     }
 
     const std::string name = StripLibraryName(full_name);
-    if (name == "Uintptr") {
-      return Type(TypeUintptrT{});
-    }
-
-    if (name == "Usize") {
-      return Type(TypeSizeT{});
-    }
-
     Type workaround_type;
     if (AliasWorkaround(name, library, &workaround_type)) {
       return workaround_type;
@@ -267,7 +265,7 @@ bool Syscall::MapRequestResponseToKernelAbi() {
           default_to_const(type.constness()), Optionality::kInputArgument);
       kernel_arguments_.emplace_back(m.name(), pointer_to_subtype, m.attributes());
       auto [size_name, is_u32] = get_vector_size_name(m);
-      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}),
+      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeUsize{}),
                                      std::map<std::string, std::string>{});
     } else if (type.IsString()) {
       // char*, using the same constness as the string was specified as.
@@ -276,7 +274,7 @@ bool Syscall::MapRequestResponseToKernelAbi() {
           Type(TypePointer(Type(TypeChar{})), default_to_const(type.constness()),
                Optionality::kInputArgument),
           m.attributes());
-      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}),
+      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeUsize{}),
                                      std::map<std::string, std::string>{});
     } else if (type.IsStruct()) {
       // If it's a struct, map to struct*, const unless otherwise specified. The pointer takes the
@@ -323,14 +321,14 @@ bool Syscall::MapRequestResponseToKernelAbi() {
           Constness::kMutable, Optionality::kOutputOptional);
       kernel_arguments_.emplace_back(m.name(), pointer_to_subtype, m.attributes());
       auto [size_name, is_u32] = get_vector_size_name(m);
-      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeSizeT{}),
+      kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeUsize{}),
                                      std::map<std::string, std::string>{});
     } else if (type.IsString()) {
       kernel_arguments_.emplace_back(
           m.name(),
           Type(TypePointer(Type(TypeChar{})), Constness::kMutable, Optionality::kOutputOptional),
           m.attributes());
-      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}),
+      kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeUsize{}),
                                      std::map<std::string, std::string>{});
     } else if (type.IsPointer()) {
       kernel_arguments_.emplace_back(

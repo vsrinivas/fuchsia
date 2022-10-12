@@ -24,7 +24,7 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     return true;
   }
   if (name == "MutableUsize") {
-    *type = Type(TypePointer(Type(TypeSizeT{})), Constness::kMutable);
+    *type = Type(TypePointer(Type(TypeUsize{})), Constness::kMutable);
     return true;
   }
   if (name == "MutableVectorHandleDispositionU32Size") {

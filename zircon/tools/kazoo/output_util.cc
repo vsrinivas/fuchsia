@@ -104,12 +104,12 @@ std::string CNameImpl(const Type& type) {
     void operator()(const TypeInt16&) { ret = "int16_t"; }
     void operator()(const TypeInt32&) { ret = "int32_t"; }
     void operator()(const TypeInt64&) { ret = "int64_t"; }
-    void operator()(const TypeSizeT&) { ret = "size_t"; }
+    void operator()(const TypeUsize&) { ret = "size_t"; }
     void operator()(const TypeUint8&) { ret = "uint8_t"; }
     void operator()(const TypeUint16&) { ret = "uint16_t"; }
     void operator()(const TypeUint32&) { ret = "uint32_t"; }
     void operator()(const TypeUint64&) { ret = "uint64_t"; }
-    void operator()(const TypeUintptrT&) { ret = "uintptr_t"; }
+    void operator()(const TypeUintptr&) { ret = "uintptr_t"; }
     void operator()(const TypeVoid&) { ret = "void"; }
     void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.c_name(); }
 
@@ -215,12 +215,12 @@ std::string GetGoNameImpl(const Type& type) {
     void operator()(const TypeInt16&) { ret = "int16"; }
     void operator()(const TypeInt32&) { ret = "int32"; }
     void operator()(const TypeInt64&) { ret = "int64"; }
-    void operator()(const TypeSizeT&) { ret = "uint"; }
+    void operator()(const TypeUsize&) { ret = "uint"; }
     void operator()(const TypeUint8&) { ret = "uint8"; }
     void operator()(const TypeUint16&) { ret = "uint16"; }
     void operator()(const TypeUint32&) { ret = "uint32"; }
     void operator()(const TypeUint64&) { ret = "uint64"; }
-    void operator()(const TypeUintptrT&) { ret = "uintptr"; }
+    void operator()(const TypeUintptr&) { ret = "uintptr"; }
     void operator()(const TypeVoid&) { ret = "void"; }
     void operator()(const TypeZxBasicAlias& zx_basic_alias) { ret = zx_basic_alias.name(); }
 

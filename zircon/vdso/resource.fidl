@@ -106,7 +106,7 @@ protocol Resource {
         parent_rsrc handle:RESOURCE;
         options uint32;
         base uint64;
-        size Usize;
+        size usize;
         name string;
     }) -> (resource struct {
         resource_out handle:RESOURCE;

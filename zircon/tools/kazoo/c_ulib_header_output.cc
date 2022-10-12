@@ -91,7 +91,7 @@ class Formatter {
           if constexpr (std::is_same_v<T, TypeInt64>) {
             return "int64_t";
           }
-          if constexpr (std::is_same_v<T, TypeSizeT>) {
+          if constexpr (std::is_same_v<T, TypeUsize>) {
             return "size_t";
           }
           if constexpr (std::is_same_v<T, TypeUint8>) {
@@ -106,7 +106,7 @@ class Formatter {
           if constexpr (std::is_same_v<T, TypeUint64>) {
             return "uint64_t";
           }
-          if constexpr (std::is_same_v<T, TypeUintptrT>) {
+          if constexpr (std::is_same_v<T, TypeUintptr>) {
             return "uintptr_t";
           }
           if constexpr (std::is_same_v<T, TypeVoid>) {

@@ -10,7 +10,7 @@ library zx;
 type PciBar = struct {
     id uint32;
     type uint32;
-    size Usize;
+    size usize;
     // TODO(scottmg): Unnamed union.
     //union {
     //    uintptr_t addr;
@@ -220,7 +220,7 @@ protocol Pci {
     ConfigRead(resource struct {
         handle handle:PCI_DEVICE;
         offset uint16;
-        width Usize;
+        width usize;
     }) -> (struct {
         out_val uint32;
     }) error status;
@@ -263,7 +263,7 @@ protocol Pci {
     ConfigWrite(resource struct {
         handle handle:PCI_DEVICE;
         offset uint16;
-        width Usize;
+        width usize;
         val uint32;
     }) -> (struct {}) error status;
 
@@ -313,7 +313,7 @@ protocol Pci {
         func uint8;
         offset uint8;
         val MutableUint32;
-        width Usize;
+        width usize;
         write uint32;
     }) -> (struct {}) error status;
 

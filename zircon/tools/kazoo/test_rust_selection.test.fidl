@@ -48,8 +48,8 @@ protocol Rust {
         f uint16;
         g uint32;
         h uint64;
-        i Usize;
-        j Uintptr;
+        i usize;
+        j uintptr;
         k VoidPtr;
         l time;
         m ticks;

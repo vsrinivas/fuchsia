@@ -225,7 +225,7 @@ protocol Guest {
         handle handle:GUEST;
         kind uint32;
         addr vaddr;
-        size Usize;
+        size usize;
         port_handle handle:PORT;
         key uint64;
     }) -> (struct {}) error status;

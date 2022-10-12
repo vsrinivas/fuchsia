@@ -106,17 +106,17 @@ zx_host_tool_action_foreach("test_files_fidl_to_json") {
     "--json",
     rebase_path("$target_gen_dir", root_build_dir) +
         "/{{source_name_part}}.json",
+    "--experimental",
+    "zx_c_types",
     "--files",
     "{{source}}",
     rebase_path("//zircon/vdso/rights.fidl", root_build_dir),
     rebase_path("//zircon/vdso/zx_common.fidl", root_build_dir),
-    rebase_path("//zircon/vdso/zx_syscall.fidl", root_build_dir),
   ]
 
   inputs = [
     "//zircon/vdso/rights.fidl",
     "//zircon/vdso/zx_common.fidl",
-    "//zircon/vdso/zx_syscall.fidl",
   ]
 
   outputs = [ "$target_gen_dir/{{source_name_part}}.json" ]

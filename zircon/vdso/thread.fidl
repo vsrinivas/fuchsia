@@ -232,8 +232,8 @@ protocol Thread {
         handle handle:THREAD;
         thread_entry vaddr;
         stack vaddr;
-        arg1 Uintptr;
-        arg2 Uintptr;
+        arg1 uintptr;
+        arg2 uintptr;
     }) -> (struct {}) error status;
 
     /// ## Summary

@@ -45,7 +45,7 @@ protocol Selection {
         data MutableVectorVoid;
         offset uint32;
     }) -> (struct {
-        actual Usize;
+        actual usize;
     }) error status;
 
     // Mutable uint32 in the middle of input parameters (rather than as an
@@ -57,7 +57,7 @@ protocol Selection {
         func uint8;
         offset uint8;
         val MutableUint32;
-        width Usize;
+        width usize;
         write bool;
     }) -> (struct {}) error status;
 

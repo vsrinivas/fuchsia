@@ -1939,8 +1939,8 @@ protocol Object {
         topic uint32;
     }) -> (struct {
         buffer VectorVoid;
-        actual Usize;
-        avail Usize;
+        actual usize;
+        avail usize;
     }) error status;
 
     /// ## Summary

@@ -154,7 +154,7 @@ protocol Msi {
         options uint32;
         msi_id uint32;
         vmo handle:VMO;
-        vmo_offset Usize;
+        vmo_offset usize;
     }) -> (resource struct {
         out_interrupt handle;
     }) error status;

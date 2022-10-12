@@ -54,7 +54,7 @@ protocol Ktrace {
         offset uint32;
     }) -> (struct {
         data VectorVoid;
-        actual Usize;
+        actual usize;
     }) error status;
 
     // TODO(scottmg): syscalls.banjo had the length of |ptr| being |action|?

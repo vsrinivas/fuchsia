@@ -340,7 +340,7 @@ protocol Process {
         stack vaddr;
         @release
         arg1 handle;
-        arg2 Uintptr;
+        arg2 uintptr;
     }) -> (struct {}) error status;
 
     /// ## Summary
@@ -417,7 +417,7 @@ protocol Process {
         vaddr vaddr;
     }) -> (struct {
         buffer VectorVoid;
-        actual Usize;
+        actual usize;
     }) error status;
 
     /// ## Summary
@@ -500,6 +500,6 @@ protocol Process {
         vaddr vaddr;
         buffer VectorVoid;
     }) -> (struct {
-        actual Usize;
+        actual usize;
     }) error status;
 };

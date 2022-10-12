@@ -152,8 +152,10 @@ if (current_toolchain == fidl_toolchain) {
       "vmar.fidl",
       "vmo.fidl",
       "zx_common.fidl",
-      "zx_syscall.fidl",
     ]
+
+    # TODO(fxbug.dev/110021): Burn these down.
+    experimental_flags = [ "zx_c_types" ]
 
     # TODO(fxbug.dev/109734): Burn these down.
     excluded_checks = [

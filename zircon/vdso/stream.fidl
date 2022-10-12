@@ -185,7 +185,7 @@ protocol Stream {
         options uint32;
         vector VectorIovec;
     }) -> (struct {
-        actual Usize;
+        actual usize;
     }) error status;
 
     /// ## Summary
@@ -278,7 +278,7 @@ protocol Stream {
         offset off;
         vector VectorIovec;
     }) -> (struct {
-        actual Usize;
+        actual usize;
     }) error status;
 
     /// ## Summary
@@ -361,7 +361,7 @@ protocol Stream {
         options uint32;
     }) -> (struct {
         vector VectorIovec;
-        actual Usize;
+        actual usize;
     }) error status;
 
     /// ## Summary
@@ -444,7 +444,7 @@ protocol Stream {
         offset off;
     }) -> (struct {
         vector VectorIovec;
-        actual Usize;
+        actual usize;
     }) error status;
 
     /// ## Summary

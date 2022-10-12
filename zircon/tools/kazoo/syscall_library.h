@@ -29,12 +29,12 @@ class TypeInt8 {};
 class TypeInt16 {};
 class TypeInt32 {};
 class TypeInt64 {};
-class TypeSizeT {};
+class TypeUsize {};
 class TypeUint16 {};
 class TypeUint32 {};
 class TypeUint64 {};
 class TypeUint8 {};
-class TypeUintptrT {};
+class TypeUintptr {};
 class TypeVoid {};
 class TypeZxBasicAlias;
 
@@ -46,8 +46,8 @@ class TypeString {};
 class TypeStruct;
 class TypeVector;
 using TypeData = std::variant<std::monostate, TypeBool, TypeChar, TypeInt8, TypeInt16, TypeInt32,
-                              TypeInt64, TypeSizeT, TypeUint16, TypeUint32, TypeUint64, TypeUint8,
-                              TypeUintptrT, TypeVoid, TypeZxBasicAlias, TypeAlias, TypeEnum,
+                              TypeInt64, TypeUsize, TypeUint16, TypeUint32, TypeUint64, TypeUint8,
+                              TypeUintptr, TypeVoid, TypeZxBasicAlias, TypeAlias, TypeEnum,
                               TypeHandle, TypePointer, TypeString, TypeStruct, TypeVector>;
 
 class Type;

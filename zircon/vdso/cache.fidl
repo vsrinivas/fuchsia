@@ -61,7 +61,7 @@ protocol Cache {
     @vdsocall
     Flush(struct {
         addr ConstVoidPtr;
-        size Usize;
+        size usize;
         options uint32;
     }) -> (struct {}) error status;
 };

@@ -69,7 +69,7 @@ protocol Debug {
         handle handle:RESOURCE;
     }) -> (struct {
         buffer string;
-        actual Usize;
+        actual usize;
     }) error status;
 
     /// ## Summary

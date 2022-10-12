@@ -491,7 +491,7 @@ protocol System {
         resource handle:RESOURCE;
         topic uint32;
         info ConstVoidPtr;
-        count Usize;
+        count usize;
     }) -> (struct {}) error status;
 
     /// ## Summary
@@ -586,10 +586,10 @@ protocol System {
     GetPerformanceInfo(resource struct {
         resource handle:RESOURCE;
         topic uint32;
-        count Usize;
+        count usize;
     }) -> (resource struct {
         info VoidPtr;
-        output_count Usize;
+        output_count usize;
     }) error status;
 
     /// ## Summary
