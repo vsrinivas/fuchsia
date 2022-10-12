@@ -113,14 +113,14 @@ if [[ "$build_subdir" != "." ]]
 then
   for f in "${outputs[@]}"
   do
-    case "$f" in
-      *"$build_subdir"* )
+    # Match paths on \<whole-word\> boundaries.
+    # Unfortunately, built-in bash regex not sufficient.
+    if echo "$f" | grep -q "\<$build_subdir\>" ; then
         err=1
         error_msg "Output path '$f' contains '$build_subdir'." \
           "Adding rebase_path(..., root_build_dir) may fix this to be relative." \
           "If this command requires an absolute path, mark this action in GN with 'no_output_dir_leaks = false'."
-        ;;
-    esac
+    fi
   done
 
   # Command is in "$@".  Scan its tokens for $build_dir.
@@ -135,10 +135,13 @@ then
       -fcoverage-prefix-map=*"$build_subdir"* )
         ;;
       *"$build_subdir"* )
-        err=1
-        error_msg "Command token '$tok' contains '$build_subdir'." \
-          "Adding rebase_path(..., root_build_dir) may fix this to be relative." \
-          "If this command requires an absolute path, mark this action in GN with 'no_output_dir_leaks = false'."
+        # Check with whole-word boundaries.
+        if echo "$tok" | grep -q "\<$build_subdir\>" ; then
+          err=1
+          error_msg "Command token '$tok' contains '$build_subdir'." \
+            "Adding rebase_path(..., root_build_dir) may fix this to be relative." \
+            "If this command requires an absolute path, mark this action in GN with 'no_output_dir_leaks = false'."
+        fi
         ;;
     esac
     # Do not shift, keep tokens for execution.
@@ -156,7 +159,7 @@ then
   test "$status" != 0 || {
     for f in "${outputs[@]}"
     do
-      if grep -qwF "$build_subdir" "$f"
+      if grep -qwF "\<$build_subdir\>" "$f"
       then
         err=1
         error_msg "Output file $f contains '$build_subdir'." \
