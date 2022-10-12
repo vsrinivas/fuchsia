@@ -1,9 +1,9 @@
 toc:
 - versioning:
     library_name: fidl
-    versions: ["7", "8", "9", "HEAD"]
+    versions: ["1"]
     selector_label: API Level
-    default_version: "9"
+    default_version: "1"
 - title: Overview
   path: /README.md
 - title: API

@@ -1,14 +1,14 @@
 toc:
 - versioning:
     library_name: fidl
-    versions: ["7", "8", "9", "HEAD"]
+    versions: [{{ #each table_of_contents.versions }}"{{this}}"{{#unless @last}}, {{/unless}}{{ /each}}]
     selector_label: API Level
-    default_version: "9"
+    default_version: "{{table_of_contents.default_version}}"
 - title: Overview
   path: {{url_path}}README.md
 - title: API
   section:
-{{ #each table_of_contents }}
+{{ #each table_of_contents.items }}
   - title: {{name}}
     path: {{@root.url_path}}{{name}}
     version_added: "{{added}}"

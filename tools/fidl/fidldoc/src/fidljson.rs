@@ -41,6 +41,13 @@ pub fn wrap_non_struct_payload(payloads: &mut HashMap<String, Value>, name: Stri
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct TableOfContents {
+    pub items: Vec<TableOfContentsItem>,
+    pub versions: Vec<String>,
+    pub default_version: String,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct TableOfContentsItem {
     pub name: String,
     pub link: String,

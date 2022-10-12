@@ -195,19 +195,25 @@ mod test {
     fn render_main_page_test() {
         let source = include_str!("testdata/README.md");
 
-        let mut table_of_contents: Vec<crate::TableOfContentsItem> = vec![];
-        table_of_contents.push(crate::TableOfContentsItem {
+        let mut table_of_contents_items: Vec<crate::TableOfContentsItem> = vec![];
+        table_of_contents_items.push(crate::TableOfContentsItem {
             name: "fuchsia.auth".to_string(),
             link: "fuchsia.auth/README.md".to_string(),
             description: "Fuchsia Auth API".to_string(),
             added: "7".to_string(),
         });
-        table_of_contents.push(crate::TableOfContentsItem {
+        table_of_contents_items.push(crate::TableOfContentsItem {
             name: "fuchsia.media".to_string(),
             link: "fuchsia.media/README.md".to_string(),
             description: "Fuchsia Media API".to_string(),
             added: "".to_string(),
         });
+
+        let table_of_contents = crate::TableOfContents {
+            items: table_of_contents_items,
+            versions: vec!["7".to_string(), "HEAD".to_string()],
+            default_version: "7".to_string(),
+        };
 
         let fidl_config = json!(null);
         let declarations: Vec<String> = Vec::new();
@@ -231,25 +237,31 @@ mod test {
     fn render_toc_test() {
         let source = include_str!("testdata/_toc.yaml");
 
-        let mut table_of_contents: Vec<crate::TableOfContentsItem> = vec![];
-        table_of_contents.push(crate::TableOfContentsItem {
+        let mut table_of_contents_items: Vec<crate::TableOfContentsItem> = vec![];
+        table_of_contents_items.push(crate::TableOfContentsItem {
             name: "fuchsia.auth".to_string(),
             link: "fuchsia.auth/README.md".to_string(),
             description: "Fuchsia Auth API".to_string(),
             added: "7".to_string(),
         });
-        table_of_contents.push(crate::TableOfContentsItem {
+        table_of_contents_items.push(crate::TableOfContentsItem {
             name: "fuchsia.bluetooth".to_string(),
             link: "fuchsia.bluetooth/README.md".to_string(),
             description: "Fuchsia Bluetooth API".to_string(),
             added: "HEAD".to_string(),
         });
-        table_of_contents.push(crate::TableOfContentsItem {
+        table_of_contents_items.push(crate::TableOfContentsItem {
             name: "fuchsia.media".to_string(),
             link: "fuchsia.media/README.md".to_string(),
             description: "Fuchsia Media API".to_string(),
             added: "".to_string(),
         });
+
+        let table_of_contents = crate::TableOfContents {
+            items: table_of_contents_items,
+            versions: vec!["HEAD".to_string(), "7".to_string()],
+            default_version: "7".to_string(),
+        };
 
         let fidl_config = json!(null);
         let declarations: Vec<String> = Vec::new();

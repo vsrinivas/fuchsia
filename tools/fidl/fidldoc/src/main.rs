@@ -4,7 +4,7 @@
 
 use anyhow::{anyhow, bail, Context, Error};
 use argh::FromArgs;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -15,7 +15,9 @@ use rayon::prelude::*;
 use serde_json::{json, Value};
 
 mod fidljson;
-use fidljson::{to_lower_snake_case, FidlJson, FidlJsonPackageData, TableOfContentsItem};
+use fidljson::{
+    to_lower_snake_case, FidlJson, FidlJsonPackageData, TableOfContents, TableOfContentsItem,
+};
 
 mod templates;
 use templates::markdown::MarkdownTemplate;
@@ -27,6 +29,7 @@ static ATTR_NAME_DOC: &'static str = "doc";
 static ATTR_NAME_AVAILABLE: &'static str = "available";
 static ATTR_NAME_ADDED: &'static str = "added";
 static ATTR_NAME_NO_DOC: &'static str = "no_doc";
+static HEAD_VERSION: &'static str = "HEAD";
 
 #[derive(Debug)]
 enum TemplateType {
@@ -199,7 +202,7 @@ fn get_attribute_standalone_arg_value(attribute: &Value) -> Result<String, Error
 fn render_fidl_library(
     package: &String,
     package_fidl_json: &FidlJson,
-    table_of_contents: &Vec<TableOfContentsItem>,
+    table_of_contents: &TableOfContents,
     fidl_config: &Value,
     tag: &String,
     declarations: &Vec<String>,
@@ -312,9 +315,9 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> FidlJsonPackageData {
     package_data
 }
 
-fn create_toc(fidl_json_map: &HashMap<String, FidlJson>) -> Vec<TableOfContentsItem> {
+fn create_toc(fidl_json_map: &HashMap<String, FidlJson>) -> TableOfContents {
     // The table of contents lists all packages in alphabetical order.
-    let mut table_of_contents: Vec<_> = fidl_json_map
+    let mut table_of_contents_items: Vec<_> = fidl_json_map
         .par_iter()
         .map(|(package_name, fidl_json)| TableOfContentsItem {
             name: package_name.clone(),
@@ -323,8 +326,27 @@ fn create_toc(fidl_json_map: &HashMap<String, FidlJson>) -> Vec<TableOfContentsI
             added: get_library_added(&fidl_json.maybe_attributes),
         })
         .collect();
-    table_of_contents.sort_unstable_by(|a, b| a.name.cmp(&b.name));
-    table_of_contents
+    table_of_contents_items.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+
+    // Add all versions as <integer value, string representation> to a
+    // BTreeMap so that they are automatically sorted by key.
+    // A string representation such as "HEAD" gets a 0 value.
+    let mut version_map: BTreeMap<u64, String> = BTreeMap::new();
+    for item in table_of_contents_items.iter() {
+        if !item.added.is_empty() {
+            version_map.insert(item.added.parse::<u64>().unwrap_or(0), item.added.clone());
+        }
+    }
+
+    // Because the BTreeMap is ordered, the max version is the last item in it.
+    let head = HEAD_VERSION.to_string();
+    let (_, max_version) = version_map.iter().next_back().unwrap_or((&0, &head));
+
+    TableOfContents {
+        items: table_of_contents_items,
+        versions: version_map.values().cloned().collect(),
+        default_version: max_version.to_string(),
+    }
 }
 
 fn get_library_description(maybe_attributes: &Vec<Value>) -> String {
@@ -352,7 +374,7 @@ fn get_library_added(maybe_attributes: &Vec<Value>) -> String {
                         if let Some(val) = argument["value"].as_object() {
                             let mut vers = val["value"].as_str().unwrap_or("").to_string();
                             if vers == u64::MAX.to_string() {
-                                vers = "HEAD".to_string();
+                                vers = HEAD_VERSION.to_string();
                             }
                             return vers;
                         }
@@ -431,7 +453,22 @@ mod test {
             "fuchsia.media".to_string(),
             FidlJson {
                 name: "fuchsia.media".to_string(),
-                maybe_attributes: Vec::new(),
+                maybe_attributes: vec![json!({"name": ATTR_NAME_AVAILABLE, "arguments": [
+                    {
+                    "name": "added",
+                    "type": "uint64",
+                    "value": {
+                        "kind": "literal",
+                        "value": "7",
+                        "expression": "7",
+                        "literal": {
+                        "kind": "numeric",
+                        "value": "7",
+                        "expression": "7"
+                        }
+                    },
+                    }
+                ]})],
                 library_dependencies: Vec::new(),
                 bits_declarations: Vec::new(),
                 const_declarations: Vec::new(),
@@ -485,7 +522,25 @@ mod test {
             "fuchsia.camera.common".to_string(),
             FidlJson {
                 name: "fuchsia.camera.common".to_string(),
-                maybe_attributes: vec![json!({"some_key": "key", "some_value": "not_description"})],
+                maybe_attributes: vec![json!({
+                    "some_key": "key", "some_value": "not_description",
+                    "name": ATTR_NAME_AVAILABLE, "arguments": [
+                    {
+                    "name": "added",
+                    "type": "uint64",
+                    "value": {
+                        "kind": "literal",
+                        "value": u64::MAX.to_string(),
+                        "expression": u64::MAX.to_string(),
+                        "literal": {
+                        "kind": "numeric",
+                        "value": u64::MAX.to_string(),
+                        "expression": u64::MAX.to_string()
+                        }
+                    },
+                    }
+                ]
+                })],
                 library_dependencies: Vec::new(),
                 bits_declarations: Vec::new(),
                 const_declarations: Vec::new(),
@@ -502,19 +557,21 @@ mod test {
         );
 
         let toc = create_toc(&fidl_json_map);
-        assert_eq!(toc.len(), 3);
+        assert_eq!(toc.items.len(), 3);
+        assert_eq!(toc.versions, vec!["HEAD", "7"]);
+        assert_eq!(toc.default_version, "7");
 
-        let item0 = toc.get(0).unwrap();
+        let item0 = toc.items.get(0).unwrap();
         assert_eq!(item0.name, "fuchsia.auth".to_string());
         assert_eq!(item0.link, "fuchsia.auth/index".to_string());
         assert_eq!(item0.description, "Fuchsia Auth API".to_string());
 
-        let item1 = toc.get(1).unwrap();
+        let item1 = toc.items.get(1).unwrap();
         assert_eq!(item1.name, "fuchsia.camera.common".to_string());
         assert_eq!(item1.link, "fuchsia.camera.common/index".to_string());
         assert_eq!(item1.description, "".to_string());
 
-        let item2 = toc.get(2).unwrap();
+        let item2 = toc.items.get(2).unwrap();
         assert_eq!(item2.name, "fuchsia.media".to_string());
         assert_eq!(item2.link, "fuchsia.media/index".to_string());
         assert_eq!(item2.description, "".to_string());
