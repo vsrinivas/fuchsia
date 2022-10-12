@@ -319,6 +319,13 @@ func interfaceWatcherEventLoop(
 				if !added.HasId() {
 					panic(fmt.Sprintf("interface added event with no ID: %#v", event))
 				}
+				if len(added.GetAddresses()) > 0 {
+					// This panic enforces that interfaces are never added
+					// with addresses present, which enables the event loop to
+					// not have to worry about address properties/assignment
+					// state when handling interface-added events.
+					panic(fmt.Sprintf("interface added event contains addresses: %#v", event))
+				}
 				nicid := tcpip.NICID(added.GetId())
 				if properties, ok := propertiesMap[nicid]; ok {
 					panic(fmt.Sprintf("interface %#v already exists but duplicate added event received: %#v", properties, event))
@@ -326,10 +333,10 @@ func interfaceWatcherEventLoop(
 				propertiesMap[nicid] = added
 				for w := range watchers {
 					properties := added
-					// Filtering address properties returns a deep copy of
-					// the addresses so that updates to the current interface
-					// state don't accidentally change enqueued events.
-					properties.SetAddresses(w.filterAddressProperties(properties.GetAddresses()))
+					// Since added interfaces must not have any addresses, explicitly set
+					// the addresses field to nil instead of potentially copying a slice
+					// of length 0.
+					properties.SetAddresses(nil)
 					w.onEvent(interfaces.EventWithAdded(properties))
 				}
 			case interfaceRemoved:
