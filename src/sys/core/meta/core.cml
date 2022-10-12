@@ -221,9 +221,10 @@
             subdir: "class/sysmem",
         },
         {
-            protocol: [ "fuchsia.pkg.FontResolver" ],
-            from: "#pkg-resolver",
+            protocol: "fuchsia.pkg.FontResolver",
+            from: "void",
             to: "#font_provider",
+            availability: "optional",
         },
         {
             protocol: [ "fuchsia.device.NameProvider" ],

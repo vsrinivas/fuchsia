@@ -19,11 +19,10 @@
         },
     ],
     use: [
+        { protocol: "fuchsia.tracing.provider.Registry" },
         {
-            protocol: [
-                "fuchsia.pkg.FontResolver",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: "fuchsia.pkg.FontResolver",
+            availability: "optional",
         },
         {
             directory: "config-data",
