@@ -1050,7 +1050,7 @@ pub fn resolve_package(
     let response_fut = resolver.resolve(url, package_server_end);
     async move {
         let resolved_context = response_fut.await.unwrap()?;
-        Ok((package, resolved_context.into()))
+        Ok((package, resolved_context.try_into().unwrap()))
     }
 }
 
@@ -1065,7 +1065,7 @@ pub fn resolve_with_context(
     let response_fut = resolver.resolve_with_context(url, &mut context.into(), package_server_end);
     async move {
         let resolved_context = response_fut.await.unwrap()?;
-        Ok((package, resolved_context.into()))
+        Ok((package, resolved_context.try_into().unwrap()))
     }
 }
 

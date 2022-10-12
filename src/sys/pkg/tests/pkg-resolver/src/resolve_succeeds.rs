@@ -7,8 +7,7 @@
 /// different types of packages when blobfs is in various intermediate states.
 use {
     assert_matches::assert_matches,
-    fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
-    fuchsia_async as fasync,
+    fidl_fuchsia_pkg_ext as pkg, fuchsia_async as fasync,
     fuchsia_inspect::assert_data_tree,
     fuchsia_pkg_testing::{
         serve::{responder, Domain},
@@ -74,7 +73,10 @@ async fn package_resolution() {
     // All blobs in the repository should now be present in blobfs.
     assert_eq!(env.blobfs.list_blobs().unwrap(), repo_blobs);
 
-    assert_eq!(resolved_context.bytes(), pkg.meta_far_merkle_root().as_bytes());
+    assert_eq!(
+        resolved_context.blob_id().unwrap(),
+        &pkg::BlobId::from(*pkg.meta_far_merkle_root())
+    );
 
     env.stop().await;
 }
@@ -108,7 +110,7 @@ async fn separate_blobs_url() {
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let mut repo_config = served_repository.make_repo_config(repo_url);
     let mirror = &repo_config.mirrors()[0];
-    let mirror = MirrorConfigBuilder::new(mirror.mirror_url().to_owned())
+    let mirror = pkg::MirrorConfigBuilder::new(mirror.mirror_url().to_owned())
         .unwrap()
         .subscribe(mirror.subscribe())
         .blob_mirror_url(mirror.mirror_url().to_owned().extend_dir_with_path("blobsbolb").unwrap())

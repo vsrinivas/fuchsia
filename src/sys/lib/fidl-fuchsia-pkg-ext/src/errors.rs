@@ -83,11 +83,23 @@ pub enum BlobIdParseError {
     #[error("cannot contain uppercase hex characters")]
     CannotContainUppercase,
 
-    #[error("invalid length, expected 32 hex bytes, got {0}")]
+    #[error("invalid length, expected {} hex bytes, got {0}", crate::types::BLOB_ID_SIZE)]
     InvalidLength(usize),
 
     #[error("invalid hex")]
     FromHexError(#[from] hex::FromHexError),
+}
+
+#[derive(Error, Debug)]
+pub enum BlobIdFromSliceError {
+    #[error("invalid length, expected {} bytes, got {0}", crate::types::BLOB_ID_SIZE)]
+    InvalidLength(usize),
+}
+
+#[derive(Error, Debug)]
+pub enum ResolutionContextError {
+    #[error("bytes was neither empty nor a valid BlobId")]
+    InvalidBlobId(#[source] BlobIdFromSliceError),
 }
 
 #[derive(Error, Debug)]

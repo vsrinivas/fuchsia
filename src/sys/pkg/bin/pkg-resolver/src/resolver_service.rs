@@ -176,9 +176,7 @@ impl Resolver for QueuedResolver {
                 },
             ),
         ]);
-        resolve_res.map(|pkg_with_source| {
-            (pkg_with_source.package, pkg_with_source.blob_id.as_bytes().to_vec().into())
-        })
+        resolve_res.map(|pkg_with_source| (pkg_with_source.package, pkg_with_source.blob_id.into()))
     }
 }
 

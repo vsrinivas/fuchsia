@@ -212,6 +212,7 @@ rustc_test("resolve_with_context") {
     ":lib",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/fuchsia",
+    "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:assert_matches",
   ]

@@ -706,7 +706,7 @@ mod tests {
         let pkg_dir = PackageDirectory::open_from_namespace().unwrap();
         MockResolver::new(move |_url| {
             let pkg_dir = pkg_dir.clone();
-            async move { Ok((pkg_dir, vec![].into())) }
+            async move { Ok((pkg_dir, ResolutionContext::new())) }
         })
     }
 
@@ -759,7 +759,7 @@ mod tests {
         let pkg_dir = PackageDirectory::from_proxy(proxy);
         let package_resolver = MockResolver::new(move |_url| {
             let pkg_dir = pkg_dir.clone();
-            async move { Ok((pkg_dir, vec![].into())) }
+            async move { Ok((pkg_dir, ResolutionContext::new())) }
         });
         (package_resolver, dir)
     }

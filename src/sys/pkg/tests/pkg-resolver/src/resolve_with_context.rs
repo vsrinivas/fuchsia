@@ -4,7 +4,7 @@
 
 use {
     assert_matches::assert_matches,
-    fidl_fuchsia_pkg as fpkg,
+    fidl_fuchsia_pkg as fpkg, fidl_fuchsia_pkg_ext as pkg,
     fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder},
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
     std::sync::Arc,
@@ -27,13 +27,19 @@ async fn absolute_url_rejects_non_empty_context() {
 
     // Fails with non-empty context
     assert_matches!(
-        env.resolve_with_context("fuchsia-pkg://test/package-name", vec![0u8].into()).await,
+        env.resolve_with_context(
+            "fuchsia-pkg://test/package-name",
+            [0u8; 32].as_slice().try_into().unwrap()
+        )
+        .await,
         Err(fpkg::ResolveError::InvalidContext)
     );
 
     // Succeeds with empty context
-    let (resolved_pkg, _) =
-        env.resolve_with_context("fuchsia-pkg://test/package-name", vec![].into()).await.unwrap();
+    let (resolved_pkg, _) = env
+        .resolve_with_context("fuchsia-pkg://test/package-name", pkg::ResolutionContext::new())
+        .await
+        .unwrap();
     pkg.verify_contents(&resolved_pkg).await.unwrap();
 
     env.stop().await;
@@ -55,7 +61,7 @@ async fn relative_url_not_implemented() {
     let () = env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     assert_matches!(
-        env.resolve_with_context("package-name", vec![0u8].into()).await,
+        env.resolve_with_context("package-name", pkg::ResolutionContext::new()).await,
         Err(fpkg::ResolveError::Internal)
     );
 
