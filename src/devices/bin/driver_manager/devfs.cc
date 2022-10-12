@@ -233,52 +233,49 @@ Devnode::Devnode(Devfs& devfs, PseudoDir& parent, Target target, fbl::String nam
       parent_(&parent),
       node_(fbl::MakeRefCounted<VnodeImpl>(*this, std::move(target))),
       name_(std::move(name)) {
-  std::optional<std::reference_wrapper<fs::Vnode>> other =
-      [&parent, name = this->name()]() -> std::optional<std::reference_wrapper<fs::Vnode>> {
-    {
-      fbl::RefPtr<fs::Vnode> out;
-      switch (const zx_status_t status = parent.Lookup(name, &out); status) {
-        case ZX_OK:
-          return *out;
-        case ZX_ERR_NOT_FOUND:
-          break;
-        default:
-          ZX_PANIC("%s", zx_status_get_string(status));
-      }
-    }
-    for (auto& child : parent.unpublished) {
-      if (child.name() == name) {
-        return child.node();
-      }
-    }
-    return {};
-  }();
-  if (other.has_value()) {
-    // As of this writing, composite devices all attach at the root node in devfs, including
-    // duplicates. Because this is load-bearing, we cannot easily change it.
-    //
-    // Normally we'd assert that such duplicates are composite devices to prevent regressions, but
-    // composite devices are late-bound; a device's membership in a composite is recorded only when
-    // `CompositeDevice::TryAssemble()` is called, which is apparently *after* the device is added
-    // to devfs.
-    //
-    // This apparently also happens with non-composite devices. During zxcrypt-test these paths
-    // appear more than once:
-    //
-    // - sys/platform/00:00:2d/ramctl/ramdisk-0/block/zxcrypt/unsealed
-    // - sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/data-p-1/block/zxcrypt/unsealed
-    //
-    // To preserve the invariant that directory entries do not contain duplicates, we do not add
-    // this to the parent. Hopefully the first device to arrive is sufficient. Unhook the parent to
-    // prevent double cleanup.
-    //
-    // TODO(https://fxbug.dev/110922): Remove this logic when composite devices no longer surface
-    // this way in devfs.
-    parent_ = nullptr;
+  {
     const std::string_view name = this->name();
-    LOGF(WARNING, "skipping duplicate devfs element '%.*s': this=%p other=%p",
-         static_cast<int>(name.size()), name.data(), this, &other.value());
-    return;
+    std::optional<std::reference_wrapper<fs::Vnode>> other =
+        [&parent, name]() -> std::optional<std::reference_wrapper<fs::Vnode>> {
+      {
+        fbl::RefPtr<fs::Vnode> out;
+        switch (const zx_status_t status = parent.Lookup(name, &out); status) {
+          case ZX_OK:
+            return *out;
+          case ZX_ERR_NOT_FOUND:
+            break;
+          default:
+            ZX_PANIC("%s", zx_status_get_string(status));
+        }
+      }
+      for (auto& child : parent.unpublished) {
+        if (child.name() == name) {
+          return child.node();
+        }
+      }
+      return {};
+    }();
+    if (other.has_value()) {
+      // As of this writing, composite devices all attach at the root node in devfs, including
+      // duplicates. Because this is load-bearing, we cannot easily change it.
+      //
+      // To preserve the invariant that directory entries do not contain duplicates, we do not add
+      // this to the parent. Hopefully the first device to arrive is sufficient. Unhook the parent
+      // to prevent double cleanup.
+      //
+      // TODO(https://fxbug.dev/110922): Remove this logic when composite devices no longer surface
+      // this way in devfs.
+      const bool is_composite = std::visit(
+          overloaded{[](const NoRemote&) { return false; }, [](const Service&) { return false; },
+                     [](const Device& device) { return device.is_composite(); }},
+          this->target());
+      ZX_ASSERT_MSG(is_composite, "non-composite duplicate devfs element '%.*s': this=%p other=%p",
+                    static_cast<int>(name.size()), name.data(), this, &other.value());
+      parent_ = nullptr;
+      LOGF(WARNING, "skipping duplicate devfs element '%.*s': this=%p other=%p",
+           static_cast<int>(name.size()), name.data(), this, &other.value());
+      return;
+    }
   }
   parent.unpublished.push_back(this);
 }

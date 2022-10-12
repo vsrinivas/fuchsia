@@ -1009,7 +1009,7 @@ TEST_F(CompositeMetadataTestCase, FailGetMetadataFromParent) {
   size_t len = 0;
   ASSERT_NO_FATAL_FAILURE(AddCompositeDevice());
   fbl::RefPtr<Device> parent =
-      composite_device->composite()->bound_fragments().front().bound_device();
+      composite_device->composite()->get().bound_fragments().front().bound_device();
   ASSERT_EQ(
       platform_bus()->device->coordinator->GetMetadata(parent, kMetadataKey, nullptr, 0, &len),
       ZX_ERR_NOT_FOUND);

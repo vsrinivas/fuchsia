@@ -213,7 +213,7 @@ zx_status_t Device::Create(
 }
 
 zx_status_t Device::CreateComposite(
-    Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host, const CompositeDevice& composite,
+    Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host, CompositeDevice& composite,
     fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
     fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
     fbl::RefPtr<Device>* device) {
@@ -239,6 +239,7 @@ zx_status_t Device::CreateComposite(
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
+  dev->composite_ = composite;
 
   if (auto status = coordinator->inspect_manager().devfs()->Publish(dev); status.is_error()) {
     return status.error_value();

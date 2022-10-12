@@ -159,6 +159,7 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   using FragmentList = fbl::TaggedDoublyLinkedList<std::unique_ptr<CompositeDeviceFragment>,
                                                    CompositeDeviceFragment::ListTag>;
   FragmentList& bound_fragments() { return bound_fragments_; }
+  const FragmentList& bound_fragments() const { return bound_fragments_; }
 
  private:
   // Returns true if a fragment matches |dev|. Sets |*index_out| will be set to the

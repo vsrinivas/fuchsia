@@ -578,8 +578,8 @@ zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
       }
     }
     // search fragments of composite devices
-    if (current->is_composite()) {
-      for (auto& fragment : current->composite()->bound_fragments()) {
+    if (std::optional composite = current->composite(); composite.has_value()) {
+      for (auto& fragment : composite.value().get().bound_fragments()) {
         auto dev = fragment.bound_device();
         if (dev != nullptr) {
           if (GetMetadata(dev, type, buffer, buflen, size) == ZX_OK) {

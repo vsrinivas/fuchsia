@@ -122,8 +122,7 @@ class Device final
 
   // Create a new composite device.
   static zx_status_t CreateComposite(
-      Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
-      const CompositeDevice& composite,
+      Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host, CompositeDevice& composite,
       fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
       fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
       fbl::RefPtr<Device>* device);
@@ -214,17 +213,12 @@ class Device final
   fragments() {
     return fragments_;
   }
-  // If the device was created as a composite, this returns its description.
-  CompositeDevice* composite() const {
-    auto val = std::get_if<CompositeDevice*>(&composite_);
-    return val ? *val : nullptr;
+  std::optional<std::reference_wrapper<CompositeDevice>> composite() { return composite_; }
+  std::optional<std::reference_wrapper<const CompositeDevice>> composite() const {
+    return composite_;
   }
-  void set_composite(CompositeDevice* composite) {
-    ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
-    composite_ = composite;
-  }
-  bool is_composite() const { return composite() != nullptr; }
-  void disassociate_from_composite() { composite_ = UnassociatedWithComposite{}; }
+  bool is_composite() const { return composite_.has_value(); }
+  void disassociate_from_composite() { composite_.reset(); }
 
   void set_host(fbl::RefPtr<DriverHost> host);
   const fbl::RefPtr<DriverHost>& host() const { return host_; }
@@ -445,11 +439,7 @@ class Device final
   fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceListTag>
       fragments_;
 
-  // - If this device is a composite device, this is inhabited by
-  //   CompositeDevice* and it points to the composite that describes it.
-  // - Otherwise, it is inhabited by UnassociatedWithComposite
-  struct UnassociatedWithComposite {};
-  std::variant<UnassociatedWithComposite, CompositeDevice*> composite_;
+  std::optional<std::reference_wrapper<CompositeDevice>> composite_;
 
   fbl::RefPtr<DriverHost> host_;
   // The id of this device from the perspective of the driver_host.  This can be

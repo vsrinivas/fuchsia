@@ -348,7 +348,6 @@ zx_status_t CompositeDevice::TryAssemble() {
           });
 
   device_ = std::move(new_device);
-  device_->set_composite(this);
 
   // Add metadata
   for (size_t i = 0; i < metadata_.size(); i++) {

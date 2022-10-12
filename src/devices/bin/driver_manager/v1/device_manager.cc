@@ -243,11 +243,11 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
   }
 
   // Check if this device is a composite device, and if so disconnects from it
-  if (dev->composite()) {
-    CompositeDevice* composite = dev->composite();
-    for (auto itr = composite->bound_fragments().begin();
-         itr != composite->bound_fragments().end();) {
-      CompositeDeviceFragment& bound_fragment = *itr;
+  if (std::optional composite_opt = dev->composite(); composite_opt.has_value()) {
+    CompositeDevice& composite = composite_opt.value().get();
+    for (auto itr = composite.bound_fragments().begin();
+         itr != composite.bound_fragments().end();) {
+      const CompositeDeviceFragment& bound_fragment = *itr;
       // Advance the iterator because we will erase the current element from the list in Unbind.
       ++itr;
 
@@ -264,13 +264,13 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
       // Erase from the parent the fragment that matches this composite device.
       CompositeDeviceFragment* fragment =
           parent->fragments().erase_if([&composite](const CompositeDeviceFragment& fragment) {
-            return fragment.composite() == composite;
+            return fragment.composite() == &composite;
           });
       ZX_ASSERT_MSG(fragment != nullptr, "Unable to find fragment in bound device's fragments");
       fragment->Unbind();
     }
 
-    composite->Remove();
+    composite.Remove();
   }
 
   // Check if this device is a composite fragment device

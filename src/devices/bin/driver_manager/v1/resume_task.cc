@@ -31,9 +31,9 @@ bool ResumeTask::AddParentResumeTask() {
     // For a composite device, each fragment is a parent.
     // Until all the fragments resume, composite device cannot
     // be resumed.
-    if (device_->composite()) {
+    if (std::optional composite = device_->composite(); composite.has_value()) {
       bool parent_dependency_added = false;
-      for (auto& fragment : device_->composite()->bound_fragments()) {
+      for (const auto& fragment : composite.value().get().bound_fragments()) {
         auto dev = fragment.bound_device();
         if (dev != nullptr) {
           switch (dev->state()) {
