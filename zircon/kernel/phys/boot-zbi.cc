@@ -9,13 +9,12 @@
 #include <inttypes.h>
 #include <lib/arch/zbi-boot.h>
 #include <lib/memalloc/range.h>
+#include <lib/zbitl/item.h>
+#include <zircon/boot/image.h>
 
 #include <phys/stdio.h>
 #include <phys/symbolize.h>
 #include <pretty/cpp/sizes.h>
-
-#include "lib/zbitl/item.h"
-#include "zircon/boot/image.h"
 
 namespace {
 
@@ -125,7 +124,6 @@ fit::result<BootZbi::Error> BootZbi::Init(InputZbi arg_zbi) {
         ++it;
         continue;
     }
-
     // Any other item should not be the first item seen.
     break;
   }

@@ -44,6 +44,10 @@ import("//zircon/kernel/phys/test/phys_zbi_test.gni")
 #    - Type: string
 #    - Default: "kernel"
 #
+#  * boot_next
+#    - Optional: Generate an additional zbi target that will boot into '//zircon/kernel' when done.
+#    - Type: boolean
+#    - Default: false
 template("turducken_zbi_test") {
   turducken = target_name
   turkey = invoker.kernel
@@ -84,6 +88,15 @@ template("turducken_zbi_test") {
                              "sources",
                            ])
   }
+
+  boot_next = false
+  forward_variables_from(invoker, [ "boot_next" ])
+  if (boot_next) {
+    turducken_cuckoo_test("$target_name.cuckoo") {
+      boot_zbi = ":$target_name"
+      next_zbi = "//zircon/kernel"
+    }
+  }
 }
 
 # A Mobius Turducken test packs itself inside itself.
@@ -95,5 +108,56 @@ template("mobius_turducken_test") {
     if (toolchain_environment == "kernel.phys") {
       sources += get_target_outputs(kernel)
     }
+  }
+}
+
+# Creates a cuckoo zbi from a turducken test. That is a zbi that will boot into |next_zbi|
+# after the tuducken based zbi |boot_zbi| is done.
+#
+# Parameters
+#
+#  * boot_zbi
+#    - Required: label of the target producing the turducken zbi to be booted first.
+#    - Type: label
+#
+#  * next_zbi
+#    - Required: label of the target producing the zbi to be booted by the turducken harness when its done.
+#    - Type: label
+template("turducken_cuckoo_test") {
+  assert(defined(invoker.boot_zbi))
+  assert(defined(invoker.next_zbi))
+  forward_variables_from(invoker,
+                         [
+                           "next_zbi",
+                           "boot_zbi",
+                         ])
+
+  next_zbi_outputs = get_target_outputs(next_zbi)
+  next_zbi_file = ""
+  foreach(out, next_zbi_outputs) {
+    if (get_path_info(out, "extension") == "zbi") {
+      next_zbi_file = out
+    }
+  }
+  assert(next_zbi_file != "")
+
+  packed_next_zbi = "$target_name.next.zbi.input"
+  zbi_input(packed_next_zbi) {
+    testonly = true
+    sources = [ next_zbi_file ]
+    data_deps = [ next_zbi ]
+    type = "kernel"
+    args = [ "--compressed=zstd.max" ]
+  }
+
+  zbi_test(target_name) {
+    # NOSORT
+    deps = [
+      "$boot_zbi",
+      ":$packed_next_zbi",
+
+      # Arg to get turducken to boot the next kernel after its done.
+      "//zircon/kernel/phys/test:turducken-boot-next",
+    ]
   }
 }

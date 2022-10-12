@@ -14,6 +14,8 @@
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 
+#include <cstdint>
+
 #include <ktl/algorithm.h>
 #include <ktl/optional.h>
 #include <ktl/span.h>
@@ -22,11 +24,18 @@
 #include <phys/trampoline-boot.h>
 #include <phys/zbitl-allocation.h>
 
+#include "ktl/iterator.h"
 #include "test-main.h"
+#include "zircon/compiler.h"
 
 #include <ktl/enforce.h>
 
 namespace {
+
+// Whether after the test routine returns, should try and boot the
+// next kernel item.
+// Optional, default: false.
+constexpr ktl::string_view kBootNextOpt = "turducken.boot-next=";
 
 ktl::span<ktl::byte> GetZbi(void* zbi) {
   auto zbi_header = static_cast<const zbi_header_t*>(zbi);
@@ -201,13 +210,27 @@ int TestMain(void* zbi, arch::EarlyTicks entry_ticks) {
   TurduckenTest test(zbi, entry_ticks);
   test.LogCmdLineArguments();
 
+  // Check if we should boot the next kernel item, after
+  // booting test.Main.
+  auto maybe_opt = test.OptionWithPrefix(kBootNextOpt);
+  bool boot_next = false;
+  if (!!maybe_opt) {
+    boot_next = (maybe_opt == "true");
+  }
+
   auto kernel_item = test.boot_zbi().begin();
   while (kernel_item != test.boot_zbi().end() &&
          kernel_item->header->type != test.embedded_type()) {
     ++kernel_item;
   }
 
-  return test.Main(kernel_item);
+  if (const int test_result = test.Main(kernel_item); !boot_next || test_result != 0) {
+    return test_result;
+  }
+
+  test.Load(ktl::next(kernel_item), ktl::next(kernel_item, 2), test.boot_zbi().end());
+  test.Boot();
+  __UNREACHABLE;
 }
 
 void TurduckenTestBase::LogCmdLineArguments() {

@@ -343,6 +343,18 @@ if (current_toolchain != default_toolchain) {
     kernel = ":trampoline-boot-test"
   }
 
+  # Used for turducken_cuckoo_test(), instructing tuducken tests, when the tests finishes successfully
+  # it should boot the next kernel item in the boot zbi.
+  kernel_cmdline("turducken-boot-next") {
+    testonly = true
+    args = [ "turducken.boot-next=true" ]
+  }
+
+  turducken_cuckoo_test("turducken-boot-next-zbi-test") {
+    boot_zbi = ":turducken-zbi-test.zbi"
+    next_zbi = ":zbi-hello-world-test.zbi"
+  }
+
   group("test") {
     testonly = true
     deps = [
@@ -351,6 +363,7 @@ if (current_toolchain != default_toolchain) {
       ":hello-world-test",
       ":phys-unittests",
       ":trampoline-boot-zbi-test",
+      ":turducken-boot-next-zbi-test",
       ":turducken-zbi-test",
       ":zbi-chain-load-core-tests",
       ":zbi-chain-load-hello-world-test",
