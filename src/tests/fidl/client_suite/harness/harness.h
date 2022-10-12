@@ -16,6 +16,7 @@
 #include "src/tests/fidl/channel_util/channel.h"
 
 #define WAIT_UNTIL(condition) ASSERT_TRUE(_wait_until(condition));
+#define WAIT_UNTIL_CALLBACK_RUN() ASSERT_TRUE(_wait_until([&]() { return WasCallbackRun(); }));
 
 namespace client_suite {
 
@@ -121,6 +122,11 @@ class ClientTest : public ::loop_fixture::RealLoop, public ::testing::Test {
     return std::move(result_out.value());
   }
 
+  // Mark that the callback was run.
+  void MarkCallbackRun() { ran_callback_ = true; }
+  // Check whether the callback was run.
+  bool WasCallbackRun() const { return ran_callback_; }
+
  private:
   fidl_clientsuite::Test test_;
 
@@ -135,6 +141,8 @@ class ClientTest : public ::loop_fixture::RealLoop, public ::testing::Test {
       ajar_target_reporter_binding_;
   std::optional<fidl::ServerBindingRef<fidl_clientsuite::OpenTargetEventReporter>>
       open_target_reporter_binding_;
+
+  bool ran_callback_ = false;
 };
 
 }  // namespace client_suite

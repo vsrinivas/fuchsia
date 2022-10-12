@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include "fidl/fidl.clientsuite/cpp/common_types.h"
 #include "fidl/fidl.clientsuite/cpp/natural_types.h"
 #include "src/tests/fidl/client_suite/harness/harness.h"
@@ -27,7 +29,8 @@ const fidl_xunion_tag_t kResultUnionError = 2;
 const fidl_xunion_tag_t kResultUnionTransportError = 3;
 
 CLIENT_TEST(OneWayStrictSend) {
-  runner()->CallStrictOneWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallStrictOneWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().success().has_value());
   });
@@ -39,11 +42,12 @@ CLIENT_TEST(OneWayStrictSend) {
   };
   ASSERT_OK(server_end().read_and_check(bytes_out));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(OneWayFlexibleSend) {
-  runner()->CallFlexibleOneWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleOneWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().success().has_value());
   });
@@ -55,11 +59,12 @@ CLIENT_TEST(OneWayFlexibleSend) {
   };
   ASSERT_OK(server_end().read_and_check(bytes_out));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayStrictSend) {
-  runner()->CallStrictTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallStrictTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().success().has_value());
   });
@@ -78,11 +83,12 @@ CLIENT_TEST(TwoWayStrictSend) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayStrictSendMismatchedStrictness) {
-  runner()->CallStrictTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallStrictTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().success().has_value());
   });
@@ -101,11 +107,12 @@ CLIENT_TEST(TwoWayStrictSendMismatchedStrictness) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayStrictErrorSyntaxSendSuccessResponse) {
-  runner()->CallStrictTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallStrictTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().success().has_value());
   });
@@ -126,13 +133,14 @@ CLIENT_TEST(TwoWayStrictErrorSyntaxSendSuccessResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayStrictErrorSyntaxSendErrorResponse) {
   static constexpr int32_t kApplicationError = 39243320;
 
-  runner()->CallStrictTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallStrictTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().application_error().has_value());
     ASSERT_EQ(kApplicationError, result.value().application_error().value());
@@ -154,11 +162,12 @@ CLIENT_TEST(TwoWayStrictErrorSyntaxSendErrorResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayStrictErrorSyntaxSendUnknownMethodResponse) {
-  runner()->CallStrictTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallStrictTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kDecodingError, result.value().fidl_error().value());
@@ -180,11 +189,12 @@ CLIENT_TEST(TwoWayStrictErrorSyntaxSendUnknownMethodResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayStrictErrorSyntaxSendMismatchedStrictnessUnknownMethodResponse) {
-  runner()->CallStrictTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallStrictTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kDecodingError, result.value().fidl_error().value());
@@ -206,11 +216,12 @@ CLIENT_TEST(TwoWayStrictErrorSyntaxSendMismatchedStrictnessUnknownMethodResponse
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleSendSuccessResponse) {
-  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().success().has_value());
   });
@@ -231,11 +242,12 @@ CLIENT_TEST(TwoWayFlexibleSendSuccessResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleSendErrorResponse) {
-  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kDecodingError, result.value().fidl_error().value());
@@ -257,11 +269,12 @@ CLIENT_TEST(TwoWayFlexibleSendErrorResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleSendUnknownMethodResponse) {
-  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kUnknownMethod, result.value().fidl_error().value());
@@ -283,11 +296,12 @@ CLIENT_TEST(TwoWayFlexibleSendUnknownMethodResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleSendMismatchedStrictnessUnknownMethodResponse) {
-  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kUnknownMethod, result.value().fidl_error().value());
@@ -309,11 +323,12 @@ CLIENT_TEST(TwoWayFlexibleSendMismatchedStrictnessUnknownMethodResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleSendOtherTransportErrResponse) {
-  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleTwoWay({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kDecodingError, result.value().fidl_error().value());
@@ -335,7 +350,7 @@ CLIENT_TEST(TwoWayFlexibleSendOtherTransportErrResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleSendNonEmptyPayloadSuccessResponse) {
@@ -343,7 +358,8 @@ CLIENT_TEST(TwoWayFlexibleSendNonEmptyPayloadSuccessResponse) {
 
   runner()
       ->CallFlexibleTwoWayFields({{.target = TakeOpenClient()}})
-      .ThenExactlyOnce([](auto result) {
+      .ThenExactlyOnce([&](auto result) {
+        MarkCallbackRun();
         ASSERT_TRUE(result.is_ok()) << result.error_value();
         ASSERT_TRUE(result.value().success().has_value());
         ASSERT_EQ(fidl_clientsuite::NonEmptyPayload(kSomeFieldValue),
@@ -367,13 +383,14 @@ CLIENT_TEST(TwoWayFlexibleSendNonEmptyPayloadSuccessResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleSendNonEmptyPayloadUnknownMethodResponse) {
   runner()
       ->CallFlexibleTwoWayFields({{.target = TakeOpenClient()}})
-      .ThenExactlyOnce([](auto result) {
+      .ThenExactlyOnce([&](auto result) {
+        MarkCallbackRun();
         ASSERT_TRUE(result.is_ok()) << result.error_value();
         ASSERT_TRUE(result.value().fidl_error().has_value());
         ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kUnknownMethod,
@@ -397,11 +414,12 @@ CLIENT_TEST(TwoWayFlexibleSendNonEmptyPayloadUnknownMethodResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendSuccessResponse) {
-  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().success().has_value());
   });
@@ -422,12 +440,14 @@ CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendSuccessResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendErrorResponse) {
   static constexpr int32_t kApplicationError = 1456681;
-  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+
+  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().application_error().has_value());
     ASSERT_EQ(kApplicationError, result.value().application_error().value());
@@ -449,11 +469,12 @@ CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendErrorResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendUnknownMethodResponse) {
-  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kUnknownMethod, result.value().fidl_error().value());
@@ -475,11 +496,12 @@ CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendUnknownMethodResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendMismatchedStrictnessUnknownMethodResponse) {
-  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kUnknownMethod, result.value().fidl_error().value());
@@ -501,11 +523,12 @@ CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendMismatchedStrictnessUnknownMethodRespon
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendOtherTransportErrResponse) {
-  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([](auto result) {
+  runner()->CallFlexibleTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
+    MarkCallbackRun();
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kDecodingError, result.value().fidl_error().value());
@@ -527,14 +550,16 @@ CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendOtherTransportErrResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendNonEmptyPayloadSuccessResponse) {
   static constexpr int32_t kSomeFieldValue = 670705054;
+
   runner()
       ->CallFlexibleTwoWayFieldsErr({{.target = TakeOpenClient()}})
-      .ThenExactlyOnce([](auto result) {
+      .ThenExactlyOnce([&](auto result) {
+        MarkCallbackRun();
         ASSERT_TRUE(result.is_ok()) << result.error_value();
         ASSERT_TRUE(result.value().success().has_value());
         ASSERT_EQ(fidl_clientsuite::NonEmptyPayload(kSomeFieldValue),
@@ -558,13 +583,14 @@ CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendNonEmptyPayloadSuccessResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendNonEmptyPayloadUnknownMethodResponse) {
   runner()
       ->CallFlexibleTwoWayFieldsErr({{.target = TakeOpenClient()}})
-      .ThenExactlyOnce([](auto result) {
+      .ThenExactlyOnce([&](auto result) {
+        MarkCallbackRun();
         ASSERT_TRUE(result.is_ok()) << result.error_value();
         ASSERT_TRUE(result.value().fidl_error().has_value());
         ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kUnknownMethod,
@@ -588,7 +614,7 @@ CLIENT_TEST(TwoWayFlexibleErrorSyntaxSendNonEmptyPayloadUnknownMethodResponse) {
   };
   ASSERT_OK(server_end().write(bytes_in));
 
-  RunLoopUntilIdle();
+  WAIT_UNTIL_CALLBACK_RUN();
 }
 
 CLIENT_TEST(ReceiveStrictEvent) {
