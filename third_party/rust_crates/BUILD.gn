@@ -107,7 +107,7 @@ group("bincode") {
 }
 
 group("bitfield") {
-  public_deps = [ ":bitfield-v0_13_1" ]
+  public_deps = [ ":bitfield-v0_14_0" ]
 }
 
 group("bitflags") {
@@ -1915,10 +1915,10 @@ rust_library("bit-vec-v0_5_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("bitfield-v0_13_1") {
+rust_library("bitfield-v0_14_0") {
   crate_name = "bitfield"
   crate_root = "//third_party/rust_crates/vendor/bitfield/src/lib.rs"
-  output_name = "bitfield-1fad8370b10e06b"
+  output_name = "bitfield-36a15d1ed087f920"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -1928,8 +1928,8 @@ rust_library("bitfield-v0_13_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=1fad8370b10e06b",
-    "-Cextra-filename=-1fad8370b10e06b",
+    "-Cmetadata=36a15d1ed087f920",
+    "-Cextra-filename=-36a15d1ed087f920",
   ]
 
   visibility = [ ":*" ]

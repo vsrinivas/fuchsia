@@ -5,7 +5,7 @@ extern crate bitfield;
 
 use std::net::Ipv4Addr;
 
-bitfield!{
+bitfield! {
     struct IpV4Header(MSB0 [u8]);
     impl Debug;
     u32;
@@ -14,18 +14,18 @@ bitfield!{
     get_dscp, _: 13, 8;
     get_ecn, _: 15, 14;
     get_total_length, _: 31, 16;
-    get_identification, _: 47, 31;
+    get_identification, _: 47, 32;
     get_df, _: 49;
     get_mf, _: 50;
     get_fragment_offset, _: 63, 51;
     get_time_to_live, _: 71, 64;
     get_protocol, _: 79, 72;
-    get_header_checksum, _: 95, 79;
+    get_header_checksum, _: 95, 80;
     u8, get_source_address, _: 103, 96, 4;
     u32, into Ipv4Addr, get_destination_address, _: 159, 128;
 }
 
-impl<T: AsRef<[u8]> + AsMut<[u8]>> IpV4Header<T> {
+impl<T: AsRef<[u8]>> IpV4Header<T> {
     fn get_source_as_ip_addr(&self) -> Ipv4Addr {
         let mut src = [0; 4];
         for (i, src) in src.iter_mut().enumerate() {

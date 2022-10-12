@@ -1,3 +1,6 @@
+#![recursion_limit = "128"]
+#![allow(clippy::cognitive_complexity)]
+
 #[macro_use]
 extern crate bitfield;
 
@@ -10,6 +13,12 @@ pub struct Foo(u16);
 impl From<u8> for Foo {
     fn from(value: u8) -> Foo {
         Foo(u16::from(value))
+    }
+}
+
+impl From<Foo> for u8 {
+    fn from(value: Foo) -> u8 {
+        value.0 as u8
     }
 }
 
@@ -37,18 +46,19 @@ bitfield! {
     _, setter_only_array: 2*THREE, 4, 3;
     all_bits, set_all_bits: 31, 0;
     single_bit, set_single_bit: 3;
-    #[allow(dead_code)]
     u8, into Foo, into_foo1, set_into_foo1: 31, 31;
-    #[allow(dead_code)]
     pub u8, into Foo, into_foo2, set_into_foo2: 31, 31;
+    u8, from into Foo, from_foo1, set_from_foo1: 31, 31;
+    u8, from into Foo, _, set_from_foo2: 31, 31;
     u8;
-    #[allow(dead_code)]
     into Foo, into_foo3, set_into_foo3: 31, 31;
-    #[allow(dead_code)]
     pub into Foo, into_foo4, set_into_foo4: 31, 31;
-    #[allow(dead_code)]
     into Foo, _, set_into_foo5: 31, 31;
     into Foo, into_foo6, _: 29, 29, 3;
+    from into Foo, from_foo3, set_from_foo3: 31, 31;
+    from into Foo, _, set_from_foo4: 31, 31;
+    from into Foo, from_foo5, set_from_foo5: 29, 29, 3;
+    from into Foo, from_foo6, _: 31, 31;
     i8;
     signed_single_bit, set_signed_single_bit: 0, 0;
     signed_two_bits, set_signed_two_bits: 1, 0;
@@ -59,12 +69,12 @@ bitfield! {
 }
 
 impl FooBar {
-    bitfield_fields!{
+    bitfield_fields! {
         // Boolean field don't need a type
         foo7, _: 1;
     }
 
-    bitfield_fields!{
+    bitfield_fields! {
         // If all fields have a type, we don't need to specify a default type
         u8, foo8,_: 1, 0;
         u32, foo9, _: 2, 0;
@@ -79,7 +89,7 @@ impl FooBar {
     }
 
     // Check if an empty bitfield_fields compiles without errors.
-    bitfield_fields!{}
+    bitfield_fields! {}
 }
 
 #[test]
@@ -224,9 +234,8 @@ fn test_array_field2() {
     assert_eq!(7, fb.foo6(2));
 }
 
-#[allow(unknown_lints)]
-#[allow(identity_op)]
-#[allow(erasing_op)]
+#[allow(clippy::identity_op)]
+#[allow(clippy::erasing_op)]
 #[test]
 fn test_setter_only_array() {
     let mut fb = FooBar(0);
@@ -384,6 +393,10 @@ fn test_field_type() {
     let _: Foo = fb.into_foo4();
     let _: Foo = fb.into_foo6(0);
 
+    let _: Foo = fb.from_foo1();
+    let _: Foo = fb.from_foo3();
+    let _: Foo = fb.from_foo5(0);
+
     let _: i8 = fb.signed_single_bit();
     let _: i8 = fb.signed_two_bits();
     let _: i8 = fb.signed_eight_bits();
@@ -391,6 +404,46 @@ fn test_field_type() {
 
     let _: u128 = fb.u128_getter();
     let _: i128 = fb.i128_getter();
+}
+
+#[test]
+fn test_into_setter() {
+    let mut fb = FooBar(0);
+
+    // We just check that the parameter type is correct
+    fb.set_into_foo1(0u8);
+    fb.set_into_foo2(0u8);
+    fb.set_into_foo3(0u8);
+    fb.set_into_foo4(0u8);
+}
+
+#[test]
+fn test_from_setter() {
+    let mut fb = FooBar(0);
+    assert_eq!(0, fb.0);
+
+    fb.set_from_foo1(Foo(1));
+    assert_eq!(1 << 31, fb.0);
+    fb.set_from_foo1(Foo(0));
+    assert_eq!(0, fb.0);
+
+    fb.set_from_foo2(Foo(1));
+    assert_eq!(1 << 31, fb.0);
+    fb.set_from_foo2(Foo(0));
+    assert_eq!(0, fb.0);
+
+    fb.set_from_foo3(Foo(1));
+    assert_eq!(1 << 31, fb.0);
+    fb.set_from_foo3(Foo(0));
+    assert_eq!(0, fb.0);
+
+    fb.set_from_foo4(Foo(1));
+    assert_eq!(1 << 31, fb.0);
+    fb.set_from_foo4(Foo(0));
+    assert_eq!(0, fb.0);
+
+    fb.set_from_foo5(1, Foo(1));
+    assert_eq!(1 << 30, fb.0);
 }
 
 #[test]
@@ -417,13 +470,7 @@ fn test_is_copy() {
 #[test]
 fn test_debug() {
     let fb = FooBar(1_234_567_890);
-    let expected = "FooBar { .0: 1234567890, foo1: 0, foo2: 0, foo3: 2, foo3: 2, foo4: 4, foo5: [0\
-                    , 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0\
-                    , 1, 0, 0, 1, 0], foo6: [2, 3, 1], getter_only: 1, getter_only_array: [2, 3, 1]\
-                    , all_bits: 1234567890, single_bit: false, into_foo1: Foo(0), into_foo2: Foo(0)\
-                    , into_foo3: Foo(0), into_foo4: Foo(0), into_foo6: [Foo(0), Foo(1), Foo(0)], \
-                    signed_single_bit: 0, signed_two_bits: -2, signed_eight_bits: -46, \
-                    signed_eight_bits_unaligned: 105, u128_getter: 105, i128_getter: 105 }";
+    let expected = "FooBar { .0: 1234567890, foo1: 0, foo2: 0, foo3: 2, foo3: 2, foo4: 4, foo5: [0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0], foo6: [2, 3, 1], getter_only: 1, getter_only_array: [2, 3, 1], all_bits: 1234567890, single_bit: false, into_foo1: Foo(0), into_foo2: Foo(0), from_foo1: Foo(0), into_foo3: Foo(0), into_foo4: Foo(0), into_foo6: [Foo(0), Foo(1), Foo(0)], from_foo3: Foo(0), from_foo5: [Foo(0), Foo(1), Foo(0)], from_foo6: Foo(0), signed_single_bit: 0, signed_two_bits: -2, signed_eight_bits: -46, signed_eight_bits_unaligned: 105, u128_getter: 105, i128_getter: 105 }";
     assert_eq!(expected, format!("{:?}", fb))
 }
 
@@ -725,7 +772,6 @@ mod some_module {
         pub u32, field11, set_field11: 1, 1;
         pub u32, field12, set_field12: 1, 1, 1;
     }
-
 }
 
 #[test]
@@ -761,14 +807,14 @@ fn field_can_be_public() {
 // in most of the possible ways.
 #[allow(dead_code)]
 mod test_types {
-    use bitfield::BitRange;
+    use bitfield::{BitRange, BitRangeMut};
     use std;
     use std::sync::atomic::{self, AtomicUsize};
 
     struct Foo;
 
     impl Foo {
-        bitfield_fields!{
+        bitfield_fields! {
             std::sync::atomic::AtomicUsize, field1, set_field1: 0, 0;
             std::sync::atomic::AtomicUsize;
             field2, set_field2: 0, 0;
@@ -806,6 +852,9 @@ mod test_types {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> AtomicUsize {
             AtomicUsize::new(0)
         }
+    }
+
+    impl BitRangeMut<AtomicUsize> for Foo {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: AtomicUsize) {}
     }
 
@@ -813,6 +862,9 @@ mod test_types {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> Vec<AtomicUsize> {
             vec![AtomicUsize::new(0)]
         }
+    }
+
+    impl BitRangeMut<Vec<AtomicUsize>> for Foo {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: Vec<AtomicUsize>) {}
     }
 
@@ -820,6 +872,9 @@ mod test_types {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> &'a str {
             ""
         }
+    }
+
+    impl<'a> BitRangeMut<&'a str> for Foo {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: &'a str) {}
     }
 
@@ -851,11 +906,11 @@ mod test_types {
 
 #[allow(dead_code)]
 mod test_no_default_bitrange {
-    use bitfield::BitRange;
+    use bitfield::{BitRange, BitRangeMut};
     use std::fmt::Debug;
     use std::fmt::Error;
     use std::fmt::Formatter;
-    bitfield!{
+    bitfield! {
       #[derive(Eq, PartialEq)]
       pub struct BitField1(u16);
       no default BitRange;
@@ -870,13 +925,15 @@ mod test_no_default_bitrange {
         fn bit_range(&self, msb: usize, lsb: usize) -> u8 {
             (msb + lsb) as u8
         }
+    }
+
+    impl BitRangeMut<u8> for BitField1 {
         fn set_bit_range(&mut self, msb: usize, lsb: usize, value: u8) {
             self.0 = msb as u16 + lsb as u16 + u16::from(value)
         }
     }
 
-    #[allow(unknown_lints)]
-    #[allow(identity_op)]
+    #[allow(clippy::identity_op)]
     #[test]
     fn custom_bitrange_implementation_is_used() {
         let mut bf = BitField1(0);
@@ -887,7 +944,7 @@ mod test_no_default_bitrange {
         assert_eq!(bf, BitField1(10 + 0 + 42));
     }
 
-    bitfield!{
+    bitfield! {
       pub struct BitField2(u16);
       no default BitRange;
       u8;
@@ -900,6 +957,9 @@ mod test_no_default_bitrange {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> u8 {
             0
         }
+    }
+
+    impl BitRangeMut<u8> for BitField2 {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: u8) {}
     }
 
@@ -925,10 +985,13 @@ mod test_no_default_bitrange {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> u8 {
             0
         }
+    }
+
+    impl BitRangeMut<u8> for BitField3 {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: u8) {}
     }
 
-    bitfield!{
+    bitfield! {
       #[derive(Eq, PartialEq)]
       pub struct BitField4([u16]);
       no default BitRange;
@@ -943,10 +1006,13 @@ mod test_no_default_bitrange {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> u8 {
             0
         }
+    }
+
+    impl<T> BitRangeMut<u8> for BitField4<T> {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: u8) {}
     }
 
-    bitfield!{
+    bitfield! {
       pub struct BitField5([u16]);
       no default BitRange;
       u8;
@@ -959,6 +1025,9 @@ mod test_no_default_bitrange {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> u8 {
             0
         }
+    }
+
+    impl<T> BitRangeMut<u8> for BitField5<T> {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: u8) {}
     }
 
@@ -984,10 +1053,13 @@ mod test_no_default_bitrange {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> u8 {
             0
         }
+    }
+
+    impl<T> BitRangeMut<u8> for BitField6<T> {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: u8) {}
     }
 
-    bitfield!{
+    bitfield! {
       #[derive(Eq, PartialEq)]
       pub struct BitField7(MSB0 [u16]);
       no default BitRange;
@@ -1002,10 +1074,13 @@ mod test_no_default_bitrange {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> u8 {
             0
         }
+    }
+
+    impl<T> BitRangeMut<u8> for BitField7<T> {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: u8) {}
     }
 
-    bitfield!{
+    bitfield! {
       pub struct BitField8(MSB0 [u16]);
       no default BitRange;
       u8;
@@ -1018,6 +1093,9 @@ mod test_no_default_bitrange {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> u8 {
             0
         }
+    }
+
+    impl<T> BitRangeMut<u8> for BitField8<T> {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: u8) {}
     }
 
@@ -1043,6 +1121,9 @@ mod test_no_default_bitrange {
         fn bit_range(&self, _msb: usize, _lsb: usize) -> u8 {
             0
         }
+    }
+
+    impl<T> BitRangeMut<u8> for BitField9<T> {
         fn set_bit_range(&mut self, _msb: usize, _lsb: usize, _value: u8) {}
     }
 

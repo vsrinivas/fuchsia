@@ -5,7 +5,6 @@
     unused_import_braces,
     unused_qualifications
 )]
-
 //!  This crate provides macros to generate bitfield-like struct.
 //!
 //!  See the documentation of the macros for how to use them.
@@ -59,6 +58,7 @@
 /// # struct FooBar(u64);
 /// # bitfield_bitrange!{struct FooBar(u64)}
 /// # impl From<u32> for FooBar{ fn from(_: u32) -> FooBar {unimplemented!()}}
+/// # impl From<FooBar> for u32{ fn from(_: FooBar) -> u32 {unimplemented!()}}
 /// # impl FooBar {
 /// bitfield_fields!{
 ///     // The default type will be `u64
@@ -71,41 +71,46 @@
 ///     // `field3` will be read as an `u32` and then converted to `FooBar`.
 ///     // The setter is not affected, it still need an `u32` value.
 ///     u32, into FooBar, field3, set_field3: 10, 0;
+///     // `field4` will be read as an `u32` and then converted to `FooBar`.
+///     // The setter will take a `FooBar`, and converted back to an `u32`.
+///     u32, from into FooBar, field4, set_field4: 10, 0;
 /// }
 /// # }
 /// ```
 #[macro_export(local_inner_macros)]
 macro_rules! bitfield_fields {
-    (@field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $into:ty, _, $setter:ident: $msb:expr,
+    (only setter; @field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $from:ty, $into:ty, _, $setter:ident: $msb:expr,
      $lsb:expr, $count:expr) => {
         $(#[$attribute])*
         #[allow(unknown_lints)]
         #[allow(eq_op)]
-        $($vis)* fn $setter(&mut self, index: usize, value: $t) {
-            use $crate::BitRange;
+        $($vis)* fn $setter(&mut self, index: usize, value: $from) {
+            use $crate::BitRangeMut;
             __bitfield_debug_assert!(index < $count);
             let width = $msb - $lsb + 1;
             let lsb = $lsb + index*width;
             let msb = lsb + width - 1;
-            self.set_bit_range(msb, lsb, value);
+            self.set_bit_range(msb, lsb, $crate::Into::<$t>::into(value));
         }
     };
-    (@field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $into:ty, _, $setter:ident: $msb:expr,
+    (only setter; @field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $from:ty, $into:ty, _, $setter:ident: $msb:expr,
      $lsb:expr) => {
         $(#[$attribute])*
-        $($vis)* fn $setter(&mut self, value: $t) {
-            use $crate::BitRange;
-            self.set_bit_range($msb, $lsb, value);
+        $($vis)* fn $setter(&mut self, value: $from) {
+            use $crate::BitRangeMut;
+            self.set_bit_range($msb, $lsb, $crate::Into::<$t>::into(value));
         }
     };
-    (@field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $into:ty, _, $setter:ident: $bit:expr) => {
+    (only setter; @field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $from:ty, $into:ty, _, $setter:ident: $bit:expr) => {
         $(#[$attribute])*
         $($vis)* fn $setter(&mut self, value: bool) {
-            use $crate::Bit;
+            use $crate::BitMut;
             self.set_bit($bit, value);
         }
     };
-    (@field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $into:ty, $getter:ident, _: $msb:expr,
+    (only getter; @field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $from:ty, $into:ty, _, $setter:ident: $($exprs:expr),*) => {};
+
+    (only getter; @field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $from:ty, $into:ty, $getter:ident, _: $msb:expr,
      $lsb:expr, $count:expr) => {
         $(#[$attribute])*
         #[allow(unknown_lints)]
@@ -120,7 +125,7 @@ macro_rules! bitfield_fields {
             $crate::Into::into(raw_value)
         }
     };
-    (@field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $into:ty, $getter:ident, _: $msb:expr,
+    (only getter; @field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $from:ty, $into:ty, $getter:ident, _: $msb:expr,
      $lsb:expr) => {
         $(#[$attribute])*
         $($vis)* fn $getter(&self) -> $into {
@@ -129,83 +134,112 @@ macro_rules! bitfield_fields {
             $crate::Into::into(raw_value)
         }
     };
-    (@field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $into:ty, $getter:ident, _: $bit:expr) => {
+    (only getter; @field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $from:ty, $into:ty, $getter:ident, _: $bit:expr) => {
         $(#[$attribute])*
         $($vis)* fn $getter(&self) -> bool {
             use $crate::Bit;
             self.bit($bit)
         }
     };
-    (@field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $into:ty, $getter:ident, $setter:ident:
+    (only setter; @field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $from:ty, $into:ty, $getter:ident, _: $($exprs:expr),*) => {};
+
+    (only $only:tt; @field $(#[$attribute:meta])* ($($vis:tt)*) $t:ty, $from:ty, $into:ty, $getter:ident, $setter:ident:
      $($exprs:expr),*) => {
-        bitfield_fields!(@field $(#[$attribute])* ($($vis)*) $t, $into, $getter, _: $($exprs),*);
-        bitfield_fields!(@field $(#[$attribute])* ($($vis)*) $t, $into, _, $setter: $($exprs),*);
+        bitfield_fields!(only $only; @field $(#[$attribute])* ($($vis)*) $t, $from, $into, $getter, _: $($exprs),*);
+        bitfield_fields!(only $only; @field $(#[$attribute])* ($($vis)*) $t, $from, $into, _, $setter: $($exprs),*);
     };
 
-    ($t:ty;) => {};
-    ($default_ty:ty; pub $($rest:tt)*) => {
-        bitfield_fields!{$default_ty; () pub $($rest)*}
+    (only $only:tt; $t:ty;) => {};
+    (only $only:tt; $default_ty:ty; pub $($rest:tt)*) => {
+        bitfield_fields!{only $only; $default_ty; () pub $($rest)*}
     };
-    ($default_ty:ty; #[$attribute:meta] $($rest:tt)*) => {
-        bitfield_fields!{$default_ty; (#[$attribute]) $($rest)*}
+    (only $only:tt; $default_ty:ty; #[$attribute:meta] $($rest:tt)*) => {
+        bitfield_fields!{only $only; $default_ty; (#[$attribute]) $($rest)*}
     };
-    ($default_ty:ty; ($(#[$attributes:meta])*) #[$attribute:meta] $($rest:tt)*) => {
-        bitfield_fields!{$default_ty; ($(#[$attributes])* #[$attribute]) $($rest)*}
+    (only $only:tt; $default_ty:ty; ($(#[$attributes:meta])*) #[$attribute:meta] $($rest:tt)*) => {
+        bitfield_fields!{only $only; $default_ty; ($(#[$attributes])* #[$attribute]) $($rest)*}
     };
-    ($default_ty:ty; ($(#[$attribute:meta])*) pub $t:ty, into $into:ty, $getter:tt, $setter:tt:
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) pub $t:ty, from into $into:ty, $getter:tt, $setter:tt:
      $($exprs:expr),*; $($rest:tt)*) => {
-        bitfield_fields!{@field $(#[$attribute])* (pub) $t, $into, $getter, $setter: $($exprs),*}
-        bitfield_fields!{$default_ty; $($rest)*}
+        bitfield_fields!{only $only; @field $(#[$attribute])* (pub) $t, $into, $into, $getter, $setter: $($exprs),*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
     };
-    ($default_ty:ty; ($(#[$attribute:meta])*) pub $t:ty, $getter:tt, $setter:tt:  $($exprs:expr),*;
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) pub $t:ty, into $into:ty, $getter:tt, $setter:tt:
+     $($exprs:expr),*; $($rest:tt)*) => {
+        bitfield_fields!{only $only; @field $(#[$attribute])* (pub) $t, $t, $into, $getter, $setter: $($exprs),*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
+    };
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) pub $t:ty, $getter:tt, $setter:tt:  $($exprs:expr),*;
      $($rest:tt)*) => {
-        bitfield_fields!{@field $(#[$attribute])* (pub) $t, $t, $getter, $setter: $($exprs),*}
-        bitfield_fields!{$default_ty; $($rest)*}
+        bitfield_fields!{only $only; @field $(#[$attribute])* (pub) $t, $t, $t, $getter, $setter: $($exprs),*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
     };
-    ($default_ty:ty; ($(#[$attribute:meta])*) pub into $into:ty, $getter:tt, $setter:tt:
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) pub from into $into:ty, $getter:tt, $setter:tt:
      $($exprs:expr),*; $($rest:tt)*) => {
-        bitfield_fields!{@field $(#[$attribute])* (pub) $default_ty, $into, $getter, $setter:
+        bitfield_fields!{only $only; @field $(#[$attribute])* (pub) $default_ty, $into, $into, $getter, $setter:
                          $($exprs),*}
-        bitfield_fields!{$default_ty; $($rest)*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
     };
-    ($default_ty:ty; ($(#[$attribute:meta])*) pub $getter:tt, $setter:tt:  $($exprs:expr),*;
-     $($rest:tt)*) => {
-        bitfield_fields!{@field $(#[$attribute])* (pub) $default_ty, $default_ty, $getter, $setter:
-                                $($exprs),*}
-        bitfield_fields!{$default_ty; $($rest)*}
-    };
-
-    ($default_ty:ty; ($(#[$attribute:meta])*) $t:ty, into $into:ty, $getter:tt, $setter:tt:
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) pub into $into:ty, $getter:tt, $setter:tt:
      $($exprs:expr),*; $($rest:tt)*) => {
-        bitfield_fields!{@field $(#[$attribute])* () $t, $into, $getter, $setter: $($exprs),*}
-        bitfield_fields!{$default_ty; $($rest)*}
-    };
-
-    ($default_ty:ty; ($(#[$attribute:meta])*) $t:ty, $getter:tt, $setter:tt:  $($exprs:expr),*;
-     $($rest:tt)*) => {
-        bitfield_fields!{@field $(#[$attribute])* () $t, $t, $getter, $setter: $($exprs),*}
-        bitfield_fields!{$default_ty; $($rest)*}
-    };
-    ($default_ty:ty; ($(#[$attribute:meta])*) into $into:ty, $getter:tt, $setter:tt:
-     $($exprs:expr),*; $($rest:tt)*) => {
-        bitfield_fields!{@field $(#[$attribute])* () $default_ty, $into, $getter, $setter:
+        bitfield_fields!{only $only; @field $(#[$attribute])* (pub) $default_ty, $default_ty, $into, $getter, $setter:
                          $($exprs),*}
-        bitfield_fields!{$default_ty; $($rest)*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
     };
-    ($default_ty:ty; ($(#[$attribute:meta])*) $getter:tt, $setter:tt:  $($exprs:expr),*;
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) pub $getter:tt, $setter:tt:  $($exprs:expr),*;
      $($rest:tt)*) => {
-        bitfield_fields!{@field $(#[$attribute])* () $default_ty, $default_ty, $getter, $setter:
+        bitfield_fields!{only $only; @field $(#[$attribute])* (pub) $default_ty, $default_ty, $default_ty, $getter, $setter:
                                 $($exprs),*}
-        bitfield_fields!{$default_ty; $($rest)*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
     };
-    ($previous_default_ty:ty; $default_ty:ty; $($rest:tt)*) => {
-        bitfield_fields!{$default_ty; $($rest)*}
+
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) $t:ty, from into $into:ty, $getter:tt, $setter:tt:
+     $($exprs:expr),*; $($rest:tt)*) => {
+        bitfield_fields!{only $only; @field $(#[$attribute])* () $t, $into, $into, $getter, $setter: $($exprs),*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
     };
-    ($default_ty:ty; $($rest:tt)*) => {
-        bitfield_fields!{$default_ty; () $($rest)*}
+
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) $t:ty, into $into:ty, $getter:tt, $setter:tt:
+     $($exprs:expr),*; $($rest:tt)*) => {
+        bitfield_fields!{only $only; @field $(#[$attribute])* () $t, $t, $into, $getter, $setter: $($exprs),*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
+    };
+
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) $t:ty, $getter:tt, $setter:tt:  $($exprs:expr),*;
+     $($rest:tt)*) => {
+        bitfield_fields!{only $only; @field $(#[$attribute])* () $t, $t, $t, $getter, $setter: $($exprs),*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
+    };
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) from into $into:ty, $getter:tt, $setter:tt:
+     $($exprs:expr),*; $($rest:tt)*) => {
+        bitfield_fields!{only $only; @field $(#[$attribute])* () $default_ty, $into, $into, $getter, $setter:
+                         $($exprs),*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
+    };
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) into $into:ty, $getter:tt, $setter:tt:
+     $($exprs:expr),*; $($rest:tt)*) => {
+        bitfield_fields!{only $only; @field $(#[$attribute])* () $default_ty, $default_ty, $into, $getter, $setter:
+                         $($exprs),*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
+    };
+    (only $only:tt; $default_ty:ty; ($(#[$attribute:meta])*) $getter:tt, $setter:tt:  $($exprs:expr),*;
+     $($rest:tt)*) => {
+        bitfield_fields!{only $only; @field $(#[$attribute])* () $default_ty, $default_ty, $default_ty, $getter, $setter:
+                                $($exprs),*}
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
+    };
+    (only $only:tt; $previous_default_ty:ty; $default_ty:ty; $($rest:tt)*) => {
+        bitfield_fields!{only $only; $default_ty; $($rest)*}
+    };
+    (only $only:tt; $default_ty:ty; $($rest:tt)*) => {
+        bitfield_fields!{only $only; $default_ty; () $($rest)*}
+    };
+    (only $only:tt; $($rest:tt)*) => {
+        bitfield_fields!{only $only; SET_A_DEFAULT_TYPE_OR_SPECIFY_THE_TYPE_FOR_EACH_FIELDS; $($rest)*}
     };
     ($($rest:tt)*) => {
-        bitfield_fields!{SET_A_DEFAULT_TYPE_OR_SPECIFY_THE_TYPE_FOR_EACH_FIELDS; $($rest)*}
+        bitfield_fields!{only getter; $($rest)*}
+        bitfield_fields!{only setter; $($rest)*}
     }
 }
 
@@ -283,6 +317,9 @@ macro_rules! bitfield_debug {
         $debug_struct.field(__bitfield_stringify!($getter), &$self.$getter());
         bitfield_debug!{$debug_struct, $self, $($rest)*}
     };
+    ($debug_struct:ident, $self:ident, from into $into:ty, $($rest:tt)*) => {
+        bitfield_debug!{$debug_struct, $self, $($rest)*}
+    };
     ($debug_struct:ident, $self:ident, into $into:ty, $($rest:tt)*) => {
         bitfield_debug!{$debug_struct, $self, $($rest)*}
     };
@@ -292,7 +329,7 @@ macro_rules! bitfield_debug {
     ($debug_struct:ident, $self:ident, ) => {};
 }
 
-/// Implements `BitRange` for a tuple struct (or "newtype").
+/// Implements `BitRange` and `BitRangeMut` for a tuple struct (or "newtype").
 ///
 /// This macro will generate an implementation of the `BitRange` trait for an existing single
 /// element tuple struct.
@@ -302,7 +339,7 @@ macro_rules! bitfield_debug {
 ///
 /// The difference with a normal "newtype" is the type in parentheses. If the type is `[t]` (where
 /// `t` is any of the unsigned integer type), the "newtype" will be generic and implement
-/// `BitRange` for `T: AsMut<[t]> + AsRef<[t]>` (for example a slice, an array or a `Vec`). You can
+/// `BitRange` for `T: AsRef<[t]>` and `BitRangeMut` for `T: AsMut<[t]>` (for example a slice, an array or a `Vec`). You can
 /// also use `MSB0 [t]`. The difference will be the positions of the bit. You can use the
 /// `bits_positions` example to see where each bits is. If the type is neither of this two, the
 /// "newtype" will wrap a value of the specified type and implements `BitRange` the same ways as
@@ -326,7 +363,7 @@ macro_rules! bitfield_debug {
 #[macro_export(local_inner_macros)]
 macro_rules! bitfield_bitrange {
     (@impl_bitrange_slice $name:ident, $slice_ty:ty, $bitrange_ty:ty) => {
-        impl<T: AsMut<[$slice_ty]> + AsRef<[$slice_ty]>> $crate::BitRange<$bitrange_ty>
+        impl<T: AsRef<[$slice_ty]>> $crate::BitRange<$bitrange_ty>
             for $name<T> {
                 fn bit_range(&self, msb: usize, lsb: usize) -> $bitrange_ty {
                     let bit_len = $crate::size_of::<$slice_ty>()*8;
@@ -338,6 +375,9 @@ macro_rules! bitfield_bitrange {
                     }
                     value << (value_bit_len - (msb - lsb + 1)) >> (value_bit_len - (msb - lsb + 1))
                 }
+        }
+        impl<T: AsMut<[$slice_ty]>> $crate::BitRangeMut<$bitrange_ty>
+            for $name<T> {
 
                 fn set_bit_range(&mut self, msb: usize, lsb: usize, value: $bitrange_ty) {
                     let bit_len = $crate::size_of::<$slice_ty>()*8;
@@ -351,7 +391,7 @@ macro_rules! bitfield_bitrange {
             }
     };
     (@impl_bitrange_slice_msb0 $name:ident, $slice_ty:ty, $bitrange_ty:ty) => {
-        impl<T: AsMut<[$slice_ty]> + AsRef<[$slice_ty]>> $crate::BitRange<$bitrange_ty>
+        impl<T: AsRef<[$slice_ty]>> $crate::BitRange<$bitrange_ty>
             for $name<T> {
             fn bit_range(&self, msb: usize, lsb: usize) -> $bitrange_ty {
                 let bit_len = $crate::size_of::<$slice_ty>()*8;
@@ -364,7 +404,9 @@ macro_rules! bitfield_bitrange {
                 }
                 value << (value_bit_len - (msb - lsb + 1)) >> (value_bit_len - (msb - lsb + 1))
             }
-
+        }
+        impl<T: AsMut<[$slice_ty]>> $crate::BitRangeMut<$bitrange_ty>
+            for $name<T> {
             fn set_bit_range(&mut self, msb: usize, lsb: usize, value: $bitrange_ty) {
                 let bit_len = $crate::size_of::<$slice_ty>()*8;
                 let mut value = value;
@@ -406,6 +448,8 @@ macro_rules! bitfield_bitrange {
             fn bit_range(&self, msb: usize, lsb: usize) -> T {
                 self.0.bit_range(msb, lsb)
             }
+        }
+        impl<T> $crate::BitRangeMut<T> for $name where $t: $crate::BitRangeMut<T> {
             fn set_bit_range(&mut self, msb: usize, lsb: usize, value: T) {
                 self.0.set_bit_range(msb, lsb, value);
             }
@@ -445,10 +489,10 @@ macro_rules! bitfield_bitrange {
 /// }
 /// ```
 ///
-/// or with a custom `BitRange` implementation :
+/// or with a custom `BitRange` and `BitRangeMut` implementation :
 /// ```rust
 /// # #[macro_use] extern crate bitfield;
-/// # use bitfield::BitRange;
+/// # use bitfield::{BitRange, BitRangeMut};
 /// # fn main() {}
 /// bitfield!{
 ///   pub struct BitField1(u16);
@@ -464,6 +508,8 @@ macro_rules! bitfield_bitrange {
 ///         let mask = (1 << width) - 1;
 ///         ((self.0 >> lsb) & mask) as u8
 ///     }
+/// }
+/// impl BitRangeMut<u8> for BitField1 {
 ///     fn set_bit_range(&mut self, msb: usize, lsb: usize, value: u8) {
 ///         self.0 = (value as u16) << lsb;
 ///     }
@@ -486,7 +532,7 @@ macro_rules! bitfield {
     // If we have `impl Debug` without `no default BitRange`, we will still match, because when
     // we call `bitfield_bitrange`, we add `no default BitRange`.
     ($(#[$attribute:meta])* ($($vis:tt)*) struct $name:ident([$t:ty]); no default BitRange; impl Debug; $($rest:tt)*) => {
-        impl<T: AsMut<[$t]> + AsRef<[$t]> + $crate::fmt::Debug> $crate::fmt::Debug for $name<T> {
+        impl<T: AsRef<[$t]> + $crate::fmt::Debug> $crate::fmt::Debug for $name<T> {
             bitfield_debug!{struct $name; $($rest)*}
         }
 
@@ -496,8 +542,14 @@ macro_rules! bitfield {
         $(#[$attribute])*
         $($vis)* struct $name<T>(pub T);
 
-        impl<T: AsMut<[$t]> + AsRef<[$t]>> $name<T> {
-            bitfield_fields!{$($rest)*}
+        //impl<T: AsMut<[$t]> + AsRef<[$t]>> $name<T> {
+        //    bitfield_fields!{$($rest)*}
+        //}
+        impl<T: AsRef<[$t]>> $name<T> {
+           bitfield_fields!{only getter; $($rest)*}
+        }
+        impl<T: AsMut<[$t]>> $name<T> {
+           bitfield_fields!{only setter; $($rest)*}
         }
     };
     ($(#[$attribute:meta])* ($($vis:tt)*) struct $name:ident([$t:ty]); $($rest:tt)*) => {
@@ -543,21 +595,30 @@ pub use core::fmt;
 #[doc(hidden)]
 pub use core::mem::size_of;
 
-/// A trait to get or set ranges of bits.
+/// A trait to get ranges of bits.
 pub trait BitRange<T> {
     /// Get a range of bits.
     fn bit_range(&self, msb: usize, lsb: usize) -> T;
+}
+
+/// A trait to set ranges of bits.
+pub trait BitRangeMut<T> {
     /// Set a range of bits.
     fn set_bit_range(&mut self, msb: usize, lsb: usize, value: T);
 }
 
-/// A trait to get or set a single bit.
+/// A trait to get a single bit.
 ///
 /// This trait is implemented for all type that implement `BitRange<u8>`.
 pub trait Bit {
     /// Get a single bit.
     fn bit(&self, bit: usize) -> bool;
+}
 
+/// A trait to set a single bit.
+///
+/// This trait is implemented for all type that implement `BitRangeMut<u8>`.
+pub trait BitMut {
     /// Set a single bit.
     fn set_bit(&mut self, bit: usize, value: bool);
 }
@@ -566,6 +627,9 @@ impl<T: BitRange<u8>> Bit for T {
     fn bit(&self, bit: usize) -> bool {
         self.bit_range(bit, bit) != 0
     }
+}
+
+impl<T: BitRangeMut<u8>> BitMut for T {
     fn set_bit(&mut self, bit: usize, value: bool) {
         self.set_bit_range(bit, bit, value as u8);
     }
@@ -575,8 +639,7 @@ macro_rules! impl_bitrange_for_u {
     ($t:ty, $bitrange_ty:ty) => {
         impl BitRange<$bitrange_ty> for $t {
             #[inline]
-            #[allow(unknown_lints)]
-            #[allow(cast_lossless)]
+            #[allow(clippy::cast_lossless)]
             fn bit_range(&self, msb: usize, lsb: usize) -> $bitrange_ty {
                 let bit_len = size_of::<$t>()*8;
                 let result_bit_len = size_of::<$bitrange_ty>()*8;
@@ -584,10 +647,11 @@ macro_rules! impl_bitrange_for_u {
                     as $bitrange_ty;
                 result << (result_bit_len - (msb - lsb + 1)) >> (result_bit_len - (msb - lsb + 1))
             }
+        }
 
+        impl BitRangeMut<$bitrange_ty> for $t {
             #[inline]
-            #[allow(unknown_lints)]
-            #[allow(cast_lossless)]
+            #[allow(clippy::cast_lossless)]
             fn set_bit_range(&mut self, msb: usize, lsb: usize, value: $bitrange_ty) {
                 let bit_len = size_of::<$t>()*8;
                 let mask: $t = !(0 as $t)
@@ -614,8 +678,8 @@ macro_rules! impl_bitrange_for_u_combinations {
     };
 }
 
-impl_bitrange_for_u_combinations!{(u8, u16, u32, u64, u128), (u8, u16, u32, u64, u128)}
-impl_bitrange_for_u_combinations!{(u8, u16, u32, u64, u128), (i8, i16, i32, i64, i128)}
+impl_bitrange_for_u_combinations! {(u8, u16, u32, u64, u128), (u8, u16, u32, u64, u128)}
+impl_bitrange_for_u_combinations! {(u8, u16, u32, u64, u128), (i8, i16, i32, i64, i128)}
 
 // Same as std::stringify but callable from local_inner_macros macros defined inside
 // this crate.

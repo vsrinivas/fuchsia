@@ -1,14 +1,14 @@
 #[macro_use]
 extern crate bitfield;
 
-use bitfield::Bit;
-use bitfield::BitRange;
+use bitfield::BitMut;
+use bitfield::BitRangeMut;
 
-bitfield!{
+bitfield! {
     struct BitsLocations([u8]);
 }
 
-bitfield!{
+bitfield! {
     struct BitsLocationsMsb0(MSB0 [u8]);
 }
 
