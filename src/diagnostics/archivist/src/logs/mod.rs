@@ -33,12 +33,12 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_log_manager_simple() {
-        TestHarness::new().manager_test(false).await;
+        TestHarness::new().await.manager_test(false).await;
     }
 
     #[fuchsia::test]
     async fn test_log_manager_dump() {
-        TestHarness::new().manager_test(true).await;
+        TestHarness::new().await.manager_test(true).await;
     }
 
     #[fuchsia::test]
@@ -68,7 +68,7 @@ mod tests {
         fifth_packet.metadata.severity = LogLevelFilter::Error.into_primitive().into();
         fifth_message.severity = fifth_packet.metadata.severity;
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::new().await;
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![
             first_packet,
@@ -258,7 +258,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn attributed_inspect_two_streams_different_identities() {
-        let mut harness = TestHarness::with_retained_sinks();
+        let mut harness = TestHarness::with_retained_sinks().await;
 
         let log_reader1 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
@@ -287,7 +287,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn attributed_inspect_two_v2_streams_different_identities() {
-        let mut harness = TestHarness::with_retained_sinks();
+        let mut harness = TestHarness::with_retained_sinks().await;
         let log_reader1 = harness.create_event_stream_reader("./foo", "http://foo.com");
         let log_reader2 = harness.create_event_stream_reader("./bar", "http://bar.com");
 
@@ -300,7 +300,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn attributed_inspect_two_mixed_streams_different_identities() {
-        let mut harness = TestHarness::with_retained_sinks();
+        let mut harness = TestHarness::with_retained_sinks().await;
         let log_reader1 = harness.create_event_stream_reader("./foo", "http://foo.com");
         let log_reader2 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
@@ -342,7 +342,7 @@ mod tests {
             tags: vec![],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::new().await;
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2]);
         drop(stream);
@@ -374,7 +374,7 @@ mod tests {
             tags: vec![],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::new().await;
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2]);
         drop(stream);
@@ -413,7 +413,7 @@ mod tests {
             tags: vec![],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::new().await;
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2, p3, p4, p5]);
         drop(stream);
@@ -448,7 +448,7 @@ mod tests {
             tags: vec![],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::new().await;
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2, p3]);
         drop(stream);
@@ -497,7 +497,7 @@ mod tests {
             tags: vec![String::from("BBBBB"), String::from("DDDDD")],
         };
 
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::new().await;
         let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2]);
         drop(stream);
@@ -578,7 +578,7 @@ mod tests {
                 tags: vec![String::from("tag-1"), String::from("tag-2")],
             },
         ];
-        let mut harness = TestHarness::new();
+        let mut harness = TestHarness::new().await;
         let mut stream =
             harness.create_structured_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(logs);

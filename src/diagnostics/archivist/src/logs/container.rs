@@ -75,9 +75,6 @@ enum TestState {
 
 type InterestSender = oneshot::Sender<Result<FidlInterest, InterestChangeError>>;
 struct ContainerState {
-    /// Whether we think the component is currently running.
-    is_live: bool,
-
     /// Number of sockets currently being drained for this component.
     num_active_sockets: u64,
 
@@ -89,6 +86,8 @@ struct ContainerState {
 
     /// Hanging gets
     hanging_gets: BTreeMap<usize, Arc<Mutex<Option<InterestSender>>>>,
+
+    is_initializing: bool,
 }
 
 impl LogsArtifactsContainer {
@@ -103,11 +102,11 @@ impl LogsArtifactsContainer {
             budget,
             buffer: Default::default(),
             state: Arc::new(Mutex::new(ContainerState {
-                is_live: true,
                 num_active_channels: 0,
                 num_active_sockets: 0,
                 interests: BTreeMap::new(),
                 hanging_gets: BTreeMap::new(),
+                is_initializing: true,
             })),
             stats: Arc::new(stats),
             event_timestamp: zx::Time::get_monotonic(),
@@ -192,7 +191,11 @@ impl LogsArtifactsContainer {
         stream: LogSinkRequestStream,
         sender: mpsc::UnboundedSender<Task<()>>,
     ) {
-        self.state.lock().await.num_active_channels += 1;
+        {
+            let mut guard = self.state.lock().await;
+            guard.num_active_channels += 1;
+            guard.is_initializing = false;
+        }
         let task = Task::spawn(self.clone().actually_handle_log_sink(stream, sender.clone()));
         sender.unbounded_send(task).expect("channel is live for whole program");
     }
@@ -463,10 +466,6 @@ impl LogsArtifactsContainer {
         }
     }
 
-    pub async fn mark_stopped(&self) {
-        self.state.lock().await.is_live = false;
-    }
-
     /// Remove the oldest message from this buffer, returning it.
     pub fn pop(&self) -> Option<Arc<StoredMessage>> {
         self.buffer.pop_front()
@@ -476,7 +475,7 @@ impl LogsArtifactsContainer {
     /// or still has pending objects to drain.
     pub async fn should_retain(&self) -> bool {
         let state = self.state.lock().await;
-        state.is_live
+        state.is_initializing
             || state.num_active_sockets > 0
             || state.num_active_channels > 0
             || !self.buffer.is_empty()
@@ -496,6 +495,11 @@ impl LogsArtifactsContainer {
     #[cfg(test)]
     pub fn buffer(&self) -> &ArcList<StoredMessage> {
         &self.buffer
+    }
+
+    #[cfg(test)]
+    pub async fn mark_stopped(&self) {
+        self.state.lock().await.is_initializing = false;
     }
 }
 

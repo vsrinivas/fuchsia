@@ -11,11 +11,12 @@ use crate::{
 };
 use diagnostics_data as schema;
 use diagnostics_hierarchy::{DiagnosticsHierarchy, InspectHierarchyMatcher};
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree};
 use fuchsia_zircon as zx;
-use futures::{FutureExt, Stream};
+use futures::{channel::oneshot, FutureExt, Stream};
 use inspect_fidl_load as deprecated_inspect;
 use lazy_static::lazy_static;
 use std::time::Duration;
@@ -25,7 +26,27 @@ use tracing::warn;
 pub struct InspectArtifactsContainer {
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
-    pub component_diagnostics_proxy: fio::DirectoryProxy,
+    component_diagnostics_proxy: Arc<fio::DirectoryProxy>,
+    _on_closed_task: fasync::Task<()>,
+}
+
+impl InspectArtifactsContainer {
+    pub fn new(proxy: fio::DirectoryProxy) -> (Self, oneshot::Receiver<()>) {
+        let (snd, rcv) = oneshot::channel();
+        let component_diagnostics_proxy = Arc::new(proxy);
+        let proxy_for_fut = component_diagnostics_proxy.clone();
+        let _on_closed_task = fasync::Task::spawn(async move {
+            if !proxy_for_fut.is_closed() {
+                let _ = proxy_for_fut.on_closed().await;
+            }
+            let _ = snd.send(());
+        });
+        (Self { component_diagnostics_proxy, _on_closed_task }, rcv)
+    }
+
+    pub fn diagnostics_directory(&self) -> &fio::DirectoryProxy {
+        self.component_diagnostics_proxy.as_ref()
+    }
 }
 
 lazy_static! {

@@ -20,10 +20,6 @@
     ],
     use: [
         {
-            event: [ "stopped" ],
-            from: "parent",
-        },
-        {
             protocol: [ "fuchsia.sys2.EventSource" ],
         },
 
@@ -38,7 +34,6 @@
             subscriptions: [
                 { event: "diagnostics_ready" },
                 { event: "log_sink_requested" },
-                { event: "stopped" },
             ],
         },
         {
@@ -52,11 +47,6 @@
             from: "parent",
             as: "log_sink_requested",
             filter: { name: "fuchsia.logger.LogSink" },
-        },
-        {
-            event_stream: [ "stopped_v2" ],
-            from: "parent",
-            path: "/events/lifecycle_event_stream",
         },
         {
             event_stream: [ "capability_requested_v2" ],

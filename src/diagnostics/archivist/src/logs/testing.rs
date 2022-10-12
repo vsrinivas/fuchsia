@@ -69,21 +69,21 @@ pub fn create_log_sink_requested_event(
 }
 
 impl TestHarness {
-    pub fn new() -> Self {
-        Self::make(false)
+    pub async fn new() -> Self {
+        Self::make(false).await
     }
 
     /// Create a new test harness which will keep its LogSinks alive as long as it itself is,
     /// useful for testing inspect hierarchies for attribution.
     // TODO(fxbug.dev/53932) this will be made unnecessary by historical retention of component stats
-    pub fn with_retained_sinks() -> Self {
-        Self::make(true)
+    pub async fn with_retained_sinks() -> Self {
+        Self::make(true).await
     }
 
-    fn make(hold_sinks: bool) -> Self {
+    async fn make(hold_sinks: bool) -> Self {
         let inspector = Inspector::new();
         let budget = BudgetManager::new(1_000_000);
-        let log_manager = DataRepo::new(&budget, inspector.root());
+        let log_manager = DataRepo::new(&budget, inspector.root()).await;
 
         let (listen_sender, listen_receiver) = mpsc::unbounded();
         let (log_proxy, log_stream) =
@@ -404,7 +404,7 @@ pub async fn debuglog_test(
 
     let inspector = Inspector::new();
     let budget = BudgetManager::new(1_000_000);
-    let lm = DataRepo::new(&budget, inspector.root());
+    let lm = DataRepo::new(&budget, inspector.root()).await;
     let (log_proxy, log_stream) = fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
     lm.clone().handle_log(log_stream, log_sender);
     fasync::Task::spawn(lm.drain_debuglog(debug_log)).detach();

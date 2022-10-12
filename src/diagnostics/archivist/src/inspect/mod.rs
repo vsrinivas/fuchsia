@@ -326,7 +326,6 @@ mod tests {
             repository::DataRepo,
         },
         async_lock::RwLock,
-        diagnostics_hierarchy::trie::TrieIterableNode,
         fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
@@ -603,8 +602,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let inspect_repo = DataRepo::default();
-        let mut inspect_repo = inspect_repo.write().await;
+        let inspect_repo = DataRepo::default().await;
         let instance_id = "1234".to_string();
 
         let identity = ComponentIdentity::from_identifier_and_url(
@@ -621,15 +619,7 @@ mod tests {
 
         inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
-        assert_eq!(
-            inspect_repo
-                .data_directories
-                .get(&identity.unique_key().into())
-                .unwrap()
-                .get_values()
-                .len(),
-            1
-        );
+        assert_eq!(inspect_repo.read().await.get(&identity).len(), 1);
     }
 
     #[fuchsia::test]
@@ -723,18 +713,13 @@ mod tests {
                     }))
                     .await;
 
-                let inspect_repo = DataRepo::default();
+                let inspect_repo = DataRepo::default().await;
                 let pipeline_wrapper =
                     Arc::new(RwLock::new(Pipeline::for_test(None, inspect_repo.clone())));
 
                 for (cid, proxy) in id_and_directory_proxy {
                     let identity = ComponentIdentity::from_identifier_and_url(cid, TEST_URL);
-                    inspect_repo
-                        .write()
-                        .await
-                        .add_inspect_artifacts(identity.clone(), proxy)
-                        .await
-                        .unwrap();
+                    inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.unwrap();
 
                     pipeline_wrapper
                         .write()
@@ -797,7 +782,7 @@ mod tests {
         let child_2_selector =
             selectors::parse_selector::<VerboseError>(r#"test_component.cmx:root/child_2:*"#)
                 .unwrap();
-        let inspect_repo = DataRepo::default();
+        let inspect_repo = DataRepo::default().await;
         let static_selectors_opt = Some(vec![child_1_1_selector, child_2_selector]);
 
         let pipeline_wrapper =
@@ -883,12 +868,7 @@ mod tests {
         let inspector_arc = Arc::new(inspector);
 
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
-        inspect_repo
-            .write()
-            .await
-            .add_inspect_artifacts(identity.clone(), out_dir_proxy)
-            .await
-            .unwrap();
+        inspect_repo.add_inspect_artifacts(identity.clone(), out_dir_proxy).await.unwrap();
 
         pipeline_wrapper.write().await.add_inspect_artifacts(&identity.relative_moniker).unwrap();
 
@@ -993,7 +973,7 @@ mod tests {
 
         let test_batch_iterator_stats2 = Arc::new(test_accessor_stats.new_inspect_batch_iterator());
 
-        inspect_repo.write().await.mark_stopped(&identity.unique_key()).await;
+        inspect_repo.write().await.terminate_inspect(&identity);
         pipeline_wrapper.write().await.remove(&identity.relative_moniker);
         {
             let result_json = read_snapshot(
