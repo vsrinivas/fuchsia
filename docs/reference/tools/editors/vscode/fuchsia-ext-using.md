@@ -17,7 +17,7 @@ The Fuchsia extension is compatible with ffx `9.20220803.3.1` and forward.
 
 ## Edit code
 
-By default, VS code provides provides syntax highlighting, errors and warnings,
+By default, VS code provides syntax highlighting, errors and warnings,
 jumping to a definition, and lists references for C++.
 
 Note: The Fuchsia extension does not directly implement support for C++
@@ -27,7 +27,8 @@ VS Code actively analyzes your code in the background and can show you various
 warnings or errors. For more information, see
 [Errors and warnings][vscode-errors]{: .external}.
 
-The Fuchsia extension also provides [FIDL][fidl-docs] syntax highlighting.
+The Fuchsia extension also provides syntax highlighting for
+[FIDL][fidl-docs] and [CML][cml-docs].
 
 ## Connect to a Fuchsia device
 
@@ -400,6 +401,7 @@ Once you have started the debugger:
 [zxdb-commands-docs]: /docs/development/debugger/commands.md
 [vscode-debug-actions]: https://code.visualstudio.com/docs/editor/debugging#_debug-actions
 [fidl-docs]: /docs/concepts/fidl/overview.md
+[cml-docs]: https://fuchsia.dev/reference/cml
 [vscode-errors]: https://code.visualstudio.com/Docs/editor/editingevolved#_errors-warnings
 [diagnostics-schema]: /docs/reference/platform-spec/diagnostics/schema.md#payload
 [docs-schema-logs]: /docs/reference/platform-spec/diagnostics/schema.md#logs_2
