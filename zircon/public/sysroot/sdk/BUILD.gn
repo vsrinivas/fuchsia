@@ -151,7 +151,10 @@ sdk_atom("sysroot_sdk") {
   api = "sysroot.api"
   api_contents = sdk_api_contents
 
-  non_sdk_deps = [ ":sysroot-meta" ] + sysroot_sdk_deps
+  non_sdk_deps = [
+                   ":sysroot-meta",
+                   "//sdk/fidl/zbi:sysroot_sdk",
+                 ] + sysroot_sdk_deps
 
   meta = {
     dest = "pkg/sysroot/meta.json"

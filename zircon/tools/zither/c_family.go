@@ -20,6 +20,16 @@ func HeaderPath(summary FileSummary, backend string) string {
 // HeaderGuard gives the header guard value for a C family backend.
 func HeaderGuard(summary FileSummary, backend string) string {
 	path := HeaderPath(summary, backend)
+	// TODO(fxbug.dev/110021, fxbug.dev/111453): Once these C headers are no
+	// longer checked in, we can drop these rewrite rules.
+	if backend == "c" {
+		switch summary.Library.String() {
+		case "zx":
+			path = "SYSROOT_ZIRCON_" + summary.Name() + "_H"
+		case "zbi":
+			path = "SYSROOT_ZIRCON_BOOT_" + summary.Name() + "_H"
+		}
+	}
 	for _, c := range []string{".", string(filepath.Separator), "-"} {
 		path = strings.ReplaceAll(path, c, "_")
 	}

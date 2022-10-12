@@ -1,0 +1,19 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found
+# in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//zircon/tools/zither/zither_golden_files.gni")
+
+# TODO(fxbug.dev/111453): This is not yet exported in the SDK - and rather is
+# used to generate checked-in headers which are - but it will be eventually.
+fidl("zbi") {
+  sources = [ "driver-config.fidl" ]
+}
+
+# Depended on by //zircon/public/sysroot/sdk:sysroot_sdk.
+zither_golden_files("sysroot_sdk") {
+  fidl = ":zbi"
+  backend = "c"
+  goldens = [ "//zircon/system/public/zircon/boot/driver-config.h" ]
+}

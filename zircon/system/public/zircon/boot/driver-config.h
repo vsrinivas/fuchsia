@@ -1,57 +1,67 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// DO NOT EDIT. Generated from FIDL library
+//   zbi (//sdk/fidl/zbi/driver-config.fidl)
+// by zither, a Fuchsia platform tool.
 
 #ifndef SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_
 #define SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_
 
 #include <stdint.h>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 // ZBI_TYPE_KERNEL_DRIVER item types (for zbi_header_t.extra)
+typedef uint32_t zbi_kernel_driver_t;
+
 // 'PSCI'
-#define ZBI_KERNEL_DRIVER_ARM_PSCI ((uint32_t)(0x49435350u))
+#define ZBI_KERNEL_DRIVER_ARM_PSCI ((zbi_kernel_driver_t)(0x49435350u))
 
 // 'GIC2'
-#define ZBI_KERNEL_DRIVER_ARM_GIC_V2 ((uint32_t)(0x32434947u))
+#define ZBI_KERNEL_DRIVER_ARM_GIC_V2 ((zbi_kernel_driver_t)(0x32434947u))
 
 // 'GIC3'
-#define ZBI_KERNEL_DRIVER_ARM_GIC_V3 ((uint32_t)(0x33434947u))
+#define ZBI_KERNEL_DRIVER_ARM_GIC_V3 ((zbi_kernel_driver_t)(0x33434947u))
 
 // 'ATIM'
-#define ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER ((uint32_t)(0x4d495441u))
+#define ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER ((zbi_kernel_driver_t)(0x4d495441u))
 
 // 'PL0U'
-#define ZBI_KERNEL_DRIVER_PL011_UART ((uint32_t)(0x55304c50u))
+#define ZBI_KERNEL_DRIVER_PL011_UART ((zbi_kernel_driver_t)(0x55304c50u))
 
 // 'AMLU'
-#define ZBI_KERNEL_DRIVER_AMLOGIC_UART ((uint32_t)(0x554c4d41u))
+#define ZBI_KERNEL_DRIVER_AMLOGIC_UART ((zbi_kernel_driver_t)(0x554c4d41u))
 
 // 'AMLH'
-#define ZBI_KERNEL_DRIVER_AMLOGIC_HDCP ((uint32_t)(0x484c4d41u))
+#define ZBI_KERNEL_DRIVER_AMLOGIC_HDCP ((zbi_kernel_driver_t)(0x484c4d41u))
 
 // 'DW8U'
-#define ZBI_KERNEL_DRIVER_DW8250_UART ((uint32_t)(0x44573855u))
+#define ZBI_KERNEL_DRIVER_DW8250_UART ((zbi_kernel_driver_t)(0x44573855u))
 
 // 'AMLR'
-#define ZBI_KERNEL_DRIVER_AMLOGIC_RNG ((uint32_t)(0x484c4d52u))
+#define ZBI_KERNEL_DRIVER_AMLOGIC_RNG ((zbi_kernel_driver_t)(0x484c4d52u))
 
 // 'WD32'
-#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG ((uint32_t)(0x32334457u))
+#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG ((zbi_kernel_driver_t)(0x32334457u))
 
 // '8250'
-#define ZBI_KERNEL_DRIVER_I8250_PIO_UART ((uint32_t)(0x30353238u))
+#define ZBI_KERNEL_DRIVER_I8250_PIO_UART ((zbi_kernel_driver_t)(0x30353238u))
 
 // '825M'
-#define ZBI_KERNEL_DRIVER_I8250_MMIO_UART ((uint32_t)(0x4d353238u))
+#define ZBI_KERNEL_DRIVER_I8250_MMIO_UART ((zbi_kernel_driver_t)(0x4d353238u))
 
 // 'MMTU'
-#define ZBI_KERNEL_DRIVER_MOTMOT_UART ((uint32_t)(0x4d4d5455u))
+#define ZBI_KERNEL_DRIVER_MOTMOT_UART ((zbi_kernel_driver_t)(0x4d4d5455u))
 
 // 'MMTP'
-#define ZBI_KERNEL_DRIVER_MOTMOT_POWER ((uint32_t)(0x4d4d5450u))
+#define ZBI_KERNEL_DRIVER_MOTMOT_POWER ((zbi_kernel_driver_t)(0x4d4d5450u))
 
 // '370P'
-#define ZBI_KERNEL_DRIVER_AS370_POWER ((uint32_t)(0x50303733u))
+#define ZBI_KERNEL_DRIVER_AS370_POWER ((zbi_kernel_driver_t)(0x50303733u))
 
 // Kernel driver struct that can be used for simple drivers.
 // Used by ZBI_KERNEL_DRIVER_PL011_UART, ZBI_KERNEL_DRIVER_AMLOGIC_UART, and
@@ -140,10 +150,13 @@ typedef struct {
   uint32_t set_mask;
 } zbi_dcfg_generic32_watchdog_action_t;
 
-#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_FLAGS_ENABLED ((uint32_t)0x00000001)
+typedef uint32_t zbi_kernel_driver_generic32_watchdog_flags_t;
+
+#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_FLAGS_ENABLED \
+  ((zbi_kernel_driver_generic32_watchdog_flags_t)(1u << 0))
 
 // 1ms
-#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_MIN_PERIOD ((int64_t)(1000000))
+#define ZBI_KERNEL_DRIVER_GENERIC32_WATCHDOG_MIN_PERIOD ((int64_t)(1000000u))
 
 // Definitions of actions which may be taken by a generic 32 bit watchdog timer
 // kernel driver which may be passed by a bootloader.  Field definitions are as
@@ -170,9 +183,12 @@ typedef struct {
   // Storage for additional flags.  Currently, only one flag is defined,
   // "FLAG_ENABLED".  When this flag is set, it indicates that the watchdog timer
   // was left enabled by the bootloader at startup.
-  uint32_t flags;
-
+  zbi_kernel_driver_generic32_watchdog_flags_t flags;
   uint32_t reserved;
 } zbi_dcfg_generic32_watchdog_t;
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif  // SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_
