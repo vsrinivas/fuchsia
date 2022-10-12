@@ -326,9 +326,6 @@ parameter `_N_` is not an [ABI-breaking][compat] change.
     maximum 40 element vector.
 *   There is no special case for vectors of bools. Each bool element takes one
     byte as usual.
-*   We have a [built-in alias](#built-in-aliases) for **`bytes`** to mean
-    `vector<uint8>`, and it can be size bound in a similar fashion e.g.
-    `bytes:1024`.
 
 #### Use
 
