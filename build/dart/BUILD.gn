@@ -117,6 +117,8 @@ group("dart_allowlist") {
     "//src/tests/end_to_end/sl4f:*",
     "//src/tests/end_to_end/snapshot:*",
     "//src/tests/end_to_end/time_sync:*",
+    "//src/tests/fidl/client_suite/dart:*",
+    "//src/tests/fidl/client_suite/fidl:*",
     "//src/tests/fidl/compatibility/dart:*",
     "//src/tests/fidl/compatibility/fidl:*",
     "//src/tests/fidl/conformance_suite:*",
