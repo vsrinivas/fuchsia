@@ -94,8 +94,8 @@ def move_owners_file(root_build_dir, fuchsia_api_level):
        supported API level.
 
     """
-    root = join_path(root_build_dir, "sdk", "history")
-    src = join_path(root, str(fuchsia_api_level-1), "OWNERS")
+    root = join_path("sdk", "history")
+    src = join_path(root, str(fuchsia_api_level - 1), "OWNERS")
     dst = join_path(root, str(fuchsia_api_level))
 
     try:
@@ -106,10 +106,10 @@ def move_owners_file(root_build_dir, fuchsia_api_level):
 
     try:
         print(f"copying {src} to {dst}")
-        shutil.copy2(src, dst)
+        shutil.move(src, dst)
     except Exception as e:
-        print(f"shutil.copy2({src}, {dst}) failed: {e}")
-        return False   
+        print(f"shutil.move({src}, {dst}) failed: {e}")
+        return False
     return True
 
 
@@ -129,15 +129,10 @@ def copy_compatibility_test_goldens(root_build_dir, fuchsia_api_level):
             src = join_path(root_build_dir, entry["src"])
             dst = join_path(root_build_dir, entry["dst"])
             try:
-                print("copying {} to {}".format(src, dst))
+                print(f"copying {src} to {dst}")
                 shutil.copyfile(src, dst)
             except Exception as e:
-                print(
-                    "failed to copy {src} to {dst}: {reason}".format(
-                        src=src,
-                        dst=dst,
-                        reason=e,
-                    ))
+                print(f"failed to copy {src} to {dst}: {e}")
                 return False
     return True
 
@@ -161,13 +156,13 @@ def main():
         return 1
 
     if args.update_goldens:
-        if not move_owners_file(root_build_dir, fuchsia_api_level):
+        if not move_owners_file(args.root_build_dir, args.fuchsia_api_level):
             return 1
-        if not copy_compatibility_test_goldens(args.root_build_dir, args.fuchsia_api_level):
+        if not copy_compatibility_test_goldens(args.root_build_dir,
+                                               args.fuchsia_api_level):
             return 1
 
     return 0
-
 
 
 if __name__ == "__main__":

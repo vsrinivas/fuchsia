@@ -79,16 +79,18 @@ template("fidl_ir") {
       deps = [ ":$fidlc_target_name" ]
 
       metadata = {
+        _api_level = ""
+        if (defined(invoker.target_api_level)) {
+          _api_level = invoker.target_api_level
+        }
+        _summary_basename = get_path_info(invoker.out_json_summary, "file")
+        _new_golden_file = "${invoker.goldens_dir}/${invoker.target_api_level}/${_summary_basename}"
+
         compatibility_testing_goldens = [
           {
+            api_level = _api_level
             src = rebase_path(invoker.out_json_summary, root_build_dir)
-            if (!defined(invoker.target_api_level) ||
-                invoker.target_api_level == "HEAD") {
-              dst = rebase_path(invoker.out_json_summary, root_build_dir)
-            } else {
-              dst = "${invoker.goldens_dir}/${invoker.target_api_level}/" +
-                    get_path_info(invoker.out_json_summary, "file")
-            }
+            dst = rebase_path(_new_golden_file, root_build_dir)
           },
         ]
       }
