@@ -4,7 +4,10 @@
 
 group("device_tests") {
   testonly = true
-  deps = [ ":virtio_balloon_test" ]
+  deps = [
+    ":virtio_balloon_test",
+    ":virtio_block_test",
+  ]
 }
 
 source_set("virtio_queue_fake") {
@@ -48,6 +51,25 @@ source_set("virtio_balloon_test") {
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
     "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//zircon/system/ulib/virtio",
+  ]
+}
+
+source_set("virtio_block_test") {
+  testonly = true
+
+  sources = [ "virtio_block_test.cc" ]
+
+  deps = [
+    ":test_with_device",
+    ":virtio_queue_fake",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/virtio",
   ]
 }
