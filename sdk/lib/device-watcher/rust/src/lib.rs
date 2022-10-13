@@ -11,20 +11,6 @@ use {
     std::path::PathBuf,
 };
 
-/// Waits for a device to appear within `dev_dir` that has a topological path
-/// that matches `topo_path`. Returns the path of the found device within
-/// `dev_dir`. If no topological path match is found this function will wait
-/// forever.
-pub async fn wait_for_device_topo_path(
-    dev_dir: &fio::DirectoryProxy,
-    topo_path: &str,
-) -> Result<String, anyhow::Error> {
-    wait_for_device_with(dev_dir, |DeviceInfo { filename, topological_path }| {
-        (topological_path == topo_path).then(|| filename.to_string())
-    })
-    .await
-}
-
 // Device metadata.
 pub struct DeviceInfo<'a> {
     // The device's file name within the directory in which it was found.
@@ -212,7 +198,11 @@ mod tests {
             fidl::endpoints::ServerEnd::new(remote.into_channel()),
         );
 
-        let path = wait_for_device_topo_path(&dir_proxy, "/dev/test2/x/dev").await.unwrap();
+        let path = wait_for_device_with(&dir_proxy, |DeviceInfo { filename, topological_path }| {
+            (topological_path == "/dev/test2/x/dev").then(|| filename.to_string())
+        })
+        .await
+        .unwrap();
         assert_eq!("x", path);
     }
 
@@ -268,7 +258,11 @@ mod tests {
             fidl::endpoints::ServerEnd::new(remote.into_channel()),
         );
 
-        let path = wait_for_device_topo_path(&dir_proxy, "/dev/test2/x/dev").await.unwrap();
+        let path = wait_for_device_with(&dir_proxy, |DeviceInfo { filename, topological_path }| {
+            (topological_path == "/dev/test2/x/dev").then(|| filename.to_string())
+        })
+        .await
+        .unwrap();
         assert_eq!("x", path);
     }
 

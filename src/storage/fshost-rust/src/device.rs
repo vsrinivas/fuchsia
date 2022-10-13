@@ -8,7 +8,6 @@ use {
     self::constants::{FVM_MAGIC, GPT_MAGIC},
     anyhow::{anyhow, Error},
     async_trait::async_trait,
-    device_watcher::wait_for_device_topo_path,
     fidl::endpoints::{create_endpoints, Proxy},
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_hardware_block::BlockProxy,
@@ -175,16 +174,23 @@ impl Device for BlockDevice {
     }
 
     async fn get_child(&self, suffix: &str) -> Result<Box<dyn Device>, Error> {
+        const DEV_CLASS_BLOCK: &str = "/dev/class/block";
         let dev_class_block = fuchsia_fs::directory::open_in_namespace(
-            "/dev/class/block",
+            DEV_CLASS_BLOCK,
             OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
         )?;
-        let child_path = wait_for_device_topo_path(
+        let child_path = device_watcher::wait_for_device_with(
             &dev_class_block,
-            &format!("{}{}", self.topological_path, suffix),
+            |device_watcher::DeviceInfo { filename, topological_path }| {
+                topological_path.strip_suffix(suffix).and_then(|topological_path| {
+                    (topological_path == self.topological_path)
+                        .then(|| format!("{}/{}", DEV_CLASS_BLOCK, filename))
+                })
+            },
         )
         .await?;
-        Ok(Box::new(BlockDevice::new(format!("/dev/class/block/{}", child_path)).await?))
+        let block_device = BlockDevice::new(child_path).await?;
+        Ok(Box::new(block_device))
     }
 }
 
