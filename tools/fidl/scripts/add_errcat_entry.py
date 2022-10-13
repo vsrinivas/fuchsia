@@ -224,11 +224,11 @@ def main(args):
     if progress['bad_test_created']:
         print(
             "  * Added bad example for fi-%s at %s/fi-%s.test.fidl. Please resolve the TODO(DONOTSUBMIT)!"
-            % (ns, DOCS_DIR_PATH, ns))
+            % (ns, FIDLC_BAD_TESTS_DIR_PATH, ns))
     if progress['good_test_created']:
         print(
             "  * Added bad example for fi-%s at %s/fi-%s.test.fidl. Please resolve the TODO(DONOTSUBMIT)!"
-            % (ns, DOCS_DIR_PATH, ns))
+            % (ns, FIDLC_GOOD_TESTS_DIR_PATH, ns))
     print()
 
     return 0
