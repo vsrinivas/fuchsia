@@ -25,8 +25,8 @@ struct __PACKED GvnicRegisters {
   BigEndian<uint32_t> admin_queue_doorbell;
   BigEndian<uint32_t> admin_queue_counter;
   uint8_t padding[2];
-  uint8_t dma_mask;
-  uint8_t driver_version;
+  BigEndian<uint8_t> dma_mask;
+  BigEndian<uint8_t> driver_version;
   BigEndian<uint64_t> admin_queue_base_address;
   BigEndian<uint32_t> admin_queue_length;
 };
@@ -49,7 +49,7 @@ assert_offset_size(0x1E, 1, dma_mask);
 assert_offset_size(0x1f, 1, driver_version);
 assert_offset_size(0x20, 8, admin_queue_base_address);
 assert_offset_size(0x28, 4, admin_queue_length);
-#undef assert_offset
+#undef assert_offset_size
 
 //
 // Common definitions

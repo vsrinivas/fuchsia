@@ -38,13 +38,26 @@ class __attribute__((packed)) BigEndian {
     return ret;
   } */
  public:
+  using wrapped_type = T;
   BigEndian() = default;
   // NOLINTNEXTLINE(google-explicit-constructor)
   BigEndian(const T& t) : rep(swap(t)) {}
   // NOLINTNEXTLINE(google-explicit-constructor)
   operator T() const { return swap(rep); }
   T val() const { return swap(rep); }
+  T GetBE() const { return rep; }  // Returns the unswapped value.
+  T SetBE(T t) {                   // Sets the unswapped value (and returns the swapped one).
+    rep = t;
+    return val();
+  }
 };
+
+// The uint8_t version is just a noop.
+template <>
+inline uint8_t BigEndian<uint8_t>::swap(const uint8_t& arg) {
+  return arg;
+}
+static_assert(sizeof(BigEndian<uint8_t>) == sizeof(uint8_t));
 
 // Speciliazations to use the (presumably) more efficient bswap functions from
 // byteswap.h for the basic integer types.
@@ -66,25 +79,5 @@ inline uint64_t BigEndian<uint64_t>::swap(const uint64_t& arg) {
   return bswap_64(arg);
 }
 static_assert(sizeof(BigEndian<uint64_t>) == sizeof(uint64_t));
-
-/* Delete these if they are not used
-template <>
-int16_t BigEndian<int16_t>::swap(const int16_t& arg) {
-  return reinterpret_cast<int16_t>(bswap_16(reinterpret_cast<uint16_t>(arg)));
-}
-static_assert(sizeof(BigEndian<int16_t>) == sizeof(int16_t));
-
-template <>
-int32_t BigEndian<int32_t>::swap(const int32_t& arg) {
-  return reinterpret_cast<int32_t>(bswap_32(reinterpret_cast<uint32_t>(arg)));
-}
-static_assert(sizeof(BigEndian<int32_t>) == sizeof(int32_t));
-
-template <>
-int64_t BigEndian<int64_t>::swap(const int64_t& arg) {
-  return reinterpret_cast<int64_t>(bswap_64(reinterpret_cast<uint64_t>(arg)));
-}
-static_assert(sizeof(BigEndian<int64_t>) == sizeof(int64_t));
-*/
 
 #endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_GVNIC_BIGENDIAN_H_
