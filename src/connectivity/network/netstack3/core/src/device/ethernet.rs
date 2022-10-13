@@ -145,7 +145,7 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
 {
     fn with_static_ethernet_device_state<O, F: FnOnce(&StaticEthernetDeviceState) -> O>(
         &self,
-        &EthernetDeviceId(id): &EthernetDeviceId,
+        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
         cb: F,
     ) -> O {
         let eth = {
@@ -160,7 +160,7 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
         F: FnOnce(&StaticEthernetDeviceState, &DynamicEthernetDeviceState) -> O,
     >(
         &self,
-        &EthernetDeviceId(id): &EthernetDeviceId,
+        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
         cb: F,
     ) -> O {
         let eth = {
@@ -178,7 +178,7 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
         F: FnOnce(&StaticEthernetDeviceState, &mut DynamicEthernetDeviceState) -> O,
     >(
         &mut self,
-        &EthernetDeviceId(id): &EthernetDeviceId,
+        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
         cb: F,
     ) -> O {
         let eth = {
@@ -193,7 +193,7 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
     fn add_ipv6_addr_subnet(
         &mut self,
         ctx: &mut NonSyncCtx,
-        device_id: &EthernetDeviceId,
+        device_id: &EthernetDeviceId<NonSyncCtx::Instant>,
         addr_sub: AddrSubnet<Ipv6Addr>,
         config: AddrConfig<NonSyncCtx::Instant>,
     ) -> Result<(), ExistsError> {
@@ -262,7 +262,10 @@ impl<
 impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx>
     for &'_ SyncCtx<NonSyncCtx>
 {
-    fn retrans_timer(&self, &EthernetDeviceId(id): &EthernetDeviceId) -> NonZeroDuration {
+    fn retrans_timer(
+        &self,
+        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
+    ) -> NonZeroDuration {
         let eth = {
             let devices = self.state.device.devices.read();
             ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
@@ -274,7 +277,7 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
 
     fn with_nud_state_mut<O, F: FnOnce(&mut NudState<Ipv6, Mac>) -> O>(
         &mut self,
-        &EthernetDeviceId(id): &EthernetDeviceId,
+        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
         cb: F,
     ) -> O {
         let eth = {
@@ -288,7 +291,7 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
     fn send_neighbor_solicitation(
         &mut self,
         ctx: &mut NonSyncCtx,
-        device_id: &EthernetDeviceId,
+        device_id: &EthernetDeviceId<NonSyncCtx::Instant>,
         lookup_addr: SpecifiedAddr<Ipv6Addr>,
     ) {
         let dst_ip = lookup_addr.to_solicited_node_address().into_specified();
@@ -351,7 +354,7 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
     fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut NonSyncCtx,
-        device_id: &EthernetDeviceId,
+        device_id: &EthernetDeviceId<NonSyncCtx::Instant>,
         dst_mac: Mac,
         body: S,
     ) -> Result<(), S> {
@@ -834,7 +837,7 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for &'_ SyncCtx<C> {
     fn get_protocol_addr(
         &self,
         _ctx: &mut C,
-        &EthernetDeviceId(id): &EthernetDeviceId,
+        &EthernetDeviceId(id, _): &EthernetDeviceId<C::Instant>,
     ) -> Option<Ipv4Addr> {
         let eth = {
             let devices = self.state.device.devices.read();
@@ -845,13 +848,17 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for &'_ SyncCtx<C> {
         ret
     }
 
-    fn get_hardware_addr(&self, _ctx: &mut C, device_id: &EthernetDeviceId) -> UnicastAddr<Mac> {
+    fn get_hardware_addr(
+        &self,
+        _ctx: &mut C,
+        device_id: &EthernetDeviceId<C::Instant>,
+    ) -> UnicastAddr<Mac> {
         get_mac(self, device_id)
     }
 
     fn with_arp_state_mut<O, F: FnOnce(&mut ArpState<EthernetLinkDevice>) -> O>(
         &mut self,
-        &EthernetDeviceId(id): &EthernetDeviceId,
+        &EthernetDeviceId(id, _): &EthernetDeviceId<C::Instant>,
         cb: F,
     ) -> O {
         let eth = {
@@ -869,7 +876,7 @@ impl<B: BufferMut, C: BufferNonSyncContext<B>> BufferArpContext<EthernetLinkDevi
     fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,
-        device_id: &EthernetDeviceId,
+        device_id: &EthernetDeviceId<C::Instant>,
         dst_mac: Mac,
         body: S,
     ) -> Result<(), S> {
@@ -1133,7 +1140,7 @@ mod tests {
 
     fn contains_addr<A: IpAddress>(
         sync_ctx: &&crate::testutil::DummySyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         addr: SpecifiedAddr<A>,
     ) -> bool {
         match addr.into() {
@@ -1318,7 +1325,7 @@ mod tests {
 
     fn is_routing_enabled<I: Ip>(
         sync_ctx: &&crate::testutil::DummySyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
     ) -> bool {
         match I::VERSION {
             IpVersion::V4 => is_ip_routing_enabled::<Ipv4, _, _>(sync_ctx, device),
@@ -1330,7 +1337,7 @@ mod tests {
     fn test_set_ip_routing<I: Ip + TestIpExt>() {
         fn check_other_is_routing_enabled<I: Ip>(
             sync_ctx: &&crate::testutil::DummySyncCtx,
-            device: &DeviceId,
+            device: &DeviceId<DummyInstant>,
             expected: bool,
         ) {
             let enabled = match I::VERSION {
@@ -1630,7 +1637,7 @@ mod tests {
     fn receive_simple_ip_packet_test<A: IpAddress>(
         sync_ctx: &mut &crate::testutil::DummySyncCtx,
         non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         src_ip: A,
         dst_ip: A,
         expected: usize,
@@ -1785,7 +1792,7 @@ mod tests {
     fn join_ip_multicast<A: IpAddress, NonSyncCtx: NonSyncContext>(
         mut sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<NonSyncCtx::Instant>,
         multicast_addr: MulticastAddr<A>,
     ) {
         match multicast_addr.into() {
@@ -1807,7 +1814,7 @@ mod tests {
     fn leave_ip_multicast<A: IpAddress, NonSyncCtx: NonSyncContext>(
         mut sync_ctx: &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<NonSyncCtx::Instant>,
         multicast_addr: MulticastAddr<A>,
     ) {
         match multicast_addr.into() {

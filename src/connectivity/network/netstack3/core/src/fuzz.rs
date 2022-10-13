@@ -27,7 +27,7 @@ use packet_formats::{
 };
 
 use crate::{
-    context::testutil::{handle_timer_helper_with_sc_ref, DummyTimerCtxExt},
+    context::testutil::{handle_timer_helper_with_sc_ref, DummyInstant, DummyTimerCtxExt},
     Ctx, DeviceId, TimerId,
 };
 
@@ -313,7 +313,7 @@ fn arbitrary_packet<B: NestedPacketBuilder + core::fmt::Debug>(
 
 fn dispatch(
     Ctx { sync_ctx, non_sync_ctx }: &mut crate::testutil::DummyCtx,
-    device_id: &DeviceId,
+    device_id: &DeviceId<DummyInstant>,
     action: FuzzAction,
 ) {
     use FuzzAction::*;
@@ -323,7 +323,7 @@ fn dispatch(
                 .expect("error receiving frame")
         }
         AdvanceTime(SmallDuration(duration)) => {
-            let _: Vec<TimerId> = non_sync_ctx.trigger_timers_for(
+            let _: Vec<TimerId<_>> = non_sync_ctx.trigger_timers_for(
                 duration,
                 handle_timer_helper_with_sc_ref(&*sync_ctx, crate::handle_timer),
             );

@@ -5,6 +5,7 @@
 use super::{
     devices::{BindingId, DeviceSpecificInfo, Devices, EthernetInfo},
     DeviceStatusNotifier, InterfaceControl as _, LockableContext, MutableDeviceState as _,
+    StackTime,
 };
 use anyhow::Error;
 use assert_matches::assert_matches;
@@ -15,7 +16,10 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error, info, trace};
-use netstack3_core::{device::receive_frame, BufferNonSyncContext, Ctx};
+use netstack3_core::{
+    device::{receive_frame, DeviceId},
+    BufferNonSyncContext, Ctx,
+};
 use packet::serialize::Buf;
 use std::ops::DerefMut as _;
 
@@ -52,9 +56,9 @@ impl<C> EthernetWorker<C> {
 pub(crate) trait EthernetWorkerContext:
     LockableContext<NonSyncCtx = <Self as EthernetWorkerContext>::NonSyncCtx> + Send + Sync + 'static
 {
-    type NonSyncCtx: for<'a> BufferNonSyncContext<Buf<&'a mut [u8]>>
-        + AsRef<Devices>
-        + AsMut<Devices>
+    type NonSyncCtx: for<'a> BufferNonSyncContext<Buf<&'a mut [u8]>, Instant = StackTime>
+        + AsRef<Devices<DeviceId<StackTime>>>
+        + AsMut<Devices<DeviceId<StackTime>>>
         + DeviceStatusNotifier
         + Send
         + Sync;
@@ -63,9 +67,9 @@ pub(crate) trait EthernetWorkerContext:
 impl<T> EthernetWorkerContext for T
 where
     T: LockableContext + Send + Sync + 'static,
-    T::NonSyncCtx: for<'a> BufferNonSyncContext<Buf<&'a mut [u8]>>
-        + AsRef<Devices>
-        + AsMut<Devices>
+    T::NonSyncCtx: for<'a> BufferNonSyncContext<Buf<&'a mut [u8]>, Instant = StackTime>
+        + AsRef<Devices<DeviceId<StackTime>>>
+        + AsMut<Devices<DeviceId<StackTime>>>
         + DeviceStatusNotifier
         + Send
         + Sync,
@@ -136,7 +140,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                             let mut ctx = ctx.lock().await; let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
 
                             if let Some(id) =
-                                AsRef::<Devices>::as_ref(non_sync_ctx).get_core_id(id)
+                                AsRef::<Devices<_>>::as_ref(non_sync_ctx).get_core_id(id)
                             {
                                 receive_frame(sync_ctx, non_sync_ctx, &id, Buf::new(&mut buf[..len], ..))
                                     .unwrap_or_else(|e| error!("error receiving frame: {}", e))

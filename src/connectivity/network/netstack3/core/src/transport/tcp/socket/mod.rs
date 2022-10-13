@@ -1227,7 +1227,7 @@ impl<A: IpAddress, D> From<ConnAddr<A, D, NonZeroU16, NonZeroU16>> for Connectio
 pub fn get_unbound_info<I: Ip, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     id: UnboundId,
-) -> UnboundInfo<DeviceId> {
+) -> UnboundInfo<DeviceId<C::Instant>> {
     I::map_ip(
         IpInv((&mut sync_ctx, id)),
         |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_unbound_info(sync_ctx, id),
@@ -1239,7 +1239,7 @@ pub fn get_unbound_info<I: Ip, C: NonSyncContext>(
 pub fn get_bound_info<I: Ip, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     id: BoundId,
-) -> BoundInfo<I::Addr, DeviceId> {
+) -> BoundInfo<I::Addr, DeviceId<C::Instant>> {
     I::map_ip(
         IpInv((&mut sync_ctx, id)),
         |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_bound_info(sync_ctx, id),
@@ -1251,7 +1251,7 @@ pub fn get_bound_info<I: Ip, C: NonSyncContext>(
 pub fn get_listener_info<I: Ip, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     id: ListenerId,
-) -> BoundInfo<I::Addr, DeviceId> {
+) -> BoundInfo<I::Addr, DeviceId<C::Instant>> {
     I::map_ip(
         IpInv((&mut sync_ctx, id)),
         |IpInv((mut sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_listener_info(sync_ctx, id),
@@ -1263,7 +1263,7 @@ pub fn get_listener_info<I: Ip, C: NonSyncContext>(
 pub fn get_connection_info<I: Ip, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     id: ConnectionId,
-) -> ConnectionInfo<I::Addr, DeviceId> {
+) -> ConnectionInfo<I::Addr, DeviceId<C::Instant>> {
     I::map_ip(
         IpInv((&mut sync_ctx, id)),
         |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_connection_info(sync_ctx, id),

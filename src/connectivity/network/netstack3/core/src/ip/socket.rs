@@ -1164,8 +1164,9 @@ mod tests {
         sync_ctx: &mut &DummySyncCtx,
         ctx: &mut DummyNonSyncCtx,
     ) where
-        for<'a> &'a DummySyncCtx: DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
-        DummyNonSyncCtx: IpDeviceNonSyncContext<I, DeviceId, Instant = DummyInstant>,
+        for<'a> &'a DummySyncCtx:
+            DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId<DummyInstant>>,
+        DummyNonSyncCtx: IpDeviceNonSyncContext<I, DeviceId<DummyInstant>, Instant = DummyInstant>,
     {
         let devices = DeviceIpDeviceContext::<I, _>::with_devices(sync_ctx, |devices| {
             devices.collect::<Vec<_>>()
@@ -1270,11 +1271,14 @@ mod tests {
     fn test_new<I: Ip + IpSocketIpExt + IpLayerIpExt + IpDeviceIpExt>(test_case: NewSocketTestCase)
     where
         for<'a> &'a DummySyncCtx: IpSocketHandler<I, DummyNonSyncCtx>
-            + IpDeviceIdContext<I, DeviceId = DeviceId>
-            + DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
-        DummyNonSyncCtx: TimerContext<I::Timer<DeviceId>>,
-        context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>:
-            EventContext<IpDeviceEvent<DeviceId, I>>,
+            + IpDeviceIdContext<I, DeviceId = DeviceId<DummyInstant>>
+            + DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId<DummyInstant>>,
+        DummyNonSyncCtx: TimerContext<I::Timer<DeviceId<DummyInstant>>>,
+        context::testutil::DummyNonSyncCtx<
+            TimerId<DummyInstant>,
+            DispatchedEvent,
+            DummyNonSyncCtxState,
+        >: EventContext<IpDeviceEvent<DeviceId<DummyInstant>, I>>,
     {
         let cfg = I::DUMMY_CONFIG;
         let proto = I::ICMP_IP_PROTO;
@@ -1396,7 +1400,7 @@ mod tests {
         to_addr_type: AddressType,
     ) where
         for<'a> &'a DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
-            + IpDeviceIdContext<I, DeviceId = DeviceId>,
+            + IpDeviceIdContext<I, DeviceId = DeviceId<DummyInstant>>,
         IcmpEchoReply: IcmpMessage<I, &'static [u8], Code = IcmpUnusedCode>,
     {
         set_logger_for_test();
@@ -1517,10 +1521,13 @@ mod tests {
     fn test_send<I: Ip + IpSocketIpExt + IpLayerIpExt>()
     where
         for<'a> &'a DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
-            + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>
+            + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId<DummyInstant>>
             + IpStateContext<I, <DummyNonSyncCtx as InstantContext>::Instant>,
-        context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>:
-            EventContext<IpLayerEvent<DeviceId, I>>,
+        context::testutil::DummyNonSyncCtx<
+            TimerId<DummyInstant>,
+            DispatchedEvent,
+            DummyNonSyncCtxState,
+        >: EventContext<IpLayerEvent<DeviceId<DummyInstant>, I>>,
     {
         // Test various edge cases of the
         // `BufferIpSocketContext::send_ip_packet` method.
@@ -1656,7 +1663,7 @@ mod tests {
     fn test_send_hop_limits<I: Ip + IpSocketIpExt + IpLayerIpExt>()
     where
         for<'a> &'a DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
-            + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>
+            + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId<DummyInstant>>
             + IpStateContext<I, <DummyNonSyncCtx as InstantContext>::Instant>,
     {
         set_logger_for_test();

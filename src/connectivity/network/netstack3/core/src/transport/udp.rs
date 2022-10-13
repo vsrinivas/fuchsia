@@ -1661,7 +1661,7 @@ pub fn send_udp_conn_to<I: IpExt, B: BufferMut, C: BufferNonSyncContext<B>>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     conn: UdpConnId<I>,
-    remote_ip: ZonedAddr<I::Addr, DeviceId>,
+    remote_ip: ZonedAddr<I::Addr, DeviceId<C::Instant>>,
     remote_port: NonZeroU16,
     body: B,
 ) -> Result<(), (B, UdpSendError)> {
@@ -1901,7 +1901,7 @@ pub fn connect_udp<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpUnboundId<I>,
-    remote_ip: ZonedAddr<I::Addr, DeviceId>,
+    remote_ip: ZonedAddr<I::Addr, DeviceId<C::Instant>>,
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, SockCreationError> {
     I::map_ip::<_, Result<_, _>>(
@@ -1927,7 +1927,7 @@ pub fn set_unbound_udp_device<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpUnboundId<I>,
-    device_id: Option<&DeviceId>,
+    device_id: Option<&DeviceId<C::Instant>>,
 ) {
     I::map_ip(
         (IpInv((&mut sync_ctx, ctx, device_id)), id),
@@ -1952,7 +1952,7 @@ pub fn set_listener_udp_device<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpListenerId<I>,
-    device_id: Option<&DeviceId>,
+    device_id: Option<&DeviceId<C::Instant>>,
 ) -> Result<(), LocalAddressError> {
     I::map_ip::<_, Result<_, _>>(
         (IpInv((&mut sync_ctx, ctx, device_id)), id),
@@ -1980,7 +1980,7 @@ pub fn set_conn_udp_device<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpConnId<I>,
-    device_id: Option<&DeviceId>,
+    device_id: Option<&DeviceId<C::Instant>>,
 ) -> Result<(), SocketError> {
     I::map_ip::<_, Result<_, _>>(
         (IpInv((&mut sync_ctx, ctx, device_id)), id),
@@ -2005,8 +2005,8 @@ pub fn get_udp_bound_device<I: IpExt, C: NonSyncContext>(
     sync_ctx: &SyncCtx<C>,
     ctx: &C,
     id: UdpSocketId<I>,
-) -> Option<DeviceId> {
-    let IpInv(device) = I::map_ip::<_, IpInv<Option<DeviceId>>>(
+) -> Option<DeviceId<C::Instant>> {
+    let IpInv(device) = I::map_ip::<_, IpInv<Option<DeviceId<C::Instant>>>>(
         (IpInv((&sync_ctx, ctx)), id),
         |(IpInv((sync_ctx, ctx)), id)| {
             IpInv(UdpSocketHandler::<Ipv4, _>::get_udp_bound_device(sync_ctx, ctx, id))
@@ -2074,7 +2074,7 @@ pub fn set_udp_multicast_membership<I: IpExt, C: NonSyncContext>(
     ctx: &mut C,
     id: UdpSocketId<I>,
     multicast_group: MulticastAddr<I::Addr>,
-    interface: MulticastMembershipInterfaceSelector<I::Addr, DeviceId>,
+    interface: MulticastMembershipInterfaceSelector<I::Addr, DeviceId<C::Instant>>,
     want_membership: bool,
 ) -> Result<(), SetMulticastMembershipError> {
     I::map_ip::<_, Result<_, _>>(
@@ -2220,7 +2220,7 @@ pub fn connect_udp_listener<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpListenerId<I>,
-    remote_ip: ZonedAddr<I::Addr, DeviceId>,
+    remote_ip: ZonedAddr<I::Addr, DeviceId<C::Instant>>,
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, (ConnectListenerError, UdpListenerId<I>)> {
     I::map_ip::<_, Result<_, _>>(
@@ -2283,7 +2283,7 @@ pub fn reconnect_udp<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpConnId<I>,
-    remote_ip: ZonedAddr<I::Addr, DeviceId>,
+    remote_ip: ZonedAddr<I::Addr, DeviceId<C::Instant>>,
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, (ConnectListenerError, UdpConnId<I>)> {
     I::map_ip::<_, Result<_, _>>(
@@ -2313,7 +2313,7 @@ pub fn remove_udp_conn<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpConnId<I>,
-) -> UdpConnInfo<I::Addr, DeviceId> {
+) -> UdpConnInfo<I::Addr, DeviceId<C::Instant>> {
     I::map_ip(
         (IpInv((&mut sync_ctx, ctx)), id),
         |(IpInv((sync_ctx, ctx)), id)| {
@@ -2334,7 +2334,7 @@ pub fn get_udp_conn_info<I: IpExt, C: NonSyncContext>(
     sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpConnId<I>,
-) -> UdpConnInfo<I::Addr, DeviceId> {
+) -> UdpConnInfo<I::Addr, DeviceId<C::Instant>> {
     I::map_ip(
         (IpInv((&sync_ctx, ctx)), id),
         |(IpInv((sync_ctx, ctx)), id)| {
@@ -2366,7 +2366,7 @@ pub fn listen_udp<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpUnboundId<I>,
-    addr: Option<ZonedAddr<I::Addr, DeviceId>>,
+    addr: Option<ZonedAddr<I::Addr, DeviceId<C::Instant>>>,
     port: Option<NonZeroU16>,
 ) -> Result<UdpListenerId<I>, LocalAddressError> {
     I::map_ip::<_, Result<_, _>>(
@@ -2394,7 +2394,7 @@ pub fn remove_udp_listener<I: IpExt, C: NonSyncContext>(
     mut sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpListenerId<I>,
-) -> UdpListenerInfo<I::Addr, DeviceId> {
+) -> UdpListenerInfo<I::Addr, DeviceId<C::Instant>> {
     I::map_ip(
         (IpInv((&mut sync_ctx, ctx)), id),
         |(IpInv((sync_ctx, ctx)), id)| {
@@ -2416,7 +2416,7 @@ pub fn get_udp_listener_info<I: IpExt, C: NonSyncContext>(
     sync_ctx: &SyncCtx<C>,
     ctx: &mut C,
     id: UdpListenerId<I>,
-) -> UdpListenerInfo<I::Addr, DeviceId> {
+) -> UdpListenerInfo<I::Addr, DeviceId<C::Instant>> {
     I::map_ip(
         (IpInv((&sync_ctx, ctx)), id),
         |(IpInv((sync_ctx, ctx)), id)| {

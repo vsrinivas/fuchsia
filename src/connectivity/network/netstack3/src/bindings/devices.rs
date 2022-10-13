@@ -16,7 +16,7 @@ use netstack3_core::{
     Ctx,
 };
 
-use crate::bindings::{interfaces_admin, util::NeedsDataNotifier, LockableContext};
+use crate::bindings::{interfaces_admin, util::NeedsDataNotifier, LockableContext, StackTime};
 
 pub const LOOPBACK_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
 
@@ -31,7 +31,7 @@ pub type BindingId = u64;
 /// information associated with the device, respectively, and default to the
 /// types used by `EventLoop` for brevity in the main use case. The type
 /// parameters are there to allow testing without dependencies on `core`.
-pub struct Devices<C: IdMapCollectionKey = DeviceId, I = DeviceSpecificInfo> {
+pub struct Devices<C: IdMapCollectionKey, I = DeviceSpecificInfo> {
     devices: IdMapCollection<C, DeviceInfo<C, I>>,
     // invariant: all values in id_map are valid keys in devices.
     id_map: HashMap<BindingId, C>,
@@ -163,7 +163,7 @@ impl DeviceSpecificInfo {
 pub(crate) fn spawn_rx_task<C: LockableContext + Send + Sync + 'static>(
     notifier: &NeedsDataNotifier,
     ns: C,
-    device_id: DeviceId,
+    device_id: DeviceId<StackTime>,
 ) {
     let mut watcher = notifier.watcher();
 
@@ -260,7 +260,7 @@ impl From<NetdeviceInfo> for DeviceSpecificInfo {
 
 /// Device information kept by [`Devices`].
 #[derive(Debug, PartialEq)]
-pub struct DeviceInfo<C = DeviceId, I = DeviceSpecificInfo> {
+pub struct DeviceInfo<C, I = DeviceSpecificInfo> {
     id: BindingId,
     core_id: C,
     info: I,

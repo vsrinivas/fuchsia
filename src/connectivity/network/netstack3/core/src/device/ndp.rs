@@ -142,9 +142,11 @@ mod tests {
             .unwrap_b()
     }
 
-    impl TryFrom<DeviceId> for EthernetDeviceId {
-        type Error = DeviceId;
-        fn try_from(id: DeviceId) -> Result<EthernetDeviceId, DeviceId> {
+    impl TryFrom<DeviceId<DummyInstant>> for EthernetDeviceId<DummyInstant> {
+        type Error = DeviceId<DummyInstant>;
+        fn try_from(
+            id: DeviceId<DummyInstant>,
+        ) -> Result<EthernetDeviceId<DummyInstant>, DeviceId<DummyInstant>> {
             match id.inner() {
                 DeviceIdInner::Ethernet(id) => Ok(id.clone()),
                 DeviceIdInner::Loopback(_) => Err(id),
@@ -341,13 +343,16 @@ mod tests {
         assert!(!is_in_ip_multicast(&&*net.sync_ctx("remote"), &remote_device_id, multicast_addr));
     }
 
-    fn dad_timer_id(id: EthernetDeviceId, addr: UnicastAddr<Ipv6Addr>) -> TimerId {
+    fn dad_timer_id(
+        id: EthernetDeviceId<DummyInstant>,
+        addr: UnicastAddr<Ipv6Addr>,
+    ) -> TimerId<DummyInstant> {
         TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Dad(
             crate::ip::device::dad::DadTimerId { device_id: id.into(), addr },
         )))
     }
 
-    fn rs_timer_id(id: EthernetDeviceId) -> TimerId {
+    fn rs_timer_id(id: EthernetDeviceId<DummyInstant>) -> TimerId<DummyInstant> {
         TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Rs(
             crate::ip::device::router_solicitation::RsTimerId { device_id: id.into() },
         )))
@@ -511,7 +516,8 @@ mod tests {
             local_mac(),
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let eth_dev_id: EthernetDeviceId = dev_id.clone().try_into().expect("expected ethernet ID");
+        let eth_dev_id: EthernetDeviceId<_> =
+            dev_id.clone().try_into().expect("expected ethernet ID");
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &dev_id);
 
         // Enable DAD.
@@ -647,7 +653,7 @@ mod tests {
 
     fn get_address_state(
         sync_ctx: &&crate::testutil::DummySyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         addr: UnicastAddr<Ipv6Addr>,
     ) -> Option<AddressState> {
         crate::ip::device::IpDeviceContext::<Ipv6, _>::with_ip_device_state(
@@ -667,7 +673,8 @@ mod tests {
             local_mac(),
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let eth_dev_id: EthernetDeviceId = dev_id.clone().try_into().expect("expected ethernet ID");
+        let eth_dev_id: EthernetDeviceId<_> =
+            dev_id.clone().try_into().expect("expected ethernet ID");
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &dev_id);
 
         assert_empty(non_sync_ctx.frames_sent());
@@ -776,7 +783,8 @@ mod tests {
             local_mac(),
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let eth_dev_id: EthernetDeviceId = dev_id.clone().try_into().expect("expected ethernet ID");
+        let eth_dev_id: EthernetDeviceId<_> =
+            dev_id.clone().try_into().expect("expected ethernet ID");
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, &dev_id);
 
         // Enable DAD.
@@ -1008,7 +1016,7 @@ mod tests {
         fn inner_test(
             sync_ctx: &mut &crate::testutil::DummySyncCtx,
             ctx: &mut crate::testutil::DummyNonSyncCtx,
-            device_id: &DeviceId,
+            device_id: &DeviceId<DummyInstant>,
             hop_limit: u8,
             frame_offset: usize,
         ) {
@@ -1208,7 +1216,7 @@ mod tests {
             dummy_config.local_mac,
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let eth_device_id: EthernetDeviceId =
+        let eth_device_id: EthernetDeviceId<_> =
             device_id.clone().try_into().expect("expected ethernet ID");
         crate::device::update_ipv6_configuration(
             &mut sync_ctx,
@@ -1384,7 +1392,7 @@ mod tests {
                 config.max_router_solicitations = NonZeroU8::new(2);
             },
         );
-        let timer_id: TimerId =
+        let timer_id: TimerId<_> =
             rs_timer_id(device.clone().try_into().expect("expected ethernet ID")).into();
 
         // Send the first router solicitation.
@@ -1657,8 +1665,8 @@ mod tests {
         assert_eq!(non_sync_ctx.trigger_next_timer(sync_ctx, crate::handle_timer), None);
     }
 
-    impl From<SlaacTimerId<DeviceId>> for TimerId {
-        fn from(id: SlaacTimerId<DeviceId>) -> TimerId {
+    impl From<SlaacTimerId<DeviceId<DummyInstant>>> for TimerId<DummyInstant> {
+        fn from(id: SlaacTimerId<DeviceId<DummyInstant>>) -> TimerId<DummyInstant> {
             TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Slaac(id)))
         }
     }
@@ -1674,7 +1682,7 @@ mod tests {
             &self,
             sync_ctx: &mut &crate::testutil::DummySyncCtx,
             ctx: &mut crate::testutil::DummyNonSyncCtx,
-            device: &DeviceId,
+            device: &DeviceId<DummyInstant>,
             src_ip: Ipv6Addr,
         ) {
             let Self { prefix, valid_for, preferred_for } = *self;
@@ -1742,7 +1750,7 @@ mod tests {
     }
 
     fn initialize_with_temporary_addresses_enabled(
-    ) -> (crate::testutil::DummyCtx, DeviceId, SlaacConfiguration) {
+    ) -> (crate::testutil::DummyCtx, DeviceId<DummyInstant>, SlaacConfiguration) {
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = crate::testutil::DummyCtx::default();
@@ -1888,7 +1896,7 @@ mod tests {
     fn test_host_generate_temporary_slaac_address(
         valid_lifetime_in_ra: u32,
         preferred_lifetime_in_ra: u32,
-    ) -> (crate::testutil::DummyCtx, DeviceId, UnicastAddr<Ipv6Addr>) {
+    ) -> (crate::testutil::DummyCtx, DeviceId<DummyInstant>, UnicastAddr<Ipv6Addr>) {
         set_logger_for_test();
         let (mut ctx, device, slaac_config) = initialize_with_temporary_addresses_enabled();
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
@@ -2205,7 +2213,7 @@ mod tests {
     fn receive_prefix_update(
         sync_ctx: &mut &crate::testutil::DummySyncCtx,
         ctx: &mut crate::testutil::DummyNonSyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         src_ip: Ipv6Addr,
         subnet: Subnet<Ipv6Addr>,
         preferred_lifetime: u32,
@@ -2229,7 +2237,7 @@ mod tests {
 
     fn get_matching_slaac_address_entries<F: FnMut(&Ipv6AddressEntry<DummyInstant>) -> bool>(
         sync_ctx: &&crate::testutil::DummySyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         filter: F,
     ) -> impl Iterator<Item = Ipv6AddressEntry<DummyInstant>> {
         get_global_ipv6_addrs(sync_ctx, device).into_iter().filter(filter)
@@ -2237,7 +2245,7 @@ mod tests {
 
     fn get_matching_slaac_address_entry<F: FnMut(&Ipv6AddressEntry<DummyInstant>) -> bool>(
         sync_ctx: &&crate::testutil::DummySyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         filter: F,
     ) -> Option<Ipv6AddressEntry<DummyInstant>> {
         let mut matching_addrs = get_matching_slaac_address_entries(sync_ctx, device, filter);
@@ -2248,7 +2256,7 @@ mod tests {
 
     fn get_slaac_address_entry(
         sync_ctx: &&crate::testutil::DummySyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
     ) -> Option<Ipv6AddressEntry<DummyInstant>> {
         let mut matching_addrs = get_global_ipv6_addrs(sync_ctx, device)
@@ -2261,7 +2269,7 @@ mod tests {
 
     fn assert_slaac_lifetimes_enforced(
         non_sync_ctx: &crate::testutil::DummyNonSyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         entry: Ipv6AddressEntry<DummyInstant>,
         valid_until: DummyInstant,
         preferred_until: DummyInstant,
@@ -2303,7 +2311,7 @@ mod tests {
         fn inner_test(
             sync_ctx: &mut &crate::testutil::DummySyncCtx,
             ctx: &mut crate::testutil::DummyNonSyncCtx,
-            device: &DeviceId,
+            device: &DeviceId<DummyInstant>,
             src_ip: Ipv6Addr,
             subnet: Subnet<Ipv6Addr>,
             addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
@@ -2659,7 +2667,7 @@ mod tests {
     fn receive_neighbor_advertisement_for_duplicate_address(
         sync_ctx: &mut &crate::testutil::DummySyncCtx,
         ctx: &mut crate::testutil::DummyNonSyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         source_ip: UnicastAddr<Ipv6Addr>,
     ) {
         let peer_mac = mac!("00:11:22:33:44:55");
@@ -2892,7 +2900,7 @@ mod tests {
                 }
         })
         .unwrap();
-        let regen_timer_id: TimerId = SlaacTimerId::new_regenerate_temporary_slaac_address(
+        let regen_timer_id: TimerId<_> = SlaacTimerId::new_regenerate_temporary_slaac_address(
             device.clone(),
             *first_addr_entry.addr_sub(),
         )
@@ -3025,7 +3033,7 @@ mod tests {
             config.local_mac,
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
-        let device_id: EthernetDeviceId = device.clone().try_into().unwrap();
+        let device_id: EthernetDeviceId<_> = device.clone().try_into().unwrap();
         // No DAD for the auto-generated link-local address.
         crate::device::update_ipv6_configuration(
             &mut sync_ctx,

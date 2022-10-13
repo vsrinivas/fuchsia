@@ -22,6 +22,7 @@ use net_types::{
     ScopeableAddress, SpecifiedAddr, Witness, ZonedAddr,
 };
 use netstack3_core::{
+    device::DeviceId,
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
     socket::datagram::{ConnectListenerError, SetMulticastMembershipError, SockCreationError},
@@ -32,7 +33,7 @@ use netstack3_core::{
 use crate::bindings::{
     devices::Devices,
     util::{IntoCore as _, IntoFidl as _},
-    LockableContext,
+    LockableContext, StackTime,
 };
 
 // Socket constants defined in FDIO in
@@ -53,8 +54,9 @@ pub(crate) async fn serve<C>(
 ) -> Result<(), fidl::Error>
 where
     C: LockableContext,
-    C::NonSyncCtx:
-        AsRef<Devices> + datagram::SocketWorkerDispatcher + stream::SocketWorkerDispatcher,
+    C::NonSyncCtx: AsRef<Devices<DeviceId<StackTime>>>
+        + datagram::SocketWorkerDispatcher
+        + stream::SocketWorkerDispatcher,
     C: Clone + Send + Sync + 'static,
 {
     stream
@@ -64,7 +66,7 @@ where
                     let mut response = {
                         let ctx = ctx.lock().await;
                         let Ctx { sync_ctx: _, non_sync_ctx } = &*ctx;
-                        let result = AsRef::<Devices>::as_ref(&non_sync_ctx)
+                        let result = AsRef::<Devices<_>>::as_ref(&non_sync_ctx)
                             .get_device(index)
                             .map(|device_info| device_info.info().common_info().name.clone())
                             .ok_or(zx::Status::NOT_FOUND.into_raw());
@@ -76,7 +78,7 @@ where
                     let mut response = {
                         let ctx = ctx.lock().await;
                         let Ctx { sync_ctx: _, non_sync_ctx } = &*ctx;
-                        let devices = AsRef::<Devices>::as_ref(&non_sync_ctx);
+                        let devices = AsRef::<Devices<_>>::as_ref(&non_sync_ctx);
                         let result = devices
                             .get_device_by_name(&name)
                             .map(|d| d.id())

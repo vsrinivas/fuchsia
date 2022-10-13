@@ -18,7 +18,7 @@ impl<C: NonSyncContext> UdpStateContext<Ipv4, C> for &'_ SyncCtx<C> {
     fn join_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: &DeviceId,
+        device: &DeviceId<C::Instant>,
         addr: MulticastAddr<Ipv4Addr>,
     ) {
         crate::ip::device::join_ip_multicast::<Ipv4, _, _>(self, ctx, device, addr);
@@ -27,13 +27,16 @@ impl<C: NonSyncContext> UdpStateContext<Ipv4, C> for &'_ SyncCtx<C> {
     fn leave_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: &DeviceId,
+        device: &DeviceId<C::Instant>,
         addr: MulticastAddr<Ipv4Addr>,
     ) {
         crate::ip::device::leave_ip_multicast::<Ipv4, _, _>(self, ctx, device, addr);
     }
 
-    fn with_sockets<O, F: FnOnce(&Self::IpSocketsCtx, &UdpSockets<Ipv4, DeviceId>) -> O>(
+    fn with_sockets<
+        O,
+        F: FnOnce(&Self::IpSocketsCtx, &UdpSockets<Ipv4, DeviceId<C::Instant>>) -> O,
+    >(
         &self,
         cb: F,
     ) -> O {
@@ -42,7 +45,7 @@ impl<C: NonSyncContext> UdpStateContext<Ipv4, C> for &'_ SyncCtx<C> {
 
     fn with_sockets_mut<
         O,
-        F: FnOnce(&mut Self::IpSocketsCtx, &mut UdpSockets<Ipv4, DeviceId>) -> O,
+        F: FnOnce(&mut Self::IpSocketsCtx, &mut UdpSockets<Ipv4, DeviceId<C::Instant>>) -> O,
     >(
         &mut self,
         cb: F,
@@ -61,7 +64,7 @@ impl<C: NonSyncContext> UdpStateContext<Ipv6, C> for &'_ SyncCtx<C> {
     fn join_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: &DeviceId,
+        device: &DeviceId<C::Instant>,
         addr: MulticastAddr<Ipv6Addr>,
     ) {
         crate::ip::device::join_ip_multicast::<Ipv6, _, _>(self, ctx, device, addr);
@@ -70,13 +73,16 @@ impl<C: NonSyncContext> UdpStateContext<Ipv6, C> for &'_ SyncCtx<C> {
     fn leave_multicast_group(
         &mut self,
         ctx: &mut C,
-        device: &DeviceId,
+        device: &DeviceId<C::Instant>,
         addr: MulticastAddr<Ipv6Addr>,
     ) {
         crate::ip::device::leave_ip_multicast::<Ipv6, _, _>(self, ctx, device, addr);
     }
 
-    fn with_sockets<O, F: FnOnce(&Self::IpSocketsCtx, &UdpSockets<Ipv6, DeviceId>) -> O>(
+    fn with_sockets<
+        O,
+        F: FnOnce(&Self::IpSocketsCtx, &UdpSockets<Ipv6, DeviceId<C::Instant>>) -> O,
+    >(
         &self,
         cb: F,
     ) -> O {
@@ -85,7 +91,7 @@ impl<C: NonSyncContext> UdpStateContext<Ipv6, C> for &'_ SyncCtx<C> {
 
     fn with_sockets_mut<
         O,
-        F: FnOnce(&mut Self::IpSocketsCtx, &mut UdpSockets<Ipv6, DeviceId>) -> O,
+        F: FnOnce(&mut Self::IpSocketsCtx, &mut UdpSockets<Ipv6, DeviceId<C::Instant>>) -> O,
     >(
         &mut self,
         cb: F,

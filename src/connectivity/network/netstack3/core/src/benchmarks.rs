@@ -34,7 +34,7 @@ use crate::{
     device::receive_frame,
     testutil::{
         benchmarks::{black_box, Bencher},
-        DummyEventDispatcherBuilder, DummyNonSyncCtx, DUMMY_CONFIG_V4,
+        DummyEventDispatcherBuilder, DUMMY_CONFIG_V4,
     },
     Ctx, StackStateBuilder,
 };
@@ -52,7 +52,7 @@ use crate::{
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let (Ctx { sync_ctx, mut non_sync_ctx }, idx_to_device_id) =
         DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-            .build_with::<DummyNonSyncCtx>(StackStateBuilder::default());
+            .build_with(StackStateBuilder::default());
     let mut sync_ctx = &sync_ctx;
     let device = &idx_to_device_id[0];
     crate::ip::device::set_routing_enabled::<_, _, Ipv4>(

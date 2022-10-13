@@ -105,10 +105,10 @@ impl TransportStateBuilder {
 
 /// The state associated with the transport layer.
 pub(crate) struct TransportLayerState<C: TcpNonSyncContext> {
-    udpv4: UdpState<Ipv4, DeviceId>,
-    udpv6: UdpState<Ipv6, DeviceId>,
-    tcpv4: TcpState<Ipv4, DeviceId, C>,
-    tcpv6: TcpState<Ipv6, DeviceId, C>,
+    udpv4: UdpState<Ipv4, DeviceId<C::Instant>>,
+    udpv6: UdpState<Ipv6, DeviceId<C::Instant>>,
+    tcpv4: TcpState<Ipv4, DeviceId<C::Instant>, C>,
+    tcpv6: TcpState<Ipv6, DeviceId<C::Instant>, C>,
 }
 
 impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for &'_ SyncCtx<C> {

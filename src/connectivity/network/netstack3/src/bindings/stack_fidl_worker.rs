@@ -9,7 +9,7 @@ use super::{
     ethernet_worker, interfaces_admin,
     util::{IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidlWithContext as _},
     InterfaceControl as _, InterfaceControlRunner, InterfaceEventProducerFactory, Lockable,
-    LockableContext,
+    LockableContext, StackTime,
 };
 
 use fidl_fuchsia_hardware_ethernet as fhardware_ethernet;
@@ -24,7 +24,8 @@ use futures::{FutureExt as _, TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_ip_addr, del_route, ip::types::AddableEntryEither, Ctx,
+    add_ip_addr_subnet, add_route, del_ip_addr, del_route, device::DeviceId,
+    ip::types::AddableEntryEither, Ctx,
 };
 use std::collections::HashMap;
 
@@ -194,7 +195,7 @@ where
             let (control_sender, control_receiver) =
                 interfaces_admin::OwnedControlHandle::new_channel();
 
-            let devices: &mut Devices = non_sync_ctx.as_mut();
+            let devices: &mut Devices<_> = non_sync_ctx.as_mut();
             devices
                 .add_device(eth_id.clone(), |id| {
                     let device_class = if features.contains(fhardware_ethernet::Features::LOOPBACK)
@@ -262,7 +263,7 @@ where
 impl<'a, C> LockedFidlWorker<'a, C>
 where
     C: LockableContext,
-    C::NonSyncCtx: AsMut<Devices>,
+    C::NonSyncCtx: AsMut<Devices<DeviceId<StackTime>>>,
 {
     /// Cancels the `fuchsia.net.interfaces.admin/Control` task.
     ///
@@ -321,7 +322,7 @@ where
 impl<'a, C> LockedFidlWorker<'a, C>
 where
     C: LockableContext,
-    C::NonSyncCtx: AsRef<Devices>,
+    C::NonSyncCtx: AsRef<Devices<DeviceId<StackTime>>>,
 {
     fn fidl_add_interface_address(
         mut self,

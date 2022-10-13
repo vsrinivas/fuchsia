@@ -974,7 +974,7 @@ pub(crate) mod testutil {
         rng: FakeCryptoRng<XorShiftRng>,
         timers: DummyTimerCtx<TimerId>,
         events: DummyEventCtx<Event>,
-        frames: DummyFrameCtx<DeviceId>,
+        frames: DummyFrameCtx<DeviceId<DummyInstant>>,
         counters: DummyCounterCtx,
         state: State,
     }
@@ -1015,11 +1015,11 @@ pub(crate) mod testutil {
             self.events.take()
         }
 
-        pub(crate) fn frame_ctx(&self) -> &DummyFrameCtx<DeviceId> {
+        pub(crate) fn frame_ctx(&self) -> &DummyFrameCtx<DeviceId<DummyInstant>> {
             &self.frames
         }
 
-        pub(crate) fn frame_ctx_mut(&mut self) -> &mut DummyFrameCtx<DeviceId> {
+        pub(crate) fn frame_ctx_mut(&mut self) -> &mut DummyFrameCtx<DeviceId<DummyInstant>> {
             &mut self.frames
         }
 
@@ -1634,10 +1634,10 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<CtxId, Links> DummyNetwork<CtxId, DeviceId, crate::testutil::DummyCtx, Links>
+    impl<CtxId, Links> DummyNetwork<CtxId, DeviceId<DummyInstant>, crate::testutil::DummyCtx, Links>
     where
         CtxId: Eq + Hash + Copy + Debug,
-        Links: DummyNetworkLinks<DeviceId, DeviceId, CtxId>,
+        Links: DummyNetworkLinks<DeviceId<DummyInstant>, DeviceId<DummyInstant>, CtxId>,
     {
         pub(crate) fn with_context<
             K: Into<CtxId>,
@@ -1714,18 +1714,18 @@ pub(crate) mod testutil {
     pub(crate) fn new_legacy_simple_dummy_network<CtxId: Copy + Debug + Hash + Eq>(
         a_id: CtxId,
         a: crate::testutil::DummyCtx,
-        a_device_id: DeviceId,
+        a_device_id: DeviceId<DummyInstant>,
         b_id: CtxId,
         b: crate::testutil::DummyCtx,
-        b_device_id: DeviceId,
+        b_device_id: DeviceId<DummyInstant>,
     ) -> DummyNetwork<
         CtxId,
-        DeviceId,
+        DeviceId<DummyInstant>,
         crate::testutil::DummyCtx,
-        impl DummyNetworkLinks<DeviceId, DeviceId, CtxId>,
+        impl DummyNetworkLinks<DeviceId<DummyInstant>, DeviceId<DummyInstant>, CtxId>,
     > {
         let contexts = vec![(a_id, a), (b_id, b)].into_iter();
-        DummyNetwork::new(contexts, move |net, _device_id: DeviceId| {
+        DummyNetwork::new(contexts, move |net, _device_id: DeviceId<DummyInstant>| {
             if net == a_id {
                 vec![(b_id, b_device_id.clone(), None)]
             } else {

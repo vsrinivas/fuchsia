@@ -18,14 +18,14 @@ use netstack3_core::Ctx;
 
 use crate::bindings::{
     devices, interfaces_admin, BindingId, DeviceId, InterfaceEventProducerFactory as _, Netstack,
-    NetstackContext,
+    NetstackContext, StackTime,
 };
 
 #[derive(Clone)]
 struct Inner {
     device: netdevice_client::Client,
     session: netdevice_client::Session,
-    state: Arc<Mutex<netdevice_client::PortSlab<DeviceId>>>,
+    state: Arc<Mutex<netdevice_client::PortSlab<DeviceId<StackTime>>>>,
 }
 
 /// The worker that receives messages from the ethernet device, and passes them
@@ -311,7 +311,7 @@ impl PortHandler {
 
     pub(crate) async fn uninstall(self) -> Result<(), netdevice_client::Error> {
         let Self { id: _, port_id, inner: Inner { device: _, session, state } } = self;
-        let _: DeviceId = assert_matches::assert_matches!(
+        let _: DeviceId<_> = assert_matches::assert_matches!(
             state.lock().await.remove(&port_id),
             netdevice_client::port_slab::RemoveOutcome::Removed(core_id) => core_id
         );

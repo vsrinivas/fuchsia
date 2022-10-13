@@ -93,7 +93,7 @@ const LOOPBACK_NAME: &'static str = "lo";
 const DEFAULT_LOOPBACK_MTU: u32 = 65536;
 
 pub(crate) trait LockableContext: for<'a> Lockable<'a, Ctx<Self::NonSyncCtx>> {
-    type NonSyncCtx: NonSyncContext + Send;
+    type NonSyncCtx: NonSyncContext<Instant = StackTime> + Send;
 }
 
 pub(crate) trait DeviceStatusNotifier {
@@ -130,33 +130,33 @@ impl DeviceStatusNotifier for BindingsNonSyncCtxImpl {
 #[derive(Default)]
 pub(crate) struct BindingsNonSyncCtxImpl {
     rng: OsRng,
-    timers: timers::TimerDispatcher<TimerId>,
-    devices: Devices,
+    timers: timers::TimerDispatcher<TimerId<StackTime>>,
+    devices: Devices<DeviceId<StackTime>>,
     icmp_echo_sockets: IcmpEchoSockets,
     udp_sockets: UdpSockets,
     tcp_listeners: IdMap<zx::Socket>,
 }
 
-impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsNonSyncCtxImpl {
-    fn as_ref(&self) -> &TimerDispatcher<TimerId> {
+impl AsRef<timers::TimerDispatcher<TimerId<StackTime>>> for BindingsNonSyncCtxImpl {
+    fn as_ref(&self) -> &TimerDispatcher<TimerId<StackTime>> {
         &self.timers
     }
 }
 
-impl AsMut<timers::TimerDispatcher<TimerId>> for BindingsNonSyncCtxImpl {
-    fn as_mut(&mut self) -> &mut TimerDispatcher<TimerId> {
+impl AsMut<timers::TimerDispatcher<TimerId<StackTime>>> for BindingsNonSyncCtxImpl {
+    fn as_mut(&mut self) -> &mut TimerDispatcher<TimerId<StackTime>> {
         &mut self.timers
     }
 }
 
-impl AsRef<Devices> for BindingsNonSyncCtxImpl {
-    fn as_ref(&self) -> &Devices {
+impl AsRef<Devices<DeviceId<StackTime>>> for BindingsNonSyncCtxImpl {
+    fn as_ref(&self) -> &Devices<DeviceId<StackTime>> {
         &self.devices
     }
 }
 
-impl AsMut<Devices> for BindingsNonSyncCtxImpl {
-    fn as_mut(&mut self) -> &mut Devices {
+impl AsMut<Devices<DeviceId<StackTime>>> for BindingsNonSyncCtxImpl {
+    fn as_mut(&mut self) -> &mut Devices<DeviceId<StackTime>> {
         &mut self.devices
     }
 }
@@ -193,37 +193,43 @@ impl AsMut<UdpSockets> for BindingsNonSyncCtxImpl {
     }
 }
 
-impl<NonSyncCtx> timers::TimerHandler<TimerId> for Ctx<NonSyncCtx>
+impl<NonSyncCtx> timers::TimerHandler<TimerId<NonSyncCtx::Instant>> for Ctx<NonSyncCtx>
 where
-    NonSyncCtx: NonSyncContext + AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
+    NonSyncCtx: NonSyncContext
+        + AsMut<timers::TimerDispatcher<TimerId<NonSyncCtx::Instant>>>
+        + Send
+        + Sync
+        + 'static,
 {
-    fn handle_expired_timer(&mut self, timer: TimerId) {
+    fn handle_expired_timer(&mut self, timer: TimerId<NonSyncCtx::Instant>) {
         let Ctx { sync_ctx, non_sync_ctx } = self;
         handle_timer(sync_ctx, non_sync_ctx, timer)
     }
 
-    fn get_timer_dispatcher(&mut self) -> &mut timers::TimerDispatcher<TimerId> {
+    fn get_timer_dispatcher(
+        &mut self,
+    ) -> &mut timers::TimerDispatcher<TimerId<NonSyncCtx::Instant>> {
         self.non_sync_ctx.as_mut()
     }
 }
 
-impl<C> timers::TimerContext<TimerId> for C
+impl<C> timers::TimerContext<TimerId<StackTime>> for C
 where
     C: LockableContext + Clone + Send + Sync + 'static,
-    C::NonSyncCtx: AsMut<timers::TimerDispatcher<TimerId>> + Send + Sync + 'static,
+    C::NonSyncCtx: AsMut<timers::TimerDispatcher<TimerId<StackTime>>> + Send + Sync + 'static,
 {
     type Handler = Ctx<C::NonSyncCtx>;
 }
 
 impl<D> ConversionContext for D
 where
-    D: AsRef<Devices>,
+    D: AsRef<Devices<DeviceId<StackTime>>>,
 {
-    fn get_core_id(&self, binding_id: u64) -> Option<DeviceId> {
+    fn get_core_id(&self, binding_id: u64) -> Option<DeviceId<StackTime>> {
         self.as_ref().get_core_id(binding_id)
     }
 
-    fn get_binding_id(&self, core_id: DeviceId) -> Option<u64> {
+    fn get_binding_id(&self, core_id: DeviceId<StackTime>) -> Option<u64> {
         self.as_ref().get_binding_id(core_id)
     }
 }
@@ -278,26 +284,30 @@ impl RngContext for BindingsNonSyncCtxImpl {
     }
 }
 
-impl TimerContext<TimerId> for BindingsNonSyncCtxImpl {
-    fn schedule_timer_instant(&mut self, time: StackTime, id: TimerId) -> Option<StackTime> {
+impl TimerContext<TimerId<StackTime>> for BindingsNonSyncCtxImpl {
+    fn schedule_timer_instant(
+        &mut self,
+        time: StackTime,
+        id: TimerId<StackTime>,
+    ) -> Option<StackTime> {
         self.timers.schedule_timer(id, time)
     }
 
-    fn cancel_timer(&mut self, id: TimerId) -> Option<StackTime> {
+    fn cancel_timer(&mut self, id: TimerId<StackTime>) -> Option<StackTime> {
         self.timers.cancel_timer(&id)
     }
 
-    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+    fn cancel_timers_with<F: FnMut(&TimerId<StackTime>) -> bool>(&mut self, f: F) {
         self.timers.cancel_timers_with(f);
     }
 
-    fn scheduled_instant(&self, id: TimerId) -> Option<StackTime> {
+    fn scheduled_instant(&self, id: TimerId<StackTime>) -> Option<StackTime> {
         self.timers.scheduled_time(&id)
     }
 }
 
 impl DeviceLayerEventDispatcher for BindingsNonSyncCtxImpl {
-    fn wake_rx_task(&mut self, device: &DeviceId) {
+    fn wake_rx_task(&mut self, device: &DeviceId<StackTime>) {
         match self.devices.get_core_device_mut(device) {
             Some(dev) => match dev.info_mut() {
                 DeviceSpecificInfo::Ethernet(_) | DeviceSpecificInfo::Netdevice(_) => {
@@ -320,7 +330,7 @@ where
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        device: &DeviceId,
+        device: &DeviceId<StackTime>,
         frame: S,
     ) -> Result<(), S> {
         // TODO(wesleyac): Error handling
@@ -446,8 +456,8 @@ where
     }
 }
 
-impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for BindingsNonSyncCtxImpl {
-    fn on_event(&mut self, event: IpDeviceEvent<DeviceId, I>) {
+impl<I: Ip> EventContext<IpDeviceEvent<DeviceId<StackTime>, I>> for BindingsNonSyncCtxImpl {
+    fn on_event(&mut self, event: IpDeviceEvent<DeviceId<StackTime>, I>) {
         match event {
             IpDeviceEvent::AddressAdded { device, addr, state } => {
                 self.notify_interface_update(
@@ -481,8 +491,10 @@ impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for BindingsNonSyncCtxImpl 
     }
 }
 
-impl<I: Ip> EventContext<netstack3_core::ip::IpLayerEvent<DeviceId, I>> for BindingsNonSyncCtxImpl {
-    fn on_event(&mut self, event: netstack3_core::ip::IpLayerEvent<DeviceId, I>) {
+impl<I: Ip> EventContext<netstack3_core::ip::IpLayerEvent<DeviceId<StackTime>, I>>
+    for BindingsNonSyncCtxImpl
+{
+    fn on_event(&mut self, event: netstack3_core::ip::IpLayerEvent<DeviceId<StackTime>, I>) {
         let (device, subnet, has_default_route) = match event {
             netstack3_core::ip::IpLayerEvent::DeviceRouteAdded { device, subnet } => {
                 (device, subnet, true)
@@ -502,8 +514,10 @@ impl<I: Ip> EventContext<netstack3_core::ip::IpLayerEvent<DeviceId, I>> for Bind
     }
 }
 
-impl EventContext<netstack3_core::ip::device::dad::DadEvent<DeviceId>> for BindingsNonSyncCtxImpl {
-    fn on_event(&mut self, event: netstack3_core::ip::device::dad::DadEvent<DeviceId>) {
+impl EventContext<netstack3_core::ip::device::dad::DadEvent<DeviceId<StackTime>>>
+    for BindingsNonSyncCtxImpl
+{
+    fn on_event(&mut self, event: netstack3_core::ip::device::dad::DadEvent<DeviceId<StackTime>>) {
         match event {
             netstack3_core::ip::device::dad::DadEvent::AddressAssigned { device, addr } => self
                 .on_event(
@@ -517,12 +531,16 @@ impl EventContext<netstack3_core::ip::device::dad::DadEvent<DeviceId>> for Bindi
     }
 }
 
-impl EventContext<netstack3_core::ip::device::route_discovery::Ipv6RouteDiscoveryEvent<DeviceId>>
-    for BindingsNonSyncCtxImpl
+impl
+    EventContext<
+        netstack3_core::ip::device::route_discovery::Ipv6RouteDiscoveryEvent<DeviceId<StackTime>>,
+    > for BindingsNonSyncCtxImpl
 {
     fn on_event(
         &mut self,
-        _event: netstack3_core::ip::device::route_discovery::Ipv6RouteDiscoveryEvent<DeviceId>,
+        _event: netstack3_core::ip::device::route_discovery::Ipv6RouteDiscoveryEvent<
+            DeviceId<StackTime>,
+        >,
     ) {
         // TODO(https://fxbug.dev/97203): Update forwarding table in response to
         // the event.
@@ -530,7 +548,7 @@ impl EventContext<netstack3_core::ip::device::route_discovery::Ipv6RouteDiscover
 }
 
 impl BindingsNonSyncCtxImpl {
-    fn notify_interface_update(&self, device: &DeviceId, event: InterfaceUpdate) {
+    fn notify_interface_update(&self, device: &DeviceId<StackTime>, event: InterfaceUpdate) {
         self.devices
             .get_core_device(device)
             .unwrap_or_else(|| panic!("issued event {:?} for deleted device {:?}", event, device))
@@ -544,7 +562,7 @@ impl BindingsNonSyncCtxImpl {
     /// Notify `AddressStateProvider.WatchAddressAssignmentState` watchers.
     fn notify_address_update(
         &self,
-        device: &DeviceId,
+        device: &DeviceId<StackTime>,
         address: SpecifiedAddr<IpAddr>,
         state: netstack3_core::ip::device::IpAddressState,
     ) {
@@ -569,14 +587,25 @@ impl BindingsNonSyncCtxImpl {
 
 trait MutableDeviceState {
     /// Invoke a function on the state associated with the device `id`.
-    fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F);
+    fn update_device_state<F: FnOnce(&mut DeviceInfo<DeviceId<StackTime>>)>(
+        &mut self,
+        id: u64,
+        f: F,
+    );
 }
 
 impl<NonSyncCtx> MutableDeviceState for Ctx<NonSyncCtx>
 where
-    NonSyncCtx: NonSyncContext + DeviceStatusNotifier + AsRef<Devices> + AsMut<Devices>,
+    NonSyncCtx: NonSyncContext<Instant = StackTime>
+        + DeviceStatusNotifier
+        + AsRef<Devices<DeviceId<StackTime>>>
+        + AsMut<Devices<DeviceId<StackTime>>>,
 {
-    fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
+    fn update_device_state<F: FnOnce(&mut DeviceInfo<DeviceId<StackTime>>)>(
+        &mut self,
+        id: u64,
+        f: F,
+    ) {
         if let Some(device_info) = self.non_sync_ctx.as_mut().get_device_mut(id) {
             f(device_info);
             self.non_sync_ctx.device_status_changed(id)
@@ -597,7 +626,11 @@ trait InterfaceControl {
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error>;
 }
 
-fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Devices>>(
+fn set_interface_enabled<
+    NonSyncCtx: NonSyncContext
+        + AsRef<Devices<DeviceId<NonSyncCtx::Instant>>>
+        + AsMut<Devices<DeviceId<NonSyncCtx::Instant>>>,
+>(
     Ctx { sync_ctx, non_sync_ctx }: &mut Ctx<NonSyncCtx>,
     id: u64,
     should_enable: bool,
@@ -655,7 +688,7 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
 fn add_loopback_ip_addrs<NonSyncCtx: NonSyncContext>(
     sync_ctx: &mut SyncCtx<NonSyncCtx>,
     non_sync_ctx: &mut NonSyncCtx,
-    loopback: &DeviceId,
+    loopback: &DeviceId<NonSyncCtx::Instant>,
 ) -> Result<(), NetstackError> {
     for addr_subnet in [
         AddrSubnetEither::V4(
@@ -674,7 +707,9 @@ fn add_loopback_ip_addrs<NonSyncCtx: NonSyncContext>(
 
 impl<NonSyncCtx> InterfaceControl for Ctx<NonSyncCtx>
 where
-    NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Devices>,
+    NonSyncCtx: NonSyncContext
+        + AsRef<Devices<DeviceId<NonSyncCtx::Instant>>>
+        + AsMut<Devices<DeviceId<NonSyncCtx::Instant>>>,
 {
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         set_interface_enabled(self, id, true /* should_enable */)
@@ -822,7 +857,7 @@ impl NetstackSeed {
                 DEFAULT_LOOPBACK_MTU,
             )
             .expect("error adding loopback device");
-            let devices: &mut Devices = non_sync_ctx.as_mut();
+            let devices: &mut Devices<_> = non_sync_ctx.as_mut();
             let (control_sender, control_receiver) =
                 interfaces_admin::OwnedControlHandle::new_channel();
             let loopback_rx_notifier = Default::default();

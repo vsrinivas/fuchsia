@@ -10,6 +10,7 @@ use core::{
     fmt::{self, Debug, Display, Formatter},
 };
 
+use derivative::Derivative;
 use net_types::{
     ip::{Ip as _, IpAddress, IpVersion, Ipv4, Ipv6},
     SpecifiedAddr,
@@ -26,22 +27,23 @@ use crate::{
         Device, DeviceIdContext, DeviceLayerEventDispatcher, FrameDestination,
     },
     sync::ReferenceCounted,
-    DeviceId, NonSyncContext, SyncCtx,
+    DeviceId, Instant, NonSyncContext, SyncCtx,
 };
 
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub(crate) struct LoopbackDeviceId;
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Eq(bound = ""), PartialEq(bound = ""), Hash(bound = ""))]
+pub(crate) struct LoopbackDeviceId<I: Instant>(pub(super) core::marker::PhantomData<I>);
 
-impl Debug for LoopbackDeviceId {
+impl<I: Instant> Debug for LoopbackDeviceId<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let device: DeviceId = self.clone().into();
+        let device: DeviceId<I> = self.clone().into();
         write!(f, "{:?}", device)
     }
 }
 
-impl Display for LoopbackDeviceId {
+impl<I: Instant> Display for LoopbackDeviceId<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let device: DeviceId = self.clone().into();
+        let device: DeviceId<I> = self.clone().into();
         write!(f, "{}", device)
     }
 }
@@ -52,7 +54,7 @@ pub(super) enum LoopbackDevice {}
 impl Device for LoopbackDevice {}
 
 impl<NonSyncCtx: NonSyncContext> DeviceIdContext<LoopbackDevice> for &'_ SyncCtx<NonSyncCtx> {
-    type DeviceId = LoopbackDeviceId;
+    type DeviceId = LoopbackDeviceId<NonSyncCtx::Instant>;
 }
 
 pub(super) struct LoopbackDeviceState {
@@ -74,7 +76,7 @@ pub(super) fn send_ip_frame<
 >(
     mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
-    device_id: &LoopbackDeviceId,
+    device_id: &LoopbackDeviceId<NonSyncCtx::Instant>,
     _local_addr: SpecifiedAddr<A>,
     body: S,
 ) -> Result<(), S> {
@@ -112,7 +114,7 @@ pub(super) fn send_ip_frame<
 /// Gets the MTU associated with this device.
 pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(
     ctx: &SyncCtx<NonSyncCtx>,
-    &LoopbackDeviceId: &LoopbackDeviceId,
+    &LoopbackDeviceId(_): &LoopbackDeviceId<NonSyncCtx::Instant>,
 ) -> u32 {
     let loopback = {
         let devices = ctx.state.device.devices.read();
@@ -122,8 +124,10 @@ pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(
     loopback.link.mtu
 }
 
-impl<C: NonSyncContext> ReceiveQueueNonSyncContext<LoopbackDevice, LoopbackDeviceId> for C {
-    fn wake_rx_task(&mut self, device_id: LoopbackDeviceId) {
+impl<C: NonSyncContext> ReceiveQueueNonSyncContext<LoopbackDevice, LoopbackDeviceId<C::Instant>>
+    for C
+{
+    fn wake_rx_task(&mut self, device_id: LoopbackDeviceId<C::Instant>) {
         DeviceLayerEventDispatcher::wake_rx_task(self, &device_id.into())
     }
 }
@@ -137,7 +141,7 @@ impl<C: NonSyncContext> ReceiveQueueContext<LoopbackDevice, C> for &'_ SyncCtx<C
         F: FnOnce(&mut ReceiveQueueState<Self::Meta, Self::Buffer>) -> O,
     >(
         &mut self,
-        &LoopbackDeviceId: &LoopbackDeviceId,
+        &LoopbackDeviceId(_): &LoopbackDeviceId<C::Instant>,
         cb: F,
     ) -> O {
         let loopback = {
@@ -152,7 +156,7 @@ impl<C: NonSyncContext> ReceiveQueueContext<LoopbackDevice, C> for &'_ SyncCtx<C
     fn handle_packet(
         &mut self,
         ctx: &mut C,
-        device_id: &LoopbackDeviceId,
+        device_id: &LoopbackDeviceId<C::Instant>,
         meta: IpVersion,
         buf: Buf<Vec<u8>>,
     ) {
@@ -183,7 +187,7 @@ impl<C: NonSyncContext> ReceiveDequeContext<LoopbackDevice, C> for &'_ SyncCtx<C
         F: FnOnce(&mut ReceiveDequeueState<IpVersion, Buf<Vec<u8>>>, &mut Self::ReceiveQueueCtx) -> O,
     >(
         &mut self,
-        &LoopbackDeviceId: &LoopbackDeviceId,
+        &LoopbackDeviceId(_): &LoopbackDeviceId<C::Instant>,
         cb: F,
     ) -> O {
         let mut me = *self;
@@ -229,8 +233,11 @@ mod tests {
         fn test<I: TestIpExt + IpDeviceStateIpExt, NonSyncCtx: NonSyncContext>(
             sync_ctx: &mut &SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
-            device: &DeviceId,
-            get_addrs: fn(&mut &SyncCtx<NonSyncCtx>, &DeviceId) -> Vec<SpecifiedAddr<I::Addr>>,
+            device: &DeviceId<NonSyncCtx::Instant>,
+            get_addrs: fn(
+                &mut &SyncCtx<NonSyncCtx>,
+                &DeviceId<NonSyncCtx::Instant>,
+            ) -> Vec<SpecifiedAddr<I::Addr>>,
         ) {
             assert_eq!(get_addrs(sync_ctx, device), []);
 

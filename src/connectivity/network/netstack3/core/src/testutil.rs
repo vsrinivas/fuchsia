@@ -19,7 +19,9 @@ use rand_xorshift::XorShiftRng;
 
 use crate::{
     context::{
-        testutil::{DummyFrameCtx, DummyNetworkContext, DummyTimerCtx, InstantAndData},
+        testutil::{
+            DummyFrameCtx, DummyInstant, DummyNetworkContext, DummyTimerCtx, InstantAndData,
+        },
         EventContext, FrameContext as _, InstantContext, TimerContext,
     },
     device::{BufferDeviceLayerEventDispatcher, DeviceId, DeviceLayerEventDispatcher},
@@ -33,7 +35,7 @@ use crate::{
         tcp::{buffer::RingBuffer, socket::TcpNonSyncContext},
         udp::{BufferUdpContext, UdpContext},
     },
-    Ctx, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
+    Ctx, StackStateBuilder, SyncCtx, TimerId,
 };
 
 /// Asserts that an iterable object produces zero items.
@@ -101,7 +103,7 @@ pub(crate) mod benchmarks {
 pub(crate) struct DummyNonSyncCtxState {
     icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
     icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
-    rx_available: Vec<DeviceId>,
+    rx_available: Vec<DeviceId<DummyInstant>>,
 }
 
 // Use the `Never` type for the `crate::context::testutil::DummyCtx`'s frame
@@ -113,8 +115,11 @@ pub(crate) struct DummyNonSyncCtxState {
 // compile).
 pub(crate) type DummyCtx = Ctx<DummyNonSyncCtx>;
 pub(crate) type DummySyncCtx = SyncCtx<DummyNonSyncCtx>;
-pub(crate) type DummyNonSyncCtx =
-    crate::context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>;
+pub(crate) type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx<
+    TimerId<DummyInstant>,
+    DispatchedEvent,
+    DummyNonSyncCtxState,
+>;
 
 impl TcpNonSyncContext for DummyNonSyncCtx {
     type ReceiveBuffer = RingBuffer;
@@ -134,11 +139,11 @@ impl TcpNonSyncContext for DummyNonSyncCtx {
 }
 
 impl DummyNonSyncCtx {
-    pub(crate) fn take_frames(&mut self) -> Vec<(DeviceId, Vec<u8>)> {
+    pub(crate) fn take_frames(&mut self) -> Vec<(DeviceId<DummyInstant>, Vec<u8>)> {
         self.frame_ctx_mut().take_frames()
     }
 
-    pub(crate) fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
+    pub(crate) fn frames_sent(&self) -> &[(DeviceId<DummyInstant>, Vec<u8>)] {
         self.frame_ctx().frames()
     }
 }
@@ -423,7 +428,7 @@ pub(crate) struct DummyEventDispatcherBuilder {
     ndp_table_entries: Vec<(usize, UnicastAddr<Ipv6Addr>, UnicastAddr<Mac>)>,
     // usize refers to index into devices Vec.
     device_routes: Vec<(SubnetEither, usize)>,
-    routes: Vec<AddableEntryEither<DeviceId>>,
+    routes: Vec<AddableEntryEither<DeviceId<DummyInstant>>>,
 }
 
 impl DummyEventDispatcherBuilder {
@@ -504,7 +509,7 @@ impl DummyEventDispatcherBuilder {
     }
 
     /// Builds a `Ctx` from the present configuration with a default dispatcher.
-    pub(crate) fn build(self) -> (DummyCtx, Vec<DeviceId>) {
+    pub(crate) fn build(self) -> (DummyCtx, Vec<DeviceId<DummyInstant>>) {
         self.build_with_modifications(|_| {})
     }
 
@@ -514,7 +519,7 @@ impl DummyEventDispatcherBuilder {
     pub(crate) fn build_with_modifications<F: FnOnce(&mut StackStateBuilder)>(
         self,
         f: F,
-    ) -> (DummyCtx, Vec<DeviceId>) {
+    ) -> (DummyCtx, Vec<DeviceId<DummyInstant>>) {
         let mut stack_builder = StackStateBuilder::default();
         f(&mut stack_builder);
         self.build_with(stack_builder)
@@ -522,10 +527,10 @@ impl DummyEventDispatcherBuilder {
 
     /// Build a `Ctx` from the present configuration with a caller-provided
     /// dispatcher and `StackStateBuilder`.
-    pub(crate) fn build_with<NonSyncCtx: NonSyncContext + Default>(
+    pub(crate) fn build_with(
         self,
         state_builder: StackStateBuilder,
-    ) -> (Ctx<NonSyncCtx>, Vec<DeviceId>) {
+    ) -> (DummyCtx, Vec<DeviceId<DummyInstant>>) {
         let mut ctx = Ctx::new_with_builder(state_builder);
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
@@ -604,27 +609,27 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     }
 }
 
-impl AsMut<DummyFrameCtx<DeviceId>> for DummyCtx {
-    fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId> {
+impl AsMut<DummyFrameCtx<DeviceId<DummyInstant>>> for DummyCtx {
+    fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId<DummyInstant>> {
         self.non_sync_ctx.frame_ctx_mut()
     }
 }
 
-impl AsRef<DummyTimerCtx<TimerId>> for DummyCtx {
-    fn as_ref(&self) -> &DummyTimerCtx<TimerId> {
+impl AsRef<DummyTimerCtx<TimerId<DummyInstant>>> for DummyCtx {
+    fn as_ref(&self) -> &DummyTimerCtx<TimerId<DummyInstant>> {
         self.non_sync_ctx.as_ref()
     }
 }
 
-impl AsMut<DummyTimerCtx<TimerId>> for DummyCtx {
-    fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId> {
+impl AsMut<DummyTimerCtx<TimerId<DummyInstant>>> for DummyCtx {
+    fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId<DummyInstant>> {
         self.non_sync_ctx.as_mut()
     }
 }
 
 impl DummyNetworkContext for DummyCtx {
-    type TimerId = TimerId;
-    type SendMeta = DeviceId;
+    type TimerId = TimerId<DummyInstant>;
+    type SendMeta = DeviceId<DummyInstant>;
 }
 
 pub(crate) trait TestutilIpExt: Ip {
@@ -700,7 +705,7 @@ impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyNonSyncCtx {
 }
 
 impl DeviceLayerEventDispatcher for DummyNonSyncCtx {
-    fn wake_rx_task(&mut self, device: &DeviceId) {
+    fn wake_rx_task(&mut self, device: &DeviceId<DummyInstant>) {
         self.state_mut().rx_available.push(device.clone());
     }
 }
@@ -708,7 +713,7 @@ impl DeviceLayerEventDispatcher for DummyNonSyncCtx {
 impl<B: BufferMut> BufferDeviceLayerEventDispatcher<B> for DummyNonSyncCtx {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         frame: S,
     ) -> Result<(), S> {
         self.frame_ctx_mut().send_frame(&mut (), device.clone(), frame)
@@ -731,82 +736,82 @@ pub(crate) fn handle_queued_rx_packets(sync_ctx: &DummySyncCtx, ctx: &mut DummyN
 /// Wraps all events emitted by Core into a single enum type.
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub(crate) enum DispatchedEvent {
-    Dad(DadEvent<DeviceId>),
-    IpDeviceIpv4(IpDeviceEvent<DeviceId, Ipv4>),
-    IpDeviceIpv6(IpDeviceEvent<DeviceId, Ipv6>),
-    IpLayerIpv4(IpLayerEvent<DeviceId, Ipv4>),
-    IpLayerIpv6(IpLayerEvent<DeviceId, Ipv6>),
-    Ipv6RouteDiscovery(Ipv6RouteDiscoveryEvent<DeviceId>),
+    Dad(DadEvent<DeviceId<DummyInstant>>),
+    IpDeviceIpv4(IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>),
+    IpDeviceIpv6(IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>),
+    IpLayerIpv4(IpLayerEvent<DeviceId<DummyInstant>, Ipv4>),
+    IpLayerIpv6(IpLayerEvent<DeviceId<DummyInstant>, Ipv6>),
+    Ipv6RouteDiscovery(Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>),
 }
 
-impl From<DadEvent<DeviceId>> for DispatchedEvent {
-    fn from(e: DadEvent<DeviceId>) -> DispatchedEvent {
+impl From<DadEvent<DeviceId<DummyInstant>>> for DispatchedEvent {
+    fn from(e: DadEvent<DeviceId<DummyInstant>>) -> DispatchedEvent {
         DispatchedEvent::Dad(e)
     }
 }
 
-impl From<IpDeviceEvent<DeviceId, Ipv4>> for DispatchedEvent {
-    fn from(e: IpDeviceEvent<DeviceId, Ipv4>) -> DispatchedEvent {
+impl From<IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>> for DispatchedEvent {
+    fn from(e: IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>) -> DispatchedEvent {
         DispatchedEvent::IpDeviceIpv4(e)
     }
 }
 
-impl From<IpDeviceEvent<DeviceId, Ipv6>> for DispatchedEvent {
-    fn from(e: IpDeviceEvent<DeviceId, Ipv6>) -> DispatchedEvent {
+impl From<IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>> for DispatchedEvent {
+    fn from(e: IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>) -> DispatchedEvent {
         DispatchedEvent::IpDeviceIpv6(e)
     }
 }
 
-impl From<IpLayerEvent<DeviceId, Ipv4>> for DispatchedEvent {
-    fn from(e: IpLayerEvent<DeviceId, Ipv4>) -> DispatchedEvent {
+impl From<IpLayerEvent<DeviceId<DummyInstant>, Ipv4>> for DispatchedEvent {
+    fn from(e: IpLayerEvent<DeviceId<DummyInstant>, Ipv4>) -> DispatchedEvent {
         DispatchedEvent::IpLayerIpv4(e)
     }
 }
 
-impl From<IpLayerEvent<DeviceId, Ipv6>> for DispatchedEvent {
-    fn from(e: IpLayerEvent<DeviceId, Ipv6>) -> DispatchedEvent {
+impl From<IpLayerEvent<DeviceId<DummyInstant>, Ipv6>> for DispatchedEvent {
+    fn from(e: IpLayerEvent<DeviceId<DummyInstant>, Ipv6>) -> DispatchedEvent {
         DispatchedEvent::IpLayerIpv6(e)
     }
 }
 
-impl From<Ipv6RouteDiscoveryEvent<DeviceId>> for DispatchedEvent {
-    fn from(e: Ipv6RouteDiscoveryEvent<DeviceId>) -> DispatchedEvent {
+impl From<Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>> for DispatchedEvent {
+    fn from(e: Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>) -> DispatchedEvent {
         DispatchedEvent::Ipv6RouteDiscovery(e)
     }
 }
 
-impl EventContext<IpLayerEvent<DeviceId, Ipv4>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: IpLayerEvent<DeviceId, Ipv4>) {
+impl EventContext<IpLayerEvent<DeviceId<DummyInstant>, Ipv4>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: IpLayerEvent<DeviceId<DummyInstant>, Ipv4>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<IpLayerEvent<DeviceId, Ipv6>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: IpLayerEvent<DeviceId, Ipv6>) {
+impl EventContext<IpLayerEvent<DeviceId<DummyInstant>, Ipv6>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: IpLayerEvent<DeviceId<DummyInstant>, Ipv6>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<IpDeviceEvent<DeviceId, Ipv4>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: IpDeviceEvent<DeviceId, Ipv4>) {
+impl EventContext<IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<IpDeviceEvent<DeviceId, Ipv6>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: IpDeviceEvent<DeviceId, Ipv6>) {
+impl EventContext<IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<DadEvent<DeviceId>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: DadEvent<DeviceId>) {
+impl EventContext<DadEvent<DeviceId<DummyInstant>>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: DadEvent<DeviceId<DummyInstant>>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: Ipv6RouteDiscoveryEvent<DeviceId>) {
+impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
@@ -814,7 +819,7 @@ impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId>> for DummyNonSyncCtx {
 pub(crate) fn handle_timer(
     DummyCtx { sync_ctx, non_sync_ctx }: &mut DummyCtx,
     _ctx: &mut (),
-    id: TimerId,
+    id: TimerId<DummyInstant>,
 ) {
     crate::handle_timer(sync_ctx, non_sync_ctx, id)
 }
@@ -1012,7 +1017,7 @@ mod tests {
         let (bob_ctx, bob_device_ids) = DUMMY_CONFIG_V4.swap().into_builder().build();
         let mut net = DummyNetwork::new(
             [("alice", alice_ctx), ("bob", bob_ctx)],
-            |net: &'static str, _device_id: DeviceId| {
+            |net: &'static str, _device_id: DeviceId<DummyInstant>| {
                 if net == "alice" {
                     vec![("bob", bob_device_ids[0].clone(), Some(latency))]
                 } else {
@@ -1074,8 +1079,11 @@ mod tests {
         // - Bob's timer expires at t = 7
         // - Alice receives Bob's response and Bob's last timer fires at t = 10
 
-        fn assert_full_state<'a, L: DummyNetworkLinks<DeviceId, DeviceId, &'a str>>(
-            net: &mut DummyNetwork<&'a str, DeviceId, DummyCtx, L>,
+        fn assert_full_state<
+            'a,
+            L: DummyNetworkLinks<DeviceId<DummyInstant>, DeviceId<DummyInstant>, &'a str>,
+        >(
+            net: &mut DummyNetwork<&'a str, DeviceId<DummyInstant>, DummyCtx, L>,
             alice_nop: usize,
             bob_nop: usize,
             bob_echo_request: usize,
@@ -1114,11 +1122,15 @@ mod tests {
         ctx: &mut DummyNonSyncCtx,
         src_ip: SpecifiedAddr<A>,
         dst_ip: SpecifiedAddr<A>,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
     ) where
         A::Version: TestIpExt,
-        &'a DummySyncCtx:
-            BufferIpLayerHandler<A::Version, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
+        &'a DummySyncCtx: BufferIpLayerHandler<
+            A::Version,
+            DummyNonSyncCtx,
+            Buf<Vec<u8>>,
+            DeviceId = DeviceId<DummyInstant>,
+        >,
     {
         let meta = SendIpPacketMeta {
             device,
@@ -1141,8 +1153,12 @@ mod tests {
     #[ip_test]
     fn test_send_to_many<I: Ip + TestIpExt>()
     where
-        for<'a> &'a DummySyncCtx:
-            BufferIpLayerHandler<I, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
+        for<'a> &'a DummySyncCtx: BufferIpLayerHandler<
+            I,
+            DummyNonSyncCtx,
+            Buf<Vec<u8>>,
+            DeviceId = DeviceId<DummyInstant>,
+        >,
     {
         let mac_a = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap();
         let mac_b = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 8])).unwrap();
@@ -1168,7 +1184,7 @@ mod tests {
         let (calvin_ctx, calvin_device_ids) = calvin.build();
         let mut net = DummyNetwork::new(
             [("alice", alice_ctx), ("bob", bob_ctx), ("calvin", calvin_ctx)],
-            |net: &'static str, _device_id: DeviceId| match net {
+            |net: &'static str, _device_id: DeviceId<DummyInstant>| match net {
                 "alice" => vec![
                     ("bob", bob_device_ids[bob_device_idx].clone(), None),
                     ("calvin", calvin_device_ids[calvin_device_idx].clone(), None),

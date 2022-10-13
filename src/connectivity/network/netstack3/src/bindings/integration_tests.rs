@@ -106,14 +106,14 @@ pub(crate) struct TestNonSyncCtx {
     /// Holds when timers are scheduled to fire.
     ///
     /// Note that the timers will not actually fire/be dispatched.
-    scheduled_timers: HashMap<TimerId, StackTime>,
+    scheduled_timers: HashMap<TimerId<StackTime>, StackTime>,
 }
 
 impl TestNonSyncCtx {
     /// Shorthand method to get a [`DeviceInfo`] from the device's bindings
     /// identifier.
-    fn get_device_info(&self, id: u64) -> Option<&DeviceInfo> {
-        AsRef::<Devices>::as_ref(self).get_device(id)
+    fn get_device_info(&self, id: u64) -> Option<&DeviceInfo<DeviceId<StackTime>>> {
+        AsRef::<Devices<_>>::as_ref(self).get_device(id)
     }
 }
 
@@ -200,26 +200,30 @@ impl TcpNonSyncContext for TestNonSyncCtx {
 // does not actually fire timers.
 //
 // This is OK as current tests do not expect to fire timers.
-impl TimerContext<TimerId> for TestNonSyncCtx {
-    fn schedule_timer_instant(&mut self, time: StackTime, id: TimerId) -> Option<StackTime> {
+impl TimerContext<TimerId<StackTime>> for TestNonSyncCtx {
+    fn schedule_timer_instant(
+        &mut self,
+        time: StackTime,
+        id: TimerId<StackTime>,
+    ) -> Option<StackTime> {
         self.scheduled_timers.insert(id, time)
     }
 
-    fn cancel_timer(&mut self, id: TimerId) -> Option<StackTime> {
+    fn cancel_timer(&mut self, id: TimerId<StackTime>) -> Option<StackTime> {
         self.scheduled_timers.remove(&id)
     }
 
-    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, mut f: F) {
+    fn cancel_timers_with<F: FnMut(&TimerId<StackTime>) -> bool>(&mut self, mut f: F) {
         self.scheduled_timers.retain(|id, _time| !f(id))
     }
 
-    fn scheduled_instant(&self, id: TimerId) -> Option<StackTime> {
+    fn scheduled_instant(&self, id: TimerId<StackTime>) -> Option<StackTime> {
         self.scheduled_timers.get(&id).cloned()
     }
 }
 
 impl DeviceLayerEventDispatcher for TestNonSyncCtx {
-    fn wake_rx_task(&mut self, device: &DeviceId) {
+    fn wake_rx_task(&mut self, device: &DeviceId<StackTime>) {
         self.ctx.wake_rx_task(device)
     }
 }
@@ -227,7 +231,7 @@ impl DeviceLayerEventDispatcher for TestNonSyncCtx {
 impl<B: BufferMut> BufferDeviceLayerEventDispatcher<B> for TestNonSyncCtx {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        device: &DeviceId,
+        device: &DeviceId<StackTime>,
         frame: S,
     ) -> Result<(), S> {
         self.ctx.send_frame(device, frame)
@@ -394,7 +398,7 @@ impl TestStack {
         Ok(stack)
     }
 
-    fn is_interface_link_up(info: &DeviceInfo) -> bool {
+    fn is_interface_link_up(info: &DeviceInfo<DeviceId<StackTime>>) -> bool {
         match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
                 common_info: _,
@@ -424,7 +428,7 @@ impl TestStack {
         self.wait_for_interface_status(if_id, |info| !Self::is_interface_link_up(info)).await;
     }
 
-    async fn wait_for_interface_status<F: Fn(&DeviceInfo) -> bool>(
+    async fn wait_for_interface_status<F: Fn(&DeviceInfo<DeviceId<StackTime>>) -> bool>(
         &mut self,
         if_id: u64,
         check_status: F,
@@ -698,7 +702,7 @@ impl TestSetupBuilder {
                         },
                     );
 
-                    let devices: &mut Devices = non_sync_ctx.as_mut();
+                    let devices: &mut Devices<_> = non_sync_ctx.as_mut();
                     let (control_sender, _control_receiver) =
                         interfaces_admin::OwnedControlHandle::new_channel();
                     let loopback_rx_notifier = Default::default();
@@ -980,7 +984,7 @@ async fn test_ethernet_link_up_down() {
 
 fn check_ip_enabled<NonSyncCtx: NonSyncContext>(
     Ctx { sync_ctx, non_sync_ctx: _ }: &mut Ctx<NonSyncCtx>,
-    core_id: &DeviceId,
+    core_id: &DeviceId<NonSyncCtx::Instant>,
     expected: bool,
 ) {
     let ipv4_enabled =

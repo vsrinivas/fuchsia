@@ -657,7 +657,10 @@ impl<
 impl<NonSyncCtx: NonSyncContext> IpStateContext<Ipv4, NonSyncCtx::Instant>
     for &'_ SyncCtx<NonSyncCtx>
 {
-    fn with_ip_layer_state<O, F: FnOnce(&Ipv4State<NonSyncCtx::Instant, DeviceId>) -> O>(
+    fn with_ip_layer_state<
+        O,
+        F: FnOnce(&Ipv4State<NonSyncCtx::Instant, DeviceId<NonSyncCtx::Instant>>) -> O,
+    >(
         &self,
         cb: F,
     ) -> O {
@@ -668,7 +671,10 @@ impl<NonSyncCtx: NonSyncContext> IpStateContext<Ipv4, NonSyncCtx::Instant>
 impl<NonSyncCtx: NonSyncContext> IpStateContext<Ipv6, NonSyncCtx::Instant>
     for &'_ SyncCtx<NonSyncCtx>
 {
-    fn with_ip_layer_state<O, F: FnOnce(&Ipv6State<NonSyncCtx::Instant, DeviceId>) -> O>(
+    fn with_ip_layer_state<
+        O,
+        F: FnOnce(&Ipv6State<NonSyncCtx::Instant, DeviceId<NonSyncCtx::Instant>>) -> O,
+    >(
         &self,
         cb: F,
     ) -> O {
@@ -1313,7 +1319,7 @@ macro_rules! try_parse_ip_packet {
 pub(crate) fn receive_ip_packet<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>, I: Ip>(
     mut sync_ctx: &SyncCtx<NonSyncCtx>,
     ctx: &mut NonSyncCtx,
-    device: &DeviceId,
+    device: &DeviceId<NonSyncCtx::Instant>,
     frame_dst: FrameDestination,
     buffer: B,
 ) {
@@ -2133,7 +2139,10 @@ pub(crate) fn del_device_routes<
 fn with_ipv4_and_ipv6_routing_tables<
     C: NonSyncContext,
     O,
-    F: FnOnce(&ForwardingTable<Ipv4, DeviceId>, &ForwardingTable<Ipv6, DeviceId>) -> O,
+    F: FnOnce(
+        &ForwardingTable<Ipv4, DeviceId<C::Instant>>,
+        &ForwardingTable<Ipv6, DeviceId<C::Instant>>,
+    ) -> O,
 >(
     sync_ctx: &SyncCtx<C>,
     cb: F,
@@ -2144,7 +2153,7 @@ fn with_ipv4_and_ipv6_routing_tables<
 /// Get all the routes.
 pub fn get_all_routes<NonSyncCtx: NonSyncContext>(
     mut sync_ctx: &SyncCtx<NonSyncCtx>,
-) -> Vec<types::EntryEither<DeviceId>> {
+) -> Vec<types::EntryEither<DeviceId<NonSyncCtx::Instant>>> {
     with_ipv4_and_ipv6_routing_tables(&mut sync_ctx, |ipv4, ipv6| {
         ipv4.iter_table()
             .cloned()
@@ -2339,7 +2348,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for &'_ SyncCtx<C> {
     fn receive_icmp_error(
         &mut self,
         ctx: &mut C,
-        device: &DeviceId,
+        device: &DeviceId<C::Instant>,
         original_src_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv4Addr>,
         original_proto: Ipv4Proto,
@@ -2372,7 +2381,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for &'_ SyncCtx<C> {
 
     fn with_icmp_sockets<
         O,
-        F: FnOnce(&IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId, DefaultSendOptions>>) -> O,
+        F: FnOnce(&IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId<C::Instant>, DefaultSendOptions>>) -> O,
     >(
         &self,
         cb: F,
@@ -2382,7 +2391,9 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for &'_ SyncCtx<C> {
 
     fn with_icmp_sockets_mut<
         O,
-        F: FnOnce(&mut IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId, DefaultSendOptions>>) -> O,
+        F: FnOnce(
+            &mut IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId<C::Instant>, DefaultSendOptions>>,
+        ) -> O,
     >(
         &mut self,
         cb: F,
@@ -2402,7 +2413,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for &'_ SyncCtx<C> {
     fn receive_icmp_error(
         &mut self,
         ctx: &mut C,
-        device: &DeviceId,
+        device: &DeviceId<C::Instant>,
         original_src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv6Addr>,
         original_next_header: Ipv6Proto,
@@ -2435,7 +2446,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for &'_ SyncCtx<C> {
 
     fn with_icmp_sockets<
         O,
-        F: FnOnce(&IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId, DefaultSendOptions>>) -> O,
+        F: FnOnce(&IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId<C::Instant>, DefaultSendOptions>>) -> O,
     >(
         &self,
         cb: F,
@@ -2445,7 +2456,9 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for &'_ SyncCtx<C> {
 
     fn with_icmp_sockets_mut<
         O,
-        F: FnOnce(&mut IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId, DefaultSendOptions>>) -> O,
+        F: FnOnce(
+            &mut IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId<C::Instant>, DefaultSendOptions>>,
+        ) -> O,
     >(
         &mut self,
         cb: F,
@@ -2476,7 +2489,7 @@ pub(crate) mod testutil {
 
     use net_types::{ip::IpAddr, MulticastAddr};
 
-    use crate::testutil::DummySyncCtx;
+    use crate::{context::testutil::DummyInstant, testutil::DummySyncCtx};
 
     impl<I: Ip, S, Meta, D: IpDeviceId + 'static> IpDeviceIdContext<I>
         for crate::context::testutil::DummySyncCtx<S, Meta, D>
@@ -2545,7 +2558,7 @@ pub(crate) mod testutil {
 
     pub(crate) fn is_in_ip_multicast<A: IpAddress>(
         sync_ctx: &DummySyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<DummyInstant>,
         addr: MulticastAddr<A>,
     ) -> bool {
         match addr.into() {
@@ -2722,7 +2735,7 @@ mod tests {
     fn process_ip_fragment<I: Ip, NonSyncCtx: NonSyncContext>(
         sync_ctx: &mut &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<NonSyncCtx::Instant>,
         fragment_id: u16,
         fragment_offset: u8,
         fragment_count: u8,
@@ -2755,7 +2768,7 @@ mod tests {
     fn process_ipv4_fragment<NonSyncCtx: NonSyncContext>(
         sync_ctx: &mut &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<NonSyncCtx::Instant>,
         fragment_id: u16,
         fragment_offset: u8,
         fragment_count: u8,
@@ -2783,7 +2796,7 @@ mod tests {
     fn process_ipv6_fragment<NonSyncCtx: NonSyncContext>(
         sync_ctx: &mut &SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
-        device: &DeviceId,
+        device: &DeviceId<NonSyncCtx::Instant>,
         fragment_id: u16,
         fragment_offset: u8,
         fragment_count: u8,
