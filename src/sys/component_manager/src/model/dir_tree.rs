@@ -15,7 +15,7 @@ use {
 
 /// Represents the directory hierarchy of the exposed directory, not including the nodes for the
 /// capabilities themselves.
-pub(super) struct DirTree {
+pub struct DirTree {
     directory_nodes: HashMap<String, Box<DirTree>>,
     broker_nodes: HashMap<String, RoutingFn>,
 }

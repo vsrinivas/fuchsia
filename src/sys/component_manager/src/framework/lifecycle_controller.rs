@@ -4,7 +4,7 @@
 
 use {
     crate::capability::{CapabilityProvider, CapabilitySource, PERMITTED_FLAGS},
-    crate::framework::RealmCapabilityHost,
+    crate::framework::realm::RealmCapabilityHost,
     crate::model::{
         component::{ComponentInstance, StartReason, WeakComponentInstance},
         error::ModelError,

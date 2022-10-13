@@ -15,7 +15,7 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
-        framework::SDK_REALM_SERVICE,
+        framework::realm::SDK_REALM_SERVICE,
         model::{
             actions::{ActionSet, DestroyAction, DestroyChildAction, ShutdownAction},
             error::ModelError,

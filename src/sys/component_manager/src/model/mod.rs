@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 pub mod actions;
+pub mod addable_directory;
 pub mod component;
+pub mod dir_tree;
 pub mod error;
 pub mod event_logger;
 pub mod hooks;
-pub mod hub;
 pub mod model;
 pub mod starter;
 
@@ -20,8 +21,6 @@ pub(crate) mod routing;
 pub(crate) mod routing_fns;
 pub(crate) mod storage;
 
-mod addable_directory;
-mod dir_tree;
 mod exposed_dir;
 mod ns_dir;
 

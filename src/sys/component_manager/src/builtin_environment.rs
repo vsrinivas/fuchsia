@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        binder::BinderCapabilityHost,
         bootfs::BootfsSvc,
         builtin::{
             arguments::Arguments as BootArguments,
@@ -20,22 +19,17 @@ use {
             irq_resource::IrqResource,
             items::Items,
             kernel_stats::KernelStats,
-            lifecycle_controller::LifecycleController,
             log::{ReadOnlyLog, WriteOnlyLog},
             mexec_resource::MexecResource,
             mmio_resource::MmioResource,
-            pkg_dir::PkgDirectory,
             power_resource::PowerResource,
             process_launcher::ProcessLauncher,
             realm_builder::{
                 RealmBuilderResolver, RealmBuilderRunner, RUNNER_NAME as REALM_BUILDER_RUNNER_NAME,
                 SCHEME as REALM_BUILDER_SCHEME,
             },
-            realm_explorer::RealmExplorer,
-            realm_query::RealmQuery,
             root_job::{RootJob, ROOT_JOB_CAPABILITY_NAME, ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME},
             root_resource::RootResource,
-            route_validator::RouteValidator,
             runner::{BuiltinRunner, BuiltinRunnerFactory},
             smc_resource::SmcResource,
             svc_stash_provider::SvcStashCapability,
@@ -47,7 +41,11 @@ use {
         diagnostics::{cpu::ComponentTreeStats, startup::ComponentEarlyStartupTimeStats},
         directory_ready_notifier::DirectoryReadyNotifier,
         elf_runner::ElfRunner,
-        framework::RealmCapabilityHost,
+        framework::{
+            binder::BinderCapabilityHost, hub::Hub, lifecycle_controller::LifecycleController,
+            pkg_dir::PkgDirectory, realm::RealmCapabilityHost, realm_explorer::RealmExplorer,
+            realm_query::RealmQuery, route_validator::RouteValidator,
+        },
         model::{
             component::ComponentManagerInstance,
             environment::Environment,
@@ -60,7 +58,6 @@ use {
                 stream_provider::EventStreamProvider,
             },
             hooks::EventType,
-            hub::Hub,
             model::{Model, ModelParams},
             resolver::{BuiltinResolver, Resolver, ResolverRegistry},
             storage::admin_protocol::StorageAdmin,
