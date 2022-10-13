@@ -8,8 +8,7 @@
 #include <lib/fit/function.h>
 #include <zircon/status.h>
 
-#include "src/devices/bin/driver_manager/binding_internal.h"
-#include "src/devices/bin/driver_manager/devfs.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/bin/driver_manager/v1/device_group_v1.h"
 #include "src/devices/lib/log/log.h"
 
@@ -97,36 +96,6 @@ zx_status_t BindDriverManager::BindDevice(const fbl::RefPtr<Device>& dev,
   }
 
   return ZX_OK;
-}
-
-zx_status_t BindDriverManager::MatchDevice(const fbl::RefPtr<Device>& dev, const Driver* driver,
-                                           bool autobind) const {
-  if (dev->IsAlreadyBound()) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-
-  if (autobind && dev->should_skip_autobind()) {
-    return ZX_ERR_NEXT;
-  }
-
-  if (!dev->is_bindable() && !(dev->is_composite_bindable())) {
-    return ZX_ERR_NEXT;
-  }
-
-  if (!can_driver_bind(driver, dev->protocol_id(), dev->props(), dev->str_props(), autobind)) {
-    return ZX_ERR_NEXT;
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t BindDriverManager::MatchAndBind(const fbl::RefPtr<Device>& dev, const Driver* drv,
-                                            bool autobind) {
-  zx_status_t status = MatchDevice(dev, drv, autobind);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return BindDriverToDevice(MatchedDriverInfo{.driver = drv}, dev);
 }
 
 zx::status<std::vector<MatchedDriver>> BindDriverManager::GetMatchingDrivers(

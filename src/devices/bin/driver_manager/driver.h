@@ -25,17 +25,6 @@ struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
 
   fbl::String name;
 
-  uint32_t bytecode_version = 0;
-
-  // Unlike the old bytecode format, the instructions in the new format are not
-  // represented by three uint32 integers. To support both formats
-  // simultaneously, zx_bind_inst_t values are used to represent the old bytecode
-  // instructions while uint8_t values are used to represent the new bytecode.
-  std::variant<std::unique_ptr<zx_bind_inst_t[]>, std::unique_ptr<uint8_t[]>> binding;
-
-  // Number of bytes in the bind rules.
-  uint32_t binding_size = 0;
-
   // If this is true, this driver should only be bound after /system/ comes up.
   bool fallback = false;
 

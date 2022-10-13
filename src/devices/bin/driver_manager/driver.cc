@@ -92,34 +92,6 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi,
     return;
   }
 
-  drv->bytecode_version = note->bytecodeversion;
-
-  // Check the bytecode version and populate binding or bytecode based on it.
-  if (drv->bytecode_version == 1) {
-    auto binding = std::make_unique<zx_bind_inst_t[]>(note->bindcount);
-    if (binding == nullptr) {
-      return;
-    }
-
-    const size_t bindlen = note->bindcount * sizeof(zx_bind_inst_t);
-    memcpy(binding.get(), bi, bindlen);
-    drv->binding = std::move(binding);
-    drv->binding_size = static_cast<uint32_t>(bindlen);
-  } else if (drv->bytecode_version == 2) {
-    auto binding = std::make_unique<uint8_t[]>(note->bytecount);
-    if (binding == nullptr) {
-      return;
-    }
-
-    const size_t bytecount = note->bytecount;
-    memcpy(binding.get(), bytecode, bytecount);
-    drv->binding = std::move(binding);
-    drv->binding_size = static_cast<uint32_t>(bytecount);
-  } else {
-    LOGF(ERROR, "Invalid bytecode version: %i", drv->bytecode_version);
-    return;
-  }
-
   drv->flags = note->flags;
   drv->libname = context->libname;
   drv->name = note->name;

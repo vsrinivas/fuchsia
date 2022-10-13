@@ -64,8 +64,6 @@ source_set("lib") {
     "base_package_resolver.h",
     "bind_driver_manager.cc",
     "bind_driver_manager.h",
-    "binding_internal.cc",
-    "binding_internal.h",
     "builtin_devices.cc",
     "builtin_devices.h",
     "component_lifecycle.cc",
@@ -209,7 +207,6 @@ executable("driver_manager") {
 
 test("driver_manager_test") {
   sources = [
-    "tests/binding_v2_test.cc",
     "tests/builtin_devices_test.cc",
     "tests/composite_device_tests.cc",
     "tests/coordinator_test_utils.cc",

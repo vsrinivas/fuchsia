@@ -10,8 +10,8 @@
 #include <string_view>
 #include <utility>
 
-#include "binding_internal.h"
-#include "coordinator.h"
+#include "src/devices/bin/driver_manager/binding.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/lib/log/log.h"
 
 namespace fdm = fuchsia_device_manager;
@@ -406,15 +406,22 @@ CompositeDeviceFragment::CompositeDeviceFragment(CompositeDevice* composite, std
 CompositeDeviceFragment::~CompositeDeviceFragment() = default;
 
 bool CompositeDeviceFragment::TryMatch(const fbl::RefPtr<Device>& dev) const {
-  return internal::EvaluateBindProgram(dev, "composite_binder", bind_rules_, true /* autobind */);
+  internal::BindProgramContext ctx;
+  ctx.props = &dev->props();
+  ctx.protocol_id = dev->protocol_id();
+  ctx.binding = bind_rules_.data();
+  ctx.binding_size = bind_rules_.size() * sizeof(bind_rules_[0]);
+  ctx.name = "composite_binder";
+  ctx.autobind = true;
+  return internal::EvaluateBindProgram(&ctx);
 }
 
 zx_status_t CompositeDeviceFragment::Bind(const fbl::RefPtr<Device>& dev) {
   ZX_ASSERT(bound_device_ == nullptr);
 
   if (!dev->has_outgoing_directory()) {
-    zx_status_t status = dev->coordinator->bind_driver_manager()->MatchAndBind(
-        dev, dev->coordinator->fragment_driver(), false /* autobind */);
+    zx_status_t status = dev->coordinator->bind_driver_manager()->BindDriverToDevice(
+        MatchedDriverInfo{.driver = dev->coordinator->fragment_driver()}, dev);
     if (status != ZX_OK) {
       return status;
     }

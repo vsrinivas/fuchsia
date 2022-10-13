@@ -26,23 +26,12 @@ class BindDriverManager {
   explicit BindDriverManager(Coordinator* coordinator);
   ~BindDriverManager();
 
-  // Returns ZX_OK if |device| and |driver| are a match for binding.
-  zx_status_t MatchDevice(const fbl::RefPtr<Device>& dev, const Driver* driver,
-                          bool autobind) const;
-
   zx_status_t BindDriverToDevice(const MatchedDriver& driver, const fbl::RefPtr<Device>& dev);
 
   // Try binding a driver to the device. Returns ZX_ERR_ALREADY_BOUND if there
   // is a driver bound to the device and the device is not allowed to be bound multiple times.
   zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname,
                          bool new_device);
-
-  // Attempts to bind the given driver to the given device.  Returns ZX_OK on
-  // success, ZX_ERR_ALREADY_BOUND if there is a driver bound to the device
-  // and the device is not allowed to be bound multiple times, ZX_ERR_NEXT if
-  // the driver is not capable of binding to the device, and a different error
-  // if the driver was capable of binding but failed to bind.
-  zx_status_t MatchAndBind(const fbl::RefPtr<Device>& dev, const Driver* driver, bool autobind);
 
   // Given a device, return all of the Drivers whose bind programs match with the device.
   // The returned vector is organized by priority, so if only one driver is being bound it

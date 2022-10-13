@@ -51,44 +51,6 @@ TEST_F(DriverDevelopmentTest, DeviceInfo) {
   ASSERT_TRUE(was_called);
 }
 
-TEST_F(DriverDevelopmentTest, DriverInfo) {
-  Driver driver;
-  driver.name = "test";
-  std::vector<const Driver*> drivers;
-  driver.bytecode_version = 2;
-  auto bind_rules = std::make_unique<uint8_t[]>(1);
-  driver.binding = std::move(bind_rules);
-
-  drivers.push_back(&driver);
-
-  auto arena = std::make_unique<fidl::Arena<512>>();
-  auto result = GetDriverInfo(*arena, drivers);
-  ASSERT_EQ(ZX_OK, result.status_value());
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_driver_development::DriverInfoIterator>();
-  auto iterator = std::make_unique<DriverInfoIterator>(std::move(arena), std::move(*result));
-
-  async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
-  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), std::move(iterator));
-
-  auto client = fidl::WireClient(std::move(endpoints->client), loop.dispatcher());
-
-  bool was_called = false;
-  client->GetNext().Then(
-      [&was_called](
-          fidl::WireUnownedResult<::fuchsia_driver_development::DriverInfoIterator::GetNext>&
-              result) {
-        was_called = true;
-        auto count = result->drivers.count();
-        ASSERT_EQ(count, 1);
-
-        ASSERT_EQ(std::string(result->drivers[0].name().get()), std::string("test"));
-      });
-
-  loop.RunUntilIdle();
-  ASSERT_TRUE(was_called);
-}
-
 TEST_F(DriverDevelopmentTest, UnknownFlagsWork) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURE(
