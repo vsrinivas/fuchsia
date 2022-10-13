@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load("@rules_fuchsia_experimental//fuchsia:defs.bzl", "fuchsia_product_configuration")
+load("@rules_fuchsia//fuchsia:assembly.bzl", "fuchsia_product_configuration")
 
 package(default_visibility = ["//build/bazel/assembly:__pkg__"])
 

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 load("@legacy_ninja_build_outputs//:build_args.bzl", "use_vbmeta")
-load("@rules_fuchsia_experimental//fuchsia:defs.bzl", "fuchsia_image_configuration")
+load("@rules_fuchsia//fuchsia:assembly.bzl", "fuchsia_image_configuration")
 
 package(default_visibility = ["//build/bazel/assembly:__pkg__"])
 
