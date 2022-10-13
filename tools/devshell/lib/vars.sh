@@ -782,13 +782,20 @@ function fx-run-ninja {
   local newpath="${PREBUILT_PYTHON3_DIR}/bin:${PATH}"
   local rbe_wrapper=()
   if fx-rbe-enabled ; then rbe_wrapper=("${RBE_WRAPPER[@]}") ; fi
-  full_cmdline=(env -i "TERM=${TERM}" "PATH=${newpath}" \
-    ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
-    ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"} \
-    ${TMPDIR+"TMPDIR=$TMPDIR"} \
-    ${CLICOLOR_FORCE+"CLICOLOR_FORCE=$CLICOLOR_FORCE"} \
-    "${rbe_wrapper[@]}" \
-    "$cmd" "${args[@]}")
+
+  full_cmdline=(
+    env -i
+    "TERM=${TERM}"
+    "PATH=${newpath}"
+    # By default, also show the number of actively running actions.
+    "NINJA_STATUS=${NINJA_STATUS:-"[%f/%t](%r) "}"
+    ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"}
+    ${TMPDIR+"TMPDIR=$TMPDIR"}
+    ${CLICOLOR_FORCE+"CLICOLOR_FORCE=$CLICOLOR_FORCE"}
+    "${rbe_wrapper[@]}"
+    "$cmd"
+    "${args[@]}"
+  )
 
   if [[ "${print_full_cmd}" = true ]]; then
     echo "${full_cmdline[@]}"
