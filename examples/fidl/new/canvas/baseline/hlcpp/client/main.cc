@@ -46,6 +46,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
+  // [START connect-protocol]
   // Connect to the protocol inside the component's namespace, then create an asynchronous client
   // using the newly-established connection.
   examples::canvas::baseline::InstancePtr instance_proxy;
@@ -57,6 +58,7 @@ int main(int argc, const char** argv) {
     FX_LOGS(ERROR) << "Shutdown unexpectedly";
     loop.Quit();
   });
+  // [END connect-protocol]
 
   // Provide a lambda to handle incoming |OnDrawn| events asynchronously.
   instance_proxy.events().OnDrawn = [&loop](::examples::canvas::baseline::Point top_left,

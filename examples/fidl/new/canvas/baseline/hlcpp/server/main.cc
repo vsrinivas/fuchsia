@@ -21,8 +21,10 @@ struct CanvasState {
   examples::canvas::baseline::BoundingBox bounding_box;
 };
 
+// [START server-impl-short]
 // An implementation of the |Instance| protocol.
 class InstanceImpl final : public examples::canvas::baseline::Instance {
+  // [END server-impl-short]
  public:
   // Bind this implementation to an |InterfaceRequest|.
   InstanceImpl(async_dispatcher_t* dispatcher,
@@ -42,7 +44,9 @@ class InstanceImpl final : public examples::canvas::baseline::Instance {
     ScheduleOnDrawnEvent(dispatcher, zx::sec(1));
   }
 
+  // [START addline-impl-short]
   void AddLine(::std::array<::examples::canvas::baseline::Point, 2> line) override {
+    // [END addline-impl-short]
     FX_LOGS(INFO) << "AddLine request received: [Point { x: " << line[1].x << ", y: " << line[1].y
                   << " }, Point { x: " << line[0].x << ", y: " << line[0].y << " }]";
 

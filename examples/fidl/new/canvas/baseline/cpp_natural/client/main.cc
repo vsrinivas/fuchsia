@@ -68,6 +68,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
+  // [START connect-protocol]
   // Connect to the protocol inside the component's namespace. This can fail so it's wrapped in a
   // |zx::status| and it must be checked for errors.
   zx::status client_end = component::Connect<examples_canvas_baseline::Instance>();
@@ -83,6 +84,7 @@ int main(int argc, const char** argv) {
   // Create an asynchronous client using the newly-established connection.
   fidl::Client client(std::move(*client_end), dispatcher, &event_handler);
   FX_LOGS(INFO) << "Outgoing connection enabled";
+  // [END connect-protocol]
 
   for (const auto& action : conf.script()) {
     // If the next action in the script is to "WAIT", block until an |OnDrawn| event is received

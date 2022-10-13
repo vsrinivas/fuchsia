@@ -2,31 +2,223 @@
 
 [TOC]
 
-## [DEPRECATED] C bindings
+## Quick reference
 
-The C bindings are deprecated in favor of [New C++ bindings](#cpp).
+Here's how to recognize if a particular type/function/identifier in C++ code is
+part of the new C++ bindings or high-level C++ bindings.
 
-*   Optimized to meet the needs of low-level systems programming, plus tight
-    constraints around dependencies and toolchains. The compiler, bindings
-    library, and code-generator are written in C++, while exposing a pure C
-    interface to clients.
-*   Represent data structures whose memory layout coincides with the wire
-    format.
-*   Support in-place access and construction of FIDL messages.
-*   Generated structures are views of an underlying buffer; they do not own
-    memory.
-*   Provide convenience wrappers for message construction and calling for
-    a limited subset of FIDL messages (see
-    [@for_deprecated_c_bindings][layout-attribute]).
-*   Client is synchronous only. Two-way method calls will block.
-*   As the New C++ bindings mature, there are plans to re-implement
-    the C bindings as a light-weight wrapper around the C++ bindings.
+Taking the [`examples.keyvaluestore.baseline`][kvstore] library as example:
+
+```fidl
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/fidl/key_value_store.test.fidl" exclude_regexp="^//.*" %}
+```
+
+Here are how the various FIDL elements will map to in the C++ bindings. Note
+that in the table "C++" refers to the new C++ bindings, and applies equally to
+both natural domain objects and wire domain objects. "Natural" refers to the
+natural domain objects in the new C++ bindings. "Wire" refers to the wire domain
+objects in the new C++ bindings.
+
+<div>
+<table>
+<thead>
+  <tr>
+    <th>FIDL element</th>
+    <th></th>
+    <th>C++ natural types</th>
+    <th>Comments</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td rowspan="2">The library</td>
+    <td>C++</td>
+    <td>::examples_keyvaluestore_baseline</td>
+    <td rowspan="2">New C++ uses a single level namespace.<br>HLCPP uses nested namespaces.</td>
+  </tr>
+  <tr>
+    <td>HLCPP</td>
+    <td>::examples::keyvaluestore::baseline</td>
+  </tr>
+  <tr>
+    <td rowspan="3">Item struct</td>
+    <td>Natural</td>
+    <td>::examples_keyvaluestore_baseline::Item</td>
+    <td rowspan="3">On top of the namespace differences, the wire types are nested under "::wire".</td>
+  </tr>
+  <tr>
+    <td>Wire</td>
+    <td>::examples_keyvaluestore_baseline::wire::Item</td>
+  </tr>
+  <tr>
+    <td>HLCPP</td>
+    <td>::examples::keyvaluestore::baseline::Item</td>
+  </tr>
+  <tr>
+    <td rowspan="3">WriteError enum</td>
+    <td>Natural</td>
+    <td>::examples_keyvaluestore_baseline::WriteError</td>
+    <td rowspan="3">On top of the namespace differences, the wire types are nested under "::wire".<br>In case of enums and bits, the wire types and natural types are equivalent. There is just an extra type alias.<br></td>
+  </tr>
+  <tr>
+    <td>Wire</td>
+    <td>::examples_keyvaluestore_baseline::wire::WriteError</td>
+  </tr>
+  <tr>
+    <td>HLCPP</td>
+    <td>::examples::keyvaluestore::baseline::WriteError</td>
+  </tr>
+  <tr>
+    <td rowspan="3">string:128</td>
+    <td>Natural</td>
+    <td>std::string</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Wire</td>
+    <td>fidl::StringView</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>HLCPP</td>
+    <td>std::string</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td rowspan="3">vector&lt;byte&gt;:64000</td>
+    <td>Natural</td>
+    <td>std::vector&lt;uint8_t&gt;</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Wire</td>
+    <td>fidl::VectorView&lt;uint8_t&gt;</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>HLCPP</td>
+    <td>std::vector&lt;uint8_t&gt;</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td rowspan="2">protocol Store</td>
+    <td>C++</td>
+    <td>::examples_keyvaluestore_baseline::Store</td>
+    <td>A marker type that carries some information about the protocol</td>
+  </tr>
+  <tr>
+    <td>HLCPP</td>
+    <td>::examples::keyvaluestore::baseline::Store</td>
+    <td>An abstract base class that contains methods in the protocol</td>
+  </tr>
+  <tr>
+    <td rowspan="2">client_end:Store</td>
+    <td>C++</td>
+    <td>fidl::ClientEnd&lt;Store&gt;
+    <td rowspan="2"></td>
+  </tr>
+  <tr>
+    <td>HLCPP</td>
+    <td>fidl::InterfaceHandle&lt;Store&gt;</td>
+  </tr>
+  <tr>
+    <td rowspan="2">server_end:Store</td>
+    <td>C++</td>
+    <td>fidl::ServerEnd&lt;Store&gt;</td>
+    <td rowspan="2"></td>
+  </tr>
+  <tr>
+    <td>HLCPP</td>
+    <td>fidl::InterfaceRequest&lt;Store&gt;</td>
+  </tr>
+  <tr>
+    <td rowspan="3">Client and server types<br>for the Store protocol<br></td>
+    <td>Natural</td>
+    <td colspan="2">Client: fidl::Client&lt;Store&gt;<br>Synchronous client: fidl::SyncClient&lt;Store&gt;<br>Server interface: fidl::Server&lt;Store&gt;<br>Event handler interface: fidl::EventHandler&lt;Store&gt;</td>
+  </tr>
+  <tr>
+    <td>Wire</td>
+    <td colspan="2">Client: fidl::WireClient&lt;Store&gt;<br>Synchronous client: fidl::WireSyncClient&lt;Store&gt;<br>Server interface: fidl::WireServer&lt;Store&gt;<br>Event handler interface: fidl::WireEventHandler&lt;Store&gt;</td>
+  </tr>
+  <tr>
+    <td>HLCPP</td>
+    <td colspan="2">Client: fidl::InterfacePtr&lt;Store&gt;<br>Synchronous client: fidl::SynchronousInterfacePtr&lt;Store&gt;<br>Server interface: Store<br>Event handler interface: N/A. InterfacePtr has setters that take one callback per event declaration.</td>
+  </tr>
+</tbody>
+</table>
+</div>
+
+<!-- TODO(fxbug.dev/111281): Replace the canvas reference with key value store
+     to align with the above, once the key value store example has landed. -->
+
+Here's the most common way to set up a client:
+
+<div>
+  <devsite-selector>
+    <!-- C++ (Natural) -->
+    <section>
+      <h3>C++ (Natural)</h3>
+      <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_natural/client/main.cc" region_tag="connect-protocol" %}</pre>
+    </section>
+    <!-- C++ (Wire) -->
+    <section>
+      <h3>C++ (Wire)</h3>
+      <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_wire/client/main.cc" region_tag="connect-protocol" %}</pre>
+    </section>
+    <!-- HLCPP -->
+    <section>
+      <h3>HLCPP</h3>
+      <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/hlcpp/client/main.cc" region_tag="connect-protocol" %}</pre>
+    </section>
+  </devsite-selector>
+</div>
+
+See the [canvas][canvas] example for the full code listing and explanation.
+
+Here's the most common way to implement a server:
+
+<div>
+  <devsite-selector>
+    <!-- C++ (Natural) -->
+    <section>
+      <h3>C++ (Natural)</h3>
+      <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_natural/server/main.cc" region_tag="server-impl-short" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_natural/server/main.cc" region_tag="addline-impl-short" %}
+    // ...
+  }
+};</pre>
+    </section>
+    <!-- C++ (Wire) -->
+    <section>
+      <h3>C++ (Wire)</h3>
+      <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_wire/server/main.cc" region_tag="server-impl-short" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/cpp_wire/server/main.cc" region_tag="addline-impl-short" %}
+    // ...
+  }
+};</pre>
+    </section>
+    <!-- HLCPP -->
+    <section>
+      <h3>HLCPP</h3>
+      <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/hlcpp/server/main.cc" region_tag="server-impl-short" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/baseline/hlcpp/server/main.cc" region_tag="addline-impl-short" %}
+    // ...
+  }
+};</pre>
+    </section>
+  </devsite-selector>
+</div>
+
+See the [canvas][canvas] example for the full code listing and explanation.
 
 ## New C++ bindings {#cpp}
 
 The new C++ bindings supports both low-level and high-level use cases, by
 offering two families of generated domain objects, and corresponding client and
 server APIs that speak those types.
+
+Note: prefer natural types unless optimizing for critical performance and
+memory allocation. Refer to the [C++ tutorials][cpp-prefer-natural].
 
 ### Natural types
 
@@ -69,7 +261,7 @@ server APIs that speak those types.
 
 Refer to the [New C++ tutorial][cpp-tutorial] to get started.
 
-## High-Level C++ Bindings
+## High-level C++ bindings
 
 *   Optimized to meet the needs of high-level service programming.
 *   Represent data structures using idiomatic C++ types such as `std::vector`,
@@ -90,6 +282,29 @@ Refer to the [New C++ tutorial][cpp-tutorial] to get started.
 *   Requires C++14 or above.
 
 Refer to the [HLCPP tutorial][hlcpp-tutorial] to get started.
+
+<!-- TODO(fxbug.dev/NNNNN): Guide for migrating HLCPP to new C++. -->
+<!-- TODO(fxbug.dev/NNNNN): Guide for migrating C to new C++. -->
+
+## [DEPRECATED] C bindings
+
+The C bindings are deprecated in favor of [New C++ bindings](#cpp).
+
+*   Optimized to meet the needs of low-level systems programming, plus tight
+    constraints around dependencies and toolchains. The compiler, bindings
+    library, and code-generator are written in C++, while exposing a pure C
+    interface to clients.
+*   Represent data structures whose memory layout coincides with the wire
+    format.
+*   Support in-place access and construction of FIDL messages.
+*   Generated structures are views of an underlying buffer; they do not own
+    memory.
+*   Provide convenience wrappers for message construction and calling for
+    a limited subset of FIDL messages (see
+    [@for_deprecated_c_bindings][layout-attribute]).
+*   Client is synchronous only. Two-way method calls will block.
+*   As the New C++ bindings mature, there are plans to re-implement
+    the C bindings as a light-weight wrapper around the C++ bindings.
 
 ## Summary
 
@@ -135,11 +350,10 @@ The bindings library [lib/fidl](/sdk/lib/fidl/cpp/wire) enables parallel
 dispatch using the `EnableNextDispatch()` API defined in
 [lib/fidl/cpp/wire/async_transaction.h](/sdk/lib/fidl/cpp/wire/include/lib/fidl/cpp/wire/async_transaction.h).
 
-## Migrating from C bindings to new C++ bindings
-
-TODO
-
 <!-- xrefs -->
 [layout-attribute]: /docs/reference/fidl/language/attributes.md#layout
 [cpp-tutorial]: /docs/development/languages/fidl/tutorials/cpp
+[cpp-prefer-natural]: /docs/development/languages/fidl/tutorials/cpp/README.md#natural_and_wire_domain_objects
 [hlcpp-tutorial]: /docs/development/languages/fidl/tutorials/hlcpp
+[kvstore]: /docs/development/languages/fidl/examples/key_value_store
+[canvas]: /docs/development/languages/fidl/examples/canvas

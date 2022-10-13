@@ -21,8 +21,10 @@ struct CanvasState {
   examples_canvas_baseline::BoundingBox bounding_box;
 };
 
+// [START server-impl-short]
 // An implementation of the |Instance| protocol.
 class InstanceImpl final : public fidl::Server<examples_canvas_baseline::Instance> {
+  // [END server-impl-short]
  public:
   // Bind this implementation to a channel.
   InstanceImpl(async_dispatcher_t* dispatcher,
@@ -41,7 +43,9 @@ class InstanceImpl final : public fidl::Server<examples_canvas_baseline::Instanc
     ScheduleOnDrawnEvent(dispatcher, zx::sec(1));
   }
 
+  // [START addline-impl-short]
   void AddLine(AddLineRequest& request, AddLineCompleter::Sync& completer) override {
+    // [END addline-impl-short]
     auto points = request.line();
     FX_LOGS(INFO) << "AddLine request received: [Point { x: " << points[1].x()
                   << ", y: " << points[1].y() << " }, Point { x: " << points[0].x()
