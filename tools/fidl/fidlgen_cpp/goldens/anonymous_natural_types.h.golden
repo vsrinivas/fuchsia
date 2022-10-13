@@ -286,10 +286,7 @@ class Expression {
         return 2;
       case ::test_anonymous::Expression::Tag::kFunctionApplication:
         return 3;
-      case ::test_anonymous::Expression::Tag::_do_not_handle_this__write_a_default_case_instead:
-        return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -384,10 +381,7 @@ class UnionMember {
     switch (tag) {
       case ::test_anonymous::UnionMember::Tag::kUnionData:
         return 1;
-      case ::test_anonymous::UnionMember::Tag::_do_not_handle_this__write_a_default_case_instead:
-        return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }

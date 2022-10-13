@@ -124,10 +124,7 @@ class UnionWithHandle {
     switch (tag) {
       case ::test_handlesintypes::UnionWithHandle::Tag::kH:
         return 1;
-      case ::test_handlesintypes::UnionWithHandle::Tag::_do_not_handle_this__write_a_default_case_instead:
-        return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }

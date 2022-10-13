@@ -214,7 +214,9 @@ func (b *equalityCheckBuilder) visitTable(actualExpr string, expectedValue gidli
 	expectedFieldValues := map[string]gidlir.Value{}
 	for _, field := range expectedValue.Fields {
 		if field.Key.IsUnknown() {
-			panic("unknown fields not supported by the new C++ bindings")
+			// Unknowns table members are dropped when decoding in the new C++ bindings.
+			// There are also no way to access them.
+			continue
 		}
 		expectedFieldValues[field.Key.Name] = field.Value
 	}
@@ -245,7 +247,10 @@ func (b *equalityCheckBuilder) visitUnion(actualExpr string, expectedValue gidli
 	}
 	field := expectedValue.Fields[0]
 	if field.Key.IsUnknown() {
-		panic("unknown fields not supported by the new C++ bindings")
+		// The natural types discards all information except the fact that
+		// the member was unknown. So there's nothing else to check.
+		b.assertTrue(fmt.Sprintf("%s%sIsUnknown()", actualVar, op))
+		return
 	}
 	fieldDecl, ok := decl.Field(field.Key.Name)
 	if !ok {

@@ -114,11 +114,10 @@ class {{ .Name }} {
       {{- range .Members }}
         case {{ .TagName }}: return {{ .NaturalIndex }};
       {{- end }}
-      {{- if .IsFlexible }}
-        case {{ .TagUnknown }}: return 0;
-      {{- end }}
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        {{- if .IsStrict }}
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+        {{- end }}
         return 0;
       }
     }

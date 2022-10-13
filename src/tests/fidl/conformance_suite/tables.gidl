@@ -616,8 +616,8 @@ success("TableWithGaps") {
 }
 
 decode_success("ValueTableUnknownReservedDropped") {
-    // LLCPP and HLCPP don't store unknowns.
-    bindings_allowlist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP don't store unknowns.
+    bindings_allowlist = [cpp, llcpp, hlcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -658,8 +658,8 @@ decode_success("ValueTableUnknownReservedDropped") {
 }
 
 decode_success("ResourceTableUnknownReservedDropped") {
-    // LLCPP and HLCPP don't store unknowns.
-    bindings_allowlist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP don't store unknowns.
+    bindings_allowlist = [cpp, llcpp, hlcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -700,8 +700,8 @@ decode_success("ResourceTableUnknownReservedDropped") {
 }
 
 success("ValueTableUnknownReservedStored") {
-    // LLCPP and HLCPP are tested in the ValueTableUnknownReservedDropped test
-    bindings_denylist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP are tested in the ValueTableUnknownReservedDropped test
+    bindings_denylist = [cpp, llcpp, hlcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -745,8 +745,8 @@ success("ValueTableUnknownReservedStored") {
 }
 
 success("ResourceTableUnknownReservedStored") {
-    // LLCPP and HLCPP are tested in the ResourceTableUnknownReservedDropped test
-    bindings_denylist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP are tested in the ResourceTableUnknownReservedDropped test
+    bindings_denylist = [cpp, llcpp, hlcpp],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -790,8 +790,8 @@ success("ResourceTableUnknownReservedStored") {
 }
 
 decode_success("ValueTableUnknownTrailingDropped") {
-    // LLCPP and HLCPP don't store unknowns.
-    bindings_allowlist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP don't store unknowns.
+    bindings_allowlist = [cpp, llcpp, hlcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -835,8 +835,8 @@ decode_success("ValueTableUnknownTrailingDropped") {
 }
 
 decode_success("ResourceTableUnknownTrailingDropped") {
-    // LLCPP and HLCPP don't store unknowns.
-    bindings_allowlist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP don't store unknowns.
+    bindings_allowlist = [cpp, llcpp, hlcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -880,8 +880,8 @@ decode_success("ResourceTableUnknownTrailingDropped") {
 }
 
 success("ValueTableUnknownTrailingStored") {
-    // LLCPP and HLCPP are tested in the ValueTableUnknownTrailingDropped test
-    bindings_denylist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP are tested in the ValueTableUnknownTrailingDropped test
+    bindings_denylist = [cpp, llcpp, hlcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -928,8 +928,8 @@ success("ValueTableUnknownTrailingStored") {
 }
 
 success("ResourceTableUnknownTrailingStored") {
-    // LLCPP and HLCPP are tested in the ResourceTableUnknownTrailingDropped test
-    bindings_denylist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP are tested in the ResourceTableUnknownTrailingDropped test
+    bindings_denylist = [cpp, llcpp, hlcpp],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -976,8 +976,8 @@ success("ResourceTableUnknownTrailingStored") {
 }
 
 decode_success("ValueTableUnknownTrailingHandlesDropped") {
-    // LLCPP and HLCPP don't store unknowns.
-    bindings_allowlist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP don't store unknowns.
+    bindings_allowlist = [cpp, llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -1022,8 +1022,8 @@ decode_success("ValueTableUnknownTrailingHandlesDropped") {
 }
 
 decode_success("ResourceTableUnknownTrailingHandlesDropped") {
-    // LLCPP and HLCPP don't store unknowns.
-    bindings_allowlist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP don't store unknowns.
+    bindings_allowlist = [cpp, llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -1068,8 +1068,9 @@ decode_success("ResourceTableUnknownTrailingHandlesDropped") {
 }
 
 decode_failure("ValueTableUnknownTrailingHandlesRejected") {
-    // LLCPP and HLCPP are tested in the ValueTableUnknownTrailingHandlesDropped test
-    bindings_denylist = [c, llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP are tested in the
+    // ValueTableUnknownTrailingHandlesDropped test
+    bindings_denylist = [c, cpp, llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -1111,8 +1112,8 @@ decode_failure("ValueTableUnknownTrailingHandlesRejected") {
 }
 
 success("ResourceTableUnknownTrailingHandlesStored") {
-    // LLCPP and HLCPP are tested in the ResourceTableUnknownTrailingHandlesDropped test
-    bindings_denylist = [llcpp, hlcpp],
+    // Natural C++, Wire C++, and HLCPP are tested in the ResourceTableUnknownTrailingHandlesDropped test
+    bindings_denylist = [cpp, llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

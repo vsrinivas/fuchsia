@@ -473,9 +473,12 @@ struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
   static void Decode(NaturalDecoder* decoder, std::unique_ptr<T>* value, size_t offset,
                      size_t recursion_depth) {
     fidl_xunion_v2_t* u = decoder->template GetPtr<fidl_xunion_v2_t>(offset);
-    if (FidlIsZeroEnvelope(&u->envelope)) {
-      *value = nullptr;
-      return;
+    if (u->tag == 0) {
+      if (likely(FidlIsZeroEnvelope(&u->envelope))) {
+        *value = nullptr;
+        return;
+      }
+      decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
     }
     *value = std::make_unique<T>(DefaultConstructPossiblyInvalidObject<T>::Make());
     NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), offset, recursion_depth);

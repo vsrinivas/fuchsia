@@ -103,7 +103,7 @@ class NaturalDecoder final {
 
         zx_handle_t& body_handle = body_.handles()[handle_index_];
 
-        if (body_.transport_vtable()->encoding_configuration->decode_process_handle) {
+        if (coding_config()->decode_process_handle) {
           const char* error;
           zx_status_t status =
               body_.transport_vtable()->encoding_configuration->decode_process_handle(
@@ -134,30 +134,16 @@ class NaturalDecoder final {
     }
   }
 
-  struct EnvelopeUnknownDataInfoResult {
-    size_t value_offset;
-    uint32_t num_bytes;
-    uint16_t num_handles;
-    uint16_t flags;
-  };
+  // Decode an unknown envelope whose header is located at |offset|.
+  // If the envelope is absent, it's a no-op.
+  void DecodeUnknownEnvelopeOptional(size_t offset);
 
-  EnvelopeUnknownDataInfoResult EnvelopeUnknownDataInfo(const fidl_envelope_v2_t* envelope) const {
-    const auto* unknown_data_envelope =
-        reinterpret_cast<const fidl_envelope_v2_unknown_data_t*>(envelope);
+  // Decode an unknown envelope whose header is located at |offset|.
+  // If the envelope is absent, it's an error.
+  void DecodeUnknownEnvelopeRequired(size_t offset);
 
-    EnvelopeUnknownDataInfoResult result;
-    if ((unknown_data_envelope->flags & FIDL_ENVELOPE_FLAGS_INLINING_MASK) != 0) {
-      result.value_offset = GetOffset(&envelope->inline_value);
-      result.num_bytes = 4;
-    } else {
-      result.value_offset = unknown_data_envelope->out_of_line.offset;
-      result.num_bytes = unknown_data_envelope->out_of_line.num_bytes;
-    }
-    result.num_handles = unknown_data_envelope->num_handles;
-    result.flags = unknown_data_envelope->flags;
-
-    return result;
-  }
+  // Close the next |count| handles.
+  void CloseNextHandles(size_t count);
 
   void SetError(const char* error) {
     if (status_ != ZX_OK)
@@ -166,16 +152,22 @@ class NaturalDecoder final {
     error_ = error;
   }
 
-  WireFormatVersion wire_format() { return wire_format_version_; }
+  WireFormatVersion wire_format() const { return wire_format_version_; }
 
   size_t CurrentLength() const { return next_out_of_line_; }
 
   size_t CurrentHandleCount() const { return handle_index_; }
 
-  zx_status_t status() { return status_; }
-  const char* error() { return error_; }
+  zx_status_t status() const { return status_; }
+  const char* error() const { return error_; }
 
  private:
+  void DecodeUnknownEnvelope(const fidl_envelope_v2_t* envelope);
+
+  const fidl::internal::CodingConfig* coding_config() const {
+    return body_.transport_vtable()->encoding_configuration;
+  }
+
   fidl::EncodedMessage body_;
 
   uint32_t handle_index_ = 0;

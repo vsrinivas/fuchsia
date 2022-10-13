@@ -329,9 +329,54 @@ struct NaturalTableCodingTraits {
   static constexpr size_t inline_size_v2 = 16;
   static constexpr bool is_memcpy_compatible = false;
 
+  struct TableMemberVisitor : public MemberVisitor<T> {
+    using Base = MemberVisitor<T>;
+
+    // Invokes |func| with |std::integral_constant<size_t, I>| for each |I| in |indexes|.
+    template <typename F, size_t... I>
+    static void Fold(F func, std::index_sequence<I...> indexes) {
+      (func(std::integral_constant<size_t, I>{}), ...);
+    }
+
+    // Visit all of the members in order, calling |func| with the previous member ordinal and the
+    // current member ordinal. The main purpose of this function is to optimize closing unknown
+    // envelopes in tables. The compiler can deterministically omit unknown envelope code paths if
+    // it statically knows that there is no gap between two ordinals.
+    //
+    // |func| should have the signature:
+    //
+    // void func(
+    //     Member* member_ptr,
+    //     const fidl::internal::NaturalTableMember<...>& member_info,
+    //     std::integral_constant<size_t, PreviousOrdinal>,
+    //     std::integral_constant<size_t, CurrentOrdinal>,
+    // );
+    template <typename U, typename Fn>
+    static void VisitPrevAndCurOrdinals(U value, Fn&& func) {
+      static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
+      constexpr size_t N = std::tuple_size_v<decltype(T::kMembers)>;
+      Fold(
+          [func = std::forward<Fn>(func), value](const auto& integral) {
+            constexpr size_t I = cpp20::remove_cvref_t<decltype(integral)>::value;
+            auto& member_info = std::get<I>(Base::kMembers);
+            auto* member_ptr = &(value->storage_.*(member_info.member_ptr));
+            if constexpr (I == 0) {
+              func(member_ptr, member_info, std::integral_constant<size_t, 0>{},
+                   std::integral_constant<size_t, member_info.ordinal>{});
+            } else {
+              constexpr auto& prev_member_info = std::get<I - 1>(Base::kMembers);
+              func(member_ptr, member_info,
+                   std::integral_constant<size_t, prev_member_info.ordinal>{},
+                   std::integral_constant<size_t, member_info.ordinal>{});
+            }
+          },
+          std::make_index_sequence<N>{});
+    }
+  };
+
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset, size_t recursion_depth) {
-    size_t max_ordinal = MaxOrdinal(value);
+    size_t max_ordinal = MaxOrdinalPresent(value);
     fidl_vector_t* vector = encoder->template GetPtr<fidl_vector_t>(offset);
     vector->count = max_ordinal;
     vector->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
@@ -352,7 +397,7 @@ struct NaturalTableCodingTraits {
 
   // Returns the largest ordinal of a present table member.
   template <size_t I = std::tuple_size_v<decltype(T::kMembers)> - 1>
-  static size_t MaxOrdinal(T* value) {
+  static size_t MaxOrdinalPresent(T* value) {
     if constexpr (I == -1) {
       return 0;
     } else {
@@ -361,7 +406,17 @@ struct NaturalTableCodingTraits {
       if (member.has_value()) {
         return std::get<I>(T::kMembers).ordinal;
       }
-      return MaxOrdinal<I - 1>(value);
+      return MaxOrdinalPresent<I - 1>(value);
+    }
+  }
+
+  // Returns the largest known ordinal in the FIDL schema.
+  constexpr static size_t MaxOrdinalInSchema() {
+    constexpr size_t kMemberCount = std::tuple_size_v<decltype(T::kMembers)>;
+    if constexpr (kMemberCount == 0) {
+      return 0;
+    } else {
+      return std::get<kMemberCount - 1>(T::kMembers).ordinal;
     }
   }
 
@@ -390,16 +445,35 @@ struct NaturalTableCodingTraits {
     if (!decoder->Alloc(sizeof(fidl_envelope_v2_t) * count, &base)) {
       return;
     }
+    auto envelope_offset = [base](size_t ordinal) {
+      return base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+    };
 
-    MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
-      size_t member_offset = base + (member_info.ordinal - 1) * sizeof(fidl_envelope_v2_t);
-      if (member_info.ordinal <= count) {
-        using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
-        NaturalEnvelopeDecodeOptional<Constraint>(decoder, member, member_offset, recursion_depth);
-      } else {
+    // While visiting, if there's a gap in the ordinals, close the envelopes in the gaps.
+    // The gaps between 1 to first member ordinal, and the gaps between last member ordinal
+    // to count, must also be closed.
+    TableMemberVisitor::VisitPrevAndCurOrdinals(value, [=](auto* member, const auto& member_info,
+                                                           const auto& prev_ordinal_integral,
+                                                           const auto& ordinal_integral) {
+      constexpr size_t kPrevOrdinal = cpp20::remove_cvref_t<decltype(prev_ordinal_integral)>::value;
+      constexpr size_t kMemberOrdinal = cpp20::remove_cvref_t<decltype(ordinal_integral)>::value;
+      if (member_info.ordinal > count) {
         member->reset();
+        return;
       }
+      // This block will disappear if there are no reserved ordinals in-between.
+      if constexpr (kPrevOrdinal + 1 < kMemberOrdinal) {
+        for (size_t i = kPrevOrdinal + 1; i < kMemberOrdinal; i++) {
+          decoder->DecodeUnknownEnvelopeOptional(envelope_offset(i));
+        }
+      }
+      size_t member_offset = envelope_offset(member_info.ordinal);
+      using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
+      NaturalEnvelopeDecodeOptional<Constraint>(decoder, member, member_offset, recursion_depth);
     });
+    for (size_t i = MaxOrdinalInSchema() + 1; i < count + 1; i++) {
+      decoder->DecodeUnknownEnvelopeOptional(envelope_offset(i));
+    }
   }
 
   static bool Equal(const T* table1, const T* table2) {
@@ -428,8 +502,14 @@ struct NaturalUnionCodingTraits {
 
   static void Encode(NaturalEncoder* encoder, T* value, size_t offset, size_t recursion_depth) {
     const size_t index = value->storage_->index();
-    ZX_ASSERT(index > 0);
-    if (recursion_depth + 1 > kRecursionDepthMax) {
+    if (unlikely(index == 0)) {
+      // While it is not possible to construct a flexible union with unknown
+      // data in the natural C++ types, this may happen if e.g. someone tried
+      // to re-encode a flexible union that's received with unknown data.
+      encoder->SetError(kCodingErrorUnknownUnionTag);
+      return;
+    }
+    if (unlikely(recursion_depth + 1 > kRecursionDepthMax)) {
       encoder->SetError(kCodingErrorRecursionDepthExceeded);
       return;
     }
@@ -465,15 +545,22 @@ struct NaturalUnionCodingTraits {
 
     fidl_xunion_v2_t* xunion = decoder->GetPtr<fidl_xunion_v2_t>(offset);
     const size_t index = T::TagToIndex(decoder, static_cast<typename T::Tag>(xunion->tag));
-    if (decoder->status() != ZX_OK) {
+    if (unlikely(decoder->status() != ZX_OK)) {
       return;
     }
-    ZX_ASSERT(index > 0);
-    if (recursion_depth + 1 > kRecursionDepthMax) {
+    if (unlikely(recursion_depth + 1 > kRecursionDepthMax)) {
       decoder->SetError(kCodingErrorRecursionDepthExceeded);
       return;
     }
     const size_t envelope_offset = offset + offsetof(fidl_xunion_v2_t, envelope);
+    if (unlikely(index == 0)) {
+      // Flexible unknown envelope.
+      decoder->DecodeUnknownEnvelopeRequired(envelope_offset);
+      if (unlikely(xunion->tag == 0)) {
+        decoder->SetError(kCodingErrorZeroTagButNonZeroEnvelope);
+      }
+      return;
+    }
     DecodeMember(decoder, value, envelope_offset, index, recursion_depth + 1);
   }
 
@@ -490,11 +577,14 @@ struct NaturalUnionCodingTraits {
         using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
         NaturalEnvelopeDecode<Constraint>(decoder, &std::get<I>(*value->storage_), envelope_offset,
                                           recursion_depth);
+        // Success.
         return;
       }
+      // Tail recurse into attempting to decode as the next member.
       return DecodeMember<I + 1>(decoder, value, envelope_offset, index, recursion_depth);
     }
-    // TODO: dcheck
+    // Unknown member case is handled in |Decode|.
+    __builtin_unreachable();
   }
 };
 

@@ -182,10 +182,7 @@ class LocalUnionPayload {
     switch (tag) {
       case ::test_protocollayouts::LocalUnionPayload::Tag::kB:
         return 1;
-      case ::test_protocollayouts::LocalUnionPayload::Tag::_do_not_handle_this__write_a_default_case_instead:
-        return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -982,10 +979,7 @@ class MainProtocolTwoWayAnonRequest {
     switch (tag) {
       case ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::kB:
         return 1;
-      case ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead:
-        return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1168,10 +1162,7 @@ class MainProtocolTwoWayAnonWithErrorResponse {
     switch (tag) {
       case ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag::kB:
         return 1;
-      case ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag::_do_not_handle_this__write_a_default_case_instead:
-        return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1427,10 +1418,7 @@ class MainProtocolOnAnonRequest {
     switch (tag) {
       case ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::kB:
         return 1;
-      case ::test_protocollayouts::MainProtocolOnAnonRequest::Tag::_do_not_handle_this__write_a_default_case_instead:
-        return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }

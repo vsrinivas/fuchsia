@@ -937,9 +937,7 @@ class UnknownInteractionsProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1178,7 +1176,7 @@ class UnknownInteractionsProtocolStrictTwoWayErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1436,7 +1434,7 @@ class UnknownInteractionsProtocolStrictTwoWayFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1608,9 +1606,7 @@ class UnknownInteractionsProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1722,7 +1718,7 @@ class UnknownInteractionsProtocolStrictTwoWayUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1961,7 +1957,7 @@ class UnknownInteractionsProtocolStrictTwoWayTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2219,7 +2215,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::Tag::kTransportErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2477,7 +2473,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayFieldsResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsResult::Tag::kTransportErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2649,9 +2645,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2763,7 +2757,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult::Tag::kTransportErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -3002,7 +2996,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayTableResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableResult::Tag::kTransportErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -3276,7 +3270,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Tag::kErr: return 2;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Tag::kTransportErr: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -3551,7 +3545,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult::Tag::kErr: return 2;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult::Tag::kTransportErr: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -3724,9 +3718,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -3854,7 +3846,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult::Tag::kErr: return 2;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult::Tag::kTransportErr: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -4110,7 +4102,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult::Tag::kErr: return 2;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult::Tag::kTransportErr: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -4356,9 +4348,7 @@ class UnknownInteractionsProtocolStrictEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -4597,7 +4587,7 @@ class UnknownInteractionsProtocolStrictEventErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -4855,7 +4845,7 @@ class UnknownInteractionsProtocolStrictEventFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -5027,9 +5017,7 @@ class UnknownInteractionsProtocolStrictEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -5141,7 +5129,7 @@ class UnknownInteractionsProtocolStrictEventUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -5380,7 +5368,7 @@ class UnknownInteractionsProtocolStrictEventTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolStrictEventTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -5625,9 +5613,7 @@ class UnknownInteractionsProtocolFlexibleEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -5866,7 +5852,7 @@ class UnknownInteractionsProtocolFlexibleEventErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -6124,7 +6110,7 @@ class UnknownInteractionsProtocolFlexibleEventFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -6296,9 +6282,7 @@ class UnknownInteractionsProtocolFlexibleEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -6410,7 +6394,7 @@ class UnknownInteractionsProtocolFlexibleEventUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -6649,7 +6633,7 @@ class UnknownInteractionsProtocolFlexibleEventTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -6897,9 +6881,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -7138,7 +7120,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -7396,7 +7378,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -7568,9 +7550,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -7682,7 +7662,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -7921,7 +7901,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -8166,9 +8146,7 @@ class UnknownInteractionsAjarProtocolStrictEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -8407,7 +8385,7 @@ class UnknownInteractionsAjarProtocolStrictEventErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -8665,7 +8643,7 @@ class UnknownInteractionsAjarProtocolStrictEventFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -8837,9 +8815,7 @@ class UnknownInteractionsAjarProtocolStrictEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -8951,7 +8927,7 @@ class UnknownInteractionsAjarProtocolStrictEventUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -9190,7 +9166,7 @@ class UnknownInteractionsAjarProtocolStrictEventTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -9435,9 +9411,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -9676,7 +9650,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -9934,7 +9908,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -10106,9 +10080,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -10220,7 +10192,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -10459,7 +10431,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -10707,9 +10679,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -10948,7 +10918,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -11206,7 +11176,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -11378,9 +11348,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -11492,7 +11460,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -11731,7 +11699,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -11976,9 +11944,7 @@ class UnknownInteractionsClosedProtocolStrictEventUnionRequest {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -12217,7 +12183,7 @@ class UnknownInteractionsClosedProtocolStrictEventErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -12475,7 +12441,7 @@ class UnknownInteractionsClosedProtocolStrictEventFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -12647,9 +12613,7 @@ class UnknownInteractionsClosedProtocolStrictEventUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -12761,7 +12725,7 @@ class UnknownInteractionsClosedProtocolStrictEventUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -13000,7 +12964,7 @@ class UnknownInteractionsClosedProtocolStrictEventTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -13248,9 +13212,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -13489,7 +13451,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayErrResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -13747,7 +13709,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -13919,9 +13881,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -14033,7 +13993,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -14272,7 +14232,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -14530,7 +14490,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Tag::kTransportErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -14788,7 +14748,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult::Tag::kTransportErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -14960,9 +14920,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -15074,7 +15032,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult::Tag::kTransportErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -15313,7 +15271,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult::Tag::kTransportErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -15587,7 +15545,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Tag::kErr: return 2;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Tag::kTransportErr: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -15862,7 +15820,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult::Tag::kErr: return 2;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult::Tag::kTransportErr: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -16035,9 +15993,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -16165,7 +16121,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult::Tag::kErr: return 2;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult::Tag::kTransportErr: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -16421,7 +16377,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult::Tag::kErr: return 2;
         case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult::Tag::kTransportErr: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -16670,9 +16626,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -16911,7 +16865,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -17169,7 +17123,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -17341,9 +17295,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -17455,7 +17407,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -17694,7 +17646,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -17942,9 +17894,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -18183,7 +18133,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -18441,7 +18391,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -18613,9 +18563,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag tag) {
     switch (tag) {
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::kSomeField: return 1;
-        case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -18727,7 +18675,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -18966,7 +18914,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult {
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult::Tag::kResponse: return 1;
         case ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }

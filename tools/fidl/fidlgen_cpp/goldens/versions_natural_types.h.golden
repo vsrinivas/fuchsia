@@ -209,10 +209,7 @@ class Union {
     switch (tag) {
       case ::test_versions::Union::Tag::kX:
         return 1;
-      case ::test_versions::Union::Tag::_do_not_handle_this__write_a_default_case_instead:
-        return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }

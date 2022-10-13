@@ -811,7 +811,7 @@ class WithErrorSyntaxResponseAsStructResult {
         case ::test_protocols::WithErrorSyntaxResponseAsStructResult::Tag::kResponse: return 1;
         case ::test_protocols::WithErrorSyntaxResponseAsStructResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1069,7 +1069,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
         case ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::Tag::kResponse: return 1;
         case ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1327,7 +1327,7 @@ class WithErrorSyntaxErrorAsEnumResult {
         case ::test_protocols::WithErrorSyntaxErrorAsEnumResult::Tag::kResponse: return 1;
         case ::test_protocols::WithErrorSyntaxErrorAsEnumResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1563,7 +1563,7 @@ class WithErrorSyntaxHandleInResultResult {
         case ::test_protocols::WithErrorSyntaxHandleInResultResult::Tag::kResponse: return 1;
         case ::test_protocols::WithErrorSyntaxHandleInResultResult::Tag::kErr: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -3716,9 +3716,7 @@ class TheUnion {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_protocols::TheUnion::Tag tag) {
     switch (tag) {
         case ::test_protocols::TheUnion::Tag::kV: return 1;
-        case ::test_protocols::TheUnion::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }

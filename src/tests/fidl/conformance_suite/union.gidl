@@ -295,9 +295,13 @@ decode_failure("StrictUnionUnknownValueWithHandles") {
 }
 
 decode_failure("FlexibleUnionUnknownValueWithHandles") {
-    // C, LLCPP and HLCPP do not store handles, so they do not fail when decoding unknown
-    // handles for a value type.
-    bindings_denylist = [c, llcpp, hlcpp],
+    // TODO(fxbug.dev/85383): Decoding unknown handles into value types should
+    // succeed after RFC-0137: Discard unknown data in FIDL. As a result, this
+    // test case should be deleted as bindings implement discarding unknowns.
+    //
+    // C, C++ wire types, C++ natural types, and HLCPP are tested in
+    // "FlexibleUnionUnknownValueWithHandlesCloseHandles"
+    bindings_denylist = [c, cpp, llcpp, hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -323,6 +327,44 @@ decode_failure("FlexibleUnionUnknownValueWithHandles") {
         ],
     },
     err = NON_RESOURCE_UNKNOWN_HANDLES,
+}
+
+decode_success("FlexibleUnionUnknownValueWithHandlesCloseHandles") {
+    // TODO(fxbug.dev/85383): Decoding unknown handles into value types should
+    // succeed after RFC-0137: Discard unknown data in FIDL. As a result, this
+    // test case should grow to cover all bindings.
+    bindings_allowlist = [c, cpp, llcpp, hlcpp],
+    handle_defs = {
+        #0 = event(),
+        #1 = event(),
+        #2 = channel(),
+        #3 = channel(),
+    },
+    value = TestFlexibleXUnionInStruct{
+        xu: SampleXUnion{
+            1234: {
+                // padding must be included in the raw bytes
+                bytes = [repeat(0xab):20, padding:4],
+            },
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1234):8, // unknown ordinal
+            num(24):4, num(4):4, repeat(0xff):8, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(1234):8, // unknown ordinal
+            num(24):4, num(4):2, num(0):2, // envelope
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
 }
 
 encode_failure("StrictUnionUnknownValue") {
@@ -640,8 +682,8 @@ encode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
 }
 
 encode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
-    // C and LLCPP cannot construct unknown variants.
-    bindings_denylist = [c, llcpp],
+    // C, C++ wire types, and C++ natural types cannot construct unknown variants.
+    bindings_denylist = [c, cpp, llcpp],
     value = TestOptionalFlexibleXUnionInStruct{
         xu: SampleXUnion{
             0: {
@@ -653,8 +695,8 @@ encode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
 }
 
 encode_failure("OptionalFlexibleResourceUnionZeroOrdinalWithPayload") {
-    // C and LLCPP cannot construct unknown variants.
-    bindings_denylist = [c, llcpp],
+    // C, C++ wire types, and C++ natural types cannot construct unknown variants.
+    bindings_denylist = [c, cpp, llcpp],
     value = TestOptionalFlexibleResourceXUnionInStruct{
         xu: SampleResourceXUnion{
             0: {
@@ -1071,7 +1113,7 @@ decode_success("EmptyFlexibleUnionDecodesUnknownLargeValue") {
             num(8):4, num(0):4, // envelope
 
             // secondary object
-            repeat(0xab):8
+            repeat(0xab):8,
         ],
     },
 }

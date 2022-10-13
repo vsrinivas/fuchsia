@@ -386,7 +386,7 @@ class PizzaOrPasta {
         case ::test_union::PizzaOrPasta::Tag::kPizza: return 1;
         case ::test_union::PizzaOrPasta::Tag::kPasta: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -499,7 +499,7 @@ class ExplicitPizzaOrPasta {
         case ::test_union::ExplicitPizzaOrPasta::Tag::kPizza: return 1;
         case ::test_union::ExplicitPizzaOrPasta::Tag::kPasta: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -615,9 +615,7 @@ class FlexiblePizzaOrPasta {
     switch (tag) {
         case ::test_union::FlexiblePizzaOrPasta::Tag::kPizza: return 1;
         case ::test_union::FlexiblePizzaOrPasta::Tag::kPasta: return 2;
-        case ::test_union::FlexiblePizzaOrPasta::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -730,7 +728,7 @@ class StrictPizzaOrPasta {
         case ::test_union::StrictPizzaOrPasta::Tag::kPizza: return 1;
         case ::test_union::StrictPizzaOrPasta::Tag::kPasta: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -859,7 +857,7 @@ class Union {
         case ::test_union::Union::Tag::kStringNeedsConstructor: return 2;
         case ::test_union::Union::Tag::kVectorStringAlsoNeedsConstructor: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -992,9 +990,7 @@ class FlexibleUnion {
         case ::test_union::FlexibleUnion::Tag::kPrimitive: return 1;
         case ::test_union::FlexibleUnion::Tag::kStringNeedsConstructor: return 2;
         case ::test_union::FlexibleUnion::Tag::kVectorStringAlsoNeedsConstructor: return 3;
-        case ::test_union::FlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1124,7 +1120,7 @@ class StrictUnion {
         case ::test_union::StrictUnion::Tag::kStringNeedsConstructor: return 2;
         case ::test_union::StrictUnion::Tag::kVectorStringAlsoNeedsConstructor: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1222,7 +1218,7 @@ class FieldCollision {
     switch (tag) {
         case ::test_union::FieldCollision::Tag::kFieldCollisionTag: return 1;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1334,7 +1330,7 @@ class ExplicitUnion {
         case ::test_union::ExplicitUnion::Tag::kPrimitive: return 1;
         case ::test_union::ExplicitUnion::Tag::kStringNeedsConstructor: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1447,7 +1443,7 @@ class ReverseOrdinalUnion {
         case ::test_union::ReverseOrdinalUnion::Tag::kSecond: return 1;
         case ::test_union::ReverseOrdinalUnion::Tag::kFirst: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1635,9 +1631,7 @@ class FlexibleFoo {
     switch (tag) {
         case ::test_union::FlexibleFoo::Tag::kS: return 1;
         case ::test_union::FlexibleFoo::Tag::kI: return 2;
-        case ::test_union::FlexibleFoo::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1750,7 +1744,7 @@ class StrictFoo {
         case ::test_union::StrictFoo::Tag::kS: return 1;
         case ::test_union::StrictFoo::Tag::kI: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1866,9 +1860,7 @@ class ExplicitFoo {
     switch (tag) {
         case ::test_union::ExplicitFoo::Tag::kS: return 1;
         case ::test_union::ExplicitFoo::Tag::kI: return 2;
-        case ::test_union::ExplicitFoo::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -1981,7 +1973,7 @@ class ExplicitStrictFoo {
         case ::test_union::ExplicitStrictFoo::Tag::kS: return 1;
         case ::test_union::ExplicitStrictFoo::Tag::kI: return 2;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2097,9 +2089,7 @@ class OlderSimpleUnion {
     switch (tag) {
         case ::test_union::OlderSimpleUnion::Tag::kI: return 1;
         case ::test_union::OlderSimpleUnion::Tag::kF: return 2;
-        case ::test_union::OlderSimpleUnion::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2231,9 +2221,7 @@ class NewerSimpleUnion {
         case ::test_union::NewerSimpleUnion::Tag::kI: return 1;
         case ::test_union::NewerSimpleUnion::Tag::kS: return 2;
         case ::test_union::NewerSimpleUnion::Tag::kV: return 3;
-        case ::test_union::NewerSimpleUnion::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2363,7 +2351,7 @@ class StrictSimpleXUnion {
         case ::test_union::StrictSimpleXUnion::Tag::kF: return 2;
         case ::test_union::StrictSimpleXUnion::Tag::kS: return 3;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2537,9 +2525,7 @@ class XUnionContainingEmptyStruct {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_union::XUnionContainingEmptyStruct::Tag tag) {
     switch (tag) {
         case ::test_union::XUnionContainingEmptyStruct::Tag::kEmpty: return 1;
-        case ::test_union::XUnionContainingEmptyStruct::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2635,7 +2621,7 @@ class StrictBoundedXUnion {
     switch (tag) {
         case ::test_union::StrictBoundedXUnion::Tag::kV: return 1;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
+          decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -2969,9 +2955,7 @@ class ExplicitXUnion {
     switch (tag) {
         case ::test_union::ExplicitXUnion::Tag::kI: return 1;
         case ::test_union::ExplicitXUnion::Tag::kF: return 2;
-        case ::test_union::ExplicitXUnion::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -3181,9 +3165,7 @@ class UnionWithAttributes {
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_union::UnionWithAttributes::Tag tag) {
     switch (tag) {
         case ::test_union::UnionWithAttributes::Tag::kX: return 1;
-        case ::test_union::UnionWithAttributes::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -3266,9 +3248,7 @@ class EmptyFlexibleUnion {
 
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_union::EmptyFlexibleUnion::Tag tag) {
     switch (tag) {
-        case ::test_union::EmptyFlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }
@@ -3350,9 +3330,7 @@ class OnlyReservedFlexibleUnion {
 
   static constexpr size_t TagToIndex(::fidl::internal::NaturalDecoder* decoder, ::test_union::OnlyReservedFlexibleUnion::Tag tag) {
     switch (tag) {
-        case ::test_union::OnlyReservedFlexibleUnion::Tag::_do_not_handle_this__write_a_default_case_instead: return 0;
       default: {
-        decoder->SetError(::fidl::internal::kCodingErrorUnknownUnionTag);
         return 0;
       }
     }

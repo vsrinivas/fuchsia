@@ -92,6 +92,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
+		// TODO(fxbug.dev/111709): Translate this to GIDL denylist, or properly support the test case.
 		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
 			continue
 		}
@@ -125,6 +126,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
+		// TODO(fxbug.dev/111709): Translate this to GIDL denylist, or properly support the test case.
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
