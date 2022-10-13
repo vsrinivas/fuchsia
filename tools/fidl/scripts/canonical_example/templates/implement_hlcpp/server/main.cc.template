@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <examples/${series_flat_case}/${variant_flat_case}/cpp/fidl.h>
@@ -16,7 +16,7 @@ class ${protocol_pascal_case}Impl final : public examples::${series_flat_case}::
   // Bind this implementation to an |InterfaceRequest|.
   ${protocol_pascal_case}Impl(async_dispatcher_t* dispatcher,
                fidl::InterfaceRequest<examples::${series_flat_case}::${variant_flat_case}::${protocol_pascal_case}> request)
-      : binding_(fidl::Binding<examples::${series_flat_case}::${variant_flat_case}::${protocol_pascal_case}>(this))) {
+      : binding_(fidl::Binding<examples::${series_flat_case}::${variant_flat_case}::${protocol_pascal_case}>(this)) {
     binding_.Bind(std::move(request), dispatcher);
 
     // Gracefully handle abrupt shutdowns.

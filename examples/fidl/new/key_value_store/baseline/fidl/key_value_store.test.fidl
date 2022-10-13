@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 library examples.keyvaluestore.baseline;
 
-/// An item in the store. The key must match the regex `^[A-z][A-z0-9_\.\/]{2,62}[A-z0-9]$`. That
-/// is, it must start with a letter, end with a letter or number, contain only letters, numbers,
-/// periods, and slashes, and be between 4 and 64 characters long.
+/// An item in the store. The key must match the regex `^[A-Za-z]\\w+[A-Za-z0-9]$`. That
+/// is, it must start with a letter, end with a letter or number, and contain at least one other
+/// word character (letter, number, dash, or underscore) in between.
 type Item = struct {
     key string:128;
     value vector<byte>:64000;

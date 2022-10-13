@@ -21,7 +21,7 @@ fuchsia_component("server") {
 }
 
 # The Fuchsia package, containing all of our child components in one neat artifact.
-fuchsia_package("examples_fidl_keyvaluestore_baseline_cpp_natural") {
+fuchsia_package("examples_fidl_keyvaluestore_baseline_hlcpp") {
   deps = [
     ":client",
     ":server",
@@ -39,7 +39,7 @@ fuchsia_component("test") {
     "//examples/fidl/new/key_value_store/baseline/test/goldens:resources",
   ]
 }
-fuchsia_test_package("examples_fidl_keyvaluestore_baseline_cpp_natural_tests") {
+fuchsia_test_package("examples_fidl_keyvaluestore_baseline_hlcpp_tests") {
   deps = [
     ":client",
     ":server",
@@ -50,5 +50,5 @@ fuchsia_test_package("examples_fidl_keyvaluestore_baseline_cpp_natural_tests") {
 }
 group("tests") {
   testonly = true
-  deps = [ ":examples_fidl_keyvaluestore_baseline_cpp_natural_tests" ]
+  deps = [ ":examples_fidl_keyvaluestore_baseline_hlcpp_tests" ]
 }
