@@ -15,7 +15,6 @@ rustc_library("system-image") {
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-url",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/pkg/lib/blobfs",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-pkg",
@@ -24,6 +23,7 @@ rustc_library("system-image") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [

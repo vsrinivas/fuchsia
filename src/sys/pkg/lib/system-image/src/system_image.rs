@@ -92,7 +92,7 @@ impl SystemImage {
         }
         .await
         .unwrap_or_else(|e| {
-            fuchsia_syslog::fx_log_warn!(
+            tracing::warn!(
                 "Failed to load non static allow list from system_image, treating as empty: {e:#}"
             );
             NonStaticAllowList::empty()
