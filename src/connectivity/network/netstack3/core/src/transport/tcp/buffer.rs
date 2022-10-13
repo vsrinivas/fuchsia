@@ -27,6 +27,10 @@ pub trait Buffer: Takeable + Debug + Sized {
 
 /// A buffer supporting TCP receiving operations.
 pub trait ReceiveBuffer: Buffer {
+    /// Stores the remaining data that have not been read by the user when the
+    /// connection is shutdown by the peer.
+    type Residual: From<Self> + Takeable + Debug;
+
     /// Writes `data` into the buffer at `offset`.
     ///
     /// Returns the number of bytes written.
@@ -245,6 +249,8 @@ impl Buffer for RingBuffer {
 }
 
 impl ReceiveBuffer for RingBuffer {
+    type Residual = Self;
+
     fn write_at<P: Payload>(&mut self, offset: usize, data: &P) -> usize {
         let Self { storage, head, len } = self;
         if storage.len() == 0 {
