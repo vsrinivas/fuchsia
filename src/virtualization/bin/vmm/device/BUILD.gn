@@ -205,8 +205,6 @@ executable("device_tests") {
 
   sources = [
     "magma_image_test.cc",
-    "test_with_device.cc",
-    "test_with_device.h",
     "virtio_balloon_test.cc",
     "virtio_block_test.cc",
     "virtio_console_test.cc",
@@ -214,8 +212,6 @@ executable("device_tests") {
     "virtio_input_test.cc",
     "virtio_magma_test.cc",
     "virtio_net_test.cc",
-    "virtio_queue_fake.cc",
-    "virtio_queue_fake.h",
     "virtio_queue_test.cc",
     "virtio_rng_test.cc",
     "virtio_sound_test.cc",
@@ -226,6 +222,8 @@ executable("device_tests") {
   deps = [
     ":lib",
     ":magma_image",
+    "tests:test_with_device",
+    "tests:virtio_queue_fake",
     "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_hlcpp",
     "//sdk/fidl/fuchsia.input:fuchsia.input_hlcpp",

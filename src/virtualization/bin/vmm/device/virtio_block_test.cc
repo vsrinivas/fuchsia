@@ -19,8 +19,8 @@
 #include <virtio/block.h>
 
 #include "src/virtualization/bin/vmm/device/block.h"
-#include "src/virtualization/bin/vmm/device/test_with_device.h"
-#include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
+#include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
+#include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
 
 static constexpr uint16_t kNumQueues = 1;
 static constexpr uint16_t kQueueSize = 16;

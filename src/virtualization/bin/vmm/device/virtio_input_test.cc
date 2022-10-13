@@ -13,8 +13,8 @@
 #include "fuchsia/logger/cpp/fidl.h"
 #include "fuchsia/ui/input3/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/input.h"
-#include "src/virtualization/bin/vmm/device/test_with_device.h"
-#include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
+#include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
+#include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
 
 namespace {
 

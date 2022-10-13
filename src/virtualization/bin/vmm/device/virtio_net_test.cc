@@ -19,8 +19,8 @@
 #include "fuchsia/logger/cpp/fidl.h"
 #include "lib/fpromise/single_threaded_executor.h"
 #include "src/connectivity/lib/network-device/cpp/network_device_client.h"
-#include "src/virtualization/bin/vmm/device/test_with_device.h"
-#include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
+#include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
+#include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
 
 namespace {
 

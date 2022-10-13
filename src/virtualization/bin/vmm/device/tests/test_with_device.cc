@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/vmm/device/test_with_device.h"
+#include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
 
 #include <lib/zx/channel.h>
 

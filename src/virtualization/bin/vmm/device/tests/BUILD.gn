@@ -1,0 +1,30 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("virtio_queue_fake") {
+  testonly = true
+
+  sources = [
+    "virtio_queue_fake.cc",
+    "virtio_queue_fake.h",
+  ]
+
+  deps = [ "//src/virtualization/bin/vmm/device:lib" ]
+}
+
+source_set("test_with_device") {
+  testonly = true
+
+  sources = [
+    "test_with_device.cc",
+    "test_with_device.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//src/virtualization/bin/vmm/device:lib",
+    "//zircon/system/ulib/virtio",
+  ]
+}

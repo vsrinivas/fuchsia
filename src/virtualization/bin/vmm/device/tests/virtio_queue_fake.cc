@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
+#include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
 
 static size_t desc_size(uint16_t queue_size) { return sizeof(*VirtioRing::desc) * queue_size; }
 

@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
+#include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
 
 namespace {
 

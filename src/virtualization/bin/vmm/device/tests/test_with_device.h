@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TEST_WITH_DEVICE_H_
-#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TEST_WITH_DEVICE_H_
+#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TESTS_TEST_WITH_DEVICE_H_
+#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TESTS_TEST_WITH_DEVICE_H_
 
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -21,4 +21,4 @@ class TestWithDevice : public gtest::RealLoopFixture {
   PhysMem phys_mem_;
 };
 
-#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TEST_WITH_DEVICE_H_
+#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TESTS_TEST_WITH_DEVICE_H_

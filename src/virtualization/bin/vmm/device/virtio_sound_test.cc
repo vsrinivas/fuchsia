@@ -21,8 +21,8 @@
 
 #include "fuchsia/logger/cpp/fidl.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/virtualization/bin/vmm/device/test_with_device.h"
-#include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
+#include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
+#include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
 
 #define UNEXPECTED_METHOD_CALL ADD_FAILURE() << "unexpected method call " << __func__
 

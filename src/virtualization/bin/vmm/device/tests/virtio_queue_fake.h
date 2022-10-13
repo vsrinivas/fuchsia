@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_QUEUE_FAKE_H_
-#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_QUEUE_FAKE_H_
+#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TESTS_VIRTIO_QUEUE_FAKE_H_
+#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TESTS_VIRTIO_QUEUE_FAKE_H_
 
 #include <optional>
 
@@ -87,4 +87,4 @@ class DescriptorChainBuilder {
   DescriptorChainBuilder& AppendDescriptor(void** buf, uint32_t len, uint16_t flags);
 };
 
-#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_QUEUE_FAKE_H_
+#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_TESTS_VIRTIO_QUEUE_FAKE_H_
