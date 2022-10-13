@@ -117,6 +117,7 @@ template("fidl_library") {
     fidl_library_name = library_name
     gen_dir = target_gen_dir
     json_representation = fidl_ir_json
+    target_api_level = "LEGACY"
   }
 
   summary_file_json = "$target_gen_dir/$target_name.api_summary.json"
