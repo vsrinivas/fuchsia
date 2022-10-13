@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 # Generate the manifest for the client component.
 fuchsia_component_manifest("client_manifest") {
-  component_name = "canvas_client"
+  component_name = "canvas_add_line_metered_client"
   manifest = "//examples/fidl/new/canvas/add_line_metered/meta/client.cml"
 }
 

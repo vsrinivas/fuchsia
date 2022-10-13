@@ -7,18 +7,18 @@ import("//build/components.gni")
 # The two definitions below are Fuchsia components, which will be wrapped into a package for
 # delivery to running devices.
 fuchsia_component("client") {
-  component_name = "${series_snake_case}_client"
+  component_name = "${series_snake_case}_${variant_snake_case}_client"
   manifest = "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/meta/client.cml"
   deps = [ "client:bin" ]
 }
 fuchsia_component("server") {
-  component_name = "${series_snake_case}_server"
+  component_name = "${series_snake_case}_${variant_snake_case}_server"
   manifest = "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/meta/server.cml"
   deps = [ "server:bin" ]
 }
 
 # The Fuchsia package, containing all of our child components in one neat artifact.
-fuchsia_package("examples_fidl_${series_snake_case}_${variant_snake_case}_cpp_natural ") {
+fuchsia_package("examples_fidl_${series_flat_case}_${variant_flat_case}_cpp_natural") {
   deps = [
     ":client",
     ":server",
@@ -36,7 +36,7 @@ fuchsia_component("test") {
     "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/test/goldens:resources",
   ]
 }
-fuchsia_test_package("examples_fidl_${series_snake_case}_${variant_snake_case}_cpp_natural_tests") {
+fuchsia_test_package("examples_fidl_${series_flat_case}_${variant_flat_case}_cpp_natural_tests") {
   deps = [
     ":client",
     ":server",
@@ -47,5 +47,5 @@ fuchsia_test_package("examples_fidl_${series_snake_case}_${variant_snake_case}_c
 }
 group("tests") {
   testonly = true
-  deps = [ ":examples_fidl_${series_snake_case}_${variant_snake_case}_cpp_natural_tests" ]
+  deps = [ ":examples_fidl_${series_flat_case}_${variant_flat_case}_cpp_natural_tests" ]
 }

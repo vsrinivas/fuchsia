@@ -7,18 +7,18 @@ import("//build/components.gni")
 # The two definitions below are Fuchsia components, which will be wrapped into a package for
 # delivery to running devices.
 fuchsia_component("client") {
-  component_name = "canvas_client"
+  component_name = "canvas_add_line_metered_client"
   manifest = "//examples/fidl/new/canvas/add_line_metered/meta/client.cml"
   deps = [ "client:bin" ]
 }
 fuchsia_component("server") {
-  component_name = "canvas_server"
+  component_name = "canvas_add_line_metered_server"
   manifest = "//examples/fidl/new/canvas/add_line_metered/meta/server.cml"
   deps = [ "server:bin" ]
 }
 
 # The Fuchsia package, containing all of our child components in one neat artifact.
-fuchsia_package("examples_fidl_canvas_add_line_metered_cpp_wire") {
+fuchsia_package("examples_fidl_canvas_addlinemetered_cpp_wire") {
   deps = [
     ":client",
     ":server",
@@ -36,7 +36,7 @@ fuchsia_component("test") {
     "//examples/fidl/new/canvas/add_line_metered/test/goldens:resources",
   ]
 }
-fuchsia_test_package("examples_fidl_canvas_add_line_metered_cpp_wire_tests") {
+fuchsia_test_package("examples_fidl_canvas_addlinemetered_cpp_wire_tests") {
   deps = [
     ":client",
     ":server",
@@ -47,5 +47,5 @@ fuchsia_test_package("examples_fidl_canvas_add_line_metered_cpp_wire_tests") {
 }
 group("tests") {
   testonly = true
-  deps = [ ":examples_fidl_canvas_add_line_metered_cpp_wire_tests" ]
+  deps = [ ":examples_fidl_canvas_addlinemetered_cpp_wire_tests" ]
 }

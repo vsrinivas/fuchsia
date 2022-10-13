@@ -15,8 +15,8 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn test_write_item_success() -> Result<(), Error> {
     let test_name = "test_write_item_success";
-    let client = Client::new(test_name, "#meta/keyvaluestore_client.cm");
-    let server = Server::new(test_name, "#meta/keyvaluestore_server.cm");
+    let client = Client::new(test_name, "#meta/key_value_store_baseline_client.cm");
+    let server = Server::new(test_name, "#meta/key_value_store_baseline_server.cm");
 
     run_test(
         StoreMarker::PROTOCOL_NAME,
@@ -35,8 +35,8 @@ async fn test_write_item_success() -> Result<(), Error> {
 }
 
 async fn test_write_item_invalid(test_name: &str, input: &str) -> Result<(), Error> {
-    let client = Client::new(test_name, "#meta/keyvaluestore_client.cm");
-    let server = Server::new(test_name, "#meta/keyvaluestore_server.cm");
+    let client = Client::new(test_name, "#meta/key_value_store_baseline_client.cm");
+    let server = Server::new(test_name, "#meta/key_value_store_baseline_server.cm");
 
     run_test(
         StoreMarker::PROTOCOL_NAME,
@@ -73,8 +73,8 @@ async fn test_write_item_error_invalid_value() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn test_write_item_error_already_found() -> Result<(), Error> {
     let test_name = "test_write_item_error_already_found";
-    let client = Client::new(test_name, "#meta/keyvaluestore_client.cm");
-    let server = Server::new(test_name, "#meta/keyvaluestore_server.cm");
+    let client = Client::new(test_name, "#meta/key_value_store_baseline_client.cm");
+    let server = Server::new(test_name, "#meta/key_value_store_baseline_server.cm");
 
     run_test(
         StoreMarker::PROTOCOL_NAME,

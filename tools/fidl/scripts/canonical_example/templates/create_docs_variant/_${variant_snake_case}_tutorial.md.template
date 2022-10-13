@@ -15,7 +15,7 @@ implementations can use:
   <devsite-selector>
     <!-- FIDL -->
     <section>
-      <h3>FIDL</h3>
+      <h3 id="${series_snake_case}-${variant_snake_case}-fidl">FIDL</h3>
       <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/fidl/${series_snake_case}.test.fidl" %}</pre>
     </section>
     <!-- CML -->
@@ -23,15 +23,15 @@ implementations can use:
       <h3>CML</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-cml-client">Client</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/meta/client.cml" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-server">Server</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/meta/server.cml" %}</pre>
         </section>
         <section>
-          <h3>Realm</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-realm">Realm</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/realm/meta/realm.cml" %}</pre>
         </section>
       </devsite-selector>
@@ -48,11 +48,11 @@ Client and server implementations can then be written in any supported language:
       <h3>Rust</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-rust-client">Client</h3>
           <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/rust/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-rust-server">Server</h3>
           <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/rust/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>
@@ -62,11 +62,11 @@ Client and server implementations can then be written in any supported language:
       <h3>C++ (Natural)</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-cpp_natural-client">Client</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/cpp_natural/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-cpp_natural-server">Server</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/cpp_natural/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>
@@ -76,25 +76,25 @@ Client and server implementations can then be written in any supported language:
       <h3>C++ (Wire)</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-cpp_wire-client">Client</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/cpp_wire/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-cpp_wire-server">Server</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/cpp_wire/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>
     </section>
     <!-- HLCPP -->
     <section style="padding: 0px;">
-      <h3>HLCPP</h3>
+      <h3 id="${series_snake_case}-${variant_snake_case}-hlcpp">HLCPP</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-hlcpp-client">Client</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/hlcpp/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="${series_snake_case}-${variant_snake_case}-hlcpp-server">Server</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/${series_snake_case}/${variant_snake_case}/hlcpp/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>

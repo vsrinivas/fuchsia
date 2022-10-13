@@ -22,15 +22,15 @@ The changes applied to the FIDL and CML definitions are as follows:
       <h3>CML</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-add_read_item-cml-client">Client</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/meta/client.cml" highlight="26,27,28,29,30,31,32,33" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-add_read_item-cml-server">Server</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/meta/server.cml" %}</pre>
         </section>
         <section>
-          <h3>Realm</h3>
+          <h3 id="key_value_store-add_read_item-cml-realm">Realm</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/realm/meta/realm.cml" %}</pre>
         </section>
       </devsite-selector>
@@ -46,12 +46,13 @@ Client and server implementations for all languages change as well:
     <section style="padding: 0px;">
       <h3>Rust</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
+        <!-- TODO(fxbug.dev/111275): Add region based highlight "add_read_item" when possible -->
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-add_read_item-rust-client">Client</h3>
           <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/client/src/main.rs" highlight="45,46,47,48,49,50,51,52,53,54,55,56,57" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-add_read_item-rust-server">Server</h3>
           <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/server/src/main.rs" highlight="76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93" %}</pre>
         </section>
       </devsite-selector>
@@ -61,11 +62,11 @@ Client and server implementations for all languages change as well:
       <h3>C++ (Natural)</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-add_read_item-cpp_natural-client">Client</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/cpp_natural/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-add_read_item-cpp_natural-server">Server</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/cpp_natural/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>
@@ -75,11 +76,11 @@ Client and server implementations for all languages change as well:
       <h3>C++ (Wire)</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-add_read_item-cpp_wire-client">Client</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/cpp_wire/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-add_read_item-cpp_wire-server">Server</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/cpp_wire/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>
@@ -89,11 +90,11 @@ Client and server implementations for all languages change as well:
       <h3>HLCPP</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-add_read_item-hlcpp-client">Client</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/hlcpp/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-add_read_item-hlcpp-server">Server</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/hlcpp/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>

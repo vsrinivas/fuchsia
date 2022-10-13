@@ -26,15 +26,15 @@ implementations can use:
       <h3>CML</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-baseline-cml-client">Client</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/meta/client.cml" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-baseline-cml-server">Server</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/meta/server.cml" %}</pre>
         </section>
         <section>
-          <h3>Realm</h3>
+          <h3 id="key_value_store-baseline-cml-realm">Realm</h3>
           <pre class="prettyprint">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/realm/meta/realm.cml" %}</pre>
         </section>
       </devsite-selector>
@@ -51,11 +51,11 @@ Client and server implementations can then be written in any supported language:
       <h3>Rust</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-baseline-rust-client">Client</h3>
           <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/rust/client/src/main.rs" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-baseline-rust-server">Server</h3>
           <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/rust/server/src/main.rs" %}</pre>
         </section>
       </devsite-selector>
@@ -65,11 +65,11 @@ Client and server implementations can then be written in any supported language:
       <h3>C++ (Natural)</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-baseline-cpp_natural-client">Client</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/cpp_natural/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-baseline-cpp_natural-server">Server</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/cpp_natural/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>
@@ -79,11 +79,11 @@ Client and server implementations can then be written in any supported language:
       <h3>C++ (Wire)</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-baseline-cpp_wire-client">Client</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/cpp_wire/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-baseline-cpp_wire-server">Server</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/cpp_wire/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>
@@ -93,11 +93,11 @@ Client and server implementations can then be written in any supported language:
       <h3>HLCPP</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
-          <h3>Client</h3>
+          <h3 id="key_value_store-baseline-hlcpp-client">Client</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/hlcpp/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
-          <h3>Server</h3>
+          <h3 id="key_value_store-baseline-hlcpp-server">Server</h3>
           <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/hlcpp/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>

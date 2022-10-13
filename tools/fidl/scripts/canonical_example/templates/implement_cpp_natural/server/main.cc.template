@@ -24,10 +24,7 @@ class ${protocol_pascal_case}Impl final : public fidl::Server<examples_${series_
                 FX_LOGS(ERROR) << "Shutdown unexpectedly";
               }
               delete this;
-            })) {
-    // Start the update timer on startup. Our server sends one update per second
-    ScheduleOnDrawnEvent(dispatcher, zx::sec(1));
-  }
+            })) {}
 
   // TODO(${dns}): override each of the as-yet-undefined methods on the generated FIDL class
   // here.

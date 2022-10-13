@@ -24,9 +24,7 @@ executable("bin") {
     "//examples/fidl/new/${series_snake_case}/${variant_snake_case}/fidl:examples.${series_flat_case}.${variant_flat_case}_cpp_wire",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

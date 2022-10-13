@@ -15,8 +15,8 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn test_draw_success() -> Result<(), Error> {
     let test_name = "test_draw_success";
-    let client = Client::new(test_name, "#meta/canvas_client.cm");
-    let server = Server::new(test_name, "#meta/canvas_server.cm");
+    let client = Client::new(test_name, "#meta/canvas_baseline_client.cm");
+    let server = Server::new(test_name, "#meta/canvas_baseline_server.cm");
     let filter = |raw_log: &&Data<Logs>| {
         let msg = raw_log.payload_message().expect("payload not found").properties[0]
             .string()

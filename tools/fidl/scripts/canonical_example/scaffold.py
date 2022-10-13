@@ -634,10 +634,10 @@ def implement(name, binding, protocol, series):
     with open(tutorial_md_file_path, "r") as f:
         replaced_client_todo = f.read().replace(
             """%s/TODO.md" region_tag="todo" """ % binding,
-            """client/%s" """ % BINDINGS[binding], 1)
+            """%s/client/%s" """ % (binding, BINDINGS[binding]), 1)
         replaced_both_todos = replaced_client_todo.replace(
             """%s/TODO.md" region_tag="todo" """ % binding,
-            """server/%s" """ % BINDINGS[binding], 1)
+            """%s/server/%s" """ % (binding, BINDINGS[binding]), 1)
         with open(tutorial_md_file_path, "wt") as f:
             f.write(replaced_both_todos)
 
