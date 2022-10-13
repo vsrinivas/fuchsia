@@ -1,0 +1,24 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_library.gni")
+
+assert(is_host,
+       "The transfer manifest crate is only valid in the host toolchain")
+
+rustc_library("transfer_manifest") {
+  edition = "2021"
+  name = "transfer_manifest"
+  version = "0.1.0"
+  with_unit_tests = true
+  deps = [ "//third_party/rust_crates:serde" ]
+  test_deps = [ "//third_party/rust_crates:serde_json" ]
+  sources = [ "src/lib.rs" ]
+}
+
+group("host_tests") {
+  testonly = true
+  deps = [ ":transfer_manifest_test" ]
+}
