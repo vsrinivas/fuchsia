@@ -117,8 +117,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<LogConnectorMarker>().expect("create proxy");
         let log_connection_listener = spawn_log_connector(request_stream);
         let mut log_connector = LogConnector::new(connector);
-        let events =
-            BTreeSet::from([AnyEventType::Singleton(SingletonEventType::LogSinkRequested)]);
+        let events = BTreeSet::from([EventType::LogSinkRequested]);
         let (mut event_stream, dispatcher) = Dispatcher::new_for_test(events);
         log_connector.set_dispatcher(dispatcher);
         let _task = fasync::Task::spawn(async move { log_connector.spawn().await });

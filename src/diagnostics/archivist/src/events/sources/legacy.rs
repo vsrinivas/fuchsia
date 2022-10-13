@@ -147,8 +147,7 @@ mod tests {
     #[fuchsia::test]
     async fn component_event_stream() {
         let (mut provider, listener_receiver) = spawn_fake_component_event_provider();
-        let events =
-            BTreeSet::from([AnyEventType::Singleton(SingletonEventType::DiagnosticsReady)]);
+        let events = BTreeSet::from([EventType::DiagnosticsReady]);
 
         let (mut event_stream, dispatcher) = Dispatcher::new_for_test(events);
         provider.set_dispatcher(dispatcher);

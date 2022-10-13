@@ -72,58 +72,20 @@ impl From<UniqueKey> for Vec<String> {
     }
 }
 
-/// Wrapper for all types of events.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum AnyEventType {
-    General(EventType),
-    Singleton(SingletonEventType),
-}
-
-/// Event types that don't contain singleton data and can be cloned directly.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum EventType {}
-
 /// Event types that contain singleton data. When these events are cloned, their singleton data
 /// won't be cloned.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum SingletonEventType {
+pub enum EventType {
     DiagnosticsReady,
     LogSinkRequested,
 }
 
-impl AsRef<str> for AnyEventType {
-    fn as_ref(&self) -> &str {
-        match &self {
-            Self::General(event) => event.as_ref(),
-            Self::Singleton(singleton_event) => singleton_event.as_ref(),
-        }
-    }
-}
-
-impl AsRef<str> for SingletonEventType {
+impl AsRef<str> for EventType {
     fn as_ref(&self) -> &str {
         match &self {
             Self::DiagnosticsReady => "diagnostics_ready",
             Self::LogSinkRequested => "log_sink_requested",
         }
-    }
-}
-
-impl From<EventType> for AnyEventType {
-    fn from(event: EventType) -> AnyEventType {
-        AnyEventType::General(event)
-    }
-}
-
-impl AsRef<str> for EventType {
-    fn as_ref(&self) -> &str {
-        ""
-    }
-}
-
-impl From<SingletonEventType> for AnyEventType {
-    fn from(event: SingletonEventType) -> AnyEventType {
-        AnyEventType::Singleton(event)
     }
 }
 
@@ -136,14 +98,10 @@ pub struct Event {
 }
 
 impl Event {
-    pub fn is_singleton(&self) -> bool {
-        matches!(self.ty(), AnyEventType::Singleton(_))
-    }
-
-    pub fn ty(&self) -> AnyEventType {
+    pub fn ty(&self) -> EventType {
         match &self.payload {
-            EventPayload::DiagnosticsReady(_) => SingletonEventType::DiagnosticsReady.into(),
-            EventPayload::LogSinkRequested(_) => SingletonEventType::LogSinkRequested.into(),
+            EventPayload::DiagnosticsReady(_) => EventType::DiagnosticsReady,
+            EventPayload::LogSinkRequested(_) => EventType::LogSinkRequested,
         }
     }
 }

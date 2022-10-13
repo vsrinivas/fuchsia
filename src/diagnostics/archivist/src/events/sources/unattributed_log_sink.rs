@@ -71,8 +71,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn events_have_unknown_identity() {
-        let events =
-            BTreeSet::from([AnyEventType::Singleton(SingletonEventType::LogSinkRequested)]);
+        let events = BTreeSet::from([EventType::LogSinkRequested]);
         let (mut event_stream, dispatcher) = Dispatcher::new_for_test(events);
         let mut source = UnattributedLogSinkSource::default();
         source.set_dispatcher(dispatcher);

@@ -168,10 +168,7 @@ pub mod tests {
 
     #[fuchsia::test]
     async fn event_stream() {
-        let events = BTreeSet::from([
-            AnyEventType::Singleton(SingletonEventType::DiagnosticsReady),
-            AnyEventType::Singleton(SingletonEventType::LogSinkRequested),
-        ]);
+        let events = BTreeSet::from([EventType::DiagnosticsReady, EventType::LogSinkRequested]);
         let (mut event_stream, dispatcher) = Dispatcher::new_for_test(events);
         let (stream_server, _server_task, sender) = spawn_fake_event_stream();
         let mut source = EventSource::new_for_test(stream_server).await.unwrap();

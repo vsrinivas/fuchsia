@@ -192,8 +192,7 @@ impl Archivist {
         self.event_router.add_producer(ProducerConfig {
             producer: &mut unattributed_log_sink_source,
             producer_type: ProducerType::External,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::LogSinkRequested],
+            events: vec![EventType::LogSinkRequested],
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
             unattributed_log_sink_source.spawn().await.unwrap_or_else(|err| {
@@ -241,11 +240,7 @@ impl Archivist {
                 self.event_router.add_producer(ProducerConfig {
                     producer: &mut event_source,
                     producer_type: ProducerType::External,
-                    events: vec![],
-                    singleton_events: vec![
-                        SingletonEventType::LogSinkRequested,
-                        SingletonEventType::DiagnosticsReady,
-                    ],
+                    events: vec![EventType::LogSinkRequested, EventType::DiagnosticsReady],
                 });
                 self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
                     // This should never exit.
@@ -268,8 +263,7 @@ impl Archivist {
         self.event_router.add_producer(ProducerConfig {
             producer: &mut component_event_provider,
             producer_type: ProducerType::External,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
             component_event_provider.spawn().await.unwrap_or_else(|err| {
@@ -290,8 +284,7 @@ impl Archivist {
         self.event_router.add_producer(ProducerConfig {
             producer: &mut connector,
             producer_type: ProducerType::External,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::LogSinkRequested],
+            events: vec![EventType::LogSinkRequested],
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
             connector.spawn().await.unwrap_or_else(|err| {
@@ -337,11 +330,7 @@ impl Archivist {
         let archivist_state_log_sender = archivist_state.log_sender.clone();
         event_router.add_consumer(ConsumerConfig {
             consumer: &archivist_state,
-            events: vec![],
-            singleton_events: vec![
-                SingletonEventType::DiagnosticsReady,
-                SingletonEventType::LogSinkRequested,
-            ],
+            events: vec![EventType::DiagnosticsReady, EventType::LogSinkRequested],
         });
         // panic: can only panic if we didn't register event producers and consumers correctly.
         let (terminate_handle, drain_events_fut) =
@@ -546,11 +535,7 @@ mod tests {
         archivist.event_router.add_producer(ProducerConfig {
             producer: &mut fake_producer,
             producer_type: ProducerType::External,
-            events: vec![],
-            singleton_events: vec![
-                SingletonEventType::LogSinkRequested,
-                SingletonEventType::DiagnosticsReady,
-            ],
+            events: vec![EventType::LogSinkRequested, EventType::DiagnosticsReady],
         });
 
         archivist

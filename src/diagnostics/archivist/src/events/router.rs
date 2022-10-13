@@ -15,7 +15,6 @@ use lazy_static::lazy_static;
 use pin_project::pin_project;
 use std::{
     collections::{BTreeMap, BTreeSet},
-    iter::Extend,
     pin::Pin,
     sync::{Arc, Weak},
 };
@@ -47,9 +46,9 @@ impl Default for RouterOptions {
 /// consumers.
 pub struct EventRouter {
     // All the consumers that have been registered for an event.
-    consumers: BTreeMap<AnyEventType, Vec<Weak<dyn EventConsumer + Send + Sync>>>,
+    consumers: BTreeMap<EventType, Vec<Weak<dyn EventConsumer + Send + Sync>>>,
     // The types of all events that can be produced. Used only for validation.
-    producers_registered: BTreeSet<AnyEventType>,
+    producers_registered: BTreeSet<EventType>,
 
     // Ends of the channel used by internal event producers.
     internal_sender: mpsc::Sender<Event>,
@@ -84,8 +83,7 @@ impl EventRouter {
     where
         T: EventProducer,
     {
-        let mut events: BTreeSet<_> = config.events.into_iter().map(|e| e.into()).collect();
-        events.extend(config.singleton_events.into_iter().map(|e| e.into()));
+        let events: BTreeSet<_> = config.events.into_iter().collect();
         self.producers_registered.append(&mut events.clone());
         let sender = match config.producer_type {
             ProducerType::Internal => self.internal_sender.clone(),
@@ -105,9 +103,6 @@ impl EventRouter {
         for event_type in config.events {
             self.consumers.entry(event_type.into()).or_default().push(subscriber_weak.clone());
         }
-        for event_type in config.singleton_events {
-            self.consumers.entry(event_type.into()).or_default().push(subscriber_weak.clone());
-        }
     }
 
     /// Starts listening for events emitted by the registered producers and dispatching them to
@@ -118,7 +113,7 @@ impl EventRouter {
     /// producer.
     ///
     /// Afterwards, listens to events emitted by producers. When an event arrives it sends it to
-    /// all consumers of the event. If the event is singleton, the first consumer that was
+    /// all consumers of the event. Since all events are singletons, the first consumer that was
     /// registered will get the singleton data and the rest won't.
     pub fn start(
         mut self,
@@ -150,8 +145,7 @@ impl EventRouter {
                         };
 
                         let event_without_singleton_data = event.clone();
-                        let mut event_with_singleton_data =
-                            if event.is_singleton() { Some(event) } else { None };
+                        let mut event_with_singleton_data = Some(event);
 
                         // Consumers which weak reference could be upgraded will be stored here.
                         let mut active_consumers = vec![];
@@ -358,7 +352,7 @@ impl TerminateHandle {
 /// Event producers will receive a `Dispatcher` instance that will allow them to emit events of
 /// restricted set of types.
 pub struct Dispatcher {
-    allowed_events: BTreeSet<AnyEventType>,
+    allowed_events: BTreeSet<EventType>,
     sender: Option<mpsc::Sender<Event>>,
 }
 
@@ -370,7 +364,7 @@ impl Default for Dispatcher {
 }
 
 impl Dispatcher {
-    fn new(allowed_events: BTreeSet<AnyEventType>, sender: mpsc::Sender<Event>) -> Self {
+    fn new(allowed_events: BTreeSet<EventType>, sender: mpsc::Sender<Event>) -> Self {
         Self { allowed_events, sender: Some(sender) }
     }
 
@@ -386,14 +380,14 @@ impl Dispatcher {
     }
 
     #[cfg(test)]
-    pub fn new_for_test(allowed_events: BTreeSet<AnyEventType>) -> (mpsc::Receiver<Event>, Self) {
+    pub fn new_for_test(allowed_events: BTreeSet<EventType>) -> (mpsc::Receiver<Event>, Self) {
         let (sender, receiver) = mpsc::channel(100);
         (receiver, Self::new(allowed_events, sender))
     }
 }
 
 struct EventStreamLogger {
-    counters: BTreeMap<AnyEventType, inspect::UintProperty>,
+    counters: BTreeMap<EventType, inspect::UintProperty>,
     component_log_node: BoundedListNode,
     counters_node: inspect::Node,
     _node: inspect::Node,
@@ -446,10 +440,10 @@ impl EventStreamLogger {
 #[derive(Debug, Error)]
 pub enum RouterError {
     #[error("Missing consumer for event type {0:?}")]
-    MissingConsumer(AnyEventType),
+    MissingConsumer(EventType),
 
     #[error("Missing producer for event type {0:?}")]
-    MissingProducer(AnyEventType),
+    MissingProducer(EventType),
 }
 
 /// Configuration for an event producer.
@@ -459,9 +453,6 @@ pub struct ProducerConfig<'a, T> {
 
     /// The set of events that the `producer` will be allowed to emit.
     pub events: Vec<EventType>,
-
-    /// The set of singleton events that the `producer` will be allowed to emit.
-    pub singleton_events: Vec<SingletonEventType>,
 
     /// The type of the producer.
     pub producer_type: ProducerType,
@@ -487,9 +478,6 @@ pub struct ConsumerConfig<'a, T> {
 
     /// The set of event types that the `consumer` will receive.
     pub events: Vec<EventType>,
-
-    /// The set of singleton event types that the `consumer` will receive.
-    pub singleton_events: Vec<SingletonEventType>,
 }
 
 /// Trait implemented by data types which receive events.
@@ -541,17 +529,16 @@ mod tests {
     }
 
     impl TestEventProducer {
-        async fn emit(&mut self, event_type: AnyEventType, identity: ComponentIdentity) {
+        async fn emit(&mut self, event_type: EventType, identity: ComponentIdentity) {
             let event = match event_type {
-                AnyEventType::General(_) => unreachable!("general event types are gone"),
-                AnyEventType::Singleton(SingletonEventType::DiagnosticsReady) => Event {
+                EventType::DiagnosticsReady => Event {
                     timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
                     payload: EventPayload::DiagnosticsReady(DiagnosticsReadyPayload {
                         component: identity,
                         directory: None,
                     }),
                 },
-                AnyEventType::Singleton(SingletonEventType::LogSinkRequested) => Event {
+                EventType::LogSinkRequested => Event {
                     timestamp: zx::Time::from_nanos(FAKE_TIMESTAMP),
                     payload: EventPayload::LogSinkRequested(LogSinkRequestedPayload {
                         component: identity,
@@ -595,16 +582,11 @@ mod tests {
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             producer_type: ProducerType::Internal,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
-            events: vec![],
-            singleton_events: vec![
-                SingletonEventType::DiagnosticsReady,
-                SingletonEventType::LogSinkRequested,
-            ],
+            events: vec![EventType::DiagnosticsReady, EventType::LogSinkRequested],
         });
 
         // An explicit match is needed here since unwrap_err requires Debug implemented for both T
@@ -612,12 +594,7 @@ mod tests {
         // doesn't implement Debug.
         match router.start(RouterOptions::default()) {
             Err(err) => {
-                assert_matches!(
-                    err,
-                    RouterError::MissingProducer(AnyEventType::Singleton(
-                        SingletonEventType::LogSinkRequested
-                    ))
-                );
+                assert_matches!(err, RouterError::MissingProducer(EventType::LogSinkRequested));
             }
             Ok(_) => panic!("expected an error from routing events"),
         }
@@ -628,24 +605,19 @@ mod tests {
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             producer_type: ProducerType::External,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::LogSinkRequested],
+            events: vec![EventType::LogSinkRequested],
         });
 
         match router.start(RouterOptions::default()) {
             Err(err) => {
                 assert_matches!(
                     err,
-                    RouterError::MissingConsumer(AnyEventType::Singleton(
-                        SingletonEventType::DiagnosticsReady
-                    )) | RouterError::MissingProducer(AnyEventType::Singleton(
-                        SingletonEventType::LogSinkRequested,
-                    ))
+                    RouterError::MissingConsumer(EventType::DiagnosticsReady)
+                        | RouterError::MissingProducer(EventType::LogSinkRequested)
                 );
             }
             Ok(_) => panic!("expected an error from routing events"),
@@ -653,7 +625,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn singleton_event_subscription() {
+    async fn event_subscription() {
         let mut producer = TestEventProducer::default();
         let (mut first_receiver, first_consumer) = TestEventConsumer::new();
         let (mut second_receiver, second_consumer) = TestEventConsumer::new();
@@ -661,18 +633,15 @@ mod tests {
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             producer_type: ProducerType::External,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::LogSinkRequested],
+            events: vec![EventType::LogSinkRequested],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &first_consumer,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::LogSinkRequested],
+            events: vec![EventType::LogSinkRequested],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &second_consumer,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::LogSinkRequested],
+            events: vec![EventType::LogSinkRequested],
         });
 
         let (_terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
@@ -724,23 +693,19 @@ mod tests {
         router.add_producer(ProducerConfig {
             producer: &mut producer,
             producer_type: ProducerType::Internal,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &first_consumer,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &second_consumer,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_consumer(ConsumerConfig {
             consumer: &third_consumer,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
 
         drop(first_consumer);
@@ -795,34 +760,21 @@ mod tests {
         let (receiver, consumer) = TestEventConsumer::new();
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
-            events: vec![],
-            singleton_events: vec![
-                SingletonEventType::LogSinkRequested,
-                SingletonEventType::DiagnosticsReady,
-            ],
+            events: vec![EventType::LogSinkRequested, EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer1,
             producer_type: ProducerType::Internal,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer2,
             producer_type: ProducerType::Internal,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::LogSinkRequested],
+            events: vec![EventType::LogSinkRequested],
         });
 
-        producer1
-            .emit(
-                AnyEventType::Singleton(SingletonEventType::DiagnosticsReady),
-                LEGACY_IDENTITY.clone(),
-            )
-            .await;
-        producer2
-            .emit(AnyEventType::Singleton(SingletonEventType::LogSinkRequested), IDENTITY.clone())
-            .await;
+        producer1.emit(EventType::DiagnosticsReady, LEGACY_IDENTITY.clone()).await;
+        producer2.emit(EventType::LogSinkRequested, IDENTITY.clone()).await;
 
         // Consume the events.
         let (_terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
@@ -860,20 +812,17 @@ mod tests {
         let (receiver, consumer) = TestEventConsumer::new();
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer1,
             producer_type: ProducerType::Internal,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer2,
             producer_type: ProducerType::External,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
 
         let identity = |moniker| {
@@ -883,18 +832,10 @@ mod tests {
             )
         };
 
-        producer1
-            .emit(AnyEventType::Singleton(SingletonEventType::DiagnosticsReady), identity("./b"))
-            .await;
-        producer1
-            .emit(AnyEventType::Singleton(SingletonEventType::DiagnosticsReady), identity("./d"))
-            .await;
-        producer2
-            .emit(AnyEventType::Singleton(SingletonEventType::DiagnosticsReady), identity("./a"))
-            .await;
-        producer2
-            .emit(AnyEventType::Singleton(SingletonEventType::DiagnosticsReady), identity("./c"))
-            .await;
+        producer1.emit(EventType::DiagnosticsReady, identity("./b")).await;
+        producer1.emit(EventType::DiagnosticsReady, identity("./d")).await;
+        producer2.emit(EventType::DiagnosticsReady, identity("./a")).await;
+        producer2.emit(EventType::DiagnosticsReady, identity("./c")).await;
 
         // We should see an event from each producer followed by an event from the other producer.
         // Also events from each producer must be in order.
@@ -923,31 +864,21 @@ mod tests {
         let (mut receiver, consumer) = TestEventConsumer::new();
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut internal_producer,
             producer_type: ProducerType::Internal,
-            events: vec![],
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
+            events: vec![EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut external_producer,
             producer_type: ProducerType::External,
-            singleton_events: vec![SingletonEventType::DiagnosticsReady],
-            events: vec![],
+            events: vec![EventType::DiagnosticsReady],
         });
 
-        internal_producer
-            .emit(
-                AnyEventType::Singleton(SingletonEventType::DiagnosticsReady),
-                LEGACY_IDENTITY.clone(),
-            )
-            .await;
-        external_producer
-            .emit(AnyEventType::Singleton(SingletonEventType::DiagnosticsReady), IDENTITY.clone())
-            .await;
+        internal_producer.emit(EventType::DiagnosticsReady, LEGACY_IDENTITY.clone()).await;
+        external_producer.emit(EventType::DiagnosticsReady, IDENTITY.clone()).await;
 
         let (terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
@@ -962,16 +893,9 @@ mod tests {
 
         // We must never see any new event emitted by the external producer. But we must see
         // events emitted by the internal producer.
-        external_producer
-            .emit(AnyEventType::Singleton(SingletonEventType::DiagnosticsReady), IDENTITY.clone())
-            .await;
+        external_producer.emit(EventType::DiagnosticsReady, IDENTITY.clone()).await;
         assert!(receiver.next().now_or_never().is_none());
-        internal_producer
-            .emit(
-                AnyEventType::Singleton(SingletonEventType::DiagnosticsReady),
-                LEGACY_IDENTITY.clone(),
-            )
-            .await;
+        internal_producer.emit(EventType::DiagnosticsReady, LEGACY_IDENTITY.clone()).await;
         assert_event(receiver.next().await.unwrap(), diagnostics_ready(LEGACY_IDENTITY.clone()));
     }
 
