@@ -18,7 +18,7 @@ use {
     fidl_fuchsia_developer_ffx_ext::{RepositoryConfig, RepositoryError, RepositorySpec},
     fuchsia_url::RepositoryUrl,
     pbms::{
-        get_product_data, is_locally_built, is_pb_ready, product_bundle_urls,
+        get_images_dir, get_product_data, is_locally_built, is_pb_ready, product_bundle_urls,
         select_product_bundle, update_metadata_all, ListingMode,
     },
     std::{
@@ -252,7 +252,7 @@ where
 
 /// `ffx product-bundle get` sub-command.
 async fn pb_get<I>(
-    writer: Writer,
+    mut writer: Writer,
     ui: &mut I,
     cmd: &GetCommand,
     repos: RepositoryRegistryProxy,
@@ -264,6 +264,12 @@ where
     tracing::debug!("pb_get {:?}", cmd.product_bundle_name);
     let product_url = determine_pbm_url(cmd, ui).await?;
     let output_dir = pbms::get_product_dir(&product_url).await?;
+
+    let path = get_images_dir(&product_url).await;
+    if path.is_ok() && path.unwrap().exists() && !cmd.force {
+        writeln!(writer, "This product bundle is already downloaded. Use --force to replace it.")?;
+        return Ok(());
+    }
 
     let repo_name = if let Some(repo_name) = &cmd.repository {
         repo_name.clone()
@@ -296,11 +302,13 @@ where
     // If a repo with the selected name already exists, that's an error.
     let repo_list = get_repos(&repos).await?;
     if repo_list.iter().any(|r| r.name == repo_name) {
-        bail!(
+        writeln!(
+            writer,
             "A package repository already exists with the name '{}'. \
             Specify an alternative name using the --repository flag.",
             repo_name
-        );
+        )?;
+        return Ok(());
     }
 
     // Go ahead and download the product images.
