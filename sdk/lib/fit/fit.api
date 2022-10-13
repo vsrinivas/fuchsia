@@ -4,7 +4,7 @@
   "pkg/fit/include/lib/fit/function_traits.h": "4db000fe2c2daba6d1b999c21c851da9",
   "pkg/fit/include/lib/fit/inline_any.h": "9fe4466cfa91be3d4e5bb71aa7952283",
   "pkg/fit/include/lib/fit/internal/compiler.h": "b3219fe602f7beb7ae4855b1d30074bf",
-  "pkg/fit/include/lib/fit/internal/function.h": "952c6ba591f6b052b35a957d602b589f",
+  "pkg/fit/include/lib/fit/internal/function.h": "907f6db41e40ac927b3b1cae75191d43",
   "pkg/fit/include/lib/fit/internal/inline_any.h": "87c691e1775070e7e922ac2f46270026",
   "pkg/fit/include/lib/fit/internal/result.h": "d9d2615f4403fd774f161b4eca358a33",
   "pkg/fit/include/lib/fit/internal/utility.h": "efad68bc25805e7c3d649163a57a116c",

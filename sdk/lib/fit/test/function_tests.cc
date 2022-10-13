@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fit/function.h>
+#include <lib/stdcompat/bit.h>
 
 #include <algorithm>
 
@@ -889,6 +890,27 @@ CONSTINIT const fit::function<void()> kNullptrConstructed(nullptr);
 TEST(FunctionTests, null_constructors_are_constexpr) {
   EXPECT_EQ(kDefaultConstructed, nullptr);
   EXPECT_EQ(kNullptrConstructed, nullptr);
+}
+
+TEST(FunctionTests, function_with_callable_aligned_larger_than_inline_size) {
+  struct alignas(4 * alignof(void*)) LargeAlignedCallable {
+    void operator()() { calls += 1; }
+
+    char calls = 0;
+  };
+
+  static_assert(sizeof(LargeAlignedCallable) > sizeof(void*), "Should not fit inline in function");
+
+  fit::function<void(), sizeof(void*)> function = LargeAlignedCallable();
+
+  static_assert(alignof(LargeAlignedCallable) > alignof(decltype(function)), "");
+
+  // Verify that the allocated target is aligned correctly.
+  LargeAlignedCallable* callable_ptr = function.target<LargeAlignedCallable>();
+  EXPECT_EQ(cpp20::bit_cast<uintptr_t>(callable_ptr) % alignof(LargeAlignedCallable), 0u);
+
+  function();
+  EXPECT_EQ(callable_ptr->calls, 1);
 }
 
 // Test that function inline sizes round up to the nearest word.

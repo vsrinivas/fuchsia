@@ -533,7 +533,7 @@ class function_base<inline_target_size, require_inline, Result(Args...)>
   void initialize_target(Callable&& target) {
     // Convert function or function references to function pointer.
     using DecayedCallable = std::decay_t<Callable>;
-    static_assert(alignof(DecayedCallable) <= alignof(base),
+    static_assert(!require_inline || alignof(DecayedCallable) <= alignof(base),
                   "Alignment of Callable must be <= alignment of the function class.");
     static_assert(!require_inline || sizeof(DecayedCallable) <= inline_target_size,
                   "Callable too large to store inline as requested.");
