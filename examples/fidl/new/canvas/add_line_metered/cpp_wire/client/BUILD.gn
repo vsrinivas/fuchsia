@@ -6,7 +6,7 @@ import("//build/components.gni")
 
 fuchsia_component_manifest("manifest") {
   component_name = "client"
-  manifest = "//examples/fidl/new/canvas/baseline/meta/client.cml"
+  manifest = "//examples/fidl/new/canvas/add_line_metered/meta/client.cml"
 }
 
 fuchsia_structured_config_cpp_elf_lib("config") {
@@ -21,10 +21,12 @@ executable("bin") {
 
   deps = [
     ":config",
-    "//examples/fidl/new/canvas/baseline/fidl:examples.canvas.baseline_cpp_wire",
+    "//examples/fidl/new/canvas/add_line_metered/fidl:examples.canvas.addlinemetered_cpp_wire",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

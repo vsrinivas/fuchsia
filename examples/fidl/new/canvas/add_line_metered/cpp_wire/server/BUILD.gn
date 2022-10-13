@@ -4,27 +4,23 @@
 
 import("//build/components.gni")
 
-fuchsia_component_manifest("manifest") {
-  component_name = "client"
-  manifest = "//examples/fidl/new/canvas/baseline/meta/client.cml"
-}
-
-fuchsia_structured_config_cpp_elf_lib("config") {
-  cm_label = ":manifest"
-}
-
 executable("bin") {
-  output_name = "client_bin"
+  output_name = "server_bin"
   output_dir = target_out_dir + "/cpp_wire"
 
   sources = [ "main.cc" ]
 
   deps = [
-    ":config",
-    "//examples/fidl/new/canvas/baseline/fidl:examples.canvas.baseline_cpp_wire",
+    "//examples/fidl/new/canvas/add_line_metered/fidl:examples.canvas.addlinemetered_cpp_wire",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async",
   ]
 }

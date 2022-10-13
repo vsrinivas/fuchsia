@@ -19,12 +19,17 @@ fuchsia_component_manifest("client_manifest") {
 fuchsia_structured_config_values("client_config_values") {
   cm_label = ":client_manifest"
   values = {
+    script = []
   }
 }
 
+# TODO(fxbug.dev/111273): Add per-binding `:tests` target after building out each implementation.
 group("tests") {
   testonly = true
 
-  # TODO(fxbug.dev/111273): Add per-binding `:tests` target after building out each implementation.
-  deps = []
+  deps = [
+    # DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
+    "cpp_wire:tests",
+    # /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
+  ]
 }

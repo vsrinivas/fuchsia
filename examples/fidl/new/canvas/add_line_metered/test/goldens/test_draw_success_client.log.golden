@@ -1,0 +1,14 @@
+Started
+Outgoing connection enabled
+AddLine request sent: [Point { x: 0, y: 0 }, Point { x: -5, y: 0 }]
+AddLine response received
+AddLine request sent: [Point { x: 5, y: 6 }, Point { x: -2, y: 2 }]
+AddLine response received
+AddLine request sent: [Point { x: -2, y: -2 }, Point { x: 4, y: -3 }]
+AddLine response received
+OnDrawn event received: top_left: Point { x: -5, y: 6 }, bottom_right: Point { x: 5, y: -3 }
+AddLine request sent: [Point { x: 7, y: 0 }, Point { x: 6, y: -1 }]
+AddLine response received
+AddLine request sent: [Point { x: -4, y: 3 }, Point { x: 7, y: -8 }]
+AddLine response received
+OnDrawn event received: top_left: Point { x: -5, y: 6 }, bottom_right: Point { x: 7, y: -8 }
