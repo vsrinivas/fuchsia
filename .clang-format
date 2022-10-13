@@ -8,7 +8,6 @@ Standard: Cpp11
 SortIncludes: true
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-BreakStringLiterals: false
 DerivePointerAlignment: true
 PointerAlignment: Left
 ColumnLimit: 100

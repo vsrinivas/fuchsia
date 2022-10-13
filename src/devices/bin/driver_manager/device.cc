@@ -137,11 +137,13 @@ zx_status_t Device::Create(
     fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
     bool want_init_task, bool skip_autobind, zx::vmo inspect,
     fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device) {
-  fbl::RefPtr<Device> real_parent = parent;
+  fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
-  if (real_parent->flags & DEV_CTX_PROXY) {
-    real_parent = real_parent->parent();
+  if (parent->flags & DEV_CTX_PROXY) {
+    real_parent = parent->parent();
+  } else {
+    real_parent = parent;
   }
 
   auto dev = fbl::MakeRefCounted<Device>(coordinator, std::move(name), std::move(driver_path),
@@ -227,16 +229,13 @@ zx_status_t Device::CreateComposite(
     str_props[i] = composite_str_props[i];
   }
 
-  fbl::RefPtr<Device> real_parent = composite.primary_fragment()->bound_device();
-  // If our parent is a proxy, for the purpose of devfs, we need to work with
-  // *its* parent which is the device that it is proxying.
-  if (real_parent->flags & DEV_CTX_PROXY) {
-    real_parent = real_parent->parent();
-  }
+  // TODO(teisenbe): Figure out how to manifest in devfs?  For now just hang it off of the root
+  // device?
+  const fbl::RefPtr<Device>& parent = coordinator->root_device();
 
   auto dev =
       fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(), fbl::String(),
-                                  real_parent, 0, zx::vmo(), fidl::ClientEnd<fio::Directory>());
+                                  parent, 0, zx::vmo(), fidl::ClientEnd<fio::Directory>());
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -266,9 +265,9 @@ zx_status_t Device::CreateComposite(
     return status;
   }
 
-  real_parent->children_.push_back(dev.get());
+  parent->children_.push_back(dev.get());
   VLOGF(1, "Created composite device %p '%s' (child of %p '%s')", dev.get(), dev->name().c_str(),
-        real_parent.get(), real_parent->name().c_str());
+        parent.get(), parent->name().c_str());
 
   dev->InitializeInspectValues();
   *device = std::move(dev);

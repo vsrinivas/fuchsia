@@ -372,23 +372,23 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
   static const char* kDevicePaths[] = {
       "sys/platform/platform-passthrough/astro",
       "sys/platform/05:03:1/aml-axg-gpio",
-      "sys/platform/05:03:1/aml-axg-gpio/gpio-5/astro-buttons/hid-buttons",
+      "astro-buttons/hid-buttons",
       "sys/platform/05:00:2/aml-i2c",
-      "sys/platform/05:03:17/mali/aml-gpu",
-      "sys/platform/05:00:18/aml-usb-phy-v2",
+      "mali/aml-gpu",
+      "aml-usb-phy-v2",
       "class/bt-transport/000",
       "class/bt-hci/000",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
 
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-44/backlight/ti-lp8556",
-      "sys/platform/00:00:1e/dw-dsi/display/amlogic-display/display-controller",
+      "backlight/ti-lp8556",
+      "display/amlogic-display/display-controller",
       "sys/platform/00:00:1e/dw-dsi",
       "class/dsi-base/000",
       "sys/platform/05:00:10/aml-canvas",
-      "sys/platform/00:00:e/tee/optee",
-      "sys/platform/05:03:e/aml-video",
+      "tee/optee",
+      "aml-video",
       "sys/platform/05:00:f/aml-raw_nand/nand/bl2/skip-block",
       "sys/platform/05:00:f/aml-raw_nand/nand/tpl/skip-block",
       "sys/platform/05:00:f/aml-raw_nand/nand/fts/skip-block",
@@ -398,33 +398,33 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/05:00:f/aml-raw_nand/nand/zircon-r/skip-block",
       "sys/platform/05:00:f/aml-raw_nand/nand/sys-config/skip-block",
       "sys/platform/05:00:f/aml-raw_nand/nand/migration/skip-block",
-      "sys/platform/05:00:7/aml-sdio/aml-sd-emmc/sdmmc",
-      "sys/platform/05:00:7/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
-      "sys/platform/05:00:7/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "sys/platform/05:00:7/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
-      "sys/platform/05:00:7/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/wifi/brcmfmac-wlanphy",
-      "sys/platform/05:00:7/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/wifi/brcmfmac-wlanphy/wlanphy",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-57/tcs3400-light/tcs-3400",
+      "aml-sdio/aml-sd-emmc/sdmmc",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
+      "wifi/brcmfmac-wlanphy",
+      "wifi/brcmfmac-wlanphy/wlanphy",
+      "tcs3400-light/tcs-3400",
       "sys/platform/05:03:11/clocks",
-      "sys/platform/05:03:12:1/astro-i2s-audio-out",
+      "astro-i2s-audio-out",
       "sys/platform/05:03:13/astro-audio-pdm-in",
-      "sys/platform/05:03:1a/aml-secure-mem/aml-securemem",
+      "aml-secure-mem/aml-securemem",
       //"sys/platform/05:05:3/aml-uart/serial/bt-transport-uart/bcm-hci",
-      "sys/platform/05:03:1d/aml-pwm-device/pwm-4/pwm-init",
+      "pwm-init",
 
       // CPU Device.
       "sys/platform/03:03:6",
       "class/cpu-ctrl/000",
-      "sys/platform/03:03:26/aml-power-impl-composite/power-impl/composite-pd-armcore/power-0/aml-cpu/s905d2-arm-a53",
+      "aml-cpu/s905d2-arm-a53",
       // LED.
       "class/light/000",
       // RAM (DDR) control.
       "sys/platform/05:03:24/ram",
 
       // Power Device.
-      "sys/platform/03:03:26/aml-power-impl-composite",
-      "sys/platform/03:03:26/aml-power-impl-composite/power-impl/composite-pd-armcore",
-      "sys/platform/03:03:26/aml-power-impl-composite/power-impl/composite-pd-armcore/power-0",
+      "aml-power-impl-composite",
+      "composite-pd-armcore",
+      "composite-pd-armcore/power-0",
 
       // Thermal
       "sys/platform/05:03:a/thermal",
@@ -449,8 +449,8 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 
   static const char* kTouchscreenDevicePaths[] = {
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-56/ft3x27-touch/focaltouch HidDevice/hid-device/InputReport",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-93/gt92xx-touch/gt92xx HidDevice/hid-device/InputReport",
+      "gt92xx-touch/gt92xx HidDevice/hid-device/InputReport",
+      "ft3x27-touch/focaltouch HidDevice/hid-device/InputReport",
   };
   ASSERT_NO_FATAL_FAILURE(
       WaitForOne(cpp20::span(kTouchscreenDevicePaths, std::size(kTouchscreenDevicePaths))));
@@ -461,48 +461,48 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/platform-passthrough/nelson",
       "sys/platform/05:05:1/aml-axg-gpio",
       "sys/platform/05:05:1:1/aml-axg-gpio",
-      "sys/platform/05:05:1/aml-axg-gpio/gpio-5/nelson-buttons/hid-buttons",
+      "nelson-buttons/hid-buttons",
       "class/bt-transport/000",
       "class/bt-hci/000",
       "sys/platform/05:00:2/aml-i2c",
-      "sys/platform/05:05:17/mali/aml-gpu",
+      "mali/aml-gpu",
       "sys/platform/05:0a:21/nelson-usb-phy",
-      "sys/platform/05:05:12/nelson-audio-i2s-out",
+      "nelson-audio-i2s-out",
       "sys/platform/05:05:13/nelson-audio-pdm-in",
       "sys/platform/00:00:29",  // registers device
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
 
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-44/backlight/ti-lp8556",
+      "backlight/ti-lp8556",
       "sys/platform/05:00:10/aml-canvas",
-      "sys/platform/00:00:e/tee/optee",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot1/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot2/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/rpmb",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-001/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-003/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-004/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-005/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-006/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-007/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-008/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-009/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-010/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-011/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-012/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-013/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-014/block",
-      "sys/platform/05:00:8/nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-015/block",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-57/tcs3400-light/tcs-3400",
-      "sys/platform/05:05:1c/aml-nna",
+      "tee/optee",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot1/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot2/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/rpmb",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-001/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-003/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-004/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-005/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-006/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-007/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-008/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-009/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-010/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-011/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-012/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-013/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-014/block",
+      "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-015/block",
+      "tcs3400-light/tcs-3400",
+      "aml-nna",
       "sys/platform/05:05:22/clocks",
-      "sys/platform/05:05:a/aml-thermal-pll/thermal",
+      "aml-thermal-pll/thermal",
       "class/thermal/000",
       // "sys/platform/05:03:1e/cpu",
-      "sys/platform/05:03:1a/aml-secure-mem/aml-securemem",
+      "aml-secure-mem/aml-securemem",
       "class/pwm/000",
       "class/pwm/001",
       "class/pwm/002",
@@ -513,27 +513,27 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "class/pwm/007",
       "class/pwm/008",
       "class/pwm/009",
-      "sys/platform/05:00:6/aml-sdio/aml-sd-emmc/sdmmc",
-      "sys/platform/05:00:6/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
-      "sys/platform/05:00:6/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "sys/platform/05:00:6/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
-      "sys/platform/05:00:6/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/wifi/brcmfmac-wlanphy",
-      "sys/platform/05:00:6/aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/wifi/brcmfmac-wlanphy/wlanphy",
+      "aml-sdio/aml-sd-emmc/sdmmc",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
+      "wifi/brcmfmac-wlanphy",
+      "wifi/brcmfmac-wlanphy/wlanphy",
       "sys/platform/00:00:1e/dw-dsi",
-      "sys/platform/00:00:1e/dw-dsi/display/amlogic-display/display-controller",
+      "display/amlogic-display/display-controller",
       "class/dsi-base/000",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-73/ti-ina231-mlb/ti-ina231",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-64/ti-ina231-speakers/ti-ina231",
+      "ti-ina231-mlb/ti-ina231",
+      "ti-ina231-speakers/ti-ina231",
       "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-112/shtv3",
-      "sys/platform/1c:00:1/gt6853-touch/gt6853",
+      "gt6853-touch/gt6853",
 
       // Amber LED.
-      "sys/platform/05:00:1c/gpio-light",
+      "gpio-light",
       "class/light/000",
 
       // This should exist, but open() will fail because it is already being used by radar.
       // "spi-1/aml-spi-1/spi/spi-1-0",
-      "sys/platform/05:05:1:1/aml-axg-gpio/gpio-82/spi-1/aml-spi-1/spi/spi-1-0/spi-banjo-1-0/selina",
+      "selina/selina",
       "class/radar/000",
 
       "sys/platform/05:05:24/ram",
@@ -541,19 +541,20 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "sys/platform/03:0a:27/thermistor-device/therm-thread",
       "sys/platform/03:0a:27/thermistor-device/therm-audio",
 
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-45/audio-tas58xx/TAS5805m/brownout-protection",
+      "brownout-protection/nelson-brownout-protection",
 
-      "sys/platform/05:00:19/spi-0/aml-spi-0/spi/spi-0-0",
-      "sys/platform/00:0a:23/nrf52811-radio",
+      "spi-0/aml-spi-0/spi/spi-0-0",
+      "nrf52811-radio",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 
   static const char* kTouchscreenDevicePaths[] = {
       // One of these touch devices could be on P0/P1 boards.
-      "sys/platform/05:05:1/aml-axg-gpio/gpio-5/nelson-buttons/hid-buttons/hidbus_function/hid-device/InputReport",
+      "gtx8x-touch/gt92xx HidDevice/hid-device/InputReport",
+      "ft3x27-touch/focaltouch HidDevice/hid-device/InputReport",
       // This is the only possible touch device for P2 and beyond.
-      "sys/platform/1c:00:1/gt6853-touch/gt6853",
+      "gt6853-touch/gt6853",
   };
   ASSERT_NO_FATAL_FAILURE(
       WaitForOne(cpp20::span(kTouchscreenDevicePaths, std::size(kTouchscreenDevicePaths))));
@@ -566,58 +567,58 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:00:14/clocks",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:00:10/aml-canvas",
-      "sys/platform/05:04:a/aml-thermal-pll/thermal",
+      "aml-thermal-pll/thermal",
       "sys/platform/00:00:1e/dw-dsi",
-      "sys/platform/00:00:1e/dw-dsi/display/amlogic-display/display-controller",
+      "display/amlogic-display/display-controller",
       "class/dsi-base/000",
-      "sys/platform/05:00:18/aml-usb-phy-v2",
+      "aml-usb-phy-v2",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",
 
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot1/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot2/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/rpmb",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-003/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-004/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-005/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-006/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-007/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-008/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-009/block",
-      "sys/platform/05:00:8/sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-010/block",
-      "sys/platform/05:00:6/sherlock-sd-emmc/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
-      "sys/platform/05:00:6/sherlock-sd-emmc/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
-      "sys/platform/05:00:6/sherlock-sd-emmc/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/wifi/brcmfmac-wlanphy",
-      "sys/platform/05:00:6/sherlock-sd-emmc/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/wifi/brcmfmac-wlanphy/wlanphy",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot1/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/boot2/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/rpmb",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-003/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-004/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-005/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-006/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-007/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-008/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-009/block",
+      "sherlock-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-010/block",
+      "sherlock-sd-emmc/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "sherlock-sd-emmc/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
+      "wifi/brcmfmac-wlanphy",
+      "wifi/brcmfmac-wlanphy/wlanphy",
       "sys/platform/05:04:15/aml-mipi",
-      "sys/platform/05:04:1c/aml-nna",
+      "aml-nna",
       "sys/platform/05:04:1d",  // pwm
-      "sys/platform/05:04:15/aml-mipi/imx227-sensor/imx227/gdc",
-      "sys/platform/05:04:15/aml-mipi/imx227-sensor/imx227/ge2d",
-      "sys/platform/05:00:1c/gpio-light",
-      "sys/platform/05:04:15/aml-mipi/imx227-sensor",
-      "sys/platform/05:04:15/aml-mipi/imx227-sensor/imx227/isp",
-      "sys/platform/05:04:15/aml-mipi/imx227-sensor/imx227/isp/arm-isp/camera-controller",
-      "sys/platform/05:04:e/aml-video",
-      "sys/platform/05:04:23/aml-video-enc",
-      "sys/platform/05:04:25/aml-hevc-enc",
-      "sys/platform/05:04:17/mali/aml-gpu",
+      "gdc",
+      "ge2d",
+      "gpio-light",
+      "imx227-sensor",
+      "isp",
+      "camera-controller",
+      "aml-video",
+      "aml-video-enc",
+      "aml-hevc-enc",
+      "mali/aml-gpu",
       "sys/platform/05:04:13/sherlock-audio-pdm-in",
-      "sys/platform/05:04:12:1/sherlock-i2s-audio-out",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-1-56/ft5726-touch",
-      "sys/platform/00:00:e/tee/optee",
-      "sys/platform/05:00:19/spi-0/aml-spi-0/spi/spi-0-0",
-      "sys/platform/05:04:1/aml-axg-gpio/gpio-4/sherlock-buttons/hid-buttons",
-      "sys/platform/00:05:23/nrf52840-radio",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-2-44/backlight/ti-lp8556",
-      "sys/platform/05:00:2/aml-i2c/i2c/i2c-0-57/SherlockLightSensor/tcs-3400",
-      "sys/platform/05:04:1a/aml-secure-mem/aml-securemem",
-      "sys/platform/05:04:1d/aml-pwm-device/pwm-4/pwm-init",
+      "sherlock-i2s-audio-out",
+      "ft5726-touch",
+      "tee/optee",
+      "spi-0/aml-spi-0/spi/spi-0-0",
+      "sherlock-buttons/hid-buttons",
+      "nrf52840-radio",
+      "backlight/ti-lp8556",
+      "SherlockLightSensor/tcs-3400",
+      "aml-secure-mem/aml-securemem",
+      "pwm-init",
       "sys/platform/05:04:24/ram",
       "sys/platform/00:00:29",  // registers device
 
@@ -625,8 +626,8 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/03:05:6",
       "class/cpu-ctrl/000",
       "class/cpu-ctrl/001",
-      "sys/platform/05:04:a/aml-thermal-pll/thermal/aml-cpu/big-cluster",
-      "sys/platform/05:04:a/aml-thermal-pll/thermal/aml-cpu/little-cluster",
+      "aml-cpu/big-cluster",
+      "aml-cpu/little-cluster",
 
       // Thermal devices.
       "sys/platform/05:04:a",
@@ -713,16 +714,16 @@ TEST_F(DeviceEnumerationTest, EveTest) {
 
 TEST_F(DeviceEnumerationTest, NucTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/platform-passthrough/PCI0/bus/00:02.0_/pci-00:02.0-fidl/intel_i915/intel-gpu-core",
-      "sys/platform/platform-passthrough/PCI0/bus/00:02.0_/pci-00:02.0-fidl/intel_i915/intel-display-controller/display-controller",
-      "sys/platform/platform-passthrough/PCI0/bus/00:14.0_/pci-00:14.0-fidl/xhci/usb-bus",
-      "sys/platform/platform-passthrough/PCI0/bus/00:15.0_/pci-00:15.0-fidl/i2c-bus-9d60",
-      "sys/platform/platform-passthrough/PCI0/bus/00:15.1_/pci-00:15.1-fidl/i2c-bus-9d61",
-      "sys/platform/platform-passthrough/PCI0/bus/00:17.0_/pci-00:17.0-fidl/ahci",
+      "pci-00:02.0-fidl/intel_i915/intel-gpu-core",
+      "pci-00:02.0-fidl/intel_i915/intel-display-controller/display-controller",
+      "pci-00:14.0-fidl/xhci/usb-bus",
+      "pci-00:15.0-fidl/i2c-bus-9d60",
+      "pci-00:15.1-fidl/i2c-bus-9d61",
+      "pci-00:17.0-fidl/ahci",
       // TODO(fxbug.dev/84037): Temporarily removed.
       // "pci-00:1f.3-fidl/intel-hda-000",
       // "pci-00:1f.3-fidl/intel-hda-controller",
-      "sys/platform/platform-passthrough/PCI0/bus/00:1f.6_/pci-00:1f.6-fidl/e1000",
+      "pci-00:1f.6-fidl/e1000",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -836,57 +837,51 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   static const char* kDevicePaths[] = {
       "class/sysmem/000",
 
+      "pci-00:1f.2-fidl/ahci",
+
       "sys/platform/platform-passthrough/acpi",
       "sys/platform/platform-passthrough/acpi/acpi-pwrbtn",
+      "acpi-KBD_-composite/i8042/i8042-keyboard",
+      "acpi-KBD_-composite/i8042/i8042-mouse",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-
-  []() {
-    if (IsDfv2Enabled()) {
-      return;
-    }
-
-    // TODO(fxbug.dev/106517): Fix these devices and move them back.
-    static const char* kDevicesThatFailInDfv2[] = {
-        "sys/platform/platform-passthrough/PCI0/bus/00:1f.2_/pci-00:1f.2-fidl/ahci",
-        "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-keyboard",
-        "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-mouse",
-    };
-
-    ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicesThatFailInDfv2, std::size(kDevicesThatFailInDfv2)));
-  }();
 
   if (!device_enumeration::IsAemuBoard()) {
     return;
   }
   printf("INFO: AEMU board detected. Test enumerating AEMU-specific devices.\n");
 
-  // TODO(fxbug.dev/106517): Fix the devices below and remove this.
+  static const char* kAemuDevicePaths[] = {
+      "pci-00:01.0-fidl/virtio-input",
+      "pci-00:02.0-fidl/virtio-input",
+      "pci-00:0b.0-fidl/goldfish-address-space",
+
+      // Verify goldfish pipe root device created.
+      "acpi-GFPP-composite/goldfish-pipe",
+      // Verify goldfish pipe child devices created.
+      "acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control",
+      "acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-sensor",
+      "acpi-GFSK-composite/goldfish-sync",
+
+      "goldfish-control-2/goldfish-control",
+      "goldfish-control-2/goldfish-control/goldfish-display",
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));
+
   if (IsDfv2Enabled()) {
     return;
   }
 
-  static const char* kAemuDevicePaths[] = {
-      "sys/platform/platform-passthrough/PCI0/bus/00:01.0_/pci-00:01.0-fidl/virtio-input",
-      "sys/platform/platform-passthrough/PCI0/bus/00:02.0_/pci-00:02.0-fidl/virtio-input",
-      "sys/platform/platform-passthrough/PCI0/bus/00:0b.0_/pci-00:0b.0-fidl/goldfish-address-space",
-
-      // Verify goldfish pipe root device created.
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe",
-      // Verify goldfish pipe child devices created.
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-sensor",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFSK/acpi-GFSK-passthrough/acpi-GFSK-composite/goldfish-sync",
-
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control/goldfish-display",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFSK/acpi-GFSK-passthrough/acpi-GFSK-composite",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2",
+  // TODO(fxbug.dev/106517): Fix these devices and move them back.
+  static const char* kDevicesThatFailInDfv2[] = {
+      "acpi-GFPP-composite",
+      "acpi-GFSK-composite",
+      "goldfish-control-2",
   };
 
-  ASSERT_NO_FATAL_FAILURE(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicesThatFailInDfv2, std::size(kDevicesThatFailInDfv2)));
 }
 
 // If this test fails, it indicates that the board driver set the board name incorrectly.
