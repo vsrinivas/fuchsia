@@ -57,6 +57,8 @@ host_test_data("bad_cases") {
     "fidl/bad/fi-0110.test.fidl",
     "fidl/bad/fi-0145.test.fidl",
     "fidl/bad/fi-0158.test.fidl",
+    "fidl/bad/fi-0162-a.test.fidl",
+    "fidl/bad/fi-0162-b.test.fidl",
     "fidl/bad/fi-0167.test.fidl",
     "fidl/bad/fi-0178.test.fidl",
   ]
@@ -117,6 +119,7 @@ host_test_data("good_cases") {
     "fidl/good/fi-0110-b.test.fidl",
     "fidl/good/fi-0145.test.fidl",
     "fidl/good/fi-0158.test.fidl",
+    "fidl/good/fi-0162.test.fidl",
     "fidl/good/fi-0167.test.fidl",
     "fidl/good/fi-0178.test.fidl",
   ]

@@ -557,14 +557,8 @@ type TypeDecl = resource struct {
 }
 
 TEST(NewSyntaxTests, BadTooManyLayoutParameters) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = struct {
-  foo uint8<8>;
-};
-)FIDL");
-
+  TestLibrary library;
+  library.AddFile("bad/fi-0162-b.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
@@ -582,14 +576,8 @@ type Foo = struct {
 }
 
 TEST(NewSyntaxTests, BadNotEnoughParameters) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = struct {
-  foo array<8>;
-};
-)FIDL");
-
+  TestLibrary library;
+  library.AddFile("bad/fi-0162-a.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
   EXPECT_EQ(library.errors()[0]->span.data(), "<8>");
 }

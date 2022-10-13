@@ -15,8 +15,7 @@ namespace fidl {
 constexpr RetiredDef<0> ErrAlwaysRetired("error id fi-0000 was always retired");
 constexpr ErrorDef<1, std::string_view> ErrInvalidCharacter("invalid character '{}'");
 constexpr ErrorDef<2> ErrUnexpectedLineBreak("unexpected line-break in string literal");
-constexpr ErrorDef<3, std::string_view> ErrInvalidEscapeSequence(
-    "invalid escape sequence '{}'");
+constexpr ErrorDef<3, std::string_view> ErrInvalidEscapeSequence("invalid escape sequence '{}'");
 constexpr ErrorDef<4, char> ErrInvalidHexDigit("invalid hex digit '{}'");
 constexpr ErrorDef<5, char> ErrInvalidOctDigit("invalid oct digit '{}'");
 constexpr ErrorDef<6, std::string_view> ErrExpectedDeclaration("invalid declaration type {}");
@@ -398,7 +397,7 @@ constexpr UndocumentedErrorDef<160, flat::Name> ErrCannotIndicateOptionalTwice(
     "{} is already optional, cannot indicate optionality twice");
 constexpr UndocumentedErrorDef<161, flat::Name> ErrMustHaveNonZeroSize(
     "{} must have non-zero size");
-constexpr UndocumentedErrorDef<162, flat::Name, size_t, size_t> ErrWrongNumberOfLayoutParameters(
+constexpr ErrorDef<162, flat::Name, size_t, size_t> ErrWrongNumberOfLayoutParameters(
     "{} expected {} layout parameter(s), but got {}");
 constexpr UndocumentedErrorDef<163> ErrMultipleConstraintDefinitions(
     "cannot specify multiple constraint sets on a type");
