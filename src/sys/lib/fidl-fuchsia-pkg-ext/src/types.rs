@@ -172,10 +172,10 @@ impl TryFrom<&[u8]> for ResolutionContext {
     }
 }
 
-impl TryFrom<fidl::ResolutionContext> for ResolutionContext {
+impl TryFrom<&fidl::ResolutionContext> for ResolutionContext {
     type Error = ResolutionContextError;
 
-    fn try_from(context: fidl::ResolutionContext) -> Result<Self, Self::Error> {
+    fn try_from(context: &fidl::ResolutionContext) -> Result<Self, Self::Error> {
         Self::try_from(context.bytes.as_slice())
     }
 }
@@ -392,12 +392,12 @@ mod test_resolution_context {
     #[test]
     fn try_from_fidl_succeeds() {
         assert_eq!(
-            ResolutionContext::try_from(fidl::ResolutionContext { bytes: vec![] }).unwrap(),
+            ResolutionContext::try_from(&fidl::ResolutionContext { bytes: vec![] }).unwrap(),
             ResolutionContext { blob_id: None }
         );
 
         assert_eq!(
-            ResolutionContext::try_from(fidl::ResolutionContext { bytes: vec![1u8; 32] }).unwrap(),
+            ResolutionContext::try_from(&fidl::ResolutionContext { bytes: vec![1u8; 32] }).unwrap(),
             ResolutionContext { blob_id: Some([1u8; 32].into()) }
         );
     }
@@ -405,7 +405,7 @@ mod test_resolution_context {
     #[test]
     fn try_from_fidl_fails() {
         assert_matches!(
-            ResolutionContext::try_from(fidl::ResolutionContext { bytes: vec![1u8; 1] }),
+            ResolutionContext::try_from(&fidl::ResolutionContext { bytes: vec![1u8; 1] }),
             Err(ResolutionContextError::InvalidBlobId(_))
         );
     }

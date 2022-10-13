@@ -16,7 +16,8 @@ pub use crate::repo::{
 
 mod errors;
 pub use crate::errors::{
-    BlobIdParseError, CupMissingField, MirrorConfigError, RepositoryParseError, ResolveError,
+    BlobIdParseError, CupMissingField, MirrorConfigError, RepositoryParseError,
+    ResolutionContextError, ResolveError,
 };
 
 mod measure;

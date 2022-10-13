@@ -409,6 +409,7 @@ pub async fn run_resolver_service(
     repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
     rewriter: Arc<AsyncRwLock<RewriteManager>>,
     package_resolver: QueuedResolver,
+    pkg_cache: pkg::cache::Client,
     base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
     stream: PackageResolverRequestStream,
@@ -449,6 +450,8 @@ pub async fn run_resolver_service(
                         context,
                         dir,
                         &package_resolver,
+                        &pkg_cache,
+                        base_package_index.as_ref(),
                         eager_package_manager.as_ref().as_ref(),
                         cobalt_sender.clone(),
                     )

@@ -13,7 +13,7 @@ mod meta_package;
 mod meta_subpackages;
 mod package;
 mod package_builder;
-mod package_directory;
+pub mod package_directory;
 mod package_manifest;
 mod package_manifest_list;
 mod path;

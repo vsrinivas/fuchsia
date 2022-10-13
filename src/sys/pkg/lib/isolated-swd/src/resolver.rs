@@ -228,7 +228,7 @@ pub(crate) mod for_tests {
                 .await
                 .unwrap()
                 .map_err(|e| anyhow!("Package resolver error: {:?}", e))?;
-            Ok((package, resolved_context.try_into().expect("resolver returns valid context")))
+            Ok((package, (&resolved_context).try_into().expect("resolver returns valid context")))
         }
     }
 }

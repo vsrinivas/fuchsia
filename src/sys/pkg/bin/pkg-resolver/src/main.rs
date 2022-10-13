@@ -250,7 +250,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     let eager_package_manager = Arc::new(
         crate::eager_package_manager::EagerPackageManager::from_namespace(
             package_resolver.clone(),
-            pkg_cache,
+            pkg_cache.clone(),
             data_proxy,
             &*system_cache_list,
             cobalt_sender.clone(),
@@ -278,6 +278,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
                     Arc::clone(&repo_manager),
                     Arc::clone(&rewrite_manager),
                     package_resolver.clone(),
+                    pkg_cache.clone(),
                     Arc::clone(&base_package_index),
                     Arc::clone(&system_cache_list),
                     stream,
