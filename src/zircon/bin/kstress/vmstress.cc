@@ -1107,8 +1107,8 @@ class MultiVmoTestInstance : public TestInstance {
         result = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
         ZX_ASSERT(result == ZX_OK);
         if (!make_thread([this, pager = std::move(pager), port = std::move(port),
-                          vmo = std::move(dup_vmo), reliable_mappings]() mutable {
-              pager_thread(std::move(pager), std::move(port), std::move(vmo), reliable_mappings);
+                          vmo = std::move(dup_vmo)]() mutable {
+              pager_thread(std::move(pager), std::move(port), std::move(vmo));
             })) {
           // if the pager thread couldn't spin up bail right now and don't make the client thread as
           // that client thread will either block or hard crash, either scenario will make that
@@ -1130,7 +1130,7 @@ class MultiVmoTestInstance : public TestInstance {
 
   // TODO: pager_thread currently just fulfills any page faults correctly. This should be expanded
   // to detach, error ranges, pre-supply pages etc.
-  void pager_thread(zx::pager pager, zx::port port, zx::vmo vmo, bool reliable_mappings) {
+  void pager_thread(zx::pager pager, zx::port port, zx::vmo vmo) {
     // To exit the pager thread we need to know once we have the only reference to the vmo. This
     // requires two things, our vmo handle be the only handle to that vmo, and the vmo have no
     // children. The first condition has no signal and so until we know we have the only handle we
