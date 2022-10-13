@@ -30,6 +30,7 @@
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
+#include "src/ui/testing/util/flatland_test_view.h"
 #include "src/ui/testing/util/gfx_test_view.h"
 
 namespace {
@@ -62,6 +63,16 @@ std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest() {
     configs.push_back(config);
   }
 
+  // Flatland x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.use_flatland = true;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.ui_to_client_services = {fuchsia::ui::composition::Flatland::Name_,
+                                    fuchsia::ui::composition::Allocator::Name_};
+    configs.push_back(config);
+  }
+
   return configs;
 }
 
@@ -84,16 +95,27 @@ class FocusInputTest : public gtest::RealLoopFixture,
     FX_LOGS(INFO) << "Building realm";
     realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
 
+    auto config = GetParam();
+
     // Add a test view provider.
-    test_view_ = std::make_unique<ui_testing::GfxTestView>(
-        dispatcher(), ui_testing::TestView::ContentType::COORDINATE_GRID);
+    if (config.use_flatland) {
+      test_view_ = std::make_unique<ui_testing::FlatlandTestView>(
+          dispatcher(), ui_testing::TestView::ContentType::COORDINATE_GRID);
+    } else {
+      test_view_ = std::make_unique<ui_testing::GfxTestView>(
+          dispatcher(), ui_testing::TestView::ContentType::COORDINATE_GRID);
+    }
+
     realm_->AddLocalChild(kViewProvider, test_view_.get());
     realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                            .source = ChildRef{kViewProvider},
                            .targets = {ParentRef()}});
-    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                           .source = ParentRef(),
-                           .targets = {ChildRef{kViewProvider}}});
+
+    for (const auto& protocol : config.ui_to_client_services) {
+      realm_->AddRoute(Route{.capabilities = {Protocol{protocol}},
+                             .source = ParentRef(),
+                             .targets = {ChildRef{kViewProvider}}});
+    }
 
     ui_test_manager_->BuildRealm();
     realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
