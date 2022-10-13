@@ -48,6 +48,10 @@ pub struct UpdatePackageBuilder {
     /// Manifest of packages to include in the update.
     packages: UpdatePackagesManifest,
 
+    /// The ABI revision to use when building the packages for the update.
+    /// None will default to the latest ABI.
+    abi_revision: Option<u64>,
+
     /// Directory to write outputs.
     outdir: PathBuf,
 
@@ -188,6 +192,7 @@ impl UpdatePackageBuilder {
         board_name: impl AsRef<str>,
         version_file: impl AsRef<Path>,
         epoch: EpochFile,
+        abi_revision: Option<u64>,
         outdir: impl AsRef<Path>,
     ) -> Self {
         Self {
@@ -200,6 +205,7 @@ impl UpdatePackageBuilder {
             slot_primary: None,
             slot_recovery: None,
             packages: UpdatePackagesManifest::default(),
+            abi_revision,
             outdir: outdir.as_ref().to_path_buf(),
             gendir: outdir.as_ref().to_path_buf(),
         }
@@ -254,6 +260,9 @@ impl UpdatePackageBuilder {
         // `system-updater`.  Follow that convention for images packages as well.
         let package_name = format!("update{suffix}");
         let mut builder = PackageBuilder::new(&package_name);
+        if let Some(abi) = self.abi_revision {
+            builder.abi_revision(abi);
+        }
 
         // However, they can have different published names.  And the name here
         // is the name to publish it under (and to include in the generated
@@ -462,6 +471,7 @@ mod tests {
             "board",
             fake_version.path().to_path_buf(),
             epoch.clone(),
+            Some(0xECDB841C251A8CB9),
             &outdir.path(),
         );
 
@@ -629,6 +639,7 @@ mod tests {
             "board",
             fake_version.path().to_path_buf(),
             epoch.clone(),
+            Some(0xECDB841C251A8CB9),
             &outdir.path(),
         );
 
@@ -816,6 +827,7 @@ mod tests {
             "board",
             fake_version.path().to_path_buf(),
             epoch.clone(),
+            Some(0xECDB841C251A8CB9),
             &outdir.path(),
         );
 
@@ -852,6 +864,7 @@ mod tests {
             "board",
             fake_version.path().to_path_buf(),
             EpochFile::Version1 { epoch: 0 },
+            Some(0xECDB841C251A8CB9),
             &outdir.path(),
         );
         builder.set_name("update_2");
@@ -876,6 +889,7 @@ mod tests {
             "board",
             fake_version.path().to_path_buf(),
             EpochFile::Version1 { epoch: 0 },
+            Some(0xECDB841C251A8CB9),
             &outdir.path(),
         );
 
