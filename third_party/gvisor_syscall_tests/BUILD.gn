@@ -267,8 +267,7 @@ source_set("gtest_main") {
   testonly = true
 }
 
-local_test_deps = []
-test_deps = []
+local_testing_suffix = "local_testing"
 
 # Defines test targets and unittest packages based on the
 # provided suite name for all versions of the Netstack under
@@ -281,6 +280,12 @@ test_deps = []
 #     with Fast UDP enabled.
 #     Type: bool
 #     Default: true
+#
+#   run_in_cq_with_ns3 (optional)
+#     Identifies whether or not the suite should be run against Netstack3
+#     in CQ.
+#     Type: bool
+#     Default: false
 template("syscall_test_suite") {
   not_needed([ "invoker" ])
   suite_label = target_name
@@ -307,6 +312,8 @@ template("syscall_test_suite") {
     testonly = true
   }
 
+  ns3_label = "netstack3"
+
   stacks = [
     {
       label = "netstack2_syncudp"
@@ -315,7 +322,7 @@ template("syscall_test_suite") {
       manifest = "meta/netstack2/syncudp/${suite_label}_syscall_tests.cml"
     },
     {
-      label = "netstack3"
+      label = ns3_label
       component = "//src/connectivity/network/netstack3:component"
       expectations = ":${netstack3_expectations_target}"
       manifest = "meta/netstack3/${suite_label}_syscall_tests.cml"
@@ -339,7 +346,13 @@ template("syscall_test_suite") {
     ]
   }
 
+  run_in_cq_with_ns3 = false
+  if (defined(invoker.run_in_cq_with_ns3)) {
+    run_in_cq_with_ns3 = invoker.run_in_cq_with_ns3
+  }
+
   test_deps = []
+  local_test_deps = []
   foreach(stack, stacks) {
     combined_label = "${stack.label}_${suite_label}"
 
@@ -366,10 +379,19 @@ template("syscall_test_suite") {
       ]
     }
 
-    test_deps += [ ":${test_package_label}" ]
+    local_test_deps += [ ":${test_package_label}" ]
+
+    if (run_in_cq_with_ns3 || stack.label != ns3_label) {
+      test_deps += [ ":${test_package_label}" ]
+    }
   }
 
   group(suite_label) {
+    testonly = true
+    public_deps = test_deps
+  }
+
+  group("${suite_label}_${local_testing_suffix}") {
     testonly = true
     public_deps = test_deps
   }
@@ -378,6 +400,7 @@ template("syscall_test_suite") {
 syscall_test_suite(generic_test_label) {
 }
 syscall_test_suite(raw_packet_test_label) {
+  run_in_cq_with_ns3 = true
 }
 syscall_test_suite(udp_test_label) {
 }
@@ -392,7 +415,13 @@ syscall_test_suite(tcp_blocking_test_label) {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":${raw_packet_test_label}" ]
+  public_deps = [
+    ":${raw_packet_test_label}",
+    ":${tcp_blocking_test_label}",
+    ":${tcp_test_label}",
+    ":${udp_test_label}",
+    ":${udp_unbound_test_label}",
+  ]
 }
 
 # This target contains all tests, including those currently too long
@@ -403,11 +432,11 @@ group("tests") {
 group("local-testing") {
   testonly = true
   public_deps = [
-    ":${generic_test_label}",
-    ":${raw_packet_test_label}",
-    ":${tcp_blocking_test_label}",
-    ":${tcp_test_label}",
-    ":${udp_test_label}",
-    ":${udp_unbound_test_label}",
+    ":${generic_test_label}_${local_testing_suffix}",
+    ":${raw_packet_test_label}_${local_testing_suffix}",
+    ":${tcp_blocking_test_label}_${local_testing_suffix}",
+    ":${tcp_test_label}_${local_testing_suffix}",
+    ":${udp_test_label}_${local_testing_suffix}",
+    ":${udp_unbound_test_label}_${local_testing_suffix}",
   ]
 }
