@@ -190,7 +190,9 @@ impl gesture_arena::Winner for Winner {
         match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
             0 => ProcessNewEventResult::EndGesture(
                 EndGestureEvent::GeneratedEvent(touchpad_event_to_mouse_up_event(
-                    &self.last_position,
+                    // Contact was removed simultaneously with the button being released.
+                    // Hence, there was zero motion between the down and up events.
+                    Position { x: 0.0, y: 0.0 },
                     &event,
                 )),
                 Reason::DetailedUint(DetailedReasonUint {
@@ -203,7 +205,10 @@ impl gesture_arena::Winner for Winner {
             1 => match u8::try_from(event.pressed_buttons.len()).unwrap_or(u8::MAX) {
                 0 => ProcessNewEventResult::EndGesture(
                     EndGestureEvent::GeneratedEvent(touchpad_event_to_mouse_up_event(
-                        &self.last_position,
+                        Position {
+                            x: event.contacts[0].position.x - self.last_position.x,
+                            y: event.contacts[0].position.y - self.last_position.y,
+                        },
                         &event,
                     )),
                     Reason::DetailedUint(DetailedReasonUint {
@@ -259,13 +264,13 @@ fn touchpad_event_to_mouse_down_event(
     )
 }
 
-fn touchpad_event_to_mouse_up_event(last_position: &Position, event: &TouchpadEvent) -> MouseEvent {
+fn touchpad_event_to_mouse_up_event(
+    relative_position: Position,
+    event: &TouchpadEvent,
+) -> MouseEvent {
     make_mouse_event(
         event.timestamp,
-        Position {
-            x: event.contacts[0].position.x - last_position.x,
-            y: event.contacts[0].position.y - last_position.y,
-        },
+        relative_position,
         mouse_binding::MousePhase::Up,
         hashset! {1},
         hashset! {},

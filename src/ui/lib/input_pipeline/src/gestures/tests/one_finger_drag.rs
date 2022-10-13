@@ -110,9 +110,6 @@ mod test {
         });
     }
 
-    // TODO(fxbug.dev/109690): this test shows one_finger_drag will crash if lift
-    // and button up happens in one event.
-    #[ignore]
     #[fuchsia::test(allow_stalls = false)]
     async fn drag_lift() {
         let finger_pos0_um = Position { x: 2_000.0, y: 3_000.0 };
