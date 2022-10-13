@@ -78,17 +78,6 @@ fn ip_test_inner(
         }
     };
 
-    let generics = sig
-        .generics
-        .params
-        .iter()
-        .filter(|gen| match gen {
-            GenericParam::Type(tp) => &tp.ident != type_ident,
-            _ => true,
-        })
-        .map(GenericParam::to_token_stream)
-        .collect::<Vec<_>>();
-
     // we need to check the attributes given to the function, test attributes
     // like `should_panic` need to go to the concrete test definitions instead.
     let (mut test_attrs, attrs) = attrs.into_iter().partition::<Vec<_>, _>(|attr| {
@@ -128,6 +117,7 @@ fn ip_test_inner(
     struct IpSpecializations {
         test_attrs: Vec<Attribute>,
         inputs: Vec<FnArg>,
+        fn_generics: Vec<GenericParam>,
         generic_params: Vec<Ident>,
     }
 
@@ -170,6 +160,21 @@ fn ip_test_inner(
             })
             .collect();
 
+        let fn_generics = sig
+            .generics
+            .params
+            .iter()
+            .filter(|gen| match gen {
+                GenericParam::Type(tp) => &tp.ident != type_ident,
+                _ => true,
+            })
+            .cloned()
+            .map(|mut gen| {
+                input_visitor.visit_generic_param_mut(&mut gen);
+                gen
+            })
+            .collect::<Vec<_>>();
+
         let generic_params = sig
             .generics
             .params
@@ -184,18 +189,20 @@ fn ip_test_inner(
             .cloned()
             .collect();
 
-        IpSpecializations { test_attrs, inputs, generic_params }
+        IpSpecializations { test_attrs, inputs, generic_params, fn_generics }
     };
 
     let IpSpecializations {
         test_attrs: ipv4_test_attrs,
         inputs: ipv4_inputs,
+        fn_generics: ipv4_fn_generics,
         generic_params: ipv4_generic_params,
     } = specialize(ipv4_type_ident);
 
     let IpSpecializations {
         test_attrs: ipv6_test_attrs,
         inputs: ipv6_inputs,
+        fn_generics: ipv6_fn_generics,
         generic_params: ipv6_generic_params,
     } = specialize(ipv6_type_ident);
 
@@ -208,12 +215,12 @@ fn ip_test_inner(
         #vis #sig #block
 
         #(#ipv4_test_attrs)*
-        fn #v4_test<#(#generics),*> (#(#ipv4_inputs),*) #output {
+        fn #v4_test<#(#ipv4_fn_generics),*> (#(#ipv4_inputs),*) #output {
            #ident::<#(#ipv4_generic_params),*>(#(#arg_idents),*)
         }
 
         #(#ipv6_test_attrs)*
-        fn #v6_test<#(#generics),*> (#(#ipv6_inputs),*) #output {
+        fn #v6_test<#(#ipv6_fn_generics),*> (#(#ipv6_inputs),*) #output {
            #ident::<#(#ipv6_generic_params),*>(#(#arg_idents),*)
         }
     };

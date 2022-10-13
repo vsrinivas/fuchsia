@@ -163,5 +163,15 @@ mod test {
         fn test_with_i_in_arg_type<I: Ip>(addr: Option<Option<I::Addr>>) {
             let _: I::Addr = addr.unwrap().unwrap();
         }
+
+        fn produce_default_addr<I: Ip>() -> I::Addr {
+            <I::Addr as IpAddress>::new()
+        }
+
+        #[ip_test]
+        #[test_case(produce_default_addr::<I>)]
+        fn test_with_i_in_other_type_trait_bounds<I: Ip, F: FnOnce() -> I::Addr>(f: F) {
+            let _addr = f();
+        }
     }
 }
