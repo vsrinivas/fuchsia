@@ -3,38 +3,77 @@
 // found in the LICENSE file.
 
 use {
+    crate::facet,
     anyhow::Error,
     fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_sys as fv1sys,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::LocalComponentHandles,
     fuchsia_url::{AbsoluteComponentUrl, ComponentUrl, PackageUrl},
-    futures::{StreamExt, TryStreamExt},
+    futures::{lock::Mutex, StreamExt, TryStreamExt},
     itertools::Itertools,
     std::{collections::HashSet, sync::Arc},
-    tracing::{error, warn},
+    tracing::{error, info, warn},
 };
+
+// List of non hermetic packages accessed by a test which are logged to make it easy to transition.
+#[derive(Debug)]
+pub struct NonHermeticPkgList {
+    test_url: String,
+    list: Mutex<HashSet<String>>,
+}
+
+impl NonHermeticPkgList {
+    fn new(test_url: String) -> Arc<Self> {
+        Arc::new(Self { test_url, list: HashSet::new().into() })
+    }
+
+    async fn add_pkg(&self, pkg_name: &str) {
+        let mut list = self.list.lock().await;
+        list.insert(format!("\"{}\"", pkg_name));
+    }
+}
+
+impl Drop for NonHermeticPkgList {
+    fn drop(&mut self) {
+        let list = self.list.get_mut();
+        info!(
+            "Test '{}' uses non-hermetic packages. \
+        Please add below line to facets of your test manifest:
+        \"{}\": [ {} ]\
+        \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
+        for more information.",
+            self.test_url,
+            facet::TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY,
+            list.drain().join(", ")
+        );
+    }
+}
 
 // Flag to enforce hermetic resolution. If false, default AllowedPackages value would be 'All'.
 // This flag helps us easily revert the changes if there is a problem.
 pub(crate) const ENFORCE_HERMETIC_RESOLUTION: bool = false;
 
 // Enum donating the list of non-hermetic packages allowed to resolved by a test.
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug)]
 pub enum AllowedPackages {
     // Temporary enum for transition which will allow all packages.
-    All,
+    All(Arc<NonHermeticPkgList>),
 
     // Strict list of allowed packages.
     List(Arc<HashSet<String>>),
 }
 
 impl AllowedPackages {
-    pub fn default() -> Self {
+    pub fn default(test_url: &str) -> Self {
         match ENFORCE_HERMETIC_RESOLUTION {
-            false => Self::All,
+            false => Self::all(test_url.to_string()),
             true => Self::zero_allowed_pkgs(),
         }
+    }
+
+    pub fn all(test_url: String) -> Self {
+        Self::All(NonHermeticPkgList::new(test_url))
     }
 
     pub fn zero_allowed_pkgs() -> Self {
@@ -49,20 +88,42 @@ impl AllowedPackages {
     }
 }
 
-fn validate_hermetic_package(
+impl PartialEq for AllowedPackages {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (AllowedPackages::All(_), AllowedPackages::All(_)) => true,
+            (AllowedPackages::List(l1), AllowedPackages::List(l2)) => l1.eq(l2),
+            _ => false,
+        }
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+}
+
+async fn validate_hermetic_package(
     component_url_str: &str,
     hermetic_test_package_name: &String,
     other_allowed_packages: &AllowedPackages,
 ) -> Result<(), fresolution::ResolverError> {
-    let allowed_packages = match other_allowed_packages {
-        AllowedPackages::All => return Ok(()),
-        AllowedPackages::List(l) => l,
-    };
-
     let component_url = ComponentUrl::parse(component_url_str).map_err(|err| {
         warn!("cannot parse {}, {:?}", component_url_str, err);
         fresolution::ResolverError::InvalidArgs
     })?;
+
+    let allowed_packages = match other_allowed_packages {
+        AllowedPackages::All(list) => {
+            if let PackageUrl::Absolute(pkg_url) = &component_url.package_url() {
+                let package_name = pkg_url.name();
+                if package_name.as_ref() != hermetic_test_package_name {
+                    list.add_pkg(package_name.as_ref()).await;
+                }
+            }
+            return Ok(());
+        }
+        AllowedPackages::List(l) => l,
+    };
 
     match component_url.package_url() {
         PackageUrl::Absolute(pkg_url) => {
@@ -99,7 +160,9 @@ async fn serve_resolver(
                     &component_url,
                     &hermetic_test_package_name,
                     &other_allowed_packages,
-                ) {
+                )
+                .await
+                {
                     Err(err)
                 } else {
                     full_resolver.resolve(&component_url).await.unwrap_or_else(|err| {
@@ -122,7 +185,9 @@ async fn serve_resolver(
                     &component_url,
                     &hermetic_test_package_name,
                     &other_allowed_packages,
-                ) {
+                )
+                .await
+                {
                     Err(err)
                 } else {
                     full_resolver
@@ -185,19 +250,26 @@ async fn hermetic_loader(
             return None;
         }
     };
+    let package_name = component_url.package_url().name();
 
-    if let AllowedPackages::List(allowed_packages) = other_allowed_packages {
-        let package_name = component_url.package_url().name();
-        if hermetic_test_package_name != package_name.as_ref()
-            && !allowed_packages.contains(package_name.as_ref())
-        {
-            error!(
+    match other_allowed_packages {
+        AllowedPackages::All(list) => {
+            if hermetic_test_package_name != package_name.as_ref() {
+                list.add_pkg(package_name.as_ref()).await;
+            }
+        }
+        AllowedPackages::List(allowed_packages) => {
+            if hermetic_test_package_name != package_name.as_ref()
+                && !allowed_packages.contains(package_name.as_ref())
+            {
+                error!(
                 "failed to resolve component {}: package {} is not in the test package allowlist: '{}, {}'
                 \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
                 for more information.",
                 &component_url_str, package_name, hermetic_test_package_name, allowed_packages.iter().join(", ")
             );
-            return None;
+                return None;
+            }
         }
     }
 

@@ -484,14 +484,17 @@ impl CaseMatcher {
     }
 }
 
-fn get_allowed_package_value(suite_facet: &facet::SuiteFacets) -> resolver::AllowedPackages {
+fn get_allowed_package_value(
+    test_url: &str,
+    suite_facet: &facet::SuiteFacets,
+) -> resolver::AllowedPackages {
     if suite_facet.deprecated_allowed_packages.is_some() {
         resolver::AllowedPackages::from_iter(
             suite_facet.deprecated_allowed_packages.clone().unwrap(),
         )
     } else if suite_facet.deprecated_allowed_all_packages.is_some() {
         match suite_facet.deprecated_allowed_all_packages {
-            Some(true) => resolver::AllowedPackages::All,
+            Some(true) => resolver::AllowedPackages::all(test_url.to_string()),
             Some(false) => resolver::AllowedPackages::zero_allowed_pkgs(),
             None => unreachable!(),
         }
@@ -499,7 +502,7 @@ fn get_allowed_package_value(suite_facet: &facet::SuiteFacets) -> resolver::Allo
         match suite_facet.collection {
             HERMETIC_TESTS_COLLECTION => resolver::AllowedPackages::zero_allowed_pkgs(),
             // based on the flag this can be ALL or zero list.
-            _ => resolver::AllowedPackages::default(),
+            _ => resolver::AllowedPackages::default(test_url),
         }
     }
 }
@@ -524,7 +527,7 @@ async fn get_realm(
         .await?;
 
     let hermetic_test_package_name = Arc::new(test_package.to_owned());
-    let other_allowed_packages = get_allowed_package_value(&suite_facet);
+    let other_allowed_packages = get_allowed_package_value(&test_url, &suite_facet);
 
     let hermetic_test_package_name_clone = hermetic_test_package_name.clone();
     let other_allowed_packages_clone = other_allowed_packages.clone();
@@ -1212,35 +1215,40 @@ mod tests {
             deprecated_allowed_all_packages: None,
         };
 
+        let url = "test_url";
+
         // default for hermetic realm is no other allowed package.
         assert_eq!(
             resolver::AllowedPackages::zero_allowed_pkgs(),
-            get_allowed_package_value(&suite_facet)
+            get_allowed_package_value(&url, &suite_facet)
         );
 
         // deprecated_allowed_packages and deprecated_allowed_all_packages can override
         // HERMETIC_TESTS_COLLECTION
         suite_facet.deprecated_allowed_all_packages = Some(true);
-        assert_eq!(resolver::AllowedPackages::All, get_allowed_package_value(&suite_facet));
+        assert_eq!(
+            resolver::AllowedPackages::all(url.to_string()),
+            get_allowed_package_value(&url, &suite_facet)
+        );
 
         suite_facet.deprecated_allowed_all_packages = Some(false);
         assert_eq!(
             resolver::AllowedPackages::zero_allowed_pkgs(),
-            get_allowed_package_value(&suite_facet)
+            get_allowed_package_value(&url, &suite_facet)
         );
 
         // deprecated_allowed_packages overrides deprecated_allowed_all_packages
         suite_facet.deprecated_allowed_packages = Some(vec!["pkg-one".to_owned()]);
         assert_eq!(
             resolver::AllowedPackages::from_iter(["pkg-one".to_owned()]),
-            get_allowed_package_value(&suite_facet)
+            get_allowed_package_value(&url, &suite_facet)
         );
 
         // test with other collections
         suite_facet.collection = SYSTEM_TESTS_COLLECTION;
         assert_eq!(
             resolver::AllowedPackages::from_iter(["pkg-one".to_owned()]),
-            get_allowed_package_value(&suite_facet)
+            get_allowed_package_value(&url, &suite_facet)
         );
 
         // test default with other collection
@@ -1248,8 +1256,8 @@ mod tests {
         suite_facet.deprecated_allowed_packages = None;
         let expected = match resolver::ENFORCE_HERMETIC_RESOLUTION {
             true => resolver::AllowedPackages::zero_allowed_pkgs(),
-            false => resolver::AllowedPackages::All,
+            false => resolver::AllowedPackages::all(url.to_string()),
         };
-        assert_eq!(expected, get_allowed_package_value(&suite_facet));
+        assert_eq!(expected, get_allowed_package_value(&url, &suite_facet));
     }
 }

@@ -520,6 +520,26 @@ You can avoid this error by including any components your test relies on
 to the test package - see [this CL](https://fxrev.dev/608222) for an example of
 how to do this.
 
+For the time being if you are not able to include a dependent component in your
+test package you can add below option to your test manifest file to selectively
+allow resolution of some packages:
+
+```json5
+// my_component_test.cml
+
+{
+...
+
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "non_hermetic_package" ],
+        },
+    },
+...
+}
+
+```
+
 ### Legacy non-hermetic tests
 
 These tests that were introduced before hermetic testing was enforced. They

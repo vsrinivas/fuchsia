@@ -14,7 +14,7 @@ use {
 };
 
 const TEST_TYPE_FACET_KEY: &'static str = "fuchsia.test.type";
-const TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY: &'static str =
+pub const TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY: &'static str =
     "fuchsia.test.deprecated-allowed-packages";
 const TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY: &'static str =
     "fuchsia.test.deprecated-allowed-all-packages";
