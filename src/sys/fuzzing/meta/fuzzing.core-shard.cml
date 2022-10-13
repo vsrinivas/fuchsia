@@ -16,6 +16,15 @@
             environment: "#core-env",
         },
     ],
+    // As noted in //src/sys/core/meta/svc_for_sys.core_shard.cml, protocols used by core are
+    // available to sshd-host to create the legacy `fx shell` that mimics the legacy sys realm.
+    // This allows shell binaries, e.g. fuzz_ctl, to access these protocols.
+    use: [
+        {
+            protocol: "fuchsia.fuzzer.Manager",
+            from: "#fuzz-manager",
+        },
+    ],
     offer: [
         {
             protocol: [ "fuchsia.logger.LogSink" ],

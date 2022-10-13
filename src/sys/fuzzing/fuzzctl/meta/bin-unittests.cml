@@ -9,6 +9,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/fuchsia_fuzzctl_lib_test",
+        binary: "bin/fuzz_ctl_bin_test",
     },
 }

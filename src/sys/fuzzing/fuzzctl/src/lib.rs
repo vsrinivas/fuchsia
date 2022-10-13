@@ -15,6 +15,7 @@ mod util;
 mod writer;
 
 pub use {
+    self::artifact::Artifact,
     self::controller::Controller,
     self::corpus::{get_name as get_corpus_name, get_type as get_corpus_type},
     self::diagnostics::{Forwarder, SocketForwarder},

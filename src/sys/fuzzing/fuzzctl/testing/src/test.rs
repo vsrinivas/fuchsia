@@ -41,6 +41,7 @@ pub struct Test {
     root_dir: PathBuf,
     url: Rc<RefCell<Option<String>>>,
     controller: FakeController,
+    requests: Rc<RefCell<Vec<String>>>,
     expected: Vec<Expectation>,
     actual: Rc<RefCell<Vec<u8>>>,
     writer: Writer<BufferSink>,
@@ -76,6 +77,7 @@ impl Test {
             root_dir,
             url: Rc::new(RefCell::new(None)),
             controller: FakeController::new(),
+            requests: Rc::new(RefCell::new(Vec::new())),
             expected: Vec::new(),
             actual,
             writer,
@@ -204,7 +206,7 @@ impl Test {
         test_dir: P,
         files: impl Iterator<Item = D>,
     ) -> Result<()> {
-        let test_dir = test_dir.as_ref();
+        let test_dir = self.create_dir(test_dir)?;
         for filename in files {
             let filename = filename.to_string();
             fs::write(test_dir.join(&filename), filename.as_bytes())
@@ -221,6 +223,23 @@ impl Test {
     /// Clones the fake fuzzer controller "connected" by the fake manager.
     pub fn controller(&self) -> FakeController {
         self.controller.clone()
+    }
+
+    /// Records a FIDL request made to a test fake.
+    pub fn record<S: AsRef<str>>(&mut self, request: S) {
+        let mut requests_mut = self.requests.borrow_mut();
+        requests_mut.push(request.as_ref().to_string());
+    }
+
+    /// Returns the recorded FIDL requests.
+    ///
+    /// As a side-effect, this resets the recorded requests.
+    ///
+    pub fn requests(&mut self) -> Vec<String> {
+        let mut requests_mut = self.requests.borrow_mut();
+        let requests = requests_mut.clone();
+        *requests_mut = Vec::new();
+        requests
     }
 
     /// Adds an expectation that an output written to the `BufferSink` will exactly match `msg`.

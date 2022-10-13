@@ -11,6 +11,7 @@ group("fuzzing") {
     ":fuzz-manager",
     ":fuzz-registry",
     ":fuzzing-core-shard",
+    "fuzzctl",
   ]
 }
 

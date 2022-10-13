@@ -13,7 +13,10 @@ use {
 };
 
 /// Serves `fuchsia.fuzzer.Manager` on the given `server_end` of a FIDL channel.
-pub async fn serve_manager(server_end: ServerEnd<fuzz::ManagerMarker>, test: Test) -> Result<()> {
+pub async fn serve_manager(
+    server_end: ServerEnd<fuzz::ManagerMarker>,
+    mut test: Test,
+) -> Result<()> {
     let mut stream = server_end.into_stream()?;
     let mut task = None;
     let url = test.url();
@@ -23,15 +26,20 @@ pub async fn serve_manager(server_end: ServerEnd<fuzz::ManagerMarker>, test: Tes
         let request = request.context("fuchsia.fuzzer.Manager")?;
         match request {
             fuzz::ManagerRequest::Connect { fuzzer_url, controller, responder } => {
+                test.record(format!("fuchsia.fuzzer.Manager/Connect({})", fuzzer_url));
                 let stream = controller.into_stream()?;
                 {
                     let mut url_mut = url.borrow_mut();
                     *url_mut = Some(fuzzer_url);
                 }
                 responder.send(zx::Status::OK.into_raw())?;
-                task = Some(create_task(serve_controller(stream, fake.clone()), &writer));
+                task = Some(create_task(serve_controller(stream, test.clone()), &writer));
             }
             fuzz::ManagerRequest::GetOutput { fuzzer_url, output, socket, responder } => {
+                test.record(format!(
+                    "fuchsia.fuzzer.Manager/GetOutput({}, {:?})",
+                    fuzzer_url, output
+                ));
                 let running = {
                     let url = url.borrow();
                     url.clone().unwrap_or(String::default())
@@ -43,6 +51,7 @@ pub async fn serve_manager(server_end: ServerEnd<fuzz::ManagerMarker>, test: Tes
                 }
             }
             fuzz::ManagerRequest::Stop { fuzzer_url, responder } => {
+                test.record(format!("fuchsia.fuzzer.Manager/Stop({})", fuzzer_url));
                 let running = {
                     let mut url_mut = url.borrow_mut();
                     let running = url_mut.as_ref().map_or(String::default(), |url| url.to_string());

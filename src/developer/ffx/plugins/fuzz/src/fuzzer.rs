@@ -414,10 +414,10 @@ mod tests {
         let url = Url::parse(TEST_URL)?;
         let (proxy, stream) = create_proxy_and_stream::<fuzz::ControllerMarker>()
             .context("failed to create FIDL connection")?;
-        let fake = FakeController::new();
+        let fake = test.controller();
         let writer = test.writer();
         let fuzzer = Fuzzer::new(&url, proxy, test.root_dir(), &writer);
-        let task = create_task(serve_controller(stream, fake.clone()), test.writer());
+        let task = create_task(serve_controller(stream, test.clone()), test.writer());
         Ok((fake, fuzzer, task))
     }
 

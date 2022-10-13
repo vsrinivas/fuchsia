@@ -5,7 +5,8 @@
 use {
     crate::diagnostics::send_log_entry,
     crate::options::add_defaults,
-    anyhow::{anyhow, Result},
+    crate::test::Test,
+    anyhow::{anyhow, Context as _, Result},
     fidl_fuchsia_fuzzer::{self as fuzz, Input as FidlInput, Result_ as FuzzResult},
     fuchsia_async as fasync,
     fuchsia_fuzzctl::InputPair,
@@ -23,7 +24,7 @@ use {
 #[derive(Debug)]
 pub struct FakeController {
     corpus_type: Rc<RefCell<fuzz::Corpus>>,
-    input_to_send: Rc<RefCell<Vec<u8>>>,
+    input_to_send: Rc<RefCell<Option<Vec<u8>>>>,
     options: Rc<RefCell<fuzz::Options>>,
     received_input: Rc<RefCell<Vec<u8>>>,
     result: Rc<RefCell<Result<FuzzResult, zx::Status>>>,
@@ -42,7 +43,7 @@ impl FakeController {
         add_defaults(&mut options);
         Self {
             corpus_type: Rc::new(RefCell::new(fuzz::Corpus::Seed)),
-            input_to_send: Rc::new(RefCell::new(Vec::new())),
+            input_to_send: Rc::new(RefCell::new(None)),
             options: Rc::new(RefCell::new(options)),
             received_input: Rc::new(RefCell::new(Vec::new())),
             result: Rc::new(RefCell::new(Ok(FuzzResult::NoErrors))),
@@ -87,14 +88,14 @@ impl FakeController {
     }
 
     /// Returns the test input to be sent via a FIDL response.
-    pub fn get_input_to_send(&self) -> Vec<u8> {
-        self.input_to_send.borrow().clone()
+    pub fn take_input_to_send(&self) -> Option<Vec<u8>> {
+        self.input_to_send.borrow_mut().take()
     }
 
     /// Sets the test input to be sent via a FIDL response.
     pub fn set_input_to_send(&self, input_to_send: &[u8]) {
         let mut input_to_send_mut = self.input_to_send.borrow_mut();
-        *input_to_send_mut = input_to_send.to_vec();
+        *input_to_send_mut = Some(input_to_send.to_vec());
     }
 
     /// Returns the options received via FIDL requests.
@@ -205,9 +206,10 @@ impl Clone for FakeController {
 /// Serves `fuchsia.fuzzer.Controller` using test fakes.
 pub async fn serve_controller(
     mut stream: fuzz::ControllerRequestStream,
-    fake: FakeController,
+    mut test: Test,
 ) -> Result<()> {
     let mut _responder = None;
+    let fake = test.controller();
     loop {
         let request = stream.next().await;
         if fake.is_canceled() {
@@ -215,35 +217,43 @@ pub async fn serve_controller(
         }
         match request {
             Some(Ok(fuzz::ControllerRequest::Configure { options, responder })) => {
+                test.record("fuchsia.fuzzer.Controller/Configure");
                 fake.set_options(options);
                 responder.send(zx::Status::OK.into_raw())?;
             }
             Some(Ok(fuzz::ControllerRequest::GetOptions { responder })) => {
+                test.record("fuchsia.fuzzer.Controller/GetOptions");
                 let options = fake.get_options();
                 responder.send(options)?;
             }
             Some(Ok(fuzz::ControllerRequest::AddToCorpus { corpus, input, responder })) => {
+                test.record(format!("fuchsia.fuzzer.Controller/AddToCorpus({:?})", corpus));
                 fake.receive_input(input).await?;
                 fake.set_corpus_type(corpus);
                 responder.send(zx::Status::OK.into_raw())?;
             }
             Some(Ok(fuzz::ControllerRequest::ReadCorpus { corpus, corpus_reader, responder })) => {
+                test.record("fuchsia.fuzzer.Controller/ReadCorpus");
                 fake.set_corpus_type(corpus);
                 let corpus_reader = corpus_reader.into_proxy()?;
-                let input_pair = InputPair::try_from_data(fake.get_input_to_send())?;
-                let (mut fidl_input, input) = input_pair.as_tuple();
-                let corpus_fut = corpus_reader.next(&mut fidl_input);
-                let input_fut = input.send();
-                let results = join!(corpus_fut, input_fut);
-                assert!(results.0.is_ok());
-                assert!(results.1.is_ok());
+                if let Some(input_to_send) = fake.take_input_to_send() {
+                    let input_pair = InputPair::try_from_data(input_to_send)?;
+                    let (mut fidl_input, input) = input_pair.as_tuple();
+                    let corpus_fut = corpus_reader.next(&mut fidl_input);
+                    let input_fut = input.send();
+                    let results = join!(corpus_fut, input_fut);
+                    assert!(results.0.is_ok());
+                    assert!(results.1.is_ok());
+                }
                 responder.send()?;
             }
             Some(Ok(fuzz::ControllerRequest::GetStatus { responder })) => {
+                test.record("fuchsia.fuzzer.Controller/GetStatus");
                 let status = fake.get_status();
                 responder.send(status)?;
             }
             Some(Ok(fuzz::ControllerRequest::Execute { test_input, responder })) => {
+                test.record("fuchsia.fuzzer.Controller/Execute");
                 fake.receive_input(test_input).await?;
                 match fake.get_result() {
                     Ok(fuzz_result) => {
@@ -256,22 +266,29 @@ pub async fn serve_controller(
                 }
             }
             Some(Ok(fuzz::ControllerRequest::Minimize { test_input, responder })) => {
+                test.record("fuchsia.fuzzer.Controller/Minimize");
                 fake.receive_input(test_input).await?;
-                let input_pair = InputPair::try_from_data(fake.get_input_to_send())?;
+                let input_to_send = fake.take_input_to_send().context("input_to_send unset")?;
+                let input_pair = InputPair::try_from_data(input_to_send)?;
                 let (fidl_input, input) = input_pair.as_tuple();
+                fake.set_result(Ok(FuzzResult::Minimized));
                 responder.send(&mut Ok(fidl_input))?;
                 input.send().await?;
                 fake.send_output(fuzz::DONE_MARKER).await?;
             }
             Some(Ok(fuzz::ControllerRequest::Cleanse { test_input, responder })) => {
+                test.record("fuchsia.fuzzer.Controller/Cleanse");
                 fake.receive_input(test_input).await?;
-                let input_pair = InputPair::try_from_data(fake.get_input_to_send())?;
+                let input_to_send = fake.take_input_to_send().context("input_to_send unset")?;
+                let input_pair = InputPair::try_from_data(input_to_send)?;
                 let (fidl_input, input) = input_pair.as_tuple();
+                fake.set_result(Ok(FuzzResult::Cleansed));
                 responder.send(&mut Ok(fidl_input))?;
                 input.send().await?;
                 fake.send_output(fuzz::DONE_MARKER).await?;
             }
             Some(Ok(fuzz::ControllerRequest::Fuzz { responder })) => {
+                test.record("fuchsia.fuzzer.Controller/Fuzz");
                 // As special cases, fuzzing indefinitely without any errors or fuzzing with an
                 // explicit error of `SHOULD_WAIT` will imitate a FIDL call that does not
                 // complete. These can be interrupted by the shell or allowed to timeout.
@@ -287,7 +304,8 @@ pub async fn serve_controller(
                         _responder = Some(responder);
                     }
                     (_, _, Ok(fuzz_result)) => {
-                        let input_pair = InputPair::try_from_data(fake.get_input_to_send())?;
+                        let input_to_send = fake.take_input_to_send().unwrap_or(Vec::new());
+                        let input_pair = InputPair::try_from_data(input_to_send)?;
                         let (fidl_input, input) = input_pair.as_tuple();
                         let mut response = Ok((fuzz_result, fidl_input));
                         responder.send(&mut response)?;
@@ -300,6 +318,8 @@ pub async fn serve_controller(
                 };
             }
             Some(Ok(fuzz::ControllerRequest::Merge { responder })) => {
+                test.record("fuchsia.fuzzer.Controller/Merge");
+                fake.set_result(Ok(FuzzResult::Merged));
                 responder.send(zx::Status::OK.into_raw())?;
                 fake.send_output(fuzz::DONE_MARKER).await?;
             }

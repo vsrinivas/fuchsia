@@ -50,6 +50,46 @@ rustc_library("lib") {
   ]
 }
 
+rustc_binary("bin") {
+  name = "fuzz_ctl"
+  with_unit_tests = true
+  edition = "2021"
+  testonly = true
+  sources = [
+    "src/args.rs",
+    "src/fuzzctl.rs",
+    "src/main.rs",
+  ]
+  deps = [
+    ":lib",
+    "//build/validate:non_production_tag",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_rust",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:url",
+    "//third_party/rust_crates:walkdir",
+  ]
+  test_deps = [
+    "testing",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
+}
+
+fuchsia_shell_package("fuzzctl") {
+  testonly = true
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_component("bin-unittests") {
+  manifest = "meta/bin-unittests.cml"
+  deps = [ ":bin_test" ]
+}
+
 fuchsia_test_component("lib-unittests") {
   manifest = "meta/lib-unittests.cml"
   deps = [ ":lib_test" ]
@@ -57,5 +97,8 @@ fuchsia_test_component("lib-unittests") {
 
 fuchsia_test_package("tests") {
   package_name = "fuzzctl-tests"
-  test_components = [ ":lib-unittests" ]
+  test_components = [
+    ":bin-unittests",
+    ":lib-unittests",
+  ]
 }
