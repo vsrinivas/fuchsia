@@ -35,8 +35,8 @@ void InspectTree::Initialize() {
   }
 
   {
-    std::lock_guard guard(volume_mutex_);
-    UpdateVolumeSizeInfo();
+    std::lock_guard guard(fvm_mutex_);
+    UpdateFvmSizeInfo();
   }
 
   tree_root_ = inspector_.GetRoot().CreateChild("f2fs");
@@ -58,10 +58,10 @@ void InspectTree::UpdateUsage() {
   usage_.used_nodes = fs_info.value().used_nodes;
 }
 
-void InspectTree::UpdateVolumeSizeInfo() {
-  zx::status<fs_inspect::VolumeData::SizeInfo> size_info = zx::error(ZX_ERR_BAD_HANDLE);
+void InspectTree::UpdateFvmSizeInfo() {
+  zx::status<fs_inspect::FvmData::SizeInfo> size_info = zx::error(ZX_ERR_BAD_HANDLE);
   {
-    size_info = fs_inspect::VolumeData::GetSizeInfoFromDevice(*fs_->GetBc().GetDevice());
+    size_info = fs_inspect::FvmData::GetSizeInfoFromDevice(*fs_->GetBc().GetDevice());
     if (size_info.is_error()) {
       FX_LOGS(WARNING) << "Failed to obtain size information from block device: "
                        << size_info.status_string();
@@ -69,15 +69,15 @@ void InspectTree::UpdateVolumeSizeInfo() {
   }
 
   if (size_info.is_ok()) {
-    volume_.size_info = size_info.value();
+    fvm_.size_info = size_info.value();
   }
 }
 
 void InspectTree::OnOutOfSpace() {
   zx::time curr_time = zx::clock::get_monotonic();
-  std::lock_guard guard(volume_mutex_);
+  std::lock_guard guard(fvm_mutex_);
   if ((curr_time - last_out_of_space_time_) > kOutOfSpaceDuration) {
-    ++volume_.out_of_space_events;
+    ++fvm_.out_of_space_events;
     last_out_of_space_time_ = curr_time;
   }
 }
@@ -95,11 +95,11 @@ fs_inspect::NodeCallbacks InspectTree::CreateCallbacks() {
             UpdateUsage();
             return usage_;
           },
-      .volume_callback =
+      .fvm_callback =
           [this] {
-            std::lock_guard guard(volume_mutex_);
-            UpdateVolumeSizeInfo();
-            return volume_;
+            std::lock_guard guard(fvm_mutex_);
+            UpdateFvmSizeInfo();
+            return fvm_;
           },
   };
 }

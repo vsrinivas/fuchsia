@@ -33,9 +33,9 @@ class BlobfsInspectTree final {
   // Update resource usage values that change when certain fields in the superblock are modified.
   void UpdateSuperblock(const Superblock& superblock) __TA_EXCLUDES(usage_mutex_);
 
-  // Update FVM volume information and record any out of space events.
-  void UpdateVolumeData(const block_client::BlockDevice& device, bool out_of_space = false)
-      __TA_EXCLUDES(volume_mutex_);
+  // Update FVM fvm information and record any out of space events.
+  void UpdateFvmData(const block_client::BlockDevice& device, bool out_of_space = false)
+      __TA_EXCLUDES(fvm_mutex_);
 
   // The Inspector this object owns.
   const inspect::Inspector& inspector() { return inspector_; }
@@ -63,8 +63,8 @@ class BlobfsInspectTree final {
   mutable std::mutex usage_mutex_{};
   fs_inspect::UsageData usage_ __TA_GUARDED(usage_mutex_){};
 
-  mutable std::mutex volume_mutex_{};
-  fs_inspect::VolumeData volume_ __TA_GUARDED(volume_mutex_){};
+  mutable std::mutex fvm_mutex_{};
+  fs_inspect::FvmData fvm_ __TA_GUARDED(fvm_mutex_){};
 
   // The Inspector to which the tree is attached.
   inspect::Inspector inspector_;

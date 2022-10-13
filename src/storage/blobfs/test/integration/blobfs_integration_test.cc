@@ -1387,7 +1387,7 @@ TEST_F(BlobfsMetricIntegrationTest, BlobfsInspectTree) {
 
   // Ensure that all nodes we expect exist.
   for (const char* name :
-       {fs_inspect::kInfoNodeName, fs_inspect::kUsageNodeName, fs_inspect::kVolumeNodeName}) {
+       {fs_inspect::kInfoNodeName, fs_inspect::kUsageNodeName, fs_inspect::kFvmNodeName}) {
     ASSERT_NE(blobfs_root->GetByPath({name}), nullptr)
         << "Could not find expected node in Blobfs inspect hierarchy: " << name;
   }

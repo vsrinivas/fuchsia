@@ -386,7 +386,7 @@ void Blobfs::InitializeInspectTree() {
   inspect_tree_.UpdateSuperblock(Info());
   block_client::BlockDevice* device = Device();
   if (device) {
-    inspect_tree_.UpdateVolumeData(*device);
+    inspect_tree_.UpdateFvmData(*device);
   }
 
   inspect_tree_.CalculateFragmentationMetrics(*this);
@@ -654,7 +654,7 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
   uint64_t length = 1;
   zx_status_t status = Device()->VolumeExtend(offset, length);
   bool failed_to_extend = (status != ZX_OK);
-  inspect_tree_.UpdateVolumeData(*Device(), failed_to_extend);
+  inspect_tree_.UpdateFvmData(*Device(), failed_to_extend);
   if (failed_to_extend) {
     FX_LOGS(ERROR) << ":AddInodes fvm_extend failure: " << zx_status_get_string(status);
     return status;
@@ -732,7 +732,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
 
   zx_status_t status = Device()->VolumeExtend(offset, length);
   bool failed_to_extend = (status != ZX_OK);
-  inspect_tree_.UpdateVolumeData(*Device(), failed_to_extend);
+  inspect_tree_.UpdateFvmData(*Device(), failed_to_extend);
   if (failed_to_extend) {
     FX_LOGS(ERROR) << ":AddBlocks FVM Extend failure: " << zx_status_get_string(status);
     return status;
@@ -787,7 +787,7 @@ zx::status<fs::FilesystemInfo> Blobfs::GetFilesystemInfo() {
   info.name = "blobfs";
 
   if (Device()) {
-    auto result = fs_inspect::VolumeData::GetSizeInfoFromDevice(*Device());
+    auto result = fs_inspect::FvmData::GetSizeInfoFromDevice(*Device());
     if (result.is_ok()) {
       info.free_shared_pool_bytes = result->available_space_bytes;
     }

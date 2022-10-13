@@ -34,14 +34,13 @@ void Attach(inspect::Inspector& insp, const UsageData& usage) {
   root.CreateUint(UsageData::kPropUsedNodes, usage.used_nodes, &insp);
 }
 
-void Attach(inspect::Inspector& insp, const VolumeData& volume) {
+void Attach(inspect::Inspector& insp, const FvmData& volume) {
   inspect::Node& root = insp.GetRoot();
 
-  root.CreateUint(VolumeData::kPropSizeBytes, volume.size_info.size_bytes, &insp);
-  root.CreateUint(VolumeData::kPropSizeLimitBytes, volume.size_info.size_limit_bytes, &insp);
-  root.CreateUint(VolumeData::kPropAvailableSpaceBytes, volume.size_info.available_space_bytes,
-                  &insp);
-  root.CreateUint(VolumeData::kPropOutOfSpaceEvents, volume.out_of_space_events, &insp);
+  root.CreateUint(FvmData::kPropSizeBytes, volume.size_info.size_bytes, &insp);
+  root.CreateUint(FvmData::kPropSizeLimitBytes, volume.size_info.size_limit_bytes, &insp);
+  root.CreateUint(FvmData::kPropAvailableSpaceBytes, volume.size_info.available_space_bytes, &insp);
+  root.CreateUint(FvmData::kPropOutOfSpaceEvents, volume.out_of_space_events, &insp);
 }
 
 }  // namespace detail
@@ -50,9 +49,9 @@ std::string InfoData::OldestVersion(uint32_t oldest_major, uint32_t oldest_minor
   return std::to_string(oldest_major) + "/" + std::to_string(oldest_minor);
 }
 
-zx::status<VolumeData::SizeInfo> VolumeData::GetSizeInfoFromDevice(
+zx::status<FvmData::SizeInfo> FvmData::GetSizeInfoFromDevice(
     const block_client::BlockDevice& device) {
-  VolumeData::SizeInfo size_info{};
+  FvmData::SizeInfo size_info{};
   // This information is for the entire FVM volume. So the "slices allocated" counts across all
   // partitions inside of FVM.
   fuchsia_hardware_block_volume_VolumeManagerInfo volume_manager;

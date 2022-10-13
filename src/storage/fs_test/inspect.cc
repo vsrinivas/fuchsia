@@ -43,12 +43,12 @@ constexpr std::string_view kAllUsageProperties[] = {
     fs_inspect::UsageData::kPropUsedNodes,
 };
 
-// All properties we expect the fs.volume node to contain.
-constexpr std::string_view kAllVolumeProperties[] = {
-    fs_inspect::VolumeData::kPropSizeBytes,
-    fs_inspect::VolumeData::kPropSizeLimitBytes,
-    fs_inspect::VolumeData::kPropAvailableSpaceBytes,
-    fs_inspect::VolumeData::kPropOutOfSpaceEvents,
+// All properties we expect the fs.fvm node to contain.
+constexpr std::string_view kAllFvmProperties[] = {
+    fs_inspect::FvmData::kPropSizeBytes,
+    fs_inspect::FvmData::kPropSizeLimitBytes,
+    fs_inspect::FvmData::kPropAvailableSpaceBytes,
+    fs_inspect::FvmData::kPropOutOfSpaceEvents,
 };
 
 // Create a vector of all property names found in the given node.
@@ -62,13 +62,7 @@ std::vector<std::string> GetPropertyNames(const inspect::NodeValue& node) {
 
 // Validates that the snapshot's hierarchy is compliant so that the test case invariants can be
 // ensured. Use with ASSERT_NO_FATAL_FAILURE.
-void ValidateHierarchy(const inspect::Hierarchy& root) {
-  // Validate that the expected nodes in the hierarchy exist.
-  ASSERT_THAT(root,
-              ChildrenMatch(IsSupersetOf({NodeMatches(NameMatches(fs_inspect::kInfoNodeName)),
-                                          NodeMatches(NameMatches(fs_inspect::kUsageNodeName)),
-                                          NodeMatches(NameMatches(fs_inspect::kVolumeNodeName))})));
-
+void ValidateHierarchy(const inspect::Hierarchy& root, const TestFilesystemOptions& options) {
   // Ensure the expected properties under each node exist so that the invariants the getters above
   // rely on are valid (namely, that these specific nodes and their properties exist).
 
@@ -82,10 +76,12 @@ void ValidateHierarchy(const inspect::Hierarchy& root) {
   ASSERT_NE(usage, nullptr) << "Could not find node " << fs_inspect::kUsageNodeName;
   EXPECT_THAT(GetPropertyNames(usage->node()), UnorderedElementsAreArray(kAllUsageProperties));
 
-  // Validate fs.volume node properties.
-  const inspect::Hierarchy* volume = root.GetByPath({fs_inspect::kVolumeNodeName});
-  ASSERT_NE(volume, nullptr) << "Could not find node " << fs_inspect::kVolumeNodeName;
-  EXPECT_THAT(GetPropertyNames(volume->node()), UnorderedElementsAreArray(kAllVolumeProperties));
+  if (options.use_fvm) {
+    // Validate fs.fvm node properties.
+    const inspect::Hierarchy* fvm = root.GetByPath({fs_inspect::kFvmNodeName});
+    ASSERT_NE(fvm, nullptr) << "Could not find node " << fs_inspect::kFvmNodeName;
+    EXPECT_THAT(GetPropertyNames(fvm->node()), UnorderedElementsAreArray(kAllFvmProperties));
+  }
 }
 
 // Parse the given fs.info node properties into a corresponding InfoData struct.
@@ -129,24 +125,23 @@ fs_inspect::UsageData GetUsageProperties(const inspect::NodeValue& usage_node) {
   };
 }
 
-// Parse the given fs.volume node properties into a corresponding VolumeData struct.
+// Parse the given fs.volume node properties into a corresponding FvmData struct.
 // Properties within the given node must both exist and be the correct type.
-fs_inspect::VolumeData GetVolumeProperties(const inspect::NodeValue& volume_node) {
-  using fs_inspect::VolumeData;
-  return VolumeData{
+fs_inspect::FvmData GetFvmProperties(const inspect::NodeValue& fvm_node) {
+  using fs_inspect::FvmData;
+  return FvmData{
       .size_info =
           {
               .size_bytes =
-                  volume_node.get_property<UintPropertyValue>(VolumeData::kPropSizeBytes)->value(),
+                  fvm_node.get_property<UintPropertyValue>(FvmData::kPropSizeBytes)->value(),
               .size_limit_bytes =
-                  volume_node.get_property<UintPropertyValue>(VolumeData::kPropSizeLimitBytes)
-                      ->value(),
+                  fvm_node.get_property<UintPropertyValue>(FvmData::kPropSizeLimitBytes)->value(),
               .available_space_bytes =
-                  volume_node.get_property<UintPropertyValue>(VolumeData::kPropAvailableSpaceBytes)
+                  fvm_node.get_property<UintPropertyValue>(FvmData::kPropAvailableSpaceBytes)
                       ->value(),
           },
       .out_of_space_events =
-          volume_node.get_property<UintPropertyValue>(VolumeData::kPropOutOfSpaceEvents)->value(),
+          fvm_node.get_property<UintPropertyValue>(FvmData::kPropOutOfSpaceEvents)->value(),
   };
 }
 
@@ -167,7 +162,7 @@ class InspectTest : public FilesystemTest {
   void UpdateAndValidateSnapshot() {
     snapshot_ = fs().TakeSnapshot();
     // Validate the inspect hierarchy. Ensures all nodes/properties exist and are the correct types.
-    ASSERT_NO_FATAL_FAILURE(ValidateHierarchy(Root()));
+    ASSERT_NO_FATAL_FAILURE(ValidateHierarchy(Root(), fs().options()));
   }
 
   // Reference to root hierarchy from last snapshot. After calling UpdateAndValidateSnapshot(),
@@ -197,11 +192,11 @@ class InspectTest : public FilesystemTest {
     return GetUsageProperties(Root().GetByPath({fs_inspect::kUsageNodeName})->node());
   }
 
-  // Obtains VolumeData containing values from the latest snapshot's fs.volume node.
+  // Obtains FvmData containing values from the latest snapshot's fs.fvm node.
   // All calls to UpdateAndValidateSnapshot() must be wrapped by ASSERT_NO_FATAL_FAILURE,
   // otherwise this function can dereference a nullptr causing a segfault.
-  fs_inspect::VolumeData GetVolumeData() const {
-    return GetVolumeProperties(Root().GetByPath({fs_inspect::kVolumeNodeName})->node());
+  fs_inspect::FvmData GetFvmData() const {
+    return GetFvmProperties(Root().GetByPath({fs_inspect::kFvmNodeName})->node());
   }
 
  private:
@@ -253,35 +248,29 @@ TEST_P(InspectTest, ValidateUsageNode) {
   EXPECT_GE(usage_data.used_nodes, orig_used_nodes + 1);
 }
 
-// Validate values in the fs.volume node.
-TEST_P(InspectTest, ValidateVolumeNode) {
-  fs_inspect::VolumeData volume_data = GetVolumeData();
-  EXPECT_EQ(volume_data.out_of_space_events, 0u);
-  if (fs().options().use_fvm) {
-    uint64_t device_size = fs().options().device_block_count * fs().options().device_block_size;
-    uint64_t init_fvm_size = fs().options().fvm_slice_size * fs().options().initial_fvm_slice_count;
-    ASSERT_GT(device_size, 0u) << "Invalid block device size!";
-    ASSERT_GT(init_fvm_size, 0u) << "Invalid FVM volume size!";
-
-    // The reported volume size should be at least the amount of initial FVM slices, but not exceed
-    // the size of the block device.
-    EXPECT_GE(volume_data.size_info.size_bytes, init_fvm_size);
-    EXPECT_LT(volume_data.size_info.size_bytes, device_size);
-
-    // We should have some amount of free space, but not more than the size of the block device.
-    EXPECT_GT(volume_data.size_info.available_space_bytes, 0u);
-    EXPECT_LT(volume_data.size_info.available_space_bytes, device_size);
-
-    // We do not set a volume size limit in fs_test currently, so this should always be zero.
-    EXPECT_EQ(volume_data.size_info.size_limit_bytes, 0u);
-
-  } else {
-    // If we aren't using an FVM-backed filesystem, we should fail to query these properties from
-    // the volume protocol, so they should all be set to zero.
-    EXPECT_EQ(volume_data.size_info.available_space_bytes, 0u);
-    EXPECT_EQ(volume_data.size_info.size_bytes, 0u);
-    EXPECT_EQ(volume_data.size_info.size_limit_bytes, 0u);
+// Validate values in the fs.fvm node.
+TEST_P(InspectTest, ValidateFvmNode) {
+  if (!fs().options().use_fvm) {
+    return;
   }
+  fs_inspect::FvmData fvm_data = GetFvmData();
+  EXPECT_EQ(fvm_data.out_of_space_events, 0u);
+  uint64_t device_size = fs().options().device_block_count * fs().options().device_block_size;
+  uint64_t init_fvm_size = fs().options().fvm_slice_size * fs().options().initial_fvm_slice_count;
+  ASSERT_GT(device_size, 0u) << "Invalid block device size!";
+  ASSERT_GT(init_fvm_size, 0u) << "Invalid FVM volume size!";
+
+  // The reported volume size should be at least the amount of initial FVM slices, but not exceed
+  // the size of the block device.
+  EXPECT_GE(fvm_data.size_info.size_bytes, init_fvm_size);
+  EXPECT_LT(fvm_data.size_info.size_bytes, device_size);
+
+  // We should have some amount of free space, but not more than the size of the block device.
+  EXPECT_GT(fvm_data.size_info.available_space_bytes, 0u);
+  EXPECT_LT(fvm_data.size_info.available_space_bytes, device_size);
+
+  // We do not set a volume size limit in fs_test currently, so this should always be zero.
+  EXPECT_EQ(fvm_data.size_info.size_limit_bytes, 0u);
 }
 
 std::vector<TestFilesystemOptions> GetTestCombinations() {

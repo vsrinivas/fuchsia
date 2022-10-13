@@ -1371,8 +1371,8 @@ zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
 
   const block_client::BlockDevice* device = bc_->device();
   if (device) {
-    zx::status<fs_inspect::VolumeData::SizeInfo> size_info =
-        fs_inspect::VolumeData::GetSizeInfoFromDevice(*device);
+    zx::status<fs_inspect::FvmData::SizeInfo> size_info =
+        fs_inspect::FvmData::GetSizeInfoFromDevice(*device);
     if (size_info.is_ok()) {
       info.free_shared_pool_bytes = size_info->available_space_bytes;
     } else {

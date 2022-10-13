@@ -19,7 +19,6 @@ use {
 
 const INFO_NODE_NAME: &'static str = "fs.info";
 const USAGE_NODE_NAME: &'static str = "fs.usage";
-const VOLUME_NODE_NAME: &'static str = "fs.volume";
 
 /// Trait that Rust filesystems should implement to expose required Inspect data.
 ///
@@ -29,8 +28,6 @@ const VOLUME_NODE_NAME: &'static str = "fs.volume";
 pub trait FsInspect {
     fn get_info_data(&self) -> InfoData;
     async fn get_usage_data(&self) -> UsageData;
-    // TODO(fxbug.dev/85419): Provide default impl for non-FVM based filesystems.
-    fn get_volume_data(&self) -> VolumeData;
 }
 
 /// Maintains ownership of the various inspect nodes/properties. Will be removed from the root node
@@ -38,7 +35,6 @@ pub trait FsInspect {
 pub struct FsInspectTree {
     _info: LazyNode,
     _usage: LazyNode,
-    _volume: LazyNode,
 }
 
 impl FsInspectTree {
@@ -71,20 +67,7 @@ impl FsInspectTree {
             .boxed()
         });
 
-        let fs_clone = fs.clone();
-        let volume_node = root.create_lazy_child(VOLUME_NODE_NAME, move || {
-            let fs_clone = fs_clone.clone();
-            async move {
-                let inspector = fuchsia_inspect::Inspector::new();
-                if let Some(fs) = fs_clone.upgrade() {
-                    fs.get_volume_data().record_into(inspector.root());
-                }
-                Ok(inspector)
-            }
-            .boxed()
-        });
-
-        FsInspectTree { _info: info_node, _usage: usage_node, _volume: volume_node }
+        FsInspectTree { _info: info_node, _usage: usage_node }
     }
 }
 
@@ -143,28 +126,5 @@ impl UsageData {
         node.record_uint(Self::USED_BYTES_KEY, self.used_bytes);
         node.record_uint(Self::TOTAL_NODES_KEY, self.total_nodes);
         node.record_uint(Self::USED_NODES_KEY, self.used_nodes);
-    }
-}
-
-/// fs.volume Properties.
-pub struct VolumeData {
-    pub size_bytes: u64,
-    pub size_limit_bytes: u64,
-    pub available_space_bytes: u64,
-    // TODO(fxbug.dev/85419): Move out_of_space_events to fs.usage, and rename node to fs.fvm_stats.
-    pub out_of_space_events: u64,
-}
-
-impl VolumeData {
-    const SIZE_BYTES_KEY: &'static str = "size_bytes";
-    const SIZE_LIMIT_BYTES_KEY: &'static str = "size_limit_bytes";
-    const AVAILABLE_SPACE_BYTES_KEY: &'static str = "available_space_bytes";
-    const OUT_OF_SPACE_EVENTS_KEY: &'static str = "out_of_space_events";
-
-    fn record_into(self, node: &Node) {
-        node.record_uint(Self::SIZE_BYTES_KEY, self.size_bytes);
-        node.record_uint(Self::SIZE_LIMIT_BYTES_KEY, self.size_limit_bytes);
-        node.record_uint(Self::AVAILABLE_SPACE_BYTES_KEY, self.available_space_bytes);
-        node.record_uint(Self::OUT_OF_SPACE_EVENTS_KEY, self.out_of_space_events);
     }
 }

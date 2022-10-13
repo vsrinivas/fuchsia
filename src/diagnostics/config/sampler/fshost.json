@@ -78,7 +78,7 @@
             ],
             "metric_id": 4008,
             "metric_type": "Occurrence",
-            "selector": "bootstrap/fshost:root/minfs/fs.volume:out_of_space_events"
+            "selector": "bootstrap/fshost:root/minfs/fs.fvm:out_of_space_events"
         },
         {
             "event_codes": [

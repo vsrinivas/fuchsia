@@ -27,13 +27,13 @@ class InspectTree final {
   fs_inspect::UsageData usage_ __TA_GUARDED(usage_mutex_){};
   void UpdateUsage() __TA_REQUIRES(usage_mutex_);
 
-  mutable std::mutex volume_mutex_{};
-  fs_inspect::VolumeData volume_ __TA_GUARDED(volume_mutex_){};
-  void UpdateVolumeSizeInfo() __TA_REQUIRES(volume_mutex_);
+  mutable std::mutex fvm_mutex_{};
+  fs_inspect::FvmData fvm_ __TA_GUARDED(fvm_mutex_){};
+  void UpdateFvmSizeInfo() __TA_REQUIRES(fvm_mutex_);
 
   // Lasted out of space event within 5 minutes will not be counted.
   static constexpr zx::duration kOutOfSpaceDuration = zx::min(5);
-  zx::time last_out_of_space_time_ __TA_GUARDED(volume_mutex_){zx::time::infinite_past()};
+  zx::time last_out_of_space_time_ __TA_GUARDED(fvm_mutex_){zx::time::infinite_past()};
 
   // The Inspector to which the tree is attached.
   inspect::Inspector inspector_;

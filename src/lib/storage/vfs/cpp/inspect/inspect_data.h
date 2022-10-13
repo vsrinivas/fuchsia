@@ -64,8 +64,8 @@ struct UsageData {
   static constexpr char kPropUsedNodes[] = "used_nodes";
 };
 
-// fs.volume properties
-struct VolumeData {
+// fs.fvm properties
+struct FvmData {
   struct SizeInfo {
     // Current size of the volume that FVM has allocated for the filesystem.
     uint64_t size_bytes;
@@ -79,7 +79,7 @@ struct VolumeData {
   // Amount of times extending the volume failed when more space was required.
   uint64_t out_of_space_events;
 
-  // Helper function to create a `SizeInfo` using the Volume protocol from a block device.
+  // Helper function to create a `SizeInfo` using the Fvm protocol from a block device.
   static zx::status<SizeInfo> GetSizeInfoFromDevice(const block_client::BlockDevice& device);
 
   // Inspect Property Names
@@ -97,8 +97,8 @@ void Attach(inspect::Inspector& insp, const InfoData& info);
 // Attach the values from the given UsageData object as properties to the inspector's root node.
 void Attach(inspect::Inspector& insp, const UsageData& usage);
 
-// Attach the values from the given VolumeData object as properties to the inspector's root node.
-void Attach(inspect::Inspector& insp, const VolumeData& volume);
+// Attach the values from the given FvmData object as properties to the inspector's root node.
+void Attach(inspect::Inspector& insp, const FvmData& volume);
 }  // namespace detail
 
 }  // namespace fs_inspect

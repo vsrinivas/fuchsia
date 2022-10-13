@@ -24,7 +24,7 @@ use {
     anyhow::{bail, Error},
     async_trait::async_trait,
     fidl_fuchsia_io as fio,
-    fs_inspect::{FsInspect, InfoData, UsageData, VolumeData},
+    fs_inspect::{FsInspect, InfoData, UsageData},
     fuchsia_async as fasync,
     futures::{self, channel::oneshot, FutureExt},
     std::{
@@ -279,17 +279,6 @@ impl FsInspect for FxVolume {
             used_bytes: info.used_bytes,
             total_nodes: TOTAL_NODES,
             used_nodes: object_count,
-        }
-    }
-
-    fn get_volume_data(&self) -> VolumeData {
-        // Since we're not using FVM these values should all be set to zero.
-        VolumeData {
-            size_bytes: 0,
-            size_limit_bytes: 0,
-            available_space_bytes: 0,
-            // TODO(fxbug.dev/93770): Handle out of space events.
-            out_of_space_events: 0,
         }
     }
 }

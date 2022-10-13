@@ -35,16 +35,16 @@ class MinfsInspectTree final {
       __TA_EXCLUDES(usage_mutex_);
 
   // Increment the out of space event counter.
-  void OnOutOfSpace() __TA_EXCLUDES(volume_mutex_);
+  void OnOutOfSpace() __TA_EXCLUDES(fvm_mutex_);
 
   // Increment the recovered space event counter.
-  void OnRecoveredSpace() __TA_EXCLUDES(volume_mutex_);
+  void OnRecoveredSpace() __TA_EXCLUDES(fvm_mutex_);
 
   // Add |bytes| to the dirty bytes counter.
-  void AddDirtyBytes(uint64_t bytes) __TA_EXCLUDES(volume_mutex_);
+  void AddDirtyBytes(uint64_t bytes) __TA_EXCLUDES(fvm_mutex_);
 
   // Subtract |bytes| from the dirty bytes counter.
-  void SubtractDirtyBytes(uint64_t bytes) __TA_EXCLUDES(volume_mutex_);
+  void SubtractDirtyBytes(uint64_t bytes) __TA_EXCLUDES(fvm_mutex_);
 
   // Reference to the Inspector this object owns.
   const inspect::Inspector& Inspector() { return inspector_; }
@@ -56,8 +56,8 @@ class MinfsInspectTree final {
   // Helper function to create and return all required callbacks to create an fs_inspect tree.
   fs_inspect::NodeCallbacks CreateCallbacks();
 
-  // Update and retrieve latest volume information.
-  fs_inspect::VolumeData GetVolumeData() __TA_EXCLUDES(volume_mutex_, device_mutex_);
+  // Update and retrieve latest fvm information.
+  fs_inspect::FvmData GetFvmData() __TA_EXCLUDES(fvm_mutex_, device_mutex_);
 
   mutable std::mutex device_mutex_{};
   const block_client::BlockDevice* const device_ __TA_GUARDED(device_mutex_){};
@@ -72,9 +72,9 @@ class MinfsInspectTree final {
   mutable std::mutex usage_mutex_{};
   fs_inspect::UsageData usage_ __TA_GUARDED(usage_mutex_){};
 
-  mutable std::mutex volume_mutex_{};
-  fs_inspect::VolumeData volume_ __TA_GUARDED(volume_mutex_){};
-  uint64_t recovered_space_events_ __TA_GUARDED(volume_mutex_){};
+  mutable std::mutex fvm_mutex_{};
+  fs_inspect::FvmData fvm_ __TA_GUARDED(fvm_mutex_){};
+  uint64_t recovered_space_events_ __TA_GUARDED(fvm_mutex_){};
 
   // Window to limit frequency of reporting for out of space / recovered space events.
   //
@@ -96,11 +96,11 @@ class MinfsInspectTree final {
   // These properties may be simplified once we know the answers to #1 and #2 and have more data.
   //
   static constexpr zx::duration kEventWindowDuration = zx::min(5);
-  zx::time last_out_of_space_event_ __TA_GUARDED(volume_mutex_){zx::time::infinite_past()};
-  zx::time last_recovered_space_event_ __TA_GUARDED(volume_mutex_){zx::time::infinite_past()};
+  zx::time last_out_of_space_event_ __TA_GUARDED(fvm_mutex_){zx::time::infinite_past()};
+  zx::time last_recovered_space_event_ __TA_GUARDED(fvm_mutex_){zx::time::infinite_past()};
 
   // Number of bytes currently in the dirty cache.
-  uint64_t dirty_bytes_ __TA_GUARDED(volume_mutex_){};
+  uint64_t dirty_bytes_ __TA_GUARDED(fvm_mutex_){};
 
   inspect::LazyNodeCallbackFn CreateDetailNode() const;
 

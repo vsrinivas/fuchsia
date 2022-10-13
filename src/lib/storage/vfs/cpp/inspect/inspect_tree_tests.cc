@@ -31,7 +31,7 @@ namespace {
 ::testing::Matcher<const inspect::Hierarchy&> HasExpectedNodeLayout() {
   return ChildrenMatch(IsSupersetOf({NodeMatches(NameMatches(kInfoNodeName)),
                                      NodeMatches(NameMatches(kUsageNodeName)),
-                                     NodeMatches(NameMatches(kVolumeNodeName))}));
+                                     NodeMatches(NameMatches(kFvmNodeName))}));
 }
 
 // Match the given hierarchy against fs.info using the given InfoData values.
@@ -66,15 +66,15 @@ namespace {
                                         UintIs(UsageData::kPropUsedNodes, usage.used_nodes)))));
 }
 
-// Match the given hierarchy against fs.volume using the given VolumeData values.
-::testing::Matcher<const inspect::Hierarchy&> NodePropertiesMatch(const VolumeData& volume) {
-  return NodeMatches(AllOf(
-      NameMatches(kVolumeNodeName),
-      PropertyList(UnorderedElementsAre(
-          UintIs(VolumeData::kPropSizeBytes, volume.size_info.size_bytes),
-          UintIs(VolumeData::kPropSizeLimitBytes, volume.size_info.size_limit_bytes),
-          UintIs(VolumeData::kPropAvailableSpaceBytes, volume.size_info.available_space_bytes),
-          UintIs(VolumeData::kPropOutOfSpaceEvents, volume.out_of_space_events)))));
+// Match the given hierarchy against fs.fvm using the given FvmData values.
+::testing::Matcher<const inspect::Hierarchy&> NodePropertiesMatch(const FvmData& fvm) {
+  return NodeMatches(
+      AllOf(NameMatches(kFvmNodeName),
+            PropertyList(UnorderedElementsAre(
+                UintIs(FvmData::kPropSizeBytes, fvm.size_info.size_bytes),
+                UintIs(FvmData::kPropSizeLimitBytes, fvm.size_info.size_limit_bytes),
+                UintIs(FvmData::kPropAvailableSpaceBytes, fvm.size_info.available_space_bytes),
+                UintIs(FvmData::kPropOutOfSpaceEvents, fvm.out_of_space_events)))));
 }
 
 }  // namespace
@@ -85,24 +85,23 @@ namespace {
 class FakeInspectTree {
  public:
   explicit FakeInspectTree(inspect::LazyNodeCallbackFn detail_node = nullptr)
-      : fs_inspect_nodes_{
-            CreateTree(inspector_.GetRoot(),
-                       NodeCallbacks{.info_callback = [this]() { return info_data_; },
-                                     .usage_callback = [this]() { return usage_data_; },
-                                     .volume_callback = [this]() { return volume_data_; },
-                                     .detail_node_callback = std::move(detail_node)})} {}
+      : fs_inspect_nodes_{CreateTree(
+            inspector_.GetRoot(), NodeCallbacks{.info_callback = [this]() { return info_data_; },
+                                                .usage_callback = [this]() { return usage_data_; },
+                                                .fvm_callback = [this]() { return fvm_data_; },
+                                                .detail_node_callback = std::move(detail_node)})} {}
 
   // Setters to modify the data the tree exposes.
   void SetInfoData(const InfoData& info_data) { info_data_ = info_data; }
   void SetUsageData(const UsageData& usage_data) { usage_data_ = usage_data; }
-  void SetVolumeData(const VolumeData& volume_data) { volume_data_ = volume_data; }
+  void SetFvmData(const FvmData& fvm_data) { fvm_data_ = fvm_data; }
 
   // Pointers to nodes within the hierarchy obtained from the last call to `UpdateSnapshot`.
   // Invalidated every time UpdateSnapshot() is called.
   const inspect::Hierarchy* RootNode() const { return &snapshot_; }
   const inspect::Hierarchy* InfoNode() const { return snapshot_.GetByPath({kInfoNodeName}); }
   const inspect::Hierarchy* UsageNode() const { return snapshot_.GetByPath({kUsageNodeName}); }
-  const inspect::Hierarchy* VolumeNode() const { return snapshot_.GetByPath({kVolumeNodeName}); }
+  const inspect::Hierarchy* FvmNode() const { return snapshot_.GetByPath({kFvmNodeName}); }
   const inspect::Hierarchy* DetailNode() const { return snapshot_.GetByPath({kDetailNodeName}); }
 
   // Updates the exposed node hierarchy by taking a snapshot of the tree and storing it internally.
@@ -119,7 +118,7 @@ class FakeInspectTree {
   // Structured data to be exposed in the inspect hierarchy.
   fs_inspect::InfoData info_data_ = {};
   fs_inspect::UsageData usage_data_ = {};
-  fs_inspect::VolumeData volume_data_ = {};
+  fs_inspect::FvmData fvm_data_ = {};
 
   // Last snapshot taken of the inspect tree.
   inspect::Hierarchy snapshot_ = {};
@@ -129,7 +128,7 @@ class FakeInspectTree {
   fs_inspect::FilesystemNodes fs_inspect_nodes_;
 };
 
-// Validates that the root node contains children named "fs.info", "fs.usage", and "fs.volume".
+// Validates that the root node contains children named "fs.info", "fs.usage", and "fs.fvm".
 TEST(VfsInspectTree, ValidateNodeHierarchy) {
   FakeInspectTree tree;
   tree.UpdateSnapshot();
@@ -140,7 +139,7 @@ TEST(VfsInspectTree, ValidateNodeHierarchy) {
   // Ensure that pointers to all common nodes are now valid as well.
   EXPECT_NE(tree.InfoNode(), nullptr);
   EXPECT_NE(tree.UsageNode(), nullptr);
-  EXPECT_NE(tree.VolumeNode(), nullptr);
+  EXPECT_NE(tree.FvmNode(), nullptr);
   // The detail node should not exist since we did not provide a callback to populate it.
   EXPECT_EQ(tree.DetailNode(), nullptr);
 }
@@ -164,7 +163,7 @@ TEST(VfsInspectTree, AttachDetailNode) {
   // All nodes should exist this time.
   EXPECT_NE(tree_with_detail.InfoNode(), nullptr);
   EXPECT_NE(tree_with_detail.UsageNode(), nullptr);
-  EXPECT_NE(tree_with_detail.VolumeNode(), nullptr);
+  EXPECT_NE(tree_with_detail.FvmNode(), nullptr);
   // The detail node should exist, and it's contents should match the callback above.
   ASSERT_NE(tree_with_detail.DetailNode(), nullptr);
   EXPECT_THAT(*tree_with_detail.DetailNode(),
@@ -234,17 +233,17 @@ TEST(VfsInspectTree, UsageNode) {
   EXPECT_THAT(*inspect_tree.UsageNode(), NodePropertiesMatch(usage_data));
 }
 
-// Validates the layout of the fs.volume node and ensures that updates to properties are propagated.
-TEST(VfsInspectTree, VolumeNode) {
+// Validates the layout of the fs.fvm node and ensures that updates to properties are propagated.
+TEST(VfsInspectTree, FvmNode) {
   FakeInspectTree inspect_tree{};
 
   // Test default-constructed values.
   inspect_tree.UpdateSnapshot();
-  ASSERT_NE(inspect_tree.VolumeNode(), nullptr);
-  EXPECT_THAT(*inspect_tree.VolumeNode(), NodePropertiesMatch(VolumeData{}));
+  ASSERT_NE(inspect_tree.FvmNode(), nullptr);
+  EXPECT_THAT(*inspect_tree.FvmNode(), NodePropertiesMatch(FvmData{}));
 
   // Set some other values and make sure the tree reflects them.
-  VolumeData volume_data = {
+  FvmData fvm_data = {
       .size_info =
           {
               .size_bytes = 1024,
@@ -253,17 +252,17 @@ TEST(VfsInspectTree, VolumeNode) {
           },
       .out_of_space_events = 0,
   };
-  inspect_tree.SetVolumeData(volume_data);
+  inspect_tree.SetFvmData(fvm_data);
   inspect_tree.UpdateSnapshot();
-  ASSERT_NE(inspect_tree.VolumeNode(), nullptr);
-  EXPECT_THAT(*inspect_tree.VolumeNode(), NodePropertiesMatch(volume_data));
+  ASSERT_NE(inspect_tree.FvmNode(), nullptr);
+  EXPECT_THAT(*inspect_tree.FvmNode(), NodePropertiesMatch(fvm_data));
 
-  volume_data.size_info.available_space_bytes = 1024;
-  volume_data.out_of_space_events++;
-  inspect_tree.SetVolumeData(volume_data);
+  fvm_data.size_info.available_space_bytes = 1024;
+  fvm_data.out_of_space_events++;
+  inspect_tree.SetFvmData(fvm_data);
   inspect_tree.UpdateSnapshot();
-  ASSERT_NE(inspect_tree.VolumeNode(), nullptr);
-  EXPECT_THAT(*inspect_tree.VolumeNode(), NodePropertiesMatch(volume_data));
+  ASSERT_NE(inspect_tree.FvmNode(), nullptr);
+  EXPECT_THAT(*inspect_tree.FvmNode(), NodePropertiesMatch(fvm_data));
 }
 
 }  // namespace fs_inspect

@@ -53,21 +53,20 @@ void BlobfsInspectTree::UpdateSuperblock(const Superblock& superblock) {
   usage_.used_nodes = superblock.alloc_inode_count;
 }
 
-// Update FVM volume information and record any out of space events.
-void BlobfsInspectTree::UpdateVolumeData(const block_client::BlockDevice& device,
-                                         bool out_of_space) {
-  zx::status<fs_inspect::VolumeData::SizeInfo> size_info =
-      fs_inspect::VolumeData::GetSizeInfoFromDevice(device);
+// Update FVM fvm information and record any out of space events.
+void BlobfsInspectTree::UpdateFvmData(const block_client::BlockDevice& device, bool out_of_space) {
+  zx::status<fs_inspect::FvmData::SizeInfo> size_info =
+      fs_inspect::FvmData::GetSizeInfoFromDevice(device);
   if (size_info.is_error()) {
     FX_LOGS(WARNING) << "Failed to obtain size information from block device: "
                      << size_info.status_string();
   }
-  std::lock_guard guard(volume_mutex_);
+  std::lock_guard guard(fvm_mutex_);
   if (size_info.is_ok()) {
-    volume_.size_info = size_info.value();
+    fvm_.size_info = size_info.value();
   }
   if (out_of_space) {
-    ++volume_.out_of_space_events;
+    ++fvm_.out_of_space_events;
   }
 }
 
@@ -83,10 +82,10 @@ fs_inspect::NodeCallbacks BlobfsInspectTree::CreateCallbacks() {
             std::lock_guard guard(usage_mutex_);
             return usage_;
           },
-      .volume_callback =
+      .fvm_callback =
           [this] {
-            std::lock_guard guard(volume_mutex_);
-            return volume_;
+            std::lock_guard guard(fvm_mutex_);
+            return fvm_;
           },
   };
 }

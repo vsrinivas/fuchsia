@@ -57,16 +57,16 @@ void MinfsInspectTree::UpdateSpaceUsage(const Superblock& superblock, uint64_t r
 
 void MinfsInspectTree::OnOutOfSpace() {
   zx::time curr_time = zx::clock::get_monotonic();
-  std::lock_guard guard(volume_mutex_);
+  std::lock_guard guard(fvm_mutex_);
   if ((curr_time - last_out_of_space_event_) > kEventWindowDuration) {
-    ++volume_.out_of_space_events;
+    ++fvm_.out_of_space_events;
     last_out_of_space_event_ = curr_time;
   }
 }
 
 void MinfsInspectTree::OnRecoveredSpace() {
   zx::time curr_time = zx::clock::get_monotonic();
-  std::lock_guard guard(volume_mutex_);
+  std::lock_guard guard(fvm_mutex_);
   if ((curr_time - last_recovered_space_event_) > kEventWindowDuration) {
     ++recovered_space_events_;
     last_recovered_space_event_ = curr_time;
@@ -74,30 +74,30 @@ void MinfsInspectTree::OnRecoveredSpace() {
 }
 
 void MinfsInspectTree::AddDirtyBytes(uint64_t bytes) {
-  std::lock_guard guard(volume_mutex_);
+  std::lock_guard guard(fvm_mutex_);
   dirty_bytes_ = safemath::CheckAdd(dirty_bytes_, bytes).ValueOrDie();
 }
 
 void MinfsInspectTree::SubtractDirtyBytes(uint64_t bytes) {
-  std::lock_guard guard(volume_mutex_);
+  std::lock_guard guard(fvm_mutex_);
   dirty_bytes_ = safemath::CheckSub(dirty_bytes_, bytes).ValueOrDie();
 }
 
-fs_inspect::VolumeData MinfsInspectTree::GetVolumeData() {
-  zx::status<fs_inspect::VolumeData::SizeInfo> size_info = zx::error(ZX_ERR_BAD_HANDLE);
+fs_inspect::FvmData MinfsInspectTree::GetFvmData() {
+  zx::status<fs_inspect::FvmData::SizeInfo> size_info = zx::error(ZX_ERR_BAD_HANDLE);
   {
     std::lock_guard guard(device_mutex_);
-    size_info = fs_inspect::VolumeData::GetSizeInfoFromDevice(*device_);
+    size_info = fs_inspect::FvmData::GetSizeInfoFromDevice(*device_);
     if (size_info.is_error()) {
       FX_LOGS(WARNING) << "Failed to obtain size information from block device: "
                        << size_info.status_string();
     }
   }
-  std::lock_guard guard(volume_mutex_);
+  std::lock_guard guard(fvm_mutex_);
   if (size_info.is_ok()) {
-    volume_.size_info = size_info.value();
+    fvm_.size_info = size_info.value();
   }
-  return volume_;
+  return fvm_;
 }
 
 inspect::LazyNodeCallbackFn MinfsInspectTree::CreateDetailNode() const {
@@ -106,7 +106,7 @@ inspect::LazyNodeCallbackFn MinfsInspectTree::CreateDetailNode() const {
     uint64_t recovered_space_events;
     uint64_t dirty_bytes;
     {
-      std::lock_guard guard(volume_mutex_);
+      std::lock_guard guard(fvm_mutex_);
       recovered_space_events = recovered_space_events_;
       dirty_bytes = dirty_bytes_;
     }
@@ -128,7 +128,7 @@ fs_inspect::NodeCallbacks MinfsInspectTree::CreateCallbacks() {
             std::lock_guard guard(usage_mutex_);
             return usage_;
           },
-      .volume_callback = [this] { return GetVolumeData(); },
+      .fvm_callback = [this] { return GetFvmData(); },
       .detail_node_callback = CreateDetailNode(),
   };
 }

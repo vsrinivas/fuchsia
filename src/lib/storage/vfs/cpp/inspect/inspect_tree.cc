@@ -26,11 +26,11 @@ inspect::LazyNodeCallbackFn CreateUsageNode(std::function<UsageData()> usage_cal
   };
 }
 
-inspect::LazyNodeCallbackFn CreateVolumeNode(std::function<VolumeData()> volume_callback) {
-  return [volume_callback = std::move(volume_callback)]() {
+inspect::LazyNodeCallbackFn CreateFvmNode(std::function<FvmData()> fvm_callback) {
+  return [fvm_callback = std::move(fvm_callback)]() {
     inspect::Inspector insp;
-    VolumeData volume = volume_callback();
-    detail::Attach(insp, volume);
+    FvmData fvm = fvm_callback();
+    detail::Attach(insp, fvm);
     return fpromise::make_ok_promise(insp);
   };
 }
@@ -40,14 +40,14 @@ inspect::LazyNodeCallbackFn CreateVolumeNode(std::function<VolumeData()> volume_
 FilesystemNodes CreateTree(inspect::Node& root, NodeCallbacks node_callbacks) {
   ZX_ASSERT(node_callbacks.info_callback != nullptr);
   ZX_ASSERT(node_callbacks.usage_callback != nullptr);
-  ZX_ASSERT(node_callbacks.volume_callback != nullptr);
+  ZX_ASSERT(node_callbacks.fvm_callback != nullptr);
   return {
       .info = root.CreateLazyNode(kInfoNodeName,
                                   CreateInfoNode(std::move(node_callbacks.info_callback))),
       .usage = root.CreateLazyNode(kUsageNodeName,
                                    CreateUsageNode(std::move(node_callbacks.usage_callback))),
-      .volume = root.CreateLazyNode(kVolumeNodeName,
-                                    CreateVolumeNode(std::move(node_callbacks.volume_callback))),
+      .fvm =
+          root.CreateLazyNode(kFvmNodeName, CreateFvmNode(std::move(node_callbacks.fvm_callback))),
       .detail = node_callbacks.detail_node_callback == nullptr
                     ? inspect::LazyNode{}
                     : root.CreateLazyNode(kDetailNodeName,

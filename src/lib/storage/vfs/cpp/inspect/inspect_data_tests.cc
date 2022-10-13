@@ -39,7 +39,7 @@ class FakeBlockDevice final : public block_client::FakeBlockDevice {
   VolumeInfo volume_info_;
 };
 
-// Validates calculation of size information via `VolumeData::GetSizeInfoFromDevice` ensuring that
+// Validates calculation of size information via `FvmData::GetSizeInfoFromDevice` ensuring that
 // it is consistent with the values reported by the underlying block device.
 TEST(VfsInspectData, GetSizeInfoFromDevice) {
   const uint64_t kSliceSize = 1024;
@@ -55,7 +55,7 @@ TEST(VfsInspectData, GetSizeInfoFromDevice) {
       .slice_limit = 0,  // Size limit set by `VolumeManager.SetPartitionLimit()` (0 = no limit)
   };
 
-  VolumeData::SizeInfo expected_size_info = {
+  FvmData::SizeInfo expected_size_info = {
       // The partition size is the slice count times slice size
       .size_bytes = volume_info.partition_slice_count * kSliceSize,
       // We haven't set a slice limit above, so ensure that's indicated below
@@ -67,10 +67,10 @@ TEST(VfsInspectData, GetSizeInfoFromDevice) {
   };
 
   FakeBlockDevice fake_device;
-  zx::status<VolumeData::SizeInfo> size_info;
+  zx::status<FvmData::SizeInfo> size_info;
 
   fake_device.SetVolumeInfo(volume_manager_info, volume_info);
-  size_info = VolumeData::GetSizeInfoFromDevice(fake_device);
+  size_info = FvmData::GetSizeInfoFromDevice(fake_device);
   ASSERT_TRUE(size_info.is_ok());
   EXPECT_EQ(expected_size_info.size_bytes, size_info->size_bytes);
   EXPECT_EQ(expected_size_info.size_limit_bytes, size_info->size_limit_bytes);
@@ -83,7 +83,7 @@ TEST(VfsInspectData, GetSizeInfoFromDevice) {
       (volume_info.slice_limit - volume_info.partition_slice_count) * kSliceSize;
 
   fake_device.SetVolumeInfo(volume_manager_info, volume_info);
-  size_info = VolumeData::GetSizeInfoFromDevice(fake_device);
+  size_info = FvmData::GetSizeInfoFromDevice(fake_device);
   ASSERT_TRUE(size_info.is_ok());
   EXPECT_EQ(expected_size_info.size_bytes, size_info->size_bytes);
   EXPECT_EQ(expected_size_info.size_limit_bytes, size_info->size_limit_bytes);
@@ -96,7 +96,7 @@ TEST(VfsInspectData, GetSizeInfoFromDevice) {
   expected_size_info.available_space_bytes = 0;
 
   fake_device.SetVolumeInfo(volume_manager_info, volume_info);
-  size_info = VolumeData::GetSizeInfoFromDevice(fake_device);
+  size_info = FvmData::GetSizeInfoFromDevice(fake_device);
   ASSERT_TRUE(size_info.is_ok());
   EXPECT_EQ(expected_size_info.size_bytes, size_info->size_bytes);
   EXPECT_EQ(expected_size_info.size_limit_bytes, size_info->size_limit_bytes);

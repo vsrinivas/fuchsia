@@ -33,7 +33,7 @@ namespace fs_inspect {
 
 constexpr char kInfoNodeName[] = "fs.info";
 constexpr char kUsageNodeName[] = "fs.usage";
-constexpr char kVolumeNodeName[] = "fs.volume";
+constexpr char kFvmNodeName[] = "fs.fvm";
 constexpr char kDetailNodeName[] = "fs.detail";
 
 // Callbacks that a filesystem must provide to expose a standard inspect hierarchy.
@@ -44,8 +44,8 @@ struct NodeCallbacks {
   std::function<InfoData()> info_callback;
   // Callback invoked when populating the fs.usage node. Must not be nullptr.
   std::function<UsageData()> usage_callback;
-  // Callback invoked when populating the fs.volume node. Must not be nullptr.
-  std::function<VolumeData()> volume_callback;
+  // Callback invoked when populating the fs.fvm node. Must not be nullptr.
+  std::function<FvmData()> fvm_callback;
   // Callback which creates the LazyNode for fs.detail. If nullptr, fs.detail will not be created.
   inspect::LazyNodeCallbackFn detail_node_callback = nullptr;
 };
@@ -56,7 +56,7 @@ struct NodeCallbacks {
 struct FilesystemNodes {
   inspect::LazyNode info;
   inspect::LazyNode usage;
-  inspect::LazyNode volume;
+  inspect::LazyNode fvm;
   inspect::LazyNode detail;
 };
 

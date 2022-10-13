@@ -12,7 +12,7 @@ the following data types defined in `inspect_data.h`:
 
  - `fs_inspect::InfoData` - general information about the filesystem instance (`fs.info`)
  - `fs_inspect::UsageData` - current filesystem resource utilization (`fs.usage`)
- - `fs_inspect::VolumeData` - information from the volume manager (`fs.volume`)
+ - `fs_inspect::FvmData` - information from the volume manager (`fs.fvm`)
 
 In addition to providing a common set of properties, filesystems are free to attach detailed
 information specific to their implementation.  This is done by implementing a callback to populate
@@ -48,7 +48,7 @@ class FilesystemInspectData {
   // Data types defined in `inspect_data.h` to be queried from callbacks (see `Attach()` below).
   fs_inspect::InfoData info_data_;
   fs_inspect::UsageData usage_data_;
-  fs_inspect::VolumeData volume_data_;
+  fs_inspect::FvmData fvm_data_;
 
   // The Inspector on which the tree was attached.
   inspect::Inspector inspector_;
