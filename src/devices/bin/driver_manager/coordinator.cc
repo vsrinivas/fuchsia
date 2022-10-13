@@ -59,16 +59,10 @@
 #include <src/lib/fsl/vmo/sized_vmo.h>
 #include <src/lib/fsl/vmo/vector.h>
 
-#include "src/devices/bin/driver_manager/driver_host_loader_service.h"
-#include "src/devices/bin/driver_manager/manifest_parser.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
 #include "src/devices/bin/driver_manager/v1/device_group_v1.h"
 #include "src/devices/bin/driver_manager/v1/driver_development.h"
-#include "src/devices/bin/driver_manager/v1/unbind_task.h"
 #include "src/devices/lib/log/log.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-
-namespace fio = fuchsia_io;
 
 namespace {
 
@@ -874,23 +868,6 @@ zx_status_t Coordinator::AddDeviceGroup(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return ZX_OK;
-}
-
-zx_status_t Coordinator::BindDriver(Driver* drv) {
-  if (!running_) {
-    return ZX_ERR_UNAVAILABLE;
-  }
-  for (auto& dev : device_manager_->devices()) {
-    zx_status_t status =
-        bind_driver_manager_->MatchAndBind(fbl::RefPtr(&dev), drv, true /* autobind */);
-    if (status == ZX_ERR_NEXT || status == ZX_ERR_ALREADY_BOUND) {
-      continue;
-    }
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
   return ZX_OK;
 }
 

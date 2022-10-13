@@ -46,14 +46,12 @@
 #include "src/devices/bin/driver_manager/driver_host.h"
 #include "src/devices/bin/driver_manager/driver_loader.h"
 #include "src/devices/bin/driver_manager/inspect.h"
-#include "src/devices/bin/driver_manager/metadata.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
 #include "src/devices/bin/driver_manager/system_state_manager.h"
 #include "src/devices/bin/driver_manager/v1/device_manager.h"
 #include "src/devices/bin/driver_manager/v1/firmware_loader.h"
 #include "src/devices/bin/driver_manager/v1/suspend_resume_manager.h"
 #include "src/devices/bin/driver_manager/v2/driver_runner.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;
@@ -191,11 +189,6 @@ class Coordinator : public CompositeManagerBridge,
   void set_driver_runner(dfv2::DriverRunner* runner) { driver_runner_ = runner; }
 
   SystemStateManager& system_state_manager() { return system_state_manager_; }
-
-  // Called when a new driver becomes available to the Coordinator. Existing devices are
-  // inspected to see if the new driver is bindable to them (unless they are already bound).
-  // This method is public only for the test suite.
-  zx_status_t BindDriver(Driver* drv);
 
   // Function to attempt binding a driver to the device.
   zx_status_t AttemptBind(const MatchedDriverInfo matched_driver, const fbl::RefPtr<Device>& dev);
