@@ -103,7 +103,7 @@ class AmlMipiDevice : public DeviceType,
   zx::bti bti_;
   zx::interrupt adap_irq_;
   std::atomic<bool> running_;
-  thrd_t irq_thread_;
+  std::optional<thrd_t> irq_thread_;
 
   zx::vmo ring_buffer_vmo_;
   fzl::PinnedVmo pinned_ring_buffer_;
