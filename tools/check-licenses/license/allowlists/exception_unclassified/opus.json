@@ -13,7 +13,7 @@
         "example": "http://shortn/_JrNQCYDqad",
         "licenseType": "opus",
         "notes": [],
-        "patternRoot": "//tools/check-licenses/license/patterns/exception/opus"
+        "patternRoot": "//tools/check-licenses/license/patterns/exception_unclassified/opus"
       }
     ]
   }
