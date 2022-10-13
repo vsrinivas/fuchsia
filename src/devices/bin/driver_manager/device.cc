@@ -102,12 +102,12 @@ Device::~Device() {
   VLOGF(1, "Destroyed device %p '%s'", this, name_.data());
 }
 
-void Device::Bind(fbl::RefPtr<Device> dev, async_dispatcher_t* dispatcher,
-                  fidl::ServerEnd<fuchsia_device_manager::Coordinator> request) {
-  dev->coordinator_binding_ = fidl::BindServer(
-      dispatcher, std::move(request), dev.get(),
-      [dev](Device* self, fidl::UnbindInfo info,
-            fidl::ServerEnd<fuchsia_device_manager::Coordinator> server_end) {
+void Device::Serve(fidl::ServerEnd<fuchsia_device_manager::Coordinator> request) {
+  coordinator_binding_ = fidl::BindServer(
+      coordinator->dispatcher(), std::move(request), this,
+      [dev = fbl::RefPtr<Device>(this)](
+          Device* self, fidl::UnbindInfo info,
+          fidl::ServerEnd<fuchsia_device_manager::Coordinator> server_end) {
         if (info.is_user_initiated()) {
           return;
         }
@@ -172,7 +172,7 @@ zx_status_t Device::Create(
   }
 
   dev->device_controller_.Bind(std::move(device_controller), coordinator->dispatcher());
-  Device::Bind(dev, coordinator->dispatcher(), std::move(coordinator_request));
+  dev->Serve(std::move(coordinator_request));
 
   // If we have bus device args we are, by definition, a bus device.
   if (!dev->args_.empty()) {
@@ -256,7 +256,7 @@ zx_status_t Device::CreateComposite(
   }
 
   dev->device_controller_.Bind(std::move(device_controller), coordinator->dispatcher());
-  Device::Bind(dev, coordinator->dispatcher(), std::move(coordinator_request));
+  dev->Serve(std::move(coordinator_request));
   // We exist within our parent's device host
   dev->set_host(std::move(driver_host));
 

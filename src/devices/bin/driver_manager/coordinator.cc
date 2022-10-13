@@ -171,7 +171,7 @@ zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Driver
             });
   }
 
-  Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
+  dev->Serve(std::move(coordinator_endpoints->server));
   return ZX_OK;
 }
 
@@ -203,7 +203,7 @@ zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Dri
             }
           });
 
-  Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
+  dev->Serve(std::move(coordinator_endpoints->server));
   return ZX_OK;
 }
 

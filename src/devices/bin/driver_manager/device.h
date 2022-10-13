@@ -129,8 +129,7 @@ class Device final
   zx_status_t CreateProxy();
   zx_status_t CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out);
 
-  static void Bind(fbl::RefPtr<Device> dev, async_dispatcher_t*,
-                   fidl::ServerEnd<fuchsia_device_manager::Coordinator>);
+  void Serve(fidl::ServerEnd<fuchsia_device_manager::Coordinator> request);
 
   std::list<const Device*> children() const;
   std::list<Device*> children();
