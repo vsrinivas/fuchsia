@@ -630,6 +630,46 @@ TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
   ASSERT_TRUE(callback_called);
 }
 
+TEST_F(DeviceTest, DevfsVnodeSetPerformanceState) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a device.
+  zx_protocol_device_t ops{
+      .set_performance_state = [](void* ctx, uint32_t state, uint32_t* out_state) -> zx_status_t {
+        *out_state = state;
+        return ZX_OK;
+      }};
+  compat::Device device(compat::kDefaultDevice, &ops, nullptr, std::nullopt, logger(),
+                        dispatcher());
+  device.Bind({std::move(endpoints->client), dispatcher()});
+
+  DevfsVnode vnode(device.ZxDevice());
+  auto dev_endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
+  ASSERT_EQ(ZX_OK, endpoints.status_value());
+
+  fidl::BindServer(test_loop().dispatcher(), std::move(dev_endpoints->server), &vnode);
+
+  fidl::WireClient<fuchsia_device::Controller> client;
+  client.Bind(std::move(dev_endpoints->client), test_loop().dispatcher());
+
+  bool callback_called = false;
+  const uint32_t kState = 5;
+  client->SetPerformanceState(kState).Then(
+      [&callback_called,
+       kState](fidl::WireUnownedResult<fuchsia_device::Controller::SetPerformanceState>& result) {
+        if (!result.ok()) {
+          FAIL() << result.error();
+          return;
+        }
+        EXPECT_EQ(ZX_OK, result->status);
+        EXPECT_EQ(kState, result->out_state);
+        callback_called = true;
+      });
+
+  ASSERT_TRUE(test_loop().RunUntilIdle());
+  ASSERT_TRUE(callback_called);
+}
+
 TEST_F(DeviceTest, DevfsVnodeSetAndGetMinDriverLogSeverity) {
   auto endpoints = fidl::CreateEndpoints<fdf::Node>();
 

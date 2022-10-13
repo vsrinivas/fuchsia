@@ -183,5 +183,8 @@ void DevfsVnode::SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView requ
 
 void DevfsVnode::SetPerformanceState(SetPerformanceStateRequestView request,
                                      SetPerformanceStateCompleter::Sync& completer) {
-  completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
+  auto result = dev_->SetPerformanceStateOp(request->requested_state);
+  zx_status_t status = result.is_ok() ? ZX_OK : result.error_value();
+  uint32_t out_state = result.is_ok() ? result.value() : 0;
+  completer.Reply(status, out_state);
 }

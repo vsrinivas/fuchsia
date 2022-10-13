@@ -643,6 +643,18 @@ zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return ops_->message(compat_symbol_.context, msg, txn);
 }
 
+zx::status<uint32_t> Device::SetPerformanceStateOp(uint32_t state) {
+  if (!HasOp(ops_, &zx_protocol_device_t::set_performance_state)) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+  uint32_t out_state;
+  zx_status_t status = ops_->set_performance_state(compat_symbol_.context, state, &out_state);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(out_state);
+}
+
 void Device::InitReply(zx_status_t status) {
   std::scoped_lock lock(init_lock_);
   init_is_finished_ = true;
