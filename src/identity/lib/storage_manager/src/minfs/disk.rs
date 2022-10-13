@@ -181,7 +181,7 @@ async fn wait_for_node(
 /// There is only one production implementation, [`DevDiskManager`].
 #[async_trait]
 pub trait DiskManager: Sync + Send {
-    type BlockDevice;
+    type BlockDevice: Send;
     type Partition: Partition<BlockDevice = Self::BlockDevice>;
     type EncryptedBlockDevice: EncryptedBlockDevice<BlockDevice = Self::BlockDevice>;
     type Minfs: Minfs;
@@ -225,7 +225,7 @@ pub trait Partition: Sync + Send {
 /// The `EncryptedBlockDevice` trait provides a narrow interface for
 /// [`DeviceManager`][fidl_fuchsia_hardware_block_encrypted::DeviceManagerProxy].
 #[async_trait]
-pub trait EncryptedBlockDevice: Send + 'static {
+pub trait EncryptedBlockDevice: Sync + Send + 'static {
     type BlockDevice;
 
     /// Unseals the block device using the given key. The key must be 256 bits long.

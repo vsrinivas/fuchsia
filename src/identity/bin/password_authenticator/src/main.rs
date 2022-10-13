@@ -52,10 +52,6 @@ async fn main() -> Result<(), Error> {
         return Err(err);
     }
 
-    let dev_root =
-        open_in_namespace("/dev", fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE)?;
-    let disk_manager = DevDiskManager::new(dev_root);
-
     let metadata_root = open_in_namespace(
         "/data/accounts",
         fio::OpenFlags::RIGHT_READABLE
@@ -72,21 +68,20 @@ async fn main() -> Result<(), Error> {
     drop(cleanup_res);
 
     let cred_manager_provider = EnvCredManagerProvider {};
-    let storage_manager = MinfsStorageManager::new(disk_manager);
 
-    type MainStorageManager = MinfsStorageManager<DevDiskManager>;
-    type MainAccountManager = AccountManager<
-        DevDiskManager,
-        DataDirAccountMetadataStore,
-        EnvCredManagerProvider,
-        MainStorageManager,
-    >;
-
-    let account_manager = Arc::new(MainAccountManager::new(
+    let account_manager = Arc::new(AccountManager::new(
         config,
         account_metadata_store,
         cred_manager_provider,
-        storage_manager,
+        || {
+            MinfsStorageManager::new(DevDiskManager::new(
+                open_in_namespace(
+                    "/dev",
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                )
+                .expect("open /dev root for disk manager"),
+            ))
+        },
     ));
 
     let storage_unlock_mechanism = Arc::new(StorageUnlockMechanism::new());
@@ -103,7 +98,7 @@ async fn main() -> Result<(), Error> {
         .expect("Async channel conversion failed.");
     let lifecycle_req_stream = LifecycleRequestStream::from_channel(async_chan);
 
-    let account_manager_for_lifecycle = account_manager.clone();
+    let account_manager_for_lifecycle = Arc::clone(&account_manager);
     let _lifecycle_task = fasync::Task::spawn(async move {
         account_manager_for_lifecycle.handle_requests_for_lifecycle(lifecycle_req_stream).await
     });

@@ -11,6 +11,7 @@ use crate::{
     pinweaver::{CredManager, PinweaverKeyEnroller, PinweaverKeyRetriever, PinweaverParams},
     scrypt::{ScryptKeySource, ScryptParams},
 };
+use account_common::AccountManagerError;
 use anyhow::{Context, Error};
 use fidl::endpoints::{ControlHandle, ServerEnd};
 use fidl_fuchsia_identity_account::{
@@ -22,13 +23,7 @@ use fuchsia_component::client::connect_to_protocol;
 use futures::{lock::Mutex, prelude::*};
 use password_authenticator_config::Config;
 use std::{collections::HashMap, sync::Arc};
-use storage_manager::{
-    minfs::{
-        disk::{DiskError, DiskManager, EncryptedBlockDevice},
-        StorageManagerExtTrait,
-    },
-    StorageManager,
-};
+use storage_manager::{minfs::disk::DiskError, StorageManager};
 use tracing::{error, info, warn};
 
 /// The singleton account ID on the device.
@@ -64,26 +59,27 @@ impl CredManagerProvider for EnvCredManagerProvider {
     }
 }
 
-pub struct AccountManager<DM, AMS, CMP, SM>
+pub struct AccountManager<AMS, CMP, SM, SMF>
 where
-    DM: DiskManager,
     AMS: AccountMetadataStore,
     CMP: CredManagerProvider,
     SM: StorageManager,
+    SMF: FnMut() -> SM + 'static,
 {
     config: Config,
     account_metadata_store: Mutex<AMS>,
     cred_manager_provider: CMP,
-    #[allow(dead_code)]
-    storage_manager: SM,
+    storage_manager_factory: Arc<Mutex<SMF>>,
 
-    accounts: Mutex<HashMap<AccountId, AccountState<DM::EncryptedBlockDevice, DM::Minfs>>>,
+    // HashMap containing accounts which have been unsealed so far within the
+    // current power cycle.
+    accounts: Mutex<HashMap<AccountId, AccountState<SM>>>,
 }
 
 /// The external state of the account.
-enum AccountState<EB, M> {
+enum AccountState<SM> {
     Provisioning(Arc<Mutex<()>>),
-    Provisioned(Arc<Account<EB, M>>),
+    Provisioned(Arc<Account<SM>>),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -92,6 +88,8 @@ enum ProvisionError {
     DiskError(#[from] DiskError),
     #[error("Failed to save account metadata: {0}")]
     MetadataError(#[from] AccountMetadataStoreError),
+    #[error("Failed to save account: {0}")]
+    AccountManagerError(#[from] AccountManagerError),
 }
 
 impl From<ProvisionError> for faccount::Error {
@@ -99,6 +97,7 @@ impl From<ProvisionError> for faccount::Error {
         match e {
             ProvisionError::DiskError(d) => Self::from(d),
             ProvisionError::MetadataError(m) => Self::from(m),
+            ProvisionError::AccountManagerError(a) => a.api_error,
         }
     }
 }
@@ -109,33 +108,27 @@ enum EnrollmentScheme {
     Pinweaver,
 }
 
-impl<DM, AMS, CMP, SM> AccountManager<DM, AMS, CMP, SM>
+impl<AMS, CMP, SM, SMF> AccountManager<AMS, CMP, SM, SMF>
 where
-    DM: DiskManager,
     AMS: AccountMetadataStore,
     CMP: CredManagerProvider,
-    SM: StorageManager + StorageManagerExtTrait<DM>,
+    SM: StorageManager<Key = [u8; 32]> + Send + Sync + 'static,
+    SMF: FnMut() -> SM + 'static,
 {
     pub fn new(
         config: Config,
         account_metadata_store: AMS,
         cred_manager_provider: CMP,
-        storage_manager: SM,
+        storage_manager_factory: SMF,
     ) -> Self {
-        Self {
+        let account_manager = Self {
             config,
             account_metadata_store: Mutex::new(account_metadata_store),
             cred_manager_provider,
-            storage_manager,
+            storage_manager_factory: Arc::new(Mutex::new(storage_manager_factory)),
             accounts: Mutex::new(HashMap::new()),
-        }
-    }
-
-    fn disk_manager(&self) -> &DM {
-        // Provides access to the storage_manager's internal disk_manager.
-        // TODO(https://fxbug.dev/103134): Plan on removing this, since it
-        // crosses separation-of-concerns in an unfortunate way.
-        self.storage_manager.disk_manager()
+        };
+        account_manager
     }
 
     /// Serially process a stream of incoming LifecycleRequest FIDL requests.
@@ -431,7 +424,7 @@ where
                 match account.check_new_client(&key).await {
                     CheckNewClientResult::Locked => {
                         // The account has been sealed. We'll need to unseal the account from disk.
-                        let account = self.unseal_account(id, &key).await?;
+                        let account = self.unseal_account(id, &key, &mut accounts_locked).await?;
                         accounts_locked.insert(id, AccountState::Provisioned(account.clone()));
                         account
                     }
@@ -463,10 +456,11 @@ where
             None => {
                 // There is no account associated with the ID in memory. Check if the account can
                 // be unsealed from disk.
-                let account = self.unseal_account(id, &key).await.map_err(|err| {
-                    warn!(account_id = %id, "get_account: failed to unseal account: {:?}", err);
-                    err
-                })?;
+                let account =
+                    self.unseal_account(id, &key, &mut accounts_locked).await.map_err(|err| {
+                        warn!(account_id = %id, "get_account: failed to unseal account: {:?}", err);
+                        err
+                    })?;
                 info!(account_id = %id, "get_account: unsealed");
                 accounts_locked.insert(id, AccountState::Provisioned(account.clone()));
                 account
@@ -480,6 +474,7 @@ where
             )
             .await
             .map_err(|_| faccount::Error::Resource)?;
+
         info!(account_id = %id, "get_account successful");
         Ok(())
     }
@@ -488,7 +483,8 @@ where
         &self,
         id: AccountId,
         key: &Key,
-    ) -> Result<Arc<Account<DM::EncryptedBlockDevice, DM::Minfs>>, faccount::Error> {
+        accounts_locked: &mut futures::lock::MutexGuard<'_, HashMap<u64, AccountState<SM>>>,
+    ) -> Result<Arc<Account<SM>>, faccount::Error> {
         let account_ids = self.get_account_ids().await.map_err(|err| {
             warn!("unseal_account: couldn't list account IDs: {}", err);
             faccount::Error::NotFound
@@ -496,39 +492,32 @@ where
         if account_ids.into_iter().find(|i| *i == id).is_none() {
             return Err(faccount::Error::NotFound);
         }
-        let block_device = self
-            .storage_manager
-            .find_account_partition()
-            .await
-            .ok_or(faccount::Error::NotFound)
-            .map_err(|err| {
-                error!("unseal_account: couldn't find account partition");
-                err
-            })?;
-        let encrypted_block =
-            self.disk_manager().bind_to_encrypted_block(block_device).await.map_err(|err| {
-                error!(
-                    "unseal_account: couldn't bind zxcrypt driver to encrypted block device: {}",
-                    err
-                );
-                err
-            })?;
-        let block_device = match encrypted_block.unseal(&key).await {
-            Ok(block_device) => block_device,
-            Err(DiskError::FailedToUnsealZxcrypt(err)) => {
-                info!("unseal_account: failed to unseal zxcrypt (wrong password?): {}", err);
-                return Err(faccount::Error::FailedAuthentication);
+
+        match accounts_locked.get_mut(&id) {
+            Some(AccountState::Provisioned(_)) | None => {
+                // If there isn't yet an account here, create one.
+                //
+                // If there already is an account, we create a new
+                // StorageManager anyway. AccountManager doesn't currently
+                // support the notion of reusing the same Account across
+                // multiple lock/unlock cycles.
+                let storage_manager = (self.storage_manager_factory.lock().await)();
+                let () = storage_manager
+                    .unlock(key)
+                    .map_err(|err| {
+                        warn!(
+                            account_id = %id,
+                            "unseal_account: failed to unlock underlying storage manager: {:?}",
+                            err
+                        );
+                        faccount::Error::FailedAuthentication
+                    })
+                    .await?;
+                info!("unseal_account: unsealed global account");
+                Ok(Arc::new(Account::new(key.clone(), storage_manager)))
             }
-            Err(err) => {
-                warn!("unseal_account: failed to unseal zxcrypt: {}", err);
-                return Err(err.into());
-            }
-        };
-        let minfs = self.disk_manager().serve_minfs(block_device).await.map_err(|err| {
-            error!("unseal_account: couldn't serve minfs: {}", err);
-            err
-        })?;
-        Ok(Arc::new(Account::new(key.clone(), encrypted_block, minfs)))
+            Some(AccountState::Provisioning(_)) => Err(faccount::Error::Resource),
+        }
     }
 
     async fn provision_new_account(
@@ -588,16 +577,6 @@ where
             }
         }
 
-        let block = self
-            .storage_manager
-            .find_account_partition()
-            .await
-            .ok_or(faccount::Error::NotFound)
-            .map_err(|err| {
-                error!("provision_new_account: couldn't find account partition to provision");
-                err
-            })?;
-
         // Reserve the new account ID and mark it as being provisioned so other tasks don't try to
         // provision the same account or unseal it.
         let provisioning_lock = Arc::new(Mutex::new(()));
@@ -606,9 +585,6 @@ where
         // Acquire the provisioning lock. That way if we fail to provision, this lock will be
         // automatically released and another task can try to provision again.
         let _ = provisioning_lock.lock().await;
-
-        // Release the lock for all accounts, allowing other tasks to access unrelated accounts.
-        drop(accounts_locked);
 
         // Provision the new account.
         let (key, authenticator_metadata): (Key, AuthenticatorMetadata) = match enrollment_scheme {
@@ -643,39 +619,6 @@ where
         let metadata = AccountMetadata::new(name.to_string(), authenticator_metadata);
 
         let res: Result<AccountId, ProvisionError> = async {
-            let encrypted_block =
-                self.disk_manager().bind_to_encrypted_block(block).await.map_err(|err| {
-                    error!(
-                        "provision_new_account: couldn't bind zxcrypt driver to encrypted \
-                           block device: {}",
-                        err
-                    );
-                    err
-                })?;
-            encrypted_block.format(&key).await.map_err(|err| {
-                error!("provision_new_account: couldn't format encrypted block device: {}", err);
-                err
-            })?;
-            let unsealed_block = encrypted_block.unseal(&key).await.map_err(|err| {
-                error!("provision_new_account: couldn't unseal encrypted block device: {}", err);
-                err
-            })?;
-            self.disk_manager().format_minfs(&unsealed_block).await.map_err(|err| {
-                error!(
-                    "provision_new_account: couldn't format minfs on inner block device: {}",
-                    err
-                );
-                err
-            })?;
-            let minfs = self.disk_manager().serve_minfs(unsealed_block).await.map_err(|err| {
-                error!(
-                    "provision_new_account: couldn't serve minfs on inner unsealed block \
-                       device: {}",
-                    err
-                );
-                err
-            })?;
-
             // Save the new account metadata.  Drop the lock once done.
             let mut ams_locked = self.account_metadata_store.lock().await;
             ams_locked.save(&account_id, &metadata).await.map_err(|err| {
@@ -688,15 +631,30 @@ where
             drop(ams_locked);
 
             // Register the newly provisioned and unsealed account.
-            let mut accounts_locked = self.accounts.lock().await;
+
+            let storage_manager = (self.storage_manager_factory.lock().await)();
+            let () = storage_manager
+                .provision(&key)
+                .map_err(|err| {
+                    error!(
+                        "unseal_account: failed to unlock underlying storage manager: {:?}",
+                        err
+                    );
+                    err
+                })
+                .await?;
+
             accounts_locked.insert(
                 account_id,
-                AccountState::Provisioned(Arc::new(Account::new(key, encrypted_block, minfs))),
+                AccountState::Provisioned(Arc::new(Account::new(key, storage_manager))),
             );
 
             Ok(account_id)
         }
         .await;
+
+        // Release the lock for all accounts, allowing other tasks to access unrelated accounts.
+        drop(accounts_locked);
 
         let id = res?;
         info!("provision_new_account: successfully provisioned new account {}", id);
@@ -739,7 +697,7 @@ where
                 // The account had no previous state, so we don't need to lock it.
             }
         }
-        accounts_locked.remove(&id);
+        let account = accounts_locked.remove(&id);
 
         // step 2: remove the metadata from the account metadata store
         // By now we have guaranteed that the Account is either explicitly locked, or implicitly
@@ -785,30 +743,44 @@ where
         // The metadata removal is sufficient to make the volume no longer unsealable, so we
         // should not return a failure if we make it to here.  We should block though, because if
         // we return before we've shredded the volume, a client could race with itself.
-        match self.storage_manager.find_account_partition().await {
-            Some(block_device) => {
-                match self.disk_manager().bind_to_encrypted_block(block_device).await {
-                    Ok(encrypted_block) => {
-                        let _ = encrypted_block.shred().await.map_err(|err| {
-                            warn!(
-                                "remove_account: couldn't shred encrypted block device: {} \
-                                    (ignored)",
-                                err
-                            );
-                        });
-                    }
-                    Err(err) => {
-                        // Ignore the failure.
-                        warn!(
-                            "remove_account: couldn't bind zxcrypt driver to encrypted block \
-                            device: {} (ignored)",
+        match account {
+            None => {
+                // Create a storage manager.
+                let storage_manager = (self.storage_manager_factory.lock().await)();
+                // The storage manager is not provisioned, but we can call
+                // StorageManager::destroy() on it anyway. Since only one
+                // account is supported at the moment, this will access the
+                // underlying account partition (if there is one) and then we
+                // can shred it.
+                let () = storage_manager
+                    .destroy()
+                    .map_err(|err| {
+                        error!(
+                            account_id = %id,
+                            "remove_account: error destroying storage for account {:?}",
                             err
                         );
+                        faccount::Error::Resource
+                    })
+                    .await?;
+            }
+            Some(AccountState::Provisioning(_)) => {
+                warn!("remove_account: couldn't find account partition, carrying on anyway");
+            }
+            Some(AccountState::Provisioned(account)) => {
+                match account.storage_manager().destroy().await {
+                    Ok(()) => {
+                        info!("remove_account: removed global account");
+                    }
+                    Err(err) => {
+                        warn!(
+                            account_id = %id,
+                            "remove_account: error destroying storage for account {:?}",
+                            err
+                        );
+                        return Err(faccount::Error::Resource);
                     }
                 }
-            }
-            None => {
-                warn!("remove_account: couldn't find account partition, carrying on anyway");
             }
         }
 
@@ -968,7 +940,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
@@ -988,7 +960,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, vec![GLOBAL_ACCOUNT_ID]);
@@ -1008,7 +980,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let account_metadata =
             account_manager.get_account_metadata(GLOBAL_ACCOUNT_ID).await.unwrap();
@@ -1036,7 +1008,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let err = account_manager.get_account_metadata(UNSUPPORTED_ACCOUNT_ID).await.unwrap_err();
         assert_eq!(err, faccount::Error::NotFound);
@@ -1053,7 +1025,7 @@ mod test {
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             MockCredManagerProvider::new(),
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
@@ -1078,7 +1050,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
@@ -1102,7 +1074,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
@@ -1125,7 +1097,7 @@ mod test {
             SCRYPT_ONLY_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
@@ -1153,7 +1125,7 @@ mod test {
             PINWEAVER_ONLY_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (_, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
 
@@ -1193,7 +1165,7 @@ mod test {
             PINWEAVER_ONLY_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
@@ -1228,7 +1200,7 @@ mod test {
             PINWEAVER_ONLY_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (_, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         let res = account_manager.get_account(GLOBAL_ACCOUNT_ID, WRONG_PASSWORD, server).await;
@@ -1249,7 +1221,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (client1, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
@@ -1287,7 +1259,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
@@ -1327,7 +1299,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
@@ -1358,7 +1330,7 @@ mod test {
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         let metadata = faccount::AccountMetadata { name: None, ..faccount::AccountMetadata::EMPTY };
         assert_eq!(
@@ -1379,7 +1351,7 @@ mod test {
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         assert_eq!(
             account_manager
@@ -1402,7 +1374,7 @@ mod test {
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         assert_eq!(
             account_manager
@@ -1426,7 +1398,7 @@ mod test {
             SCRYPT_ONLY_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         assert_eq!(
             account_manager.provision_new_account(&TEST_FACCOUNT_METADATA, "").await,
@@ -1454,7 +1426,7 @@ mod test {
             SCRYPT_ONLY_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         assert_eq!(
             account_manager
@@ -1476,7 +1448,7 @@ mod test {
             PINWEAVER_ONLY_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         assert_eq!(
             account_manager
@@ -1504,7 +1476,7 @@ mod test {
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         assert_eq!(
             account_manager
@@ -1538,7 +1510,7 @@ mod test {
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         assert_eq!(
             account_manager
@@ -1572,13 +1544,13 @@ mod test {
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
                 .await,
-            Err(faccount::Error::Resource)
+            Err(faccount::Error::Internal)
         );
     }
 
@@ -1594,7 +1566,7 @@ mod test {
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
         assert_eq!(
             account_manager
@@ -1653,7 +1625,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
 
         let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
@@ -1694,18 +1666,22 @@ mod test {
     #[fuchsia::test]
     async fn test_recover_from_failed_provisioning() {
         let cred_manager_provider = MockCredManagerProvider::new();
-        let storage_manager_factory = || {
-            let scope = ExecutionScope::new();
-            let mut one_time_failure =
-                Some(DiskError::MinfsServeError(anyhow!("Fake serve error")));
+        // let a = Arc::new(std::sync::Mutex::new(1_u32));
+        let one_time_failure = Arc::new(std::sync::Mutex::new(Some(DiskError::MinfsServeError(
+            anyhow!("Fake serve error"),
+        ))));
+        let storage_manager_factory = move || {
+            let one_time_failure = Arc::clone(&one_time_failure);
             let disk_manager = MockDiskManager::new()
                 .with_partition(make_unformatted_account_partition())
                 .with_serve_minfs(move || {
-                    if let Some(err) = one_time_failure.take() {
+                    let one_time_failure = Arc::clone(&one_time_failure);
+                    let result = if let Some(err) = (*one_time_failure.lock().unwrap()).take() {
                         Err(err)
                     } else {
-                        Ok(MockMinfs::simple(scope.clone()))
-                    }
+                        Ok(MockMinfs::simple(ExecutionScope::new()))
+                    };
+                    result
                 });
             make_storage_manager(disk_manager)
         };
@@ -1713,10 +1689,10 @@ mod test {
             DEFAULT_CONFIG,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
 
-        // Expect a Resource failure.
+        // Expect an Resource failure.
         assert_eq!(
             account_manager
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
@@ -1747,7 +1723,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
 
         let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
@@ -1797,7 +1773,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
 
         // scrypt
@@ -1829,7 +1805,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
 
         let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
@@ -1855,7 +1831,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
 
         let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
@@ -1906,7 +1882,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
 
         let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
@@ -1934,7 +1910,7 @@ mod test {
             DEFAULT_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
 
         let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");
@@ -1961,7 +1937,7 @@ mod test {
             PINWEAVER_ONLY_CONFIG,
             account_metadata_store,
             cred_manager_provider,
-            storage_manager_factory(),
+            storage_manager_factory,
         );
 
         let account_ids_before = account_manager.get_account_ids().await.expect("get account ids");

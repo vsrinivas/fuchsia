@@ -71,6 +71,15 @@ pub enum StateTransitionError {
 }
 
 impl<T> State<T> {
+    /// Returns a reference to the held internals, or None if we're in a
+    /// non-AVAILABLE state.
+    pub fn get_internals(&self) -> Option<&T> {
+        match self {
+            Self::Available { internals } => Some(&internals),
+            Self::Locked | Self::Uninitialized => None,
+        }
+    }
+
     /// Attempts a transition from AVAILABLE to LOCKED.
     ///
     /// Upon successful transition, returns Ok(internals) with the contents of
@@ -158,6 +167,24 @@ impl<T> State<T> {
 mod test {
     use super::*;
     use assert_matches::assert_matches;
+
+    #[test]
+    fn test_get_internals_from_available() {
+        let state = State::Available { internals: 123 };
+        assert_matches!(state.get_internals(), Some(123));
+    }
+
+    #[test]
+    fn test_get_internals_from_locked() {
+        let state: State<()> = State::Locked {};
+        assert_matches!(state.get_internals(), None);
+    }
+
+    #[test]
+    fn test_get_internals_from_uninitialized() {
+        let state: State<()> = State::Uninitialized {};
+        assert_matches!(state.get_internals(), None);
+    }
 
     #[test]
     fn test_try_lock_from_available() {

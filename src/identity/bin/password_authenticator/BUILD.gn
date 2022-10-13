@@ -19,7 +19,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.identity.credential:fuchsia.identity.credential_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
-    "//src/identity/lib/identity_common",
+    "//src/identity/lib/account_common",
     "//src/identity/lib/identity_common",
     "//src/identity/lib/storage_manager",
     "//src/lib/async-utils",

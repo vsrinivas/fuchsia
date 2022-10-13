@@ -26,11 +26,6 @@ impl CallCounter {
         Self(Arc::new(std::sync::Mutex::new(initial)))
     }
 
-    /// Read the count in the counter.
-    pub fn count(&self) -> usize {
-        *self.0.lock().unwrap()
-    }
-
     /// Increment the value in the counter by one.
     pub fn increment(&self) {
         *self.0.lock().unwrap() += 1
