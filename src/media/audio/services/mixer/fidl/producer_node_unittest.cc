@@ -170,13 +170,11 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
   auto buffer =
       MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
 
-  auto ring_buffer = RingBuffer::Create({
-      .format = kFormat,
-      .reference_clock = UnreadableClock(clock),
-      .buffer = buffer,
-      .producer_frames = kRingBufferFrames / 2,
-      .consumer_frames = kRingBufferFrames / 2,
-  });
+  auto ring_buffer = std::make_shared<RingBuffer>(
+      kFormat, UnreadableClock(clock),
+      std::make_shared<RingBuffer::Buffer>(buffer,
+                                           /*producer_frames=*/kRingBufferFrames / 2,
+                                           /*consumer_frames=*/kRingBufferFrames / 2));
   auto producer = ProducerNode::Create({
       .pipeline_direction = PipelineDirection::kInput,
       .format = kFormat,

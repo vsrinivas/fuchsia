@@ -330,9 +330,10 @@ class PipelineStage {
   // Denotes whether the stage stream is currently _locked_ or not.
   bool is_locked_ = false;
 
-  // This is accessed with atomic instructions (std::atomic_load and std::atomic_store) so that any
-  // thread can call thread()->checker(). This can be a std::atomic<std::shared_ptr<PipelineThread>>
-  // after our build supports C++20.
+  // This is atomic so that any thread can call thread()->checker().
+  //
+  // TODO(fxbug.dev/111798): This must be accessed with atomic instructions (std::atomic_load and
+  // std::atomic_store). This can be std::atomic<std::shared_ptr<>> after C++20 is available.
   std::shared_ptr<PipelineThread> thread_;
 
   // Current translation from frame numbers to presentation timestamps.

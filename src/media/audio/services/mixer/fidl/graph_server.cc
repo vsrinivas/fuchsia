@@ -207,15 +207,14 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
   }
 
   return fpromise::ok(RingBufferInfo{
-      .ring_buffer = RingBuffer::Create({
-          .format = format,
-          .reference_clock = UnreadableClock(clock_result.value()),
-          .buffer = std::move(mapped_buffer),
-          .producer_frames =
+      .ring_buffer = std::make_shared<RingBuffer>(
+          format, UnreadableClock(clock_result.value()),
+          std::make_shared<RingBuffer::Buffer>(
+              std::move(mapped_buffer),
+              /*producer_frames=*/
               static_cast<int64_t>(ring_buffer.producer_bytes()) / format.bytes_per_frame(),
-          .consumer_frames =
-              static_cast<int64_t>(ring_buffer.consumer_bytes()) / format.bytes_per_frame(),
-      }),
+              /*consumer_frames=*/
+              static_cast<int64_t>(ring_buffer.consumer_bytes()) / format.bytes_per_frame())),
       .format = format,
       .reference_clock = clock_result.value(),
   });

@@ -478,13 +478,11 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
       : pending_start_stop_command_(std::make_shared<ProducerStage::PendingStartStopCommand>()),
         buffer_(
             MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true)),
-        ring_buffer_(RingBuffer::Create({
-            .format = kFormat,
-            .reference_clock = DefaultUnreadableClock(),
-            .buffer = buffer_,
-            .producer_frames = kRingBufferFrames / 2,
-            .consumer_frames = kRingBufferFrames / 2,
-        })),
+        ring_buffer_(std::make_shared<RingBuffer>(
+            kFormat, DefaultUnreadableClock(),
+            std::make_shared<RingBuffer::Buffer>(buffer_,
+                                                 /*.producer_frames=*/kRingBufferFrames / 2,
+                                                 /*.consumer_frames=*/kRingBufferFrames / 2))),
         producer_stage_({
             .format = kFormat,
             .reference_clock = DefaultUnreadableClock(),

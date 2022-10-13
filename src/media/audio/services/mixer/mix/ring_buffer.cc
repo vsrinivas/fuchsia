@@ -6,8 +6,10 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
+#include <zircon/compiler.h>
 
-#include <algorithm>
+#include <atomic>
+#include <memory>
 #include <optional>
 
 #include "src/media/audio/lib/format2/fixed.h"
@@ -19,35 +21,31 @@ namespace media_audio {
 
 using WritablePacketView = RingBuffer::WritablePacketView;
 
-// static
-std::shared_ptr<RingBuffer> RingBuffer::Create(Args args) {
-  struct WithPublicCtor : public RingBuffer {
-   public:
-    WithPublicCtor(Args args) : RingBuffer(std::move(args)) {}
-  };
-  return std::make_shared<WithPublicCtor>(std::move(args));
+WritablePacketView::~WritablePacketView() {
+  zx_cache_flush(payload(), length() * format().bytes_per_frame(), ZX_CACHE_FLUSH_DATA);
 }
 
-RingBuffer::RingBuffer(Args args)
-    : format_(args.format),
-      reference_clock_(std::move(args.reference_clock)),
-      buffer_(std::move(args.buffer)),
-      total_frames_(buffer_->content_size() / format_.bytes_per_frame()),
-      producer_frames_(args.producer_frames),
-      consumer_frames_(args.consumer_frames) {
+RingBuffer::RingBuffer(const Format& format, UnreadableClock reference_clock,
+                       std::shared_ptr<Buffer> buffer)
+    : format_(format), reference_clock_(std::move(reference_clock)), buffer_(std::move(buffer)) {
+  // std::atomic accesses not necessary during the constructor.
   FX_CHECK(buffer_);
-  FX_CHECK(total_frames_ >= producer_frames_ + consumer_frames_)
-      << "total_frames=" << total_frames_ << ", producer_frames=" << producer_frames_
-      << ", consumer_frames=" << consumer_frames_;
-  FX_CHECK(producer_frames_ > 0);
-  FX_CHECK(consumer_frames_ > 0);
+  auto total_frames = TotalFramesForBuffer(*buffer_->buffer);
+  FX_CHECK(total_frames >= buffer_->producer_frames + buffer_->consumer_frames)
+      << "total_frames=" << total_frames << ", producer_frames=" << buffer_->producer_frames
+      << ", consumer_frames=" << buffer_->consumer_frames;
+  FX_CHECK(buffer_->producer_frames > 0);
+  FX_CHECK(buffer_->consumer_frames > 0);
 }
 
 PacketView RingBuffer::Read(const int64_t start_frame, const int64_t frame_count) {
-  FX_CHECK(frame_count <= producer_frames_) << "producer tried to access " << frame_count
-                                            << " frames, more than limit of " << producer_frames_;
+  auto buffer = std::atomic_load(&buffer_);
 
-  auto packet = PacketForRange(start_frame, frame_count);
+  FX_CHECK(frame_count <= buffer->producer_frames)
+      << "producer tried to access " << frame_count << " frames, more than limit of "
+      << buffer->producer_frames;
+
+  auto packet = PacketForRange(*buffer->buffer, start_frame, frame_count);
 
   // Ring buffers are synchronized only by time, which means there may not be a synchronization
   // happens-before edge connecting the last writer with the current reader, which means we must
@@ -66,29 +64,66 @@ PacketView RingBuffer::Read(const int64_t start_frame, const int64_t frame_count
 
 WritablePacketView RingBuffer::PrepareToWrite(const int64_t start_frame,
                                               const int64_t frame_count) {
-  FX_CHECK(frame_count <= consumer_frames_) << "consumer tried to access " << frame_count
-                                            << " frames, more than limit of " << consumer_frames_;
+  auto buffer = std::atomic_load(&buffer_);
+
+  // Switch to the pending buffer, if requested.
+  if (auto pending = std::atomic_exchange(&pending_buffer_, std::shared_ptr<Buffer>(nullptr));
+      unlikely(pending)) {
+    int64_t old_total_frames = TotalFramesForBuffer(*buffer->buffer);
+    int64_t new_total_frames = TotalFramesForBuffer(*pending->buffer);
+
+    // Copy the old buffer into the pending buffer.
+    int64_t start = start_frame - std::min(old_total_frames, new_total_frames);
+    int64_t end = start_frame;
+
+    while (end > start) {
+      auto old_packet = PacketForRange(*buffer->buffer, start, end - start);
+      auto new_packet = PacketForRange(*pending->buffer, start, end - start);
+
+      const int64_t frames = std::min(old_packet.length(), new_packet.length());
+      std::memmove(new_packet.payload(), old_packet.payload(), frames * format_.bytes_per_frame());
+      start += frames;
+    }
+
+    // Swap in the new buffer. At this point, the new buffer is accessible to Read.
+    std::atomic_store(&buffer_, pending);
+    buffer = std::move(pending);
+  }
+
+  FX_CHECK(frame_count <= buffer->consumer_frames)
+      << "consumer tried to access " << frame_count << " frames, more than limit of "
+      << buffer->consumer_frames;
 
   // Ring buffers are synchronized only by time, which means there may not be a synchronization
   // happens-before edge connecting the last writer with the current reader. When the write is
   // complete, we must flush our cache to ensure we have published the latest data.
-  return WritablePacketView(PacketForRange(start_frame, frame_count));
+  return WritablePacketView(PacketForRange(*buffer->buffer, start_frame, frame_count));
 }
 
-PacketView RingBuffer::PacketForRange(const int64_t start_frame, const int64_t frame_count) {
+void RingBuffer::SetBufferAsync(std::shared_ptr<Buffer> new_buffer) {
+  std::atomic_store(&pending_buffer_, std::move(new_buffer));
+}
+
+int64_t RingBuffer::TotalFramesForBuffer(const MemoryMappedBuffer& buffer) const {
+  return buffer.content_size() / format_.bytes_per_frame();
+}
+
+PacketView RingBuffer::PacketForRange(const MemoryMappedBuffer& buffer, const int64_t start_frame,
+                                      const int64_t frame_count) {
   const int64_t end_frame = start_frame + frame_count;
+  const int64_t total_frames = TotalFramesForBuffer(buffer);
 
   // Wrap the absolute frames around the ring to calculate the "relative" frames to be returned.
-  int64_t relative_start_frame = start_frame % total_frames_;
+  int64_t relative_start_frame = start_frame % total_frames;
   if (relative_start_frame < 0) {
-    relative_start_frame += total_frames_;
+    relative_start_frame += total_frames;
   }
-  int64_t relative_end_frame = end_frame % total_frames_;
+  int64_t relative_end_frame = end_frame % total_frames;
   if (relative_end_frame < 0) {
-    relative_end_frame += total_frames_;
+    relative_end_frame += total_frames;
   }
   if (relative_end_frame <= relative_start_frame) {
-    relative_end_frame = total_frames_;
+    relative_end_frame = total_frames;
   }
 
   return PacketView({
@@ -96,12 +131,8 @@ PacketView RingBuffer::PacketForRange(const int64_t start_frame, const int64_t f
       .start = Fixed(start_frame),
       .length = relative_end_frame - relative_start_frame,
       .payload =
-          buffer_->offset(static_cast<size_t>(relative_start_frame * format_.bytes_per_frame())),
+          buffer.offset(static_cast<size_t>(relative_start_frame * format_.bytes_per_frame())),
   });
-}
-
-RingBuffer::WritablePacketView::~WritablePacketView() {
-  zx_cache_flush(payload(), length() * format().bytes_per_frame(), ZX_CACHE_FLUSH_DATA);
 }
 
 }  // namespace media_audio
