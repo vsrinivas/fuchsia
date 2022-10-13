@@ -117,18 +117,8 @@ type Foo = struct {
 }
 
 TEST(UsingTests, BadUnknownUsing) {
-  TestLibrary library(R"FIDL(
-library example;
-
-using dependent; // unknown using.
-
-type Foo = struct {
-    dep dependent.Bar;
-};
-
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownLibrary);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
+  TestLibrary library;
+  library.AddFile("bad/fi-0046.test.fidl");
 }
 
 TEST(UsingTests, BadUsingAliasRefThroughFqn) {

@@ -103,7 +103,7 @@ constexpr UndocumentedErrorDef<44, std::vector<std::string_view>, std::string_vi
         "import of library '{}' under alias '{}' conflicts with another library import");
 constexpr UndocumentedErrorDef<45, const raw::AttributeList *>
     ErrAttributesNotAllowedOnLibraryImport("no attributes allowed on library import, found: {}");
-constexpr UndocumentedErrorDef<46, std::vector<std::string_view>> ErrUnknownLibrary(
+constexpr ErrorDef<46, std::vector<std::string_view>> ErrUnknownLibrary(
     "Could not find library named {}. Did you include its sources with --files?");
 constexpr UndocumentedErrorDef<47, SourceSpan> ErrProtocolComposedMultipleTimes(
     "protocol composed multiple times; previous was at {}");
