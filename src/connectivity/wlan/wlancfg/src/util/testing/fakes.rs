@@ -191,8 +191,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
             .lock()
             .await
             .insert(network_id, vec![config])
-            .map(|mut v| v.pop())
-            .flatten());
+            .and_then(|mut v| v.pop()));
     }
 
     async fn record_connect_result(
@@ -253,8 +252,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
             .await
             .values()
             .into_iter()
-            .map(|cfgs| cfgs.clone())
-            .flatten()
+            .flat_map(|cfgs| cfgs.clone())
             .collect()
     }
 

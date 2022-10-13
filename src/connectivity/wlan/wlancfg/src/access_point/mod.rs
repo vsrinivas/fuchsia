@@ -54,7 +54,7 @@ impl AccessPoint {
         self.update_sender
             .clone()
             .unbounded_send(message)
-            .or_else(|e| Err(format_err!("failed to send state update: {}", e)))
+            .map_err(|e| format_err!("failed to send state update: {}", e))
     }
 
     /// Serves the AccessPointProvider protocol.  Only one caller is allowed to interact with an
@@ -104,10 +104,7 @@ impl AccessPoint {
                         match result.result {
                             Ok(()) => {}
                             Err(_) => {
-                                let ssid_as_str = match std::str::from_utf8(&result.config.id.ssid) {
-                                    Ok(ssid) => ssid,
-                                    Err(_) => "",
-                                };
+                                let ssid_as_str = std::str::from_utf8(&result.config.id.ssid).unwrap_or("");
                                 error!("AP {} did not start", ssid_as_str);
                             }
                         };

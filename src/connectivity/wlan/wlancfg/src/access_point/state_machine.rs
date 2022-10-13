@@ -134,7 +134,7 @@ impl ApStateTrackerInner {
         self.sender
             .clone()
             .unbounded_send(NotifyListeners(updates))
-            .or_else(|e| Err(format_err!("failed to send state update: {}", e)))
+            .map_err(|e| format_err!("failed to send state update: {}", e))
     }
 }
 

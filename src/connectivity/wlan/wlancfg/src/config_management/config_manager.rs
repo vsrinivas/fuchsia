@@ -558,8 +558,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
             .await
             .values()
             .into_iter()
-            .map(|cfgs| cfgs.clone())
-            .flatten()
+            .flat_map(|cfgs| cfgs.clone())
             .collect()
     }
 
@@ -573,8 +572,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
             .lock()
             .await
             .get(id)
-            .map(|configs| configs.iter().find(|config| &config.credential == credential))
-            .flatten()
+            .and_then(|configs| configs.iter().find(|config| &config.credential == credential))
             .map(|config| config.perf_stats.past_connections.get_list_for_bss(bssid))
             .unwrap_or_default()
     }

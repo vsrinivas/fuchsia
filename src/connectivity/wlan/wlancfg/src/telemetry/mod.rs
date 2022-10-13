@@ -2425,7 +2425,7 @@ impl StatsLogger {
             });
         }
 
-        if let Some(cap) = latest_ap_state.ext_cap().map(|cap| cap.ext_caps_octet_3).flatten() {
+        if let Some(cap) = latest_ap_state.ext_cap().and_then(|cap| cap.ext_caps_octet_3) {
             if cap.bss_transition() {
                 metric_events.push(MetricEvent {
                     metric_id: metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_BSS_TRANSITION_MANAGEMENT_METRIC_ID,

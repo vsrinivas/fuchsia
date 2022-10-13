@@ -581,7 +581,8 @@ mod tests {
         }
 
         async fn record_idle_client(&mut self, iface_id: u16) -> Result<(), Error> {
-            Ok(self.disconnected_ifaces.push(iface_id))
+            self.disconnected_ifaces.push(iface_id);
+            Ok(())
         }
 
         async fn has_idle_client(&mut self) -> Result<bool, Error> {

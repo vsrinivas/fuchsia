@@ -1317,7 +1317,8 @@ pub(crate) async fn serve_iface_manager_requests(
                         }
                     }
                     IfaceManagerRequest::RecordIdleIface(RecordIdleIfaceRequest { iface_id, responder } ) => {
-                        if responder.send(iface_manager.record_idle_client(iface_id)).is_err() {
+                        iface_manager.record_idle_client(iface_id);
+                        if responder.send(()).is_err() {
                             error!("could not respond to RecordIdleIfaceRequest");
                         }
                     }
@@ -1335,7 +1336,8 @@ pub(crate) async fn serve_iface_manager_requests(
                         }
                     }
                     IfaceManagerRequest::RemoveIface(RemoveIfaceRequest { iface_id, responder }) => {
-                        if responder.send(iface_manager.handle_removed_iface(iface_id).await).is_err() {
+                        iface_manager.handle_removed_iface(iface_id).await;
+                        if responder.send(()).is_err() {
                             error!("could not respond to RemoveIfaceRequest");
                         }
                     }
@@ -1396,7 +1398,8 @@ pub(crate) async fn serve_iface_manager_requests(
                         operation_futures.push(regulatory_fut);
                     }
                     IfaceManagerRequest::ReportDefect(ReportDefectRequest { defect, responder }) => {
-                        if responder.send(iface_manager.record_defect(defect).await).is_err() {
+                        iface_manager.record_defect(defect).await;
+                        if responder.send(()).is_err() {
                             error!("could not respond to RecordDefectRequest");
                         }
                     }

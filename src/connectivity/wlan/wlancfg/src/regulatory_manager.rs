@@ -225,7 +225,7 @@ mod tests {
         pin_mut!(iface_manager_fut);
         match context.executor.run_until_stalled(&mut iface_manager_fut) {
             Poll::Ready(iface_manager) => {
-                assert_eq!(iface_manager.country_code, Some(['U' as u8, 'S' as u8]))
+                assert_eq!(iface_manager.country_code, Some([b'U', b'S']))
             }
             Poll::Pending => panic!("Expected to be able to lock the IfaceManager."),
         };
@@ -274,9 +274,7 @@ mod tests {
             let iface_manager_fut = context.iface_manager.lock();
             pin_mut!(iface_manager_fut);
             match context.executor.run_until_stalled(&mut iface_manager_fut) {
-                Poll::Ready(mut iface_manager) => {
-                    iface_manager.country_code = Some(['U' as u8, 'S' as u8])
-                }
+                Poll::Ready(mut iface_manager) => iface_manager.country_code = Some([b'U', b'S']),
                 Poll::Pending => panic!("Expected to be able to lock the IfaceManager."),
             }
         }
@@ -364,7 +362,7 @@ mod tests {
             pin_mut!(iface_manager_fut);
             match context.executor.run_until_stalled(&mut iface_manager_fut) {
                 Poll::Ready(iface_manager) => {
-                    assert_eq!(iface_manager.country_code, Some(['U' as u8, 'S' as u8]))
+                    assert_eq!(iface_manager.country_code, Some([b'U', b'S']))
                 }
                 Poll::Pending => panic!("Expected to be able to lock the IfaceManager."),
             }
@@ -393,7 +391,7 @@ mod tests {
             pin_mut!(iface_manager_fut);
             match context.executor.run_until_stalled(&mut iface_manager_fut) {
                 Poll::Ready(iface_manager) => {
-                    assert_eq!(iface_manager.country_code, Some(['C' as u8, 'A' as u8]))
+                    assert_eq!(iface_manager.country_code, Some([b'C', b'A']))
                 }
                 Poll::Pending => panic!("Expected to be able to lock the IfaceManager."),
             };
