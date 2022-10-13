@@ -1,0 +1,10 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.good.fi0071;
+
+type MyEnum = strict enum : int8 {
+    UNKNOWN = 0;
+    FOO = 1;
+    MAX = 127;
+};

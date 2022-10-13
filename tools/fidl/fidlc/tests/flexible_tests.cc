@@ -12,14 +12,8 @@
 namespace {
 
 TEST(FlexibleTests, BadEnumMultipleUnknown) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = flexible enum : uint8 {
-  @unknown ZERO = 0;
-  @unknown ONE = 1;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0072.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleEnumMembers);
 }
 

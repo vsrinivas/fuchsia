@@ -170,9 +170,9 @@ constexpr UndocumentedErrorDef<69, const flat::Type *> ErrBitsTypeMustBeUnsigned
     "bits may only be of unsigned integral primitive type, found {}");
 constexpr UndocumentedErrorDef<70, const flat::Type *> ErrEnumTypeMustBeIntegralPrimitive(
     "enums may only be of integral primitive type, found {}");
-constexpr UndocumentedErrorDef<71> ErrUnknownAttributeOnStrictEnumMember(
+constexpr ErrorDef<71> ErrUnknownAttributeOnStrictEnumMember(
     "the @unknown attribute can be only be used on flexible enum members.");
-constexpr UndocumentedErrorDef<72> ErrUnknownAttributeOnMultipleEnumMembers(
+constexpr ErrorDef<72> ErrUnknownAttributeOnMultipleEnumMembers(
     "the @unknown attribute can be only applied to one enum member.");
 constexpr UndocumentedErrorDef<73> ErrComposingNonProtocol("This declaration is not a protocol");
 constexpr UndocumentedErrorDef<74, flat::Decl::Kind> ErrInvalidParameterListKind(

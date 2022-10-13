@@ -568,13 +568,8 @@ type B = flexible bits : uint32 {
 }
 
 TEST(AttributesTests, BadUnknownInvalidOnStrictEnumMember) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-type E = strict enum : uint32 {
-  @unknown A = 1;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0071.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnStrictEnumMember);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
 }
