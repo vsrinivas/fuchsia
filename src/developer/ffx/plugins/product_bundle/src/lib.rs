@@ -235,6 +235,7 @@ where
     }
     let mut entries = product_bundle_urls().await.context("list pbms")?;
     entries.sort();
+    entries.reverse();
     let mut table = structured_ui::TableRows::builder();
     for entry in entries {
         let ready = if is_pb_ready(&entry).await? { "*" } else { " " };
