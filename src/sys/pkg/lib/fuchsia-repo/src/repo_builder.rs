@@ -242,12 +242,33 @@ where
 
         // Stage the targets metadata. If we're forcing a metadata refresh, force a new targets,
         // snapshot, and timestamp, even if nothing changed in the contents.
-        if self.refresh_metadata || self.refresh_non_root_metadata {
-            repo_builder.stage_targets()?.stage_snapshot()?.stage_timestamp()?.commit().await
+        let repo_builder = if self.refresh_metadata || self.refresh_non_root_metadata {
+            repo_builder.stage_targets()?
         } else {
-            repo_builder.commit().await
-        }
-        .context("publishing metadata")?;
+            repo_builder.stage_targets_if_necessary()?
+        };
+
+        let repo_builder = repo_builder
+            .snapshot_includes_length(true)
+            .snapshot_includes_hashes(&[HashAlgorithm::Sha512]);
+
+        let repo_builder = if self.refresh_metadata || self.refresh_non_root_metadata {
+            repo_builder.stage_snapshot()?
+        } else {
+            repo_builder.stage_snapshot_if_necessary()?
+        };
+
+        let repo_builder = repo_builder
+            .timestamp_includes_length(true)
+            .timestamp_includes_hashes(&[HashAlgorithm::Sha512]);
+
+        let repo_builder = if self.refresh_metadata || self.refresh_non_root_metadata {
+            repo_builder.stage_timestamp()?
+        } else {
+            repo_builder.stage_timestamp_if_necessary()?
+        };
+
+        repo_builder.commit().await.context("publishing metadata")?;
 
         // Stage the blobs.
         for (blob_hash, blob) in staged_blobs {
@@ -375,6 +396,17 @@ mod tests {
         assert_eq!(repo_client.database().trusted_targets().map(|m| m.version()), Some(2));
         assert_eq!(repo_client.database().trusted_snapshot().map(|m| m.version()), Some(2));
         assert_eq!(repo_client.database().trusted_timestamp().map(|m| m.version()), Some(2));
+
+        // Make sure the timestamp and snapshot metadata was generated with the snapshot and targets
+        // length and hashes.
+        let snapshot_description = repo_client.database().trusted_timestamp().unwrap().snapshot();
+        assert!(snapshot_description.length().is_some());
+        assert!(!snapshot_description.hashes().is_empty());
+
+        let trusted_snapshot = repo_client.database().trusted_snapshot().unwrap();
+        let targets_description = trusted_snapshot.meta().get(&MetadataPath::targets()).unwrap();
+        assert!(targets_description.length().is_some());
+        assert!(!targets_description.hashes().is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
