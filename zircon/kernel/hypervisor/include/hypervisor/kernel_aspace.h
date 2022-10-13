@@ -8,14 +8,14 @@
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_KERNEL_ASPACE_H_
 
 #include <align.h>
-#include <zircon/types.h>
+#include <sys/types.h>
 
 #include <arch/kernel_aspace.h>
 
-constexpr zx_vaddr_t kGuestGlobalAspaceBase = PAGE_ALIGN((USER_ASPACE_BASE + USER_ASPACE_SIZE) / 2);
-constexpr size_t kGuestGlobalAspaceSize = 512ul << 30;
+constexpr vaddr_t kGuestSharedAspaceBase = PAGE_ALIGN((USER_ASPACE_BASE + USER_ASPACE_SIZE) / 2);
+constexpr size_t kGuestSharedAspaceSize = 512ul << 30;
 
-const zx_vaddr_t kGuestUserAspaceBase = USER_ASPACE_BASE;
-const size_t kGuestUserAspaceSize = kGuestGlobalAspaceBase - USER_ASPACE_BASE;
+const vaddr_t kGuestUserAspaceBase = USER_ASPACE_BASE;
+const size_t kGuestUserAspaceSize = kGuestSharedAspaceBase - USER_ASPACE_BASE;
 
 #endif  // ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_KERNEL_ASPACE_H_
