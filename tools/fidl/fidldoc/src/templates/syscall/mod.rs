@@ -4,6 +4,7 @@
 
 use anyhow::{Context as _, Error};
 use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError};
+use heck::SnakeCase;
 use serde_json::{json, Value};
 use std::fs::File;
 use std::io::Write;
@@ -150,6 +151,7 @@ impl<'a> SyscallTemplate<'a> {
             syscall_name.push_str("_");
         }
         syscall_name.push_str(method_name);
+        syscall_name = syscall_name.as_str().to_snake_case().to_lowercase();
 
         info!("Rendering {}", syscall_name);
         let output_path = self.output_path.join(syscall_name.clone() + &".md".to_string());

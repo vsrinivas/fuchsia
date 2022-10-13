@@ -23,7 +23,8 @@ overwritten with non-bootable ZBI containing a sequence of entries that should
 be appended to a ZBI before passing that image to [`zx_system_mexec()`]; the
 tail of the buffer is left untouched.
 
-*resource* must be of type **ZX_RSRC_KIND_ROOT**.
+*resource* must be of type **ZX_RSRC_KIND_SYSTEM** with base
+**ZX_RSRC_SYSTEM_MEXEC_BASE**.
 
 *buffer* and *buffer_size* must point to a buffer that is no longer than 16KiB.
 
@@ -33,7 +34,8 @@ the function returns **ZX_ERR_NOT_SUPPORTED**.
 
 ## Rights
 
-*resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+*resource* must have resource kind **ZX_RSRC_KIND_SYSTEM** with base
+**ZX_RSRC_SYSTEM_MEXEC_BASE**.
 
 ## Return value
 

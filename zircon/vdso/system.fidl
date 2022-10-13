@@ -127,7 +127,7 @@ protocol System {
     /// The returned object is a simple pair of C string pointer and length.  The
     /// string is guaranteed to be NUL-terminated and to be valid UTF-8.  The length
     /// does not include the NUL terminator.  In C++ the return value can be coerced
-    /// implicitly to `std::string_view`, `std::u8StringView`, or other types with
+    /// implicitly to `std::string_view`, `std::u8string_view`, or other types with
     /// equivalent two-argument constructor signatures.
     ///
     /// The string constant may be of any length.  It is in read-only memory provided

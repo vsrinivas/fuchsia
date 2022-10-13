@@ -21,8 +21,8 @@ zx_status_t zx_system_mexec(zx_handle_t resource,
 kernel image and *bootimage_vmo* should contain an initrd whose address shall
 be passed to the new kernel as a kernel argument.
 
-To supplant the running kernel, a *resource* of **ZX_RSRC_KIND_ROOT** must be
-supplied.
+To supplant the running kernel, a *resource* of **ZX_RSRC_KIND_SYSTEM** with base
+**ZX_RSRC_SYSTEM_MEXEC_BASE** must be supplied.
 
 Upon success, `zx_system_mexec()` shall supplant the currently running kernel
 image with the kernel image contained within *kernel_vmo*, load the ramdisk
@@ -36,7 +36,8 @@ the function returns **ZX_ERR_NOT_SUPPORTED**.
 
 ## Rights
 
-*resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+*resource* must have resource kind **ZX_RSRC_KIND_SYSTEM** with base
+**ZX_RSRC_SYSTEM_MEXEC_BASE**.
 
 *kernel_vmo* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
 
