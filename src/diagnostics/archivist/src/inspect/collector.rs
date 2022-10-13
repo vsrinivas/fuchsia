@@ -100,11 +100,9 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         ) {
             Ok(proxy) => proxy,
-            Err(err) => {
-                error!(
-                    file = %entry.name, ?err,
-                    "failed to open",
-                );
+            Err(_) => {
+                // It should be ok to not be able to read a file. The file might be closed by the
+                // time we get here.
                 continue;
             }
         };
@@ -112,7 +110,7 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
         // Obtain the backing vmo.
         let vmo = match file_proxy.get_backing_memory(fio::VmoFlags::READ).await {
             Ok(vmo) => vmo,
-            Err(_err) => {
+            Err(_) => {
                 // It should be ok to not be able to read a file. The file might be closed by the
                 // time we get here.
                 continue;
@@ -133,11 +131,9 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
                 }
                 match fuchsia_fs::file::read(&file_proxy).await {
                     Ok(contents) => InspectData::File(contents),
-                    Err(err) => {
-                        error!(
-                            file = %entry.name, ?err,
-                            "failed to read inspect file content",
-                        );
+                    Err(_) => {
+                        // It should be ok to not be able to read a file. The file might be closed
+                        // by the time we get here.
                         continue;
                     }
                 }
