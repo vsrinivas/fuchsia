@@ -22,9 +22,25 @@ use {
 pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     let repo = PmRepository::builder(cmd.repo_path.clone()).copy_mode(cmd.copy_mode).build();
 
-    // Load the keys. If we weren't passed in a keys file, try to read it from the repository.
-    let repo_keys = if let Some(repo_keys_path) = cmd.keys {
-        RepoKeys::from_dir(repo_keys_path.as_std_path())?
+    // Load the signing metadata keys if from a file if specified.
+    let repo_signing_keys = if let Some(path) = cmd.signing_keys {
+        if !path.exists() {
+            anyhow::bail!("--signing-keys path {} does not exist", path);
+        }
+
+        Some(RepoKeys::from_dir(path.as_std_path())?)
+    } else {
+        None
+    };
+
+    // Load the trusted metadata keys. If they weren't passed in a trusted keys file, try to read
+    // the keys from the repository.
+    let repo_trusted_keys = if let Some(path) = cmd.trusted_keys {
+        if !path.exists() {
+            anyhow::bail!("--trusted-keys path {} does not exist", path);
+        }
+
+        RepoKeys::from_dir(path.as_std_path())?
     } else {
         repo.repo_keys()?
     };
@@ -72,18 +88,22 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
         }
     };
 
-    let repo_builder = if let Some(client) = &client {
-        RepoBuilder::from_database(&repo, &repo_keys, client.database())
+    let mut repo_builder = if let Some(client) = &client {
+        RepoBuilder::from_database(&repo, &repo_trusted_keys, client.database())
     } else {
-        RepoBuilder::create(&repo, &repo_keys)
+        RepoBuilder::create(&repo, &repo_trusted_keys)
     };
 
-    // Publish all the packages.
-    let mut repo_builder = repo_builder
+    if let Some(repo_signing_keys) = &repo_signing_keys {
+        repo_builder = repo_builder.signing_repo_keys(&repo_signing_keys);
+    }
+
+    repo_builder = repo_builder
         .refresh_non_root_metadata(true)
         .time_versioning(cmd.time_versioning)
         .inherit_from_trusted_targets(!cmd.clean);
 
+    // Publish all the packages.
     for package in packages {
         repo_builder = repo_builder.add_package(package);
     }
@@ -128,7 +148,8 @@ mod tests {
         let repo_path = Utf8Path::from_path(tempdir.path()).unwrap();
 
         let cmd = RepoPublishCommand {
-            keys: None,
+            signing_keys: None,
+            trusted_keys: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -152,7 +173,8 @@ mod tests {
         test_utils::make_repo_keys_dir(&repo_keys_path);
 
         let cmd = RepoPublishCommand {
-            keys: Some(repo_keys_path),
+            signing_keys: None,
+            trusted_keys: Some(repo_keys_path),
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -198,7 +220,8 @@ mod tests {
         .unwrap();
 
         let cmd = RepoPublishCommand {
-            keys: None,
+            signing_keys: None,
+            trusted_keys: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -238,7 +261,8 @@ mod tests {
         assert_eq!(repo_client.database().trusted_timestamp().map(|m| m.version()), Some(1));
 
         let cmd = RepoPublishCommand {
-            keys: None,
+            signing_keys: None,
+            trusted_keys: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -273,7 +297,8 @@ mod tests {
         std::fs::rename(repo_path.join("keys"), &keys_path).unwrap();
 
         let cmd = RepoPublishCommand {
-            keys: None,
+            signing_keys: None,
+            trusted_keys: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -287,7 +312,8 @@ mod tests {
 
         // Explicitly specifying the keys path should work though.
         let cmd = RepoPublishCommand {
-            keys: Some(keys_path),
+            signing_keys: None,
+            trusted_keys: Some(keys_path),
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -312,7 +338,8 @@ mod tests {
         test_utils::make_empty_pm_repo_dir(repo_path);
 
         let cmd = RepoPublishCommand {
-            keys: None,
+            signing_keys: None,
+            trusted_keys: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: true,
@@ -375,7 +402,8 @@ mod tests {
 
         // Publish the packages.
         let cmd = RepoPublishCommand {
-            keys: None,
+            signing_keys: None,
+            trusted_keys: None,
             package_manifests: vec![pkg1_manifest_path.clone(), pkg2_manifest_path.clone()],
             package_list_manifests: vec![
                 pkg_list1_manifest_path.clone(),
@@ -441,7 +469,8 @@ mod tests {
         serde_json::to_writer(File::create(&pkg3_manifest_path).unwrap(), &pkg3_manifest).unwrap();
 
         let cmd = RepoPublishCommand {
-            keys: None,
+            signing_keys: None,
+            trusted_keys: None,
             package_manifests: vec![pkg3_manifest_path],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -468,7 +497,8 @@ mod tests {
         serde_json::to_writer(File::create(&pkg4_manifest_path).unwrap(), &pkg4_manifest).unwrap();
 
         let cmd = RepoPublishCommand {
-            keys: None,
+            signing_keys: None,
+            trusted_keys: None,
             package_manifests: vec![pkg4_manifest_path],
             package_list_manifests: vec![],
             time_versioning: false,

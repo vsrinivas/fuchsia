@@ -68,8 +68,17 @@ pub struct RepoCreateCommand {
 #[derive(FromArgs, PartialEq, Debug, Default)]
 #[argh(subcommand, name = "publish")]
 pub struct RepoPublishCommand {
-    #[argh(option, description = "path to the repository keys directory")]
-    pub keys: Option<Utf8PathBuf>,
+    #[argh(
+        option,
+        description = "path to the keys used to sign metadata, but not trust for key rotation"
+    )]
+    pub signing_keys: Option<Utf8PathBuf>,
+
+    #[argh(
+        option,
+        description = "path to the keys used to sign and trust metadata (default repository `keys/` directory)"
+    )]
+    pub trusted_keys: Option<Utf8PathBuf>,
 
     #[argh(option, long = "package", description = "path to a package manifest")]
     pub package_manifests: Vec<Utf8PathBuf>,

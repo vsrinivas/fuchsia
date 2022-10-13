@@ -30,7 +30,8 @@ const DEFAULT_TIMESTAMP_EXPIRATION: i64 = 30;
 
 /// RepoBuilder can create and manipulate package repositories.
 pub struct RepoBuilder<'a, R: RepoStorageProvider> {
-    repo_keys: &'a RepoKeys,
+    signing_repo_keys: Option<&'a RepoKeys>,
+    trusted_repo_keys: &'a RepoKeys,
     database: Option<&'a Database<Pouf1>>,
     repo: R,
     current_time: DateTime<Utc>,
@@ -71,12 +72,13 @@ where
 
     fn new(
         repo: R,
-        repo_keys: &'a RepoKeys,
+        trusted_repo_keys: &'a RepoKeys,
         database: Option<&'a Database<Pouf1>>,
     ) -> RepoBuilder<'a, R> {
         RepoBuilder {
             repo,
-            repo_keys,
+            signing_repo_keys: None,
+            trusted_repo_keys,
             database,
             current_time: Utc::now(),
             time_versioning: false,
@@ -85,6 +87,11 @@ where
             inherit_from_trusted_targets: true,
             packages: vec![],
         }
+    }
+
+    pub fn signing_repo_keys(mut self, signing_repo_keys: &'a RepoKeys) -> Self {
+        self.signing_repo_keys = Some(signing_repo_keys);
+        self
     }
 
     pub fn current_time(mut self, current_time: DateTime<Utc>) -> Self {
@@ -145,24 +152,42 @@ where
             .snapshot_expiration_duration(Duration::days(DEFAULT_SNAPSHOT_EXPIRATION))
             .timestamp_expiration_duration(Duration::days(DEFAULT_TIMESTAMP_EXPIRATION));
 
-        for key in self.repo_keys.root_keys() {
+        if let Some(signing_repo_keys) = self.signing_repo_keys {
+            for key in signing_repo_keys.root_keys() {
+                repo_builder = repo_builder.signing_root_keys(&[&**key]);
+            }
+
+            for key in signing_repo_keys.targets_keys() {
+                repo_builder = repo_builder.signing_targets_keys(&[&**key]);
+            }
+
+            for key in signing_repo_keys.snapshot_keys() {
+                repo_builder = repo_builder.signing_snapshot_keys(&[&**key]);
+            }
+
+            for key in signing_repo_keys.timestamp_keys() {
+                repo_builder = repo_builder.signing_timestamp_keys(&[&**key]);
+            }
+        }
+
+        for key in self.trusted_repo_keys.root_keys() {
             repo_builder = repo_builder.trusted_root_keys(&[&**key]);
         }
 
-        for key in self.repo_keys.targets_keys() {
+        for key in self.trusted_repo_keys.targets_keys() {
             repo_builder = repo_builder.trusted_targets_keys(&[&**key]);
         }
 
-        for key in self.repo_keys.snapshot_keys() {
+        for key in self.trusted_repo_keys.snapshot_keys() {
             repo_builder = repo_builder.trusted_snapshot_keys(&[&**key]);
         }
 
-        for key in self.repo_keys.timestamp_keys() {
+        for key in self.trusted_repo_keys.timestamp_keys() {
             repo_builder = repo_builder.trusted_timestamp_keys(&[&**key]);
         }
 
         // We can't generate a new root if we don't have any root keys.
-        let mut repo_builder = if self.repo_keys.root_keys().is_empty() {
+        let mut repo_builder = if self.trusted_repo_keys.root_keys().is_empty() {
             repo_builder.skip_root()
         } else if self.refresh_metadata {
             repo_builder.stage_root()?
@@ -246,7 +271,10 @@ mod tests {
         camino::Utf8Path,
         pretty_assertions::{assert_eq, assert_ne},
         std::collections::{BTreeMap, HashMap},
-        tuf::metadata::{Metadata as _, MetadataPath},
+        tuf::{
+            crypto::Ed25519PrivateKey,
+            metadata::{Metadata as _, MetadataPath},
+        },
         walkdir::WalkDir,
     };
 
@@ -615,5 +643,70 @@ mod tests {
         assert!(trusted_targets.targets().get("package2/0").is_none());
         assert!(trusted_targets.targets().get("package3/0").is_none());
         assert!(trusted_targets.targets().get("package4/0").is_some());
+    }
+
+    fn generate_ed25519_private_key() -> Ed25519PrivateKey {
+        Ed25519PrivateKey::from_pkcs8(&Ed25519PrivateKey::pkcs8().unwrap()).unwrap()
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_key_rotation() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(tmp.path()).unwrap();
+        let repo_dir = root.join("repo");
+
+        // First, make a repository.
+        let repo = test_utils::make_pm_repository(repo_dir).await;
+        let mut repo_client = RepoClient::from_trusted_remote(&repo).await.unwrap();
+        repo_client.update().await.unwrap();
+
+        // Then make a new RepoKeys with unique keys.
+        let repo_trusted_keys = RepoKeys::builder()
+            .add_root_key(Box::new(generate_ed25519_private_key()))
+            .add_targets_key(Box::new(generate_ed25519_private_key()))
+            .add_snapshot_key(Box::new(generate_ed25519_private_key()))
+            .add_timestamp_key(Box::new(generate_ed25519_private_key()))
+            .build();
+
+        // Generate new metadata that trusts the new keys, but signs it with the old keys.
+        let repo_signing_keys = repo.repo_keys().unwrap();
+        RepoBuilder::from_database(
+            repo_client.remote_repo(),
+            &repo_trusted_keys,
+            repo_client.database(),
+        )
+        .signing_repo_keys(&repo_signing_keys)
+        .commit()
+        .await
+        .unwrap();
+
+        // Make sure we can update.
+        assert_matches!(repo_client.update().await, Ok(true));
+        assert_eq!(repo_client.database().trusted_root().version(), 2);
+        assert_eq!(repo_client.database().trusted_snapshot().unwrap().version(), 2);
+        assert_eq!(repo_client.database().trusted_targets().unwrap().version(), 2);
+        assert_eq!(repo_client.database().trusted_timestamp().unwrap().version(), 2);
+
+        // Make sure we only trust the new keys.
+        let trusted_root = repo_client.database().trusted_root();
+        assert_eq!(
+            trusted_root.root_keys().collect::<Vec<_>>(),
+            repo_trusted_keys.root_keys().iter().map(|k| k.public()).collect::<Vec<_>>(),
+        );
+
+        assert_eq!(
+            trusted_root.targets_keys().collect::<Vec<_>>(),
+            repo_trusted_keys.targets_keys().iter().map(|k| k.public()).collect::<Vec<_>>(),
+        );
+
+        assert_eq!(
+            trusted_root.snapshot_keys().collect::<Vec<_>>(),
+            repo_trusted_keys.snapshot_keys().iter().map(|k| k.public()).collect::<Vec<_>>(),
+        );
+
+        assert_eq!(
+            trusted_root.timestamp_keys().collect::<Vec<_>>(),
+            repo_trusted_keys.timestamp_keys().iter().map(|k| k.public()).collect::<Vec<_>>(),
+        );
     }
 }
