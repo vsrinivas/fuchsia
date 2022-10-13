@@ -533,7 +533,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
     public_deps = [
       ":${cpp_elf_headers_target}",
       ":${cpp_elf_source_target}($default_toolchain)",
-      "//sdk/lib/sys/inspect/cpp",
+      "//zircon/system/ulib/inspect",
     ]
 
     # prevent manifest from getting into package this way
@@ -724,7 +724,7 @@ template("fuchsia_structured_config_cpp_driver_lib") {
       ":${cpp_driver_source_target}($default_toolchain)",
       "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
       "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
-      "//sdk/lib/sys/inspect/cpp",
+      "//zircon/system/ulib/inspect",
     ]
 
     # prevent manifest from getting into package this way

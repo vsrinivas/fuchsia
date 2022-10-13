@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 {
     include: [
-        // TODO(fxbug.dev/109273): remove this line when the linked bug is resolved.
-        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {

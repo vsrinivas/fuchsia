@@ -4,9 +4,6 @@
 {
     include: [
         "//src/virtualization/bin/guest_manager/meta/guest_manager.cml",
-
-        // TODO(https://fxbug.dev/109273) remove extraneous inspect shard
-        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {

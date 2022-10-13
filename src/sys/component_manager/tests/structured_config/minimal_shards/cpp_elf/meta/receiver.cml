@@ -5,8 +5,7 @@
     include: [
         "//src/sys/component_manager/tests/structured_config/all_config_types.shard.cml",
 
-        // TODO(https://fxbug.dev/109273) remove extraneous inspect shard
-        "inspect/client.shard.cml",
+        // TODO(https://fxbug.dev/97805) remove syslog shard once no longer needed
         "syslog/client.shard.cml",
     ],
     program: {
