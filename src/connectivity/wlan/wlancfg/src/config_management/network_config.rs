@@ -164,7 +164,7 @@ where
         for bssid in self.0.keys() {
             recents.append(&mut self.get_list_for_bss(bssid).get_recent(earliest_time));
         }
-        recents.sort_by(|a, b| a.time().cmp(&b.time()));
+        recents.sort_by_key(|a| a.time());
         recents
     }
 
@@ -604,7 +604,7 @@ fn check_config_errors(
     credential: &Credential,
 ) -> Result<(), NetworkConfigError> {
     // Verify SSID has at least 1 byte.
-    if ssid.len() < 1 as usize {
+    if ssid.len() < 1 {
         return Err(NetworkConfigError::SsidEmpty);
     }
     // Verify that credentials match the security type. This code only inspects the lengths of

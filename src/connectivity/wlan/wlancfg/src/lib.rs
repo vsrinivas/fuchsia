@@ -4,6 +4,9 @@
 
 #![deny(clippy::correctness)]
 #![warn(clippy::suspicious)]
+#![warn(clippy::complexity)]
+// The complexity of a separate struct doesn't seem universally better than having many arguments
+#![allow(clippy::too_many_arguments)]
 
 pub mod access_point;
 pub mod client;

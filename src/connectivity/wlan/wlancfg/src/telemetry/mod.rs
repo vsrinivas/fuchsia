@@ -6416,10 +6416,10 @@ mod tests {
 
     fn fake_iface_counter_stats(nth_req: u64) -> fidl_fuchsia_wlan_stats::IfaceCounterStats {
         fidl_fuchsia_wlan_stats::IfaceCounterStats {
-            rx_unicast_total: 1 * nth_req,
+            rx_unicast_total: nth_req,
             rx_unicast_drop: 0,
             rx_multicast: 2 * nth_req,
-            tx_total: 1 * nth_req,
+            tx_total: nth_req,
             tx_drop: 0,
         }
     }

@@ -2592,30 +2592,24 @@ mod tests {
 
         // The order of the first two cobalt events is not deterministic
         // Three BSSs present for network 1 in scan results
-        assert!(metric_events[..2]
-            .iter()
-            .find(|event| **event
-                == MetricEvent {
-                    metric_id: SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID,
-                    event_codes: vec![
-                        SavedNetworkInScanResultMigratedMetricDimensionBssCount::TwoToFour as u32
-                    ],
-                    payload: MetricEventPayload::Count(1),
-                })
-            .is_some());
+        assert!(metric_events[..2].iter().any(|event| *event
+            == MetricEvent {
+                metric_id: SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID,
+                event_codes: vec![
+                    SavedNetworkInScanResultMigratedMetricDimensionBssCount::TwoToFour as u32
+                ],
+                payload: MetricEventPayload::Count(1),
+            }));
 
         // One BSS present for network 2 in scan results
-        assert!(metric_events[..2]
-            .iter()
-            .find(|event| **event
-                == MetricEvent {
-                    metric_id: SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID,
-                    event_codes: vec![
-                        SavedNetworkInScanResultMigratedMetricDimensionBssCount::One as u32
-                    ],
-                    payload: MetricEventPayload::Count(1),
-                })
-            .is_some());
+        assert!(metric_events[..2].iter().any(|event| *event
+            == MetricEvent {
+                metric_id: SAVED_NETWORK_IN_SCAN_RESULT_MIGRATED_METRIC_ID,
+                event_codes: vec![
+                    SavedNetworkInScanResultMigratedMetricDimensionBssCount::One as u32
+                ],
+                payload: MetricEventPayload::Count(1),
+            }));
 
         // Total of two saved networks in the scan results
         assert_eq!(

@@ -490,7 +490,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
 
     async fn record_periodic_metrics(&self) {
         let saved_networks = self.saved_networks.lock().await;
-        log_cobalt_metrics(&*saved_networks, &self.telemetry_sender);
+        log_cobalt_metrics(&saved_networks, &self.telemetry_sender);
     }
 
     async fn record_scan_result(
@@ -1878,25 +1878,24 @@ mod tests {
 
         // For the next two events, the order is not guaranteed
         // Zero configs for one network
-        assert!(metric_events[1..]
-            .iter()
-            .find(|event| **event == MetricEvent {
+        assert!(metric_events[1..].iter().any(|event| *event
+            == MetricEvent {
                 metric_id: SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID,
-                event_codes: vec![SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::Zero
-                     as u32],
+                event_codes: vec![
+                SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::Zero
+                    as u32
+            ],
                 payload: MetricEventPayload::Count(1),
-            })
-            .is_some());
+            }));
         // Two configs for the other network
         assert!(metric_events[1..]
             .iter()
-            .find(|event| **event == MetricEvent {
+            .any(|event| *event == MetricEvent {
                 metric_id: SAVED_CONFIGURATIONS_FOR_SAVED_NETWORK_MIGRATED_METRIC_ID,
                 event_codes: vec![SavedConfigurationsForSavedNetworkMigratedMetricDimensionSavedConfigurations::TwoToFour
                      as u32],
                 payload: MetricEventPayload::Count(1),
-            })
-            .is_some());
+            }));
     }
 
     #[fuchsia::test]
