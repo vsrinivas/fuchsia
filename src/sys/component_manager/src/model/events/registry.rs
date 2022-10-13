@@ -14,10 +14,7 @@ use {
                 stream::EventStream,
                 synthesizer::{EventSynthesisProvider, EventSynthesizer},
             },
-            hooks::{
-                Event as ComponentEvent, EventPayload, EventType, HasEventType, Hook,
-                HooksRegistration,
-            },
+            hooks::{Event as ComponentEvent, EventType, HasEventType, Hook, HooksRegistration},
             model::Model,
             routing::{RouteRequest, RouteSource},
         },
@@ -144,12 +141,17 @@ impl EventRegistry {
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
+        let mut event_types = EventType::values();
+
+        // Do not subscribe to CapabilityRouted. That is a component-framework-internal event.
+        event_types.retain(|t| t != &EventType::CapabilityRouted);
+
         vec![
             // This hook must be registered with all events.
             // However, a task will only receive events to which it subscribed.
             HooksRegistration::new(
                 "EventRegistry",
-                EventType::values(),
+                event_types,
                 Arc::downgrade(self) as Weak<dyn Hook>,
             ),
         ]
@@ -582,20 +584,7 @@ impl EventRegistry {
 #[async_trait]
 impl Hook for EventRegistry {
     async fn on(self: Arc<Self>, event: &ComponentEvent) -> Result<(), ModelError> {
-        match &event.result {
-            Ok(EventPayload::CapabilityRouted { source, .. }) => {
-                // Only dispatch the CapabilityRouted event for capabilities
-                // that can be in a component's namespace.
-                // TODO(fxbug.dev/54251): In the future, if we wish to be able to mock or
-                // interpose runners, we can introduce, a new, separate event
-                // type.
-                if source.can_be_in_namespace() {
-                    return self.dispatch(event).await;
-                }
-                return Ok(());
-            }
-            _ => self.dispatch(event).await,
-        }
+        self.dispatch(event).await
     }
 }
 
