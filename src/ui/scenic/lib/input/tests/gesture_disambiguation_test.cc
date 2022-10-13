@@ -95,9 +95,8 @@ class GestureDisambiguationTest : public gtest::TestLoopFixture {
  public:
   GestureDisambiguationTest()
       : hit_tester_(view_tree_snapshot_, inspect_node_),
-        touch_system_(
-            context_provider_.context(), view_tree_snapshot_, hit_tester_, inspect_node_,
-            /*request_focus*/ [](auto...) {}, nullptr) {}
+        touch_system_(context_provider_.context(), view_tree_snapshot_, hit_tester_, inspect_node_,
+                      nullptr) {}
 
   void SetUp() override {
     client1_ptr_.set_error_handler([](auto) { FAIL() << "Client1's channel closed"; });

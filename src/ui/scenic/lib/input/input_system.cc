@@ -12,9 +12,8 @@ InputSystem::InputSystem(sys::ComponentContext* context, inspect::Node& inspect_
       hit_tester_(view_tree_snapshot_, inspect_node),
       mouse_system_(context, view_tree_snapshot_, hit_tester_,
                     [this](zx_koid_t koid) { request_focus_(koid); }),
-      touch_system_(
-          context, view_tree_snapshot_, hit_tester_, inspect_node,
-          [this](zx_koid_t koid) { request_focus_(koid); }, std::move(scene_graph)),
+      touch_system_(context, view_tree_snapshot_, hit_tester_, inspect_node,
+                    std::move(scene_graph)),
       pointerinjector_registry_(
           context,
           /*inject_touch_exclusive=*/

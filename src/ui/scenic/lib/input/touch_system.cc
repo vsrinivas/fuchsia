@@ -84,10 +84,9 @@ void ChattyA11yLog(const fuchsia::ui::input::accessibility::PointerEvent& event)
 TouchSystem::TouchSystem(sys::ComponentContext* context,
                          std::shared_ptr<const view_tree::Snapshot>& view_tree_snapshot,
                          HitTester& hit_tester, inspect::Node& parent_node,
-                         RequestFocusFunc request_focus, fxl::WeakPtr<gfx::SceneGraph> scene_graph)
+                         fxl::WeakPtr<gfx::SceneGraph> scene_graph)
     : view_tree_snapshot_(view_tree_snapshot),
       hit_tester_(hit_tester),
-      request_focus_(std::move(request_focus)),
       scene_graph_(std::move(scene_graph)),
       contender_inspector_(parent_node.CreateChild("GestureContenders")) {
   a11y_pointer_event_registry_.emplace(
@@ -257,19 +256,6 @@ ContenderId TouchSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
                           for (const auto& event : events) {
                             ReportPointerEventToGfxLegacyView(
                                 event, view_ref_koid, fuchsia::ui::input::PointerEventType::TOUCH);
-                            // Update focus if necessary.
-                            // TODO(fxbug.dev/59858): Figure out how to handle focus with real GD
-                            // clients.
-                            if (event.phase == Phase::kAdd) {
-                              if (view_tree_snapshot_->view_tree.count(view_ref_koid) != 0) {
-                                if (view_tree_snapshot_->view_tree.at(view_ref_koid).is_focusable) {
-                                  request_focus_(view_ref_koid);
-                                }
-                              } else {
-                                // Focus root.
-                                request_focus_(ZX_KOID_INVALID);
-                              }
-                            }
                           }
                         },
                         /*self_destruct*/
@@ -370,9 +356,6 @@ void TouchSystem::InjectTouchEventHitTested(const InternalTouchEvent& event, Str
       if (it->second.contest_has_ended()) {
         contenders_.at(front_contender)->EndContest(stream_id, /*awarded_win*/ true);
       }
-    } else {
-      // No node was hit. Transfer focus to root.
-      request_focus_(ZX_KOID_INVALID);
     }
   }
 
@@ -578,16 +561,9 @@ void TouchSystem::DestroyArenaIfComplete(StreamId stream_id) {
 
   const auto& arena = arena_it->second;
 
-  // One of these two branches will always be reached eventually.
+  // This branch will eventually be taken for every arena.
   // TODO(fxbug.dev/90004): can we elaborate on why this is true?
-  if (arena.contenders().empty()) {
-    // If no one won the contest then it will appear as if nothing was hit. Transfer focus to root.
-    // TODO(fxbug.dev/59858): This probably needs to change when we figure out the exact semantics
-    // we want.
-    request_focus_(ZX_KOID_INVALID);
-    gesture_arenas_.erase(stream_id);
-  } else if (arena.contest_has_ended() && arena.stream_has_ended()) {
-    // If both the contest and the stream is over, destroy the arena.
+  if (arena.contenders().empty() || (arena.contest_has_ended() && arena.stream_has_ended())) {
     gesture_arenas_.erase(stream_id);
   }
 }

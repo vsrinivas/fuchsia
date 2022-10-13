@@ -30,7 +30,7 @@ class TouchSystem : public fuchsia::ui::pointer::augment::LocalHit {
   explicit TouchSystem(sys::ComponentContext* context,
                        std::shared_ptr<const view_tree::Snapshot>& view_tree_snapshot,
                        HitTester& hit_tester, inspect::Node& parent_node,
-                       RequestFocusFunc request_focus, fxl::WeakPtr<gfx::SceneGraph> scene_graph);
+                       fxl::WeakPtr<gfx::SceneGraph> scene_graph);
   ~TouchSystem() = default;
 
   fuchsia::ui::input::accessibility::PointerEventListenerPtr&
@@ -101,7 +101,6 @@ class TouchSystem : public fuchsia::ui::pointer::augment::LocalHit {
   // Reference to the ViewTreeSnapshot held by InputSystem.
   std::shared_ptr<const view_tree::Snapshot>& view_tree_snapshot_;
   HitTester& hit_tester_;
-  const RequestFocusFunc request_focus_;
   // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
   // An inspector that tracks all GestureContenders, so data can persist past contender lifetimes.

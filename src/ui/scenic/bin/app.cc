@@ -632,7 +632,7 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 void App::InitializeInput() {
   TRACE_DURATION("gfx", "App::InitializeInput");
   input_ = std::make_unique<input::InputSystem>(
-      app_context_.get(), *scenic_->inspect_node(), engine_->scene_graph(),
+      app_context_.get(), inspect_node_, engine_->scene_graph(),
       /*request_focus*/
       [this, use_auto_focus = config_values_.pointer_auto_focus_on](zx_koid_t koid) {
         if (!use_auto_focus)
