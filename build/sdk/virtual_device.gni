@@ -5,7 +5,6 @@
 import("//build/board.gni")
 import("//build/json/validate_json.gni")
 import("//build/product.gni")
-import("//src/developer/ffx/build/ffx_action.gni")
 
 # Generates a virtual device specification JSON from a product and board
 # definition.
@@ -188,26 +187,6 @@ template("virtual_device_specification") {
     allow_comments = true
   }
 
-  verified_file = "$target_gen_dir/${target_name}.verified"
-  ffx_validator_target = "${target_name}_ffx_validator"
-  ffx_action(ffx_validator_target) {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    args = [
-      "--config",
-      "product.experimental=true",
-      "product",
-      "verify",
-      "--virtual-device",
-      rebase_path(file, root_build_dir),
-      "--verified-file",
-      rebase_path(verified_file, root_build_dir),
-    ]
-    deps = [ ":${generator_target}" ]
-    inputs = [ file ]
-    outputs = [ verified_file ]
-  }
-
   group(target_name) {
     forward_variables_from(invoker,
                            [
@@ -215,7 +194,6 @@ template("virtual_device_specification") {
                              "visibility",
                            ])
     deps = [
-      ":${ffx_validator_target}",
       ":${generator_target}",
       ":${template_target}",
       ":${validator_target}",

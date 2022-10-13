@@ -4,7 +4,6 @@
 
 import("//build/board.gni")
 import("//build/json/validate_json.gni")
-import("//src/developer/ffx/build/ffx_action.gni")
 
 # Generates a physical device manifest JSON from a board definition.
 #
@@ -102,31 +101,6 @@ template("physical_device_manifest") {
     allow_comments = true
   }
 
-  verified_file = "$target_gen_dir/${target_name}.verified"
-  ffx_validator_target = "${target_name}_ffx_validator"
-  ffx_action(ffx_validator_target) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "public_deps",
-                             "testonly",
-                           ])
-    visibility = [ ":*" ]
-    args = [
-      "--config",
-      "product.experimental=true",
-      "product",
-      "verify",
-      "--physical-device",
-      rebase_path(file, root_build_dir),
-      "--verified-file",
-      rebase_path(verified_file, root_build_dir),
-    ]
-    deps = [ ":${generator_target}" ]
-    inputs = [ file ]
-    outputs = [ verified_file ]
-  }
-
   group(target_name) {
     forward_variables_from(invoker,
                            [
@@ -134,7 +108,6 @@ template("physical_device_manifest") {
                              "visibility",
                            ])
     deps = [
-      ":${ffx_validator_target}",
       ":${generator_target}",
       ":${validator_target}",
     ]

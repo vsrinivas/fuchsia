@@ -120,6 +120,7 @@ template("product_metadata") {
     }
   }
 
+  # TODO(https://fxbug.dev/82728): Add path validation.
   validator_target = "${target_name}_json_validator"
   validate_json(validator_target) {
     visibility = [ ":*" ]
@@ -136,27 +137,6 @@ template("product_metadata") {
     allow_comments = true
   }
 
-  # TODO(https://fxbug.dev/82728): Add path validation.
-  verified_file = "$target_gen_dir/${target_name}.verified"
-  ffx_validator_target = "${target_name}_ffx_validator"
-  ffx_action(ffx_validator_target) {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    args = [
-      "--config",
-      "product.experimental=true",
-      "product",
-      "verify",
-      "--product-bundle",
-      rebase_path(get_path_info(file, "dir"), root_build_dir),
-      "--verified-file",
-      rebase_path(verified_file, root_build_dir),
-    ]
-    deps = [ ":${generator_target}" ]
-    inputs = [ file ]
-    outputs = [ verified_file ]
-  }
-
   group(target_name) {
     forward_variables_from(invoker,
                            [
@@ -164,7 +144,6 @@ template("product_metadata") {
                              "visibility",
                            ])
     deps = [
-      ":${ffx_validator_target}",
       ":${generator_target}",
       ":${validator_target}",
     ]

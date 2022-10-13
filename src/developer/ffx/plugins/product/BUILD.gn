@@ -12,7 +12,6 @@ ffx_plugin("ffx_product") {
   plugin_deps = [
     "create:ffx_product_create",
     "get:ffx_product_get",
-    "verify:ffx_product_verify",
   ]
 
   args_sources = [ "src/args.rs" ]
