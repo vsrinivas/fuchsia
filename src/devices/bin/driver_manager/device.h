@@ -427,8 +427,9 @@ class Device final
 
   // List of all child devices of this device.
   //
-  // Does not include composite devices except when `this` is root; all composite devices are
-  // children of the root device.
+  // Does not include composite devices except when `this` is the composite device's primary
+  // fragment. The primary fragment is used because the use of intrusive nodes precludes us from
+  // modeling multiple parents.
   fbl::TaggedDoublyLinkedList<Device*, ChildListTag> children_;
 
   // Metadata entries associated to this device.

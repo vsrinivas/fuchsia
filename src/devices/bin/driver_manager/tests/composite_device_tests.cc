@@ -826,17 +826,6 @@ TEST_F(CompositeTestCase, ResumeOrder) {
 
 // Make sure we receive devfs notifications when composite devices appear
 TEST_F(CompositeTestCase, DevfsNotifications) {
-  fs::SynchronousVfs vfs(coordinator().dispatcher());
-  fidl::ClientEnd<fuchsia_io::DirectoryWatcher> client_end;
-  {
-    zx::status server = fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>(&client_end);
-    ASSERT_OK(server.status_value());
-    std::optional<Devnode>& dn = coordinator().root_device()->self;
-    ASSERT_TRUE(dn.has_value());
-    ASSERT_OK(dn.value().children().WatchDir(&vfs, fio::wire::WatchMask::kAdded, 0,
-                                             std::move(server.value())));
-  }
-
   uint32_t protocol_id[] = {
       ZX_PROTOCOL_GPIO,
       ZX_PROTOCOL_I2C,
@@ -847,6 +836,7 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
                                                        std::size(protocol_id), nullptr /* props */,
                                                        0, kCompositeDevName));
+
   // Add the devices to construct the composite out of.
   for (size_t i = 0; i < std::size(device_indexes); ++i) {
     char name[32];
@@ -855,19 +845,54 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
         AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
   }
 
+  // Install a watcher on each of the parent devices.
+  fs::SynchronousVfs vfs(coordinator().dispatcher());
+  std::vector<fidl::ClientEnd<fuchsia_io::DirectoryWatcher>> client_ends;
+  for (const auto& device : devices_) {
+    zx::status server =
+        fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>(&client_ends.emplace_back());
+    ASSERT_OK(server.status_value());
+    std::optional<Devnode>& dn = device.device->self;
+    ASSERT_TRUE(dn.has_value());
+    ASSERT_OK(dn.value().children().WatchDir(&vfs, fio::wire::WatchMask::kAdded, 0,
+                                             std::move(server.value())));
+  }
+
   DeviceState composite;
   size_t fragment_device_indexes[std::size(device_indexes)];
   ASSERT_NO_FATAL_FAILURE(CheckCompositeCreation(kCompositeDevName, device_indexes,
                                                  std::size(device_indexes), fragment_device_indexes,
                                                  &composite));
 
-  uint8_t msg[fio::wire::kMaxFilename + 2];
-  uint32_t msg_len = 0;
-  ASSERT_OK(client_end.channel().read(0, msg, nullptr, sizeof(msg), 0, &msg_len, nullptr));
-  ASSERT_EQ(msg_len, 2 + strlen(kCompositeDevName));
-  ASSERT_EQ(static_cast<fio::wire::WatchEvent>(msg[0]), fio::wire::WatchEvent::kAdded);
-  ASSERT_EQ(msg[1], strlen(kCompositeDevName));
-  ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kCompositeDevName), msg + 2, msg[1]);
+  // Assert that our watchers were notified of the expected devices' creation.
+  for (size_t i = 0; i < client_ends.size(); ++i) {
+    const auto& client_end = client_ends.at(i);
+    uint8_t msg[fio::wire::kMaxFilename + 2];
+    uint32_t msg_len;
+    ASSERT_OK(client_end.channel().read(0, msg, nullptr, sizeof(msg), 0, &msg_len, nullptr));
+    ASSERT_GE(msg_len, 1);
+    ASSERT_EQ(static_cast<fio::wire::WatchEvent>(msg[0]), fio::wire::WatchEvent::kAdded);
+    ASSERT_GE(msg_len, 2);
+
+    // Each device gets a fragment as its child.
+    {
+      const std::string_view name{reinterpret_cast<char*>(msg + 2), msg[1]};
+      ASSERT_EQ(name.find(kCompositeDevName), 0);
+      ASSERT_TRUE(cpp20::starts_with(name.substr(strlen(kCompositeDevName)), "-comp-device-"));
+    }
+
+    if (i == 0) {
+      // This is the primary parent; expect a notification for the composite device.
+      ASSERT_OK(client_end.channel().read(0, msg, nullptr, sizeof(msg), 0, &msg_len, nullptr));
+      ASSERT_GE(msg_len, 1);
+      ASSERT_EQ(static_cast<fio::wire::WatchEvent>(msg[0]), fio::wire::WatchEvent::kAdded);
+      ASSERT_GE(msg_len, 2);
+      const std::string name{reinterpret_cast<char*>(msg + 2), msg[1]};
+      EXPECT_EQ(name, kCompositeDevName);
+    }
+    ASSERT_STATUS(client_end.channel().read(0, msg, nullptr, sizeof(msg), 0, &msg_len, nullptr),
+                  ZX_ERR_SHOULD_WAIT);
+  }
 }
 
 // Make sure the path returned by GetTopologicalPath is accurate
@@ -898,13 +923,34 @@ TEST_F(CompositeTestCase, Topology) {
 
   std::optional<Devnode>& dn = coordinator().root_device()->self;
   ASSERT_TRUE(dn.has_value());
-  zx::status composite_dev_result = dn.value().walk("composite-dev");
-  ASSERT_OK(composite_dev_result.status_value());
-  const fbl::RefPtr<const Device> composite_dev(composite_dev_result.value()->device());
+  Devnode& root = dn.value();
 
-  char path_buf[PATH_MAX];
-  ASSERT_OK(coordinator().GetTopologicalPath(composite_dev, path_buf, sizeof(path_buf)));
-  ASSERT_STREQ(path_buf, "/dev/composite-dev");
+  constexpr std::string_view kDev = "/dev/";
+
+  for (size_t i = 0; i < devices_.size(); ++i) {
+    const auto& device = devices_[i];
+    char path_buf[PATH_MAX];
+
+    ASSERT_OK(coordinator().GetTopologicalPath(device.device, path_buf, sizeof(path_buf)));
+    const std::string_view parent_topological_path{path_buf + kDev.size()};
+    zx::status parent = root.walk(parent_topological_path);
+    ASSERT_OK(parent);
+    zx::status child = parent.value()->walk(kCompositeDevName);
+    if (i != 0) {
+      // This isn't the primary parent; the composite device isn't a child node.
+      ASSERT_STATUS(child.status_value(), ZX_ERR_NOT_FOUND);
+      continue;
+    }
+    // This is the primary parent; the composite device is a child node. Verify its topological path
+    // is correct.
+    ASSERT_OK(child.status_value());
+
+    // Copy before reusing the buffer.
+    const std::string expected_topological_path = std::string(path_buf) + '/' + kCompositeDevName;
+    ASSERT_OK(coordinator().GetTopologicalPath(fbl::RefPtr(child.value()->device()), path_buf,
+                                               sizeof(path_buf)));
+    ASSERT_STREQ(path_buf, expected_topological_path);
+  }
 }
 
 class CompositeMetadataTestCase : public CompositeTestCase {
@@ -1222,11 +1268,11 @@ TEST_F(CompositeTestCase, DeviceIteratorCompositeChild) {
   size_t fragment_device_indexes;
   ASSERT_NO_FATAL_FAILURE(
       CheckCompositeCreation("composite", &parent_index, 1, &fragment_device_indexes, &composite));
-
-  ASSERT_FALSE(device(parent_index)->device->children().empty());
-  for (auto& d : device(parent_index)->device->children()) {
-    ASSERT_EQ(d->name(), "composite-comp-device-0");
-  }
+  const std::list children = device(parent_index)->device->children();
+  std::list<Device*>::const_iterator it = children.begin();
+  ASSERT_EQ((*it++)->name(), "composite-comp-device-0");
+  ASSERT_EQ((*it++)->name(), "composite");
+  ASSERT_EQ(it, children.end());
 }
 
 TEST_F(CompositeTestCase, DeviceIteratorCompositeChildNoFragment) {
