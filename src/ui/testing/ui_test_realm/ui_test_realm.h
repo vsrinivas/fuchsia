@@ -190,6 +190,8 @@ class UITestRealm {
 
   component_testing::RealmRoot* realm_root() { return realm_root_.get(); }
 
+  const Config& config() { return config_; }
+
  private:
   // Helper methods to configure the test realm.
   void ConfigureClientSubrealm();

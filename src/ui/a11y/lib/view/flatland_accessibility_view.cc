@@ -312,14 +312,41 @@ void FlatlandAccessibilityView::SetMagnificationTransform(
       fuchsia::ui::composition::TransformId{.value = kMagnifierTransformId},
       fuchsia::math::VecF{.x = scale, .y = scale});
 
-  // Translation arguments to this method are normalized, so we need to put them
-  // into the coordinate space of the magnifier transform.
-  auto translation_x = x * static_cast<float>(layout_info_->logical_size().width) / 2.f;
-  auto translation_y = y * static_cast<float>(layout_info_->logical_size().height) / 2.f;
+  // TODO(fxbug.dev/111799): Remove this hack to accommodate a translation
+  // specified in scaled NDC space.
+  //
+  // Translation arguments to this method are in "scaled NDC" space, i.e. NDC
+  // space with |scale| applied. We need to put them into the coordinate space of the
+  // magnifier transform.
+  //
+  // To do so, we first compute the center of the
+  // "viewport", or the portion of the a11y view that we would like to be
+  // visible post-scale-and-translate. For convenience, we compute this location
+  // in a hypothetical coordinate space that spans [0, scale] on both axes,
+  // where single "units" on the x- and y-axes is taken to be equivalent to the logical
+  // width and height of the a11y view, respectively.
+  //
+  // Computing the final translation then reduces to finding the top-left corner of
+  // the "viewport". Since we defined our virtual coordinate space such that the
+  // viewport is 1 unit wide and 1 unit tall, we can simply subtract 0.5f from
+  // viewport_center_x and viewport_center_y to find the virtual coordinates of the
+  // top-left corner of the viewport. We can convert to the magnifier
+  // transform's post-scale space by mutliplying the x- and y- virtual
+  // coordinates by the a11y view's logical width and height, respectively.
+  //
+  // Finally, we compute the end translation such that it moves the top-left
+  // corner of the viewport to the top-left corner of the a11y view; i.e. the
+  // final translation is (-left, -top).
+  auto viewport_center_x = (-x + scale) / 2;
+  auto viewport_center_y = (-y + scale) / 2;
+  auto viewport_left_f =
+      (viewport_center_x - 0.5f) * static_cast<float>(layout_info_->logical_size().width);
+  auto viewport_top_f =
+      (viewport_center_y - 0.5f) * static_cast<float>(layout_info_->logical_size().height);
   flatland_a11y_.flatland()->SetTranslation(
       fuchsia::ui::composition::TransformId{.value = kMagnifierTransformId},
-      fuchsia::math::Vec{.x = static_cast<int32_t>(translation_x),
-                         .y = static_cast<int32_t>(translation_y)});
+      fuchsia::math::Vec{.x = static_cast<int32_t>(-viewport_left_f),
+                         .y = static_cast<int32_t>(-viewport_top_f)});
 
   flatland_a11y_.Present(fuchsia::ui::composition::PresentArgs{},
                          [callback = std::move(callback)](auto) { callback(); });

@@ -57,6 +57,30 @@ void UITestManager::BuildRealm() {
 
   display_width_ = info.extent_in_px().width;
   display_height_ = info.extent_in_px().height;
+
+  // Connect screenshotter.
+  screenshotter_ = realm_.realm_root()->ConnectSync<fuchsia::ui::composition::Screenshot>();
+
+  // Register focus chain listener.
+  auto focus_chain_listener_registry =
+      realm_.realm_root()->Connect<fuchsia::ui::focus::FocusChainListenerRegistry>();
+  focus_chain_listener_registry->Register(focus_chain_listener_binding_.NewBinding());
+
+  // Register geometry observer.
+  if (realm_.config().scene_owner) {
+    scene_controller_ = realm_.realm_root()->Connect<fuchsia::ui::test::scene::Controller>();
+    scene_controller_->RegisterViewTreeWatcher(view_tree_watcher_.NewRequest(), []() {});
+  } else {
+    realm_.realm_root()->Connect<fuchsia::ui::observation::test::Registry>(
+        observer_registry_.NewRequest());
+    observer_registry_->RegisterGlobalViewTreeWatcher(view_tree_watcher_.NewRequest());
+  }
+
+  view_tree_watcher_.set_error_handler(
+      [](auto) { FX_LOGS(ERROR) << "Received error on view tree watcher channel"; });
+
+  // Watch view geometry.
+  Watch();
 }
 
 std::unique_ptr<sys::ServiceDirectory> UITestManager::CloneExposedServicesDirectory() {
@@ -64,25 +88,12 @@ std::unique_ptr<sys::ServiceDirectory> UITestManager::CloneExposedServicesDirect
 }
 
 void UITestManager::InitializeScene() {
-  FX_CHECK(!view_tree_watcher_) << "InitializeScene() called twice";
-
-  // Register focus chain listener.
-  auto focus_chain_listener_registry =
-      realm_.realm_root()->Connect<fuchsia::ui::focus::FocusChainListenerRegistry>();
-  focus_chain_listener_registry->Register(focus_chain_listener_binding_.NewBinding());
-
   // Use scene provider helper component to attach client view to the scene.
   fuchsia::ui::test::scene::ControllerAttachClientViewRequest request;
   request.set_view_provider(realm_.realm_root()->Connect<fuchsia::ui::app::ViewProvider>());
-  scene_controller_ = realm_.realm_root()->Connect<fuchsia::ui::test::scene::Controller>();
-  scene_controller_->RegisterViewTreeWatcher(view_tree_watcher_.NewRequest(), []() {});
   scene_controller_->AttachClientView(std::move(request), [this](zx_koid_t client_view_ref_koid) {
     client_view_ref_koid_ = client_view_ref_koid;
   });
-
-  screenshotter_ = realm_.realm_root()->ConnectSync<fuchsia::ui::composition::Screenshot>();
-
-  Watch();
 }
 
 std::pair<uint64_t, uint64_t> UITestManager::GetDisplayDimensions() const {

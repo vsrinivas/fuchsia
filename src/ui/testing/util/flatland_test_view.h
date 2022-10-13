@@ -40,7 +40,6 @@ class FlatlandTestView : public TestView {
   // lifetime of the view.
   fuchsia::ui::composition::ParentViewportWatcherPtr parent_watcher_;
 
-  std::optional<fuchsia::ui::views::ViewRef> view_ref_;
   std::optional<fuchsia::ui::composition::LayoutInfo> layout_info_;
 
   uint64_t next_resource_id_ = kRootTransformId + 1;
