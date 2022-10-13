@@ -223,7 +223,7 @@
               "type": "uint64",
               "value": {
                 "kind": "identifier",
-                "value": "18446744073709551615",
+                "value": "18446744073709551614",
                 "expression": "HEAD",
                 "identifier": "fidl/HEAD"
               },

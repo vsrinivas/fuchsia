@@ -21,6 +21,9 @@ std::optional<Version> Version::From(uint64_t ordinal) {
   if (ordinal == Head().ordinal()) {
     return Head();
   }
+  if (ordinal == Legacy().ordinal()) {
+    return Legacy();
+  }
   if (ordinal == 0 || ordinal >= (1ul << 63)) {
     return std::nullopt;
   }
@@ -35,6 +38,9 @@ std::optional<Version> Version::Parse(std::string_view str) {
   if (str == "HEAD") {
     return Head();
   }
+  if (str == "LEGACY") {
+    return Legacy();
+  }
   uint64_t value;
   if (utils::ParseNumeric(str, &value) != utils::ParseNumericResult::kSuccess) {
     return std::nullopt;
@@ -48,6 +54,8 @@ uint64_t Version::ordinal() const {
     case PosInf().value_:
       ZX_PANIC("infinite versions do not have an ordinal");
     case Head().value_:
+      return std::numeric_limits<uint64_t>::max() - 1;
+    case Legacy().value_:
       return std::numeric_limits<uint64_t>::max();
     default:
       return value_;
@@ -62,6 +70,8 @@ std::string Version::ToString() const {
       return "+inf";
     case Version::Head().value_:
       return "HEAD";
+    case Version::Legacy().value_:
+      return "LEGACY";
     default:
       return std::to_string(value_);
   }
@@ -86,9 +96,54 @@ std::optional<VersionRange> VersionRange::Intersect(const std::optional<VersionR
   return VersionRange(std::max(a1, a2), std::min(b1, b2));
 }
 
-VersionRange Availability::range() const {
+bool VersionSet::Contains(Version version) const {
+  auto& [x, maybe_y] = ranges_;
+  return x.Contains(version) || (maybe_y && maybe_y.value().Contains(version));
+}
+
+// static
+std::optional<VersionSet> VersionSet::Intersect(const std::optional<VersionSet>& lhs,
+                                                const std::optional<VersionSet>& rhs) {
+  if (!lhs || !rhs) {
+    return std::nullopt;
+  }
+  auto& [x1, x2] = lhs.value().ranges_;
+  auto& [y1, y2] = rhs.value().ranges_;
+  std::optional<VersionRange> z1, z2;
+  for (auto range : {
+           VersionRange::Intersect(x1, y1),
+           VersionRange::Intersect(x1, y2),
+           VersionRange::Intersect(x2, y1),
+           VersionRange::Intersect(x2, y2),
+       }) {
+    if (!range) {
+      continue;
+    }
+    if (!z1) {
+      z1 = range;
+    } else if (!z2) {
+      z2 = range;
+    } else {
+      ZX_PANIC("set intersection is more than two pieces");
+    }
+  }
+  if (!z1) {
+    ZX_ASSERT(!z2);
+    return std::nullopt;
+  }
+  return VersionSet(z1.value(), z2);
+}
+
+VersionSet Availability::set() const {
   ZX_ASSERT(state_ == State::kInherited || state_ == State::kNarrowed);
-  return VersionRange(added_.value(), removed_.value());
+  VersionRange range(added_.value(), removed_.value());
+  switch (legacy_.value()) {
+    case Legacy::kNotApplicable:
+    case Legacy::kNo:
+      return VersionSet(range);
+    case Legacy::kYes:
+      return VersionSet(range, VersionRange(Version::Legacy(), Version::PosInf()));
+  }
 }
 
 std::set<Version> Availability::points() const {
@@ -97,7 +152,16 @@ std::set<Version> Availability::points() const {
   if (deprecated_) {
     result.insert(deprecated_.value());
   }
+  if (legacy_.value() == Legacy::kYes) {
+    ZX_ASSERT(result.insert(Version::Legacy()).second);
+    ZX_ASSERT(result.insert(Version::PosInf()).second);
+  }
   return result;
+}
+
+VersionRange Availability::range() const {
+  ZX_ASSERT(state_ == State::kNarrowed);
+  return VersionRange(added_.value(), removed_.value());
 }
 
 bool Availability::is_deprecated() const {
@@ -112,13 +176,18 @@ void Availability::Fail() {
 
 bool Availability::Init(InitArgs args) {
   ZX_ASSERT_MSG(state_ == State::kUnset, "called Init in the wrong order");
+  ZX_ASSERT_MSG(args.added != Version::Legacy(), "adding at LEGACY is not allowed");
+  ZX_ASSERT_MSG(args.removed != Version::Legacy(), "removing at LEGACY is not allowed");
+  ZX_ASSERT_MSG(args.deprecated != Version::Legacy(), "deprecating at LEGACY is not allowed");
   ZX_ASSERT_MSG(args.deprecated != Version::NegInf(),
                 "deprecated version must be finite, got -inf");
   ZX_ASSERT_MSG(args.deprecated != Version::PosInf(),
                 "deprecated version must be finite, got +inf");
+  ZX_ASSERT_MSG(args.legacy != Legacy::kNotApplicable, "legacy cannot be kNotApplicable");
   added_ = args.added;
   deprecated_ = args.deprecated;
   removed_ = args.removed;
+  legacy_ = args.legacy;
   bool valid = ValidOrder();
   state_ = valid ? State::kInitialized : State::kFailed;
   return valid;
@@ -176,9 +245,47 @@ Availability::InheritResult Availability::Inherit(const Availability& parent) {
   } else if (parent.deprecated_ && deprecated_.value() > parent.deprecated_.value()) {
     result.deprecated = InheritResult::Status::kAfterParentDeprecated;
   }
+  // Inherit and validate `legacy`.
+  if (!legacy_) {
+    if (removed_.value() == parent.removed_.value()) {
+      // Only inherit if the parent was removed at the same time. For example:
+      //
+      //     @available(added=1, removed=100, legacy=true)
+      //     type Foo = table {
+      //         @available(removed=2) 1: string bar;
+      //         @available(added=2)   1: string bar:10;
+      //         @available(removed=3) 2: bool qux;
+      //     };
+      //
+      // It's crucial we do not inherit legacy=true on the first `bar`,
+      // otherwise there will be two `bar` fields that collide at LEGACY. We
+      // also don't want to inherit legacy=true for `qux`: it had no legacy
+      // legacy support when it was removed at 3, so it doesn't make sense to
+      // change that when we later remove the entire table at 100.
+      //
+      // An alternative is to inherit when the child has no explicit `removed`.
+      // We prefer to base it on post-inheritance equality so that adding or
+      // removing a redundant `removed=...` on the child is purely stylistic.
+      legacy_ = parent.legacy_.value();
+    } else {
+      ZX_ASSERT_MSG(
+          removed_.value() != Version::PosInf(),
+          "impossible for child to be removed at +inf if parent is not also removed at +inf");
+      // By default, removed elements are not added back at LEGACY.
+      legacy_ = Legacy::kNo;
+    }
+  } else if (removed_.value() == Version::PosInf()) {
+    // Legacy is not applicable if the element is never removed. Note that we
+    // cannot check this earlier (e.g. in Init) because we don't know if the
+    // element is removed or not until performing inheritance.
+    result.legacy = InheritResult::LegacyStatus::kNeverRemoved;
+  } else if (legacy_.value() == Legacy::kYes && parent.legacy_.value() == Legacy::kNo) {
+    // We can't re-add the child at LEGACY without its parent.
+    result.legacy = InheritResult::LegacyStatus::kWithoutParent;
+  }
 
   if (result.Ok()) {
-    ZX_ASSERT(added_ && removed_);
+    ZX_ASSERT(added_ && removed_ && legacy_);
     ZX_ASSERT(ValidOrder());
     state_ = State::kInherited;
   } else {
@@ -189,9 +296,13 @@ Availability::InheritResult Availability::Inherit(const Availability& parent) {
 
 void Availability::Narrow(VersionRange range) {
   ZX_ASSERT_MSG(state_ == State::kInherited, "called Narrow in the wrong order");
-  state_ = State::kNarrowed;
   auto [a, b] = range.pair();
-  ZX_ASSERT_MSG(a >= added_ && b <= removed_, "must narrow to a subrange");
+  if (a == Version::Legacy()) {
+    ZX_ASSERT_MSG(b == Version::PosInf(), "legacy range must be [LEGACY, +inf)");
+    ZX_ASSERT_MSG(legacy_.value() != Legacy::kNo, "must be present at LEGACY");
+  } else {
+    ZX_ASSERT_MSG(a >= added_ && b <= removed_, "must narrow to a subrange");
+  }
   added_ = a;
   removed_ = b;
   if (deprecated_ && a >= deprecated_.value()) {
@@ -199,14 +310,36 @@ void Availability::Narrow(VersionRange range) {
   } else {
     deprecated_ = std::nullopt;
   }
+  if (a <= Version::Legacy() && b > Version::Legacy()) {
+    legacy_ = Legacy::kNotApplicable;
+  } else {
+    legacy_ = Legacy::kNo;
+  }
+  state_ = State::kNarrowed;
+}
+
+template <typename T>
+static std::string ToString(const std::optional<T>& opt) {
+  return opt ? ToString(opt.value()) : "_";
+}
+
+static std::string ToString(const Version& version) { return version.ToString(); }
+
+static std::string ToString(Availability::Legacy legacy) {
+  switch (legacy) {
+    case Availability::Legacy::kNotApplicable:
+      return "n/a";
+    case Availability::Legacy::kNo:
+      return "no";
+    case Availability::Legacy::kYes:
+      return "yes";
+  }
 }
 
 std::string Availability::Debug() const {
   std::stringstream ss;
-  auto str = [&](const std::optional<Version>& version) {
-    return version ? version->ToString() : "_";
-  };
-  ss << str(added_) << " " << str(deprecated_) << " " << str(removed_);
+  ss << ToString(added_) << " " << ToString(deprecated_) << " " << ToString(removed_) << " "
+     << ToString(legacy_);
   return ss.str();
 }
 

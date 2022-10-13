@@ -853,6 +853,8 @@ AttributeSchemaMap AttributeSchema::OfficialAttributes() {
                                             AttributeArgSchema::Optionality::kOptional))
       .AddArg("note", AttributeArgSchema(ConstantValue::Kind::kString,
                                          AttributeArgSchema::Optionality::kOptional))
+      .AddArg("legacy", AttributeArgSchema(ConstantValue::Kind::kBool,
+                                           AttributeArgSchema::Optionality::kOptional))
       .CompileEarly();
   return map;
 }

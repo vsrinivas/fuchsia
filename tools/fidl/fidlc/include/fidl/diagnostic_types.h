@@ -53,6 +53,7 @@ std::string Display(const flat::Name& n);
 std::string Display(const Platform& p);
 std::string Display(const Version& v);
 std::string Display(const VersionRange& r);
+std::string Display(const VersionSet& s);
 template <typename T, typename = decltype(std::to_string(std::declval<T>()))>
 std::string Display(T val) {
   return std::to_string(val);

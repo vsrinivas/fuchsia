@@ -74,11 +74,11 @@ constexpr ErrorDef<35, std::string_view, std::string_view, SourceSpan, std::stri
     ErrNameCollisionCanonical(
         "the name '{}' conflicts with '{}' from {}; both are represented by "
         "the canonical form '{}'");
-constexpr ErrorDef<36, std::string_view, SourceSpan, VersionRange, Platform> ErrNameOverlap(
+constexpr ErrorDef<36, std::string_view, SourceSpan, VersionSet, Platform> ErrNameOverlap(
     "the name '{}' conflicts with another declaration at {}; both are "
     "available {} of platform '{}'");
-constexpr ErrorDef<37, std::string_view, std::string_view, SourceSpan, std::string_view,
-                   VersionRange, Platform>
+constexpr ErrorDef<37, std::string_view, std::string_view, SourceSpan, std::string_view, VersionSet,
+                   Platform>
     ErrNameOverlapCanonical(
         "the name '{}' conflicts with '{}' from {}; both are represented "
         "by the canonical form '{}' and are available {} of platform '{}'");
@@ -442,6 +442,13 @@ constexpr ErrorDef<180, flat::Name> ErrExperimentalZxCTypesDisallowed(
     "{} is an experimental type that must be enabled by with `--experimental zx_c_types`");
 constexpr UndocumentedErrorDef<181> ErrReferenceInLibraryAttribute(
     "attributes on the 'library' declaration do not support referencing constants");
+constexpr UndocumentedErrorDef<182, const flat::AttributeArg *> ErrLegacyWithoutRemoval(
+    "the argument '{}' is not allowed on an element that is never removed");
+constexpr UndocumentedErrorDef<183, const flat::AttributeArg *, std::string_view,
+                               const flat::AttributeArg *, std::string_view, SourceSpan>
+    ErrLegacyConflictsWithParent(
+        "the argument {}={} conflicts with {}={} at {}; a child element "
+        "cannot be added back at LEGACY if its parent is removed");
 
 }  // namespace fidl
 // LINT.ThenChange(/docs/reference/fidl/language/errcat.md)

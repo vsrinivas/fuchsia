@@ -244,15 +244,18 @@ std::string Display(const Version& v) { return v.ToString(); }
 
 std::string Display(const VersionRange& r) {
   // Here we assume the version range is for an error about a versioned element.
-  // We handle 3 special cases (-inf, +inf, HEAD) for each endpoint.
+  // We handle 4 special cases (-inf, +inf, HEAD, LEGACY) for each endpoint.
   auto [a, b] = r.pair();
   std::stringstream ss;
   if (a == Version::NegInf()) {
     ZX_PANIC("versioned elements cannot start at -inf");
   } else if (a == Version::PosInf()) {
     ZX_PANIC("versioned elements cannot start at +inf");
-  } else if (a == Version::Head()) {
+  } else if (a == Version::Head() || a == Version::Legacy()) {
     ZX_ASSERT_MSG(b == Version::PosInf(), "unexpected end version");
+    // Technically [HEAD, +inf) includes LEGACY, but we just say "at version
+    // HEAD" because this will show up in contexts where mentioning LEGACY would
+    // be confusing (e.g. when the `legacy` argument is not used at all).
     ss << "at version " << Display(a);
   } else {
     if (b == Version::NegInf()) {
@@ -261,6 +264,8 @@ std::string Display(const VersionRange& r) {
       ss << "from version " << Display(a) << " onward";
     } else if (b == Version::Head()) {
       ss << "from version " << Display(a) << " to " << Display(b);
+    } else if (b == Version::Legacy()) {
+      ZX_PANIC("versioned elements cannot end at LEGACY");
     } else if (a.ordinal() + 1 == b.ordinal()) {
       ss << "at version " << Display(a);
     } else {
@@ -269,6 +274,16 @@ std::string Display(const VersionRange& r) {
     }
   }
   return ss.str();
+}
+
+std::string Display(const VersionSet& s) {
+  auto& [x, maybe_y] = s.ranges();
+  if (!maybe_y) {
+    return Display(x);
+  }
+  ZX_ASSERT_MSG(x.pair().second != Version::PosInf(),
+                "first range must have finite end if there are two");
+  return Display(x) + " and " + Display(maybe_y.value());
 }
 
 }  // namespace fidl::internal

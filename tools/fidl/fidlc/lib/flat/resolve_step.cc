@@ -36,10 +36,11 @@ void ResolveStep::RunImpl() {
     // kInherited). We don't add membership edges to them, and we specifically
     // avoid adding reference edges to them in ResolveStep::ParseReference.
     ZX_ASSERT(element->kind != Element::Kind::kLibrary);
-    // Each element starts 2 or 3 points. All have `added` and `removed`, and
-    // some have `deprecated`. Elements from other libraries (that exist due to
-    // reference edges) only ever have 2 points because those libraries are
-    // already compiled, hence post-decomposition.
+    // Each element starts with between 2 and 5 points. All have (1) `added` and
+    // (2) `removed`. Some have (3) `deprecated`. Some are added back for legacy
+    // support, so they have (4) LEGACY and (5) +inf. Elements from other
+    // libraries (that exist due to reference edges) only ever have 2 points
+    // because those libraries are already compiled, hence post-decomposition.
     info.points = element->availability.points();
   }
 
@@ -73,13 +74,25 @@ void ResolveStep::RunImpl() {
   // Split declarations based on the final point sets.
   Library::Declarations decomposed_declarations;
   for (auto [name, decl] : library()->declarations.all) {
+    auto decl_present = decl->availability.set();
     auto& points = graph_.at(decl).points;
     ZX_ASSERT_MSG(points.size() >= 2, "every decl must have at least 2 points");
     // Note: Even if there are only two points, we still "split" the decl into
     // one piece. There is no need to make it a special case.
     auto prev = *points.begin();
     for (auto it = std::next(points.begin()); it != points.end(); ++it) {
-      decomposed_declarations.Insert(decl->Split(VersionRange(prev, *it)));
+      auto range = VersionRange(prev, *it);
+      if (auto overlap = VersionSet::Intersect(VersionSet(range), decl_present)) {
+        ZX_ASSERT_MSG(overlap == VersionSet(range),
+                      "decomposed range must wholly inside or outside the availability");
+        decomposed_declarations.Insert(decl->Split(range));
+      } else {
+        auto [a, b] = range.pair();
+        auto [x, maybe_y] = decl_present.ranges();
+        auto removed = x.pair().second;
+        ZX_ASSERT_MSG(a >= removed && b <= Version::Legacy(),
+                      "skipped range must lie within [removed, LEGACY)");
+      }
       prev = *it;
     }
   }
@@ -536,7 +549,7 @@ void ResolveStep::InsertReferenceEdges(const Reference& ref, Context context) {
     }
     // Only insert an edge if we have a chance of resolving to this target
     // post-decomposition (as opposed to one of the other same-named targets).
-    if (VersionRange::Intersect(target->availability.range(), enclosing->availability.range())) {
+    if (VersionSet::Intersect(target->availability.set(), enclosing->availability.set())) {
       graph_[target].neighbors.insert(enclosing);
     }
   }

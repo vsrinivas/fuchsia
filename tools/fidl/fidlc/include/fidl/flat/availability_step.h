@@ -36,6 +36,8 @@ class AvailabilityStep : public Compiler::Step {
   std::optional<Platform> GetPlatform(const AttributeArg* maybe_arg);
   // Parses the argument value as a version. Reports an error on failure.
   std::optional<Version> GetVersion(const AttributeArg* maybe_arg);
+  // Parses the argument value as a legacy status. Reports an error on failure.
+  std::optional<Availability::Legacy> GetLegacy(const AttributeArg* maybe_arg);
 
   // Returns the availability that `element` should inherit from, or null
   // if it should not attempt inheriting.

@@ -16,15 +16,17 @@ namespace {
 
 struct TestCase {
   // A code describing how to order the availabilities relative to each other,
-  // using the characters (a, d, r) for the source and (A, D, R) for the target:
+  // using (a, d, r, l) for the source and (A, D, R, L) for the target:
   //
-  //     source: @available(added=a, deprecated=d, removed=r)
-  //     target: @available(added=A, deprecated=D, removed=R)
+  //     source: @available(added=a, deprecated=d, removed=r/l, legacy=...)
+  //     target: @available(added=A, deprecated=D, removed=R/L, legacy=...)
   //
   // For example, "AadrR" means: add target, add source, deprecate source,
   // remove source, remove target. Additionally, the character "=" is used to
   // align two values. For example, "a=A" means the source and target are added
   // at the same version, and never deprecated/removed.
+  //
+  // Using l/L instead of r/R means the element is removed with legacy=true.
   //
   // Must contain at least "a" and "A", but all others are optional.
   std::string_view code;
@@ -56,6 +58,9 @@ struct TestCase {
         case 'r':
           source << ", removed=" << version;
           break;
+        case 'l':
+          source << ", removed=" << version << ", legacy = true";
+          break;
         case 'A':
           target << "added=" << version;
           break;
@@ -64,6 +69,9 @@ struct TestCase {
           break;
         case 'R':
           target << ", removed=" << version;
+          break;
+        case 'L':
+          target << ", removed=" << version << ", legacy=true";
           break;
         case '=':
           version -= 2;
@@ -94,7 +102,8 @@ struct TestCase {
   }
 };
 
-// These cases were generated with the following Python code:
+// These cases (except for some extras at the bottom) were generated with the
+// following Python code:
 //
 //     def go(x, y):
 //         if x is None or y is None:
@@ -361,6 +370,22 @@ const TestCase kTestCases[] = {
     {"arAD", {&fidl::ErrNameNotFound}},
     {"arADR", {&fidl::ErrNameNotFound}},
     {"arAR", {&fidl::ErrNameNotFound}},
+
+    // Some manual cases for LEGACY. Doing all permutations would grow the list
+    // above from 252 to 730 entries.
+    {"AadDlL"},
+    {"AadlD"},
+    {"AalD", {&fidl::ErrInvalidReferenceToDeprecated}},
+    {"AalDL", {&fidl::ErrInvalidReferenceToDeprecated}},
+    {"AalDR", {&fidl::ErrNameNotFound}},
+    {"AalL"},
+    {"a=AL", {&fidl::ErrNameNotFound}},
+    {"a=Ad=Dl=L"},
+    {"a=Al"},
+    {"a=Al=L"},
+    {"a=Al=R", {&fidl::ErrNameNotFound}},
+    {"a=Ar=L"},
+    {"alAL", {&fidl::ErrNameNotFound}},
 };
 
 // Substitutes replacement for placeholder in str.

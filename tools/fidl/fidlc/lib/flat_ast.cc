@@ -423,7 +423,7 @@ template <typename T>
 static std::vector<T> FilterMembers(const std::vector<T>& all, VersionRange range) {
   std::vector<T> result;
   for (auto& member : all) {
-    if (VersionRange::Intersect(range, member.availability.range())) {
+    if (VersionSet::Intersect(VersionSet(range), member.availability.set())) {
       result.push_back(member.Copy());
       result.back().availability = member.availability;
       result.back().availability.Narrow(range);

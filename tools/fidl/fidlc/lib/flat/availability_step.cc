@@ -121,6 +121,7 @@ void AvailabilityStep::CompileAvailabilityFromAttribute(Element* element, Attrib
   const auto deprecated = attribute->GetArg("deprecated");
   const auto removed = attribute->GetArg("removed");
   const auto note = attribute->GetArg("note");
+  const auto legacy = attribute->GetArg("legacy");
 
   if (attribute->args.empty()) {
     Fail(ErrAvailableMissingArguments, attribute->span);
@@ -147,7 +148,8 @@ void AvailabilityStep::CompileAvailabilityFromAttribute(Element* element, Attrib
   }
   if (!element->availability.Init({.added = GetVersion(added),
                                    .deprecated = GetVersion(deprecated),
-                                   .removed = GetVersion(removed)})) {
+                                   .removed = GetVersion(removed),
+                                   .legacy = GetLegacy(legacy)})) {
     Fail(ErrInvalidAvailabilityOrder, attribute->span);
     // Return early to avoid confusing error messages about inheritance
     // conflicts for an availability that isn't even self-consistent.
@@ -179,11 +181,30 @@ void AvailabilityStep::CompileAvailabilityFromAttribute(Element* element, Attrib
          inherited_arg->value->span.data(), inherited_arg->span, child_what, when, parent_what);
   };
 
+  // Reports an error for the legacy arg given its status.
+  auto report_legacy = [&](const AttributeArg* arg,
+                           Availability::InheritResult::LegacyStatus status) {
+    switch (status) {
+      case Availability::InheritResult::LegacyStatus::kOk:
+        break;
+      case Availability::InheritResult::LegacyStatus::kNeverRemoved:
+        Fail(ErrLegacyWithoutRemoval, arg->span, arg);
+        break;
+      case Availability::InheritResult::LegacyStatus::kWithoutParent: {
+        const auto* inherited_arg = AncestorArgument(element, "removed");
+        Fail(ErrLegacyConflictsWithParent, arg->span, arg, arg->value->span.data(), inherited_arg,
+             inherited_arg->value->span.data(), inherited_arg->span);
+        break;
+      }
+    }
+  };
+
   if (auto source = AvailabilityToInheritFrom(element)) {
     const auto result = element->availability.Inherit(source.value());
     report(added, result.added);
     report(deprecated, result.deprecated);
     report(removed, result.removed);
+    report_legacy(legacy, result.legacy);
   }
 }
 
@@ -194,31 +215,49 @@ Platform AvailabilityStep::GetDefaultPlatform() {
 }
 
 std::optional<Platform> AvailabilityStep::GetPlatform(const AttributeArg* maybe_arg) {
-  if (maybe_arg && maybe_arg->value->IsResolved()) {
-    ZX_ASSERT(maybe_arg->value->Value().kind == ConstantValue::Kind::kString);
-    std::string str =
-        static_cast<const StringConstantValue*>(&maybe_arg->value->Value())->MakeContents();
-    if (auto platform = Platform::Parse(str)) {
-      return platform;
-    }
-    Fail(ErrInvalidPlatform, maybe_arg->value->span, str);
+  if (!(maybe_arg && maybe_arg->value->IsResolved())) {
+    return std::nullopt;
   }
-  return std::nullopt;
+  ZX_ASSERT(maybe_arg->value->Value().kind == ConstantValue::Kind::kString);
+  std::string str =
+      static_cast<const StringConstantValue*>(&maybe_arg->value->Value())->MakeContents();
+  auto platform = Platform::Parse(str);
+  if (!platform) {
+    Fail(ErrInvalidPlatform, maybe_arg->value->span, str);
+    return std::nullopt;
+  }
+  return platform;
 }
 
 std::optional<Version> AvailabilityStep::GetVersion(const AttributeArg* maybe_arg) {
-  if (maybe_arg && maybe_arg->value->IsResolved()) {
-    // Note: If the argument is "HEAD", its value will have been resolved to
-    // Version::Head().ordinal(). See AttributeArgSchema::ResolveArg.
-    ZX_ASSERT(maybe_arg->value->Value().kind == ConstantValue::Kind::kUint64);
-    uint64_t value =
-        static_cast<const NumericConstantValue<uint64_t>*>(&maybe_arg->value->Value())->value;
-    if (auto version = Version::From(value)) {
-      return version;
-    }
-    Fail(ErrInvalidVersion, maybe_arg->value->span, value);
+  if (!(maybe_arg && maybe_arg->value->IsResolved())) {
+    return std::nullopt;
   }
-  return std::nullopt;
+  // Note: We only have to deal with integers here. If the argument was the
+  // identifier `HEAD`, it will have been resolved to Version::Head().ordinal()
+  // when we call CompileAttributeEarly. See AttributeArgSchema::ResolveArg.
+  ZX_ASSERT(maybe_arg->value->Value().kind == ConstantValue::Kind::kUint64);
+  uint64_t value =
+      static_cast<const NumericConstantValue<uint64_t>*>(&maybe_arg->value->Value())->value;
+  auto version = Version::From(value);
+  // Do not allow referencing the LEGACY version directly. It may only be
+  // specified on the command line, or in FIDL libraries via the `legacy`
+  // argument to @available.
+  if (!version || version == Version::Legacy()) {
+    Fail(ErrInvalidVersion, maybe_arg->value->span, value);
+    return std::nullopt;
+  }
+  return version;
+}
+
+std::optional<Availability::Legacy> AvailabilityStep::GetLegacy(const AttributeArg* maybe_arg) {
+  if (!(maybe_arg && maybe_arg->value->IsResolved())) {
+    return std::nullopt;
+  }
+  ZX_ASSERT(maybe_arg->value->Value().kind == ConstantValue::Kind::kBool);
+  return static_cast<const BoolConstantValue*>(&maybe_arg->value->Value())->value
+             ? Availability::Legacy::kYes
+             : Availability::Legacy::kNo;
 }
 
 std::optional<Availability> AvailabilityStep::AvailabilityToInheritFrom(const Element* element) {
@@ -261,9 +300,9 @@ Element* AvailabilityStep::LexicalParent(const Element* element) {
 
 namespace {
 
-struct CmpRange {
+struct CmpAvailability {
   bool operator()(const Element* lhs, const Element* rhs) const {
-    return lhs->availability.range() < rhs->availability.range();
+    return lhs->availability.set() < rhs->availability.set();
   }
 };
 
@@ -275,7 +314,7 @@ void AvailabilityStep::VerifyNoDeclOverlaps() {
   // multiple elements, to allow the same code to work gracefully with libraries
   // that don't use @available (i.e. avoid too many redundant errors).
 
-  std::map<std::string, std::set<const Decl*, CmpRange>> by_canonical_name;
+  std::map<std::string, std::set<const Decl*, CmpAvailability>> by_canonical_name;
   for (auto& [name, decl] : library()->declarations.all) {
     // Skip decls whose availabilities we failed to compile.
     if (decl->availability.state() != Availability::State::kInherited) {
@@ -285,11 +324,11 @@ void AvailabilityStep::VerifyNoDeclOverlaps() {
     // TODO(fxbug.dev/67858): This is worst-case quadratic in the number of
     // declarations having the same name. It can be optimized to O(n*log(n)).
     auto canonical_name = utils::canonicalize(name);
-    auto range = decl->availability.range();
-    auto& set = by_canonical_name[canonical_name];
-    for (auto other_decl : set) {
-      auto other_range = other_decl->availability.range();
-      auto overlap = VersionRange::Intersect(range, other_range);
+    auto set = decl->availability.set();
+    auto& same_canonical_name = by_canonical_name[canonical_name];
+    for (auto other_decl : same_canonical_name) {
+      auto other_set = other_decl->availability.set();
+      auto overlap = VersionSet::Intersect(set, other_set);
       if (!overlap) {
         continue;
       }
@@ -297,8 +336,8 @@ void AvailabilityStep::VerifyNoDeclOverlaps() {
       auto other_name = other_decl->name.decl_name();
       auto other_span = other_decl->name.span().value();
       // Use a simplified error message for unversioned libraries, or for
-      // versioned libraries where the version ranges match exactly.
-      if (range == other_range) {
+      // versioned libraries where the version sets match exactly.
+      if (set == other_set) {
         if (name == other_name) {
           Fail(ErrNameCollision, span, name, other_span);
         } else {
@@ -315,7 +354,7 @@ void AvailabilityStep::VerifyNoDeclOverlaps() {
       }
       break;
     }
-    set.insert(decl);
+    same_canonical_name.insert(decl);
   }
 }
 

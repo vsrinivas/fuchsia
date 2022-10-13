@@ -107,6 +107,7 @@ library example;
   ASSERT_EQUIVALENT(fidl, fidl, "1");
   ASSERT_EQUIVALENT(fidl, fidl, "2");
   ASSERT_EQUIVALENT(fidl, fidl, "HEAD");
+  ASSERT_EQUIVALENT(fidl, fidl, "LEGACY");
 }
 
 TEST(DecompositionTests, DefaultAddedAtHead) {
@@ -126,6 +127,7 @@ type Foo = struct {};
   ASSERT_EQUIVALENT(with_attribute, without_attribute, "1");
   ASSERT_EQUIVALENT(with_attribute, without_attribute, "2");
   ASSERT_EQUIVALENT(with_attribute, without_attribute, "HEAD");
+  ASSERT_EQUIVALENT(with_attribute, without_attribute, "LEGACY");
 }
 
 TEST(DecompositionTests, AbsentLibraryIsEmpty) {
@@ -148,15 +150,16 @@ library example;
 type Foo = struct {};
 )FIDL";
 
-  auto v3_to_head = R"FIDL(
+  auto v3_onward = R"FIDL(
 @available(added=3)
 library example;
 )FIDL";
 
   ASSERT_EQUIVALENT(fidl, v1, "1");
   ASSERT_EQUIVALENT(fidl, v2, "2");
-  ASSERT_EQUIVALENT(fidl, v3_to_head, "3");
-  ASSERT_EQUIVALENT(fidl, v3_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v3_onward, "3");
+  ASSERT_EQUIVALENT(fidl, v3_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v3_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, SplitByMembership) {
@@ -177,7 +180,7 @@ library example;
 type TopLevel = struct {};
 )FIDL";
 
-  auto v2_to_head = R"FIDL(
+  auto v2_onward = R"FIDL(
 @available(added=2)
 library example;
 
@@ -187,8 +190,9 @@ type TopLevel = struct {
 )FIDL";
 
   ASSERT_EQUIVALENT(fidl, v1, "1");
-  ASSERT_EQUIVALENT(fidl, v2_to_head, "2");
-  ASSERT_EQUIVALENT(fidl, v2_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v2_onward, "2");
+  ASSERT_EQUIVALENT(fidl, v2_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v2_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, SplitByReference) {
@@ -217,7 +221,7 @@ type This = struct {
 type That = struct {};
 )FIDL";
 
-  auto v2_to_head = R"FIDL(
+  auto v2_onward = R"FIDL(
 @available(added=2)
 library example;
 
@@ -231,8 +235,9 @@ type That = struct {
 )FIDL";
 
   ASSERT_EQUIVALENT(fidl, v1, "1");
-  ASSERT_EQUIVALENT(fidl, v2_to_head, "2");
-  ASSERT_EQUIVALENT(fidl, v2_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v2_onward, "2");
+  ASSERT_EQUIVALENT(fidl, v2_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v2_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, SplitByTwoMembers) {
@@ -270,7 +275,7 @@ type This = struct {
 type That = struct {};
 )FIDL";
 
-  auto v3_to_head = R"FIDL(
+  auto v3_onward = R"FIDL(
 @available(added=3)
 library example;
 
@@ -284,8 +289,9 @@ type That = struct {};
 
   ASSERT_EQUIVALENT(fidl, v1, "1");
   ASSERT_EQUIVALENT(fidl, v2, "2");
-  ASSERT_EQUIVALENT(fidl, v3_to_head, "3");
-  ASSERT_EQUIVALENT(fidl, v3_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v3_onward, "3");
+  ASSERT_EQUIVALENT(fidl, v3_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v3_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, Recursion) {
@@ -378,7 +384,7 @@ type Expr = flexible union {
 };
 )FIDL";
 
-  auto v4_to_head = R"FIDL(
+  auto v4_onward = R"FIDL(
 @available(added=4)
 library example;
 
@@ -402,8 +408,9 @@ type Expr = flexible union {
   ASSERT_EQUIVALENT(fidl, v1, "1");
   ASSERT_EQUIVALENT(fidl, v2, "2");
   ASSERT_EQUIVALENT(fidl, v3, "3");
-  ASSERT_EQUIVALENT(fidl, v4_to_head, "4");
-  ASSERT_EQUIVALENT(fidl, v4_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v4_onward, "4");
+  ASSERT_EQUIVALENT(fidl, v4_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v4_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, MutualRecursion) {
@@ -474,7 +481,7 @@ type Bar = struct {
 };
 )FIDL";
 
-  auto v5_to_head = R"FIDL(
+  auto v5_onward = R"FIDL(
 @available(added=5)
 library example;
 
@@ -492,8 +499,9 @@ type Bar = struct {
   ASSERT_EQUIVALENT(fidl, v2, "2");
   ASSERT_EQUIVALENT(fidl, v3, "3");
   ASSERT_EQUIVALENT(fidl, v4, "4");
-  ASSERT_EQUIVALENT(fidl, v5_to_head, "5");
-  ASSERT_EQUIVALENT(fidl, v5_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v5_onward, "5");
+  ASSERT_EQUIVALENT(fidl, v5_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v5_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, MisalignedSwapping) {
@@ -542,7 +550,7 @@ type Foo = table {
 };
 )FIDL";
 
-  auto v4_to_head = R"FIDL(
+  auto v4_onward = R"FIDL(
 @available(added=4)
 library example;
 
@@ -555,8 +563,9 @@ type Foo = table {
   ASSERT_EQUIVALENT(fidl, v1, "1");
   ASSERT_EQUIVALENT(fidl, v2, "2");
   ASSERT_EQUIVALENT(fidl, v3, "3");
-  ASSERT_EQUIVALENT(fidl, v4_to_head, "4");
-  ASSERT_EQUIVALENT(fidl, v4_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v4_onward, "4");
+  ASSERT_EQUIVALENT(fidl, v4_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v4_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, StrictToFlexible) {
@@ -605,7 +614,7 @@ type X = struct {
 type Y = flexible enum { A = 1; };
 )FIDL";
 
-  auto v4_to_head = R"FIDL(
+  auto v4_onward = R"FIDL(
 @available(added=4)
 library example;
 
@@ -617,8 +626,9 @@ type Y = flexible enum { A = 1; };
   ASSERT_EQUIVALENT(fidl, v1, "1");
   ASSERT_EQUIVALENT(fidl, v2, "2");
   ASSERT_EQUIVALENT(fidl, v3, "3");
-  ASSERT_EQUIVALENT(fidl, v4_to_head, "4");
-  ASSERT_EQUIVALENT(fidl, v4_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v4_onward, "4");
+  ASSERT_EQUIVALENT(fidl, v4_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v4_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, NameReuse) {
@@ -682,7 +692,7 @@ library example;
 type Foo = struct {};
 )FIDL";
 
-  auto v7_to_head = R"FIDL(
+  auto v7_onward = R"FIDL(
 @available(added=7)
 library example;
 )FIDL";
@@ -693,8 +703,9 @@ library example;
   ASSERT_EQUIVALENT(fidl, v4_to_5, "4");
   ASSERT_EQUIVALENT(fidl, v4_to_5, "5");
   ASSERT_EQUIVALENT(fidl, v6, "6");
-  ASSERT_EQUIVALENT(fidl, v7_to_head, "7");
-  ASSERT_EQUIVALENT(fidl, v7_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v7_onward, "7");
+  ASSERT_EQUIVALENT(fidl, v7_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v7_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, ConstsAndConstraints) {
@@ -763,7 +774,7 @@ type Foo = table {
 type Bar = table {};
 )FIDL";
 
-  auto v5_to_head = R"FIDL(
+  auto v5_onward = R"FIDL(
 @available(added=5)
 library example;
 
@@ -775,8 +786,9 @@ type Bar = table {};
   ASSERT_EQUIVALENT(fidl, v2, "2");
   ASSERT_EQUIVALENT(fidl, v3, "3");
   ASSERT_EQUIVALENT(fidl, v4, "4");
-  ASSERT_EQUIVALENT(fidl, v5_to_head, "5");
-  ASSERT_EQUIVALENT(fidl, v5_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v5_onward, "5");
+  ASSERT_EQUIVALENT(fidl, v5_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v5_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, AllElementsSplitByMembership) {
@@ -991,7 +1003,7 @@ resource_definition Resource : uint32 {
 };
 )FIDL";
 
-  auto v5_to_head = R"FIDL(
+  auto v5_onward = R"FIDL(
 @available(added=5)
 library example;
 )FIDL";
@@ -1000,8 +1012,9 @@ library example;
   ASSERT_EQUIVALENT(fidl, v2, "2");
   ASSERT_EQUIVALENT(fidl, v3, "3");
   ASSERT_EQUIVALENT(fidl, v4, "4");
-  ASSERT_EQUIVALENT(fidl, v5_to_head, "5");
-  ASSERT_EQUIVALENT(fidl, v5_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v5_onward, "5");
+  ASSERT_EQUIVALENT(fidl, v5_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v5_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, AllElementsSplitByReference) {
@@ -1060,7 +1073,7 @@ alias ErrorIntegerType = uint32;
 protocol TargetProtocol {};
 )FIDL";
 
-  auto v2_to_head_prefix = R"FIDL(
+  auto v2_onward_prefix = R"FIDL(
 @available(added=2)
 library example;
 
@@ -1184,11 +1197,12 @@ protocol AnonymousLayoutsInProtocol {
 
   auto fidl = std::string(fidl_prefix) + common_suffix;
   auto v1 = std::string(v1_prefix) + common_suffix;
-  auto v2_to_head = std::string(v2_to_head_prefix) + common_suffix;
+  auto v2_onward = std::string(v2_onward_prefix) + common_suffix;
 
   ASSERT_EQUIVALENT(fidl, v1, "1");
-  ASSERT_EQUIVALENT(fidl, v2_to_head, "2");
-  ASSERT_EQUIVALENT(fidl, v2_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v2_onward, "2");
+  ASSERT_EQUIVALENT(fidl, v2_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v2_onward, "LEGACY");
 }
 
 TEST(DecompositionTests, Complicated) {
@@ -1413,7 +1427,7 @@ protocol B {
 };
 )FIDL";
 
-  auto v7_to_head = R"FIDL(
+  auto v7_onward = R"FIDL(
 @available(added=7)
 library example;
 
@@ -1454,8 +1468,184 @@ protocol B {
   ASSERT_EQUIVALENT(fidl, v4, "4");
   ASSERT_EQUIVALENT(fidl, v5, "5");
   ASSERT_EQUIVALENT(fidl, v6, "6");
-  ASSERT_EQUIVALENT(fidl, v7_to_head, "7");
-  ASSERT_EQUIVALENT(fidl, v7_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v7_onward, "7");
+  ASSERT_EQUIVALENT(fidl, v7_onward, "HEAD");
+  ASSERT_EQUIVALENT(fidl, v7_onward, "LEGACY");
+}
+
+TEST(DecompositionTests, Legacy) {
+  auto fidl = R"FIDL(
+@available(added=1)
+library example;
+
+protocol NeverRemoved {
+    @available(removed=3)
+    RemovedAt3();
+
+    @available(removed=3, legacy=false)
+    RemovedAt3LegacyFalse();
+
+    @available(removed=3, legacy=true)
+    RemovedAt3LegacyTrue();
+
+    @available(removed=2)
+    SwappedAt2();
+
+    @available(added=2)
+    SwappedAt2(struct { b bool; });
+};
+
+@available(removed=3)
+protocol RemovedAt3 {
+    Default();
+
+    @available(legacy=false)
+    LegacyFalse();
+
+    @available(removed=2)
+    RemovedAt2();
+
+    @available(removed=2)
+    SwappedAt2();
+
+    @available(added=2)
+    SwappedAt2(struct { b bool; });
+};
+
+@available(removed=3, legacy=false)
+protocol RemovedAt3LegacyFalse {
+    Default();
+
+    @available(legacy=false)
+    LegacyFalse();
+
+    @available(removed=2)
+    RemovedAt2();
+
+    @available(removed=2)
+    SwappedAt2();
+
+    @available(added=2)
+    SwappedAt2(struct { b bool; });
+};
+
+@available(removed=3, legacy=true)
+protocol RemovedAt3LegacyTrue {
+    Default();
+
+    @available(legacy=false)
+    LegacyFalse();
+
+    @available(legacy=true)
+    LegacyTrue();
+
+    @available(removed=2)
+    RemovedAt2();
+
+    @available(removed=2)
+    SwappedAt2();
+
+    @available(added=2)
+    SwappedAt2(struct { b bool; });
+};
+)FIDL";
+
+  auto v1 = R"FIDL(
+@available(added=1, removed=2)
+library example;
+
+protocol NeverRemoved {
+    RemovedAt3();
+    RemovedAt3LegacyFalse();
+    RemovedAt3LegacyTrue();
+    SwappedAt2();
+};
+
+protocol RemovedAt3 {
+    Default();
+    LegacyFalse();
+    RemovedAt2();
+    SwappedAt2();
+};
+
+protocol RemovedAt3LegacyFalse {
+    Default();
+    LegacyFalse();
+    RemovedAt2();
+    SwappedAt2();
+};
+
+protocol RemovedAt3LegacyTrue {
+    Default();
+    LegacyFalse();
+    LegacyTrue();
+    RemovedAt2();
+    SwappedAt2();
+};
+)FIDL";
+
+  auto v2 = R"FIDL(
+@available(added=2, removed=3)
+library example;
+
+protocol NeverRemoved {
+    RemovedAt3();
+    RemovedAt3LegacyFalse();
+    RemovedAt3LegacyTrue();
+    SwappedAt2(struct { b bool; });
+};
+
+protocol RemovedAt3 {
+    Default();
+    LegacyFalse();
+    SwappedAt2(struct { b bool; });
+};
+
+protocol RemovedAt3LegacyFalse {
+    Default();
+    LegacyFalse();
+    SwappedAt2(struct { b bool; });
+};
+
+protocol RemovedAt3LegacyTrue {
+    Default();
+    LegacyFalse();
+    LegacyTrue();
+    SwappedAt2(struct { b bool; });
+};
+)FIDL";
+
+  auto v3_to_head = R"FIDL(
+@available(added=3)
+library example;
+
+protocol NeverRemoved {
+    SwappedAt2(struct { b bool; });
+};
+)FIDL";
+
+  auto legacy = R"FIDL(
+// This is the closest we can get to making the library only available at LEGACY.
+@available(added=1, removed=2, legacy=true)
+library example;
+
+protocol NeverRemoved {
+    RemovedAt3LegacyTrue();
+    SwappedAt2(struct { b bool; });
+};
+
+protocol RemovedAt3LegacyTrue {
+    Default();
+    LegacyTrue();
+    SwappedAt2(struct { b bool; });
+};
+)FIDL";
+
+  ASSERT_EQUIVALENT(fidl, v1, "1");
+  ASSERT_EQUIVALENT(fidl, v2, "2");
+  ASSERT_EQUIVALENT(fidl, v3_to_head, "3");
+  ASSERT_EQUIVALENT(fidl, v3_to_head, "HEAD");
+  ASSERT_EQUIVALENT(fidl, legacy, "LEGACY");
 }
 
 }  // namespace
