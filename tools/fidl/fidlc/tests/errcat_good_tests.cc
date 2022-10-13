@@ -15,6 +15,12 @@
 
 namespace {
 
+TEST(ErrcatTests, Good0003) {
+  TestLibrary library;
+  library.AddFile("good/fi-0003.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(ErrcatTests, Good0012) {
   TestLibrary library;
   library.AddFile("good/fi-0012.test.fidl");

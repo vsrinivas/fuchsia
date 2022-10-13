@@ -387,10 +387,22 @@ const str3 string:1 = "\297";
   }
 }
 
-TEST(RecoverableParsingTests, UnexpextedLineBreakInLiteral) {
+TEST(RecoverableParsingTests, UnexpectedLineBreakInLiteral) {
   TestLibrary library;
   library.AddFile("bad/fi-0002.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedLineBreak);
+}
+
+TEST(RecoverableParsingTests, InvalidEscapeSequenceInLiteral) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0003.test.fidl");
+  EXPECT_FALSE(library.Compile());
+
+  const auto& errors = library.errors();
+  // TODO(fxbug.dev/111982): fidlc should recover from all three failures
+  ASSERT_EQ(errors.size(), 2);
+  EXPECT_ERR(errors[0], fidl::ErrInvalidEscapeSequence);
+  EXPECT_ERR(errors[1], fidl::ErrInvalidEscapeSequence);
 }
 
 TEST(RecoverableParsingTests, InvalidHexDigit) {

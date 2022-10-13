@@ -1,0 +1,9 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.good.fi0003;
+
+const ESCAPED_BACKSLASH string:2 = "\\ ";
+const REMOVED_BACKSLASH string:1 = "i";
+const SMALL_CODE_POINT string:1 = "\u2604";
+const BIG_CODE_POINT string:1 = "\U0001F604";

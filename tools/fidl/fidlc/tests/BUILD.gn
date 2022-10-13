@@ -15,6 +15,7 @@ host_test_data("bad_cases") {
   sources = [
     "fidl/bad/fi-0001.test.fidl",
     "fidl/bad/fi-0002.test.fidl",
+    "fidl/bad/fi-0003.test.fidl",
     "fidl/bad/fi-0004.test.fidl",
     "fidl/bad/fi-0005.test.fidl",
     "fidl/bad/fi-0006.test.fidl",
@@ -60,6 +61,7 @@ host_test_data("good_cases") {
   sources = [
     "fidl/good/fi-0001.test.fidl",
     "fidl/good/fi-0002.test.fidl",
+    "fidl/good/fi-0003.test.fidl",
     "fidl/good/fi-0004.test.fidl",
     "fidl/good/fi-0005.test.fidl",
     "fidl/good/fi-0006.test.fidl",
