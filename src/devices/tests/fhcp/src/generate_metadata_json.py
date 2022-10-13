@@ -36,7 +36,42 @@ def validate(data):
                 raise ValueError(
                     f"The test {url} specifies an invalid sub-type '{item_sub_type}'."
                 )
+        if "is_automated" not in test:
+            raise ValueError(
+                f"The test {url} must specify an 'is_automated' value.")
     return True
+
+
+def check_required_fhcp_fields(d):
+    # "test_types" key must exist and have a non-empty value.
+    if "test_types" not in d or not d["test_types"]:
+        raise ValueError(
+            "The 'test_types' field must have at least one type defined. Missing from:",
+            d)
+    if "device_categories" not in d or not d["device_categories"]:
+        raise ValueError(
+            "The 'device_categories' field must have at least one category defined. Missing from:",
+            d)
+    for category in d["device_categories"]:
+        if "category" not in category:
+            raise ValueError(
+                "Missing 'category' in category definition:", category)
+        if not category["category"]:
+            raise ValueError("Category field must have a category value.")
+        # Subcategory can be empty, so there is nothing to enforce.
+    if "environments" not in d or not d["environments"]:
+        raise ValueError(
+            "The 'environments' field must have at least one environment defined. Missing from:",
+            d)
+    for environment in d["environments"]:
+        if "tags" not in environment:
+            raise ValueError(
+                "Missing 'tags' in environment definition:", environment)
+        if 'fhcp-automated' not in environment[
+                "tags"] and 'fhcp-manual' not in environment["tags"]:
+            raise ValueError(
+                "The 'tags' field must have at least one tag of either 'fhcp-automated' or 'fhcp-manual'. Missing from:",
+                environment["tags"])
 
 
 def convert_to_final_dict(appendix, data):
@@ -54,6 +89,7 @@ def convert_to_final_dict(appendix, data):
             test_entries[d["test"]["package_label"]] = d
         elif "test_types" in d and "device_categories" in d:
             # Found a "Type B" as described above.
+            check_required_fhcp_fields(d)
             fhcp_entries[d["id"]] = d
         else:
             raise ValueError("This is not a valid entry:", d)
@@ -63,12 +99,15 @@ def convert_to_final_dict(appendix, data):
             raise ValueError(f"Did not find '{entry}' in the tests.")
         test_metadata = test_entries[entry]
         fhcp_metadata = fhcp_entries[entry]
+        is_automated = len(fhcp_metadata["environments"]) > 0 and fhcp_metadata[
+            "environments"][0] and "fhcp-automated" in fhcp_metadata[
+                "environments"][0]["tags"]
         tests.append(
             {
                 "url": test_metadata["test"]["package_url"],
                 "test_types": fhcp_metadata["test_types"],
                 "device_categories": fhcp_metadata["device_categories"],
-                "environments": fhcp_metadata["environments"],
+                "is_automated": is_automated,
             })
     appendix["tests"] = tests
     return appendix

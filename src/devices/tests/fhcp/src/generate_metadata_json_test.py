@@ -49,12 +49,14 @@ class GenerateMetadataTests(unittest.TestCase):
                     "subcategory": "e"
                 }],
                 "environments":
-                    [{
-                        "dimensions": {
-                            "device_type": "f"
-                        },
-                        "tags": ["g"]
-                    }]
+                    [
+                        {
+                            "dimensions": {
+                                "device_type": "f"
+                            },
+                            "tags": ["fhcp-automated"]
+                        }
+                    ]
             }
         ]
         expected = {
@@ -64,23 +66,14 @@ class GenerateMetadataTests(unittest.TestCase):
             "tests":
                 [
                     {
-                        "url":
-                            url,
+                        "url": url,
                         "test_types": ["a", "b"],
                         "device_categories":
                             [{
                                 "category": "d",
                                 "subcategory": "e"
                             }],
-                        "environments":
-                            [
-                                {
-                                    "dimensions": {
-                                        "device_type": "f"
-                                    },
-                                    "tags": ["g"]
-                                }
-                            ]
+                        "is_automated": True,
                     }
                 ]
         }
@@ -94,6 +87,20 @@ class GenerateMetadataTests(unittest.TestCase):
             f"Did not find 'not_matching' in the tests.", str(ctx.exception))
 
         intermediate_data[1]["id"] = identifier
+        ret = convert_to_final_dict(appendix_data, intermediate_data)
+        self.assertTrue(ret["tests"][0]["is_automated"])
+
+        intermediate_data[1]["environments"][0]["tags"] = []
+        with self.assertRaises(ValueError) as ctx:
+            convert_to_final_dict(appendix_data, intermediate_data)
+        self.assertEqual(
+            f"(\"The 'tags' field must have at least one tag of either 'fhcp-automated' or 'fhcp-manual'. Missing from:\", [])",
+            str(ctx.exception))
+
+        intermediate_data[1]["environments"][0]["tags"] = ["fhcp-manual"]
+        ret = convert_to_final_dict(appendix_data, intermediate_data)
+        self.assertFalse(ret["tests"][0]["is_automated"])
+
         invalid_data = {"test": {}}
         intermediate_data.append(invalid_data)
         with self.assertRaises(ValueError) as ctx:
@@ -139,8 +146,7 @@ class GenerateMetadataTests(unittest.TestCase):
                         # This valid entry tests that validate() will loop
                         # through each entry by only having the 2nd entry
                         # have failures.
-                        "url":
-                            url,
+                        "url": url,
                         "test_types": ["functional"],
                         "device_categories":
                             [
@@ -149,21 +155,12 @@ class GenerateMetadataTests(unittest.TestCase):
                                     "subcategory": "wifi"
                                 }
                             ],
-                        "environments":
-                            [
-                                {
-                                    "dimensions": {
-                                        "device_type": "f"
-                                    },
-                                    "tags": ["g"]
-                                }
-                            ]
+                        "is_automated": False,
                     },
                     {
                         "url": url2,
                         "test_types": [],
                         "device_categories": [],
-                        "environments": []
                     }
                 ]
         }
@@ -185,6 +182,13 @@ class GenerateMetadataTests(unittest.TestCase):
                 "category": "input",
                 "subcategory": "touchpad"
             })
+        with self.assertRaises(ValueError) as ctx:
+            validate(data)
+        self.assertEqual(
+            f"The test {url2} must specify an 'is_automated' value.",
+            str(ctx.exception))
+
+        data["tests"][1]["is_automated"] = True
         self.assertTrue(validate(data))
 
         data["tests"][1]["device_categories"].append(
