@@ -1,0 +1,10 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
+    program: {
+        binary: "data/tests/socket_ip_tcp_loopback_test",
+        args: [ "--gunit_filter=-*.RecvTimeoutReadSucceeds/*:*.RecvTimeoutNegSecRead/*:*.SendmsgRecvmsgMsgCtruncNoop/*:*.RecvmsgMsghdrFlagsNotClearedOnFailure/*:*.SetSocketRecvBufForceAboveMax/*:*.SetGetSendTimeoutLargerArg/*:*.SetGetRecvTimeoutLargerArg/*:*.RecvTimeoutUsecTooLarge/*:*.SendTimeoutUsecTooLarge/*:*.RecvTimeoutUsecNeg/*:*.SendTimeoutUsecNeg/*:*.RecvWaitAll/*:*.RecvWaitAllDontWait/*:*.RecvTimeoutWaitAll/*:*.SetAndGetBooleanSocketOptions/*:*.GetSetSocketRcvlowatOption/*:*.BasicReadWrite/*:*.BasicSendRecv/*:*.BasicSendmmsg/*:*.BasicRecvmmsg/*:*.SendmsgRecvmsg10KB/*:*.SendmsgRecvmsg16KB/*:*.RecvmsgMsghdrFlagsCleared/*:*.RecvmsgPeekMsghdrFlagsCleared/*:*.RecvmsgIovNotUpdated/*:*.MsgPeek/*" ],
+    },
+}

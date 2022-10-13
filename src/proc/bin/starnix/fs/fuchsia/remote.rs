@@ -286,7 +286,7 @@ fn zxio_write_at(
     Ok(actual)
 }
 
-fn zxio_wait_async(
+pub fn zxio_wait_async(
     zxio: &Arc<Zxio>,
     waiter: &Waiter,
     events: FdEvents,
@@ -305,7 +305,7 @@ fn zxio_wait_async(
     waiter.wake_on_signals(&handle, signals, Box::new(signal_handler), options).unwrap()
 }
 
-fn zxio_cancel_wait(zxio: &Arc<Zxio>, waiter: &Waiter, key: WaitKey) -> bool {
+pub fn zxio_cancel_wait(zxio: &Arc<Zxio>, waiter: &Waiter, key: WaitKey) -> bool {
     let (handle, signals) = zxio.wait_begin(ZxioSignals::NONE.bits());
     let did_cancel = waiter.cancel_signal_wait(&handle, key);
     zxio.wait_end(signals);
