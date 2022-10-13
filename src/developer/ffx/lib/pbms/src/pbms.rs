@@ -6,33 +6,22 @@
 
 use {
     crate::{
-        gcs::{
-            exists_in_gcs, fetch_from_gcs, get_boto_path, get_gcs_client_with_auth,
-            get_gcs_client_without_auth,
-        },
+        gcs::{exists_in_gcs, fetch_from_gcs},
+        repo::fetch_package_repository_from_mirrors,
         repo_info::RepoInfo,
     },
     ::gcs::client::{
         DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, ProgressState, Throttle,
     },
-    anyhow::{anyhow, bail, Context, Result},
-    camino::Utf8Path,
-    chrono::{DateTime, NaiveDateTime, Utc},
+    anyhow::{bail, Context, Result},
+    async_fs::File,
     ffx_config::sdk::SdkVersion,
     fms::{find_product_bundle, Entries},
-    fuchsia_hyper::new_https_client,
-    fuchsia_repo::{
-        repo_builder::RepoBuilder,
-        repo_client::RepoClient,
-        repo_keys::RepoKeys,
-        repository::{FileSystemRepository, GcsRepository, HttpRepository, RepoProvider},
-    },
-    futures::{stream::FuturesUnordered, TryStreamExt as _},
-    sdk_metadata::{Metadata, PackageBundle},
-    serde_json::Value,
+    futures::{AsyncWriteExt as _, TryStreamExt as _},
+    hyper::{header::CONTENT_LENGTH, StatusCode},
+    sdk_metadata::Metadata,
     std::path::{Path, PathBuf},
     structured_ui,
-    url::Url,
 };
 
 pub(crate) const CONFIG_METADATA: &str = "pbms.metadata";
@@ -333,357 +322,6 @@ pub(crate) fn pb_dir_name(gcs_url: &url::Url) -> String {
     format!("{}", out)
 }
 
-/// Fetch the product bundle package repository mirror list.
-///
-/// This will try to download a package repository from each mirror in the list, stopping on the
-/// first success. Otherwise it will return the last error encountered.
-async fn fetch_package_repository_from_mirrors<F, I>(
-    product_url: &url::Url,
-    local_dir: &Path,
-    packages: &[PackageBundle],
-    progress: &F,
-    ui: &I,
-) -> Result<()>
-where
-    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
-    I: structured_ui::Interface + Sync,
-{
-    // The packages list is a set of mirrors. Try downloading the packages from each one. Only error
-    // out if we can't download the packages from any mirror.
-    for (i, package) in packages.iter().enumerate() {
-        let res = fetch_package_repository(product_url, local_dir, package, progress, ui).await;
-
-        match res {
-            Ok(()) => {
-                break;
-            }
-            Err(err) => {
-                tracing::warn!("Unable to fetch {:?}: {:?}", package, err);
-                if i + 1 == packages.len() {
-                    return Err(err);
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Fetch packages from this package bundle and write them to `local_dir`.
-async fn fetch_package_repository<F, I>(
-    product_url: &url::Url,
-    local_dir: &Path,
-    package: &PackageBundle,
-    progress: &F,
-    ui: &I,
-) -> Result<()>
-where
-    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
-    I: structured_ui::Interface + Sync,
-{
-    tracing::debug!(
-        "product_url {:?}, local_dir {:?}, package {:?}",
-        product_url,
-        local_dir,
-        package
-    );
-    let mut repo_metadata_uri =
-        make_remote_url(product_url, &package.repo_uri).context("package.repo_uri")?;
-    tracing::debug!(
-        "package repository: repo_metadata_uri {:?}, repo_uri {}, blob_uri {:?}",
-        repo_metadata_uri,
-        package.repo_uri,
-        package.blob_uri
-    );
-
-    match package.format.as_str() {
-        "files" => {
-            // `Url::join()` treats urls with a trailing slash as a directory, and without as a
-            // file. In the latter case, it will strip off the last segment before joining paths.
-            // Since the metadata and blob url are directories, make sure they have a trailing
-            // slash.
-            if !repo_metadata_uri.path().ends_with('/') {
-                repo_metadata_uri.set_path(&format!("{}/", repo_metadata_uri.path()));
-            }
-
-            let repo_keys_uri = repo_metadata_uri.join("keys/").context("joining keys dir")?;
-            repo_metadata_uri =
-                repo_metadata_uri.join("repository/").context("joining repository dir")?;
-
-            let repo_blobs_uri = if let Some(blob_repo_uri) = &package.blob_uri {
-                make_remote_url(product_url, &blob_repo_uri).context("package.repo_uri")?
-            } else {
-                // If the blob uri is unspecified, then use `$METADATA_URI/blobs/`.
-                repo_metadata_uri.join("blobs/").context("joining blobs dir")?
-            };
-
-            fetch_package_repository_from_files(
-                local_dir,
-                repo_keys_uri,
-                repo_metadata_uri,
-                repo_blobs_uri,
-                progress,
-                ui,
-            )
-            .await
-            .context("fetch_package_repository_from_files")
-        }
-        "tgz" => {
-            if package.blob_uri.is_some() {
-                // TODO(fxbug.dev/93850): implement pbms.
-                unimplemented!();
-            }
-
-            fetch_package_repository_from_tgz(local_dir, repo_metadata_uri, progress, ui).await
-        }
-        _ =>
-        // The schema currently defines only "files" or "tgz" (see RFC-100).
-        // This error could be a typo in the product bundle or a new image
-        // format has been added and this code needs an update.
-        {
-            bail!(
-                "Unexpected image format ({:?}) in product bundle. \
-            Supported formats are \"files\" and \"tgz\". \
-            Please report as a bug.",
-                package.format,
-            )
-        }
-    }
-}
-
-/// Fetch a package repository using the `files` package bundle format and writes it to
-/// `local_dir`.
-///
-/// This supports the following URL schemes:
-/// * `http://`
-/// * `https://`
-/// * `gs://`
-async fn fetch_package_repository_from_files<F, I>(
-    local_dir: &Path,
-    repo_keys_uri: Url,
-    repo_metadata_uri: Url,
-    repo_blobs_uri: Url,
-    progress: &F,
-    ui: &I,
-) -> Result<()>
-where
-    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
-    I: structured_ui::Interface + Sync,
-{
-    match (repo_metadata_uri.scheme(), repo_blobs_uri.scheme()) {
-        (GS_SCHEME, GS_SCHEME) => {
-            // FIXME(fxbug.dev/103331): we are reproducing the gcs library's authentication flow,
-            // where we will prompt for an oauth token if we get a permission denied error. This
-            // was done because the pbms library is written to be used a frontend that can prompt
-            // for an oauth token, but the `pkg` library is written to be used on the server side,
-            // which cannot do the prompt. We should eventually restructure things such that we can
-            // deduplicate this logic.
-
-            // First try to fetch with the public client.
-            let client = get_gcs_client_without_auth();
-            let backend = Box::new(GcsRepository::new(
-                client,
-                repo_metadata_uri.clone(),
-                repo_blobs_uri.clone(),
-            )?) as Box<dyn RepoProvider>;
-
-            if let Ok(()) = fetch_package_repository_from_backend(
-                local_dir,
-                repo_keys_uri.clone(),
-                repo_metadata_uri.clone(),
-                repo_blobs_uri.clone(),
-                backend,
-                progress,
-                ui,
-            )
-            .await
-            {
-                return Ok(());
-            }
-
-            let boto_path = get_boto_path(ui).await?;
-            let client =
-                get_gcs_client_with_auth(&boto_path).context("get_gcs_client_with_auth")?;
-
-            let backend = Box::new(GcsRepository::new(
-                client,
-                repo_metadata_uri.clone(),
-                repo_blobs_uri.clone(),
-            )?) as Box<dyn RepoProvider>;
-
-            fetch_package_repository_from_backend(
-                local_dir,
-                repo_keys_uri.clone(),
-                repo_metadata_uri.clone(),
-                repo_blobs_uri.clone(),
-                backend,
-                progress,
-                ui,
-            )
-            .await
-            .context("fetch_package_repository_from_backend")
-        }
-        ("http" | "https", "http" | "https") => {
-            let client = new_https_client();
-            let backend = Box::new(HttpRepository::new(
-                client,
-                repo_metadata_uri.clone(),
-                repo_blobs_uri.clone(),
-            )) as Box<dyn RepoProvider>;
-
-            fetch_package_repository_from_backend(
-                local_dir,
-                repo_keys_uri,
-                repo_metadata_uri,
-                repo_blobs_uri,
-                backend,
-                progress,
-                ui,
-            )
-            .await
-            .context("fetch_package_repository_from_backend")
-        }
-        ("file", "file") => {
-            // The files are already local, so we don't need to download them.
-            Ok(())
-        }
-        (_, _) => {
-            bail!("Unexpected URI scheme in ({}, {})", repo_metadata_uri, repo_blobs_uri);
-        }
-    }
-}
-
-async fn fetch_package_repository_from_backend<'a, F, I>(
-    local_dir: &'a Path,
-    repo_keys_uri: Url,
-    repo_metadata_uri: Url,
-    repo_blobs_uri: Url,
-    backend: Box<dyn RepoProvider>,
-    progress: &'a F,
-    ui: &'a I,
-) -> Result<()>
-where
-    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
-    I: structured_ui::Interface + Sync,
-{
-    tracing::debug!(
-        "creating package repository, repo_metadata_uri {}, repo_blobs_uri {}",
-        repo_metadata_uri,
-        repo_blobs_uri
-    );
-    let repo = RepoClient::from_trusted_remote(backend).await.with_context(|| {
-        format!(
-            "creating package repository, repo_metadata_uri {}, repo_blobs_uri {}",
-            repo_metadata_uri, repo_blobs_uri
-        )
-    })?;
-
-    let local_dir =
-        Utf8Path::from_path(local_dir).ok_or_else(|| anyhow!("local dir must be UTF-8 safe"))?;
-    let keys_dir = local_dir.join("keys");
-    let metadata_dir = local_dir.join("repository");
-    let blobs_dir = metadata_dir.join("blobs");
-
-    // Download the repository private keys.
-    fetch_bundle_uri(&repo_keys_uri.join("timestamp.json")?, keys_dir.as_std_path(), progress, ui)
-        .await
-        .context("fetch_bundle_uri timestamp.json")?;
-
-    fetch_bundle_uri(&repo_keys_uri.join("snapshot.json")?, keys_dir.as_std_path(), progress, ui)
-        .await
-        .context("fetch_bundle_uri snapshot.json")?;
-
-    fetch_bundle_uri(&repo_keys_uri.join("targets.json")?, keys_dir.as_std_path(), progress, ui)
-        .await
-        .context("fetch_bundle_uri targets.json")?;
-
-    // TUF metadata may be expired, so pretend we're updating relative to the Unix Epoch so the
-    // metadata won't expired.
-    let start_time = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc);
-
-    let trusted_targets = fuchsia_repo::resolve::resolve_repository_metadata_with_start_time(
-        &repo,
-        &metadata_dir,
-        &start_time,
-    )
-    .await
-    .with_context(|| format!("downloading repository {} {}", repo_metadata_uri, repo_blobs_uri))?;
-
-    let mut count = 0;
-    // Exit early if there are no targets.
-    if let Some(trusted_targets) = trusted_targets {
-        // Download all the packages.
-        let fetcher =
-            fuchsia_repo::resolve::PackageFetcher::new(&repo, blobs_dir.as_std_path(), 5).await?;
-
-        let mut futures = FuturesUnordered::new();
-
-        let mut throttle = Throttle::from_duration(std::time::Duration::from_millis(500));
-        for (package_name, desc) in trusted_targets.targets().iter() {
-            let merkle = desc.custom().get("merkle").context("missing merkle")?;
-            let merkle = if let Value::String(hash) = merkle {
-                hash.parse()?
-            } else {
-                bail!("Merkle field is not a String. {:#?}", desc)
-            };
-
-            count += 1;
-            if throttle.is_ready() {
-                match progress(
-                    DirectoryProgress { url: repo_blobs_uri.as_ref(), at: 0, of: 1 },
-                    FileProgress { url: "Packages", at: 0, of: count },
-                )
-                .context("rendering progress")?
-                {
-                    ProgressResponse::Cancel => break,
-                    _ => (),
-                }
-            }
-            tracing::debug!("package: {}", package_name.as_str());
-
-            futures.push(fetcher.fetch_package(merkle));
-        }
-
-        while let Some(()) = futures.try_next().await? {}
-        progress(
-            DirectoryProgress { url: repo_blobs_uri.as_ref(), at: 1, of: 1 },
-            FileProgress { url: "Packages", at: count, of: count },
-        )
-        .context("rendering progress")?;
-    };
-
-    // Refresh the metadata to make sure it hasn't expired.
-    let repo_keys = RepoKeys::from_dir(local_dir.join("keys").as_std_path())?;
-    let repo = FileSystemRepository::new(metadata_dir, blobs_dir);
-    let repo_client =
-        RepoClient::from_trusted_remote(repo).await.context("fetching TUF metadata")?;
-
-    RepoBuilder::from_client(&repo_client, &repo_keys)
-        .refresh_metadata(true)
-        .commit()
-        .await
-        .context("committing metadata")?;
-
-    Ok(())
-}
-
-/// Fetch a package repository using the `tgz` package bundle format, and automatically expand the
-/// tarball into the `local_dir` directory.
-async fn fetch_package_repository_from_tgz<F, I>(
-    local_dir: &Path,
-    repo_uri: Url,
-    progress: &F,
-    ui: &I,
-) -> Result<()>
-where
-    F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
-    I: structured_ui::Interface + Sync,
-{
-    fetch_bundle_uri(&repo_uri, &local_dir, progress, ui)
-        .await
-        .with_context(|| format!("downloading repo URI {}", repo_uri))
-}
-
 /// Download and expand data.
 ///
 /// For a directory, all files in the directory are downloaded.
@@ -721,7 +359,7 @@ where
 /// Bundle, "bundle_uri".
 ///
 /// Currently: "pattern": "^(?:http|https|gs|file):\/\/"
-async fn fetch_bundle_uri<F, I>(
+pub(crate) async fn fetch_bundle_uri<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
     progress: &F,
@@ -737,7 +375,9 @@ where
             .await
             .context("Downloading from GCS.")?;
     } else if product_url.scheme() == "http" || product_url.scheme() == "https" {
-        fetch_from_web(product_url, local_dir, progress).await.context("fetching from http(s)")?;
+        fetch_from_web(product_url, local_dir, progress, ui)
+            .await
+            .context("fetching from http(s)")?;
     } else if let Some(_) = &path_from_file_url(product_url) {
         // Since the file is already local, no fetch is necessary.
         tracing::debug!("Found local file path {:?}", product_url);
@@ -747,17 +387,99 @@ where
     Ok(())
 }
 
-async fn fetch_from_web<F>(_product_uri: &url::Url, _local_dir: &Path, _progress: &F) -> Result<()>
+async fn fetch_from_web<F, I>(
+    product_uri: &url::Url,
+    local_dir: &Path,
+    progress: &F,
+    _ui: &I,
+) -> Result<()>
 where
     F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+    I: structured_ui::Interface + Sync,
 {
-    // TODO(fxbug.dev/93850): implement pbms.
-    unimplemented!();
+    tracing::debug!("fetch_from_web");
+    let name = if let Some((_, name)) = product_uri.path().rsplit_once('/') {
+        name
+    } else {
+        unimplemented!()
+    };
+
+    if name.is_empty() {
+        unimplemented!("downloading a directory from a web server is not implemented");
+    }
+
+    let res = fuchsia_hyper::new_client()
+        .get(hyper::Uri::from_maybe_shared(product_uri.to_string())?)
+        .await
+        .with_context(|| format!("Requesting {}", product_uri))?;
+
+    match res.status() {
+        StatusCode::OK => {}
+        StatusCode::NOT_FOUND => {
+            bail!("{} not found", product_uri);
+        }
+        status => {
+            bail!("Unexpected HTTP status downloading {}: {}", product_uri, status);
+        }
+    }
+
+    let mut at: u64 = 0;
+    let length = if res.headers().contains_key(CONTENT_LENGTH) {
+        res.headers()
+            .get(CONTENT_LENGTH)
+            .context("getting content length")?
+            .to_str()?
+            .parse::<u64>()
+            .context("parsing content length")?
+    } else {
+        0
+    };
+
+    std::fs::create_dir_all(local_dir)
+        .with_context(|| format!("Creating {}", local_dir.display()))?;
+
+    let path = local_dir.join(name);
+    let mut file =
+        File::create(&path).await.with_context(|| format!("Creating {}", path.display()))?;
+
+    let mut stream = res.into_body();
+
+    let mut of = length;
+    // Throttle the progress UI updates to avoid burning CPU on changes
+    // the user will have trouble seeing anyway. Without throttling,
+    // around 20% of the execution time can be spent updating the
+    // progress UI. The throttle makes the overhead negligible.
+    let mut throttle = Throttle::from_duration(std::time::Duration::from_millis(500));
+    let url = product_uri.to_string();
+    while let Some(chunk) =
+        stream.try_next().await.with_context(|| format!("Downloading {}", product_uri))?
+    {
+        file.write_all(&chunk).await.with_context(|| format!("Writing {}", path.display()))?;
+        at += chunk.len() as u64;
+        if at > of {
+            of = at;
+        }
+        if throttle.is_ready() {
+            match progress(
+                DirectoryProgress { url: &url, at: 0, of: 1 },
+                FileProgress { url: &url, at, of },
+            )
+            .context("rendering progress")?
+            {
+                ProgressResponse::Cancel => break,
+                _ => (),
+            }
+        }
+    }
+
+    file.close().await.with_context(|| format!("Closing {}", path.display()))?;
+
+    Ok(())
 }
 
 /// If internal_url is a file scheme, join `product_url` and `internal_url`.
 /// Otherwise, return `internal_url`.
-fn make_remote_url(product_url: &url::Url, internal_url: &str) -> Result<url::Url> {
+pub(crate) fn make_remote_url(product_url: &url::Url, internal_url: &str) -> Result<url::Url> {
     let result = if let Some(remainder) = internal_url.strip_prefix("file:/") {
         // Note: The product_url must either be a path to the product_bundle.json file or to the
         // parent directory (with a trailing slash).

@@ -46,6 +46,7 @@ pub use crate::pbms::{fetch_data_for_product_bundle_v1, get_product_dir, get_sto
 
 mod gcs;
 mod pbms;
+mod repo;
 mod repo_info;
 
 #[derive(PartialEq, Debug, Clone)]

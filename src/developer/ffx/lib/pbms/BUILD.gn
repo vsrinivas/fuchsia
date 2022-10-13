@@ -27,6 +27,7 @@ if (is_host) {
       "//third_party/rust_crates:camino",
       "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:hyper",
       "//third_party/rust_crates:itertools",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
@@ -35,8 +36,12 @@ if (is_host) {
     ]
 
     test_deps = [
+      "//src/developer/ffx/lib/pkg:empty-repo-keys",
+      "//src/developer/ffx/lib/pkg:empty-repo-metadata",
       "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:async-net",
       "//third_party/rust_crates:tempfile",
+      "//third_party/rust_crates:tuf",
     ]
 
     inputs = [
@@ -48,6 +53,7 @@ if (is_host) {
       "src/gcs.rs",
       "src/lib.rs",
       "src/pbms.rs",
+      "src/repo.rs",
       "src/repo_info.rs",
     ]
   }
