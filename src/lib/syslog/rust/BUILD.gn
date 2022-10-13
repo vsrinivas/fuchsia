@@ -86,7 +86,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/sys/pkg/bin/system-update-checker:*",
   "//src/sys/pkg/bin/system-update-committer:*",
   "//src/sys/pkg/bin/system-updater:*",
-  "//src/sys/pkg/lib/blobfs:*",
   "//src/sys/pkg/lib/forced-fdr:*",
   "//src/sys/pkg/lib/isolated-swd:*",
   "//src/sys/pkg/lib/package-directory:*",

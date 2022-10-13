@@ -10,11 +10,11 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fuchsia_hash::{Hash, ParseHashError},
-    fuchsia_syslog::fx_log_warn,
     fuchsia_zircon::{self as zx, AsHandleRef as _, Status},
     futures::{stream, StreamExt as _},
     std::{collections::HashSet, sync::Arc},
     thiserror::Error,
+    tracing::warn,
 };
 
 pub mod blob;
@@ -260,7 +260,7 @@ impl Client {
             Ok(_) => true,
             Err(status) => {
                 if status != Status::TIMED_OUT {
-                    fx_log_warn!("blobfs: unknown error asserting blob existence: {}", status);
+                    warn!("blobfs: unknown error asserting blob existence: {}", status);
                 }
                 false
             }
