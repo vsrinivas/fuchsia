@@ -24,10 +24,10 @@ use {
     std::{
         convert::TryInto,
         fs::{read_dir, remove_dir_all},
-        io::{stderr, stdin, stdout, BufRead, Read, Write},
+        io::{stderr, stdin, stdout, Write},
         path::Component,
     },
-    structured_ui,
+    structured_ui::{self, Presentation, Response, SimplePresentation, TableRows, TextUi},
     url::Url,
 };
 
@@ -44,38 +44,32 @@ pub async fn product_bundle(
     let mut input = stdin();
     let mut output = stdout();
     let mut err_out = stderr();
-    let mut ui = structured_ui::TextUi::new(&mut input, &mut output, &mut err_out);
-    product_bundle_plugin_impl(writer, cmd, &mut stdin().lock(), &mut ui, repos).await
+    let mut ui = TextUi::new(&mut input, &mut output, &mut err_out);
+    product_bundle_plugin_impl(writer, cmd, &mut ui, repos).await
 }
 
 /// Dispatch to a sub-command.
-pub async fn product_bundle_plugin_impl<R, I>(
+pub async fn product_bundle_plugin_impl<I>(
     writer: Writer,
     command: ProductBundleCommand,
-    reader: &mut R,
     ui: &mut I,
     repos: RepositoryRegistryProxy,
 ) -> Result<()>
 where
-    R: Read + Sync + BufRead,
     I: structured_ui::Interface + Sync,
 {
     match &command.sub {
         SubCommand::List(cmd) => pb_list(ui, &cmd).await,
         SubCommand::Get(cmd) => pb_get(writer, ui, &cmd, repos).await,
         SubCommand::Create(cmd) => pb_create(&cmd).await,
-        SubCommand::Remove(cmd) => pb_remove(reader, &cmd, repos).await,
+        SubCommand::Remove(cmd) => pb_remove(ui, &cmd, repos).await,
     }
 }
 
 /// `ffx product-bundle remove` sub-command.
-async fn pb_remove<R>(
-    reader: &mut R,
-    cmd: &RemoveCommand,
-    repos: RepositoryRegistryProxy,
-) -> Result<()>
+async fn pb_remove<I>(ui: &mut I, cmd: &RemoveCommand, repos: RepositoryRegistryProxy) -> Result<()>
 where
-    R: Read + Sync + BufRead,
+    I: structured_ui::Interface + Sync,
 {
     tracing::debug!("pb_remove");
     let mut pbs_to_remove = Vec::new();
@@ -108,7 +102,7 @@ where
         }
     }
     if pbs_to_remove.len() > 0 {
-        pb_remove_all(reader, pbs_to_remove, cmd.force, repos).await
+        pb_remove_all(ui, pbs_to_remove, cmd.force, repos).await
     } else {
         // Nothing to remove.
         println!("There are no product bundles to remove.");
@@ -139,28 +133,37 @@ async fn get_repos(repos_proxy: &RepositoryRegistryProxy) -> Result<Vec<Reposito
 }
 
 /// Removes a set of product bundle directories, with user confirmation if "force" is false.
-async fn pb_remove_all<R>(
-    reader: &mut R,
+async fn pb_remove_all<I>(
+    ui: &mut I,
     pbs_to_remove: Vec<Url>,
     force: bool,
     repos: RepositoryRegistryProxy,
 ) -> Result<()>
 where
-    R: Read + Sync + BufRead,
+    I: structured_ui::Interface + Sync,
 {
     let mut confirmation = true;
     if !force {
-        let mut response = String::new();
-        print!(
-            "This will delete {} product bundle(s). Are you sure you wish to proceed? (y/n) ",
+        let mut table = TableRows::builder();
+        table.title(format!(
+            "This will delete the following {} product bundle(s):",
             pbs_to_remove.len()
-        );
-        stdout().flush().ok();
-        reader.read_line(&mut response).context("reading input")?;
-        confirmation = match response.to_lowercase().trim_end() {
-            "y" | "yes" => true,
-            _ => false,
+        ));
+        for url in &pbs_to_remove {
+            table.row(vec![format!("    {}", url)]);
         }
+        ui.present(&Presentation::Table(table))?;
+
+        let mut question = SimplePresentation::builder();
+        question.prompt("Are you sure you wish to proceed? (y/n)");
+        confirmation = match ui.present(&Presentation::StringPrompt(question))? {
+            Response::Choice(str) => {
+                let response = str.to_lowercase();
+                let response = response.trim_end();
+                response == "y" || response == "yes"
+            }
+            _ => false,
+        };
     }
     if confirmation {
         let all_repos = get_repos(&repos).await?;
@@ -236,7 +239,7 @@ where
     let mut entries = product_bundle_urls().await.context("list pbms")?;
     entries.sort();
     entries.reverse();
-    let mut table = structured_ui::TableRows::builder();
+    let mut table = TableRows::builder();
     for entry in entries {
         let ready = if is_pb_ready(&entry).await? { "*" } else { " " };
         table.row(vec![format!("{}", ready), format!("{}", entry)]);
@@ -247,7 +250,7 @@ where
         The '*' is not part of the name.\
         \n",
     );
-    ui.present(&structured_ui::Presentation::Table(table.clone()))?;
+    ui.present(&Presentation::Table(table.clone()))?;
     Ok(())
 }
 
