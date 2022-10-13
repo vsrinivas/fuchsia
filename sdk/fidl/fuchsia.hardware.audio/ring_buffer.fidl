@@ -50,17 +50,13 @@ type RingBufferProperties = table {
     3: needs_cache_flush_or_invalidate bool;
 
     /// The driver's best estimate of the amount of time it takes the hardware to actually start
-    /// playback/capture after:
-    /// 1. A `Start` command is completed as defined by the returned `start_time`, or
-    /// 2. A channel is moved from the inactive to the active state using the `SetActiveChannels`
-    /// command and is completed as defined by the returned `set_time` making a channel active to
-    /// actually playback/capture some time after the same channel was made inactive by a previous
-    /// `SetActiveChannels` command.
+    /// playback/capture, after a channel is activated by `SetActiveChannels`.
+    /// Restated: the driver estimates that after `SetActiveChannels` enables a channel, its data
+    /// will resume flowing at approximately `set_time` + `turn_on_delay`.
     /// It may take some time for the hardware to get into fully operational mode, for example due
     /// a power state change or communication delays within the driver's multiple hardware entities
     /// as in a Bluetooth driver. This delay must be taken into account if not getting the initial
-    /// audio samples played or captured is not acceptable. If not included, turn_on_delay is
-    /// considered 0.
+    /// audio samples played or captured is not acceptable.
     /// If not included `turn_on_delay` is unknown.
     4: turn_on_delay zx.duration;
 };
