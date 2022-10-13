@@ -141,7 +141,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/media/audio/drivers/usb-audio:usb-audio-driver",
     "//src/media/audio/drivers/usb-audio/tests:usb-audio-test-bin",
     "//src/media/audio/tools/audio-driver-ctl:bin",
-    "//src/media/drivers/amlogic_decoder/tests/runner:amlogic_decoder_integration_tests_bin",
     "//src/modular/lib/deprecated_svc",
     "//src/modular/lib/fidl:environment",
     "//src/power/shutdown-shim",
