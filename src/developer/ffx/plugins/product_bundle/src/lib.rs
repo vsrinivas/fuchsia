@@ -82,7 +82,7 @@ where
     if cmd.all {
         let entries = product_bundle_urls().await.context("list pbms")?;
         for url in entries {
-            if url.scheme() != "file" && is_pb_ready(&url).await? {
+            if !is_locally_built(&url) && is_pb_ready(&url).await? {
                 pbs_to_remove.push(url);
             }
         }

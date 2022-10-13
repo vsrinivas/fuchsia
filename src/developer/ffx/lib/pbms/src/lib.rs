@@ -222,7 +222,7 @@ where
     // If the user is working in-tree, we want to default to any available locally-built bundles.
     let mut selected: Option<(url::Url, &str)> = if sdk_version == &sdk::SdkVersion::InTree {
         tracing::info!("In-tree selection");
-        let mut local_builds = urls.clone().filter(|url| url.scheme() == "file");
+        let mut local_builds = urls.clone().filter(|url| is_locally_built(&url));
         match local_builds.next() {
             Some(first) => Some((first, "the locally-built product bundle")),
             None => None,
@@ -303,7 +303,7 @@ pub async fn select_product_bundle(
         let mut ready = Vec::new();
         for url in iter {
             // Locally-built bundles aren't removable.
-            if mode == ListingMode::RemovableBundles && url.scheme() == "file" {
+            if mode == ListingMode::RemovableBundles && is_locally_built(&url) {
                 continue;
             } else if is_pb_ready(&url).await? {
                 ready.push(url);
@@ -358,7 +358,7 @@ where
     I: structured_ui::Interface + Sync,
 {
     tracing::debug!("get_product_data {:?} to {:?}", product_url, output_dir);
-    if product_url.scheme() == "file" {
+    if is_locally_built(&product_url) {
         writeln!(writer, "There's no data download necessary for local products.")?;
         return Ok(false);
     }
