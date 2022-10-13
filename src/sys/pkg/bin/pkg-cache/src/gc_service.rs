@@ -11,10 +11,10 @@ use {
         ManagerRequestStream as SpaceManagerRequestStream,
     },
     fidl_fuchsia_update::CommitStatusProviderProxy,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::prelude::*,
     std::sync::Arc,
+    tracing::{error, info},
 };
 
 pub async fn serve(
@@ -43,18 +43,18 @@ async fn gc(
     package_index: &Arc<async_lock::RwLock<PackageIndex>>,
     event_pair: &zx::EventPair,
 ) -> Result<(), SpaceErrorCode> {
-    fx_log_info!("performing gc");
+    info!("performing gc");
 
     event_pair.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST).map_err(|e| {
         match e {
             zx::Status::TIMED_OUT => {
-                fx_log_info!("GC is blocked pending update.");
+                info!("GC is blocked pending update.");
             }
             zx::Status::CANCELED => {
-                fx_log_info!("Commit handle is closed, likely because we are rebooting.");
+                info!("Commit handle is closed, likely because we are rebooting.");
             }
             other => {
-                fx_log_err!("Got unexpected status {:?} while waiting on handle.", other);
+                error!("Got unexpected status {:?} while waiting on handle.", other);
             }
         }
         SpaceErrorCode::PendingCommit
@@ -77,18 +77,18 @@ async fn gc(
         });
 
         // Evict all eligible blobs from blobfs.
-        fx_log_info!("Garbage collecting {} blobs...", eligible_blobs.len());
+        info!("Garbage collecting {} blobs...", eligible_blobs.len());
         for (i, blob) in eligible_blobs.iter().enumerate() {
             blobfs.delete_blob(&blob).await?;
             if (i + 1) % 100 == 0 {
-                fx_log_info!("{} blobs collected...", i + 1);
+                info!("{} blobs collected...", i + 1);
             }
         }
         Ok(())
     }
     .await
     .map_err(|e: Error| {
-        fx_log_err!("Failed to perform GC operation: {:#}", anyhow!(e));
+        error!("Failed to perform GC operation: {:#}", anyhow!(e));
         SpaceErrorCode::Internal
     })?;
 

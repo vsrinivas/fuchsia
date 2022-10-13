@@ -5,9 +5,9 @@
 use {
     fuchsia_hash::Hash,
     fuchsia_inspect::{self as finspect, NumericProperty, Property},
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     std::collections::{HashMap, HashSet},
+    tracing::error,
 };
 
 /// An index of packages considered to be part of a new system's base package set.
@@ -275,7 +275,7 @@ pub async fn populate_retained_index(
             Err(e) => {
                 // The package isn't readable yet, so the system updater will need to fetch it.
                 // Assume None for now and let the package fetch flow populate this later.
-                fx_log_err!(
+                error!(
                     "failed to enumerate content blobs for package {}: {:#}",
                     meta_hash,
                     anyhow::anyhow!(e)

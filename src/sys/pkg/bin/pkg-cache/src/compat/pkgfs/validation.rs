@@ -5,13 +5,12 @@
 use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io as fio,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     std::{
         collections::{BTreeMap, HashSet},
         sync::Arc,
     },
+    tracing::{error, info},
     vfs::{
         common::send_on_open_with_error,
         directory::{
@@ -38,10 +37,7 @@ impl Validation {
     // The contents of the "missing" file. The hex-encoded hashes of all the base blobs missing
     // from blobfs, separated and terminated by the newline character, '\n'.
     async fn make_missing_contents(&self) -> Vec<u8> {
-        fx_log_info!(
-            "checking if any of the {} base package blobs are missing",
-            self.base_blobs.len()
-        );
+        info!("checking if any of the {} base package blobs are missing", self.base_blobs.len());
 
         let mut missing = self
             .blobfs
@@ -52,9 +48,9 @@ impl Validation {
         missing.sort();
 
         if missing.is_empty() {
-            fx_log_info!("all {} base package blobs were found", self.base_blobs.len());
+            info!(total = self.base_blobs.len(), "all base package blobs were found");
         } else {
-            fx_log_err!("{} base package blobs are missing", missing.len());
+            error!(total = missing.len(), "base package blobs are missing");
         }
 
         missing.into_iter().map(|hash| format!("{hash}\n")).collect::<String>().into_bytes()

@@ -26,7 +26,6 @@ use {
     fuchsia_cobalt_builders::MetricEventExt,
     fuchsia_hash::Hash,
     fuchsia_inspect::{self as finspect, NumericProperty, Property, StringProperty},
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as ftrace, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::{prelude::*, select_biased, stream::FuturesUnordered},
@@ -34,6 +33,7 @@ use {
         atomic::{AtomicU32, Ordering},
         Arc,
     },
+    tracing::{error, info, warn},
     vfs::directory::entry::DirectoryEntry as _,
 };
 
@@ -136,7 +136,7 @@ pub(crate) async fn serve(
                 }
                 PackageCacheRequest::Sync { responder } => {
                     responder.send(&mut blobfs.sync().await.map_err(|e| {
-                        fx_log_err!("error syncing blobfs: {:#}", anyhow!(e));
+                        error!("error syncing blobfs: {:#}", anyhow!(e));
                         Status::INTERNAL.into_raw()
                     }))?;
                 }
@@ -231,7 +231,7 @@ async fn get(
                 (None, ps)
             }
             PackageStatus::Other => {
-                fx_log_info!("get package {}", meta_far_blob.blob_id);
+                info!("get package {}", meta_far_blob.blob_id);
                 let (root_dir, name) = serve_needed_blobs(
                     needed_blobs,
                     meta_far_blob,
@@ -243,7 +243,7 @@ async fn get(
                 )
                 .await
                 .map_err(|e| {
-                    fx_log_err!(
+                    error!(
                         "error while caching package {}: {:#}",
                         meta_far_blob.blob_id,
                         anyhow!(e)
@@ -273,11 +273,7 @@ async fn get(
             package_directory::RootDir::new(blobfs.clone(), meta_far_blob.blob_id.into())
                 .await
                 .map_err(|e| {
-                    fx_log_err!(
-                        "get: creating RootDir {}: {:#}",
-                        meta_far_blob.blob_id,
-                        anyhow!(e)
-                    );
+                    error!("get: creating RootDir {}: {:#}", meta_far_blob.blob_id, anyhow!(e));
                     cobalt_sender.send(
                         MetricEvent::builder(metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID)
                             .with_event_codes(
@@ -345,7 +341,7 @@ async fn open(
         dir_request,
     )
     .map_err(|e| {
-        fx_log_err!("open: error serving package {}: {:#}", meta_far, anyhow!(e));
+        error!("open: error serving package {}: {:#}", meta_far, anyhow!(e));
         cobalt_sender.send(
             MetricEvent::builder(metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID)
                 .with_event_codes(metrics::PkgCacheOpenMigratedMetricDimensionResult::Io)
@@ -560,7 +556,7 @@ async fn handle_open_meta_blob(
             Ok(()) => break,
             Err(OpenWriteBlobError::Serve(e)) => return Err(e),
             Err(OpenWriteBlobError::NonFatalWrite(e)) => {
-                fx_log_warn!("Non-fatal error while writing metadata blob: {:#}", anyhow!(e));
+                warn!("Non-fatal error while writing metadata blob: {:#}", anyhow!(e));
                 continue;
             }
         }
@@ -600,7 +596,7 @@ async fn handle_get_missing_blobs(
             10,
         )
         .unwrap_or_else(|e| {
-            fx_log_err!("error serving BlobInfoIteratorRequestStream: {:#}", anyhow!(e))
+            error!("error serving BlobInfoIteratorRequestStream: {:#}", anyhow!(e))
         }),
     ))
 }
@@ -691,11 +687,7 @@ async fn handle_open_blobs(
                 return Err(e);
             }
             Event::WriteBlobDone((hash, Err(OpenWriteBlobError::NonFatalWrite(e)))) => {
-                fx_log_warn!(
-                    "Non-fatal error while writing content blob: {} {:#}",
-                    hash,
-                    anyhow!(e)
-                );
+                warn!("Non-fatal error while writing content blob: {} {:#}", hash, anyhow!(e));
                 continue;
             }
         }
@@ -1048,7 +1040,7 @@ async fn serve_base_package_index(
         .collect::<Vec<PackageIndexEntry>>();
     package_entries.sort_unstable_by(|a, b| a.package_url.url.cmp(&b.package_url.url));
     serve_fidl_iterator_from_slice(stream, package_entries).await.unwrap_or_else(|e| {
-        fx_log_err!("error serving PackageIndexIteratorRequestStream protocol: {:#}", anyhow!(e))
+        error!("error serving PackageIndexIteratorRequestStream protocol: {:#}", anyhow!(e))
     })
 }
 
@@ -1071,7 +1063,7 @@ async fn serve_cache_package_index(
         None => vec![],
     };
     serve_fidl_iterator_from_slice(stream, package_entries).await.unwrap_or_else(|e| {
-        fx_log_err!("error serving PackageIndexIteratorRequestStream protocol: {:#}", anyhow!(e))
+        error!("error serving PackageIndexIteratorRequestStream protocol: {:#}", anyhow!(e))
     })
 }
 

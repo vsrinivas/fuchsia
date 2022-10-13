@@ -18,10 +18,10 @@ use {
     fuchsia_async::Task,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as finspect,
-    fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::join,
     futures::prelude::*,
     std::sync::{atomic::AtomicU32, Arc},
+    tracing::{error, info},
     vfs::directory::{entry::DirectoryEntry as _, helper::DirectlyMutable as _},
 };
 
@@ -96,20 +96,20 @@ enum SubpackagesConfig {
 
 // pkg-cache is conceptually a binary, but is linked together as a library with other SWD binaries
 // to save space via blob deduplication.
+#[fuchsia::main(logging_tags = ["pkg-cache"])]
 pub fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["pkg-cache"]).expect("can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
     executor.run_singlethreaded(main_inner().map_err(|err| {
         let err = anyhow!(err);
-        fx_log_err!("error running pkg-cache: {:#}", err);
+        error!("error running pkg-cache: {:#}", err);
         err
     }))
 }
 
 async fn main_inner() -> Result<(), Error> {
-    fx_log_info!("starting package cache service");
+    info!("starting package cache service");
 
     let subpackages_config =
         match pkg_cache_config::Config::take_from_startup_handle().enable_subpackages {
@@ -129,7 +129,7 @@ async fn main_inner() -> Result<(), Error> {
         base_packages,
         cache_packages,
     ) = if ignore_system_image {
-        fx_log_info!("not loading system_image due to process arguments");
+        info!("not loading system_image due to process arguments");
         inspector.root().record_string("system_image", "ignored");
         (
             None,
@@ -163,7 +163,7 @@ async fn main_inner() -> Result<(), Error> {
         let base_packages = base_packages_res.context("loading base packages")?;
         let cache_packages = cache_packages_res.map_or_else(
             |e: anyhow::Error| {
-                fx_log_err!("Failed to load cache packages: {e:#}");
+                error!("Failed to load cache packages: {e:#}");
                 None
             },
             Some,
@@ -232,7 +232,7 @@ async fn main_inner() -> Result<(), Error> {
                         Arc::clone(&cache_get_node),
                     )
                     .unwrap_or_else(|e| {
-                        fx_log_err!(
+                        error!(
                             "error handling fuchsia.pkg.PackageCache connection: {:#}",
                             anyhow!(e)
                         )
@@ -256,7 +256,7 @@ async fn main_inner() -> Result<(), Error> {
                             stream,
                         )
                         .unwrap_or_else(|e| {
-                            fx_log_err!(
+                            error!(
                                 "error handling fuchsia.pkg/RetainedPackages connection: {:#}",
                                 anyhow!(e)
                             )
@@ -286,10 +286,7 @@ async fn main_inner() -> Result<(), Error> {
                         stream,
                     )
                     .unwrap_or_else(|e| {
-                        fx_log_err!(
-                            "error handling fuchsia.space/Manager connection: {:#}",
-                            anyhow!(e)
-                        )
+                        error!("error handling fuchsia.space/Manager connection: {:#}", anyhow!(e))
                     })
                 }),
             )

@@ -9,10 +9,10 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fuchsia_hash::Hash,
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     std::{collections::BTreeMap, str::FromStr, sync::Arc},
     system_image::{ExecutabilityRestrictions, NonStaticAllowList},
+    tracing::error,
     vfs::{
         common::send_on_open_with_error,
         directory::{
@@ -175,11 +175,7 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
                     )
                     .await
                     {
-                        fx_log_err!(
-                            "Unable to serve package for {}: {:#}",
-                            package_hash,
-                            anyhow!(e)
-                        );
+                        error!("Unable to serve package for {}: {:#}", package_hash, anyhow!(e));
                     }
                 }
                 Some(Err(_)) => {

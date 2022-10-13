@@ -7,13 +7,13 @@ use {
     fuchsia_inspect as finspect,
     fuchsia_merkle::Hash,
     fuchsia_pkg::{PackageName, PackagePath},
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_zircon as zx,
     std::{
         collections::{HashMap, HashSet},
         convert::TryInto,
     },
     system_image::CachePackages,
+    tracing::{error, warn},
 };
 
 #[derive(Debug, Default)]
@@ -224,10 +224,10 @@ impl DynamicIndex {
                 self.packages.remove(package_hash);
             }
             Some(Package::Active { .. }) => {
-                fx_log_warn!("Unable to cancel install for active package {}", package_hash);
+                warn!("Unable to cancel install for active package {}", package_hash);
             }
             None => {
-                fx_log_err!("Unable to cancel install for unknown package {}", package_hash);
+                error!("Unable to cancel install for unknown package {}", package_hash);
             }
         }
     }
@@ -260,18 +260,16 @@ pub async fn load_cache_packages(
             Ok(root_dir) => match root_dir.path().await {
                 Ok(path_from_far) => {
                     if path_from_far != path {
-                        fx_log_err!(
+                        error!(
                             "load_cache_packages: path mismatch for {}, manifest: {}, far: {}",
-                            hash,
-                            path,
-                            path_from_far
+                            hash, path, path_from_far
                         );
                         continue;
                     }
                     root_dir.external_file_hashes().copied().collect::<HashSet<_>>()
                 }
                 Err(e) => {
-                    fx_log_err!(
+                    error!(
                         "load_cache_packages: obtaining path for {} {} failed: {:#}",
                         hash,
                         path,
@@ -282,7 +280,7 @@ pub async fn load_cache_packages(
             },
             Err(package_directory::Error::MissingMetaFar) => continue,
             Err(e) => {
-                fx_log_err!(
+                error!(
                     "load_cache_packages: creating RootDir for {} {} failed: {:#}",
                     hash,
                     path,
@@ -296,20 +294,12 @@ pub async fn load_cache_packages(
         }
         let () = index.start_install(hash);
         if let Err(e) = index.fulfill_meta_far(hash, path, required_blobs) {
-            fx_log_err!(
-                "load_cache_packages: fulfill_meta_far of {} failed: {:#}",
-                hash,
-                anyhow!(e)
-            );
+            error!("load_cache_packages: fulfill_meta_far of {} failed: {:#}", hash, anyhow!(e));
             let () = index.cancel_install(&hash);
             continue;
         }
         if let Err(e) = index.complete_install(hash) {
-            fx_log_err!(
-                "load_cache_packages: complete_install of {} failed: {:#}",
-                hash,
-                anyhow!(e)
-            );
+            error!("load_cache_packages: complete_install of {} failed: {:#}", hash, anyhow!(e));
             let () = index.cancel_install(&hash);
             continue;
         }

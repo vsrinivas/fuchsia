@@ -9,12 +9,12 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_hash::Hash,
     fuchsia_pkg::PackageVariant,
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     std::{
         collections::{BTreeSet, HashMap},
         sync::Arc,
     },
+    tracing::error,
     vfs::{
         common::send_on_open_with_error,
         directory::{
@@ -82,11 +82,7 @@ impl DirectoryEntry for PkgfsPackagesVariants {
                     )
                     .await
                     {
-                        fx_log_err!(
-                            "Failed to open package directory for {}: {:#}",
-                            hash,
-                            anyhow!(e)
-                        );
+                        error!("Failed to open package directory for {}: {:#}", hash, anyhow!(e));
                     }
                 })
             }
