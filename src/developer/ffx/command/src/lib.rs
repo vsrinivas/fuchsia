@@ -48,10 +48,10 @@ pub async fn report_user_error(err: &anyhow::Error) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn run(buildid: &str) -> Result<()> {
+pub async fn run() -> Result<()> {
     let app: Ffx = from_env();
 
-    let context = app.load_context(buildid)?;
+    let context = app.load_context()?;
 
     ffx_config::init(&context).await?;
 

@@ -181,6 +181,11 @@ impl EnvironmentContext {
         }
     }
 
+    /// Returns a unique identifier denoting the version of the daemon binary.
+    pub fn daemon_version_string(&self) -> Result<String> {
+        buildid::get_build_id().map_err(Into::into)
+    }
+
     pub fn env_kind(&self) -> &EnvironmentKind {
         &self.kind
     }

@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::CURRENT_EXE_BUILDID,
     anyhow::{anyhow, bail, Context, Result},
     ascendd::Ascendd,
     async_trait::async_trait,
     errors::ffx_error,
     ffx_build_version::build_info,
-    ffx_config::ConfigLevel,
+    ffx_config::EnvironmentContext,
     ffx_daemon_core::events::{self, EventHandler},
     ffx_daemon_events::{
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
@@ -322,8 +321,10 @@ impl Daemon {
     }
 
     pub async fn start(&mut self, hoist: &Hoist) -> Result<()> {
+        let context =
+            ffx_config::global_env_context().context("Discovering ffx environment context")?;
         let (quit_tx, quit_rx) = mpsc::channel(1);
-        self.log_startup_info().await.context("Logging startup info")?;
+        self.log_startup_info(&context).await.context("Logging startup info")?;
 
         self.start_protocols().await?;
         self.start_discovery(hoist).await?;
@@ -331,13 +332,12 @@ impl Daemon {
         let _socket_file_watcher =
             self.start_socket_watch(quit_tx.clone()).await.context("Starting socket watcher")?;
         self.start_target_expiry(Duration::from_secs(1));
-        self.serve(hoist, quit_tx, quit_rx).await.context("Serving clients")
+        self.serve(&context, hoist, quit_tx, quit_rx).await.context("Serving clients")
     }
 
-    async fn log_startup_info(&self) -> Result<()> {
+    async fn log_startup_info(&self, context: &EnvironmentContext) -> Result<()> {
         let pid = std::process::id();
-        let hash: String =
-            ffx_config::query(CURRENT_EXE_BUILDID).level(Some(ConfigLevel::Runtime)).get().await?;
+        let buildid = context.daemon_version_string()?;
         let version_info = build_info();
         let commit_hash = version_info.commit_hash.as_deref().unwrap_or("<unknown>");
         let commit_timestamp =
@@ -345,12 +345,7 @@ impl Daemon {
         let build_version = version_info.build_version.as_deref().unwrap_or("<unknown>");
 
         tracing::info!(
-            "Beginning daemon startup\nBuild Version: {}\nCommit Timestamp: {}\nCommit Hash: {}\nBinary Hash: {}\nPID: {}",
-            build_version,
-            commit_timestamp,
-            commit_hash,
-            hash,
-            pid
+            "Beginning daemon startup\nBuild Version: {build_version}\nCommit Timestamp: {commit_timestamp}\nCommit Hash: {commit_hash}\nBinary Build ID: {buildid}\nPID: {pid}",
         );
         add_daemon_launch_event().await;
         Ok(())
@@ -687,6 +682,7 @@ impl Daemon {
 
     async fn serve(
         &self,
+        context: &EnvironmentContext,
         hoist: &Hoist,
         quit_tx: mpsc::Sender<()>,
         mut quit_rx: mpsc::Receiver<()>,
@@ -696,10 +692,7 @@ impl Daemon {
         let mut stream = ServiceProviderRequestStream::from_channel(chan);
 
         let mut info = build_info();
-        info.build_id = Some(
-            ffx_config::query(CURRENT_EXE_BUILDID).level(Some(ConfigLevel::Runtime)).get().await?,
-        );
-
+        info.build_id = Some(context.daemon_version_string()?);
         tracing::info!("Starting daemon overnet server");
         hoist.publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
 

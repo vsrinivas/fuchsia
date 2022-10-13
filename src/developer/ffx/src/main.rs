@@ -6,11 +6,7 @@ use errors::ResultExt;
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
-    let result = match buildid::get_build_id() {
-        Ok(buildid) => ffx_command::run(&buildid).await,
-        Err(e) => Err(e.into()),
-    };
-
+    let result = ffx_command::run().await;
     if let Err(err) = &result {
         let mut out = std::io::stderr();
         // abort hard on a failure to print the user error somehow
@@ -18,6 +14,5 @@ async fn main() {
         ffx_command::report_user_error(err).await.unwrap();
         ffx_config::print_log_hint(&mut out).await;
     }
-
     std::process::exit(result.exit_code());
 }

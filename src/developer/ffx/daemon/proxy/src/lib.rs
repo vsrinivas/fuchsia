@@ -174,16 +174,12 @@ async fn init_daemon_proxy(hoist: Hoist, context: EnvironmentContext) -> Result<
     // Spawn off the link task, so that FIDL functions can be called (link IO makes progress).
     let link_task = fuchsia_async::Task::local(link.map(|_| ()));
 
-    // TODO(fxb/67400) Create an e2e test.
+    // TODO(fxbug.dev/111940): Should have a proper test setup for the context.
     let build_id = if cfg!(test) {
         "testcurrenthash".to_owned()
     } else {
-        let build_id = ffx_config::query(ffx_build_version::CURRENT_EXE_BUILDID)
-            .level(Some(ffx_config::ConfigLevel::Runtime))
-            .get()
-            .await;
-        match build_id {
-            Ok(str) => str,
+        match context.daemon_version_string() {
+            Ok(s) => s,
             Err(err) => {
                 tracing::error!("BUG: ffx version information is missing! {:?}", err);
                 link_task.detach();

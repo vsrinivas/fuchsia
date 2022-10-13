@@ -2,4 +2,3 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 pub const LOG_FILE_PREFIX: &str = "ffx.daemon";
-pub(crate) const CURRENT_EXE_BUILDID: &str = "current.buildid";

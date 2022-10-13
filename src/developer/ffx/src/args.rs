@@ -112,25 +112,10 @@ impl Ffx {
         })
     }
 
-    fn set_buildid_config(&self, buildid: &str) -> Result<Option<String>, anyhow::Error> {
-        let runtime = format!("{}={}", ffx_build_version::CURRENT_EXE_BUILDID, buildid);
-        match self.runtime_config_overrides() {
-            Some(s) => {
-                if s.is_empty() {
-                    Ok(Some(runtime))
-                } else {
-                    let new_overrides = format!("{},{}", s, runtime);
-                    Ok(Some(new_overrides))
-                }
-            }
-            None => Ok(Some(runtime)),
-        }
-    }
-
-    pub fn load_context(&self, buildid: &str) -> Result<EnvironmentContext, anyhow::Error> {
+    pub fn load_context(&self) -> Result<EnvironmentContext, anyhow::Error> {
         // Configuration initialization must happen before ANY calls to the config (or the cache won't
         // properly have the runtime parameters.
-        let overrides = self.set_buildid_config(buildid)?;
+        let overrides = self.runtime_config_overrides();
         let runtime_args = ffx_config::runtime::populate_runtime(&*self.config, overrides)?;
         let env_path = self.env.as_ref().map(PathBuf::from);
 

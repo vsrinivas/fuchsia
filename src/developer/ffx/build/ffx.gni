@@ -57,7 +57,6 @@ template("ffx") {
     deps = ffx_deps + [
              "//src/developer/ffx/command:lib",
              "//src/developer/ffx/config:lib",
-             "//src/developer/ffx/lib/buildid:lib",
              "//src/developer/ffx/lib/errors:lib",
              "//src/lib/fuchsia-async",
            ]

@@ -5,9 +5,6 @@
 use fidl_fuchsia_developer_ffx::VersionInfo;
 use std::ffi::CString;
 
-/// The config key used to store the current build id
-pub const CURRENT_EXE_BUILDID: &str = "current.buildid";
-
 const fn default_version_value() -> [u8; 64] {
     // Placeholder value to be replaced post-link: "V3RS1ONS" * 8
     [
