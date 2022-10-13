@@ -29,24 +29,23 @@ import("//sdk/ctf/build/internal/write_ctf_file.gni")
 #     The ID of the plasa element that is tested by this test.
 #     See the documentation in ctf_test.gni
 #
-#   uses_experimental_fidl (optional)
-#     Package contains a test component using an "experimental" sdk_category FIDL.
-#     Use this flag when writing tests while a FIDL interface is still under
-#     development. Prevents the CTF from releasing this test.
+#   release_in_ctf (optional)
+#     If set, this test is released in CTF. Defaults to true.
 #     Type: bool
 template("ctf_fuchsia_test_package") {
+  if (!defined(invoker.release_in_ctf)) {
+    invoker.release_in_ctf = true
+  }
+  if (!defined(invoker.package_name)) {
+    invoker.package_name = target_name
+  }
+
   not_needed(invoker, [ "plasa_element" ])
+  not_needed(invoker, [ "release_in_ctf" ])
 
   if (current_toolchain == default_toolchain) {
     main_target_name = target_name
 
-    # Whether this test can be included in the next CTF release.
-    is_releaseable = !defined(invoker.uses_experimental_fidl) ||
-                     !invoker.uses_experimental_fidl
-
-    if (!defined(invoker.package_name)) {
-      invoker.package_name = target_name
-    }
     if (cts_version != "") {
       invoker.package_name += "_$cts_version"
     }
@@ -72,7 +71,7 @@ template("ctf_fuchsia_test_package") {
       forward_variables_from(invoker, "*")
     }
 
-    if (is_releaseable) {
+    if (invoker.release_in_ctf) {
       _test_components = invoker.test_components
       _manifest_name = get_target_outputs(_test_components[0])
       _manifest_name = get_path_info(_manifest_name[0], "file")
@@ -101,7 +100,7 @@ template("ctf_fuchsia_test_package") {
         ":$fuchsia_test_package_target",
         ":$write_file_target",
       ]
-      if (is_releaseable) {
+      if (invoker.release_in_ctf) {
         deps += [ ":$ctf_test_release_archive_target" ]
       }
     }

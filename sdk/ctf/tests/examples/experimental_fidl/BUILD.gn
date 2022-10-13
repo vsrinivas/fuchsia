@@ -30,7 +30,7 @@ ctf_fuchsia_component("experimental") {
 }
 
 ctf_fuchsia_test_package("experimental-pkg") {
-  uses_experimental_fidl = true
+  release_in_ctf = false
   package_name = "experimental-cts-pkg"
   test_components = [ ":experimental" ]
 }
