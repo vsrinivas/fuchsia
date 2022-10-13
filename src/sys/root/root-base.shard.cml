@@ -75,7 +75,6 @@
                 "capability_requested_v2",
                 "destroyed_v2",
                 "directory_ready_v2",
-                "running_v2",
                 "started_v2",
                 "stopped_v2",
             ],

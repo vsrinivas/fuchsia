@@ -276,20 +276,14 @@ impl EventRegistry {
         let mut dispatcher_map = self.dispatcher_map.lock().await;
         for event in &mut events {
             event.source_name = CapabilityName::from(event_name_remap(event.source_name.str()));
-            if EventType::synthesized_only()
-                .iter()
-                .all(|e| e.to_string() != event.source_name.str())
-            {
-                // NOTE: This is for ALL events other than Running.
-                let dispatchers = dispatcher_map.entry(event.source_name.clone()).or_insert(vec![]);
-                let dispatcher = event_stream.create_dispatcher(
-                    subscriber.clone(),
-                    event.mode.clone(),
-                    event.scopes.clone(),
-                    event.route.clone(),
-                );
-                dispatchers.push(dispatcher);
-            }
+            let dispatchers = dispatcher_map.entry(event.source_name.clone()).or_insert(vec![]);
+            let dispatcher = event_stream.create_dispatcher(
+                subscriber.clone(),
+                event.mode.clone(),
+                event.scopes.clone(),
+                event.route.clone(),
+            );
+            dispatchers.push(dispatcher);
         }
         // In the case of v2 events, this function will be called
         // once per event. We need to preserve the routing information from

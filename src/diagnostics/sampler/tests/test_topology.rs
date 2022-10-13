@@ -170,7 +170,6 @@ pub async fn create() -> Result<RealmInstance, Error> {
             Route::new()
                 .capability(Capability::event(Event::Started))
                 .capability(Capability::event(Event::Stopped))
-                .capability(Capability::event(Event::Running))
                 .capability(Capability::event(Event::directory_ready("diagnostics")))
                 .capability(Capability::event(Event::capability_requested(
                     "fuchsia.logger.LogSink",

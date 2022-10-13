@@ -27,7 +27,6 @@
         {
             event: [
                 "destroyed",
-                "running",
                 "started",
             ],
             from: "framework",

@@ -1784,7 +1784,6 @@ impl EventStream {
 pub enum Event {
     Started,
     Stopped,
-    Running,
     // Filter.name
     CapabilityRequested(String),
     // Filter.name
@@ -1800,9 +1799,6 @@ impl Event {
         Self::Stopped
     }
 
-    pub fn running() -> Self {
-        Self::Running
-    }
     pub fn capability_requested(filter_name: impl Into<String>) -> Self {
         Self::CapabilityRequested(filter_name.into())
     }
@@ -1815,7 +1811,6 @@ impl Event {
         match self {
             Event::Started => "started",
             Event::Stopped => "stopped",
-            Event::Running => "running",
             Event::CapabilityRequested(_) => "capability_requested",
             Event::DirectoryReady(_) => "directory_ready",
         }

@@ -45,17 +45,13 @@ type EventType = strict enum {
     /// An instance was stopped successfully.
     STOPPED = 7;
 
-    /// If requested, this event is dispatched on subscription and indicates
-    /// that the instance has already started and is still running.
-    RUNNING = 8;
-
     /// Similar to STARTED, except the payload will carry an eventpair that the subscriber
     /// could use to defer the launch of the component. This allows, e.g., a debugger to
     /// perform some setup before any processes are created.
-    DEBUG_STARTED = 9;
+    DEBUG_STARTED = 8;
 
     /// An instance was unresolved successfully.
-    UNRESOLVED = 10;
+    UNRESOLVED = 9;
 };
 
 /// Describes the result of a state transition.
@@ -100,20 +96,17 @@ type EventErrorPayload = flexible union {
     /// Payload for Resolved events
     6: resolved ResolvedError;
 
-    /// Payload for Running events
-    7: running RunningError;
-
     /// Payload for Started events
-    8: started StartedError;
+    7: started StartedError;
 
     /// Payload for Stopped events
-    9: stopped StoppedError;
+    8: stopped StoppedError;
 
     /// Payload for DebugStarted events
-   10: debug_started DebugStartedError;
+    9: debug_started DebugStartedError;
 
     /// Payload for Unresolved events.
-   11: unresolved UnresolvedError;
+   10: unresolved UnresolvedError;
 };
 
 /// Error payload for DirectoryReady events
@@ -139,12 +132,6 @@ type ResolvedError = table {};
 
 /// Error payload for Unresolved events.
 type UnresolvedError = table {};
-
-/// Error payload for Running events.
-type RunningError = table {
-    /// Time when the component started.
-    1: started_timestamp zx.time;
-};
 
 /// Error payload for Destroyed events.
 type DestroyedError = table {};
@@ -178,20 +165,17 @@ type EventPayload = flexible resource union {
     /// Payload for Resolved events
     6: resolved ResolvedPayload;
 
-    /// Payload for Running events
-    7: running RunningPayload;
-
     /// Payload for Started events
-    8: started StartedPayload;
+    7: started StartedPayload;
 
     /// Payload for Stopped events
-    9: stopped StoppedPayload;
+    8: stopped StoppedPayload;
 
     /// Payload for DebugStarted events
-   10: debug_started DebugStartedPayload;
+    9: debug_started DebugStartedPayload;
 
     /// Payload for Unresolved events
-   11: unresolved UnresolvedPayload;
+   10: unresolved UnresolvedPayload;
 };
 
 /// Payload for DirectoryReady events
@@ -227,12 +211,6 @@ type ResolvedPayload = table {};
 
 /// Payload for Unresolved events.
 type UnresolvedPayload = table {};
-
-/// Payload for Running events.
-type RunningPayload = table {
-    /// Time when the component started.
-    1: started_timestamp zx.time;
-};
 
 /// Payload for Started events.
 type StartedPayload = table {};

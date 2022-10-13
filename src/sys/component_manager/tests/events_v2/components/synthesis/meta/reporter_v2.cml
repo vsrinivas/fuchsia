@@ -25,10 +25,7 @@
             from: "framework",
         },
         {
-            event_stream: [
-                "directory_ready_unscoped",
-                "running_unscoped",
-            ],
+            event_stream: [ "directory_ready_unscoped" ],
             from: "parent",
             filter: { name: "diagnostics" },
         },

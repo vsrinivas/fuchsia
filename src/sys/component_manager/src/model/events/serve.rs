@@ -402,12 +402,6 @@ async fn maybe_create_event_result(
             // Capability routed events cannot be exposed externally. This should be unreachable.
             Ok(None)
         }
-        Ok(EventPayload::Running { started_timestamp }) => Ok(Some(fsys::EventResult::Payload(
-            fsys::EventPayload::Running(fsys::RunningPayload {
-                started_timestamp: Some(started_timestamp.into_nanos()),
-                ..fsys::RunningPayload::EMPTY
-            }),
-        ))),
         Ok(EventPayload::Stopped { status }) => Ok(Some(fsys::EventResult::Payload(
             fsys::EventPayload::Stopped(fsys::StoppedPayload {
                 status: Some(status.into_raw()),
@@ -441,17 +435,6 @@ async fn maybe_create_event_result(
                     ..fsys::CapabilityRequestedError::EMPTY
                 },
             )),
-            description: Some(format!("{}", source)),
-            ..fsys::EventError::EMPTY
-        }))),
-        Err(EventError {
-            source,
-            event_error_payload: EventErrorPayload::Running { started_timestamp },
-        }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
-            error_payload: Some(fsys::EventErrorPayload::Running(fsys::RunningError {
-                started_timestamp: Some(started_timestamp.into_nanos()),
-                ..fsys::RunningError::EMPTY
-            })),
             description: Some(format!("{}", source)),
             ..fsys::EventError::EMPTY
         }))),

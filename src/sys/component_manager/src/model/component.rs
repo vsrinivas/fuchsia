@@ -2554,7 +2554,7 @@ pub mod tests {
     }
 
     #[fuchsia::test]
-    async fn started_and_running_event_timestamp_matches_component() {
+    async fn started_event_timestamp_matches_component() {
         let test =
             RoutingTest::new("root", vec![("root", ComponentDeclBuilder::new().build())]).await;
 
@@ -2602,17 +2602,6 @@ pub mod tests {
         let component_timestamp =
             component.lock_execution().await.runtime.as_ref().unwrap().timestamp;
         assert_eq!(component_timestamp, started_timestamp);
-
-        let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(EventType::Running.into(), EventMode::Async)])
-            .await
-            .expect("subscribe to event stream");
-        let event = event_stream.wait_until(EventType::Running, vec![].into()).await.unwrap().event;
-        assert_matches!(
-            event.result,
-            Ok(EventPayload::Running { started_timestamp: timestamp })
-            if timestamp == started_timestamp);
-        assert!(event.timestamp > started_timestamp);
     }
 
     #[fuchsia::test]

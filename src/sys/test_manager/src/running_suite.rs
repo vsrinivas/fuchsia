@@ -610,7 +610,6 @@ async fn get_realm(
         .add_route(
             Route::new()
                 .capability(Capability::event_stream("started_v2").with_scope(&wrapper_realm))
-                .capability(Capability::event_stream("running_v2").with_scope(&wrapper_realm))
                 .capability(Capability::event_stream("stopped_v2").with_scope(&wrapper_realm))
                 .capability(Capability::event_stream("destroyed_v2").with_scope(&wrapper_realm))
                 .capability(
@@ -702,11 +701,6 @@ async fn get_realm(
             Route::new()
                 .capability(
                     Capability::event_stream("started_v2")
-                        .with_scope(&test_root)
-                        .with_scope(&enclosing_env),
-                )
-                .capability(
-                    Capability::event_stream("running_v2")
                         .with_scope(&test_root)
                         .with_scope(&enclosing_env),
                 )

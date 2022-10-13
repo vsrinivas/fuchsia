@@ -31,7 +31,6 @@ pub fn event_name(event_type: &fsys::EventType) -> String {
         fsys::EventType::Unresolved => "unresolved",
         fsys::EventType::Started => "started",
         fsys::EventType::Stopped => "stopped",
-        fsys::EventType::Running => "running",
         fsys::EventType::DebugStarted => "debug_started",
     }
     .to_string()
@@ -504,26 +503,6 @@ create_event!(
         server_protocols: {},
     },
     error_payload: {}
-);
-create_event!(
-    event_type: Running,
-    event_name: running,
-    payload: {
-        data: {
-            {
-                name: started_timestamp,
-                ty: i64,
-            }
-        },
-        client_protocols: {},
-        server_protocols: {},
-    },
-    error_payload: {
-        {
-            name: started_timestamp,
-            ty: i64,
-        }
-    }
 );
 create_event!(
     event_type: DirectoryReady,

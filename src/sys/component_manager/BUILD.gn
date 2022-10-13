@@ -160,7 +160,6 @@ template("component_manager") {
     "src/model/events/event.rs",
     "src/model/events/mod.rs",
     "src/model/events/registry.rs",
-    "src/model/events/running_provider.rs",
     "src/model/events/serve.rs",
     "src/model/events/source.rs",
     "src/model/events/source_factory.rs",

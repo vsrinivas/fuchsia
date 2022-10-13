@@ -1471,7 +1471,6 @@ async fn event_streams_test() -> Result<(), Error> {
         .add_route(
             Route::new()
                 .capability(Capability::event_stream("started_v2").path("/events/event_stream"))
-                .capability(Capability::event_stream("running_v2").path("/events/event_stream"))
                 .from(Ref::parent())
                 .to(&listener),
         )

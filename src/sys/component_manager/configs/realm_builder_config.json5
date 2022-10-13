@@ -43,9 +43,6 @@
             event_stream: "stopped_v2",
         },
         {
-            event_stream: "running_v2",
-        },
-        {
             event_stream: "capability_requested_v2",
         },
         {

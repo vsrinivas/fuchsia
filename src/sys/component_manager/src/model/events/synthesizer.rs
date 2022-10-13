@@ -275,7 +275,6 @@ mod tests {
         cm_rust_testing::*,
         fidl_fuchsia_io as fio,
         fuchsia_component::server::ServiceFs,
-        std::iter::FromIterator,
     };
 
     struct CreateStreamArgs<'a> {
@@ -283,140 +282,6 @@ mod tests {
         scope_monikers: Vec<AbsoluteMoniker>,
         events: Vec<EventType>,
         include_builtin: bool,
-    }
-
-    // Shows that we see Running only for components that are bound at the moment of subscription.
-    #[fuchsia::test]
-    async fn synthesize_only_running() {
-        let test = setup_synthesis_test().await;
-
-        // Bind: b, c, e. We should see Running events only for these.
-        test.start_instance(&vec!["b"].into()).await.expect("bind instance b success");
-        test.start_instance(&vec!["c"].into()).await.expect("bind instance c success");
-        test.start_instance(&vec!["c", "e"].into()).await.expect("bind instance e success");
-
-        let registry = test.builtin_environment.event_registry.clone();
-        let mut event_stream = create_stream(CreateStreamArgs {
-            registry: &registry,
-            scope_monikers: vec![AbsoluteMoniker::root()],
-            events: vec![EventType::Started, EventType::Running],
-            include_builtin: false,
-        })
-        .await;
-
-        // Bind f, this will be a Started event.
-        test.start_instance(&vec!["c", "f"].into()).await.expect("bind instance success");
-
-        let mut result_monikers = HashSet::new();
-        while result_monikers.len() < 4 {
-            let (event, _) = event_stream.next().await.expect("got running event");
-            match event.event.result {
-                Ok(EventPayload::Running { .. }) => {
-                    if event.event.target_moniker.to_string() == "/c/f" {
-                        // There's a chance of receiving Started and Running for the instance we
-                        // just bound if it happens to start while we are synthesizing. We assert
-                        // that instance separately and count it once.
-                        continue;
-                    }
-                    result_monikers.insert(event.event.target_moniker.to_string());
-                }
-                Ok(EventPayload::Started { .. }) => {
-                    assert_eq!(event.event.target_moniker.to_string(), "/c/f");
-                    result_monikers.insert(event.event.target_moniker.to_string());
-                }
-                payload => panic!("Expected running. Got: {:?}", payload),
-            }
-        }
-
-        // Events might be out of order, sort them
-        let expected_monikers = vec!["/b", "/c", "/c/e", "/c/f"];
-        let mut result_monikers = Vec::from_iter(result_monikers.into_iter());
-        result_monikers.sort();
-        assert_eq!(expected_monikers, result_monikers);
-    }
-
-    // Shows that we see Running a single time even if the subscription scopes intersect.
-    #[fuchsia::test]
-    async fn synthesize_overlapping_scopes() {
-        let test = setup_synthesis_test().await;
-
-        test.start_instance(&vec!["b"].into()).await.expect("bind instance b success");
-        test.start_instance(&vec!["c"].into()).await.expect("bind instance c success");
-        test.start_instance(&vec!["b", "d"].into()).await.expect("bind instance d success");
-        test.start_instance(&vec!["c", "e"].into()).await.expect("bind instance e success");
-        test.start_instance(&vec!["c", "e", "g"].into()).await.expect("bind instance g success");
-        test.start_instance(&vec!["c", "e", "h"].into()).await.expect("bind instance h success");
-        test.start_instance(&vec!["c", "f"].into()).await.expect("bind instance f success");
-
-        // Subscribing with scopes /c, /c/e and /c/e/h
-        let registry = test.builtin_environment.event_registry.clone();
-        let mut event_stream = create_stream(CreateStreamArgs {
-            registry: &registry,
-            scope_monikers: vec![
-                vec!["c"].into(),
-                vec!["c", "e"].into(),
-                vec!["c", "e", "h"].into(),
-            ],
-            events: vec![EventType::Started, EventType::Running],
-            include_builtin: false,
-        })
-        .await;
-
-        let result_monikers = get_and_sort_running_events(&mut event_stream, 5).await;
-        let expected_monikers = vec!["/c", "/c/e", "/c/e/g", "/c/e/h", "/c/f"];
-        assert_eq!(expected_monikers, result_monikers);
-
-        // Verify we don't get more Running events.
-        test.start_instance(&vec!["c", "f", "i"].into()).await.expect("bind instance g success");
-        let (event, _) = event_stream.next().await.expect("got started event");
-        match event.event.result {
-            Ok(EventPayload::Started { .. }) => {
-                assert_eq!("/c/f/i", event.event.target_moniker.to_string());
-            }
-            payload => panic!("Expected started. Got: {:?}", payload),
-        }
-    }
-
-    // Shows that we see Running only for components under the given scopes.
-    #[fuchsia::test]
-    async fn synthesize_non_overlapping_scopes() {
-        let test = setup_synthesis_test().await;
-
-        test.start_instance(&vec!["b"].into()).await.expect("bind instance b success");
-        test.start_instance(&vec!["b", "d"].into()).await.expect("bind instance d success");
-        test.start_instance(&vec!["c"].into()).await.expect("bind instance c success");
-        test.start_instance(&vec!["c", "e"].into()).await.expect("bind instance e success");
-        test.start_instance(&vec!["c", "e", "g"].into()).await.expect("bind instance g success");
-        test.start_instance(&vec!["c", "e", "h"].into()).await.expect("bind instance g success");
-        test.start_instance(&vec!["c", "f"].into()).await.expect("bind instance g success");
-
-        // Subscribing with scopes /c, /c/e and c/f/i
-        let registry = test.builtin_environment.event_registry.clone();
-        let mut event_stream = create_stream(CreateStreamArgs {
-            registry: &registry,
-            scope_monikers: vec![
-                vec!["c"].into(),
-                vec!["c", "e"].into(),
-                vec!["c", "f", "i"].into(),
-            ],
-            events: vec![EventType::Started, EventType::Running],
-            include_builtin: false,
-        })
-        .await;
-
-        let result_monikers = get_and_sort_running_events(&mut event_stream, 5).await;
-        let expected_monikers = vec!["/c", "/c/e", "/c/e/g", "/c/e/h", "/c/f"];
-        assert_eq!(expected_monikers, result_monikers);
-
-        // Verify we don't get more Running events.
-        test.start_instance(&vec!["c", "f", "i"].into()).await.expect("bind instance g success");
-        let (event, _) = event_stream.next().await.expect("got started event");
-        match event.event.result {
-            Ok(EventPayload::Started { .. }) => {
-                assert_eq!("/c/f/i", event.event.target_moniker.to_string());
-            }
-            payload => panic!("Expected started. Got: {:?}", payload),
-        }
     }
 
     #[fuchsia::test]
@@ -541,24 +406,6 @@ mod tests {
             ),
         ];
         RoutingTest::new("a", components).await
-    }
-
-    async fn get_and_sort_running_events(
-        event_stream: &mut EventStream,
-        total: usize,
-    ) -> Vec<String> {
-        let mut result_monikers = Vec::new();
-        for _ in 0..total {
-            let (event, _) = event_stream.next().await.expect("got running event");
-            match event.event.result {
-                Ok(EventPayload::Running { .. }) => {
-                    result_monikers.push(event.event.target_moniker.to_string());
-                }
-                payload => panic!("Expected running. Got: {:?}", payload),
-            }
-        }
-        result_monikers.sort();
-        result_monikers
     }
 
     fn diagnostics_decl() -> DirectoryDecl {

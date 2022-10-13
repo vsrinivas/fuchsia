@@ -55,7 +55,6 @@ use {
             event_logger::EventLogger,
             events::{
                 registry::{EventRegistry, EventSubscription},
-                running_provider::RunningProvider,
                 serve::serve_event_stream_v2_as_stream,
                 source_factory::EventSourceFactory,
                 stream_provider::EventStreamProvider,
@@ -878,8 +877,6 @@ impl BuiltinEnvironment {
                 EventType::DirectoryReady,
                 directory_ready_notifier.clone(),
             );
-            event_registry
-                .register_synthesis_provider(EventType::Running, Arc::new(RunningProvider::new()));
             Arc::new(event_registry)
         };
         model.root().hooks.install(event_registry.hooks()).await;

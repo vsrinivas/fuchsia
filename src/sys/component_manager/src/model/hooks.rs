@@ -148,12 +148,6 @@ macro_rules! external_events {
     }
 }
 
-impl EventType {
-    pub fn synthesized_only() -> Vec<Self> {
-        vec![EventType::Running]
-    }
-}
-
 // Keep the event types listed below in alphabetical order!
 events!([
     /// After a CapabilityProvider has been selected through the CapabilityRouted event,
@@ -177,8 +171,6 @@ events!([
     /// An instance was stopped successfully.
     /// This event must occur before Destroyed.
     (Stopped, stopped),
-    /// A component is running.
-    (Running, running),
     /// Similar to the Started event, except the payload will carry an eventpair
     /// that the subscriber could use to defer the launch of the component.
     (DebugStarted, debug_started),
@@ -194,7 +186,6 @@ external_events!(
     Resolved,
     Started,
     Stopped,
-    Running,
     DebugStarted,
     Unresolved
 );
@@ -231,7 +222,6 @@ pub enum EventErrorPayload {
     Unresolved,
     Started,
     Stopped,
-    Running { started_timestamp: zx::Time },
     DebugStarted,
 }
 
@@ -258,7 +248,6 @@ impl fmt::Debug for EventErrorPayload {
             | EventErrorPayload::Unresolved
             | EventErrorPayload::Started
             | EventErrorPayload::Stopped
-            | EventErrorPayload::Running { .. }
             | EventErrorPayload::DebugStarted => formatter.finish(),
         }
     }
@@ -337,9 +326,6 @@ pub enum EventPayload {
     Stopped {
         status: zx::Status,
     },
-    Running {
-        started_timestamp: zx::Time,
-    },
     DebugStarted {
         runtime_dir: Option<fio::DirectoryProxy>,
         break_on_start: Arc<zx::EventPair>,
@@ -406,7 +392,6 @@ impl fmt::Debug for EventPayload {
             }
             EventPayload::Unresolved
             | EventPayload::Destroyed
-            | EventPayload::Running { .. }
             | EventPayload::DebugStarted { .. } => formatter.finish(),
         }
     }
@@ -562,7 +547,6 @@ impl fmt::Display for Event {
                     EventPayload::Discovered { .. }
                     | EventPayload::Destroyed { .. }
                     | EventPayload::Resolved { .. }
-                    | EventPayload::Running { .. }
                     | EventPayload::DebugStarted { .. }
                     | EventPayload::Unresolved => "".to_string(),
                 };

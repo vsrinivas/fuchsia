@@ -77,7 +77,6 @@ async fn run_test(
                 .capability(Capability::storage("tmp"))
                 .capability(Capability::storage("data"))
                 .capability(Capability::event_stream("started_v2"))
-                .capability(Capability::event_stream("running_v2"))
                 .capability(Capability::event_stream("stopped_v2"))
                 .capability(Capability::event_stream("destroyed_v2"))
                 .capability(Capability::event_stream("capability_requested_v2"))

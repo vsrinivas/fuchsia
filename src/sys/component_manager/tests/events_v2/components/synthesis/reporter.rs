@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    component_events::events::{DirectoryReady, Event, EventStream, Running},
+    component_events::events::{DirectoryReady, Event, EventStream},
     fidl_fuchsia_sys2 as fsys,
 };
 
@@ -12,7 +12,6 @@ async fn main() {
     // Validate that RUNNING and DirectoryReady is synthesized for root
     let mut event_stream = EventStream::open().await.unwrap();
     let mut found_directory_ready = false;
-    let mut found_running = false;
     loop {
         let event = event_stream.next().await.unwrap();
         if matches!(
@@ -24,17 +23,8 @@ async fn main() {
         ) {
             found_directory_ready = true;
         }
-        if matches!(
-            event,
-            fsys::Event {
-                header: Some(fsys::EventHeader { event_type: Some(Running::TYPE), .. }),
-                ..
-            }
-        ) {
-            found_running = true;
-        }
 
-        if found_directory_ready && found_running {
+        if found_directory_ready {
             break;
         }
     }

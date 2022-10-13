@@ -19,7 +19,6 @@ async fn start_nested_cm_and_wait_for_clean_stop(root_url: &str, moniker_to_wait
                 .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
                 .capability(Capability::event_stream("started_v2").with_scope(&root))
                 .capability(Capability::event_stream("stopped_v2").with_scope(&root))
-                .capability(Capability::event_stream("running_v2").with_scope(&root))
                 .capability(Capability::event_stream("destroyed_v2").with_scope(&root))
                 .capability(Capability::event_stream("directory_ready_v2").with_scope(&root))
                 .capability(Capability::event_stream("capability_requested_v2").with_scope(&root))
@@ -27,7 +26,6 @@ async fn start_nested_cm_and_wait_for_clean_stop(root_url: &str, moniker_to_wait
                 .capability(
                     Capability::event_stream("directory_ready_v2").as_("directory_ready_unscoped"),
                 )
-                .capability(Capability::event_stream("running_v2").as_("running_unscoped"))
                 .from(Ref::parent())
                 .to(&root),
         )
@@ -67,7 +65,6 @@ async fn from_framework_should_not_work() {
                 .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
                 .capability(Capability::event_stream("started_v2").with_scope(&root))
                 .capability(Capability::event_stream("stopped_v2").with_scope(&root))
-                .capability(Capability::event_stream("running_v2").with_scope(&root))
                 .capability(Capability::event_stream("destroyed_v2").with_scope(&root))
                 .capability(Capability::event_stream("directory_ready_v2").with_scope(&root))
                 .capability(Capability::event_stream("capability_requested_v2").with_scope(&root))
@@ -75,7 +72,6 @@ async fn from_framework_should_not_work() {
                 .capability(
                     Capability::event_stream("directory_ready_v2").as_("directory_ready_unscoped"),
                 )
-                .capability(Capability::event_stream("running_v2").as_("running_unscoped"))
                 .from(Ref::framework())
                 .to(&root),
         )

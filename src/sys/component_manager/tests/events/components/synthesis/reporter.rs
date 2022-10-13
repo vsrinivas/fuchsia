@@ -5,12 +5,11 @@
 use {
     assert_matches::assert_matches,
     component_events::events::{
-        Destroyed, DirectoryReady, Event, EventSource, EventSubscription, Running, Started,
+        Destroyed, DirectoryReady, Event, EventSource, EventSubscription, Started,
     },
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component_test::ScopedInstance,
-    regex::Regex,
-    std::{collections::BTreeSet, convert::TryFrom, iter::FromIterator},
+    std::convert::TryFrom,
     tracing::*,
 };
 
@@ -55,28 +54,16 @@ async fn main() {
     // Subscribe to events.
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![
-            Running::NAME,
-            Destroyed::NAME,
-            DirectoryReady::NAME,
-        ])])
+        .subscribe(vec![EventSubscription::new(vec![Destroyed::NAME, DirectoryReady::NAME])])
         .await
         .unwrap();
 
-    // There were 4 running instances when the stream was created: this instance itself and three
-    // more. We are also expecting directory ready for one of them.
-    let mut running = vec![];
     let mut directory_ready = vec![];
 
-    while running.len() < 4 || directory_ready.len() < 1 {
+    while directory_ready.len() < 1 {
         let event = event_stream.next().await.unwrap();
         if let Some(header) = &event.header {
             match header.event_type {
-                Some(Running::TYPE) => {
-                    let event = Running::try_from(event).expect("convert to running");
-                    info!("Got running event");
-                    running.push(event.target_moniker().to_string());
-                }
                 Some(DirectoryReady::TYPE) => {
                     let event =
                         DirectoryReady::try_from(event).expect("convert to directory ready");
@@ -88,17 +75,7 @@ async fn main() {
         }
     }
 
-    // There must be exactly 4 unique running events, 1 directory ready event.
-    // The first running event must be for this component itself.
-    // The others must be from the dynamic collection.
-    assert_eq!(running.len(), 4);
     assert_eq!(directory_ready.len(), 1);
-    assert_eq!(running[0], ".");
-
-    let re = Regex::new(r"./coll:auto-[[:xdigit:]]+").unwrap();
-    assert!(running[1..].iter().all(|m| re.is_match(m)));
-
-    assert_eq!(BTreeSet::from_iter::<Vec<String>>(running).len(), 4);
 
     // Dropping instances stops and destroys the children.
     drop(instances);
