@@ -21,6 +21,7 @@
 #include <mutex>
 
 #include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
 
 #include "sdk/lib/fdio/fdio_unistd.h"
@@ -192,7 +193,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     (fdio_fdtab[nfd].*cleanup_getter)();
   });
 
-  const fdio_ptr accepted_io = fdio_stream_socket_allocate();
+  const fdio_ptr accepted_io = fdio_socket_allocate();
   if (accepted_io == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }

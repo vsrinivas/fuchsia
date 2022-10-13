@@ -61,49 +61,12 @@ zx_status_t zxio::unwrap(zx_handle_t* out_handle) {
 }
 
 void zxio::wait_begin(uint32_t events, zx_handle_t* out_handle, zx_signals_t* out_signals) {
-  return wait_begin_inner(events, ZXIO_SIGNAL_NONE, out_handle, out_signals);
-}
-
-// TODO(fxbug.dev/45813): This is mainly used by pipes. Consider merging this with the
-// POSIX-to-zxio signal translation in |remote::wait_begin|.
-// TODO(fxbug.dev/47132): Do not change the signal mapping here and in |wait_end|
-// until linked issue is resolved.
-void zxio::wait_begin_inner(uint32_t events, zx_signals_t signals, zx_handle_t* out_handle,
-                            zx_signals_t* out_signals) {
-  if (events & POLLIN) {
-    signals |= ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_PEER_CLOSED | ZXIO_SIGNAL_READ_DISABLED;
-  }
-  if (events & POLLOUT) {
-    signals |= ZXIO_SIGNAL_WRITABLE | ZXIO_SIGNAL_WRITE_DISABLED;
-  }
-  if (events & POLLRDHUP) {
-    signals |= ZXIO_SIGNAL_READ_DISABLED | ZXIO_SIGNAL_PEER_CLOSED;
-  }
-  zxio_wait_begin(&zxio_storage().io, signals, out_handle, out_signals);
+  return zxio_wait_begin_inner(&zxio_storage().io, events, ZXIO_SIGNAL_NONE, out_handle,
+                               out_signals);
 }
 
 void zxio::wait_end(zx_signals_t signals, uint32_t* out_events) {
-  return wait_end_inner(signals, out_events, nullptr);
-}
-
-void zxio::wait_end_inner(zx_signals_t signals, uint32_t* out_events, zx_signals_t* out_signals) {
-  zxio_signals_t zxio_signals;
-  zxio_wait_end(&zxio_storage().io, signals, &zxio_signals);
-  if (out_signals) {
-    *out_signals = zxio_signals;
-  }
-
-  uint32_t events = 0;
-  if (zxio_signals & (ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_PEER_CLOSED | ZXIO_SIGNAL_READ_DISABLED)) {
-    events |= POLLIN;
-  }
-  if (zxio_signals & (ZXIO_SIGNAL_WRITABLE | ZXIO_SIGNAL_WRITE_DISABLED)) {
-    events |= POLLOUT;
-  }
-  if (zxio_signals & (ZXIO_SIGNAL_READ_DISABLED | ZXIO_SIGNAL_PEER_CLOSED)) {
-    events |= POLLRDHUP;
-  }
-  *out_events = events;
+  return zxio_wait_end_inner(&zxio_storage().io, signals, out_events, nullptr);
 }
 
 Errno zxio::posix_ioctl(int request, va_list va) {

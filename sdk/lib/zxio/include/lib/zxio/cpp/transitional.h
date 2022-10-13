@@ -16,4 +16,10 @@ zx_status_t zxio_sendmsg_inner(zxio_t* io, const struct msghdr* msg, int flags, 
 
 zx_status_t zxio_recvmsg_inner(zxio_t* io, struct msghdr* msg, int flags, size_t* out_actual);
 
+void zxio_wait_begin_inner(zxio_t* io, uint32_t events, zx_signals_t signals,
+                           zx_handle_t* out_handle, zx_signals_t* out_signals);
+
+void zxio_wait_end_inner(zxio_t* io, zx_signals_t signals, uint32_t* out_events,
+                         zx_signals_t* out_signals);
+
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_TRANSITIONAL_H_

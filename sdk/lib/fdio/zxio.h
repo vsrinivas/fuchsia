@@ -48,10 +48,6 @@ struct zxio : public fdio_t {
 
   zxio() = default;
   ~zxio() override = default;
-
-  void wait_begin_inner(uint32_t events, zx_signals_t signals, zx_handle_t* out_handle,
-                        zx_signals_t* out_signals);
-  void wait_end_inner(zx_signals_t signals, uint32_t* out_events, zx_signals_t* out_signals);
 };
 
 struct pipe : public zxio {

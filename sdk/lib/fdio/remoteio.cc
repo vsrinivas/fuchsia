@@ -10,6 +10,7 @@
 #include <poll.h>
 
 #include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 
 #include "sdk/lib/fdio/internal.h"
 #include "sdk/lib/fdio/socket.h"
@@ -48,43 +49,25 @@ zx_status_t fdio::zxio_allocator(zxio_object_type_t type, zxio_storage_t** out_s
   // https://fxbug.dev/43267 is resolved, so this has to switch on the type.
   switch (type) {
     case ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET:
-      io = fdio_datagram_socket_allocate();
+    case ZXIO_OBJECT_TYPE_PACKET_SOCKET:
+    case ZXIO_OBJECT_TYPE_RAW_SOCKET:
+    case ZXIO_OBJECT_TYPE_STREAM_SOCKET:
+    case ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET:
+      io = fdio_socket_allocate();
       break;
     case ZXIO_OBJECT_TYPE_DEBUGLOG:
       io = fbl::MakeRefCounted<fdio_internal::zxio>();
       break;
     case ZXIO_OBJECT_TYPE_DIR:
-      io = fbl::MakeRefCounted<fdio_internal::remote>();
-      break;
     case ZXIO_OBJECT_TYPE_FILE:
+    case ZXIO_OBJECT_TYPE_SERVICE:
+    case ZXIO_OBJECT_TYPE_TTY:
+    case ZXIO_OBJECT_TYPE_VMO:
+    case ZXIO_OBJECT_TYPE_VMOFILE:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
-      break;
-    case ZXIO_OBJECT_TYPE_PACKET_SOCKET:
-      io = fdio_packet_socket_allocate();
       break;
     case ZXIO_OBJECT_TYPE_PIPE:
       io = fbl::MakeRefCounted<fdio_internal::pipe>();
-      break;
-    case ZXIO_OBJECT_TYPE_RAW_SOCKET:
-      io = fdio_raw_socket_allocate();
-      break;
-    case ZXIO_OBJECT_TYPE_SERVICE:
-      io = fbl::MakeRefCounted<fdio_internal::remote>();
-      break;
-    case ZXIO_OBJECT_TYPE_STREAM_SOCKET:
-      io = fdio_stream_socket_allocate();
-      break;
-    case ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET:
-      io = fdio_synchronous_datagram_socket_allocate();
-      break;
-    case ZXIO_OBJECT_TYPE_TTY:
-      io = fbl::MakeRefCounted<fdio_internal::remote>();
-      break;
-    case ZXIO_OBJECT_TYPE_VMO:
-      io = fbl::MakeRefCounted<fdio_internal::remote>();
-      break;
-    case ZXIO_OBJECT_TYPE_VMOFILE:
-      io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
     default:
       // Unknown type - allocate a generic fdio object so that zxio_create can
