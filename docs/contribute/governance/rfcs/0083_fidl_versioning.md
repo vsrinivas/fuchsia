@@ -122,6 +122,9 @@ A _version identifier_ is an unsigned 64-bit integer between 1 and 2^63-1
 (inclusive) or equal to 2^64-1. The latter version identifier is known as `HEAD`
 and is treated specially.
 
+> *Amendment (Oct 2022).* To support [legacy methods](#legacy), we instead use
+> 2^64-2 for `HEAD` and 2^64-1 for `LEGACY`.
+
 Version identifiers are totally ordered by an "is newer than" relationship.
 Version _X_ is newer than version _Y_ when _X_ > _Y_.
 
@@ -322,6 +325,84 @@ It also makes FIDL changes easier in collaborative projects. When authoring a
 CL, looking up the current version is tedious and race-prone, especially if it
 changes during code review. Instead, contributors can simply use `HEAD`, and
 project owners can replace it with a specific version later.
+
+### Legacy support {#legacy}
+
+> *Amendment (Oct 2022).* This section was added after the RFC was accepted.
+
+When an API is removed using `@available(removed=<N>)`, it no longer appears in
+the generated bindings for versions _N_ and above. This makes it hard to build a
+Fuchsia system image that supports multiple API levels. If the system image is
+built against _N_-1 bindings, it cannot provide implementations for methods
+added at _N_. If it is built against _N_ bindings, it cannot provide
+implementations for methods removed at _N_.
+
+To solve this problem, we introduce a new version called `LEGACY` that acts the
+same as `HEAD` but also includes legacy methods. A _legacy method_ is a method
+marked `@available(removed=<N>, legacy=true)`. This uses a new boolean argument
+called `legacy` which is false by default, and only allowed when `removed` is
+present. For example:
+
+    @available(added=1)
+    library example;
+
+    protocol Foo {
+        @available(removed=2)  // implies legacy=false
+        NotLegacy();
+
+        @available(removed=2, legacy=true)
+        Legacy();
+    };
+
+Here are the methods included in that example's bindings when targeting
+different versions:
+
+| Target version | Methods included      |
+|:--------------:|:---------------------:|
+| 1              | `NotLegacy`, `Legacy` |
+| 2              |                       |
+| `HEAD`         |                       |
+| `LEGACY`       | `Legacy`              |
+
+As a matter of policy, all methods in the Fuchsia platform should retain legacy
+support when they are removed. Once the Fuchsia platform drops support for all
+API levels before the method's removal, it is safe to remove `legacy=true` and
+the method's implementation.
+
+When the Fuchsia platform acts as a client instead of a server, legacy methods
+allow the platform to continue calling the method for those targeting old API
+levels. For those targeting newer API levels that do not expect it, the method
+must be marked `flexible` so that the calls can be ignored. See [RFC-0138:
+Handling unknown interactions][rfc-0138] for more details.
+
+The `legacy` argument can be used on any FIDL element, not just on methods. For
+example, if you are removing a type along with the method that uses it, that
+type must be marked `legacy=true` as well. This is just a consequence of [use
+validation](#use-validation), not a new rule.
+
+As another example, consider a table used in a request. When removing one of
+its fields, you might wish to use `legacy=true` so that the server can continue
+supporting clients that set the field. On the other hand, if ignoring the field
+is sufficient to preserve ABI, there is no need for legacy support. Similarly,
+for a table used in a response, it is only necessary to use `legacy=true` when
+removing a field if setting that field is required to preserve ABI for old
+clients.
+
+Legacy support should never be used when [swapping](#versioning-properties) an
+element because the availabilities represent change, not removal. If you were to
+do so, it would cause an error:
+
+    protocol Foo {
+        @available(removed=2, legacy=true)
+        Bar();
+
+        @available(added=2)
+        Bar();
+    }
+
+Since the first `Bar` gets added back at `LEGACY`, and the second `Bar` is never
+removed, they both exist at `LEGACY` and fidlc will emit an error like it
+already does for same-named elements with overlapping availabilities.
 
 ### JSON IR {#json-ir}
 
@@ -740,6 +821,7 @@ i.e. without taking action to migrate.
 [rfc-0058]: /docs/contribute/governance/rfcs/0058_deprecated_attribute.md
 [rfc-0052]: /docs/contribute/governance/rfcs/0052_type_aliasing_named_types.md
 [rfc-0086]: /docs/contribute/governance/rfcs/0086_rfc_0050_attributes.md
+[rfc-0138]: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md
 [language]: /docs/reference/fidl/language/language.md
 [attrs]: /docs/reference/fidl/language/attributes.md
 [swift-attr]: https://docs.swift.org/swift-book/ReferenceManual/Attributes.html#ID583

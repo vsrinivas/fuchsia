@@ -9,19 +9,22 @@ library fuchsia.examples.docs;
 // [END library]
 
 // [START arguments]
-@available(added=1, deprecated=2, removed=3)
+@available(added=1, deprecated=2, removed=3, legacy=true)
 const ANSWER uint64 = 42;
 // [END arguments]
 
 // [START inheritance]
 @available(added=2, deprecated=3)
 protocol Versioned {
-    // Equivalent to `@available(added=2, deprecated=3, removed=4)`.
-    @available(removed=4)
+    // Equivalent to `@available(added=2, deprecated=3, removed=4, legacy=true)`.
+    @available(removed=4, legacy=true)
     Removed(table {
-        // Equivalent to `@available(added=3, deprecated=3, removed=4)`.
+        // Equivalent to `@available(added=3, deprecated=3, removed=4, legacy=true)`.
         @available(added=3)
         1: message string;
+        // Equivalent to `@available(added=2, deprecated=3, removed=4, legacy=false)`.
+        @available(legacy=false)
+        2: count uint32;
     });
 };
 // [END inheritance]
@@ -34,13 +37,20 @@ protocol Example {
     //
     // (Detailed explanation of why the method is deprecated, the timeline for
     // removing it, and what should be used instead.)
-    @available(deprecated=5, removed=HEAD, note="use Replacement")
+    @available(deprecated=5, removed=6, note="use Replacement")
     Deprecated();
 
     @available(added=5)
     Replacement();
 };
 // [END deprecation]
+
+// [START legacy]
+protocol LegacyExample {
+    @available(deprecated=5, removed=6, legacy=true, note="...")
+    LegacyMethod();
+};
+// [END legacy]
 
 // [START references]
 const VALUE uint32 = 5;
