@@ -27,8 +27,15 @@ pub struct PowerResource {
 
 impl PowerResource {
     /// `resource` must be the Power resource.
-    pub fn new(resource: Resource) -> Arc<Self> {
-        Arc::new(Self { resource })
+    pub fn new(resource: Resource) -> Result<Arc<Self>, Error> {
+        let resource_info = resource.info()?;
+        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
+            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_POWER_BASE
+            || resource_info.size != 1
+        {
+            return Err(format_err!("Power resource not available."));
+        }
+        Ok(Arc::new(Self { resource }))
     }
 }
 
@@ -41,13 +48,6 @@ impl BuiltinCapability for PowerResource {
         self: Arc<Self>,
         mut stream: fkernel::PowerResourceRequestStream,
     ) -> Result<(), Error> {
-        let resource_info = self.resource.info()?;
-        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
-            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_POWER_BASE
-            || resource_info.size != 1
-        {
-            return Err(format_err!("POWER resource not available."));
-        }
         while let Some(fkernel::PowerResourceRequest::Get { responder }) = stream.try_next().await?
         {
             responder.send(self.resource.duplicate_handle(zx::Rights::SAME_RIGHTS)?)?;
@@ -103,6 +103,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fkernel::PowerResourceMarker>()?;
         fasync::Task::local(
             PowerResource::new(power_resource)
+                .unwrap_or_else(|e| panic!("Error while creating power resource service: {}", e))
                 .serve(stream)
                 .unwrap_or_else(|e| panic!("Error while serving POWER resource service: {}", e)),
         )
@@ -115,12 +116,7 @@ mod tests {
         if power_resource_available() {
             return Ok(());
         }
-        let (_, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fkernel::PowerResourceMarker>()?;
-        assert!(!PowerResource::new(Resource::from(zx::Handle::invalid()))
-            .serve(stream)
-            .await
-            .is_ok());
+        assert!(!PowerResource::new(Resource::from(zx::Handle::invalid())).is_ok());
         Ok(())
     }
 
@@ -145,7 +141,7 @@ mod tests {
             return Ok(());
         }
 
-        let power_resource = PowerResource::new(get_power_resource().await?);
+        let power_resource = PowerResource::new(get_power_resource().await?).unwrap();
         let hooks = Hooks::new();
         hooks.install(power_resource.hooks()).await;
 

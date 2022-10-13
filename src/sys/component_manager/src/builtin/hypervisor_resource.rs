@@ -27,8 +27,15 @@ pub struct HypervisorResource {
 
 impl HypervisorResource {
     /// `resource` must be the Hypervisor resource.
-    pub fn new(resource: Resource) -> Arc<Self> {
-        Arc::new(Self { resource })
+    pub fn new(resource: Resource) -> Result<Arc<Self>, Error> {
+        let resource_info = resource.info()?;
+        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
+            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_HYPERVISOR_BASE
+            || resource_info.size != 1
+        {
+            return Err(format_err!("Hypervisor resource not available."));
+        }
+        Ok(Arc::new(Self { resource }))
     }
 }
 
@@ -41,13 +48,6 @@ impl BuiltinCapability for HypervisorResource {
         self: Arc<Self>,
         mut stream: fkernel::HypervisorResourceRequestStream,
     ) -> Result<(), Error> {
-        let resource_info = self.resource.info()?;
-        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
-            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_HYPERVISOR_BASE
-            || resource_info.size != 1
-        {
-            return Err(format_err!("HYPERVISOR resource not available."));
-        }
         while let Some(fkernel::HypervisorResourceRequest::Get { responder }) =
             stream.try_next().await?
         {
@@ -104,9 +104,14 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fkernel::HypervisorResourceMarker>()?;
         fasync::Task::local(
-            HypervisorResource::new(hypervisor_resource).serve(stream).unwrap_or_else(|e| {
-                panic!("Error while serving HYPERVISOR resource service: {}", e)
-            }),
+            HypervisorResource::new(hypervisor_resource)
+                .unwrap_or_else(|e| {
+                    panic!("Error while creating hypervisor resource service: {}", e)
+                })
+                .serve(stream)
+                .unwrap_or_else(|e| {
+                    panic!("Error while serving HYPERVISOR resource service: {}", e)
+                }),
         )
         .detach();
         Ok(proxy)
@@ -117,12 +122,7 @@ mod tests {
         if hypervisor_resource_available() {
             return Ok(());
         }
-        let (_, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fkernel::HypervisorResourceMarker>()?;
-        assert!(!HypervisorResource::new(Resource::from(zx::Handle::invalid()))
-            .serve(stream)
-            .await
-            .is_ok());
+        assert!(!HypervisorResource::new(Resource::from(zx::Handle::invalid())).is_ok());
         Ok(())
     }
 
@@ -147,7 +147,8 @@ mod tests {
             return Ok(());
         }
 
-        let hypervisor_resource = HypervisorResource::new(get_hypervisor_resource().await?);
+        let hypervisor_resource =
+            HypervisorResource::new(get_hypervisor_resource().await?).unwrap();
         let hooks = Hooks::new();
         hooks.install(hypervisor_resource.hooks()).await;
 

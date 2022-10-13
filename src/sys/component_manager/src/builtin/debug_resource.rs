@@ -27,8 +27,15 @@ pub struct DebugResource {
 
 impl DebugResource {
     /// `resource` must be the Debug resource.
-    pub fn new(resource: Resource) -> Arc<Self> {
-        Arc::new(Self { resource })
+    pub fn new(resource: Resource) -> Result<Arc<Self>, Error> {
+        let resource_info = resource.info()?;
+        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
+            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_DEBUG_BASE
+            || resource_info.size != 1
+        {
+            return Err(format_err!("Debug resource not available."));
+        }
+        Ok(Arc::new(Self { resource }))
     }
 }
 
@@ -41,13 +48,6 @@ impl BuiltinCapability for DebugResource {
         self: Arc<Self>,
         mut stream: fkernel::DebugResourceRequestStream,
     ) -> Result<(), Error> {
-        let resource_info = self.resource.info()?;
-        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
-            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_DEBUG_BASE
-            || resource_info.size != 1
-        {
-            return Err(format_err!("Debug resource not available."));
-        }
         while let Some(fkernel::DebugResourceRequest::Get { responder }) = stream.try_next().await?
         {
             responder.send(self.resource.duplicate_handle(zx::Rights::SAME_RIGHTS)?)?;
@@ -103,6 +103,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fkernel::DebugResourceMarker>()?;
         fasync::Task::local(
             DebugResource::new(debug_resource)
+                .unwrap_or_else(|e| panic!("Error while creating debug resource service: {}", e))
                 .serve(stream)
                 .unwrap_or_else(|e| panic!("Error while serving debug resource service: {}", e)),
         )
@@ -115,12 +116,7 @@ mod tests {
         if debug_resource_available() {
             return Ok(());
         }
-        let (_, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fkernel::DebugResourceMarker>()?;
-        assert!(!DebugResource::new(Resource::from(zx::Handle::invalid()))
-            .serve(stream)
-            .await
-            .is_ok());
+        assert!(!DebugResource::new(Resource::from(zx::Handle::invalid())).is_ok());
         Ok(())
     }
 
@@ -145,7 +141,7 @@ mod tests {
             return Ok(());
         }
 
-        let debug_resource = DebugResource::new(get_debug_resource().await?);
+        let debug_resource = DebugResource::new(get_debug_resource().await?).unwrap();
         let hooks = Hooks::new();
         hooks.install(debug_resource.hooks()).await;
 

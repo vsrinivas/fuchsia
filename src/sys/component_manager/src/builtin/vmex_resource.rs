@@ -26,8 +26,15 @@ pub struct VmexResource {
 
 impl VmexResource {
     /// `resource` must be the Vmex resource.
-    pub fn new(resource: Resource) -> Arc<Self> {
-        Arc::new(Self { resource })
+    pub fn new(resource: Resource) -> Result<Arc<Self>, Error> {
+        let resource_info = resource.info()?;
+        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
+            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_VMEX_BASE
+            || resource_info.size != 1
+        {
+            return Err(format_err!("Vmex resource not available."));
+        }
+        Ok(Arc::new(Self { resource }))
     }
 }
 
@@ -40,13 +47,6 @@ impl BuiltinCapability for VmexResource {
         self: Arc<Self>,
         mut stream: fkernel::VmexResourceRequestStream,
     ) -> Result<(), Error> {
-        let resource_info = self.resource.info()?;
-        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
-            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_VMEX_BASE
-            || resource_info.size != 1
-        {
-            return Err(format_err!("VMEX resource not available."));
-        }
         while let Some(fkernel::VmexResourceRequest::Get { responder }) = stream.try_next().await? {
             responder.send(self.resource.duplicate_handle(zx::Rights::SAME_RIGHTS)?)?;
         }
@@ -101,6 +101,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fkernel::VmexResourceMarker>()?;
         fasync::Task::local(
             VmexResource::new(vmex_resource)
+                .unwrap_or_else(|e| panic!("Error while creating vmex resource service: {}", e))
                 .serve(stream)
                 .unwrap_or_else(|e| panic!("Error while serving VMEX resource service: {}", e)),
         )
@@ -113,12 +114,7 @@ mod tests {
         if vmex_resource_available() {
             return Ok(());
         }
-        let (_, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fkernel::VmexResourceMarker>()?;
-        assert!(!VmexResource::new(Resource::from(zx::Handle::invalid()))
-            .serve(stream)
-            .await
-            .is_ok());
+        assert!(!VmexResource::new(Resource::from(zx::Handle::invalid())).is_ok());
         Ok(())
     }
 
@@ -143,7 +139,7 @@ mod tests {
             return Ok(());
         }
 
-        let vmex_resource = VmexResource::new(get_vmex_resource().await?);
+        let vmex_resource = VmexResource::new(get_vmex_resource().await?).unwrap();
         let hooks = Hooks::new();
         hooks.install(vmex_resource.hooks()).await;
 

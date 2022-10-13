@@ -26,8 +26,15 @@ pub struct InfoResource {
 
 impl InfoResource {
     /// `resource` must be the Info resource.
-    pub fn new(resource: Resource) -> Arc<Self> {
-        Arc::new(Self { resource })
+    pub fn new(resource: Resource) -> Result<Arc<Self>, Error> {
+        let resource_info = resource.info()?;
+        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
+            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_INFO_BASE
+            || resource_info.size != 1
+        {
+            return Err(format_err!("Info resource not available."));
+        }
+        Ok(Arc::new(Self { resource }))
     }
 }
 
@@ -40,13 +47,6 @@ impl BuiltinCapability for InfoResource {
         self: Arc<Self>,
         mut stream: fkernel::InfoResourceRequestStream,
     ) -> Result<(), Error> {
-        let resource_info = self.resource.info()?;
-        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
-            || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_INFO_BASE
-            || resource_info.size != 1
-        {
-            return Err(format_err!("INFO resource not available."));
-        }
         while let Some(fkernel::InfoResourceRequest::Get { responder }) = stream.try_next().await? {
             responder.send(self.resource.duplicate_handle(zx::Rights::SAME_RIGHTS)?)?;
         }
@@ -101,6 +101,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fkernel::InfoResourceMarker>()?;
         fasync::Task::local(
             InfoResource::new(info_resource)
+                .unwrap_or_else(|e| panic!("Error while creating info resource service: {}", e))
                 .serve(stream)
                 .unwrap_or_else(|e| panic!("Error while serving INFO resource service: {}", e)),
         )
@@ -113,12 +114,7 @@ mod tests {
         if info_resource_available() {
             return Ok(());
         }
-        let (_, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fkernel::InfoResourceMarker>()?;
-        assert!(!InfoResource::new(Resource::from(zx::Handle::invalid()))
-            .serve(stream)
-            .await
-            .is_ok());
+        assert!(!InfoResource::new(Resource::from(zx::Handle::invalid())).is_ok());
         Ok(())
     }
 
@@ -143,7 +139,7 @@ mod tests {
             return Ok(());
         }
 
-        let info_resource = InfoResource::new(get_info_resource().await?);
+        let info_resource = InfoResource::new(get_info_resource().await?).unwrap();
         let hooks = Hooks::new();
         hooks.install(info_resource.hooks()).await;
 

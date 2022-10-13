@@ -629,85 +629,81 @@ impl BuiltinEnvironment {
         }
 
         // Set up the CpuResource service.
-        let cpu_resource_handle = system_resource_handle
+        let cpu_resource = system_resource_handle
             .as_ref()
-            .map(|handle| {
-                match handle.create_child(
-                    zx::ResourceKind::SYSTEM,
-                    None,
-                    zx::sys::ZX_RSRC_SYSTEM_CPU_BASE,
-                    1,
-                    b"cpu",
-                ) {
-                    Ok(resource) => Some(resource),
-                    Err(_) => None,
-                }
+            .and_then(|handle| {
+                handle
+                    .create_child(
+                        zx::ResourceKind::SYSTEM,
+                        None,
+                        zx::sys::ZX_RSRC_SYSTEM_CPU_BASE,
+                        1,
+                        b"cpu",
+                    )
+                    .ok()
             })
-            .flatten();
-        let cpu_resource = cpu_resource_handle.map(CpuResource::new);
+            .map(CpuResource::new)
+            .and_then(Result::ok);
         if let Some(cpu_resource) = cpu_resource.as_ref() {
             model.root().hooks.install(cpu_resource.hooks()).await;
         }
 
         // Set up the DebugResource service.
-        let debug_resource_handle = system_resource_handle
+        let debug_resource = system_resource_handle
             .as_ref()
-            .map(|handle| {
-                match handle.create_child(
-                    zx::ResourceKind::SYSTEM,
-                    None,
-                    zx::sys::ZX_RSRC_SYSTEM_DEBUG_BASE,
-                    1,
-                    b"debug",
-                ) {
-                    Ok(resource) => Some(resource),
-                    Err(_) => None,
-                }
+            .and_then(|handle| {
+                handle
+                    .create_child(
+                        zx::ResourceKind::SYSTEM,
+                        None,
+                        zx::sys::ZX_RSRC_SYSTEM_DEBUG_BASE,
+                        1,
+                        b"debug",
+                    )
+                    .ok()
             })
-            .flatten();
-        let debug_resource = debug_resource_handle.map(DebugResource::new);
+            .map(DebugResource::new)
+            .and_then(Result::ok);
         if let Some(debug_resource) = debug_resource.as_ref() {
             model.root().hooks.install(debug_resource.hooks()).await;
         }
 
         // Set up the HypervisorResource service.
-        let hypervisor_resource_handle = system_resource_handle
+        let hypervisor_resource = system_resource_handle
             .as_ref()
-            .map(|handle| {
-                match handle.create_child(
-                    zx::ResourceKind::SYSTEM,
-                    None,
-                    zx::sys::ZX_RSRC_SYSTEM_HYPERVISOR_BASE,
-                    1,
-                    b"hypervisor",
-                ) {
-                    Ok(resource) => Some(resource),
-                    Err(_) => None,
-                }
+            .and_then(|handle| {
+                handle
+                    .create_child(
+                        zx::ResourceKind::SYSTEM,
+                        None,
+                        zx::sys::ZX_RSRC_SYSTEM_HYPERVISOR_BASE,
+                        1,
+                        b"hypervisor",
+                    )
+                    .ok()
             })
-            .flatten();
-        let hypervisor_resource = hypervisor_resource_handle.map(HypervisorResource::new);
+            .map(HypervisorResource::new)
+            .and_then(Result::ok);
         if let Some(hypervisor_resource) = hypervisor_resource.as_ref() {
             model.root().hooks.install(hypervisor_resource.hooks()).await;
         }
 
         // Set up the InfoResource service.
-        let info_resource_handle = system_resource_handle
+        let info_resource = system_resource_handle
             .as_ref()
-            .map(|handle| {
-                match handle.create_child(
-                    zx::ResourceKind::SYSTEM,
-                    None,
-                    zx::sys::ZX_RSRC_SYSTEM_INFO_BASE,
-                    1,
-                    b"info",
-                ) {
-                    Ok(resource) => Some(resource),
-                    Err(_) => None,
-                }
+            .and_then(|handle| {
+                handle
+                    .create_child(
+                        zx::ResourceKind::SYSTEM,
+                        None,
+                        zx::sys::ZX_RSRC_SYSTEM_INFO_BASE,
+                        1,
+                        b"info",
+                    )
+                    .ok()
             })
-            .flatten();
-        let info_resource = info_resource_handle.map(InfoResource::new);
+            .map(InfoResource::new)
+            .and_then(Result::ok);
         if let Some(info_resource) = info_resource.as_ref() {
             model.root().hooks.install(info_resource.hooks()).await;
         }
@@ -733,43 +729,41 @@ impl BuiltinEnvironment {
         }
 
         // Set up the PowerResource service.
-        let power_resource_handle = system_resource_handle
+        let power_resource = system_resource_handle
             .as_ref()
-            .map(|handle| {
-                match handle.create_child(
-                    zx::ResourceKind::SYSTEM,
-                    None,
-                    zx::sys::ZX_RSRC_SYSTEM_POWER_BASE,
-                    1,
-                    b"power",
-                ) {
-                    Ok(resource) => Some(resource),
-                    Err(_) => None,
-                }
+            .and_then(|handle| {
+                handle
+                    .create_child(
+                        zx::ResourceKind::SYSTEM,
+                        None,
+                        zx::sys::ZX_RSRC_SYSTEM_POWER_BASE,
+                        1,
+                        b"power",
+                    )
+                    .ok()
             })
-            .flatten();
-        let power_resource = power_resource_handle.map(PowerResource::new);
+            .map(PowerResource::new)
+            .and_then(Result::ok);
         if let Some(power_resource) = power_resource.as_ref() {
             model.root().hooks.install(power_resource.hooks()).await;
         }
 
         // Set up the VmexResource service.
-        let vmex_resource_handle = system_resource_handle
+        let vmex_resource = system_resource_handle
             .as_ref()
-            .map(|handle| {
-                match handle.create_child(
-                    zx::ResourceKind::SYSTEM,
-                    None,
-                    zx::sys::ZX_RSRC_SYSTEM_VMEX_BASE,
-                    1,
-                    b"vmex",
-                ) {
-                    Ok(resource) => Some(resource),
-                    Err(_) => None,
-                }
+            .and_then(|handle| {
+                handle
+                    .create_child(
+                        zx::ResourceKind::SYSTEM,
+                        None,
+                        zx::sys::ZX_RSRC_SYSTEM_VMEX_BASE,
+                        1,
+                        b"vmex",
+                    )
+                    .ok()
             })
-            .flatten();
-        let vmex_resource = vmex_resource_handle.map(VmexResource::new);
+            .map(VmexResource::new)
+            .and_then(Result::ok);
         if let Some(vmex_resource) = vmex_resource.as_ref() {
             model.root().hooks.install(vmex_resource.hooks()).await;
         }
