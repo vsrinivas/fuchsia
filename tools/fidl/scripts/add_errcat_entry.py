@@ -34,6 +34,10 @@ REGEX_BAD_TEST_ENTRY = '\s*"fidl\/bad\/fi-(\d+)\.test.fidl",'
 REGEX_GOOD_TEST_ENTRY = '\s*"fidl\/good\/fi-(\d+)\.test.fidl",'
 REGEX_ERRCAT_TEST_FILE_ENTRY = 'TEST\(ErrcatTests, Good(\d+)'
 
+# Use this weird string concatenation so that this string literal does not show up in search results
+# when people grep for it.
+DNS = "DO" + "NOT" + "SUBMIT"
+
 
 def find_line_num(regex, line):
     result = re.search(regex, line)
@@ -93,7 +97,7 @@ def create_file(file_path, template_path, numeral):
     with open(template_path, 'r') as f:
         template = Template(f.read())
         with open(file_path, 'wt') as f:
-            f.write(template.substitute(num=numeral))
+            f.write(template.substitute(num=numeral, dns=DNS))
             return True
 
 
@@ -223,12 +227,12 @@ def main(args):
         )
     if progress['bad_test_created']:
         print(
-            "  * Added bad example for fi-%s at %s/fi-%s.test.fidl. Please resolve the TODO(DONOTSUBMIT)!"
-            % (ns, FIDLC_BAD_TESTS_DIR_PATH, ns))
+            "  * Added bad example for fi-%s at %s/fi-%s.test.fidl. Please resolve the TODO(%s)!"
+            % (ns, FIDLC_BAD_TESTS_DIR_PATH, ns, DNS))
     if progress['good_test_created']:
         print(
-            "  * Added bad example for fi-%s at %s/fi-%s.test.fidl. Please resolve the TODO(DONOTSUBMIT)!"
-            % (ns, FIDLC_GOOD_TESTS_DIR_PATH, ns))
+            "  * Added good example for fi-%s at %s/fi-%s.test.fidl. Please resolve the TODO(%s)!"
+            % (ns, FIDLC_GOOD_TESTS_DIR_PATH, ns, DNS))
     print()
 
     return 0

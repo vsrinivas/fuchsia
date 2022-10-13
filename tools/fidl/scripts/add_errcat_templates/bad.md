@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library test.bad.fi${num};
 
-// TODO(DONOTSUBMIT): You'll need to grep the codebase for this error name (for example `ErrFoo`)
+// TODO(${dns}): You'll need to grep the codebase for this error name (for example `ErrFoo`)
 // and extract the content of that error (everything after the library declaration) into this file,
 // replacing this TODO. In the location where you removed the error, replace the following code:
 //
