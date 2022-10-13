@@ -25,7 +25,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
     "//src/connectivity/lib/fidl_fuchsia_net_dhcpv6_ext",
     "//src/connectivity/lib/net-types",
-    "//src/connectivity/lib/network-device/rust",
     "//src/connectivity/lib/ping",
     "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm_rust",
     "//src/lib/async-utils",

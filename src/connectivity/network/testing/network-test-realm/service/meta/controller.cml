@@ -36,14 +36,6 @@
             rights: [ "rw*" ],
             path: "/dev/class/ethernet",
         },
-        {
-            // TODO(https://fxbug.dev/77059): Only provide READABLE rights.
-            // Currently, reading the interfaces from devfs requires both
-            // READABLE and WRITABLE rights.
-            directory: "dev-class-network",
-            rights: [ "rw*" ],
-            path: "/dev/class/network",
-        },
     ],
     offer: [
         {

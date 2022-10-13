@@ -35,10 +35,7 @@
         {
             // The Network Test Realm must be able to read ethernet devices and
             // netdevices in order to take over interfaces.
-            directory: [
-                "dev-class-ethernet",
-                "dev-class-network",
-            ],
+            directory: [ "dev-class-ethernet" ],
             from: "parent",
             to: [ "#test-components" ],
         },

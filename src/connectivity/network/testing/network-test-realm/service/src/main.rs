@@ -64,33 +64,6 @@ impl<T, E: std::fmt::Debug> ResultExt<T> for Result<T, E> {
     }
 }
 
-/// Returns a stream of existing `fhwnet::PortId`s for the provided
-/// `device_proxy`.
-fn existing_ports(
-    device_proxy: &fhwnet::DeviceProxy,
-) -> Result<impl futures::Stream<Item = fhwnet::PortId> + '_> {
-    let client = netdevice_client::Client::new(Clone::clone(device_proxy));
-    Ok(client.device_port_event_stream().context("device_port_event_stream failed")?.scan(
-        (),
-        |_: &mut (), event| match event {
-            Ok(event) => match event {
-                fhwnet::DevicePortEvent::Existing(port_id) => futures::future::ready(Some(port_id)),
-                fhwnet::DevicePortEvent::Idle(fhwnet::Empty {}) => futures::future::ready(None),
-                fhwnet::DevicePortEvent::Added(_) | fhwnet::DevicePortEvent::Removed(_) => {
-                    // The first n events should correspond to existing
-                    // ports and should be followed by an idle event. As a
-                    // result, this shouldn't happen.
-                    unreachable!("unexpected event: {:?}", event);
-                }
-            },
-            Err(e) => {
-                warn!("DevicePortEvent error: {:?}", e);
-                futures::future::ready(None)
-            }
-        },
-    ))
-}
-
 /// Returns a stream that contains a `P::Proxy` for each file in the provided
 /// `directory`.
 async fn file_proxies<P: fidl::endpoints::ProtocolMarker>(
@@ -133,38 +106,6 @@ async fn file_proxies<P: fidl::endpoints::ProtocolMarker>(
             .collect();
 
     Ok(futures::stream::iter(proxies?))
-}
-
-/// Returns the `fhwnet::PortId` that corresponds to the provided
-/// `expected_mac_address`.
-///
-/// If a matching port is not found, then `Option::None` is returned.
-async fn find_matching_port_id(
-    expected_mac_address: fnet_ext::MacAddress,
-    device_proxy: &fhwnet::DeviceProxy,
-) -> Result<Option<fhwnet::PortId>> {
-    let results = existing_ports(&device_proxy)?.filter_map(|mut port_id| async move {
-        // Note that errors are logged, but not propagated. In the event of an
-        // error, this ensures that other ports/devices can be searched for the
-        // `expected_mac_address`.
-
-        let (port, port_server_end) = fidl::endpoints::create_proxy::<fhwnet::PortMarker>()
-            .ok_or_log_err("create_proxy failed")?;
-
-        device_proxy.get_port(&mut port_id, port_server_end).ok_or_log_err("get_port failed")?;
-
-        let (mac, mac_server_end) = fidl::endpoints::create_proxy::<fhwnet::MacAddressingMarker>()
-            .ok_or_log_err("create_proxy failed")?;
-
-        port.get_mac(mac_server_end).ok_or_log_err("get_mac failed")?;
-
-        let mac = mac.get_unicast_address().await.ok_or_log_err("get_unicast_address failed")?;
-
-        (mac.octets == expected_mac_address.octets).then(|| port_id)
-    });
-
-    futures::pin_mut!(results);
-    Ok(results.next().await)
 }
 
 /// Installs a netdevice with the provided `name` on the hermetic Netstack.
@@ -278,46 +219,56 @@ async fn install_netdevice(
 /// Attempts to install a netdevice on the hermetic Netstack.
 ///
 /// If a device was installed, then true is returned. An error may be returned
-/// if the `expected_mac_address` matches a netdevice, but installation of the
-/// device on the hermetic Netstack failed.
+/// if installation of the device on the hermetic Netstack failed.
 async fn try_install_netdevice(
     name: &str,
-    expected_mac_address: fnet_ext::MacAddress,
+    interface_id: u64,
     wait_any_ip_address: bool,
     connector: &HermeticNetworkConnector,
 ) -> Result<bool, fntr::Error> {
-    const NETDEV_DIRECTORY_PATH: &'static str = "/dev/class/network";
-
-    let results = file_proxies::<fhwnet::DeviceInstanceMarker>(NETDEV_DIRECTORY_PATH)
-        .await?
-        .filter_map(|device_instance_proxy| async move {
-            // Note that errors are logged, but not propagated. In the event of
-            // an error, this ensures that other devices can be searched for the
-            // `expected_mac_address`.
-
-            let (device_proxy, device_server_end) =
-                fidl::endpoints::create_proxy::<fhwnet::DeviceMarker>()
-                    .ok_or_log_err("create_proxy failed")?;
-
-            device_instance_proxy
-                .get_device(device_server_end)
-                .ok_or_log_err("get_device failed")?;
-
-            find_matching_port_id(expected_mac_address, &device_proxy)
-                .await
-                .ok_or_log_err("find_matching_port_id failed")?
-                .and_then(|port_id| Some((port_id, device_proxy)))
-        });
-
-    futures::pin_mut!(results);
-
-    match results.next().await {
-        Some((port_id, device_proxy)) => {
-            install_netdevice(name, port_id, device_proxy, wait_any_ip_address, connector).await?;
-            Ok(true)
-        }
-        None => Ok(false),
-    }
+    let debug_interfaces_proxy =
+        SystemConnector.connect_to_protocol::<fnet_debug::InterfacesMarker>()?;
+    let (port_proxy, port_server_end) = fidl::endpoints::create_proxy::<fhwnet::PortMarker>()
+        .map_err(|e| {
+            error!("create_proxy failure: {:?}", e);
+            fntr::Error::Internal
+        })?;
+    debug_interfaces_proxy.get_port(interface_id, port_server_end).map_err(|e| {
+        error!("get_port failure: {:?}", e);
+        fntr::Error::Internal
+    })?;
+    let (device_proxy, device_server_end) = fidl::endpoints::create_proxy::<fhwnet::DeviceMarker>()
+        .map_err(|e| {
+            error!("create_proxy failure: {:?}", e);
+            fntr::Error::Internal
+        })?;
+    let fhwnet::PortInfo { id, .. } = port_proxy
+        .get_info()
+        .and_then(|port_info| {
+            futures::future::ready(port_proxy.get_device(device_server_end).map(|()| port_info))
+        })
+        .await
+        .map_err(|e| match e {
+            fidl::Error::ClientChannelClosed { status, .. }
+                // NOT_FOUND indicates there was no interface at the interface
+                // id, and NOT_SUPPORTED indicates that there is an interface
+                // but it is not backed by a fuchsia.hardware.network/Port. In
+                // both cases, there is not an installable netdevice interface.
+                if status == zx::Status::NOT_FOUND || status == zx::Status::NOT_SUPPORTED =>
+            {
+                fntr::Error::InterfaceNotFound
+            }
+            e => {
+                error!("get_device failure: {:?}", e);
+                fntr::Error::Internal
+            }
+        })?;
+    let port_id = id.ok_or_else(|| {
+        error!("port info missing port id");
+        fntr::Error::Internal
+    })?;
+    install_netdevice(name, port_id, device_proxy, wait_any_ip_address, connector).await?;
+    Ok(true)
 }
 
 /// Installs an ethernet device with the provided `name` on the hermetic
@@ -441,28 +392,25 @@ async fn wait_for_any_ip_address(
 /// interface may also be propagated.
 async fn install_interface(
     name: &str,
+    interface_id: u64,
     mac_address: fnet_ext::MacAddress,
     wait_any_ip_address: bool,
     connector: &HermeticNetworkConnector,
 ) -> Result<(), fntr::Error> {
-    // TODO(https://fxbug.dev/89648): Replace this with fuchsia.net.debug, which
-    // should ideally provide direct access to the matching interface. As an
-    // intermediate solution, interfaces are read directly from devfs (for
-    // ethernet and netdevice).
     (try_install_eth_device(name, mac_address, wait_any_ip_address, connector).await?
-        || try_install_netdevice(name, mac_address, wait_any_ip_address, connector).await?)
+        || try_install_netdevice(name, interface_id, wait_any_ip_address, connector).await?)
         .then(|| ())
         .ok_or(fntr::Error::InterfaceNotFound)
 }
 
-/// Returns the id for the enabled interface that matches `mac_address`.
+/// Returns the id and the enabled/disabled status for the interface that
+/// matches `mac_address`.
 ///
 /// If an interface matching `mac_address` is not found, then an error is
-/// returned. If a matching interface is found, but it is not enabled, then
-/// `Option::None` is returned.
-async fn find_enabled_interface_id(
+/// returned.
+async fn find_interface_id_and_status(
     expected_mac_address: fnet_ext::MacAddress,
-) -> Result<Option<u64>, fntr::Error> {
+) -> Result<(u64, bool), fntr::Error> {
     let state_proxy = SystemConnector.connect_to_protocol::<fnet_interfaces::StateMarker>()?;
     let stream = fnet_interfaces_ext::event_stream_from_state(&state_proxy).map_err(|e| {
         error!("failed to read interface stream: {:?}", e);
@@ -505,13 +453,7 @@ async fn find_enabled_interface_id(
 
     futures::pin_mut!(results);
 
-    results.next().await.ok_or(fntr::Error::InterfaceNotFound).map(|(id, online)| {
-        if online {
-            Some(id)
-        } else {
-            None
-        }
-    })
+    results.next().await.ok_or(fntr::Error::InterfaceNotFound)
 }
 
 /// Returns a `fnet_interfaces_admin::ControlProxy` that can be used to
@@ -1494,14 +1436,20 @@ impl Controller {
             .as_ref()
             .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
 
-        let interface_id_to_disable = find_enabled_interface_id(mac_address).await?;
-        install_interface(name, mac_address, wait_any_ip_address, hermetic_network_connector)
-            .await?;
+        let (interface_id, enabled) = find_interface_id_and_status(mac_address).await?;
+        install_interface(
+            name,
+            interface_id,
+            mac_address,
+            wait_any_ip_address,
+            hermetic_network_connector,
+        )
+        .await?;
 
-        if let Some(interface_id_to_disable) = interface_id_to_disable {
+        if enabled {
             // Disable the matching interface on the system's Netstack.
-            disable_interface(interface_id_to_disable, &SystemConnector).await?;
-            self.mutated_interface_ids.push(interface_id_to_disable);
+            disable_interface(interface_id, &SystemConnector).await?;
+            self.mutated_interface_ids.push(interface_id);
         }
         Ok(())
     }
