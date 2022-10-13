@@ -1159,7 +1159,7 @@ impl<'a> TestInterface<'a> {
 
     /// Stops DHCP on this interface.
     pub async fn stop_dhcp(&self) -> Result<()> {
-        self.set_dhcp_client_enabled(true).await.context("failed to stop dhcp client")
+        self.set_dhcp_client_enabled(false).await.context("failed to stop dhcp client")
     }
 
     /// Adds an address and a subnet route, waiting until the address assignment
