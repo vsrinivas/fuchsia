@@ -48,7 +48,6 @@ class StoreImpl final : public fidl::Server<examples_keyvaluestore_baseline::Sto
           fit::error(examples_keyvaluestore_baseline::WriteError::kInvalidValue));
     }
 
-    // Ensure that the value does not already exist in the store.
     if (key_value_store_.find(key) != key_value_store_.end()) {
       FX_LOGS(INFO) << "Write error: ALREADY_EXISTS, For key: " << key;
       FX_LOGS(INFO) << "WriteItem response sent";
@@ -56,7 +55,7 @@ class StoreImpl final : public fidl::Server<examples_keyvaluestore_baseline::Sto
           fit::error(examples_keyvaluestore_baseline::WriteError::kAlreadyExists));
     }
 
-    // Write to the store, and report the success.
+    // Ensure that the value does not already exist in the store.
     key_value_store_.insert({key, value});
     FX_LOGS(INFO) << "Wrote value at key: " << key;
     FX_LOGS(INFO) << "WriteItem response sent";

@@ -82,7 +82,7 @@ def to_flat_case(input):
 def to_snake_case(input):
     """Converts a PascalCase string to snake_case, ex "i_am_snake_case".
     """
-    return re.sub(REGEX_TO_SNAKE_CASE, r"_\1", input).lower().strip("_ ")
+    return re.sub(REGEX_TO_SNAKE_CASE, r"_\1", input).lower()
 
 
 def to_sentence_case(input):

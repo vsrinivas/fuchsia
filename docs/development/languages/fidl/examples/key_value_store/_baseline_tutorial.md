@@ -94,11 +94,11 @@ Client and server implementations can then be written in any supported language:
       <devsite-selector style="margin: 0px; padding: 0px;">
         <section>
           <h3 id="key_value_store-baseline-hlcpp-client">Client</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/hlcpp/client/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/hlcpp/TODO.md" region_tag="todo" %}</pre>
         </section>
         <section>
           <h3 id="key_value_store-baseline-hlcpp-server">Server</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/hlcpp/server/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/baseline/hlcpp/TODO.md" region_tag="todo" %}</pre>
         </section>
       </devsite-selector>
     </section>
