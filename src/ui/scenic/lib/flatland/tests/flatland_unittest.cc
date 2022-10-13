@@ -195,7 +195,7 @@ struct GlobalIdPair {
   }
 
 const uint32_t kDefaultSize = 1;
-const glm::ivec2 kDefaultPixelScale = {1, 1};
+const glm::vec2 kDefaultDisplayPixelRatio = {1.0f, 1.0f};
 const int32_t kDefaultInset = 0;
 
 void ExpectRectFEquals(const fuchsia::math::RectF& rect1, const fuchsia::math::RectF& rect2) {
@@ -363,8 +363,6 @@ class FlatlandTest : public gtest::TestLoopFixture {
     return iter->second;
   }
 
-  void SetDisplayPixelScale(const glm::vec2& pixel_scale) { display_pixel_scale_ = pixel_scale; }
-
   // The parent transform must be a topology root or ComputeGlobalTopologyData() will crash.
   bool IsDescendantOf(TransformHandle parent, TransformHandle child) {
     auto snapshot = uber_struct_system_->Snapshot();
@@ -414,7 +412,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
         flatland::ComputeGlobalMatrices(data.topology_vector, data.parent_indices, snapshot);
 
     link_system_->UpdateLinks(data.topology_vector, data.live_handles, matrices,
-                              display_pixel_scale_, snapshot);
+                              display_pixel_ratio_, snapshot);
 
     // Run the looper again to process any queued FIDL events (i.e., Link callbacks).
     RunLoopUntilIdle();
@@ -516,7 +514,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
   std::vector<fuchsia::ui::composition::FlatlandPtr> flatlands_;
   std::vector<fuchsia::ui::composition::FlatlandDisplayPtr> flatland_displays_;
   std::unordered_map<scheduling::SessionId, FlatlandError> flatland_errors_;
-  glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
+  glm::vec2 display_pixel_ratio_ = kDefaultDisplayPixelRatio;
 
   // Storage for |mock_flatland_presenter_|.
   std::map<scheduling::SchedulingIdPair, std::vector<zx::event>> pending_release_fences_;
@@ -3054,37 +3052,6 @@ TEST_F(FlatlandTest, SetViewportPropertiesMultiParenting) {
 
   parent->SetContent(kChildId, kLinkId);
   PRESENT(parent, true);
-
-  UpdateLinks(parent->GetRoot());
-
-  // Confirm that the initial layout pixel scale is (1,1) since the smaller parent's
-  // scale is (1,1).
-  {
-    std::optional<LayoutInfo> layout;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
-
-    EXPECT_FALSE(layout.has_value());
-    UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout.has_value());
-    EXPECT_EQ(kDefaultSize, layout->pixel_scale().width);
-    EXPECT_EQ(kDefaultSize, layout->pixel_scale().height);
-  }
-
-  // Make the smaller parent's scale bigger than the mag scale. Now the default layout's pixel
-  // scale should be (5,5).
-  parent->SetScale(kNormalParentId, {9, 9});
-  PRESENT(parent, true);
-  UpdateLinks(parent->GetRoot());
-  {
-    std::optional<LayoutInfo> layout;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
-
-    EXPECT_FALSE(layout.has_value());
-    UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout.has_value());
-    EXPECT_EQ(kMagScale.width, layout->pixel_scale().width);
-    EXPECT_EQ(kMagScale.height, layout->pixel_scale().height);
-  }
 }
 
 TEST_F(FlatlandTest, SetViewportPropertiesMultisetBehavior) {
@@ -3235,121 +3202,6 @@ TEST_F(FlatlandTest, SetViewportPropertiesOnMultipleChildren) {
     EXPECT_TRUE(layout.has_value());
     EXPECT_EQ(kLinkIds[i].value, layout->logical_size().width);
     EXPECT_EQ(kLinkIds[i].value * 2, layout->logical_size().height);
-  }
-}
-
-TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
-  std::shared_ptr<Flatland> parent = CreateFlatland();
-  std::shared_ptr<Flatland> child = CreateFlatland();
-
-  const TransformId kTransformId = {1};
-  const ContentId kLinkId = {2};
-
-  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
-  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  CreateViewport(parent.get(), child.get(), kLinkId, &child_view_watcher, &parent_viewport_watcher);
-
-  parent->CreateTransform(kTransformId);
-  parent->SetRootTransform(kTransformId);
-  parent->SetContent(kTransformId, kLinkId);
-  PRESENT(parent, true);
-
-  UpdateLinks(parent->GetRoot());
-
-  // Change the display pixel scale.
-  const glm::uvec2 new_display_pixel_scale = {2, 4};
-  SetDisplayPixelScale(new_display_pixel_scale);
-
-  // Call and ignore GetLayout() to guarantee the next call hangs.
-  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {});
-
-  // Confirm that the new pixel scale is (.1, .2).
-  {
-    std::optional<LayoutInfo> layout;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
-
-    EXPECT_FALSE(layout.has_value());
-    UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout.has_value());
-    EXPECT_EQ(new_display_pixel_scale.x, layout->pixel_scale().width);
-    EXPECT_EQ(new_display_pixel_scale.y, layout->pixel_scale().height);
-  }
-}
-
-TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
-  std::shared_ptr<Flatland> parent = CreateFlatland();
-  std::shared_ptr<Flatland> child = CreateFlatland();
-
-  const TransformId kTransformId = {1};
-  const ContentId kLinkId = {2};
-
-  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
-  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  CreateViewport(parent.get(), child.get(), kLinkId, &child_view_watcher, &parent_viewport_watcher);
-
-  parent->CreateTransform(kTransformId);
-  parent->SetRootTransform(kTransformId);
-  parent->SetContent(kTransformId, kLinkId);
-  PRESENT(parent, true);
-
-  UpdateLinks(parent->GetRoot());
-
-  // Set a scale on the parent transform.
-  const fuchsia::math::VecF scale = {2.f, 3.f};
-  parent->SetScale(kTransformId, scale);
-  PRESENT(parent, true);
-
-  // Call and ignore GetLayout() to guarantee the next call hangs.
-  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {});
-
-  // Confirm that the new pixel scale is (2, 3).
-  {
-    std::optional<LayoutInfo> layout;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
-
-    EXPECT_FALSE(layout.has_value());
-    UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout.has_value());
-    EXPECT_FLOAT_EQ(scale.x, layout->pixel_scale().width);
-    EXPECT_FLOAT_EQ(scale.y, layout->pixel_scale().height);
-  }
-
-  // Set a negative scale, but confirm that pixel scale is still positive.
-  parent->SetScale(kTransformId, {-scale.x, -scale.y});
-  PRESENT(parent, true);
-
-  // Call and ignore GetLayout() to guarantee the next call hangs.
-  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {});
-
-  // Pixel scale is still (2, 3), so nothing changes.
-  {
-    std::optional<LayoutInfo> layout;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
-
-    EXPECT_FALSE(layout.has_value());
-    UpdateLinks(parent->GetRoot());
-    EXPECT_FALSE(layout.has_value());
-  }
-
-  // Set a rotation on the parent transform.
-  parent->SetOrientation(kTransformId, Orientation::CCW_90_DEGREES);
-  PRESENT(parent, true);
-
-  // Call and ignore GetLayout() to guarantee the next call hangs.
-  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {});
-
-  // This call hangs
-  {
-    std::optional<LayoutInfo> layout;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
-      EXPECT_FLOAT_EQ(scale.x, info.pixel_scale().width);
-      EXPECT_FLOAT_EQ(scale.y, info.pixel_scale().height);
-      layout = std::move(info);
-    });
-
-    EXPECT_FALSE(layout.has_value());
-    UpdateLinks(parent->GetRoot());
-    EXPECT_FALSE(layout.has_value());
   }
 }
 

@@ -21,26 +21,6 @@ using fuchsia::ui::views::ViewportCreationToken;
 
 namespace flatland {
 
-namespace {
-
-// Scale can be extracted from a matrix by finding the length of the
-// column the scale is located in:
-//
-//   a b c
-//   e f g
-//   i j k
-//
-// If |a| is the x scale and rotation, and |f| is the y scale and rotation, then
-// we can calculate the x scale with length(vector(a,e,i)) and y scale with
-// length(vector(b,f,j)).
-glm::vec2 ComputeScale(const glm::mat3& matrix) {
-  const glm::vec3 x_column = glm::column(matrix, 0);
-  const glm::vec3 y_column = glm::column(matrix, 1);
-  return {glm::length(x_column), glm::length(y_column)};
-}
-
-}  // namespace
-
 LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
     : instance_id_(instance_id), link_graph_(instance_id_), linker_(ObjectLinker::New()) {}
 
@@ -153,7 +133,6 @@ LinkSystem::LinkToParent LinkSystem::CreateLinkToParent(
           // should figure out a way to set the previous ParentViewportWatcherImpl's size here.
           LayoutInfo layout_info;
           layout_info.set_logical_size(info.initial_logical_size);
-          layout_info.set_pixel_scale({1, 1});
           layout_info.set_device_pixel_ratio({dpr.x, dpr.y});
           layout_info.set_inset(info.initial_inset);
           impl->UpdateLayoutInfo(std::move(layout_info));
@@ -260,7 +239,6 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
     }
   }
 
-  std::unordered_map<std::shared_ptr<ParentViewportWatcherImpl>, LayoutInfo> layout_map;
   for (size_t i = 0; i < global_topology.size(); ++i) {
     const auto& handle = global_topology[i];
 
@@ -275,35 +253,22 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
         auto properties_kv = uber_struct_kv->second->link_properties.find(handle);
         if (properties_kv != uber_struct_kv->second->link_properties.end() &&
             properties_kv->second.has_logical_size()) {
-          const auto pixel_scale = device_pixel_ratio * ComputeScale(global_matrices[i]);
           LayoutInfo info;
           info.set_logical_size(properties_kv->second.logical_size());
-          info.set_pixel_scale(
-              {static_cast<uint32_t>(pixel_scale.x), static_cast<uint32_t>(pixel_scale.y)});
           info.set_device_pixel_ratio({device_pixel_ratio.x, device_pixel_ratio.y});
           info.set_inset(properties_kv->second.inset());
 
-          // A transform handle may have multiple parents, resulting in the same handle appearing
-          // in the global topology vector multiple times, with multiple global matrices. We only
-          // want to update the LayoutInfo for the instance that has the lowest scale value.
+          // A transform handle may have multiple parents, resulting in the same
+          // handle appearing in the global topology vector multiple times, with
+          // multiple global matrices. As a result, it might appear as if the
+          // watcher will update the client with the layout info multiple times.
+          // However, HangingGetHelper::Update() has an early return that will stop
+          // the client from getting updated multiple times with the same information.
           const auto& watcher = parent_to_child_kv->second.parent_viewport_watcher;
-          if (layout_map.find(watcher) == layout_map.end()) {
-            layout_map[watcher] = std::move(info);
-          } else {
-            const auto& curr_info = layout_map[watcher];
-            if (curr_info.pixel_scale().width > info.pixel_scale().width) {
-              layout_map[watcher] = std::move(info);
-            }
-          }
+          watcher->UpdateLayoutInfo(std::move(info));
         }
       }
     }
-  }
-
-  // Now that we've determined which layout information to associate with a
-  // ParentViewportWatcherImpl, we can now update each one.
-  for (auto& [watcher, info] : layout_map) {
-    watcher->UpdateLayoutInfo(std::move(info));
   }
 }
 

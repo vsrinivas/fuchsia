@@ -341,9 +341,8 @@ impl SceneManager for FlatlandSceneManager {
 
     fn get_pointerinjection_display_size(&self) -> Size {
         let logical_size = self.layout_info.logical_size.unwrap();
-        let pixel_scale = self.layout_info.pixel_scale.unwrap();
-        let width: f32 = (logical_size.width * pixel_scale.width) as f32;
-        let height: f32 = (logical_size.height * pixel_scale.height) as f32;
+        let width: f32 = logical_size.width as f32;
+        let height: f32 = logical_size.height as f32;
         Size { width, height }
     }
 
@@ -439,18 +438,6 @@ impl FlatlandSceneManager {
         let root_viewport_size = layout_info
             .logical_size
             .ok_or(anyhow::anyhow!("Did not receive layout info from the display"))?;
-        match layout_info.pixel_scale {
-            Some(math::SizeU { width: 1, height: 1 }) => (),
-            Some(size) => {
-                warn!(
-                    expected_width = 1,
-                    expected_height = 1,
-                    got_width = size.width,
-                    got_height = size.height,
-                )
-            }
-            None => (),
-        };
 
         // Combine the layout info with passed-in display properties.
         let display_metrics = DisplayMetrics::new(
@@ -668,14 +655,12 @@ impl FlatlandSceneManager {
 
         let viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>> =
             scene_manager::create_viewport_hanging_get({
-                let pixel_scale =
-                    layout_info.pixel_scale.ok_or(anyhow!("LayoutInfo must have pixel_scale"))?;
                 let logical_size =
                     layout_info.logical_size.ok_or(anyhow!("LayoutInfo must have logical_size"))?;
 
                 InjectorViewportSpec {
-                    width: (logical_size.width * pixel_scale.width) as f32,
-                    height: (logical_size.height * pixel_scale.height) as f32,
+                    width: logical_size.width as f32,
+                    height: logical_size.height as f32,
                     scale: 1.,
                     x_offset: 0.,
                     y_offset: 0.,

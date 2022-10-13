@@ -92,7 +92,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
                                   SelectAttribute(global_clip_regions, image_indices), images);
 
       link_system_->UpdateLinks(topology_data.topology_vector, topology_data.live_handles,
-                                global_matrices, /*pixel_scale*/ glm::vec2(1.0), snapshot);
+                                global_matrices, /*device_pixel_ratio*/ glm::vec2(1.0), snapshot);
 
       CullRectangles(&image_rectangles, &images, display_data.first.dimensions.x,
                      display_data.first.dimensions.y);
