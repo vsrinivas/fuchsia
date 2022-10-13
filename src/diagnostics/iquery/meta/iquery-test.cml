@@ -66,6 +66,11 @@
         },
         {
             protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#archivist",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
             from: "#archivist",
             to: [ "#realm_builder_server" ],
         },
