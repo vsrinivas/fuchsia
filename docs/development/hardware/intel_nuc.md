@@ -10,8 +10,9 @@ The steps are:
 1. [Prepare a USB drive](#prepare-usb).
 1. [Enable EFI booting on the NUC](#enable-efi-booting).
 1. [Install Fuchsia on the NUC](#install-fuchsia).
+1. [(Optional) Upload Fuchsia SSH keys to the NUC](#upload-fuchsia-ssh-keys).
 
-## 1. Prerequisites {#prerequisites}
+## Prerequisites {:#prerequisites .numbered}
 
 Before you start installing Fuchsia on a NUC device, make sure that
 you've completed the following tasks:
@@ -48,7 +49,7 @@ device, so you can complete these sections prior to obtaining a NUC device.
 However, you will need a USB flash drive for the _3. Prepare a USB drive_
 section.
 
-## 2. Build Fuchsia {#build-fuchsia}
+## Build Fuchsia {:#build-fuchsia .numbered}
 
 Installing Fuchsia on a NUC device requires that you build a Workstation
 image (`workstation_eng.x64`) and generate build artifacts (which include
@@ -71,13 +72,13 @@ To build Fuchsia for NUC installation, do the following:
 
     Building Fuchsia can take up to 90 minutes.
 
-## 3. Prepare a USB drive {#prepare-usb}
+## Prepare a USB drive {:#prepare-usb .numbered}
 
 You need to prepare a bootable USB drive that runs the Fuchsia installer.
 Later in the [Install Fuchsia on the NUC](#install-fuchsia) section,
 you will use this USB drive to boot your NUC into the Fuchsia installer.
 
-Note: The instructions below require that you've completed the
+Important: The instructions below require that you've completed the
 build in the previous [Build Fuchsia](#build-fuchsia) section.
 
 To prepare a bootable USB drive, do the following:
@@ -128,7 +129,7 @@ To prepare a bootable USB drive, do the following:
 
 1. Unplug the USB drive from the workstation.
 
-## 4. Enable EFI booting on the NUC {#enable-efi-booting}
+## Enable EFI booting on the NUC {:#enable-efi-booting .numbered}
 
 Update your NUC's BIOS setup so that it can boot from
 a USB drive.
@@ -158,7 +159,7 @@ do the following:
        * **Secure Boot** is unchecked.
 1. To save and exit BIOS, press `F10` and click **Yes**.
 
-## 5. Install Fuchsia on the NUC {#install-fuchsia}
+## Install Fuchsia on the NUC {:#install-fuchsia .numbered}
 
 Use the [bootable USB drive](#prepare-usb) to boot your NUC into
 the Fuchsia installer. It then installs the Workstation image (which was built in the [Build Fuchsia](#build-fuchsia) section) to the NUC.
@@ -177,23 +178,48 @@ To install Fuchsia on your NUC, do the following:
 
 1. Once the installation completes, unplug the USB drive from the NUC device.
 
-1. (Optional) If you plan on using this NUC device for Fuchsia development,
-   complete the steps in the
-   [Flash a new Fuchsia image to the NUC](#flash-fuchsia) section in Appendices.
-
-   These steps will
-   upload [Fuchsia-specific SSH keys][fuchsia-ssh-keys] to the NUC device, which
-   then enables other useful [`ffx` workflows][ffx-workflows].
-
 1. Reboot the NUC device.
 
    The NUC is now booted into Fuchsia’s Workstation.
 
-1. Set your login password to start the Fuchsia Workstation.
+Note: Later, if you need to install a new version of Fuchsia (for instance, after
+re-building a new Workstation image using `fx build`), see
+[Flash a new Fuchsia image to the NUC](#flash-fuchsia) in Appendices.
 
-Later, if you need to install a new version of Fuchsia (for instance, after
-re-building a new Workstation image using `fx build`), see the
-[Flash a new Fuchsia image to the NUC](#flash-fuchsia) section in Appendices.
+## (Optional) Upload Fuchsia SSH keys to the NUC {:#upload-fuchsia-ssh-keys .numbered}
+
+If you plan on using this NUC device **for Fuchsia development**, you need
+to flash a Fuchsia image to the NUC device from your host machine, which
+in turn uploads the [Fuchsia-specific SSH keys][fuchsia-ssh-keys] to the NUC.
+Once those Fuchsia-specific SSH keys are uploaded to the NUC, you can perform
+[`ffx`-based  workflows][ffx-workflows] on the NUC from your host machine.
+
+To upload Fuchsia SSH keys to the NUC, do the following:
+
+1. Complete the steps in the
+   [Flash a new Fuchsia image to the NUC](#flash-fuchsia) section
+   in Appendices.
+
+1. To verify that you can connect to the NUC from the host machine,
+   run the following command:
+
+   ```posix-terminal
+   ffx target show
+   ```
+
+   This command prints output similar to the following:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ ffx target show
+   Target:
+       Name: "fuchsia-54b2-0389-644b"
+       SSH Address: "fe81::55b1:2ff2:fe34:567b%en10:22"
+   Board:
+       Name: "default-board"
+       Revision: "1"
+       Instruction set: "x64"
+   ...
+   ```
 
 ## Appendices
 
@@ -220,21 +246,22 @@ mechanism to provision a new Fuchsia image to the NUC.
 
 To flash a Fuchsia image to your NUC, do the following:
 
-1. Connect the NUC directly to the workstation using an Ethernet cable
-   (or connect the NUC to a router or WiFi modem in the same
-   Local Area Network as the workstation).
+1. Connect the NUC directly to the workstation using an Ethernet cable.
 
-   Note: Network booting only works with the NUC's built-in Ethernet port –
-   netbooting with an USB port (via an Ethernet-to-USB adapter) is not supported.
+   (Or you can also connect the NUC to a router or WiFi modem in the same
+   Local Area Network as the workstation.)
+
+   Note: Network booting only works with the NUC's built-in Ethernet port.
+   Netbooting with an USB port (via an Ethernet-to-USB adapter) is not supported.
 
 1. Reboot your NUC.
 
-1. To boot the NUC into Fastboot mode, press the `f` key at the Fuchsia boot screen.
+1. On Fuchsia's boot screen, press the `f` key to select the `fastboot` option.
 
-   Once the NUC is in Fastboot mode, you can see `entering fastboot mode` printed on the
-   screen.
+   Once the NUC is in Fastboot mode, it prints `Fastboot TCP is ready`
+   on the screen.
 
-1. **On your workstation**, detect the NUC in Fastboot mode:
+1. **On your workstation**, discover the NUC in Fastboot mode:
 
    ```posix-terminal
    ffx target list
@@ -245,10 +272,10 @@ To flash a Fuchsia image to your NUC, do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ ffx target list
    NAME                      SERIAL       TYPE       STATE       ADDRS/IP                           RCS
-   fuchsia-54b2-0389-644b    <unknown>    Unknown    Fastboot    [fe81::55b1:2ff:fe34:567b%en10]    N
+   fuchsia-54b2-0389-644b    <unknown>    Unknown    Fastboot    [fe81::55b1:2ff2:fe34:567b%en10]    N
    ```
 
-   Verify that the device's state is in `Fastboot`.
+   Verify that the device's state is `Fastboot`.
 
 1. Flash a new Fuchsia image to the NUC:
 
@@ -258,7 +285,8 @@ To flash a Fuchsia image to your NUC, do the following:
    fx flash
    ```
 
-   You may need to specify the name of the NUC device explicitly, for example:
+   If you have multiple devices connected to the host machine previously, you may need to
+   explicitly specify the name of the NUC device, for example:
 
    ```posix-terminal
    fx flash -s fuchsia-54b2-0389-644b
