@@ -9,6 +9,7 @@ mod keys;
 mod password_interaction;
 mod pinweaver;
 mod scrypt;
+mod state;
 mod storage_unlock_mechanism;
 #[cfg(test)]
 mod testing;
