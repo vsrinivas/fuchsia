@@ -38,7 +38,7 @@ void RecoverA11YFocusAction::Run(GestureContext gesture_context) {
     // If the semantic tree has been updated, it's possible that the bounding
     // box of the currently focused node has changed. Therefore, we should
     // redraw highlights.
-    a11y_focus_manager->UpdateHighlights(a11y_focus->view_ref_koid, a11y_focus->node_id);
+    a11y_focus_manager->RedrawHighlights();
 
     // the node still exists, we can stop here.
     return;

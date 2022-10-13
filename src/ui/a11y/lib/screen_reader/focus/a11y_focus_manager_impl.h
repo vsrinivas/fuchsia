@@ -71,9 +71,10 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
 
   // |A11yFocusManager|
   //
-  // Removes current highlights (if any), and highlights the node specified by (newly_focused_view,
-  // newly_focused_node).
-  void UpdateHighlights(zx_koid_t newly_focused_view, uint32_t newly_focused_node) override;
+  // If a node is in a11y focus, redraws the current highlights (useful if the
+  // node's bounding box has changed).
+  // Otherwise, clears any highlights.
+  void RedrawHighlights() override;
 
   // |A11yFocusManager|
   //
@@ -85,6 +86,10 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
   }
 
  private:
+  // Removes current highlights (if any), and highlights the node specified by (newly_focused_view,
+  // newly_focused_node).
+  void UpdateHighlights(zx_koid_t newly_focused_view, uint32_t newly_focused_node);
+
   // |AccessibilityFocusChainListener|
   void OnViewFocus(zx_koid_t view_ref_koid) override;
 

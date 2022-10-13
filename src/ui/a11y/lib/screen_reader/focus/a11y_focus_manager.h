@@ -59,9 +59,10 @@ class A11yFocusManager {
   // Clears existing a11y focus.
   virtual void ClearA11yFocus() = 0;
 
-  // Removes current highlights (if any), and highlights the node specified by (newly_focused_view,
-  // newly_focused_node).
-  virtual void UpdateHighlights(zx_koid_t newly_focused_view, uint32_t newly_focused_node) = 0;
+  // If a node is in a11y focus, redraws the current highlights (useful if the
+  // node's bounding box has changed).
+  // Otherwise, clears any highlights.
+  virtual void RedrawHighlights() = 0;
 
   // Registers a callback that is invoked when the a11y focus is updated. For now, only one callback
   // can be registered at a time.

@@ -24,7 +24,7 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
   void ClearA11yFocus() override;
 
   // |A11yFocusManager|
-  void UpdateHighlights(zx_koid_t koid, uint32_t node_id) override;
+  void RedrawHighlights() override;
 
   // |A11yFocusManager|
   void set_on_a11y_focus_updated_callback(
@@ -38,8 +38,8 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
   // Returns true if SetA11yFocusCalled was called.
   bool IsSetA11yFocusCalled() const;
 
-  // Returns true if UpdateHighlights() was called.
-  bool IsUpdateHighlightsCalled() const;
+  // Returns true if RedrawHighlights() was called.
+  bool IsRedrawHighlightsCalled() const;
 
   // Resets the IsCalled* methods return values (useful for reading expectations on an object,
   // clearing the values, and running new expectations).
@@ -58,8 +58,8 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
   // Tracks if SetA11yFocus() is called.
   bool set_a11y_focus_called_ = false;
 
-  // Tracks if UpdateHighlights() is called.
-  bool update_highlights_called_ = false;
+  // Tracks if RedrawHighlights() is called.
+  bool redraw_highlights_called_ = false;
 
   // Whether GetA11yFocus() call should fail.
   bool should_get_a11y_focus_fail_ = false;

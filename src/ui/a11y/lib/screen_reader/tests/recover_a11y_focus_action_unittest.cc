@@ -54,7 +54,7 @@ TEST_F(RecoverA11YFocusActionTest, FocusIsStillValid) {
   ASSERT_TRUE(focus);
   ASSERT_EQ(focus->view_ref_koid, mock_semantic_provider()->koid());
   ASSERT_EQ(focus->node_id, 0u);
-  EXPECT_TRUE(mock_a11y_focus_manager()->IsUpdateHighlightsCalled());
+  EXPECT_TRUE(mock_a11y_focus_manager()->IsRedrawHighlightsCalled());
 }
 
 TEST_F(RecoverA11YFocusActionTest, ViewChangeClearsPreviousNavigationContext) {
@@ -74,7 +74,7 @@ TEST_F(RecoverA11YFocusActionTest, ViewChangeClearsPreviousNavigationContext) {
   ASSERT_TRUE(focus);
   ASSERT_EQ(focus->view_ref_koid, mock_semantic_provider()->koid());
   ASSERT_EQ(focus->node_id, 0u);
-  EXPECT_TRUE(mock_a11y_focus_manager()->IsUpdateHighlightsCalled());
+  EXPECT_TRUE(mock_a11y_focus_manager()->IsRedrawHighlightsCalled());
   const auto& previous_navigation_context =
       mock_screen_reader_context()->previous_navigation_context();
   EXPECT_FALSE(previous_navigation_context.view_ref_koid.has_value());

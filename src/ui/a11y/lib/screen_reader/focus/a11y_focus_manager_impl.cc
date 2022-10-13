@@ -169,6 +169,15 @@ void A11yFocusManagerImpl::ClearA11yFocus() {
   }
 }
 
+void A11yFocusManagerImpl::RedrawHighlights() {
+  auto a11y_focus = GetA11yFocus();
+  if (a11y_focus) {
+    UpdateHighlights(a11y_focus->view_ref_koid, a11y_focus->node_id);
+  } else {
+    ClearHighlights();
+  }
+}
+
 void A11yFocusManagerImpl::ClearHighlights() {
   // If there's no view in focus, then there's no work to do.
   if (currently_focused_view_ == ZX_KOID_INVALID) {

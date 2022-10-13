@@ -38,15 +38,13 @@ void MockA11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
 
 void MockA11yFocusManager::ClearA11yFocus() { a11y_focus_info_.reset(); }
 
-void MockA11yFocusManager::UpdateHighlights(zx_koid_t koid, uint32_t node_id) {
-  update_highlights_called_ = true;
-}
+void MockA11yFocusManager::RedrawHighlights() { redraw_highlights_called_ = true; }
 
 bool MockA11yFocusManager::IsGetA11yFocusCalled() const { return get_a11y_focus_called_; }
 
 bool MockA11yFocusManager::IsSetA11yFocusCalled() const { return set_a11y_focus_called_; }
 
-bool MockA11yFocusManager::IsUpdateHighlightsCalled() const { return update_highlights_called_; }
+bool MockA11yFocusManager::IsRedrawHighlightsCalled() const { return redraw_highlights_called_; }
 
 void MockA11yFocusManager::set_should_get_a11y_focus_fail(bool value) {
   should_get_a11y_focus_fail_ = value;
