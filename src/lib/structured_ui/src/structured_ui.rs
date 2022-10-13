@@ -13,7 +13,7 @@
 
 use {
     anyhow::Result,
-    atty,
+    cfg_if::cfg_if,
     serde::{Deserialize, Serialize},
     std::io::{BufRead, BufReader, Read, Write},
 };
@@ -305,6 +305,21 @@ pub struct InnerTextUi<'a> {
     progress_needs_to_scroll: bool,
 }
 
+#[allow(dead_code)]
+mod mock_atty {
+    pub(super) fn always_a_tty(_: atty::Stream) -> bool {
+        true
+    }
+}
+
+cfg_if! {
+    if #[cfg(test)] {
+        use mock_atty::always_a_tty as is;
+    } else {
+        use atty::is;
+    }
+}
+
 pub struct TextUi<'a> {
     inner: std::sync::Mutex<InnerTextUi<'a>>,
 }
@@ -329,7 +344,7 @@ impl<'a> TextUi<'a> {
     fn present_progress(&self, progress: &Progress) -> Result<Response> {
         // We only print the progress text if it's going to a TTY terminal,
         // since the shell control sequences don't make sense otherwise.
-        if atty::is(atty::Stream::Stdout) {
+        if !is(atty::Stream::Stdout) {
             return Ok(Response::Default);
         }
         let mut inner = self.inner.lock().expect("present_progress lock");
@@ -356,7 +371,7 @@ impl<'a> TextUi<'a> {
     }
 
     fn present_string_prompt(&self, element: &SimplePresentation) -> Result<Response> {
-        if atty::is(atty::Stream::Stdout) {
+        if !is(atty::Stream::Stdout) {
             // If the terminal is non-interactive, it's not reasonable to prompt
             // the user.
             return Ok(Response::NoChoice);
