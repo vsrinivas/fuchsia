@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+// The complexity of a separate struct doesn't seem universally better than having many arguments
+#![allow(clippy::too_many_arguments)]
 #![recursion_limit = "1024"]
 
 use {

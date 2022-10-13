@@ -1428,7 +1428,7 @@ mod tests {
         eui48::MacAddress,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_common as fidl_common,
-        fuchsia_async::TestExecutor,
+        fuchsia_async::{DurationExt, TestExecutor},
         fuchsia_inspect::{self as inspect},
         futures::{
             channel::mpsc,
@@ -2057,7 +2057,9 @@ mod tests {
         // Add a network selection future which won't complete that should be canceled by a
         // connect request.
         async fn blocking_fn() -> Option<client_types::ScannedCandidate> {
-            loop {}
+            loop {
+                fasync::Timer::new(zx::Duration::from_millis(1).after_now()).await
+            }
         }
         iface_manager.network_selection_futures.push(blocking_fn().boxed());
 
