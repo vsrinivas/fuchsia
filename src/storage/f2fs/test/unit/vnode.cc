@@ -382,5 +382,97 @@ TEST_F(VnodeTest, GrabCachePages) {
   file_vnode = nullptr;
 }
 
+void CheckDataPages(LockedPagesAndAddrs &address_and_pages, pgoff_t start_offset,
+                    pgoff_t end_offset, std::set<block_t> removed_pages) {
+  for (uint32_t offset = 0; offset < end_offset - start_offset; ++offset) {
+    if (removed_pages.find(offset) != removed_pages.end()) {
+      ASSERT_EQ(address_and_pages.block_addrs[offset], kNullAddr);
+      continue;
+    }
+    ASSERT_EQ(*address_and_pages.pages[offset]->GetAddress<uint32_t>(),
+              static_cast<uint32_t>(offset));
+  }
+}
+
+TEST_F(VnodeTest, FindDataBlockAddrsAndPages) {
+  fbl::RefPtr<fs::Vnode> file_fs_vnode;
+  std::string file_name("test_file");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &file_fs_vnode), ZX_OK);
+  fbl::RefPtr<File> file = fbl::RefPtr<File>::Downcast(std::move(file_fs_vnode));
+
+  constexpr pgoff_t kStartOffset = 0;
+  constexpr pgoff_t kEndOffset = 1000;
+  constexpr pgoff_t kMidOffset = kEndOffset / 2;
+  constexpr pgoff_t kPageCount = kEndOffset - kStartOffset;
+  uint32_t page_count = kPageCount;
+  std::set<block_t> removed_pages;
+
+  // Get null block address
+  {
+    auto addrs_and_pages_or = file->FindDataBlockAddrsAndPages(kStartOffset, kEndOffset);
+    ASSERT_TRUE(addrs_and_pages_or.is_ok());
+    ASSERT_EQ(addrs_and_pages_or->block_addrs.size(), page_count);
+    ASSERT_EQ(addrs_and_pages_or->pages.size(), page_count);
+  }
+
+  // Get valid block address
+  {
+    uint32_t buf[kPageSize / sizeof(uint32_t)];
+    for (uint32_t i = 0; i < static_cast<uint32_t>(kPageCount); ++i) {
+      buf[0] = i;
+      FileTester::AppendToFile(file.get(), buf, kPageSize);
+    }
+    file->SyncFile(0, safemath::checked_cast<loff_t>(file->GetSize()), 0);
+
+    auto addrs_and_pages_or = file->FindDataBlockAddrsAndPages(kStartOffset, kEndOffset);
+    ASSERT_TRUE(addrs_and_pages_or.is_ok());
+    ASSERT_EQ(addrs_and_pages_or->block_addrs.size(), page_count);
+    ASSERT_EQ(addrs_and_pages_or->pages.size(), page_count);
+    CheckDataPages(addrs_and_pages_or.value(), kStartOffset, kEndOffset, removed_pages);
+  }
+
+  // Punch a hole at start
+  {
+    file->TruncateHole(kStartOffset, kStartOffset + 1);
+    removed_pages.insert(kStartOffset);
+
+    auto addrs_and_pages_or = file->FindDataBlockAddrsAndPages(kStartOffset, kEndOffset);
+    ASSERT_TRUE(addrs_and_pages_or.is_ok());
+    ASSERT_EQ(addrs_and_pages_or->block_addrs.size(), page_count);
+    ASSERT_EQ(addrs_and_pages_or->pages.size(), page_count);
+    CheckDataPages(addrs_and_pages_or.value(), kStartOffset, kEndOffset, removed_pages);
+  }
+
+  // Punch a hole at end
+  {
+    file->TruncateHole(kEndOffset - 1, kEndOffset);
+    removed_pages.insert(kEndOffset - 1);
+
+    auto addrs_and_pages_or = file->FindDataBlockAddrsAndPages(kStartOffset, kEndOffset);
+    ASSERT_TRUE(addrs_and_pages_or.is_ok());
+    ASSERT_EQ(addrs_and_pages_or->block_addrs.size(), page_count);
+    ASSERT_EQ(addrs_and_pages_or->pages.size(), page_count);
+    CheckDataPages(addrs_and_pages_or.value(), kStartOffset, kEndOffset, removed_pages);
+  }
+
+  // Punch holes at middle
+  {
+    constexpr uint32_t kPunchHoles = 10;
+    file->TruncateHole(kMidOffset, kMidOffset + kPunchHoles);
+    for (uint32_t i = 0; i < kPunchHoles; ++i) {
+      removed_pages.insert(kMidOffset + i);
+    }
+
+    auto addrs_and_pages_or = file->FindDataBlockAddrsAndPages(kStartOffset, kEndOffset);
+    ASSERT_TRUE(addrs_and_pages_or.is_ok());
+    ASSERT_EQ(addrs_and_pages_or->block_addrs.size(), page_count);
+    ASSERT_EQ(addrs_and_pages_or->pages.size(), page_count);
+    CheckDataPages(addrs_and_pages_or.value(), kStartOffset, kEndOffset, removed_pages);
+  }
+
+  ASSERT_EQ(file->Close(), ZX_OK);
+  file = nullptr;
+}
+
 }  // namespace
 }  // namespace f2fs

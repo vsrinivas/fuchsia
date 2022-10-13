@@ -69,7 +69,7 @@ zx::status<PageOperations> StorageBuffer::ReserveReadOperations(std::vector<Lock
 
   auto i = 0;
   for (auto addr : addrs) {
-    if (!pages[i]->IsUptodate() && addr != kNullAddr) {
+    if (addr != kNullAddr && !pages[i]->IsUptodate()) {
       if (addr != kNewAddr) {
         std::lock_guard lock(mutex_);
 

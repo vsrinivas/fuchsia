@@ -196,6 +196,41 @@ zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out) {
   return ZX_OK;
 }
 
+zx::status<LockedPagesAndAddrs> VnodeF2fs::FindDataBlockAddrsAndPages(const pgoff_t start,
+                                                                      const pgoff_t end) {
+  LockedPagesAndAddrs addrs_and_pages;
+
+  ZX_DEBUG_ASSERT(end > start);
+
+  size_t len = end - start;
+  if (auto result = fs()->GetNodeManager().GetDataBlockAddresses(*this, start, len, true);
+      result.is_error()) {
+    return result.take_error();
+  } else {
+    addrs_and_pages.block_addrs = std::move(result.value());
+  }
+  ZX_DEBUG_ASSERT(addrs_and_pages.block_addrs.size() == len);
+
+  std::vector<pgoff_t> page_offsets;
+  page_offsets.reserve(len);
+  for (auto index = start; index < end; ++index) {
+    if (addrs_and_pages.block_addrs[index - start] == kNullAddr) {
+      page_offsets.push_back(kInvalidPageOffset);
+    } else {
+      page_offsets.push_back(index);
+    }
+  }
+  ZX_DEBUG_ASSERT(page_offsets.size() == len);
+
+  if (auto pages_or = GrabCachePages(page_offsets); pages_or.is_error()) {
+    return pages_or.take_error();
+  } else {
+    addrs_and_pages.pages = std::move(pages_or.value());
+  }
+  ZX_DEBUG_ASSERT(addrs_and_pages.pages.size() == len);
+  return zx::ok(std::move(addrs_and_pages));
+}
+
 // If it tries to access a hole, return an error
 // because the callers in dir.cc and gc.cc should be able to know
 // whether this page exists or not.
@@ -204,7 +239,7 @@ zx_status_t VnodeF2fs::GetLockedDataPage(pgoff_t index, LockedPage *out) {
   if (page_or.is_error()) {
     return page_or.error_value();
   }
-  if (page_or->empty()) {
+  if (page_or->empty() || page_or.value()[0] == nullptr) {
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -212,34 +247,22 @@ zx_status_t VnodeF2fs::GetLockedDataPage(pgoff_t index, LockedPage *out) {
   return ZX_OK;
 }
 
-zx::status<std::vector<LockedPage>> VnodeF2fs::GetLockedDataPages(pgoff_t start, pgoff_t end) {
-  std::vector<block_t> addrs;
-  std::vector<LockedPage> pages;
-  pages.reserve(end - start);
-  addrs.reserve(end - start);
-
-  for (auto i = start; i < end; ++i) {
-    if (auto addr_or = FindDataBlkAddr(i); addr_or.is_error()) {
-      if (addr_or.status_value() != ZX_ERR_NOT_FOUND) {
-        return addr_or.take_error();
-      }
-    } else {
-      if (addr_or.value() != kNullAddr) {
-        LockedPage page;
-        if (zx_status_t ret = GrabCachePage(i, &page); ret != ZX_OK) {
-          return zx::error(ret);
-        }
-        pages.push_back(std::move(page));
-        addrs.emplace_back(addr_or.value());
-      }
-    }
+zx::status<std::vector<LockedPage>> VnodeF2fs::GetLockedDataPages(const pgoff_t start,
+                                                                  const pgoff_t end) {
+  LockedPagesAndAddrs addrs_and_pages;
+  if (auto addrs_and_pages_or = FindDataBlockAddrsAndPages(start, end);
+      addrs_and_pages_or.is_error()) {
+    return addrs_and_pages_or.take_error();
+  } else {
+    addrs_and_pages = std::move(addrs_and_pages_or.value());
   }
 
-  if (addrs.empty()) {
-    return zx::ok(std::move(pages));
+  if (addrs_and_pages.block_addrs.empty()) {
+    return zx::ok(std::move(addrs_and_pages.pages));
   }
 
-  auto pages_or = fs()->MakeReadOperations(std::move(pages), std::move(addrs), PageType::kData);
+  auto pages_or = fs()->MakeReadOperations(std::move(addrs_and_pages.pages),
+                                           std::move(addrs_and_pages.block_addrs), PageType::kData);
   if (pages_or.is_error()) {
     return pages_or.take_error();
   }

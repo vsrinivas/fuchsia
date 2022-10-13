@@ -40,6 +40,11 @@ struct InodeInfo {
   ExtentInfo ext;             // in-memory extent cache entry
 };
 
+struct LockedPagesAndAddrs {
+  std::vector<block_t> block_addrs;  // Allocated block address
+  std::vector<LockedPage> pages;     // Pages matched with block address
+};
+
 #ifdef __Fuchsia__
 class VnodeF2fs : public fs::PagedVnode,
                   public fbl::Recyclable<VnodeF2fs>,
@@ -152,6 +157,12 @@ class VnodeF2fs : public fs::Vnode,
 
   void UpdateExtentCache(block_t blk_addr, pgoff_t fofs);
   zx_status_t FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
+  // This function returns block addresses and LockedPages for requested offsets. If there is no
+  // node page of a offset or the block address is not assigned, this function adds null LockedPage
+  // and kNullAddr to LockedPagesAndAddrs struct. The handling of null LockedPage and kNullAddr is
+  // responsible for StorageBuffer::ReserveReadOperations().
+  zx::status<LockedPagesAndAddrs> FindDataBlockAddrsAndPages(const pgoff_t start,
+                                                             const pgoff_t end);
   zx_status_t GetLockedDataPage(pgoff_t index, LockedPage *out);
   zx::status<std::vector<LockedPage>> GetLockedDataPages(pgoff_t start, pgoff_t end);
   zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage *out);

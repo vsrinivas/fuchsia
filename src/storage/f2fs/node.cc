@@ -430,7 +430,7 @@ zx::status<bool> NodeManager::IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint3
   int32_t offset[4];
   uint32_t noffset[4];
 
-  if (node_offset == kInvalidOffset) {
+  if (node_offset == kInvalidNodeOffset) {
     return zx::ok(false);
   }
 
@@ -442,9 +442,9 @@ zx::status<bool> NodeManager::IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint3
 }
 
 zx::status<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &vnode, pgoff_t index,
-                                                                    size_t count) {
+                                                                    size_t count, bool read_only) {
   std::vector<block_t> data_block_addresses(count);
-  uint32_t prev_node_offset = kInvalidOffset;
+  uint32_t prev_node_offset = kInvalidNodeOffset;
   LockedPage dnode_page;
 
   for (uint64_t i = index; i < index + count; ++i) {
@@ -455,8 +455,19 @@ zx::status<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &v
 
     if (!is_same_or.value()) {
       dnode_page.reset();
-      if (zx_status_t err = GetLockedDnodePage(vnode, i, &dnode_page); err != ZX_OK) {
-        return zx::error(err);
+      if (read_only) {
+        if (zx_status_t err = FindLockedDnodePage(vnode, i, &dnode_page); err != ZX_OK) {
+          if (err == ZX_ERR_NOT_FOUND) {
+            prev_node_offset = kInvalidNodeOffset;
+            data_block_addresses[i - index] = kNullAddr;
+            continue;
+          }
+          return zx::error(err);
+        }
+      } else {
+        if (zx_status_t err = GetLockedDnodePage(vnode, i, &dnode_page); err != ZX_OK) {
+          return zx::error(err);
+        }
       }
       prev_node_offset = dnode_page.GetPage<NodePage>().OfsOfNode();
     }
@@ -471,7 +482,7 @@ zx::status<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &v
 
     block_t data_blkaddr = DatablockAddr(&dnode_page.GetPage<NodePage>(), ofs_in_dnode);
 
-    if (data_blkaddr == kNullAddr) {
+    if (!read_only && data_blkaddr == kNullAddr) {
       if (zx_status_t err = vnode.ReserveNewBlock(dnode_page.GetPage<NodePage>(), ofs_in_dnode);
           err != ZX_OK) {
         return zx::error(err);

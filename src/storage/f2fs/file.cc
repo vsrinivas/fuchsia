@@ -316,28 +316,20 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
     *out_actual = 0;
     return pages_or.status_value();
   }
+  auto pages = std::move(pages_or.value());
 
-  size_t i = 0;
   for (pgoff_t n = block_index_start; n < block_index_end; ++n) {
-    bool is_empty_page = false;
-    // Set |is_empty_page| to true for truncated Pages.
-    if (pages_or.value().size() <= i || pages_or.value()[i]->GetKey() != n) {
-      is_empty_page = true;
-    }
     size_t cur_len = safemath::CheckSub<size_t>(kBlockSize, off_in_block).ValueOrDie();
     cur_len = std::min(cur_len, left);
 
-    if (is_empty_page) {
-      // Zero the range of truncated Pages.
-      std::memset(static_cast<char *>(data) + off_in_buf, 0, cur_len);
-    } else if (pages_or.value()[i]->IsUptodate()) {
+    size_t index = n - block_index_start;
+    if (pages[index] && pages[index]->IsUptodate()) {
       // Copy data from valid Pages.
       std::memcpy(static_cast<char *>(data) + off_in_buf,
-                  pages_or.value()[i++]->GetAddress<char>() + off_in_block, cur_len);
+                  pages[index]->GetAddress<char>() + off_in_block, cur_len);
     } else {
-      // Zero the range of invalid Pages.
+      // Zero the range of invalid or truncated Pages.
       std::memset(static_cast<char *>(data) + off_in_buf, 0, cur_len);
-      ++i;
     }
 
     off_in_buf += cur_len;
