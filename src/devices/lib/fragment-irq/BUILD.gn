@@ -15,6 +15,7 @@ source_set("dfv1") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.interrupt:fuchsia.hardware.interrupt_cpp_wire",
     "//src/lib/ddk",
+    "//src/lib/ddktl",
   ]
 
   deps = [ "//zircon/system/ulib/fbl" ]

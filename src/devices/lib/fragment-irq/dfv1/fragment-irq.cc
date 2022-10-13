@@ -7,31 +7,24 @@
 #include <fidl/fuchsia.hardware.interrupt/cpp/markers.h>
 #include <fidl/fuchsia.hardware.interrupt/cpp/wire_messaging.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/driver.h>
 
+#include <ddktl/device.h>
 #include <fbl/string_printf.h>
 
 namespace fragment_irq {
 namespace fint = fuchsia_hardware_interrupt;
 
 zx::status<zx::interrupt> GetInterrupt(zx_device_t* dev, const char* fragment_name) {
-  auto endpoints = fidl::CreateEndpoints<fint::Service::Provider::ProtocolType>();
-  if (endpoints.is_error()) {
-    zxlogf(ERROR, "Failed to create endpoints: %s", endpoints.status_string());
-    return endpoints.take_error();
-  }
-
-  zx_status_t status = device_connect_fragment_fidl_protocol2(
-      dev, fragment_name, fint::Service::Provider::ServiceName, fint::Service::Provider::Name,
-      endpoints->server.TakeChannel().release());
-  if (status != ZX_OK) {
+  auto client_end = ddk::Device<void>::DdkConnectFragmentFidlProtocol<fint::Service::Provider>(
+      dev, fragment_name);
+  if (client_end.is_error()) {
     zxlogf(WARNING, "Failed to connect to fragment '%s' service '%s' protocol '%s': %s",
            fragment_name, fint::Service::Provider::ServiceName, fint::Service::Provider::Name,
-           zx_status_get_string(status));
-    return zx::error(status);
+           client_end.status_string());
+    return client_end.take_error();
   }
 
-  auto result = fidl::WireCall(endpoints->client)->Get();
+  auto result = fidl::WireCall(*client_end)->Get();
   if (!result.ok()) {
     zxlogf(ERROR, "Failed to send Get() request: %s", result.status_string());
     return zx::error(result.status());
