@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
-import("//build/config/build_api_module.gni")
 import("//build/info/info.gni")
 
 # Invokes the check-licenses tool.
@@ -40,7 +39,6 @@ template("license_data") {
   }
   temp_out_dir = "$out_dir/temp"
 
-  build_api_target = "licenses_${target_name}"
   check_licenses_target = "${target_name}_check-licenses"
   copy_txt_notices_target = "${target_name}_txt_copy"
   copy_html_notices_target = "${target_name}_html_copy"
@@ -110,7 +108,14 @@ template("license_data") {
     }
 
     metadata = {
-      licenses = outputs
+      licenses = [
+        {
+          version = build_info_version
+          product = build_info_product
+          board = build_info_board
+          out = rebase_path(out_dir, root_build_dir)
+        },
+      ]
     }
   }
 
@@ -139,11 +144,6 @@ template("license_data") {
     deps = [ ":$check_licenses_target" ]
   }
 
-  build_api_module(build_api_target) {
-    data_keys = [ "licenses" ]
-    deps = [ ":$check_licenses_target" ]
-  }
-
   group(target_name) {
     forward_variables_from(invoker,
                            [
@@ -153,7 +153,6 @@ template("license_data") {
                            ])
 
     deps = [
-      ":$build_api_target",
       ":$check_licenses_target",
       ":$copy_html_notices_target",
       ":$copy_txt_notices_target",
