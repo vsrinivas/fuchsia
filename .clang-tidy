@@ -12,6 +12,7 @@ Checks: >
   misc-*,
   -misc-noexcept*,
   -misc-unused-parameters,
+  -misc-const-correctness,
 
   modernize-*,
   -modernize-avoid-c-arrays,
