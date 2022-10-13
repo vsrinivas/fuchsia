@@ -913,16 +913,9 @@ TEST(ProtocolTests, GoodEventAbsentPayloadStruct) {
 }
 
 TEST(ProtocolTests, BadMethodEnumLayout) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-  MyMethod(enum {
-    FOO = 1;
-  });
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListKind);
+  TestLibrary library;
+  library.AddFile("bad/fi-0074.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidMethodPayloadLayoutClass);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "enum");
 }
 
@@ -1058,7 +1051,7 @@ protocol MyProtocol {
     MyMethod(handle);
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidMethodPayloadType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle");
 }
 
@@ -1094,14 +1087,14 @@ protocol MyProtocol {
 )FIDL");
   ASSERT_FALSE(library.Compile());
 
-  ASSERT_ERR(library.errors()[0], fidl::ErrInvalidParameterListType);
+  ASSERT_ERR(library.errors()[0], fidl::ErrInvalidMethodPayloadType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bool");
-  ASSERT_ERR(library.errors()[1], fidl::ErrInvalidParameterListType);
+  ASSERT_ERR(library.errors()[1], fidl::ErrInvalidMethodPayloadType);
   ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "example/handle");
 
-  ASSERT_ERR(library.errors()[2], fidl::ErrInvalidParameterListType);
+  ASSERT_ERR(library.errors()[2], fidl::ErrInvalidMethodPayloadType);
   ASSERT_SUBSTR(library.errors()[2]->msg.c_str(), "vector<bool>");
-  ASSERT_ERR(library.errors()[3], fidl::ErrInvalidParameterListType);
+  ASSERT_ERR(library.errors()[3], fidl::ErrInvalidMethodPayloadType);
   // TODO(fxbug.dev/93999): Should be "vector<bool>:optional".
   ASSERT_SUBSTR(library.errors()[3]->msg.c_str(), "vector<bool>?");
 }
@@ -1345,14 +1338,9 @@ protocol MyProtocol {
 }
 
 TEST(ProtocolTests, BadDisallowedRequestType) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-    MyMethod(uint32);
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+  TestLibrary library;
+  library.AddFile("bad/fi-0075.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidMethodPayloadType);
 }
 
 TEST(ProtocolTests, BadInvalidRequestType) {
@@ -1374,7 +1362,7 @@ protocol MyProtocol {
     MyMethod() -> (uint32);
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidMethodPayloadType);
 }
 
 TEST(ProtocolTests, BadInvalidResponseType) {
@@ -1396,7 +1384,7 @@ protocol MyProtocol {
     MyMethod() -> (uint32) error uint32;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidMethodPayloadType);
 }
 
 TEST(ProtocolTests, BadInvalidSuccessType) {

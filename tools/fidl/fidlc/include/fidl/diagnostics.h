@@ -175,9 +175,9 @@ constexpr ErrorDef<71> ErrUnknownAttributeOnStrictEnumMember(
 constexpr ErrorDef<72> ErrUnknownAttributeOnMultipleEnumMembers(
     "the @unknown attribute can be only applied to one enum member.");
 constexpr UndocumentedErrorDef<73> ErrComposingNonProtocol("This declaration is not a protocol");
-constexpr UndocumentedErrorDef<74, flat::Decl::Kind> ErrInvalidParameterListKind(
+constexpr ErrorDef<74, flat::Decl::Kind> ErrInvalidMethodPayloadLayoutClass(
     "cannot use {} as a request/response; must use a struct, table, or union");
-constexpr UndocumentedErrorDef<75, const flat::Type *> ErrInvalidParameterListType(
+constexpr ErrorDef<75, const flat::Type *> ErrInvalidMethodPayloadType(
     "invalid request/response type '{}'; must use a struct, table, or union");
 constexpr ErrorDef<76, SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");

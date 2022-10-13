@@ -1049,14 +1049,14 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
             break;
           }
           default: {
-            Fail(ErrInvalidParameterListKind, method_name, decl->kind);
+            Fail(ErrInvalidMethodPayloadLayoutClass, method_name, decl->kind);
             break;
           }
         }
         break;
       }
       default: {
-        Fail(ErrInvalidParameterListKind, method_name, decl->kind);
+        Fail(ErrInvalidMethodPayloadLayoutClass, method_name, decl->kind);
         break;
       }
     }
@@ -1087,7 +1087,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
       CompileTypeConstructor(method.maybe_request.get());
       if (auto type = method.maybe_request->type) {
         if (type->kind != Type::Kind::kIdentifier) {
-          Fail(ErrInvalidParameterListType, method.name, type);
+          Fail(ErrInvalidMethodPayloadType, method.name, type);
         } else {
           ZX_ASSERT(type->kind == Type::Kind::kIdentifier);
           auto decl = static_cast<const flat::IdentifierType*>(type)->type_decl;
@@ -1101,7 +1101,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
       CompileTypeConstructor(method.maybe_response.get());
       if (auto type = method.maybe_response->type) {
         if (type->kind != Type::Kind::kIdentifier) {
-          Fail(ErrInvalidParameterListType, method.name, type);
+          Fail(ErrInvalidMethodPayloadType, method.name, type);
         } else {
           ZX_ASSERT(type->kind == Type::Kind::kIdentifier);
           auto decl = static_cast<const flat::IdentifierType*>(type)->type_decl;
@@ -1120,7 +1120,7 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
             const auto* success_variant_type = result_union->members[0].maybe_used->type_ctor->type;
             if (success_variant_type) {
               if (success_variant_type->kind != Type::Kind::kIdentifier) {
-                Fail(ErrInvalidParameterListType, method.name, success_variant_type);
+                Fail(ErrInvalidMethodPayloadType, method.name, success_variant_type);
               } else {
                 const auto* success_decl =
                     static_cast<const IdentifierType*>(success_variant_type)->type_decl;
