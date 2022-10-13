@@ -13,7 +13,6 @@ use {
             network_config::{AddAndGetRecent, PastConnectionsByBssid},
             ConnectFailure, Credential, FailureReason, SavedNetworksManagerApi,
         },
-        mode_management::iface_manager_api::IfaceManagerApi,
         telemetry::{self, TelemetryEvent, TelemetrySender},
     },
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
@@ -65,6 +64,7 @@ const INSPECT_EVENT_LIMIT_FOR_NETWORK_SELECTIONS: usize = 10;
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
+    scan_requester: Arc<dyn scan::ScanRequestApi>,
     last_scan_result_time: Arc<Mutex<zx::Time>>,
     hasher: WlanHasher,
     _inspect_node_root: Arc<Mutex<InspectNode>>,
@@ -229,6 +229,7 @@ impl<'a> WriteInspect for InternalBss<'a> {
 impl NetworkSelector {
     pub fn new(
         saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
+        scan_requester: Arc<dyn scan::ScanRequestApi>,
         hasher: WlanHasher,
         inspect_node: InspectNode,
         persistence_req_sender: auto_persist::PersistenceReqSender,
@@ -245,6 +246,7 @@ impl NetworkSelector {
         );
         Self {
             saved_network_manager,
+            scan_requester,
             last_scan_result_time: Arc::new(Mutex::new(zx::Time::ZERO)),
             hasher,
             _inspect_node_root: Arc::new(Mutex::new(inspect_node)),
@@ -262,7 +264,6 @@ impl NetworkSelector {
     /// RSSI, recent failures) is selected.
     pub(crate) async fn find_best_connection_candidate(
         &self,
-        iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
     ) -> Option<types::ScannedCandidate> {
         // Log a metric for scan age
@@ -280,20 +281,7 @@ impl NetworkSelector {
             });
         }
 
-        let wpa3_supported =
-            iface_manager.lock().await.has_wpa3_capable_client().await.unwrap_or_else(|e| {
-                error!("Failed to determine WPA3 support. Assuming no WPA3 support. {}", e);
-                false
-            });
-
-        let scan_results = scan::perform_scan(
-            iface_manager.clone(),
-            self.saved_network_manager.clone(),
-            scan::LocationSensorUpdater { wpa3_supported },
-            NetworkSelectionScan,
-            Some(self.telemetry_sender.clone()),
-        )
-        .await;
+        let scan_results = self.scan_requester.perform_scan(NetworkSelectionScan).await;
 
         let (candidate_networks, num_candidates) = match scan_results {
             Err(e) => {
@@ -322,14 +310,8 @@ impl NetworkSelector {
             &mut inspect_node,
         ) {
             Some((selected, channel, bssid)) => Some(
-                augment_bss_with_active_scan(
-                    selected,
-                    channel,
-                    bssid,
-                    iface_manager,
-                    self.telemetry_sender.clone(),
-                )
-                .await,
+                augment_bss_with_active_scan(selected, channel, bssid, self.scan_requester.clone())
+                    .await,
             ),
             None => None,
         };
@@ -345,17 +327,10 @@ impl NetworkSelector {
     /// Find a suitable BSS for the given network.
     pub(crate) async fn find_connection_candidate_for_network(
         &self,
-        iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         network: types::NetworkIdentifier,
     ) -> Option<types::ScannedCandidate> {
-        // TODO: check if we have recent enough scan results that we can pull from instead?
-        let scan_results = scan::perform_directed_active_scan(
-            iface_manager,
-            &network.ssid,
-            None,
-            Some(self.telemetry_sender.clone()),
-        )
-        .await;
+        let scan_results =
+            self.scan_requester.perform_directed_active_scan(network.ssid.clone(), None).await;
 
         let (result, num_candidates) = match scan_results {
             Err(_) => (None, Err(())),
@@ -500,8 +475,7 @@ async fn augment_bss_with_active_scan(
     scanned_candidate: types::ScannedCandidate,
     channel: types::WlanChan,
     bssid: types::Bssid,
-    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    telemetry_sender: TelemetrySender,
+    scan_requester: Arc<dyn scan::ScanRequestApi>,
 ) -> types::ScannedCandidate {
     // This internal function encapsulates all the logic and has a Result<> return type, allowing us
     // to use the `?` operator inside it to reduce nesting.
@@ -509,8 +483,7 @@ async fn augment_bss_with_active_scan(
         scanned_candidate: &types::ScannedCandidate,
         channel: types::WlanChan,
         bssid: types::Bssid,
-        iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-        telemetry_sender: TelemetrySender,
+        scan_requester: Arc<dyn scan::ScanRequestApi>,
     ) -> Result<fidl_internal::BssDescription, ()> {
         match scanned_candidate.observation {
             types::ScanObservation::Passive => {
@@ -527,16 +500,15 @@ async fn augment_bss_with_active_scan(
         }
 
         // Perform the scan
-        let mut directed_scan_result = scan::perform_directed_active_scan(
-            iface_manager,
-            &scanned_candidate.network.ssid,
-            Some(vec![channel.primary]),
-            Some(telemetry_sender),
-        )
-        .await
-        .map_err(|_| {
-            info!("Failed to perform active scan to augment BSS info.");
-        })?;
+        let mut directed_scan_result = scan_requester
+            .perform_directed_active_scan(
+                scanned_candidate.network.ssid.clone(),
+                Some(vec![channel.primary]),
+            )
+            .await
+            .map_err(|_| {
+                info!("Failed to perform active scan to augment BSS info.");
+            })?;
 
         // Find the bss in the results
         let bss_description = directed_scan_result
@@ -558,15 +530,7 @@ async fn augment_bss_with_active_scan(
         Ok(bss_description)
     }
 
-    match get_enhanced_bss_description(
-        &scanned_candidate,
-        channel,
-        bssid,
-        iface_manager,
-        telemetry_sender,
-    )
-    .await
-    {
+    match get_enhanced_bss_description(&scanned_candidate, channel, bssid, scan_requester).await {
         Ok(new_bss_description) => {
             types::ScannedCandidate { bss_description: new_bss_description, ..scanned_candidate }
         }
@@ -669,35 +633,20 @@ mod tests {
     use {
         super::*,
         crate::{
-            access_point::state_machine as ap_fsm,
             config_management::{
                 network_config::{PastConnectionData, PastConnectionsByBssid},
                 SavedNetworksManager,
             },
-            mode_management::{
-                iface_manager_api::{ConnectAttemptRequest, SmeForScan},
-                Defect,
-            },
-            telemetry::ScanIssue,
             util::testing::{
-                create_inspect_persistence_channel, create_wlan_hasher, generate_channel,
-                generate_random_bss, poll_for_and_validate_sme_scan_request_and_send_results,
-                random_connection_data, validate_sme_scan_request_and_send_results,
+                create_inspect_persistence_channel, create_wlan_hasher, fakes::FakeScanRequester,
+                generate_channel, generate_random_bss, generate_random_scan_result,
+                random_connection_data,
             },
         },
-        anyhow::Error,
-        async_trait::async_trait,
-        fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_common as fidl_common,
-        fidl_fuchsia_wlan_common_security as fidl_security,
-        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
-        fuchsia_async as fasync,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
         fuchsia_inspect::{self as inspect, assert_data_tree},
-        futures::{
-            channel::{mpsc, oneshot},
-            prelude::*,
-            task::Poll,
-        },
+        futures::{channel::mpsc, task::Poll},
         pin_utils::pin_mut,
         rand::Rng,
         std::{convert::TryFrom, sync::Arc},
@@ -711,14 +660,14 @@ mod tests {
     struct TestValues {
         network_selector: Arc<NetworkSelector>,
         saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
-        iface_manager: Arc<Mutex<FakeIfaceManager>>,
-        sme_stream: fidl_sme::ClientSmeRequestStream,
+        scan_requester: Arc<FakeScanRequester>,
         inspector: inspect::Inspector,
         telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
     async fn test_setup() -> TestValues {
         let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
+        let scan_requester = Arc::new(FakeScanRequester::new());
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("net_select_test");
         let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
@@ -726,110 +675,19 @@ mod tests {
 
         let network_selector = Arc::new(NetworkSelector::new(
             saved_network_manager.clone(),
+            scan_requester.clone(),
             create_wlan_hasher(),
             inspect_node,
             persistence_req_sender,
             TelemetrySender::new(telemetry_sender),
         ));
-        let (client_sme, remote) =
-            create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
-        let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(client_sme)));
 
         TestValues {
             network_selector,
             saved_network_manager,
-            iface_manager,
-            sme_stream: remote.into_stream().expect("failed to create stream"),
+            scan_requester,
             inspector,
             telemetry_receiver,
-        }
-    }
-
-    struct FakeIfaceManager {
-        pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
-    }
-
-    impl FakeIfaceManager {
-        pub fn new(proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy) -> Self {
-            FakeIfaceManager { sme_proxy: proxy }
-        }
-    }
-
-    #[async_trait]
-    impl IfaceManagerApi for FakeIfaceManager {
-        async fn disconnect(
-            &mut self,
-            _network_id: types::NetworkIdentifier,
-            _reason: types::DisconnectReason,
-        ) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn connect(&mut self, _connect_req: ConnectAttemptRequest) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn record_idle_client(&mut self, _iface_id: u16) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn has_idle_client(&mut self) -> Result<bool, Error> {
-            unimplemented!()
-        }
-
-        async fn handle_added_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn handle_removed_iface(&mut self, _iface_id: u16) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
-            Ok(SmeForScan::new(self.sme_proxy.clone(), 0))
-        }
-
-        async fn stop_client_connections(
-            &mut self,
-            _reason: types::DisconnectReason,
-        ) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn start_client_connections(&mut self) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn start_ap(
-            &mut self,
-            _config: ap_fsm::ApConfig,
-        ) -> Result<oneshot::Receiver<()>, Error> {
-            unimplemented!()
-        }
-
-        async fn stop_ap(&mut self, _ssid: types::Ssid, _password: Vec<u8>) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn stop_all_aps(&mut self) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        // Many tests use wpa3 networks expecting them to be used normally, so by default this
-        // is true.
-        async fn has_wpa3_capable_client(&mut self) -> Result<bool, Error> {
-            Ok(true)
-        }
-
-        async fn set_country(
-            &mut self,
-            _country_code: Option<[u8; types::REGION_CODE_LEN]>,
-        ) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
-            unimplemented!();
         }
     }
 
@@ -1873,8 +1731,7 @@ mod tests {
             candidate.clone(),
             bss_1.channel,
             bss_1.bssid,
-            test_values.iface_manager.clone(),
-            test_values.network_selector.telemetry_sender.clone(),
+            test_values.scan_requester.clone(),
         );
         pin_mut!(fut);
 
@@ -1887,23 +1744,21 @@ mod tests {
     #[fuchsia::test]
     fn augment_bss_with_active_scan_runs_on_passively_found_networks() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let test_values = exec.run_singlethreaded(test_setup());
 
+        let scan_channel = 36;
         let test_id_1 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("foo").unwrap(),
             security_type: types::SecurityType::Wpa3,
         };
-        let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
         let mutual_security_protocols_1 = [SecurityDescriptor::WPA2_PERSONAL];
         let bss_1 = types::Bss {
             compatibility: Compatibility::expect_some(mutual_security_protocols_1),
-            rssi: -14,
-            channel: generate_channel(36),
             ..generate_random_bss()
         };
         let scanned_candidate = types::ScannedCandidate {
             network: test_id_1.clone(),
-            credential: credential_1.clone(),
+            credential: Credential::Password("foo_pass".as_bytes().to_vec()),
             bss_description: bss_1.bss_description.clone(),
             observation: types::ScanObservation::Passive,
             has_multiple_bss_candidates: true,
@@ -1912,107 +1767,69 @@ mod tests {
 
         let fut = augment_bss_with_active_scan(
             scanned_candidate.clone(),
-            bss_1.channel,
+            generate_channel(scan_channel),
             bss_1.bssid,
-            test_values.iface_manager.clone(),
-            test_values.network_selector.telemetry_sender.clone(),
+            test_values.scan_requester.clone(),
         );
         pin_mut!(fut);
 
-        // Progress the future until a scan request is sent
-        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-
-        // Check that a scan request was sent to the sme and send back results
-        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![test_id_1.ssid.to_vec()],
-            channels: vec![36],
-        });
-        let new_bss_desc = random_fidl_bss_description!(
-            Wpa3,
-            bssid: bss_1.bssid.0,
-            ssid: test_id_1.ssid.clone(),
-            rssi_dbm: 0,
-            snr_db: 0,
-            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-        );
-        let new_scan_result = fidl_sme::ScanResult {
-            compatibility: Some(Box::new(fidl_sme::Compatibility {
-                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
-            })),
-            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
-            bss_description: new_bss_desc.clone(),
-        };
-
-        let mock_scan_results = vec![
-            fidl_sme::ScanResult {
-                compatibility: Some(Box::new(fidl_sme::Compatibility {
-                    mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
-                })),
-                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                bss_description: random_fidl_bss_description!(
-                    Wpa3,
-                    bssid: [0, 0, 0, 0, 0, 0], // Not the same BSSID
-                    ssid: test_id_1.ssid.clone(),
-                    rssi_dbm: 10,
-                    snr_db: 10,
-                    channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-                ),
+        // Set the scan results
+        let new_bss_desc = random_fidl_bss_description!();
+        exec.run_singlethreaded(test_values.scan_requester.add_scan_result(Ok(vec![
+            types::ScanResult {
+                ssid: test_id_1.ssid.clone(),
+                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                compatibility: types::Compatibility::Supported,
+                entries: vec![types::Bss {
+                    bssid: bss_1.bssid,
+                    compatibility: wlan_common::scan::Compatibility::expect_some([
+                        wlan_common::security::SecurityDescriptor::WPA3_PERSONAL,
+                    ]),
+                    bss_description: new_bss_desc.clone(),
+                    ..generate_random_bss()
+                }],
             },
-            fidl_sme::ScanResult {
-                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                ..new_scan_result
-            },
-        ];
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut test_values.sme_stream,
-            &expected_scan_request,
-            mock_scan_results,
-        );
+        ])));
 
         // The connect_req comes out the other side with the new bss_description
         assert_eq!(
             exec.run_singlethreaded(fut),
             types::ScannedCandidate { bss_description: new_bss_desc, ..scanned_candidate }
         );
+
+        // Check the right scan request was sent
+        assert_eq!(
+            *exec.run_singlethreaded(
+                test_values.scan_requester.directed_active_scan_requests.lock()
+            ),
+            vec![(test_id_1.ssid, Some(vec![scan_channel]))]
+        );
     }
 
     #[fuchsia::test]
     fn find_best_connection_candidate_scan_error() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
-        // Kick off network selection
-        let ignore_list = vec![];
-        let network_selection_fut = network_selector
-            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
-        pin_mut!(network_selection_fut);
-        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
-
-        // Check that a scan request was sent to the sme and send back results
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req, control_handle: _
-            }))) => {
-                // Validate the request
-                assert_eq!(req, expected_scan_request);
-                // Send all the APs
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_error(&mut fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::InternalError,
-                    message: "Failed to scan".to_string()
-                })
-                    .expect("failed to send scan data");
-            }
+        // Return an error on the scan
+        exec.run_singlethreaded(
+            test_values.scan_requester.add_scan_result(Err(types::ScanError::GeneralError)),
         );
 
-        // Process scan results
+        // Kick off network selection
+        let ignore_list = vec![];
+        let network_selection_fut = network_selector.find_best_connection_candidate(&ignore_list);
+        pin_mut!(network_selection_fut);
+        // Check that nothing is returned
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Ready(None));
+
+        // Check that the right scan request was sent
+        assert_eq!(
+            *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
+            vec![scan::ScanReason::NetworkSelection]
+        );
 
         // Check the network selections were logged
         assert_data_tree!(test_values.inspector, root: {
@@ -2026,11 +1843,7 @@ mod tests {
             },
         });
 
-        // Verify two sets of TelemetryEvent for network selection were sent
-        assert_variant!(
-            telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::ScanDefect(ScanIssue::ScanFailure)))
-        );
+        // Verify TelemetryEvent for network selection was sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
             assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {
                 network_selection_type: telemetry::NetworkSelectionType::Undirected,
@@ -2043,7 +1856,7 @@ mod tests {
     #[fuchsia::test]
     fn find_best_connection_candidate_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
@@ -2053,69 +1866,14 @@ mod tests {
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let scan_result1 = fidl_sme::ScanResult {
-            compatibility: Some(Box::new(fidl_sme::Compatibility {
-                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
-            })),
-            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
-            bss_description: random_fidl_bss_description!(
-                Wpa3,
-                bssid: [0, 0, 0, 0, 0, 0],
-                ssid: test_id_1.ssid.clone(),
-                rssi_dbm: 10,
-                snr_db: 10,
-                channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-            ),
-        };
-        let bss_desc1_active = random_fidl_bss_description!(
-            Wpa3,
-            bssid: [0, 0, 0, 0, 0, 0],
-            ssid: test_id_1.ssid.clone(),
-            rssi_dbm: 10,
-            snr_db: 10,
-            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-        );
-        let scan_result1_active = fidl_sme::ScanResult {
-            compatibility: Some(Box::new(fidl_sme::Compatibility {
-                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
-            })),
-            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
-            bss_description: bss_desc1_active.clone(),
-        };
+        let bssid_1 = types::Bssid([1, 1, 1, 1, 1, 1]);
+
         let test_id_2 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("bar").unwrap(),
             security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
-        let scan_result2 = fidl_sme::ScanResult {
-            compatibility: Some(Box::new(fidl_sme::Compatibility {
-                mutual_security_protocols: vec![fidl_security::Protocol::Wpa1],
-            })),
-            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
-            bss_description: random_fidl_bss_description!(
-                Wpa1,
-                bssid: [0, 0, 0, 0, 0, 0],
-                ssid: test_id_2.ssid.clone(),
-                rssi_dbm: 0,
-                snr_db: 0,
-                channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-            ),
-        };
-        let bss_desc2_active = random_fidl_bss_description!(
-            Wpa1,
-            bssid: [0, 0, 0, 0, 0, 0],
-            ssid: test_id_2.ssid.clone(),
-            rssi_dbm: 10,
-            snr_db: 10,
-            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-        );
-        let scan_result2_active = fidl_sme::ScanResult {
-            compatibility: Some(Box::new(fidl_sme::Compatibility {
-                mutual_security_protocols: vec![fidl_security::Protocol::Wpa1],
-            })),
-            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
-            bss_description: bss_desc2_active.clone(),
-        };
+        let bssid_2 = types::Bssid([2, 2, 2, 2, 2, 2]);
 
         // insert some new saved networks
         assert!(exec
@@ -2135,65 +1893,86 @@ mod tests {
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_1.clone(),
             &credential_1.clone(),
-            types::Bssid([0, 0, 0, 0, 0, 0]),
+            bssid_1.clone(),
             fake_successful_connect_result(),
             Some(fidl_common::ScanType::Passive),
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_2.clone(),
             &credential_2.clone(),
-            types::Bssid([0, 0, 0, 0, 0, 0]),
+            bssid_2.clone(),
             fake_successful_connect_result(),
             Some(fidl_common::ScanType::Passive),
         ));
 
-        // Kick off network selection
-        let ignore_list = vec![];
-        let network_selection_fut = network_selector
-            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
-        pin_mut!(network_selection_fut);
-        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
-
-        // Check that a scan request was sent to the sme and send back results
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let mock_scan_results = vec![
-            fidl_sme::ScanResult {
-                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                ..scan_result1
+        // Prep the scan results
+        let mutual_security_protocols_1 = [SecurityDescriptor::WPA3_PERSONAL];
+        let channel_1 = generate_channel(3);
+        let mutual_security_protocols_2 = [SecurityDescriptor::WPA1];
+        let channel_2 = generate_channel(50);
+        let mock_passive_scan_results = vec![
+            types::ScanResult {
+                ssid: test_id_1.ssid.clone(),
+                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                compatibility: types::Compatibility::Supported,
+                entries: vec![types::Bss {
+                    compatibility: wlan_common::scan::Compatibility::expect_some(
+                        mutual_security_protocols_1.clone(),
+                    ),
+                    bssid: bssid_1.clone(),
+                    channel: channel_1.clone(),
+                    rssi: 20, // much higher than other result
+                    observation: types::ScanObservation::Passive,
+                    ..generate_random_bss()
+                }],
             },
-            fidl_sme::ScanResult {
-                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                ..scan_result2
+            types::ScanResult {
+                ssid: test_id_2.ssid.clone(),
+                security_type_detailed: types::SecurityTypeDetailed::Wpa1,
+                compatibility: types::Compatibility::Supported,
+                entries: vec![types::Bss {
+                    compatibility: wlan_common::scan::Compatibility::expect_some(
+                        mutual_security_protocols_2.clone(),
+                    ),
+                    bssid: bssid_2.clone(),
+                    channel: channel_2.clone(),
+                    rssi: -100, // much lower than other result
+                    observation: types::ScanObservation::Passive,
+                    ..generate_random_bss()
+                }],
             },
+            generate_random_scan_result(),
+            generate_random_scan_result(),
         ];
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut test_values.sme_stream,
-            &expected_scan_request,
-            mock_scan_results.clone(),
-        );
 
-        // Process scan results
-        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+        // Initial passive scan
+        exec.run_singlethreaded(
+            test_values.scan_requester.add_scan_result(Ok(mock_passive_scan_results.clone())),
+        );
 
         // An additional directed active scan should be made for the selected network
-        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![test_id_1.ssid.to_vec()],
-            channels: vec![1],
-        });
-        let mock_active_scan_results = vec![fidl_sme::ScanResult {
-            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-            ..scan_result1_active
-        }];
-        poll_for_and_validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut network_selection_fut,
-            &mut test_values.sme_stream,
-            &expected_scan_request,
-            mock_active_scan_results,
-        );
+        let bss_desc1_active = random_fidl_bss_description!();
+        exec.run_singlethreaded(test_values.scan_requester.add_scan_result(Ok(vec![
+            types::ScanResult {
+                ssid: test_id_1.ssid.clone(),
+                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                compatibility: types::Compatibility::Supported,
+                entries: vec![types::Bss {
+                    compatibility: wlan_common::scan::Compatibility::expect_some(
+                        mutual_security_protocols_1.clone(),
+                    ),
+                    bssid: bssid_1.clone(),
+                    bss_description: bss_desc1_active.clone(),
+                    ..generate_random_bss()
+                }],
+            },
+            generate_random_scan_result(),
+        ])));
 
         // Check that we pick a network
+        let ignore_list = vec![];
+        let network_selection_fut = network_selector.find_best_connection_candidate(&ignore_list);
+        pin_mut!(network_selection_fut);
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
             results,
@@ -2209,41 +1988,47 @@ mod tests {
             })
         );
 
+        // Check that the right scan requests were sent
+        // Initial passive scan
+        assert_eq!(
+            *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
+            vec![scan::ScanReason::NetworkSelection]
+        );
+        // Directed active scan should be made for the selected network
+        assert_eq!(
+            *exec.run_singlethreaded(
+                test_values.scan_requester.directed_active_scan_requests.lock()
+            ),
+            vec![(test_id_1.ssid.clone(), Some(vec![channel_1.primary]))]
+        );
+
         // Ignore that network, check that we pick the other one
         let ignore_list = vec![test_id_1.clone()];
-        let network_selection_fut = network_selector
-            .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
+        let network_selection_fut = network_selector.find_best_connection_candidate(&ignore_list);
         pin_mut!(network_selection_fut);
-        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
-        // Check that a scan request was sent to the sme and send back results
-        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut test_values.sme_stream,
-            &expected_scan_request,
-            mock_scan_results,
+        exec.run_singlethreaded(
+            test_values.scan_requester.add_scan_result(Ok(mock_passive_scan_results.clone())),
         );
-
-        // Process scan results
-        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
         // An additional directed active scan should be made for the selected network
-        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![test_id_2.ssid.to_vec()],
-            channels: vec![1],
-        });
-        let mock_active_scan_results = vec![fidl_sme::ScanResult {
-            timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-            ..scan_result2_active
-        }];
-        poll_for_and_validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut network_selection_fut,
-            &mut test_values.sme_stream,
-            &expected_scan_request,
-            mock_active_scan_results,
-        );
+        let bss_desc2_active = random_fidl_bss_description!();
+        exec.run_singlethreaded(test_values.scan_requester.add_scan_result(Ok(vec![
+            types::ScanResult {
+                ssid: test_id_2.ssid.clone(),
+                security_type_detailed: types::SecurityTypeDetailed::Wpa1,
+                compatibility: types::Compatibility::Supported,
+                entries: vec![types::Bss {
+                    compatibility: wlan_common::scan::Compatibility::expect_some(
+                        mutual_security_protocols_2.clone(),
+                    ),
+                    bssid: bssid_2.clone(),
+                    bss_description: bss_desc2_active.clone(),
+                    ..generate_random_bss()
+                }],
+            },
+            generate_random_scan_result(),
+        ])));
 
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
@@ -2256,6 +2041,23 @@ mod tests {
                 has_multiple_bss_candidates: false,
                 mutual_security_protocols: [SecurityDescriptor::WPA1].into_iter().collect(),
             })
+        );
+
+        // Check that the right scan requests were sent
+        // Both initial passive scans
+        assert_eq!(
+            *exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock()),
+            vec![scan::ScanReason::NetworkSelection, scan::ScanReason::NetworkSelection]
+        );
+        // Both directed active scans
+        assert_eq!(
+            *exec.run_singlethreaded(
+                test_values.scan_requester.directed_active_scan_requests.lock()
+            ),
+            vec![
+                (test_id_1.ssid.clone(), Some(vec![channel_1.primary])),
+                (test_id_2.ssid.clone(), Some(vec![channel_2.primary]))
+            ]
         );
 
         // Check the network selections were logged
@@ -2303,10 +2105,6 @@ mod tests {
         // Verify two sets of TelemetryEvent for network selection were sent
         assert_variant!(
             telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::ActiveScanRequested { .. }))
-        );
-        assert_variant!(
-            telemetry_receiver.try_next(),
             Ok(Some(TelemetryEvent::LogMetricEvents {
                 ctx: "network_selection::record_metrics_on_scan",
                 ..
@@ -2326,10 +2124,6 @@ mod tests {
         });
         assert_variant!(
             telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::ActiveScanRequested { .. }))
-        );
-        assert_variant!(
-            telemetry_receiver.try_next(),
             Ok(Some(TelemetryEvent::LogMetricEvents { .. }))
         );
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
@@ -2344,7 +2138,7 @@ mod tests {
     #[fuchsia::test]
     fn find_connection_candidate_for_network_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
@@ -2363,62 +2157,32 @@ mod tests {
             .unwrap()
             .is_none());
 
-        // Kick off network selection
-        let network_selection_fut = network_selector
-            .find_connection_candidate_for_network(test_values.iface_manager, test_id_1.clone());
-        pin_mut!(network_selection_fut);
-        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
-
-        // Check that a scan request was sent to the sme and send back results
-        let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
-            ssids: vec![test_id_1.ssid.to_vec()],
-            channels: vec![],
-        });
+        // Prep the scan results
         let mutual_security_protocols_1 = [SecurityDescriptor::WPA3_PERSONAL];
-        let bss_desc_1 = random_fidl_bss_description!(
-            // This network is WPA3, but should still match against the desired WPA2 network
-            Wpa3,
-            bssid: [0, 0, 0, 0, 0, 0],
-            ssid: test_id_1.ssid.clone(),
-            rssi_dbm: 10,
-            snr_db: 10,
-            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-        );
-        let scan_result_1 = fidl_sme::ScanResult {
-            compatibility: Some(Box::new(fidl_sme::Compatibility {
-                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
-            })),
-            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
-            bss_description: bss_desc_1.clone(),
-        };
-        let mock_scan_results = vec![
-            fidl_sme::ScanResult {
-                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                ..scan_result_1
+        let bss_desc_1 = random_fidl_bss_description!();
+        exec.run_singlethreaded(test_values.scan_requester.add_scan_result(Ok(vec![
+            types::ScanResult {
+                ssid: test_id_1.ssid.clone(),
+                // This network is WPA3, but should still match against the desired WPA2 network
+                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                compatibility: types::Compatibility::Supported,
+                entries: vec![types::Bss {
+                    // This network is WPA3, but should still match against the desired WPA2 network
+                    compatibility: wlan_common::scan::Compatibility::expect_some(
+                        mutual_security_protocols_1.clone(),
+                    ),
+                    bss_description: bss_desc_1.clone(),
+                    ..generate_random_bss()
+                }],
             },
-            fidl_sme::ScanResult {
-                compatibility: Some(Box::new(fidl_sme::Compatibility {
-                    mutual_security_protocols: vec![fidl_security::Protocol::Wpa1],
-                })),
-                timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                bss_description: random_fidl_bss_description!(
-                    Wpa1,
-                    bssid: [0, 0, 0, 0, 0, 0],
-                    ssid: types::Ssid::try_from("other ssid").unwrap(),
-                    rssi_dbm: 0,
-                    snr_db: 0,
-                    channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-                ),
-            },
-        ];
-        validate_sme_scan_request_and_send_results(
-            &mut exec,
-            &mut test_values.sme_stream,
-            &expected_scan_request,
-            mock_scan_results,
-        );
+            generate_random_scan_result(),
+            generate_random_scan_result(),
+        ])));
 
-        // Check that we pick a network
+        // Run network selection
+        let network_selection_fut =
+            network_selector.find_connection_candidate_for_network(test_id_1.clone());
+        pin_mut!(network_selection_fut);
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(
             results,
@@ -2434,6 +2198,14 @@ mod tests {
             })
         );
 
+        // Check that the right scan request was sent
+        assert_eq!(
+            *exec.run_singlethreaded(
+                test_values.scan_requester.directed_active_scan_requests.lock()
+            ),
+            vec![(test_id_1.ssid.clone(), None)]
+        );
+
         // Verify that NetworkSelectionDecision telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
             assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {
@@ -2447,7 +2219,7 @@ mod tests {
     #[fuchsia::test]
     fn find_connection_candidate_for_network_end_to_end_with_failure() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = exec.run_singlethreaded(test_setup());
+        let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
         let mut telemetry_receiver = test_values.telemetry_receiver;
 
@@ -2457,36 +2229,25 @@ mod tests {
             security_type: types::SecurityType::Wpa3,
         };
 
-        // Kick off network selection
-        let network_selection_fut = network_selector
-            .find_connection_candidate_for_network(test_values.iface_manager, test_id_1);
-        pin_mut!(network_selection_fut);
-        assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
-
         // Return an error on the scan
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                txn, req: _, control_handle: _
-            }))) => {
-                // Send failed scan response.
-                let (_stream, ctrl) = txn
-                    .into_stream_and_control_handle().expect("error accessing control handle");
-                ctrl.send_on_error(&mut fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::InternalError,
-                    message: "Failed to scan".to_string()
-                }).expect("failed to send scan error");
-            }
+        exec.run_singlethreaded(
+            test_values.scan_requester.add_scan_result(Err(types::ScanError::GeneralError)),
         );
 
+        // Kick off network selection
+        let network_selection_fut =
+            network_selector.find_connection_candidate_for_network(test_id_1.clone());
+        pin_mut!(network_selection_fut);
         // Check that nothing is returned
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(results, None);
 
-        // Verify that the scan defect is sent to telemetry.
-        assert_variant!(
-            telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::ScanDefect(ScanIssue::ScanFailure)))
+        // Check that the right scan request was sent
+        assert_eq!(
+            *exec.run_singlethreaded(
+                test_values.scan_requester.directed_active_scan_requests.lock()
+            ),
+            vec![(test_id_1.ssid.clone(), None)]
         );
 
         // Verify that NetworkSelectionDecision telemetry event is sent

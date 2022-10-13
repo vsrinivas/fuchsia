@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        client::{network_selection, serve_provider_requests, types},
+        client::{network_selection, scan, serve_provider_requests, types},
         config_management::{SavedNetworksManager, SavedNetworksManagerApi},
         legacy,
         mode_management::{
@@ -169,8 +169,12 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
     let (persistence_req_sender, _persistence_stream) = create_inspect_persistence_channel();
     let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
     let telemetry_sender = TelemetrySender::new(telemetry_sender);
+    let (scan_request_sender, scan_request_receiver) =
+        mpsc::channel::<scan::ScanRequest>(scan::SCAN_REQUEST_BUFFER_SIZE);
+    let scan_requester = Arc::new(scan::ScanRequester { sender: scan_request_sender });
     let network_selector = Arc::new(network_selection::NetworkSelector::new(
         saved_networks.clone(),
+        scan_requester.clone(),
         create_wlan_hasher(),
         inspect::Inspector::new().root().create_child("network_selector"),
         persistence_req_sender,
@@ -200,6 +204,20 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
         telemetry_sender.clone(),
     );
     let iface_manager_service = Box::pin(iface_manager_service);
+    let scan_manager_service = Box::pin(
+        scan::serve_scanning_loop(
+            iface_manager.clone(),
+            saved_networks.clone(),
+            telemetry_sender.clone(),
+            scan_request_receiver,
+        )
+        // Map the output type of this future to match the other ones we want to combine with it
+        .map(|_| {
+            let result: Result<Void, Error> =
+                Err(format_err!("scan_manager_service future exited unexpectedly"));
+            result
+        }),
+    );
 
     let client_provider_lock = Arc::new(Mutex::new(()));
 
@@ -208,6 +226,7 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
             iface_manager.clone(),
             client_update_sender,
             saved_networks.clone(),
+            scan_requester,
             client_provider_lock,
             client_provider_requests,
             telemetry_sender,
@@ -236,8 +255,12 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
     );
 
     // Combine all our "internal" futures into one, since we don't care about their individual progress
-    let internal_futures =
-        join_all(vec![serve_fut, iface_manager_service, serve_client_policy_listeners]);
+    let internal_futures = join_all(vec![
+        serve_fut,
+        iface_manager_service,
+        scan_manager_service,
+        serve_client_policy_listeners,
+    ]);
 
     let internal_objects = InternalObjects {
         internal_futures,

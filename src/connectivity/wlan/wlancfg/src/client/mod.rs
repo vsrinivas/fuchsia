@@ -50,6 +50,7 @@ pub async fn serve_provider_requests(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
+    scan_requester: Arc<dyn scan::ScanRequestApi>,
     client_provider_lock: Arc<Mutex<()>>,
     mut requests: fidl_policy::ClientProviderRequestStream,
     telemetry_sender: TelemetrySender,
@@ -68,6 +69,7 @@ pub async fn serve_provider_requests(
                         Arc::clone(&iface_manager),
                         update_sender.clone(),
                         saved_networks.clone(),
+                        scan_requester.clone(),
                         client_provider_guard,
                         req,
                         telemetry_sender.clone(),
@@ -102,6 +104,7 @@ async fn handle_provider_request(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
+    scan_requester: Arc<dyn scan::ScanRequestApi>,
     client_provider_guard: MutexGuard<'_, ()>,
     req: fidl_policy::ClientProviderRequest,
     telemetry_sender: TelemetrySender,
@@ -111,6 +114,7 @@ async fn handle_provider_request(
             register_listener(update_sender, updates.into_proxy()?);
             handle_client_requests(
                 iface_manager,
+                scan_requester,
                 saved_networks,
                 client_provider_guard,
                 requests,
@@ -143,6 +147,7 @@ fn log_client_request(request: &fidl_policy::ClientControllerRequest) {
 /// Handles all incoming requests from a ClientController.
 async fn handle_client_requests(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    scan_requester: Arc<dyn scan::ScanRequestApi>,
     saved_networks: SavedNetworksPtr,
     client_provider_guard: MutexGuard<'_, ()>,
     requests: ClientRequests,
@@ -174,11 +179,7 @@ async fn handle_client_requests(
                 responder.send(response)?
             }
             fidl_policy::ClientControllerRequest::ScanForNetworks { iterator, .. } => {
-                let fut = handle_client_request_scan(
-                    Arc::clone(&iface_manager),
-                    iterator,
-                    saved_networks.clone(),
-                );
+                let fut = handle_client_request_scan(scan_requester.clone(), iterator);
                 // The scan handler is infallible and should not block handling of further request.
                 // Detach the future here so we continue responding to other requests.
                 fuchsia_async::Task::spawn(fut).detach();
@@ -260,24 +261,10 @@ async fn handle_client_request_connect(
 }
 
 async fn handle_client_request_scan(
-    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    scan_requester: Arc<dyn scan::ScanRequestApi>,
     output_iterator: fidl::endpoints::ServerEnd<fidl_fuchsia_wlan_policy::ScanResultIteratorMarker>,
-    saved_networks: SavedNetworksPtr,
 ) {
-    let wpa3_supported =
-        iface_manager.lock().await.has_wpa3_capable_client().await.unwrap_or_else(|e| {
-            error!("Failed to determine WPA3 support. Assuming no WPA3 support. {}", e);
-            false
-        });
-
-    let results = scan::perform_scan(
-        iface_manager,
-        saved_networks.clone(),
-        scan::LocationSensorUpdater { wpa3_supported },
-        scan::ScanReason::ClientRequest,
-        None,
-    )
-    .await;
+    let results = scan_requester.perform_scan(scan::ScanReason::ClientRequest).await;
 
     match results {
         Ok(results) => {
@@ -487,12 +474,12 @@ mod tests {
             config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
             mode_management::{iface_manager_api::SmeForScan, Defect},
             telemetry::{TelemetryEvent, TelemetrySender},
-            util::testing::fakes::FakeSavedNetworksManager,
+            util::testing::fakes::{FakeSavedNetworksManager, FakeScanRequester},
         },
         anyhow::{format_err, Error},
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
-        fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+        fuchsia_async as fasync,
         futures::{
             channel::{mpsc, oneshot},
             lock::Mutex,
@@ -671,7 +658,7 @@ mod tests {
         provider: fidl_policy::ClientProviderProxy,
         requests: fidl_policy::ClientProviderRequestStream,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-        sme_stream: fidl_sme::ClientSmeRequestStream,
+        scan_requester: Arc<FakeScanRequester>,
         update_sender: mpsc::UnboundedSender<listener::ClientListenerMessage>,
         listener_updates: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         client_provider_lock: Arc<Mutex<()>>,
@@ -701,12 +688,12 @@ mod tests {
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (proxy, server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
+        let (proxy, _server) = create_proxy::<fidl_fuchsia_wlan_sme::ClientSmeMarker>()
             .expect("failed to create ClientSmeProxy");
         let (req_sender, _req_recvr) = mpsc::channel(1);
         let iface_manager = FakeIfaceManager::new(proxy.clone(), req_sender);
         let iface_manager = Arc::new(Mutex::new(iface_manager));
-        let sme_stream = server.into_stream().expect("failed to create ClientSmeRequestStream");
+        let scan_requester = Arc::new(FakeScanRequester::new());
 
         let (update_sender, listener_updates) = mpsc::unbounded();
 
@@ -715,7 +702,7 @@ mod tests {
             provider,
             requests,
             iface_manager,
-            sme_stream,
+            scan_requester,
             update_sender,
             listener_updates,
             client_provider_lock: Arc::new(Mutex::new(())),
@@ -733,6 +720,7 @@ mod tests {
             test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -777,6 +765,7 @@ mod tests {
             test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -816,6 +805,7 @@ mod tests {
             test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -855,6 +845,7 @@ mod tests {
             test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -905,6 +896,7 @@ mod tests {
             Arc::clone(&iface_manager),
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             requests,
             test_values.telemetry_sender,
@@ -945,6 +937,7 @@ mod tests {
             Arc::clone(&test_values.iface_manager),
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -986,6 +979,7 @@ mod tests {
             test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -1060,11 +1054,12 @@ mod tests {
     #[fuchsia::test]
     fn scan_end_to_end() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut test_values = test_setup();
+        let test_values = test_setup();
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
+            test_values.scan_requester.clone(),
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -1082,18 +1077,17 @@ mod tests {
         let (_iter, server) = fidl::endpoints::create_proxy().expect("failed to create iterator");
         controller.scan_for_networks(server).expect("Failed to call scan for networks");
 
-        // Process connect request and verify connect response.
+        // Currently the FakeScanRequester will panic if a scan is requested and no results
+        // are queued, so add something.
+        exec.run_singlethreaded(test_values.scan_requester.add_scan_result(Ok(vec![])));
+
+        // Process scan request and verify scan response.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Check that a scan request was sent to the sme
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Scan {
-                req, ..
-            }))) => {
-                assert_eq!(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest{}), req);
-            }
-        );
+        // Check that a scan request was sent to the scan module
+        let scan_request_guard =
+            exec.run_singlethreaded(test_values.scan_requester.scan_requests.lock());
+        assert_eq!(*scan_request_guard, vec![scan::ScanReason::ClientRequest]);
     }
 
     #[fuchsia::test]
@@ -1111,6 +1105,7 @@ mod tests {
             test_values.iface_manager,
             update_sender,
             saved_networks.clone(),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             requests,
             test_values.telemetry_sender,
@@ -1166,6 +1161,7 @@ mod tests {
             test_values.iface_manager.clone(),
             update_sender,
             saved_networks.clone(),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             requests,
             test_values.telemetry_sender,
@@ -1230,6 +1226,7 @@ mod tests {
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
+        let scan_requester = Arc::new(FakeScanRequester::new());
 
         let (update_sender, mut listener_updates) = mpsc::unbounded();
 
@@ -1244,6 +1241,7 @@ mod tests {
             iface_manager,
             update_sender,
             saved_networks.clone(),
+            scan_requester,
             Arc::new(Mutex::new(())),
             requests,
             TelemetrySender::new(telemetry_sender),
@@ -1303,6 +1301,7 @@ mod tests {
             test_values.iface_manager,
             update_sender,
             saved_networks.clone(),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             requests,
             test_values.telemetry_sender,
@@ -1350,6 +1349,7 @@ mod tests {
     fn test_remove_a_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let scan_requester = Arc::new(FakeScanRequester::new());
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1368,6 +1368,7 @@ mod tests {
             iface_manager,
             update_sender,
             saved_networks.clone(),
+            scan_requester,
             Arc::new(Mutex::new(())),
             requests,
             TelemetrySender::new(telemetry_sender),
@@ -1495,6 +1496,7 @@ mod tests {
             test_values.iface_manager,
             update_sender,
             saved_networks.clone(),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             requests,
             test_values.telemetry_sender,
@@ -1554,6 +1556,7 @@ mod tests {
             test_values.iface_manager,
             test_values.update_sender,
             test_values.saved_networks,
+            test_values.scan_requester,
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -1607,6 +1610,7 @@ mod tests {
             test_values.iface_manager,
             test_values.update_sender,
             test_values.saved_networks,
+            test_values.scan_requester,
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -1688,6 +1692,7 @@ mod tests {
             test_values.iface_manager,
             test_values.update_sender,
             test_values.saved_networks.clone(),
+            test_values.scan_requester,
             test_values.client_provider_lock,
             test_values.requests,
             test_values.telemetry_sender,
@@ -1804,6 +1809,7 @@ mod tests {
     fn no_client_interface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let scan_requester = Arc::new(FakeScanRequester::new());
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManagerNoIfaces {}));
 
@@ -1815,6 +1821,7 @@ mod tests {
             iface_manager,
             update_sender,
             saved_networks,
+            scan_requester,
             Arc::new(Mutex::new(())),
             requests,
             TelemetrySender::new(telemetry_sender),
@@ -1907,6 +1914,7 @@ mod tests {
             test_values.iface_manager.clone(),
             test_values.update_sender.clone(),
             test_values.saved_networks.clone(),
+            test_values.scan_requester.clone(),
             test_values.client_provider_lock.clone(),
             test_values.requests,
             test_values.telemetry_sender.clone(),
@@ -1930,6 +1938,7 @@ mod tests {
             test_values.iface_manager.clone(),
             test_values.update_sender.clone(),
             test_values.saved_networks.clone(),
+            test_values.scan_requester,
             test_values.client_provider_lock.clone(),
             requests,
             test_values.telemetry_sender,

@@ -5,7 +5,7 @@
 
 use {
     crate::{
-        client::{bss_selection::SignalData, types as client_types},
+        client::{bss_selection::SignalData, scan, types as client_types},
         config_management::{
             Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier, PastConnectionData,
             PastConnectionList, SavedNetworksManagerApi, ScanResultType,
@@ -17,7 +17,11 @@ use {
     futures::{channel::mpsc, lock::Mutex},
     log::info,
     rand::Rng,
-    std::{collections::HashMap, convert::TryInto, sync::Arc},
+    std::{
+        collections::{HashMap, VecDeque},
+        convert::TryInto,
+        sync::Arc,
+    },
     wlan_common::hasher::WlanHasher,
 };
 
@@ -294,4 +298,48 @@ pub fn random_connection_data() -> PastConnectionData {
         SignalData::new(rng.gen_range(-90..-20), rng.gen_range(10..50), 10),
         rng.gen::<u8>().into(),
     )
+}
+
+#[derive(Clone)]
+pub struct FakeScanRequester {
+    pub scan_results:
+        Arc<Mutex<VecDeque<Result<Vec<client_types::ScanResult>, client_types::ScanError>>>>,
+    pub scan_requests: Arc<Mutex<Vec<scan::ScanReason>>>,
+    pub directed_active_scan_requests: Arc<Mutex<Vec<(client_types::Ssid, Option<Vec<u8>>)>>>,
+}
+
+impl FakeScanRequester {
+    pub fn new() -> Self {
+        FakeScanRequester {
+            scan_results: Arc::new(Mutex::new(VecDeque::new())),
+            scan_requests: Arc::new(Mutex::new(vec![])),
+            directed_active_scan_requests: Arc::new(Mutex::new(vec![])),
+        }
+    }
+    pub async fn add_scan_result(
+        &self,
+        res: Result<Vec<client_types::ScanResult>, client_types::ScanError>,
+    ) {
+        self.scan_results.lock().await.push_back(res);
+    }
+}
+
+#[async_trait]
+impl scan::ScanRequestApi for FakeScanRequester {
+    async fn perform_scan(
+        &self,
+        scan_reason: scan::ScanReason,
+    ) -> Result<Vec<client_types::ScanResult>, client_types::ScanError> {
+        self.scan_requests.lock().await.push(scan_reason);
+        self.scan_results.lock().await.pop_front().unwrap()
+    }
+
+    async fn perform_directed_active_scan(
+        &self,
+        ssid: client_types::Ssid,
+        channels: Option<Vec<u8>>,
+    ) -> Result<Vec<client_types::ScanResult>, client_types::ScanError> {
+        self.directed_active_scan_requests.lock().await.push((ssid, channels));
+        self.scan_results.lock().await.pop_front().unwrap()
+    }
 }

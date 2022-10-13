@@ -35,7 +35,7 @@ use {
     wlan_common::hasher::WlanHasher,
     wlancfg_lib::{
         access_point::AccessPoint,
-        client::{self, network_selection::NetworkSelector},
+        client::{self, network_selection::NetworkSelector, scan},
         config_management::{SavedNetworksManager, SavedNetworksManagerApi},
         legacy::{self, device, IfaceRef},
         mode_management::{
@@ -64,6 +64,7 @@ async fn serve_fidl(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     legacy_client_ref: IfaceRef,
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
+    scan_requester: Arc<dyn scan::ScanRequestApi>,
     client_sender: util::listener::ClientListenerMessageSender,
     client_listener_msgs: mpsc::UnboundedReceiver<util::listener::ClientListenerMessage>,
     ap_listener_msgs: mpsc::UnboundedReceiver<util::listener::ApMessage>,
@@ -117,6 +118,7 @@ async fn serve_fidl(
                 iface_manager.clone(),
                 client_sender1.clone(),
                 Arc::clone(&saved_networks_clone),
+                scan_requester.clone(),
                 client_provider_lock.clone(),
                 reqs,
                 telemetry_sender.clone(),
@@ -332,9 +334,13 @@ async fn run_all_futures() -> Result<(), Error> {
     );
     component::inspector().root().record(external_inspect_node);
 
+    let (scan_request_sender, scan_request_receiver) =
+        mpsc::channel::<scan::ScanRequest>(scan::SCAN_REQUEST_BUFFER_SIZE);
+    let scan_requester = Arc::new(scan::ScanRequester { sender: scan_request_sender });
     let saved_networks = Arc::new(SavedNetworksManager::new(telemetry_sender.clone()).await?);
     let network_selector = Arc::new(NetworkSelector::new(
         saved_networks.clone(),
+        scan_requester.clone(),
         hasher,
         component::inspector().root().create_child("network_selector"),
         persistence_req_sender.clone(),
@@ -364,6 +370,13 @@ async fn run_all_futures() -> Result<(), Error> {
         telemetry_sender.clone(),
     );
 
+    let scanning_service = scan::serve_scanning_loop(
+        iface_manager.clone(),
+        saved_networks.clone(),
+        telemetry_sender.clone(),
+        scan_request_receiver,
+    );
+
     let legacy_client = IfaceRef::new();
     let listener = device::Listener::new(
         monitor_svc.clone(),
@@ -380,6 +393,7 @@ async fn run_all_futures() -> Result<(), Error> {
         iface_manager.clone(),
         legacy_client,
         saved_networks.clone(),
+        scan_requester,
         client_sender,
         client_receiver,
         ap_receiver,
@@ -406,6 +420,7 @@ async fn run_all_futures() -> Result<(), Error> {
         dev_watcher_fut,
         iface_manager_service,
         saved_networks_metrics_fut.map(Ok),
+        scanning_service,
         regulatory_fut,
         low_power_fut,
         telemetry_fut.map(Ok),
