@@ -5,59 +5,34 @@
 use fidl_fuchsia_developer_ffx::VersionInfo;
 use std::ffi::CString;
 
-const fn default_version_value() -> [u8; 64] {
-    // Placeholder value to be replaced post-link: "V3RS1ONS" * 8
-    [
-        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
-        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
-        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
-        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
-        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
-        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
-        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
-        'V' as u8, '3' as u8, 'R' as u8, 'S' as u8, '1' as u8, 'O' as u8, 'N' as u8, 'S' as u8,
-    ]
-}
-
-const fn default_build_value() -> [u8; 64] {
-    // Placeholder value to be replaced post-link: "BU1LDV3R" * 8
-    [
-        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
-        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
-        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
-        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
-        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
-        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
-        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
-        'B' as u8, 'U' as u8, '1' as u8, 'L' as u8, 'D' as u8, 'V' as u8, '3' as u8, 'R' as u8,
-    ]
-}
+/// The config key used to store the current build id
+pub const CURRENT_EXE_BUILDID: &str = "current.buildid";
 
 #[cfg(target_os = "macos")]
 #[used]
 #[no_mangle]
 // mach-o section specifiers require a segment and section separated by a comma.
 #[link_section = ".FFX_VERSION,.ffx_version"]
-static VERSION_INFO: [u8; 64] = default_version_value();
+static VERSION_INFO: [u8; 64] = ['v' as u8; 64];
 
 #[cfg(not(target_os = "macos"))]
 #[used]
 #[no_mangle]
 #[link_section = ".ffx_version"]
-static VERSION_INFO: [u8; 64] = default_version_value();
+static VERSION_INFO: [u8; 64] = ['v' as u8; 64];
 
 #[cfg(target_os = "macos")]
 #[used]
 #[no_mangle]
 // mach-o section specifiers require a segment and section separated by a comma.
 #[link_section = ".FFX_BUILD,.ffx_build"]
-static BUILD_VERSION: [u8; 64] = default_build_value();
+static BUILD_VERSION: [u8; 64] = ['v' as u8; 64];
 
 #[cfg(not(target_os = "macos"))]
 #[used]
 #[no_mangle]
 #[link_section = ".ffx_build"]
-static BUILD_VERSION: [u8; 64] = default_build_value();
+static BUILD_VERSION: [u8; 64] = ['v' as u8; 64];
 
 pub fn build_info() -> VersionInfo {
     let null_char = |b: &u8| *b == 0;

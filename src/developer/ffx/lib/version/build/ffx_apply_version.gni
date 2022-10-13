@@ -48,166 +48,80 @@ template("ffx_apply_version") {
       [ rsp_outputs[0] ] == rsp_outputs,
       "invariant assumption failed, expecting link_output_rspfile to only have a single output")
 
-  if (is_mac) {
-    # TODO(fxbug.dev/91330): Once bug is fixed, this hack can be removed.
-    action(main_target) {
-      forward_variables_from(invoker,
-                             [
-                               "output_name",
-                               "output_extension",
-                               "deps",
-                             ])
+  action(main_target) {
+    forward_variables_from(invoker,
+                           [
+                             "output_name",
+                             "output_extension",
+                             "deps",
+                           ])
 
-      if (defined(output_name)) {
-        output_file = output_name
-      } else {
-        output_file = main_target
-      }
-
-      if (defined(output_extension) && output_extension != "") {
-        output_file += ".${output_extension}"
-      }
-      outputs = [ "${root_out_dir}/${output_file}" ]
-      inputs = [
-                 version_info_bin,
-                 build_version_bin,
-               ] + get_target_outputs(":$rspfile_target")
-
-      depfile = outputs[0] + ".d"
-
-      script = "//src/developer/ffx/lib/version/build/rsp2deps.sh"
-
-      # create a depsfile for the responsefile contents
-      args = [
-               rebase_path(depfile, root_build_dir),
-               rebase_path(outputs[0], root_build_dir),
-             ] +
-             rebase_path(get_target_outputs(":$rspfile_target"), root_build_dir)
-
-      # do the real work
-      args += [
-        rebase_path(
-            "//src/developer/ffx/lib/version/build/macos-apply-ffx-version.py",
-            root_build_dir),
-
-        # RESPONSE_PATH:
-        rebase_path(rspfile, root_build_dir),
-
-        # OUTPUT:
-        rebase_path(outputs[0], root_build_dir),
-
-        # MATCH1:
-        "V3RS1ONSV3RS1ONSV3RS1ONSV3RS1ONSV3RS1ONSV3RS1ONSV3RS1ONSV3RS1ONS",
-
-        # REPLACE_PATH1:
-        rebase_path(version_info_bin, root_build_dir),
-
-        # MATCH2:
-        "BU1LDV3RBU1LDV3RBU1LDV3RBU1LDV3RBU1LDV3RBU1LDV3RBU1LDV3RBU1LDV3R",
-
-        # REPLACE_PATH2:
-        rebase_path(build_version_bin, root_build_dir),
-      ]
-
-      deps += [
-        ":$rspfile_target",
-        "//src/developer/ffx/lib/version/build:build-version.bin($default_toolchain)",
-        "//src/developer/ffx/lib/version/build:version-info.bin($default_toolchain)",
-      ]
-
-      # Note: binaries metadata is not produced, as the build-id is not updated, and will match with the unversioned build.
-      metadata = {
-        if (defined(invoker.metadata)) {
-          forward_variables_from(invoker.metadata, "*")
-        }
-
-        tool_paths = [
-          {
-            cpu = current_cpu
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            name = output_name
-            os = current_os
-            path = rebase_path(outputs[0], root_build_dir)
-          },
-        ]
-      }
+    if (defined(output_name)) {
+      output_file = output_name
+    } else {
+      output_file = main_target
     }
-  } else {
-    action(main_target) {
-      forward_variables_from(invoker,
-                             [
-                               "output_name",
-                               "output_extension",
-                               "deps",
-                             ])
 
-      if (defined(output_name)) {
-        output_file = output_name
-      } else {
-        output_file = main_target
+    if (defined(output_extension) && output_extension != "") {
+      output_file += ".${output_extension}"
+    }
+    outputs = [ "${root_out_dir}/${output_file}" ]
+    inputs = [
+               "${clang_prefix}/llvm-objcopy",
+               version_info_bin,
+               build_version_bin,
+             ] + get_target_outputs(":$rspfile_target")
+
+    depfile = outputs[0] + ".d"
+
+    script = "//src/developer/ffx/lib/version/build/rsp2deps.sh"
+
+    # create a depsfile for the responsefile contents:
+    args =
+        [
+          rebase_path(depfile, root_build_dir),
+          rebase_path(outputs[0], root_build_dir),
+        ] + rebase_path(get_target_outputs(":$rspfile_target"), root_build_dir)
+
+    # do the real work
+    args += [
+              rebase_path("${clang_prefix}/llvm-objcopy", root_build_dir),
+
+              # -x applies a "strip" on the output. Strip is currently performed after the link
+              # step in the normal toolchain rules, and uses this same flag on most platforms (see
+              # clang_toolchain.gni). Note on macOS this is a "different strip", as at time of
+              # writing, binaries on macOS are normally stripped with xcrun strip -Sx.
+              # The outcome produces the same size binary as the stripped binary on macOS.
+              "-x",
+
+              "--update-section=${version_info_section}=" +
+                  rebase_path(version_info_bin, root_build_dir),
+              "--update-section=${build_info_section}=" +
+                  rebase_path(build_version_bin, root_build_dir),
+              "@" + rebase_path(rspfile, root_build_dir),
+            ] + rebase_path(outputs, root_build_dir)
+
+    deps += [
+      ":$rspfile_target",
+      "//src/developer/ffx/lib/version/build:build-version.bin($default_toolchain)",
+      "//src/developer/ffx/lib/version/build:version-info.bin($default_toolchain)",
+    ]
+
+    # Note: binaries metadata is not produced, as the build-id is not updated, and will match with the unversioned build.
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
       }
 
-      if (defined(output_extension) && output_extension != "") {
-        output_file += ".${output_extension}"
-      }
-      outputs = [ "${root_out_dir}/${output_file}" ]
-      inputs = [
-                 "${clang_prefix}/llvm-objcopy",
-                 version_info_bin,
-                 build_version_bin,
-               ] + get_target_outputs(":$rspfile_target")
-
-      depfile = outputs[0] + ".d"
-
-      script = "//src/developer/ffx/lib/version/build/rsp2deps.sh"
-
-      # create a depsfile for the responsefile contents:
-      args = [
-               rebase_path(depfile, root_build_dir),
-               rebase_path(outputs[0], root_build_dir),
-             ] +
-             rebase_path(get_target_outputs(":$rspfile_target"), root_build_dir)
-
-      # do the real work
-      args += [
-                rebase_path("${clang_prefix}/llvm-objcopy", root_build_dir),
-
-                # -x applies a "strip" on the output. Strip is currently performed after the link
-                # step in the normal toolchain rules, and uses this same flag on most platforms (see
-                # clang_toolchain.gni). Note on macOS this is a "different strip", as at time of
-                # writing, binaries on macOS are normally stripped with xcrun strip -Sx.
-                # The outcome produces the same size binary as the stripped binary on macOS.
-                "-x",
-
-                "--update-section=${version_info_section}=" +
-                    rebase_path(version_info_bin, root_build_dir),
-                "--update-section=${build_info_section}=" +
-                    rebase_path(build_version_bin, root_build_dir),
-                "@" + rebase_path(rspfile, root_build_dir),
-              ] + rebase_path(outputs, root_build_dir)
-
-      deps += [
-        ":$rspfile_target",
-        "//src/developer/ffx/lib/version/build:build-version.bin($default_toolchain)",
-        "//src/developer/ffx/lib/version/build:version-info.bin($default_toolchain)",
+      tool_paths = [
+        {
+          cpu = current_cpu
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = output_name
+          os = current_os
+          path = rebase_path(outputs[0], root_build_dir)
+        },
       ]
-
-      # Note: binaries metadata is not produced, as the build-id is not updated, and will match with the unversioned build.
-      metadata = {
-        if (defined(invoker.metadata)) {
-          forward_variables_from(invoker.metadata, "*")
-        }
-
-        tool_paths = [
-          {
-            cpu = current_cpu
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            name = output_name
-            os = current_os
-            path = rebase_path(outputs[0], root_build_dir)
-          },
-        ]
-      }
     }
   }
 }
