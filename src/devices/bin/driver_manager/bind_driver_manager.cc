@@ -115,7 +115,7 @@ zx::status<std::vector<MatchedDriver>> BindDriverManager::GetMatchingDrivers(
   return zx::ok(coordinator_->driver_loader().MatchDeviceDriverIndex(dev, config));
 }
 
-zx::status<std::vector<MatchedDriver>> BindDriverManager::MatchDeviceWithDriverIndex(
+zx::status<std::vector<MatchedDriver>> BindDriverManager::MatchDevice(
     const fbl::RefPtr<Device>& dev, const DriverLoader::MatchDeviceConfig& config) const {
   if (dev->IsAlreadyBound()) {
     return zx::error(ZX_ERR_ALREADY_BOUND);
@@ -132,9 +132,9 @@ zx::status<std::vector<MatchedDriver>> BindDriverManager::MatchDeviceWithDriverI
   return zx::ok(coordinator_->driver_loader().MatchDeviceDriverIndex(dev, config));
 }
 
-zx_status_t BindDriverManager::MatchAndBindWithDriverIndex(
-    const fbl::RefPtr<Device>& dev, const DriverLoader::MatchDeviceConfig& config) {
-  auto result = MatchDeviceWithDriverIndex(dev, config);
+zx_status_t BindDriverManager::MatchAndBind(const fbl::RefPtr<Device>& dev,
+                                            const DriverLoader::MatchDeviceConfig& config) {
+  auto result = MatchDevice(dev, config);
   if (!result.is_ok()) {
     return result.error_value();
   }
@@ -153,11 +153,11 @@ zx_status_t BindDriverManager::MatchAndBindWithDriverIndex(
   return ZX_OK;
 }
 
-void BindDriverManager::BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config) {
+void BindDriverManager::BindAllDevices(const DriverLoader::MatchDeviceConfig& config) {
   // This call is not strictly necessary -- we do not bind anything to the root device.
   // However, it guarantees that we connect to the driver index and wait for it to start.
   // Some tests become flaky if we don't do this here.
-  zx_status_t status = MatchAndBindWithDriverIndex(coordinator_->root_device(), config);
+  zx_status_t status = MatchAndBind(coordinator_->root_device(), config);
   if (status != ZX_OK && status != ZX_ERR_NEXT) {
     LOGF(ERROR, "DriverIndex failed to match root_device: %d", status);
     return;
@@ -165,7 +165,7 @@ void BindDriverManager::BindAllDevicesDriverIndex(const DriverLoader::MatchDevic
 
   for (auto& dev : coordinator_->device_manager()->devices()) {
     auto dev_ref = fbl::RefPtr(&dev);
-    zx_status_t status = MatchAndBindWithDriverIndex(dev_ref, config);
+    zx_status_t status = MatchAndBind(dev_ref, config);
     if (status == ZX_ERR_NEXT || status == ZX_ERR_ALREADY_BOUND) {
       continue;
     }
@@ -177,7 +177,7 @@ void BindDriverManager::BindAllDevicesDriverIndex(const DriverLoader::MatchDevic
 
 zx_status_t BindDriverManager::MatchAndBindDeviceGroups(const fbl::RefPtr<Device>& dev) {
   DriverLoader::MatchDeviceConfig config;
-  auto result = MatchDeviceWithDriverIndex(dev, config);
+  auto result = MatchDevice(dev, config);
   if (!result.is_ok()) {
     if (result.error_value() == ZX_ERR_NEXT || result.error_value() == ZX_ERR_ALREADY_BOUND) {
       return ZX_OK;

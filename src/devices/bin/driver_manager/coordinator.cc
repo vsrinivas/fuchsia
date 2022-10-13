@@ -316,7 +316,7 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
 
   // Bind all the drivers we loaded.
   DriverLoader::MatchDeviceConfig config;
-  bind_driver_manager_->BindAllDevicesDriverIndex(config);
+  bind_driver_manager_->BindAllDevices(config);
 
   if (config_.require_system) {
     LOGF(INFO, "Full system required, fallback drivers will be loaded after '/system' is loaded");
@@ -326,7 +326,7 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
   driver_loader_.WaitForBaseDrivers([this]() {
     DriverLoader::MatchDeviceConfig config;
     config.only_return_base_and_fallback_drivers = true;
-    bind_driver_manager_->BindAllDevicesDriverIndex(config);
+    bind_driver_manager_->BindAllDevices(config);
   });
 
   devfs_.initialize(*sys_device_);
