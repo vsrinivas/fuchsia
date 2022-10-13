@@ -377,15 +377,14 @@ int EthDev::TransmitThread() {
         if ((status = transmit_fifo_.wait_one(
                  ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate,
                  zx::time::infinite(), &observed)) < 0) {
-          zxlogf(ERROR, "eth [%s]: tx_fifo: error waiting: %s", name_,
-                 zx_status_get_string(status));
+          zxlogf(ERROR, "eth [%s]: tx_fifo: error waiting: %d", name_, status);
           break;
         }
         if (observed & kSignalFifoTerminate)
           break;
         continue;
       } else {
-        zxlogf(WARNING, "eth [%s]: tx_fifo: cannot read: %s", name_, zx_status_get_string(status));
+        zxlogf(WARNING, "eth [%s]: tx_fifo: cannot read: %d", name_, status);
         break;
       }
     }

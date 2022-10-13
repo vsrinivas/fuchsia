@@ -462,7 +462,9 @@ zx_status_t UsbCdcEcm::Bind(void* ctx, zx_device_t* parent) {
           .property_value = str_prop_bool_val(true),
       },
   };
-  args.set_str_props(props);
+  if (device_is_dfv2(parent)) {
+    args.set_str_props(props);
+  }
 
   status = device->DdkAdd(args);
   if (status != ZX_OK) {
