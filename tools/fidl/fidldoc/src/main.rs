@@ -30,6 +30,7 @@ static ATTR_NAME_AVAILABLE: &'static str = "available";
 static ATTR_NAME_ADDED: &'static str = "added";
 static ATTR_NAME_NO_DOC: &'static str = "no_doc";
 static HEAD_VERSION: &'static str = "HEAD";
+static HEAD_VERSION_NUMBER: &'static u64 = &(u64::MAX - 1);
 
 #[derive(Debug)]
 enum TemplateType {
@@ -368,7 +369,7 @@ fn get_library_added(maybe_attributes: &Vec<Value>) -> String {
                     {
                         if let Some(val) = argument["value"].as_object() {
                             let mut vers = val["value"].as_str().unwrap_or("").to_string();
-                            if vers == u64::MAX.to_string() {
+                            if vers == HEAD_VERSION_NUMBER.to_string() {
                                 vers = HEAD_VERSION.to_string();
                             }
                             return vers;
@@ -525,12 +526,12 @@ mod test {
                     "type": "uint64",
                     "value": {
                         "kind": "literal",
-                        "value": u64::MAX.to_string(),
-                        "expression": u64::MAX.to_string(),
+                        "value": HEAD_VERSION_NUMBER.to_string(),
+                        "expression": HEAD_VERSION_NUMBER.to_string(),
                         "literal": {
                         "kind": "numeric",
-                        "value": u64::MAX.to_string(),
-                        "expression": u64::MAX.to_string()
+                        "value": HEAD_VERSION_NUMBER.to_string(),
+                        "expression": HEAD_VERSION_NUMBER.to_string()
                         }
                     },
                     }
