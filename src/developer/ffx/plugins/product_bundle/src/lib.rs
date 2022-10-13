@@ -91,7 +91,7 @@ where
         let should_print = true;
         match select_product_bundle(
             &cmd.product_bundle_name,
-            ListingMode::ReadyBundlesOnly,
+            ListingMode::RemovableBundles,
             should_print,
         )
         .await

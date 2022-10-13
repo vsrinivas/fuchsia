@@ -52,6 +52,7 @@ mod repo_info;
 pub enum ListingMode {
     AllBundles,
     ReadyBundlesOnly,
+    RemovableBundles,
 }
 
 /// Load a product bundle by name, uri, or local path.
@@ -297,12 +298,15 @@ pub async fn select_product_bundle(
     urls.sort();
     urls.reverse();
     let mut iter = urls.into_iter();
-    if mode == ListingMode::ReadyBundlesOnly {
+    if mode == ListingMode::ReadyBundlesOnly || mode == ListingMode::RemovableBundles {
         // Unfortunately this can't be a filter() because is_pb_ready is async.
         let mut ready = Vec::new();
-        for i in iter {
-            if is_pb_ready(&i).await? {
-                ready.push(i);
+        for url in iter {
+            // Locally-built bundles aren't removable.
+            if mode == ListingMode::RemovableBundles && url.scheme() == "file" {
+                continue;
+            } else if is_pb_ready(&url).await? {
+                ready.push(url);
             }
         }
         iter = ready.into_iter();
