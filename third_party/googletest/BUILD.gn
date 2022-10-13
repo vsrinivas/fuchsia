@@ -11,6 +11,12 @@ config("gtest_private_config") {
   include_dirs = [ "src/googletest" ]
 }
 
+# Soft transition to the new version of googletest. Clients can use GTEST_USING_NEW_ROLL to detect
+# the gtest version.
+NEW_GIT_SHA = "67e264834a45c3d543aa2fa11bcc41c4ba90316b"
+gtest_git_sha = read_file("src/.git/HEAD", "list lines")
+gtest_is_new_roll = gtest_git_sha[0] == NEW_GIT_SHA
+
 config("gtest_config") {
   include_dirs = [ "src/googletest/include" ]
 }
@@ -21,6 +27,7 @@ static_library("gtest") {
     "src/googletest/include/gtest/gtest-spi.h",
     "src/googletest/include/gtest/gtest.h",
   ]
+
   sources = [
     "src/googletest/include/gtest/gtest-death-test.h",
     "src/googletest/include/gtest/gtest-message.h",
@@ -56,6 +63,14 @@ static_library("gtest") {
     "src/googletest/src/gtest.cc",
   ]
   sources -= [ "src/googletest/src/gtest-all.cc" ]
+
+  if (gtest_is_new_roll) {
+    sources += [
+      "src/googletest/include/gtest/gtest-assertion-result.h",
+      "src/googletest/src/gtest-assertion-result.cc",
+    ]
+  }
+
   public_configs = [ ":gtest_config" ]
   configs += [ ":gtest_private_config" ]
 

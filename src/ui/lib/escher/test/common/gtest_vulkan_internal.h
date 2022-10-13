@@ -36,11 +36,14 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
   class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : public parent_class {                \
    public:                                                                                       \
     GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}                                       \
+    GTEST_TEST_CLASS_NAME_(test_case_name, test_name)                                            \
+    (const GTEST_TEST_CLASS_NAME_(test_case_name, test_name) &) = delete;                        \
+    GTEST_TEST_CLASS_NAME_(test_case_name, test_name) & operator=(                               \
+        const GTEST_TEST_CLASS_NAME_(test_case_name, test_name) &) = delete;                     \
                                                                                                  \
    private:                                                                                      \
     virtual void TestBody();                                                                     \
     static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;                        \
-    GTEST_DISALLOW_COPY_AND_ASSIGN_(GTEST_TEST_CLASS_NAME_(test_case_name, test_name));          \
   };                                                                                             \
                                                                                                  \
   ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::test_info_ =     \
@@ -61,6 +64,10 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
    public:                                                                                     \
     GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)() {}                                    \
     virtual void TestBody();                                                                   \
+    GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                                         \
+    (const GTEST_TEST_CLASS_NAME_(test_suite_name, test_name) &) = delete;                     \
+    GTEST_TEST_CLASS_NAME_(test_suite_name, test_name) & operator=(                            \
+        const GTEST_TEST_CLASS_NAME_(test_suite_name, test_name) &) = delete;                  \
                                                                                                \
    private:                                                                                    \
     static int AddToRegistry() {                                                               \
@@ -77,7 +84,6 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
       return 0;                                                                                \
     }                                                                                          \
     static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_;                               \
-    GTEST_DISALLOW_COPY_AND_ASSIGN_(GTEST_TEST_CLASS_NAME_(test_suite_name, test_name));       \
   };                                                                                           \
   int GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::gtest_registering_dummy_ =           \
       GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::AddToRegistry();                     \
