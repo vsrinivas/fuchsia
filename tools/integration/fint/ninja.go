@@ -24,6 +24,7 @@ import (
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/streams"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 var (
@@ -105,7 +106,7 @@ func (r ninjaRunner) run(ctx context.Context, args []string, stdout, stderr io.W
 		cmd = append(cmd, "-j", fmt.Sprintf("%d", r.jobCount))
 	}
 	cmd = append(cmd, args...)
-	return r.runner.Run(ctx, cmd, stdout, stderr)
+	return r.runner.Run(ctx, cmd, subprocess.RunOptions{Stdout: stdout, Stderr: stderr})
 }
 
 // withoutNinjaExplain is a writer that removes all Ninja explain outputs

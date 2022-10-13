@@ -26,6 +26,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
@@ -76,7 +77,7 @@ type fakeCmdRunner struct {
 	lastCmd  []string
 }
 
-func (r *fakeCmdRunner) Run(_ context.Context, command []string, _, _ io.Writer) error {
+func (r *fakeCmdRunner) Run(_ context.Context, command []string, _ subprocess.RunOptions) error {
 	r.runCalls++
 	r.lastCmd = command
 	if r.runErrs == nil {

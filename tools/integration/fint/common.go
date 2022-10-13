@@ -7,18 +7,17 @@ package fint
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/url"
 	"path/filepath"
 	"strings"
 
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 type subprocessRunner interface {
-	Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error
-	RunWithStdin(ctx context.Context, cmd []string, stdout, stderr io.Writer, stdin io.Reader) error
+	Run(ctx context.Context, cmd []string, options subprocess.RunOptions) error
 }
 
 // thirdPartyPrebuilt returns the absolute path to a platform-specific prebuilt

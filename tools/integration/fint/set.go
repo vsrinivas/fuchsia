@@ -130,7 +130,7 @@ func forceCleanIfNeeded(ctx context.Context, contextSpec *fintpb.Context, platfo
 		contextSpec.CheckoutDir,
 		"--build-dir",
 		contextSpec.BuildDir,
-	}, os.Stdout, os.Stderr)
+	}, subprocess.RunOptions{})
 }
 
 func runGen(
@@ -187,7 +187,7 @@ func runGen(
 
 	// When `gn gen` fails, it outputs a brief helpful error message to stdout.
 	var stdoutBuf bytes.Buffer
-	if err := runner.Run(ctx, genCmd, io.MultiWriter(&stdoutBuf, os.Stdout), os.Stderr); err != nil {
+	if err := runner.Run(ctx, genCmd, subprocess.RunOptions{Stdout: io.MultiWriter(&stdoutBuf, os.Stdout)}); err != nil {
 		return stdoutBuf.String(), fmt.Errorf("error running gn gen: %w", err)
 	}
 	return stdoutBuf.String(), nil
@@ -360,10 +360,14 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 // we'd need duplicated error handling code to handle both syntax errors from
 // `gn format` and non-syntax errors from `gn gen`.
 func gnFormat(ctx context.Context, gn string, runner subprocessRunner, args []string) string {
-	var output bytes.Buffer
 	unformatted := strings.Join(args, "\n")
-	input := strings.NewReader(unformatted)
-	if err := runner.RunWithStdin(ctx, []string{gn, "format", "--stdin"}, &output, nil, input); err != nil {
+	var output bytes.Buffer
+	opts := subprocess.RunOptions{
+		Stdout: &output,
+		Stderr: io.Discard,
+		Stdin:  strings.NewReader(unformatted),
+	}
+	if err := runner.Run(ctx, []string{gn, "format", "--stdin"}, opts); err != nil {
 		return unformatted
 	}
 	return output.String()

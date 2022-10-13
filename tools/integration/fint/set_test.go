@@ -20,6 +20,7 @@ import (
 
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 type fakeSubprocessRunner struct {
@@ -31,16 +32,15 @@ type fakeSubprocessRunner struct {
 
 var errSubprocessFailure = errors.New("exit status 1")
 
-func (r *fakeSubprocessRunner) Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error {
-	return r.RunWithStdin(ctx, cmd, stdout, stderr, nil)
-}
-
-func (r *fakeSubprocessRunner) RunWithStdin(_ context.Context, cmd []string, stdout, _ io.Writer, _ io.Reader) error {
+func (r *fakeSubprocessRunner) Run(_ context.Context, cmd []string, options subprocess.RunOptions) error {
+	if options.Stdout == nil {
+		options.Stdout = os.Stdout
+	}
 	r.commandsRun = append(r.commandsRun, cmd)
 	if r.run != nil {
-		return r.run(cmd, stdout)
+		return r.run(cmd, options.Stdout)
 	}
-	stdout.Write(r.mockStdout)
+	options.Stdout.Write(r.mockStdout)
 	if r.fail {
 		return errSubprocessFailure
 	}

@@ -7,12 +7,14 @@ package fint
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 type gnAnalyzeInput struct {
@@ -142,7 +144,7 @@ func shouldBuild(
 	outputPath := filepath.Join(analyzeDir, "output.json")
 
 	cmd := []string{gnPath, "analyze", buildDir, inputPath, outputPath, fmt.Sprintf("--root=%s", checkoutDir)}
-	if err := runner.Run(ctx, cmd, nil, os.Stderr); err != nil {
+	if err := runner.Run(ctx, cmd, subprocess.RunOptions{Stdout: io.Discard}); err != nil {
 		return false, err
 	}
 

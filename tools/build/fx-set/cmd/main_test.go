@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,10 +13,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
-	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
+
+	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 func TestParseArgsAndEnv(t *testing.T) {
@@ -278,11 +279,7 @@ type fakeSubprocessRunner struct {
 	fail bool
 }
 
-func (r fakeSubprocessRunner) Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error {
-	return r.RunWithStdin(ctx, cmd, stdout, stderr, nil)
-}
-
-func (r fakeSubprocessRunner) RunWithStdin(context.Context, []string, io.Writer, io.Writer, io.Reader) error {
+func (r fakeSubprocessRunner) Run(context.Context, []string, subprocess.RunOptions) error {
 	if r.fail {
 		return &exec.ExitError{}
 	}

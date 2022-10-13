@@ -90,7 +90,7 @@ type Tester interface {
 
 // For testability
 type cmdRunner interface {
-	Run(ctx context.Context, command []string, stdout, stderr io.Writer) error
+	Run(ctx context.Context, command []string, options subprocess.RunOptions) error
 }
 
 // For testability
@@ -412,7 +412,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 			return testResult, nil
 		}
 	}
-	err := r.Run(ctx, testCmd, stdout, stderr)
+	err := r.Run(ctx, testCmd, subprocess.RunOptions{Stdout: stdout, Stderr: stderr})
 	if err == nil {
 		testResult.Result = runtests.TestSuccess
 	} else if errors.Is(err, context.DeadlineExceeded) {

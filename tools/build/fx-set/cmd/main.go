@@ -17,6 +17,7 @@ import (
 	"syscall"
 
 	flag "github.com/spf13/pflag"
+
 	"go.fuchsia.dev/fuchsia/tools/integration/fint"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
@@ -42,8 +43,7 @@ const (
 )
 
 type subprocessRunner interface {
-	Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error
-	RunWithStdin(ctx context.Context, cmd []string, stdout, stderr io.Writer, stdin io.Reader) error
+	Run(ctx context.Context, cmd []string, options subprocess.RunOptions) error
 }
 
 // fxRunner is a utility for running fx commands as subprocesses.
@@ -60,13 +60,18 @@ func (r *fxRunner) constructCommand(command string, args []string) []string {
 
 // run runs the given fx command with optional args.
 func (r *fxRunner) run(ctx context.Context, command string, args ...string) error {
-	return r.sr.RunWithStdin(ctx, r.constructCommand(command, args), os.Stdout, os.Stderr, os.Stdin)
+	return r.sr.Run(ctx, r.constructCommand(command, args), subprocess.RunOptions{
+		// Subcommands may run interactive logins, so give them access to stdin by default.
+		Stdin: os.Stdin,
+	})
 }
 
 // runWithNoStdio is the same as run, but discards any stdout and stderr and
 // doesn't forward stdin to the subprocess.
 func (r *fxRunner) runWithNoStdio(ctx context.Context, command string, args ...string) error {
-	return r.sr.Run(ctx, r.constructCommand(command, args), nil, nil)
+	return r.sr.Run(ctx, r.constructCommand(command, args), subprocess.RunOptions{
+		Stdout: io.Discard, Stderr: io.Discard,
+	})
 }
 
 func main() {

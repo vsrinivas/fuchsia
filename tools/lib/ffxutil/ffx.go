@@ -48,7 +48,10 @@ func runCommand(
 	stdout, stderr io.Writer,
 	args ...string,
 ) error {
-	return runner.RunWithStdin(ctx, args, stdout, stderr, nil)
+	return runner.Run(ctx, args, subprocess.RunOptions{
+		Stdout: stdout,
+		Stderr: stderr,
+	})
 }
 
 // FFXInstance takes in a path to the ffx tool and runs ffx commands with the provided config.

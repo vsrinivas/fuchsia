@@ -117,7 +117,7 @@ func buildImpl(
 		// actions. This is done by touching a particular file in the build
 		// directory.
 		path := filepath.Join(append([]string{contextSpec.BuildDir}, rebuildNonHermeticActionsPath...)...)
-		if err := runner.Run(ctx, []string{"touch", filepath.Join(path)}, os.Stdout, os.Stderr); err != nil {
+		if err := runner.Run(ctx, []string{"touch", filepath.Join(path)}, subprocess.RunOptions{}); err != nil {
 			return nil, err
 		}
 	}
@@ -379,7 +379,6 @@ func constructNinjaTargets(
 	if staticSpec.IncludeDefaultNinjaTarget {
 		targets = append(targets, ":default")
 	} else {
-
 		// "//:host" is a dep of "//:default"
 		if staticSpec.IncludeHostTests {
 			for _, testSpec := range modules.TestSpecs() {
@@ -606,7 +605,7 @@ func gnCheckGenerated(ctx context.Context, r subprocessRunner, gn, checkoutDir, 
 		"--check-system",
 	}
 	var stdoutBuf bytes.Buffer
-	if err := r.Run(ctx, cmd, io.MultiWriter(&stdoutBuf, os.Stdout), os.Stderr); err != nil {
+	if err := r.Run(ctx, cmd, subprocess.RunOptions{Stdout: io.MultiWriter(&stdoutBuf, os.Stdout)}); err != nil {
 		return stdoutBuf.String(), fmt.Errorf("error running `gn check`: %w", err)
 	}
 	return stdoutBuf.String(), nil

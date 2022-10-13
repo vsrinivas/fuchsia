@@ -8,12 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 // gnAnalyzeRunner conforms to the subprocessRunner interface but is
@@ -31,7 +32,7 @@ type gnAnalyzeRunner struct {
 	input gnAnalyzeInput
 }
 
-func (r *gnAnalyzeRunner) Run(_ context.Context, cmd []string, _, _ io.Writer) error {
+func (r *gnAnalyzeRunner) Run(_ context.Context, cmd []string, _ subprocess.RunOptions) error {
 	if len(r.cmd) != 0 {
 		return errors.New("Run() can only be called once per runner")
 	}
@@ -46,10 +47,6 @@ func (r *gnAnalyzeRunner) Run(_ context.Context, cmd []string, _, _ io.Writer) e
 	}
 
 	return jsonutil.WriteToFile(outputPath, r.output)
-}
-
-func (r *gnAnalyzeRunner) RunWithStdin(_ context.Context, _ []string, _, _ io.Writer, _ io.Reader) error {
-	return nil
 }
 
 func TestShouldBuild(t *testing.T) {

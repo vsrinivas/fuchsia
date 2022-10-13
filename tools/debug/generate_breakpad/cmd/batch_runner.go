@@ -8,12 +8,14 @@ import (
 	"context"
 	"io"
 	"sync"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 // runner defines the interface for running commands by many means such as via
 // SSH or via Shell or serial or some other such means.
 type runner interface {
-	Run(context.Context, []string, io.Writer, io.Writer) error
+	Run(context.Context, []string, subprocess.RunOptions) error
 }
 
 // BatchRunner allows many tasks to be run in parallel using a Runner.
@@ -68,7 +70,7 @@ func (b *BatchRunner) Enqueue(command []string, stdout, stderr io.Writer, closer
 			}
 		}()
 		// Now this goroutine blocks until Run finishes.
-		if err := b.r.Run(b.ctx, command, stdout, stderr); err != nil {
+		if err := b.r.Run(b.ctx, command, subprocess.RunOptions{Stdout: stdout, Stderr: stderr}); err != nil {
 			// If an error has already been sent out don't bother sending another.
 			select {
 			case b.errs <- err:

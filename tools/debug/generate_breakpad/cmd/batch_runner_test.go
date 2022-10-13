@@ -11,6 +11,8 @@ import (
 	"io"
 	"sync"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
 type failRunner struct {
@@ -19,9 +21,9 @@ type failRunner struct {
 	err    string
 }
 
-func (f *failRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
-	io.WriteString(stdout, f.stdout)
-	io.WriteString(stderr, f.stderr)
+func (f *failRunner) Run(ctx context.Context, command []string, options subprocess.RunOptions) error {
+	io.WriteString(options.Stdout, f.stdout)
+	io.WriteString(options.Stderr, f.stderr)
 	return fmt.Errorf("%s", f.err)
 }
 
@@ -64,9 +66,9 @@ func (t *ThreadSafeBuffer) String() string {
 
 type mockRunner struct{}
 
-func (m mockRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
+func (m mockRunner) Run(ctx context.Context, command []string, options subprocess.RunOptions) error {
 	for _, str := range command {
-		io.WriteString(stderr, str)
+		io.WriteString(options.Stderr, str)
 	}
 	return nil
 }
@@ -115,7 +117,7 @@ func TestEnqueuePanic(t *testing.T) {
 
 type loopRunner struct{}
 
-func (m loopRunner) Run(ctx context.Context, command []string, stdout, stderr io.Writer) error {
+func (m loopRunner) Run(ctx context.Context, _ []string, _ subprocess.RunOptions) error {
 	<-ctx.Done()
 	return nil
 }

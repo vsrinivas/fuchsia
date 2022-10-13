@@ -402,7 +402,7 @@ func (r *RunCommand) runPreflights(ctx context.Context) error {
 	}
 	for _, c := range cmds.Commands {
 		logger.Debugf(ctx, "running preflight %s", c)
-		if err := runner.RunWithStdin(ctx, c, os.Stdout, os.Stderr, nil); err != nil {
+		if err := runner.Run(ctx, c, subprocess.RunOptions{}); err != nil {
 			return err
 		}
 	}
@@ -546,7 +546,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t targets.Target, arg
 
 	stdout, stderr, flush := botanist.NewStdioWriters(ctx)
 	defer flush()
-	if err := runner.RunWithStdin(ctx, args, stdout, stderr, nil); err != nil {
+	if err := runner.Run(ctx, args, subprocess.RunOptions{Stdout: stdout, Stderr: stderr}); err != nil {
 		return fmt.Errorf("command %s with timeout %s failed: %w", args, r.timeout, err)
 	}
 	return nil

@@ -34,29 +34,62 @@ type Runner struct {
 	Env []string
 }
 
+// RunOptions represents all the optional fields that may be passed into Run().
+type RunOptions struct {
+	// Stdout is the writer to which the subprocess's stdout should be directed.
+	// It defaults to os.Stdout.
+	Stdout io.Writer
+
+	// Stderr is the writer to which the subprocess's stderr should be directed.
+	// It defaults to os.Stderr.
+	Stderr io.Writer
+
+	// Stderr is the reader to which the subprocess's stdin should be connected.
+	// It is unset by default.
+	Stdin io.Reader
+
+	// Env is the environment of the subprocess, appended to Runner.Env.
+	Env []string
+}
+
 // Run runs a command until completion or until a context is canceled, in
 // which case the subprocess is killed so that no subprocesses it spun up are
 // orphaned.
-func (r *Runner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
-	return r.RunWithStdin(ctx, command, stdout, stderr, os.Stdin)
-}
-
-// RunWithStdin operates identically to Run, but additionally pipes input to the
-// process via stdin.
-func (r *Runner) RunWithStdin(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer, stdin io.Reader) error {
+func (r *Runner) Run(ctx context.Context, command []string, options RunOptions) error {
 	cmd := exec.Command(command[0], command[1:]...)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	cmd.Stdin = stdin
+
+	if options.Stdout == nil {
+		options.Stdout = os.Stdout
+	}
+	cmd.Stdout = options.Stdout
+	if options.Stderr == nil {
+		options.Stderr = os.Stderr
+	}
+	cmd.Stderr = options.Stderr
+	// Don't inherit stdin by default because the majority of subprocesses don't
+	// require access to stdin, and using os.Stdin results in any grandchildren
+	// processes not being cleaned up due to the pgid logic below.
+	if options.Stdin != nil {
+		cmd.Stdin = options.Stdin
+	}
+
 	cmd.Dir = r.Dir
-	cmd.Env = r.Env
+
+	// Inherit the parent process's environment. `exec.Command` inherits the
+	// parent's environment if `Env` is nil, so unconditionally inheriting the
+	// parent's environment means that adding a single environment variable to a
+	// command that previously didn't have any will not implicitly remove the
+	// inheritance.
+	cmd.Env = append(os.Environ(), r.Env...)
+	cmd.Env = append(cmd.Env, options.Env...)
+
 	// For some reason, adding the child to the same process group as the
 	// current process disconnects it from stdin. So don't do it if we're
 	// running a potentially interactive command that has access to stdin. Those
 	// cases are less likely to involve chains of subprocesses anyway, so it's
 	// not as important to be able to kill the entire chain.
 	pgidSet := false
-	if stdin != os.Stdin {
+	if cmd.Stdin != os.Stdin {
 		pgidSet = true
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			// Set a process group ID so we can kill the entire group, meaning

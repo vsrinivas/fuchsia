@@ -8,7 +8,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,7 +33,7 @@ func TestRun(t *testing.T) {
 
 			stdout := new(bytes.Buffer)
 			stderr := new(bytes.Buffer)
-			if err := r.Run(context.Background(), command, stdout, stderr); err != nil {
+			if err := r.Run(context.Background(), command, RunOptions{Stdout: stdout, Stderr: stderr, Env: []string{"BAR=baz"}}); err != nil {
 				t.Fatal(err)
 			}
 
@@ -52,7 +54,7 @@ func TestRun(t *testing.T) {
 
 			r := Runner{}
 			command := []string{"sleep", "5"}
-			err := r.Run(ctx, command, nil, nil)
+			err := r.Run(ctx, command, RunOptions{})
 			if err == nil {
 				t.Fatal("Expected sleep command to terminate early but it completed")
 			} else if !errors.Is(err, ctx.Err()) {
@@ -63,7 +65,7 @@ func TestRun(t *testing.T) {
 		t.Run("should return an error if the command fails", func(t *testing.T) {
 			r := Runner{}
 			command := []string{"not_a_command_12345"}
-			err := r.Run(context.Background(), command, nil, nil)
+			err := r.Run(context.Background(), command, RunOptions{})
 			if err == nil {
 				t.Fatalf("Expected invalid command to fail but it succeeded: %s", err)
 			} else if !errors.Is(err, exec.ErrNotFound) {
@@ -111,7 +113,7 @@ func TestRun(t *testing.T) {
 					t.Errorf("Failed to read `finished` from stdout: %s, got: %s", err, string(buf))
 				}
 			}()
-			if err := r.Run(ctx, command, stdout, stdout); err == nil {
+			if err := r.Run(ctx, command, RunOptions{Stdout: stdout, Stderr: stdout}); err == nil {
 				t.Errorf("Expected script to terminate early but it completed successfully")
 			} else {
 				if !errors.Is(err, context.Canceled) {
@@ -128,6 +130,12 @@ func TestRun(t *testing.T) {
 				// the child processes.
 				t.Skip("Skipping on Mac because setting pgid doesn't work")
 			}
+			// Random number between 10,000 and 20,000 seconds to make it more
+			// likely to be unique to each test run, so leaked `sleep` processes
+			// don't show up across test runs.
+			rand.Seed(time.Now().UTC().UnixNano())
+			sleepDuration := rand.Intn(10000) + 10000
+
 			script := filepath.Join(t.TempDir(), "script")
 			// The script below will print `start` to signify that it's ready to handle
 			// SIGTERMs and SIGINTs and then run cleanup() when it receives the signal.
@@ -136,18 +144,17 @@ func TestRun(t *testing.T) {
 			// gets killed if it can't clean up and exit in time. In this test, `finished`
 			// should not be in the output because the process would have been killed before
 			// it could run cleanup().
-			if err := os.WriteFile(script, []byte(
+			if err := os.WriteFile(script, []byte(fmt.Sprintf(
 				`#!/bin/bash
 				cleanup() {
 					echo "finished"; exit 1
 				}
 				trap cleanup TERM INT
-				sleep 10000`,
+				sleep %d`, sleepDuration),
 			), os.ModePerm); err != nil {
 				t.Fatalf("Failed to write script: %s", err)
 			}
-			r := Runner{}
-			command := []string{script}
+
 			stdoutReader, stdout := io.Pipe()
 			defer stdoutReader.Close()
 			defer stdout.Close()
@@ -158,13 +165,16 @@ func TestRun(t *testing.T) {
 			go func() {
 				// Wait for the script to start sleeping before canceling the context.
 				for {
-					cmd := exec.Command("pgrep", "-f", "sleep 10000")
+					cmd := exec.Command("pgrep", "-f", fmt.Sprintf("sleep %d", sleepDuration))
 					// pgrep returns an exit code of 1 if it fails to
 					// find anything, so ignore the error.
 					output, _ := cmd.CombinedOutput()
 					if len(output) != 0 {
 						t.Logf("pgrep: %s", output)
 						break
+					}
+					if ctx.Err() != nil {
+						return
 					}
 				}
 				cancel()
@@ -182,7 +192,9 @@ func TestRun(t *testing.T) {
 					t.Errorf("Expected script to be killed without doing cleanup")
 				}
 			}()
-			if err := r.RunWithStdin(ctx, command, stdout, stdout, nil); err == nil {
+
+			r := Runner{}
+			if err := r.Run(ctx, []string{script}, RunOptions{Stdout: stdout}); err == nil {
 				t.Errorf("Expected script to terminate early but it completed successfully")
 			} else {
 				if !errors.Is(err, context.Canceled) {
