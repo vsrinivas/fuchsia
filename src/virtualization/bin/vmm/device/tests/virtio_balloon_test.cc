@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <threads.h>
 
 #include <virtio/balloon.h>
 
-#include "fuchsia/logger/cpp/fidl.h"
-#include "fuchsia/virtualization/hardware/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
 

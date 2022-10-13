@@ -205,7 +205,6 @@ executable("device_tests") {
 
   sources = [
     "magma_image_test.cc",
-    "virtio_balloon_test.cc",
     "virtio_block_test.cc",
     "virtio_console_test.cc",
     "virtio_gpu_test.cc",
@@ -222,6 +221,7 @@ executable("device_tests") {
   deps = [
     ":lib",
     ":magma_image",
+    "tests:device_tests",
     "tests:test_with_device",
     "tests:virtio_queue_fake",
     "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
