@@ -80,7 +80,7 @@ async fn resolve_relative_impl(
         return Err(ResolveWithContextError::EmptyContext);
     };
     let superpackage = pkg_cache
-        .get_already_cached(pkg::BlobInfo { blob_id: *super_blob, length: 0 })
+        .get_already_cached(*super_blob)
         .await
         .map_err(ResolveWithContextError::MissingSuperpackage)?;
     let subpackages = superpackage.meta_subpackages().await?;
@@ -95,7 +95,7 @@ async fn resolve_relative_impl(
         return Err(ResolveWithContextError::PackageSetMismatch);
     }
     let () = pkg_cache
-        .get_already_cached(pkg::BlobInfo { blob_id: subpackage, length: 0 })
+        .get_already_cached(subpackage)
         .await
         .map_err(ResolveWithContextError::MissingSubpackage)?
         .reopen(dir)

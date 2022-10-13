@@ -73,9 +73,11 @@ impl Client {
     /// Errors if the package is not already cached.
     pub async fn get_already_cached(
         &self,
-        meta_far_blob: BlobInfo,
+        meta_far_blob: BlobId,
     ) -> Result<PackageDirectory, GetAlreadyCachedError> {
-        let mut get = self.get(meta_far_blob).map_err(GetAlreadyCachedError::Get)?;
+        let mut get = self
+            .get(BlobInfo { blob_id: meta_far_blob, length: 0 })
+            .map_err(GetAlreadyCachedError::Get)?;
         if let Some(_) = get.open_meta_blob().await.map_err(GetAlreadyCachedError::OpenMetaBlob)? {
             return Err(GetAlreadyCachedError::MissingMetaFar);
         }
@@ -1337,7 +1339,7 @@ mod tests {
                 server.expect_closed().await;
             },
             async move {
-                let pkg_dir = client.get_already_cached(blob_info(2)).await.unwrap();
+                let pkg_dir = client.get_already_cached(blob_id(2)).await.unwrap();
 
                 assert_matches!(
                     pkg_dir.into_proxy().take_event_stream().next().await,
@@ -1358,7 +1360,7 @@ mod tests {
             },
             async move {
                 assert_matches!(
-                    client.get_already_cached(blob_info(2)).await,
+                    client.get_already_cached(blob_id(2)).await,
                     Err(GetAlreadyCachedError::MissingMetaFar)
                 );
             },
@@ -1385,7 +1387,7 @@ mod tests {
             },
             async move {
                 assert_matches!(
-                    client.get_already_cached(blob_info(2)).await,
+                    client.get_already_cached(blob_id(2)).await,
                     Err(GetAlreadyCachedError::MissingContentBlobs(v))
                         if v == vec![BlobInfo {
                             blob_id: [0; 32].into(),

@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::{self as fpkg, CupRequest, CupRequestStream, GetInfoError, WriteError},
-    fidl_fuchsia_pkg_ext::{cache, BlobInfo, CupData, CupMissingField, ResolutionContext},
+    fidl_fuchsia_pkg_ext::{cache, CupData, CupMissingField, ResolutionContext},
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_pkg::PackageDirectory,
@@ -96,7 +96,7 @@ impl EagerPackage {
         };
 
         let pkg_dir = pkg_cache
-            .get_already_cached(BlobInfo { blob_id: pinned_url.hash().into(), length: 0 })
+            .get_already_cached(pinned_url.hash().into())
             .await
             .map_err(LoadError::GetAlreadyCached)?;
         self.package_directory_and_hash = Some((pkg_dir, pinned_url.hash()));
