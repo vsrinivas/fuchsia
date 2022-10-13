@@ -236,6 +236,7 @@ rustc_library("lib") {
     "src/tests/fakes/base.rs",
     "src/tests/fakes/brightness_service.rs",
     "src/tests/fakes/camera3_service.rs",
+    "src/tests/fakes/hardware_light_service.rs",
     "src/tests/fakes/input_device_registry_service.rs",
     "src/tests/fakes/recovery_policy_service.rs",
     "src/tests/fakes/service_registry.rs",

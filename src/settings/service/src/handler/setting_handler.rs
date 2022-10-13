@@ -186,6 +186,18 @@ impl ClientImpl {
         }
     }
 
+    /// Test constructor that doesn't require creating a whole [Context].
+    #[cfg(test)]
+    pub fn for_test(
+        notify: Mutex<bool>,
+        messenger: Messenger,
+        notifier_signature: Signature,
+        service_context: Arc<ServiceContext>,
+        setting_type: SettingType,
+    ) -> Self {
+        Self { notify, messenger, notifier_signature, service_context, setting_type }
+    }
+
     async fn process_request(
         setting_type: SettingType,
         controller: &BoxedController,

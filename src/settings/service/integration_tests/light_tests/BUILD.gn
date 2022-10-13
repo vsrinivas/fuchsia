@@ -55,8 +55,6 @@ rustc_test("single_config_bin") {
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures",
   ]
 

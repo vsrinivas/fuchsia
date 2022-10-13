@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async_trait::async_trait;
-use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
-use fidl_fuchsia_settings_storage::LightGroups;
-use futures::lock::Mutex;
-
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::Request;
@@ -19,6 +14,10 @@ use crate::light::light_hardware_configuration::DisableConditions;
 use crate::light::types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::service_context::ExternalServiceProxy;
 use crate::{call_async, LightHardwareConfiguration};
+use async_trait::async_trait;
+use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
+use fidl_fuchsia_settings_storage::LightGroups;
+use futures::lock::Mutex;
 use settings_storage::fidl_storage::{FidlStorage, FidlStorageConvertible};
 use settings_storage::storage_factory::StorageAccess;
 use std::collections::hash_map::Entry;
@@ -484,5 +483,209 @@ impl LightController {
         };
 
         Ok(LightState { value: Some(value) })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::handler::setting_handler::persist::ClientProxy;
+    use crate::handler::setting_handler::ClientImpl;
+    use crate::light::types::{LightInfo, LightState, LightType, LightValue};
+    use crate::message::base::MessengerType;
+    use crate::message::MessageHubUtil;
+    use crate::storage::{Payload as StoragePayload, StorageRequest, StorageResponse};
+    use crate::tests::fakes::hardware_light_service::HardwareLightService;
+    use crate::tests::fakes::service_registry::ServiceRegistry;
+    use crate::{service, Address, LightController, ServiceContext, SettingType};
+    use futures::lock::Mutex;
+    use settings_storage::fidl_storage::FidlStorageConvertible;
+    use settings_storage::UpdateState;
+    use std::sync::Arc;
+
+    // Verify that a set call without a restore call succeeds. This can happen when the controller
+    // is shutdown after inactivity and is brought up again to handle the set call.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_set_before_restore() {
+        let message_hub = service::MessageHub::create_hub();
+
+        // Create the messenger that the client proxy uses to send messages.
+        let (controller_messenger, _) = message_hub
+            .create(MessengerType::Unbound)
+            .await
+            .expect("Unable to create agent messenger");
+
+        // Create a fake hardware light service that responds to FIDL calls and add it to the
+        // service registry so that FIDL calls are routed to this fake service.
+        let service_registry = ServiceRegistry::create();
+        let light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+        service_registry.lock().await.register_service(light_service_handle.clone());
+
+        let service_context =
+            ServiceContext::new(Some(ServiceRegistry::serve(service_registry)), None);
+
+        // Add a light to the fake service.
+        light_service_handle
+            .lock()
+            .await
+            .insert_light(0, "light_1".to_string(), LightType::Simple, LightValue::Simple(false))
+            .await;
+
+        // This isn't actually the signature for the notifier, but it's unused in this test, so just
+        // provide the signature of its own messenger to the client proxy.
+        let signature = controller_messenger.get_signature();
+
+        let base_proxy = ClientImpl::for_test(
+            Default::default(),
+            controller_messenger,
+            signature,
+            Arc::new(service_context),
+            SettingType::Light,
+        );
+
+        // Create a fake storage receptor used to receive and respond to storage messages.
+        let (_, mut storage_receptor) = message_hub
+            .create(MessengerType::Addressable(Address::Storage))
+            .await
+            .expect("Unable to create agent messenger");
+
+        // Spawn a task that mimics the storage agent by responding to read/write calls.
+        fuchsia_async::Task::spawn(async move {
+            loop {
+                if let Ok((payload, message_client)) = storage_receptor.next_payload().await {
+                    if let Ok(StoragePayload::Request(storage_request)) =
+                        StoragePayload::try_from(payload)
+                    {
+                        match storage_request {
+                            StorageRequest::Read(_, _) => {
+                                // Just respond with the default value as we're not testing storage.
+                                let _ = message_client
+                                    .reply(service::Payload::Storage(StoragePayload::Response(
+                                        StorageResponse::Read(LightInfo::default_value().into()),
+                                    )))
+                                    .send();
+                            }
+                            StorageRequest::Write(_, _) => {
+                                // Just respond with Unchanged as we're not testing storage.
+                                let _ = message_client
+                                    .reply(service::Payload::Storage(StoragePayload::Response(
+                                        StorageResponse::Write(Ok(UpdateState::Unchanged)),
+                                    )))
+                                    .send();
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        .detach();
+
+        let client_proxy = ClientProxy::new(Arc::new(base_proxy), SettingType::Light).await;
+
+        // Create the light controller.
+        let light_controller = LightController::create_with_config(client_proxy, None)
+            .await
+            .expect("Failed to create light controller");
+
+        // Call set and verify it succeeds.
+        let _ = light_controller
+            .set("light_1".to_string(), vec![LightState { value: Some(LightValue::Simple(true)) }])
+            .await
+            .expect("Set call failed");
+
+        // Verify the data cache is populated after the set call.
+        let _ =
+            light_controller.data_cache.lock().await.as_ref().expect("Data cache is not populated");
+    }
+
+    // Verify that an on_mic_mute event without a restore call succeeds. This can happen when the
+    // controller is shutdown after inactivity and is brought up again to handle the set call.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_on_mic_mute_before_restore() {
+        let message_hub = service::MessageHub::create_hub();
+
+        // Create the messenger that the client proxy uses to send messages.
+        let (controller_messenger, _) = message_hub
+            .create(MessengerType::Unbound)
+            .await
+            .expect("Unable to create agent messenger");
+
+        // Create a fake hardware light service that responds to FIDL calls and add it to the
+        // service registry so that FIDL calls are routed to this fake service.
+        let service_registry = ServiceRegistry::create();
+        let light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+        service_registry.lock().await.register_service(light_service_handle.clone());
+
+        let service_context =
+            ServiceContext::new(Some(ServiceRegistry::serve(service_registry)), None);
+
+        // Add a light to the fake service.
+        light_service_handle
+            .lock()
+            .await
+            .insert_light(0, "light_1".to_string(), LightType::Simple, LightValue::Simple(false))
+            .await;
+
+        // This isn't actually the signature for the notifier, but it's unused in this test, so just
+        // provide the signature of its own messenger to the client proxy.
+        let signature = controller_messenger.get_signature();
+
+        let base_proxy = ClientImpl::for_test(
+            Default::default(),
+            controller_messenger,
+            signature,
+            Arc::new(service_context),
+            SettingType::Light,
+        );
+
+        // Create a fake storage receptor used to receive and respond to storage messages.
+        let (_, mut storage_receptor) = message_hub
+            .create(MessengerType::Addressable(Address::Storage))
+            .await
+            .expect("Unable to create agent messenger");
+
+        // Spawn a task that mimics the storage agent by responding to read/write calls.
+        fuchsia_async::Task::spawn(async move {
+            loop {
+                if let Ok((payload, message_client)) = storage_receptor.next_payload().await {
+                    if let Ok(StoragePayload::Request(storage_request)) =
+                        StoragePayload::try_from(payload)
+                    {
+                        match storage_request {
+                            StorageRequest::Read(_, _) => {
+                                // Just respond with the default value as we're not testing storage.
+                                let _ = message_client
+                                    .reply(service::Payload::Storage(StoragePayload::Response(
+                                        StorageResponse::Read(LightInfo::default_value().into()),
+                                    )))
+                                    .send();
+                            }
+                            StorageRequest::Write(_, _) => {
+                                // Just respond with Unchanged as we're not testing storage.
+                                let _ = message_client
+                                    .reply(service::Payload::Storage(StoragePayload::Response(
+                                        StorageResponse::Write(Ok(UpdateState::Unchanged)),
+                                    )))
+                                    .send();
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        .detach();
+
+        let client_proxy = ClientProxy::new(Arc::new(base_proxy), SettingType::Light).await;
+
+        // Create the light controller.
+        let light_controller = LightController::create_with_config(client_proxy, None)
+            .await
+            .expect("Failed to create light controller");
+
+        // Call on_mic_mute and verify it succeeds.
+        let _ = light_controller.on_mic_mute(false).await.expect("Set call failed");
+
+        // Verify the data cache is populated after the set call.
+        let _ =
+            light_controller.data_cache.lock().await.as_ref().expect("Data cache is not populated");
     }
 }
