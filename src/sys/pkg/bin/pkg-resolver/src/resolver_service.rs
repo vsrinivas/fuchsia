@@ -29,13 +29,13 @@ use {
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId},
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_pkg::PackageDirectory,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as ftrace,
     fuchsia_url::{AbsolutePackageUrl, ParseError},
     fuchsia_zircon::Status,
     futures::{future::Future, stream::TryStreamExt as _},
     std::{sync::Arc, time::Instant},
     system_image::CachePackages,
+    tracing::{error, info, warn},
 };
 
 mod inspect;
@@ -229,10 +229,10 @@ impl QueuedResolver {
         if let Some(blob) = self.base_package_index.is_unpinned_base_package(&pkg_url) {
             let dir = self.cache.open(blob).await.map_err(|e| {
                 let error = e.to_resolve_error();
-                fx_log_err!("failed to open base package url {:?}: {:#}", pkg_url, anyhow!(e));
+                error!("failed to open base package url {:?}: {:#}", pkg_url, anyhow!(e));
                 error
             })?;
-            fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
+            info!("resolved {} to {} with base pin", pkg_url, blob);
             return Ok(PackageWithSourceAndBlobId::base(dir, blob.into()));
         }
 
@@ -245,20 +245,14 @@ impl QueuedResolver {
         if let Some(eager_package_manager) = eager_package_manager {
             if let Some((dir, hash)) =
                 eager_package_manager.read().await.get_package_dir(&rewritten_url).map_err(|e| {
-                    fx_log_err!(
+                    error!(
                         "failed to resolve eager package at {} as {}: {:#}",
-                        pkg_url,
-                        rewritten_url,
-                        e
+                        pkg_url, rewritten_url, e
                     );
                     pkg::ResolveError::PackageNotFound
                 })?
             {
-                fx_log_info!(
-                    "resolved {} as {} with eager package manager",
-                    pkg_url,
-                    rewritten_url,
-                );
+                info!("resolved {} as {} with eager package manager", pkg_url, rewritten_url,);
                 return Ok(PackageWithSourceAndBlobId::eager(dir, hash.into()));
             }
         }
@@ -268,13 +262,13 @@ impl QueuedResolver {
             self.queue.push(rewritten_url.clone(), ResolveQueueContext::new(trace_id));
         match queued_fetch.await.expect("expected queue to be open") {
             Ok((hash, dir)) => {
-                fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, hash);
+                info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, hash);
                 Ok(PackageWithSourceAndBlobId::tuf(dir, hash))
             }
             Err(tuf_err) => {
                 match self.handle_cache_fallbacks(&*tuf_err, &pkg_url, &rewritten_url).await {
                     Ok(Some((hash, pkg))) => {
-                        fx_log_info!(
+                        info!(
                             "resolved {} as {} to {} with cache_packages due to {:#}",
                             pkg_url,
                             rewritten_url,
@@ -285,7 +279,7 @@ impl QueuedResolver {
                     }
                     Ok(None) => {
                         let fidl_err = tuf_err.to_resolve_error();
-                        fx_log_err!(
+                        error!(
                             "failed to resolve {} as {} with TUF: {:#}",
                             pkg_url,
                             rewritten_url,
@@ -295,7 +289,7 @@ impl QueuedResolver {
                     }
                     Err(fallback_err) => {
                         let fidl_err = fallback_err.to_resolve_error();
-                        fx_log_err!(
+                        error!(
                             "failed to resolve {} as {} with cache packages fallback: {:#}. \
                             fallback was attempted because TUF failed with {:#}",
                             pkg_url,
@@ -569,7 +563,7 @@ fn missing_cache_package_disk_fallback(
 ) -> Option<BlobId> {
     let possible_fallback = hash_from_cache_packages_manifest(&pkg_url, system_cache_list);
     if possible_fallback.is_some() {
-        fx_log_warn!(
+        warn!(
             "Did not find {} at URL {}, but did find a matching package name in the \
             built-in cache packages set, so falling back to it. Your package \
             repository may not be configured to serve the package correctly, or may \
@@ -599,7 +593,7 @@ async fn hash_from_base_or_repo_or_cache(
     eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
 ) -> Result<BlobId, Status> {
     if let Some(blob) = base_package_index.is_unpinned_base_package(pkg_url) {
-        fx_log_info!("get_hash for {} to {} with base pin", pkg_url, blob);
+        info!("get_hash for {} to {} with base pin", pkg_url, blob);
         return Ok(blob);
     }
 
@@ -609,7 +603,7 @@ async fn hash_from_base_or_repo_or_cache(
     if let Some(eager_package_manager) = eager_package_manager {
         if let Some((_, hash)) =
             eager_package_manager.read().await.get_package_dir(&rewritten_url).map_err(|err| {
-                fx_log_err!(
+                error!(
                     "retrieval error eager package url {} as {}: {:#}",
                     pkg_url,
                     rewritten_url,
@@ -618,11 +612,9 @@ async fn hash_from_base_or_repo_or_cache(
                 Status::NOT_FOUND
             })?
         {
-            fx_log_info!(
+            info!(
                 "get_hash for {} as {} to {} with eager package manager",
-                pkg_url,
-                rewritten_url,
-                hash
+                pkg_url, rewritten_url, hash
             );
             return Ok(hash.into());
         }
@@ -632,16 +624,16 @@ async fn hash_from_base_or_repo_or_cache(
         .await
         .map_err(|e| {
             let status = e.to_resolve_status();
-            fx_log_warn!("error getting hash {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
+            warn!("error getting hash {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
             status
         })
         .map(|hash| match hash {
             HashSource::Tuf(blob) => {
-                fx_log_info!("get_hash for {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
+                info!("get_hash for {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
                 blob
             }
             HashSource::SystemImageCachePackages(blob, tuf_err) => {
-                fx_log_info!(
+                info!(
                     "get_hash for {} as {} to {} with cache_packages due to {:#}",
                     pkg_url,
                     rewritten_url,
@@ -777,7 +769,7 @@ async fn resolve_and_reopen(
     let (pkg, resolution_context) =
         package_resolver.resolve(url.clone(), eager_package_manager).await?;
     let () = pkg.reopen(dir_request).map_err(|e| {
-        fx_log_err!("failed to re-open directory for package url {}: {:#}", url, anyhow!(e));
+        error!("failed to re-open directory for package url {}: {:#}", url, anyhow!(e));
         pkg::ResolveError::Internal
     })?;
     Ok(resolution_context.into())
@@ -860,18 +852,18 @@ async fn resolve_font<'a>(
                 .await?;
         Ok(fpkg::ResolutionContext { bytes: vec![] })
     } else {
-        fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
+        error!("font resolver asked to resolve non-font package: {}", package_url);
         Err(pkg::ResolveError::PackageNotFound)
     }
 }
 
 fn handle_bad_package_url_error(parse_error: ParseError, pkg_url: &str) -> pkg::ResolveError {
-    fx_log_err!("failed to parse package url {:?}: {:#}", pkg_url, anyhow!(parse_error));
+    error!("failed to parse package url {:?}: {:#}", pkg_url, anyhow!(parse_error));
     pkg::ResolveError::InvalidUrl
 }
 
 fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Status {
-    fx_log_err!("failed to parse package url {:?}: {:#}", pkg_url, anyhow!(parse_error));
+    error!("failed to parse package url {:?}: {:#}", pkg_url, anyhow!(parse_error));
     Status::INVALID_ARGS
 }
 

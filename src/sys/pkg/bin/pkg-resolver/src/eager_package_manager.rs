@@ -16,7 +16,6 @@ use {
     fidl_fuchsia_pkg_internal::{PersistentEagerPackage, PersistentEagerPackages},
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_pkg::PackageDirectory,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_url::{AbsolutePackageUrl, Hash, PinnedAbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
     fuchsia_zircon as zx,
     futures::prelude::*,
@@ -32,6 +31,7 @@ use {
         sync::Arc,
     },
     system_image::CachePackages,
+    tracing::{error, warn},
     version::Version,
 };
 
@@ -205,10 +205,7 @@ impl<T: Resolver> EagerPackageManager<T> {
                 match Self::load_persistent_eager_packages_fidl(&data_proxy).await {
                     Ok(persistent_cup) => (persistent_cup, false),
                     Err(e) => {
-                        fx_log_err!(
-                            "failed to load persistent eager packages fidl: {:#}",
-                            anyhow!(e)
-                        );
+                        error!("failed to load persistent eager packages fidl: {:#}", anyhow!(e));
                         (HashMap::new(), true)
                     }
                 }
@@ -242,14 +239,14 @@ impl<T: Resolver> EagerPackageManager<T> {
             );
 
             if let Err(e) = result {
-                fx_log_warn!("failed to load package directory: {:#}", anyhow!(e));
+                warn!("failed to load package directory: {:#}", anyhow!(e));
             }
 
             packages.insert(url, package);
         }
 
         if !persistent_cup.is_empty() {
-            fx_log_warn!(
+            warn!(
                 "{EAGER_PACKAGE_PERSISTENT_FIDL_NAME} contains unknown eager package: {:?}",
                 persistent_cup
             );
@@ -296,7 +293,7 @@ impl<T: Resolver> EagerPackageManager<T> {
                         .try_into()?;
                     Ok((url.url, cup))
                 })()
-                .map_err(|e: Error| fx_log_err!("failed to load persistent eager package: {:#}", e))
+                .map_err(|e: Error| error!("failed to load persistent eager package: {:#}", e))
                 .ok()
             })
             .collect())
@@ -584,7 +581,7 @@ pub async fn run_cup_service<T: Resolver>(
                     Some(manager) => {
                         manager.write().await.cup_write(&url, cup).await.map_err(|e| {
                             let write_error = (&e).into();
-                            fx_log_err!("cup_write failed for url '{}': {:#}", url.url, anyhow!(e));
+                            error!(url = %url.url, "cup_write failed: {:#}", anyhow!(e));
                             write_error
                         })
                     }
@@ -603,7 +600,7 @@ pub async fn run_cup_service<T: Resolver>(
                 let mut response = match manager.as_ref() {
                     Some(manager) => manager.read().await.cup_get_info(&url).await.map_err(|e| {
                         let get_info_error = (&e).into();
-                        fx_log_err!("cup_get_info failed for url '{}': {:#}", url.url, anyhow!(e));
+                        error!(url = %url.url, "cup_get_info failed: {:#}", anyhow!(e));
                         get_info_error
                     }),
                     None => Err(GetInfoError::NotAvailable),

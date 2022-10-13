@@ -6,7 +6,6 @@ use {
     super::{BlobFetchParams, FetchError, FetchStats},
     anyhow::anyhow,
     fuchsia_async::TimeoutExt as _,
-    fuchsia_syslog::fx_log_warn,
     futures::{
         future::TryFutureExt as _,
         stream::{Stream, TryStreamExt as _},
@@ -16,6 +15,7 @@ use {
         convert::{TryFrom, TryInto as _},
         str::FromStr,
     },
+    tracing::warn,
 };
 
 // On success, returns the Content-Length of the resource, as determined by the first GET,
@@ -81,10 +81,12 @@ pub(super) async fn resuming_get<'a>(
                     }
                     Ok(None) => break,
                     Err(e) if progress_this_attempt => {
-                        fx_log_warn!(
-                            "Resuming failed blob GET after partial success. \
-                            resumptions: {}. downloaded {} of {}. error: {:#}",
-                            fetch_stats.resumptions(), bytes_downloaded, expected_len, anyhow!(e)
+                        warn!(
+                            resumptions = fetch_stats.resumptions(),
+                            bytes_downloaded,
+                            expected_len,
+                            error = %anyhow!(e),
+                            "Resuming failed blob GET after partial success."
                         );
                         progress_this_attempt = false;
                         fetch_stats.resume();

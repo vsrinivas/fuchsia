@@ -16,7 +16,6 @@ use {
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{
         future::{AbortHandle, Abortable, FutureExt as _, TryFutureExt as _},
@@ -28,6 +27,7 @@ use {
         sync::{Arc, Weak},
         time::Duration,
     },
+    tracing::info,
     tuf::{
         error::Error as TufError,
         metadata::{Metadata, TargetDescription, TargetPath},
@@ -324,12 +324,12 @@ impl AutoClient {
 
         loop {
             if log_connection_attempt {
-                fx_log_info!("AutoClient for {:?} connecting", self.auto_url);
+                info!("AutoClient for {:?} connecting", self.auto_url);
             }
 
             match self.connect().await {
                 Ok(sse_client) => {
-                    fx_log_info!("AutoClient for {:?} connected", self.auto_url);
+                    info!("AutoClient for {:?} connected", self.auto_url);
 
                     // Log any future connection errors.
                     log_connection_attempt = true;
@@ -345,7 +345,7 @@ impl AutoClient {
                     if log_connection_attempt {
                         log_connection_attempt = false;
 
-                        fx_log_err!(
+                        tracing::error!(
                             "AutoClient for {:?} error connecting: {:#}",
                             self.auto_url,
                             anyhow!(e)
@@ -353,7 +353,7 @@ impl AutoClient {
                     }
                 }
                 Err(e) => {
-                    fx_log_err!(
+                    tracing::error!(
                         "AutoClient for {:?} making request: {:#}",
                         self.auto_url,
                         anyhow!(e)
@@ -393,22 +393,18 @@ impl AutoClient {
             match item {
                 Ok(event) => {
                     if event.event_type() != "timestamp.json" {
-                        fx_log_err!(
+                        tracing::error!(
                             "AutoClient for {:?} ignoring unrecognized event: {:?}",
                             self.auto_url,
                             event
                         );
                         continue;
                     }
-                    fx_log_info!(
-                        "AutoClient for {:?} observed valid event: {:?}",
-                        self.auto_url,
-                        event
-                    );
+                    info!("AutoClient for {:?} observed valid event: {:?}", self.auto_url, event);
                     if let Some(updating_client) = self.updating_client.upgrade() {
                         self.inspect.update_attempt_count.increment();
                         if let Err(e) = updating_client.lock().await.update().await {
-                            fx_log_err!(
+                            tracing::error!(
                                 "AutoClient for {:?} error updating TUF client: {:#}",
                                 self.auto_url,
                                 anyhow!(e)
@@ -419,7 +415,7 @@ impl AutoClient {
                     }
                 }
                 Err(e) => {
-                    fx_log_err!(
+                    tracing::error!(
                         "AutoClient for {:?} event stream read error: {:#}",
                         self.auto_url,
                         anyhow!(e)
@@ -428,7 +424,7 @@ impl AutoClient {
                 }
             }
         }
-        fx_log_err!("AutoClient for {:?} event stream closed.", self.auto_url);
+        tracing::error!("AutoClient for {:?} event stream closed.", self.auto_url);
         HandleSseEndState::Reconnect
     }
 
@@ -439,7 +435,7 @@ impl AutoClient {
 
 impl Drop for AutoClient {
     fn drop(&mut self) {
-        fx_log_info!("AutoClient for {:?} stopping.", self.auto_url);
+        info!("AutoClient for {:?} stopping.", self.auto_url);
     }
 }
 

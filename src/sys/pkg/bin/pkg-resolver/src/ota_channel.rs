@@ -11,8 +11,8 @@ use {
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect::{self as inspect, Property as _, StringProperty},
-    fuchsia_syslog::fx_log_info,
     futures::{future::BoxFuture, prelude::*},
+    tracing::info,
 };
 
 #[derive(Debug)]
@@ -97,7 +97,7 @@ where
             ChannelSource::VbMeta,
         ),
         Err(e) => {
-            fx_log_info!("Unable to load channel from vbmeta: {:#}", anyhow!(e));
+            info!("Unable to load channel from vbmeta: {:#}", anyhow!(e));
             Ok(None)
         }
     }

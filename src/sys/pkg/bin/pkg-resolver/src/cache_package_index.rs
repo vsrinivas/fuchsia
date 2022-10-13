@@ -5,8 +5,8 @@
 use {
     anyhow::Context as _,
     fidl_fuchsia_pkg::PackageIndexIteratorMarker,
-    fuchsia_syslog::fx_log_warn,
     fuchsia_url::{PinnedAbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
+    tracing::warn,
 };
 
 /// Load the list of cache_packages from fuchsia.pkg/PackageCache.CachePackageIndex.
@@ -15,7 +15,7 @@ pub async fn from_proxy(
     pkg_cache: &fidl_fuchsia_pkg::PackageCacheProxy,
 ) -> system_image::CachePackages {
     from_proxy_impl(pkg_cache).await.unwrap_or_else(|e| {
-        fx_log_warn!("Error loading cache packages manifest, using empty manifest. {:#}", e);
+        warn!("Error loading cache packages manifest, using empty manifest. {:#}", e);
         system_image::CachePackages::from_entries(vec![])
     })
 }

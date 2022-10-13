@@ -5,7 +5,7 @@
 use {
     super::QueuedResolver, crate::eager_package_manager::EagerPackageManager,
     fidl_fuchsia_io as fio, fidl_fuchsia_metrics as fmetrics, fidl_fuchsia_pkg as fpkg,
-    fidl_fuchsia_pkg_ext as pkg, fuchsia_syslog::fx_log_err,
+    fidl_fuchsia_pkg_ext as pkg, tracing::error,
 };
 
 pub(super) async fn resolve_with_context(
@@ -21,10 +21,9 @@ pub(super) async fn resolve_with_context(
     {
         fuchsia_url::PackageUrl::Absolute(url) => {
             if !context.bytes.is_empty() {
-                fx_log_err!(
+                error!(
                     "ResolveWithContext context must be empty if url is absolute {} {:?}",
-                    package_url,
-                    context,
+                    package_url, context,
                 );
                 return Err(pkg::ResolveError::InvalidContext);
             }
@@ -38,11 +37,10 @@ pub(super) async fn resolve_with_context(
             .await;
         }
         fuchsia_url::PackageUrl::Relative(_) => {
-            fx_log_err!(
+            error!(
                 "ResolveWithContext for relative urls is not currently implemented. \
                  Could not resolve {:?} with context {:?}",
-                package_url,
-                context,
+                package_url, context,
             );
             return Err(pkg::ResolveError::Internal);
         }

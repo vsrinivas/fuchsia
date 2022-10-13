@@ -12,10 +12,10 @@ use {
     },
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon::Status,
     futures::prelude::*,
     std::{convert::TryInto, sync::Arc},
+    tracing::{error, info, warn},
 };
 
 const LIST_CHUNK_SIZE: usize = 100;
@@ -68,7 +68,7 @@ impl RewriteService {
         url: &str,
     ) -> Result<fuchsia_url::AbsolutePackageUrl, Status> {
         let url = url.parse::<fuchsia_url::AbsolutePackageUrl>().map_err(|e| {
-            fx_log_err!("client provided invalid URL ({:?}): {:#}", url, anyhow!(e));
+            error!("client provided invalid URL ({:?}): {:#}", url, anyhow!(e));
             Status::INVALID_ARGS
         })?;
 
@@ -121,15 +121,15 @@ impl RewriteService {
                             let stringified = format!("{:?}", transaction);
                             let mut response = match state.write().await.apply(transaction).await {
                                 Ok(()) => {
-                                    fx_log_info!("rewrite transaction committed: {}", stringified);
+                                    info!("rewrite transaction committed: {}", stringified);
                                     Ok(())
                                 }
                                 Err(CommitError::TooLate) => {
-                                    fx_log_warn!("rewrite transaction out of date");
+                                    warn!("rewrite transaction out of date");
                                     Err(Status::UNAVAILABLE.into_raw())
                                 }
                                 Err(CommitError::DynamicConfigurationDisabled) => {
-                                    fx_log_err!(
+                                    error!(
                                         "rewrite transaction failed, dynamic configuration is \
                                          disabled"
                                     );
@@ -142,12 +142,12 @@ impl RewriteService {
                     }
                 }
 
-                fx_log_info!("rewrite transaction dropped");
+                info!("rewrite transaction dropped");
 
                 Ok(())
             }
             .unwrap_or_else(|e: Error| {
-                fx_log_err!("while serving rewrite rule edit transaction: {:#}", anyhow!(e))
+                error!("while serving rewrite rule edit transaction: {:#}", anyhow!(e))
             }),
         )
         .detach()
@@ -175,7 +175,7 @@ impl RewriteService {
                 Ok(())
             }
             .unwrap_or_else(|e: fidl::Error| {
-                fx_log_err!("while serving rewrite rule iterator: {:#}", anyhow!(e))
+                error!("while serving rewrite rule iterator: {:#}", anyhow!(e))
             }),
         )
         .detach();

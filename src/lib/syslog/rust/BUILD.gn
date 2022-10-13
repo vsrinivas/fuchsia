@@ -83,7 +83,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/sys/fuzzing/registry:*",
   "//src/sys/pkg/bin/omaha-client:*",
   "//src/sys/pkg/bin/pkg-local-mirror:*",
-  "//src/sys/pkg/bin/pkg-resolver:*",
   "//src/sys/pkg/bin/system-update-checker:*",
   "//src/sys/pkg/bin/system-update-committer:*",
   "//src/sys/pkg/bin/system-updater:*",

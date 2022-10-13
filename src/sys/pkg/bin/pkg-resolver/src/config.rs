@@ -4,13 +4,13 @@
 
 use {
     anyhow::anyhow,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     serde::Deserialize,
     std::{
         fs::File,
         io::{BufReader, Read},
     },
     thiserror::Error,
+    tracing::{error, info},
 };
 
 /// Static service configuration options.
@@ -35,22 +35,22 @@ impl Config {
     pub fn load_from_config_data_or_default() -> Config {
         let dynamic_config = match File::open("/config/data/config.json") {
             Ok(f) => Self::load_enable_dynamic_config(BufReader::new(f)).unwrap_or_else(|e| {
-                fx_log_err!("unable to load config, using defaults: {:#}", anyhow!(e));
+                error!("unable to load config, using defaults: {:#}", anyhow!(e));
                 Config::default()
             }),
             Err(e) => {
-                fx_log_info!("no config found, using defaults: {:#}", anyhow!(e));
+                info!("no config found, using defaults: {:#}", anyhow!(e));
                 Config::default()
             }
         };
 
         let repo_config = match File::open("/config/data/persisted_repos_dir.json") {
             Ok(f) => Self::load_persisted_repos_config(BufReader::new(f)).unwrap_or_else(|e| {
-                fx_log_err!("unable to load config, using defaults: {:#}", anyhow!(e));
+                error!("unable to load config, using defaults: {:#}", anyhow!(e));
                 Config::default()
             }),
             Err(e) => {
-                fx_log_info!("no config found, using defaults: {:#}", anyhow!(e));
+                info!("no config found, using defaults: {:#}", anyhow!(e));
                 Config::default()
             }
         };

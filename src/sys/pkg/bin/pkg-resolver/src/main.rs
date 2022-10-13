@@ -13,9 +13,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
-    fuchsia_inspect as inspect,
-    fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_trace as ftrace,
+    fuchsia_inspect as inspect, fuchsia_trace as ftrace,
     futures::{prelude::*, stream::FuturesUnordered},
     parking_lot::RwLock,
     std::{
@@ -23,6 +21,7 @@ use {
         sync::Arc,
         time::{Duration, Instant},
     },
+    tracing::{error, info, warn},
 };
 
 mod args;
@@ -107,17 +106,17 @@ const DEFAULT_BLOB_DOWNLOAD_RESUMPTION_ATTEMPTS_LIMIT: u64 = 50;
 // data and the server doesn't intend to send any.
 const TCP_KEEPALIVE_TIMEOUT: Duration = Duration::from_secs(30);
 
+#[fuchsia::main(logging_tags = ["pkg-resolver"])]
 pub fn main() -> Result<(), Error> {
     let startup_time = Instant::now();
-    fuchsia_syslog::init_with_tags(&["pkg-resolver"]).expect("can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
-    fx_log_info!("starting package resolver");
+    info!("starting package resolver");
 
     let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
     executor.run_singlethreaded(main_inner_async(startup_time, argh::from_env())).map_err(|err| {
         // Use anyhow to print the error chain.
         let err = anyhow!(err);
-        fuchsia_syslog::fx_log_err!("error running pkg-resolver: {:#}", err);
+        error!("error running pkg-resolver: {:#}", err);
         err
     })
 }
@@ -169,7 +168,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     ) {
         Ok(proxy) => Some(proxy),
         Err(e) => {
-            fx_log_warn!("failed to open /data: {:#}", anyhow!(e));
+            warn!("failed to open /data: {:#}", anyhow!(e));
             None
         }
     };
@@ -185,7 +184,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     ) {
         Ok(proxy) => Some(proxy),
         Err(e) => {
-            fx_log_warn!("failed to open /config/data: {:#}", anyhow!(e));
+            warn!("failed to open /config/data: {:#}", anyhow!(e));
             None
         }
     };
@@ -258,7 +257,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         )
         .await
         .map_err(|e| {
-            fx_log_err!("failed to create EagerPackageManager: {:#}", &e);
+            error!("failed to create EagerPackageManager: {:#}", &e);
         })
         .ok()
         .map(AsyncRwLock::new),
@@ -286,7 +285,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
                     Arc::clone(&resolver_service_inspect),
                     Arc::clone(&eager_package_manager),
                 )
-                .unwrap_or_else(|e| fx_log_err!("run_resolver_service failed: {:#}", anyhow!(e))),
+                .unwrap_or_else(|e| error!("run_resolver_service failed: {:#}", anyhow!(e))),
             )
             .detach()
         }
@@ -303,9 +302,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
                     stream,
                     cobalt_sender.clone(),
                 )
-                .unwrap_or_else(|e| {
-                    fx_log_err!("run_font_resolver_service failed: {:#}", anyhow!(e))
-                }),
+                .unwrap_or_else(|e| error!("run_font_resolver_service failed: {:#}", anyhow!(e))),
             )
             .detach()
         }
@@ -319,7 +316,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
                 let mut repo_service = RepositoryService::new(repo_manager);
                 repo_service.run(stream).await
             }
-            .unwrap_or_else(|e| fx_log_err!("error encountered: {:#}", anyhow!(e))),
+            .unwrap_or_else(|e| error!("error encountered: {:#}", anyhow!(e))),
         )
         .detach()
     };
@@ -329,7 +326,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
 
         fasync::Task::local(
             async move { rewrite_service.handle_client(stream).await }
-                .unwrap_or_else(|e| fx_log_err!("while handling rewrite client {:#}", anyhow!(e))),
+                .unwrap_or_else(|e| error!("while handling rewrite client {:#}", anyhow!(e))),
         )
         .detach()
     };
@@ -343,7 +340,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
                     stream,
                     cobalt_sender.clone(),
                 )
-                .unwrap_or_else(|e| fx_log_err!("run_cup_service failed: {:#}", anyhow!(e))),
+                .unwrap_or_else(|e| error!("run_cup_service failed: {:#}", anyhow!(e))),
             )
             .detach()
         }
@@ -391,7 +388,7 @@ async fn load_repo_manager(
     let builder = match RepositoryManagerBuilder::new(data_proxy, dynamic_repo_path, experiments)
         .await
         .unwrap_or_else(|(builder, err)| {
-            fx_log_err!("error loading dynamic repo config: {:#}", anyhow!(err));
+            error!("error loading dynamic repo config: {:#}", anyhow!(err));
             builder
         })
         .tuf_metadata_timeout(tuf_metadata_timeout)
@@ -426,9 +423,9 @@ async fn load_repo_manager(
                     crate::repository_manager::LoadError::Io { path: _, error }
                         if error.kind() == io::ErrorKind::NotFound =>
                     {
-                        fx_log_info!("no statically configured repositories present");
+                        info!("no statically configured repositories present");
                     }
-                    _ => fx_log_err!("error loading static repo config: {:#}", anyhow!(err)),
+                    _ => error!("error loading static repo config: {:#}", anyhow!(err)),
                 };
             }
             builder
@@ -464,7 +461,7 @@ async fn load_rewrite_manager(
                 )) => {}
                 // Unable to open /data dir proxy.
                 LoadRulesError::DirOpen(_) => {}
-                err => fx_log_err!(
+                err => error!(
                     "unable to load dynamic rewrite rules from disk, using defaults: {:#}",
                     anyhow!(err)
                 ),
@@ -483,7 +480,7 @@ async fn load_rewrite_manager(
                 // Unable to open /config/data dir proxy.
                 LoadRulesError::DirOpen(_) => {}
                 err => {
-                    fx_log_err!("unable to load static rewrite rules from disk: {:#}", anyhow!(err))
+                    error!("unable to load static rewrite rules from disk: {:#}", anyhow!(err))
                 }
             };
             builder
@@ -499,15 +496,15 @@ async fn load_rewrite_manager(
     .await
     {
         Ok(Some(rule)) => {
-            fx_log_info!("Created rewrite rule for ota channel: {:?}", rule);
+            info!("Created rewrite rule for ota channel: {:?}", rule);
             builder.replace_dynamic_rules(vec![rule]).build()
         }
         Ok(None) => {
-            fx_log_info!("No ota channel present, so not creating rewrite rule.");
+            info!("No ota channel present, so not creating rewrite rule.");
             builder.build()
         }
         Err(err) => {
-            fx_log_err!("Failed to create rewrite rule for ota channel with error, falling back to defaults. {:#}", anyhow!(err));
+            error!("Failed to create rewrite rule for ota channel with error, falling back to defaults. {:#}", anyhow!(err));
             builder.build()
         }
     }
@@ -535,9 +532,9 @@ fn load_font_package_manager(mut cobalt_sender: ProtocolSender<MetricEvent>) -> 
             );
 
             if err.is_not_found() {
-                fx_log_info!("no font package registry present: {:#}", anyhow!(err));
+                info!("no font package registry present: {:#}", anyhow!(err));
             } else {
-                fx_log_err!("error loading font package registry: {:#}", anyhow!(err));
+                error!("error loading font package registry: {:#}", anyhow!(err));
             }
             builder
         }

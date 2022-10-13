@@ -19,7 +19,6 @@ use {
     fidl_fuchsia_pkg_ext::{self as pkg, cache, BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_inspect as inspect,
     fuchsia_pkg::PackageDirectory,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_trace as ftrace,
     fuchsia_url::{AbsolutePackageUrl, RepositoryUrl},
     fuchsia_zircon::Status,
@@ -34,6 +33,7 @@ use {
         time::Duration,
     },
     thiserror::Error,
+    tracing::{error, info},
 };
 
 /// [RepositoryManager] controls access to all the repository configs used by the package resolver.
@@ -169,7 +169,7 @@ impl RepositoryManager {
 
         let connected = self.repositories.write().remove(config.repo_url()).is_some();
         if connected {
-            fx_log_info!("re-opening {} repo because config changed", config.repo_url());
+            info!("re-opening {} repo because config changed", config.repo_url());
         }
 
         let inspectable_config = InspectableRepositoryConfig::new(
@@ -197,7 +197,7 @@ impl RepositoryManager {
         if let Some(config) = self.dynamic_configs.remove(repo_url) {
             let connected = self.repositories.write().remove(config.repo_url()).is_some();
             if connected {
-                fx_log_info!("closing {}", config.repo_url());
+                info!("closing {}", config.repo_url());
             }
 
             Self::save(&self.data_proxy, &dynamic_configs_path, &mut self.dynamic_configs).await;
@@ -232,7 +232,7 @@ impl RepositoryManager {
         let data_proxy = match data_proxy.as_ref() {
             Some(proxy) => proxy,
             None => {
-                fx_log_err!("unable to save repositories because /data proxy is not available");
+                error!("unable to save repositories because /data proxy is not available");
                 return;
             }
         };
@@ -270,7 +270,7 @@ impl RepositoryManager {
         match result {
             Ok(()) => {}
             Err(err) => {
-                fx_log_err!("error while saving repositories: {:#}", anyhow!(err));
+                error!("error while saving repositories: {:#}", anyhow!(err));
             }
         }
     }

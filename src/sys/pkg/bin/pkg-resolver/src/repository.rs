@@ -19,11 +19,11 @@ use {
     fuchsia_async::TimeoutExt as _,
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_inspect::{self as inspect, Property},
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{future::TryFutureExt as _, lock::Mutex as AsyncMutex},
     serde::{Deserialize, Serialize},
     std::{sync::Arc, time::Duration},
+    tracing::info,
     tuf::{
         client::Config,
         crypto::PublicKey,
@@ -161,7 +161,7 @@ impl Repository {
         match updating_client.update_if_stale().await {
             // These are the common cases and can be inferred from AutoClient inspect.
             Ok(UpdateResult::Deferred) | Ok(UpdateResult::UpToDate) => (),
-            Ok(UpdateResult::Updated) => fx_log_info!(
+            Ok(UpdateResult::Updated) => info!(
                 "updated local TUF metadata for {:?} to version {:?} while getting merkle for {:?}",
                 self.log_ctx.repo_url,
                 updating_client.metadata_versions(),
@@ -174,7 +174,7 @@ impl Repository {
                 return Err(MerkleForError::TargetNotFound(path))
             }
             Err(other) => {
-                fx_log_err!(
+                tracing::error!(
                     "failed to update local TUF metadata for {:?} while getting merkle for {:?} with error: {:#}",
                     self.log_ctx.repo_url,
                     target_path,

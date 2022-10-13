@@ -7,10 +7,10 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_inspect::{self as inspect, Property},
-    fuchsia_syslog::fx_log_err,
     fuchsia_url::AbsolutePackageUrl,
     std::collections::VecDeque,
     thiserror::Error,
+    tracing::error,
 };
 
 /// [RewriteManager] controls access to all static and dynamic rewrite rules used by the package
@@ -64,7 +64,7 @@ impl RewriteManager {
                     return res;
                 }
                 Some(Err(err)) => {
-                    fx_log_err!(
+                    error!(
                         "ignoring rewrite rule {:?} that produced an invalid URL: {:#}",
                         rule,
                         anyhow!(err)
@@ -146,7 +146,7 @@ impl RewriteManager {
                 if let Err(err) =
                     Self::save(&mut self.dynamic_rules, data_proxy, dynamic_rules_path).await
                 {
-                    fx_log_err!("error while saving dynamic rewrite rules: {:#}", anyhow!(err));
+                    error!("error while saving dynamic rewrite rules: {:#}", anyhow!(err));
                 }
             }
             self.update_inspect_objects();
