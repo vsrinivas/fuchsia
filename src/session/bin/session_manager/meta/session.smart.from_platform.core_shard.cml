@@ -36,13 +36,11 @@
         {
             // Routed from v1 components.
             protocol: [
-                "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
                 "fuchsia.timezone.Timezone",
                 "fuchsia.ultrasound.Factory",
                 "google.cast.cryptokey.NamedKeyProvider",
-                "google.cast.multizone.Leader",
             ],
             from: "self",
             to: [ "#session-manager" ],
