@@ -16,8 +16,7 @@ use {
 
 lazy_static! {
     static ref KEY_VALIDATION_REGEX: Regex =
-        Regex::new(r"^[A-Za-z][A-Za-z0-9_\./]{2,62}[A-Za-z0-9]$")
-            .expect("Key validation regex failed to compile");
+        Regex::new(r"^[A-Za-z]\w+[A-Za-z0-9]$").expect("Key validation regex failed to compile");
 }
 
 /// Handler for the `WriteItem` method.

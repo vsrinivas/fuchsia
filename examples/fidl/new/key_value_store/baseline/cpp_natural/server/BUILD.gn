@@ -1,0 +1,23 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "server_bin"
+  output_dir = target_out_dir + "/cpp_natural"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//examples/fidl/new/key_value_store/baseline/fidl:examples.keyvaluestore.baseline_cpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//third_party/re2",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+}
