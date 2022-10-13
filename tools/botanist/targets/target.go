@@ -48,7 +48,7 @@ type FFXInstance struct {
 	ExperimentLevel int
 }
 
-// target represents a generic fuchsia instance.
+// Target represents a generic fuchsia instance.
 type Target interface {
 	// AddPackageRepository adds a given package repository to the target.
 	AddPackageRepository(client *sshutil.Client, repoURL, blobURL string) error
@@ -521,6 +521,7 @@ type Options struct {
 	SSHKey string
 }
 
+// DeriveTarget returns a Target based on the obj json and opts.
 func DeriveTarget(ctx context.Context, obj []byte, opts Options) (Target, error) {
 	type typed struct {
 		Type string `json:"type"`
@@ -559,4 +560,56 @@ func DeriveTarget(ctx context.Context, obj []byte, opts Options) (Target, error)
 	default:
 		return nil, fmt.Errorf("unknown type found: %q", x.Type)
 	}
+}
+
+// StartOptions boundle together some options that might change how a target
+// is started.
+type StartOptions struct {
+	// Netboot tells the image to use Netboot or to Pave
+	Netboot bool
+
+	// ImageManifest is the path to an image manifest
+	ImageManifest string
+
+	// ZirconArgs are kernel command-line arguments to pass on boot.
+	ZirconArgs []string
+}
+
+// StartTargets starts all the targets in targetSlice given the opts.
+func StartTargets(ctx context.Context, opts StartOptions, targetSlice []Target) error {
+	bootMode := bootserver.ModePave
+	if opts.Netboot {
+		bootMode = bootserver.ModeNetboot
+	}
+
+	// TODO(https://fxbug.dev/111922): Remove following comment once we don't run a subcommand.
+	// We wait until targets have started before running the subcommand against the zeroth one.
+	eg, ctx := errgroup.WithContext(ctx)
+	for _, t := range targetSlice {
+		t := t
+		eg.Go(func() error {
+			// TODO(fxbug.dev/47910): Move outside gofunc once we get rid of downloading or ensure that it only happens once.
+			imgs, closeFunc, err := bootserver.GetImages(ctx, opts.ImageManifest, bootMode)
+			if err != nil {
+				return err
+			}
+			defer closeFunc()
+
+			return t.Start(ctx, imgs, opts.ZirconArgs)
+		})
+	}
+	return eg.Wait()
+}
+
+// StopTargets stop all the targets in targetSlice
+func StopTargets(ctx context.Context, targetSlice []Target) {
+	// Stop the targets in parallel.
+	var eg errgroup.Group
+	for _, t := range targetSlice {
+		t := t
+		eg.Go(func() error {
+			return t.Stop()
+		})
+	}
+	_ = eg.Wait()
 }

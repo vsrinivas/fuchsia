@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/botanist/targets"
@@ -296,7 +295,14 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	eg.Go(func() error {
 		// Signal other goroutines to exit.
 		defer cancel()
-		if err := r.startTargets(ctx, targetSlice); err != nil {
+
+		startOpts := targets.StartOptions{
+			Netboot:       r.netboot,
+			ImageManifest: r.imageManifest,
+			ZirconArgs:    r.zirconArgs,
+		}
+
+		if err := targets.StartTargets(ctx, startOpts, targetSlice); err != nil {
 			return fmt.Errorf("%s: %w", constants.FailedToStartTargetMsg, err)
 		}
 		logger.Debugf(ctx, "successfully started all targets")
@@ -348,7 +354,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		defer func() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			defer cancel()
-			r.stopTargets(ctx, targetSlice)
+			targets.StopTargets(ctx, targetSlice)
 		}()
 		err = r.runAgainstTarget(ctx, t0, args, testbedConfig)
 		// Cancel ctx to notify other goroutines that this routine has completed.
@@ -446,42 +452,6 @@ func (r *RunCommand) createTestbedConfig(targetSlice []targets.Target) (string, 
 		return "", err
 	}
 	return f.Name(), nil
-}
-
-func (r *RunCommand) startTargets(ctx context.Context, targetSlice []targets.Target) error {
-	bootMode := bootserver.ModePave
-	if r.netboot {
-		bootMode = bootserver.ModeNetboot
-	}
-
-	// We wait until targets have started before running the subcommand against the zeroth one.
-	eg, ctx := errgroup.WithContext(ctx)
-	for _, t := range targetSlice {
-		t := t
-		eg.Go(func() error {
-			// TODO(fxbug.dev/47910): Move outside gofunc once we get rid of downloading or ensure that it only happens once.
-			imgs, closeFunc, err := bootserver.GetImages(ctx, r.imageManifest, bootMode)
-			if err != nil {
-				return err
-			}
-			defer closeFunc()
-
-			return t.Start(ctx, imgs, r.zirconArgs)
-		})
-	}
-	return eg.Wait()
-}
-
-func (r *RunCommand) stopTargets(ctx context.Context, targetSlice []targets.Target) {
-	// Stop the targets in parallel.
-	var eg errgroup.Group
-	for _, t := range targetSlice {
-		t := t
-		eg.Go(func() error {
-			return t.Stop()
-		})
-	}
-	_ = eg.Wait()
 }
 
 // dumpSyslogOverSerial runs log_listener over serial to collect logs that may
