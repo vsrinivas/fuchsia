@@ -44,8 +44,8 @@ func TestRunNinja(t *testing.T) {
 		{
 			name: "success",
 			stdout: `
-                [1/2] ACTION a.o
-                [2/2] ACTION b.o
+                [1/2](1) ACTION a.o
+                [2/2](1) ACTION b.o
             `,
 			expectedActionData: &fintpb.NinjaActionMetrics{
 				InitialActions: 2,
@@ -58,9 +58,9 @@ func TestRunNinja(t *testing.T) {
 		{
 			name: "success with regenerating ninja files",
 			stdout: `
-                [0/1] Regenerating ninja files
-                [1/3] ACTION a.o
-                [2/3] ACTION b.o
+                [0/1](1) Regenerating ninja files
+                [1/3](1) ACTION a.o
+                [2/3](1) ACTION b.o
             `,
 			expectedActionData: &fintpb.NinjaActionMetrics{
 				InitialActions: 3,
@@ -73,9 +73,9 @@ func TestRunNinja(t *testing.T) {
 		{
 			name: "multiple action types",
 			stdout: `
-                [1/3] CXX a.o
-                [2/3] RUST crab.rlib
-                [3/3] RUST lobster.rlib
+                [1/3](1) CXX a.o
+                [2/3](1) RUST crab.rlib
+                [3/3](1) RUST lobster.rlib
             `,
 			expectedActionData: &fintpb.NinjaActionMetrics{
 				InitialActions: 3,
@@ -89,9 +89,9 @@ func TestRunNinja(t *testing.T) {
 		{
 			name: "restat decreasing action counts",
 			stdout: `
-                [1/300] CXX a.o
-                [2/200] RUST crab.rlib
-                [3/100] RUST lobster.rlib
+                [1/300](1) CXX a.o
+                [2/200](1) RUST crab.rlib
+                [3/100](1) RUST lobster.rlib
             `,
 			expectedActionData: &fintpb.NinjaActionMetrics{
 				InitialActions: 300,
@@ -106,16 +106,16 @@ func TestRunNinja(t *testing.T) {
 			name: "single failed target",
 			fail: true,
 			stdout: `
-                [35792/53672] CXX a.o b.o
-                [35793/53672] CXX c.o d.o
+                [35792/53672](8) CXX a.o b.o
+                [35793/53672](7) CXX c.o d.o
                 FAILED: c.o d.o
                 output line 1
                 output line 2
-                [35794/53672] CXX successful/e.o
-                [35795/53672] CXX f.o
+                [35794/53672](4) CXX successful/e.o
+                [35795/53672](4) CXX f.o
             `,
 			expectedFailureMessage: `
-                [35793/53672] CXX c.o d.o
+                [35793/53672](7) CXX c.o d.o
                 FAILED: c.o d.o
                 output line 1
                 output line 2
@@ -132,16 +132,16 @@ func TestRunNinja(t *testing.T) {
 			name: "single failed target decreasing action counts",
 			fail: true,
 			stdout: `
-                [35792/53672] CXX a.o b.o
-                [35793/53672] CXX c.o d.o
+                [35792/53672](2) CXX a.o b.o
+                [35793/53672](2) CXX c.o d.o
                 FAILED: c.o d.o
                 output line 1
                 output line 2
-                [35794/45678] CXX successful/e.o
-                [35795/45678] CXX f.o
+                [35794/45678](2) CXX successful/e.o
+                [35795/45678](1) CXX f.o
             `,
 			expectedFailureMessage: `
-                [35793/53672] CXX c.o d.o
+                [35793/53672](2) CXX c.o d.o
                 FAILED: c.o d.o
                 output line 1
                 output line 2
@@ -158,15 +158,15 @@ func TestRunNinja(t *testing.T) {
 			name: "preserves indentation",
 			fail: true,
 			stdout: `
-                [35793/53672] CXX a.o b.o
+                [35793/53672](1) CXX a.o b.o
                 FAILED: a.o b.o
                     output line 1
                         output line 2
                             output line 3
-                [35794/53672] CXX successful/c.o
+                [35794/53672](1) CXX successful/c.o
             `,
 			expectedFailureMessage: `
-                [35793/53672] CXX a.o b.o
+                [35793/53672](1) CXX a.o b.o
                 FAILED: a.o b.o
                     output line 1
                         output line 2
@@ -184,24 +184,24 @@ func TestRunNinja(t *testing.T) {
 			name: "multiple failed targets",
 			fail: true,
 			stdout: `
-                [35790/53672] CXX foo
-                [35791/53672] CXX a.o b.o
+                [35790/53672](1) CXX foo
+                [35791/53672](1) CXX a.o b.o
                 FAILED: a.o b.o
                 output line 1
                 output line 2
-                [35792/53672] CXX c.o d.o
-                [35793/53672] CXX e.o
+                [35792/53672](1) CXX c.o d.o
+                [35793/53672](1) CXX e.o
                 FAILED: e.o
                 output line 3
                 output line 4
-                [35794/53672] CXX f.o
+                [35794/53672](1) CXX f.o
             `,
 			expectedFailureMessage: `
-                [35791/53672] CXX a.o b.o
+                [35791/53672](1) CXX a.o b.o
                 FAILED: a.o b.o
                 output line 1
                 output line 2
-                [35793/53672] CXX e.o
+                [35793/53672](1) CXX e.o
                 FAILED: e.o
                 output line 3
                 output line 4
@@ -218,15 +218,15 @@ func TestRunNinja(t *testing.T) {
 			name: "last target fails",
 			fail: true,
 			stdout: `
-                [35790/53672] CXX foo
-                [35791/53672] CXX a.o b.o
+                [35790/53672](1) CXX foo
+                [35791/53672](1) CXX a.o b.o
                 FAILED: a.o b.o
                 output line 1
                 output line 2
                 ninja: build stopped: subcommand failed.
             `,
 			expectedFailureMessage: `
-                [35791/53672] CXX a.o b.o
+                [35791/53672](1) CXX a.o b.o
                 FAILED: a.o b.o
                 output line 1
                 output line 2
@@ -244,7 +244,7 @@ func TestRunNinja(t *testing.T) {
 			fail: true,
 			stdout: `
 				ninja: Entering directory '/usr/me/fuchsia/out/default'
-				[0/1] Regenerating ninja files
+				[0/1](1) Regenerating ninja files
 				ERROR at //src/foo/BUILD.gn:41:5: Can't load input file.
 					"//src/bar:tests",
 					^----------------
@@ -255,7 +255,7 @@ func TestRunNinja(t *testing.T) {
 				ninja: error: rebuilding 'build.ninja': subcommand failed
 			`,
 			expectedFailureMessage: `
-				[0/1] Regenerating ninja files
+				[0/1](1) Regenerating ninja files
 				ERROR at //src/foo/BUILD.gn:41:5: Can't load input file.
 					"//src/bar:tests",
 					^----------------
@@ -270,8 +270,8 @@ func TestRunNinja(t *testing.T) {
 			name: "ninja internal error",
 			fail: true,
 			stdout: `
-                [1/53672] CXX foo
-                [2/53672] CXX a.o b.o
+                [1/53672](1) CXX foo
+                [2/53672](1) CXX a.o b.o
                 ninja: build stopped: something went wrong
             `,
 			expectedFailureMessage: `
@@ -301,7 +301,7 @@ func TestRunNinja(t *testing.T) {
 			fail: true,
 			stdout: `
 				ninja: Entering directory /foo
-				[1/1] ACTION //foo
+				[1/1](1) ACTION //foo
 				ninja: fatal: cannot create file foo
             `,
 			expectedFailureMessage: `
@@ -390,7 +390,7 @@ func TestRunWithNinjaExplain(t *testing.T) {
 
 	sr := &fakeSubprocessRunner{
 		mockStdout: []byte(`ninja: Entering directory /foo
-[1/1] ACTION //foo
+[1/1](1) ACTION //foo
 ninja explain: obj/build/foo is dirty`),
 	}
 	r := ninjaRunner{
@@ -412,7 +412,7 @@ ninja explain: obj/build/foo is dirty`),
 	}
 
 	wantStdout := `ninja: Entering directory /foo
-[1/1] ACTION //foo
+[1/1](1) ACTION //foo
 `
 	if diff := cmp.Diff(wantStdout, gotStdout.String()); diff != "" {
 		t.Errorf("Unexpected stdout output diff (-want +got):\n%s", diff)
@@ -570,7 +570,7 @@ func TestAffectedTestsNoWork(t *testing.T) {
 ninja: entering directory /foo
 ninja explain: obj/src/path/to/fuchsia_test/package_manifest.json is dirty
 ninja explain: obj/another_test/package_manifest.json is dirty
-[3/3] python build.py host/run.sh
+[3/3](1) python build.py host/run.sh
             `,
 			expectedAffectedTests: []string{"host_test", "fuchsia_test"},
 			expectedNoWork:        false,
@@ -581,7 +581,7 @@ ninja explain: obj/another_test/package_manifest.json is dirty
 ninja: entering directory /foo
 ninja explain: obj/src/path/to/fuchsia_test/package_manifest.json is dirty
 ninja explain: obj/another_test/package_manifest.json is dirty
-[3/3] python build.py host/run.sh
+[3/3](1) python build.py host/run.sh
 			`,
 			affectedFiles:         []string{"foo.gn", "bar.gni", "foo.go"},
 			expectedAffectedTests: []string{"host_test", "fuchsia_test"},

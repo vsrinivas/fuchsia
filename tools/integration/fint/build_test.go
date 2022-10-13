@@ -296,7 +296,7 @@ func TestBuild(t *testing.T) {
 			runnerFunc: func(cmd []string, stdout io.Writer) error {
 				if strings.HasSuffix(cmd[0], "ninja") {
 					if !contains(cmd, "-t") {
-						stdout.Write([]byte("[1/1] CXX c.o d.o\nFAILED: c.o d.o\nsomeoutput\n"))
+						stdout.Write([]byte("[1/1](1) CXX c.o d.o\nFAILED: c.o d.o\nsomeoutput\n"))
 					}
 					return fmt.Errorf("failed to run command: %s", cmd)
 				}
@@ -307,7 +307,7 @@ func TestBuild(t *testing.T) {
 				// Even if post-processing steps like `ninja graph` fail, the
 				// failure summary should still attribute the failure to the
 				// original ninja build error.
-				FailureSummary: "[1/1] CXX c.o d.o\nFAILED: c.o d.o\nsomeoutput\n",
+				FailureSummary: "[1/1](1) CXX c.o d.o\nFAILED: c.o d.o\nsomeoutput\n",
 				NinjaActionMetrics: &fintpb.NinjaActionMetrics{
 					InitialActions: 1,
 					FinalActions:   1,

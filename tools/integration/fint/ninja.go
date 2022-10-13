@@ -32,9 +32,18 @@ var (
 	// e.g. "ninja explain: host_x64/pm is dirty"
 	explainRegex = regexp.MustCompile(`^\s*ninja explain:.*`)
 
-	// ruleRegex matches a regular line of Ninja stdout in the default format,
-	// e.g. "[56/1234] CXX host_x64/foo.o"
-	ruleRegex = regexp.MustCompile(`^\s*\[(\d+)/(\d+)\] (\S+) (\S+)`)
+	// Explicitly format Ninja stdout lines via the NINJA_STATUS
+	// environment variable.  %f=finished, %t=remaining, %r=running
+	ninjaStatus = "[%f/%t](%r) "
+
+	// ruleRegex matches a line of Ninja stdout using the above ninjaStatus.
+	// e.g. "[56/1234](16) CXX host_x64/foo.o"
+	// $1 is the number of finished actions
+	// $2 is the number of remaining actions
+	// $3 is the number of running actions
+	// $4 is the action type, e.g. LINK
+	// $5 is the target name
+	ruleRegex = regexp.MustCompile(`^\s*\[(\d+)/(\d+)\]\((\d+)\) (\S+) (\S+)`)
 
 	// errorRegex matches a single-line error message that Ninja prints at the
 	// end of its output if it encounters an error that prevents it from even
@@ -106,7 +115,9 @@ func (r ninjaRunner) run(ctx context.Context, args []string, stdout, stderr io.W
 		cmd = append(cmd, "-j", fmt.Sprintf("%d", r.jobCount))
 	}
 	cmd = append(cmd, args...)
-	return r.runner.Run(ctx, cmd, subprocess.RunOptions{Stdout: stdout, Stderr: stderr})
+	return r.runner.Run(ctx, cmd, subprocess.RunOptions{Stdout: stdout, Stderr: stderr, Env: []string{
+		fmt.Sprintf("NINJA_STATUS=%s", ninjaStatus),
+	}})
 }
 
 // withoutNinjaExplain is a writer that removes all Ninja explain outputs
@@ -212,7 +223,7 @@ func (p *ninjaParser) parseLine(line string) error {
 	line = strings.TrimRightFunc(line, unicode.IsSpace)
 
 	ruleMatches := ruleRegex.FindStringSubmatch(line)
-	if len(ruleMatches) == 5 {
+	if len(ruleMatches) == 6 {
 		// Group each rule line with the non-rule lines of text that follow.
 		p.currentRuleLines = nil
 
@@ -233,7 +244,7 @@ func (p *ninjaParser) parseLine(line string) error {
 				}
 			}
 			p.ninjaActionData.FinalActions = totalActions
-			actionType := ruleMatches[3]
+			actionType := ruleMatches[4]
 			p.ninjaActionData.ActionsByType[actionType]++
 		}
 	}
