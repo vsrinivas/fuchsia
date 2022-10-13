@@ -270,7 +270,7 @@ async fn flash_partition_sparse<W: Write>(
     name: &str,
     file_to_upload: &str,
     fastboot_proxy: &FastbootProxy,
-    max_download_size: u32,
+    max_download_size: u64,
 ) -> Result<()> {
     writeln!(writer, "Preparing to flash {} in sparse mode", file_to_upload)?;
 
@@ -325,7 +325,7 @@ pub async fn flash_partition<W: Write, F: FileResolver + Sync>(
     tracing::trace!("Got max download size from device: {}", max_download_size_var);
     let trimmed_max_download_size_var = max_download_size_var.trim_start_matches("0x");
 
-    let max_download_size: u32 = u32::from_str_radix(trimmed_max_download_size_var, 16)
+    let max_download_size: u64 = u64::from_str_radix(trimmed_max_download_size_var, 16)
         .expect("Fastboot max download size var was not a valid u32");
 
     tracing::trace!("Device Max Download Size: {}", max_download_size);

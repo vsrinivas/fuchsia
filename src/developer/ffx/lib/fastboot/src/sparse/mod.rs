@@ -397,7 +397,7 @@ fn add_sparse_chunk<'a>(r: &Vec<Chunk<'a>>, chunk: Chunk<'a>) -> Result<Vec<Chun
 /// This will return an error if max_download_size is <= BLK_SIZE
 fn resparse<'a>(
     sparse_file: SparseFile<'a>,
-    max_download_size: u32,
+    max_download_size: u64,
 ) -> Result<Vec<SparseFile<'a>>> {
     if max_download_size as usize <= BLK_SIZE {
         anyhow::bail!(
@@ -433,7 +433,7 @@ fn resparse<'a>(
             match sparse_file.chunks.get(chunk_pos) {
                 Some(chunk) => {
                     let curr_chunk_data_len = chunk.chunk_data_len();
-                    if (file_len + curr_chunk_data_len) as u32 > max_download_size {
+                    if (file_len + curr_chunk_data_len) as u64 > max_download_size {
                         tracing::trace!("Current file size is: {} and adding another chunk of len: {} would put us over our max: {}", file_len, curr_chunk_data_len, max_download_size);
 
                         // Add a dont care chunk to do the last offset.
@@ -481,7 +481,7 @@ pub async fn build_sparse_files<W: Write>(
     name: &str,
     file_to_upload: &str,
     dir: &Path,
-    max_download_size: u32,
+    max_download_size: u64,
 ) -> Result<Vec<TempPath>> {
     writeln!(writer, "Building sparse files for: {}. File: {}", name, file_to_upload)?;
     let mut in_file = async_fs::File::open(file_to_upload).await?;
