@@ -3,12 +3,17 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
         "inspect/client.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
-        "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/mediasession_bin_test"
+        binary: "bin/mediasession_bin_test",
     },
+    use: [
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+        },
+    ],
 }

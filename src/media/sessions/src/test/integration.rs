@@ -13,9 +13,9 @@ use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_async as fasync;
-use fuchsia_component::server::*;
+use fuchsia_component::{client, server::*};
 use fuchsia_component_test::{
-    Capability, ChildOptions, Event, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
+    Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
 use fuchsia_inspect as inspect;
 use futures::{
@@ -27,8 +27,7 @@ use futures::{
 use std::collections::HashMap;
 
 const MEDIASESSION_URL: &str = "#meta/mediasession.cm";
-const MEDIASESSION_SELECTOR: &str = "mediasession";
-const ARCHIVIST_URL: &str = "#meta/archivist-for-embedding.cm";
+const MEDIASESSION_NAME: &str = "mediasession";
 
 struct TestService {
     #[allow(unused)]
@@ -44,10 +43,8 @@ struct TestService {
 impl TestService {
     async fn new() -> Result<Self> {
         let builder = RealmBuilder::new().await.unwrap();
-        let mediasession =
-            builder.add_child("mediasession", MEDIASESSION_URL, ChildOptions::new()).await.unwrap();
-        let archivist = builder
-            .add_child("archivist", ARCHIVIST_URL, ChildOptions::new().eager())
+        let mediasession = builder
+            .add_child(MEDIASESSION_NAME, MEDIASESSION_URL, ChildOptions::new())
             .await
             .unwrap();
         let (new_usage_watchers_sink, new_usage_watchers) = mpsc::channel(10);
@@ -59,6 +56,15 @@ impl TestService {
                     Box::pin(Self::usage_reporter_mock(handles, new_usage_watchers_sink))
                 },
                 ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<LogSinkMarker>())
+                    .from(Ref::parent())
+                    .to(&mediasession),
             )
             .await
             .unwrap();
@@ -101,49 +107,9 @@ impl TestService {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol::<ArchiveAccessorMarker>())
-                    .from(&archivist)
-                    .to(Ref::parent()),
-            )
-            .await
-            .unwrap();
-        builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol::<LogSinkMarker>())
-                    .from(Ref::parent())
-                    .to(&mediasession)
-                    .to(&archivist),
-            )
-            .await?;
-        builder
-            .add_route(
-                Route::new()
                     .capability(Capability::protocol::<UsageReporterMarker>())
                     .from(&usage_reporter)
                     .to(&mediasession),
-            )
-            .await?;
-        builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
-                    .from(Ref::parent())
-                    .to(&archivist),
-            )
-            .await?;
-        builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::event(Event::Started))
-                    .capability(Capability::event(Event::Stopped))
-                    .capability(Capability::event(Event::Running))
-                    .capability(Capability::event(Event::directory_ready("diagnostics")))
-                    .capability(Capability::event(Event::capability_requested(
-                        "fuchsia.logger.LogSink",
-                    )))
-                    .from(Ref::framework())
-                    .to(&archivist),
             )
             .await?;
 
@@ -161,10 +127,8 @@ impl TestService {
             .root
             .connect_to_protocol_at_exposed_dir::<ObserverDiscoveryMarker>()
             .context("Connecting to ObserverDiscovery")?;
-        let archive = realm
-            .root
-            .connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>()
-            .context("Connecting to archivist")?;
+        let archive = client::connect_to_protocol::<ArchiveAccessorMarker>()
+            .context("Connecting to ArchiveAccessor")?;
 
         Ok(Self {
             realm,
@@ -274,7 +238,11 @@ impl TestService {
     async fn inspect_tree(&mut self) -> inspect::hierarchy::DiagnosticsHierarchy {
         ArchiveReader::new()
             .with_archive(self.archive.clone())
-            .add_selector(ComponentSelector::new(vec![MEDIASESSION_SELECTOR.to_string()]))
+            .add_selector(ComponentSelector::new(vec![format!(
+                "realm_builder\\:{}/{}",
+                self.realm.root.child_name(),
+                MEDIASESSION_NAME,
+            )]))
             .snapshot::<Inspect>()
             .await
             .expect("Got batch")

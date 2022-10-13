@@ -10,9 +10,6 @@
         runner: "elf",
         binary: "bin/mediasession",
     },
-    use: [
-        { protocol: "fuchsia.media.UsageReporter" },
-    ],
     capabilities: [
         {
             protocol: [
@@ -22,6 +19,9 @@
                 "fuchsia.media.sessions2.Publisher",
             ],
         },
+    ],
+    use: [
+        { protocol: "fuchsia.media.UsageReporter" },
     ],
     expose: [
         {
@@ -35,4 +35,3 @@
         },
     ],
 }
-

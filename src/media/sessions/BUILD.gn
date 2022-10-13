@@ -78,7 +78,6 @@ fuchsia_unittest_package("mediasession_tests") {
   deps = [
     ":bin_test",
     ":component",
-    "//src/diagnostics/archivist:archivist-for-embedding-v2",
     "//src/lib/fuchsia-component-test/realm_builder_server:realm_builder_server_component",
   ]
 }
