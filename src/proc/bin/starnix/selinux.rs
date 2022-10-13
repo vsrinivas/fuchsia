@@ -52,6 +52,7 @@ impl SeLinuxFs {
             )
             .entry(b"class", SeLinuxClassDirectory::new(), mode!(IFDIR, 0o777))
             .entry(b"context", SeLinuxNode::new(|| Ok(SeContext)), mode!(IFREG, 0o644))
+            .entry_dev(b"null", DeviceFileNode {}, mode!(IFCHR, 0o666), DeviceType::NULL)
             .build_root();
 
         Ok(fs)
@@ -221,6 +222,18 @@ impl FileOps for AccessFile {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         UserBuffer::get_total_length(data)
+    }
+}
+
+struct DeviceFileNode;
+
+impl FsNodeOps for DeviceFileNode {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        unreachable!("Special nodes cannot be opened.");
     }
 }
 
