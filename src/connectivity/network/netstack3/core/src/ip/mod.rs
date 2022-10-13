@@ -302,8 +302,8 @@ where
     type Udp = SC::Udp;
 }
 
-impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C>> TransportIpContext<Ipv4, C>
-    for SC
+impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C> + NonTestCtxMarker>
+    TransportIpContext<Ipv4, C> for SC
 {
     fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<Ipv4Addr>) -> Option<SC::DeviceId> {
         match self.address_status(addr) {
@@ -325,8 +325,8 @@ impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C>> TransportIpCont
     }
 }
 
-impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C>> TransportIpContext<Ipv6, C>
-    for SC
+impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C> + NonTestCtxMarker>
+    TransportIpContext<Ipv6, C> for SC
 {
     fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<Ipv6Addr>) -> Option<SC::DeviceId> {
         match self.address_status(addr) {
@@ -526,7 +526,7 @@ impl<
 
 impl<
         C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId> + IpLayerNonSyncContext<Ipv4, SC::DeviceId>,
-        SC: IpLayerContext<Ipv4, C> + device::IpDeviceContext<Ipv4, C>,
+        SC: IpLayerContext<Ipv4, C> + device::IpDeviceContext<Ipv4, C> + NonTestCtxMarker,
     > IpSocketContext<Ipv4, C> for SC
 {
     fn lookup_route(
@@ -587,7 +587,7 @@ impl<
 
 impl<
         C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId> + IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C>,
+        SC: IpLayerContext<Ipv6, C> + device::IpDeviceContext<Ipv6, C> + NonTestCtxMarker,
     > IpSocketContext<Ipv6, C> for SC
 {
     fn lookup_route(

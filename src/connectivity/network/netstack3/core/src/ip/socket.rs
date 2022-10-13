@@ -790,7 +790,9 @@ pub(crate) mod testutil {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyInstant, DummyNonSyncCtx, DummySyncCtx},
+            testutil::{
+                DummyCounterCtx, DummyInstant, DummyInstantCtx, DummyNonSyncCtx, DummySyncCtx,
+            },
             FrameContext,
         },
         ip::{
@@ -815,12 +817,9 @@ pub(crate) mod testutil {
 
     impl<
             I: IpExt + IpDeviceStateIpExt,
+            C: AsMut<DummyCounterCtx> + AsRef<DummyInstantCtx>,
             DeviceId: IpDeviceId + 'static,
-            Id,
-            Event: Debug,
-            NonSyncCtxState,
-        > TransportIpContext<I, DummyNonSyncCtx<Id, Event, NonSyncCtxState>>
-        for DummyIpSocketCtx<I, DeviceId>
+        > TransportIpContext<I, C> for DummyIpSocketCtx<I, DeviceId>
     {
         fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {
             device.map_or(DEFAULT_HOP_LIMITS, |device| {
@@ -849,16 +848,13 @@ pub(crate) mod testutil {
 
     impl<
             I: IpDeviceStateIpExt,
-            Id,
-            Event: Debug,
+            C: AsMut<DummyCounterCtx> + AsRef<DummyInstantCtx>,
             DeviceId: IpDeviceId + 'static,
-            NonSyncCtxState,
-        > IpSocketContext<I, DummyNonSyncCtx<Id, Event, NonSyncCtxState>>
-        for DummyIpSocketCtx<I, DeviceId>
+        > IpSocketContext<I, C> for DummyIpSocketCtx<I, DeviceId>
     {
         fn lookup_route(
             &self,
-            _ctx: &mut DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
+            _ctx: &mut C,
             device: Option<&Self::DeviceId>,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             addr: SpecifiedAddr<I::Addr>,
@@ -990,6 +986,49 @@ pub(crate) mod testutil {
         pub(crate) fn get_device_state(&self, device: &D) -> &IpDeviceState<DummyInstant, I> {
             let Self { device_state, table: _ } = self;
             device_state.get(device).unwrap_or_else(|| panic!("no device {}", device))
+        }
+    }
+
+    #[derive(Default)]
+    pub(crate) struct DummyBufferIpSocketCtx<I: IpDeviceStateIpExt, D> {
+        ip_socket_ctx: DummyIpSocketCtx<I, D>,
+    }
+
+    impl<I: IpDeviceStateIpExt, D> DummyBufferIpSocketCtx<I, D> {
+        pub(crate) fn with_ctx(ip_socket_ctx: DummyIpSocketCtx<I, D>) -> Self {
+            Self { ip_socket_ctx }
+        }
+    }
+
+    impl<I: IpDeviceStateIpExt, D> AsMut<DummyIpSocketCtx<I, D>> for DummyBufferIpSocketCtx<I, D> {
+        fn as_mut(&mut self) -> &mut DummyIpSocketCtx<I, D> {
+            &mut self.ip_socket_ctx
+        }
+    }
+
+    impl<I: IpDeviceStateIpExt, D> AsRef<DummyIpSocketCtx<I, D>> for DummyBufferIpSocketCtx<I, D> {
+        fn as_ref(&self) -> &DummyIpSocketCtx<I, D> {
+            &self.ip_socket_ctx
+        }
+    }
+
+    impl<
+            I: IpExt + IpDeviceStateIpExt,
+            C: AsMut<DummyCounterCtx> + AsRef<DummyInstantCtx>,
+            D: IpDeviceId + 'static,
+            Meta,
+        > TransportIpContext<I, C> for DummySyncCtx<DummyBufferIpSocketCtx<I, D>, Meta, D>
+    where
+        Self: IpSocketContext<I, C, DeviceId = D>,
+    {
+        fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<I::Addr>) -> Option<D> {
+            let DummyBufferIpSocketCtx { ip_socket_ctx } = self.get_ref();
+            TransportIpContext::<I, C>::get_device_with_assigned_addr(ip_socket_ctx, addr)
+        }
+
+        fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {
+            let DummyBufferIpSocketCtx { ip_socket_ctx } = self.get_ref();
+            TransportIpContext::<I, C>::get_default_hop_limits(ip_socket_ctx, device)
         }
     }
 

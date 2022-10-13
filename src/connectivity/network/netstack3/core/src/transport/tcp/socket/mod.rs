@@ -1378,7 +1378,10 @@ mod tests {
             device::state::{
                 AddrConfig, AddressState, IpDeviceState, IpDeviceStateIpExt, Ipv6AddressEntry,
             },
-            socket::{testutil::DummyIpSocketCtx, BufferIpSocketHandler},
+            socket::{
+                testutil::{DummyBufferIpSocketCtx, DummyIpSocketCtx},
+                BufferIpSocketHandler,
+            },
             testutil::DummyDeviceId,
             BufferIpTransportContext as _, HopLimits, SendIpPacketMeta, TransportIpContext,
             DEFAULT_HOP_LIMITS,
@@ -1400,45 +1403,11 @@ mod tests {
         fn new_device_state(addr: Self::Addr, prefix: u8) -> IpDeviceState<DummyInstant, Self>;
     }
 
-    #[derive(Default)]
-    struct MockBufferIpTransportCtxState<I: TcpTestIpExt> {
-        ip_socket_ctx: DummyIpSocketCtx<I, DummyDeviceId>,
-    }
-
     type MockBufferIpTransportCtx<I> = DummySyncCtx<
-        MockBufferIpTransportCtxState<I>,
+        DummyBufferIpSocketCtx<I, DummyDeviceId>,
         SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
         DummyDeviceId,
     >;
-
-    impl<I: TcpTestIpExt> AsMut<DummyIpSocketCtx<I, DummyDeviceId>>
-        for MockBufferIpTransportCtxState<I>
-    {
-        fn as_mut(&mut self) -> &mut DummyIpSocketCtx<I, DummyDeviceId> {
-            &mut self.ip_socket_ctx
-        }
-    }
-
-    impl<I: TcpTestIpExt> AsRef<DummyIpSocketCtx<I, DummyDeviceId>>
-        for MockBufferIpTransportCtxState<I>
-    {
-        fn as_ref(&self) -> &DummyIpSocketCtx<I, DummyDeviceId> {
-            &self.ip_socket_ctx
-        }
-    }
-
-    impl<I: TcpTestIpExt> TransportIpContext<I, TcpNonSyncCtx> for MockBufferIpTransportCtx<I> {
-        fn get_device_with_assigned_addr(
-            &self,
-            _addr: SpecifiedAddr<I::Addr>,
-        ) -> Option<DummyDeviceId> {
-            Some(DummyDeviceId)
-        }
-
-        fn get_default_hop_limits(&self, _device: Option<&Self::DeviceId>) -> HopLimits {
-            DEFAULT_HOP_LIMITS
-        }
-    }
 
     struct MockTcpState<I: TcpTestIpExt> {
         isn_generator: IsnGenerator<DummyInstant>,
@@ -1447,7 +1416,7 @@ mod tests {
 
     type TcpSyncCtx<I> = WrappedDummySyncCtx<
         MockTcpState<I>,
-        MockBufferIpTransportCtxState<I>,
+        DummyBufferIpSocketCtx<I, DummyDeviceId>,
         SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
         DummyDeviceId,
     >;
@@ -1589,11 +1558,13 @@ mod tests {
     impl<I: TcpTestIpExt> TcpSyncCtx<I> {
         fn new(addr: SpecifiedAddr<I::Addr>, peer: SpecifiedAddr<I::Addr>, prefix: u8) -> Self {
             Self::with_inner_and_outer_state(
-                MockBufferIpTransportCtxState {
-                    ip_socket_ctx: DummyIpSocketCtx::<I, _>::with_devices_state(core::iter::once(
-                        (DummyDeviceId, I::new_device_state(*addr, prefix), alloc::vec![peer]),
+                DummyBufferIpSocketCtx::with_ctx(DummyIpSocketCtx::<I, _>::with_devices_state(
+                    core::iter::once((
+                        DummyDeviceId,
+                        I::new_device_state(*addr, prefix),
+                        alloc::vec![peer],
                     )),
-                },
+                )),
                 MockTcpState {
                     isn_generator: Default::default(),
                     sockets: TcpSockets {
