@@ -8,6 +8,7 @@ use {
     anyhow::{anyhow, bail, Context as _, Result},
     async_net::TcpStream,
     async_trait::async_trait,
+    ffx_config::get,
     futures::{
         prelude::*,
         task::{Context, Poll},
@@ -158,7 +159,10 @@ async fn handshake(stream: &mut TcpStream) -> Result<()> {
     Ok(())
 }
 
-const OPEN_RETRY: i32 = 5;
+const OPEN_RETRY_COUNT: &str = "fastboot.tcp.open.retry.count";
+const OPEN_RETRY_WAIT: &str = "fastboot.tcp.open.retry.wait";
+
+const OPEN_RETRY: u64 = 10;
 const RETRY_WAIT_SECONDS: u64 = 5;
 const FASTBOOT_PORT: u16 = 5554;
 
@@ -175,16 +179,19 @@ async fn open_once(target: &Target) -> Result<TcpNetworkInterface> {
 #[async_trait(?Send)]
 impl InterfaceFactory<TcpNetworkInterface> for TcpNetworkFactory {
     async fn open(&mut self, target: &Target) -> Result<TcpNetworkInterface> {
-        for retry in 0..OPEN_RETRY {
+        let retry_count: u64 = get(OPEN_RETRY_COUNT).await.unwrap_or(OPEN_RETRY);
+        let retry_wait_seconds: u64 = get(OPEN_RETRY_WAIT).await.unwrap_or(RETRY_WAIT_SECONDS);
+
+        for retry in 0..retry_count {
             match open_once(target).await {
                 Ok(res) => {
                     tracing::debug!("TCP connect attempt #{} succeeds", retry);
                     return Ok(res);
                 }
                 Err(e) => {
-                    if retry + 1 < OPEN_RETRY {
+                    if retry + 1 < retry_count {
                         tracing::debug!("TCP connect attempt #{} failed", retry);
-                        std::thread::sleep(std::time::Duration::from_secs(RETRY_WAIT_SECONDS));
+                        std::thread::sleep(std::time::Duration::from_secs(retry_wait_seconds));
                         continue;
                     }
 
