@@ -294,6 +294,9 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 #endif
 
 zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
+  TRACE_DURATION("f2fs", "File::Read", "event", "File::Read", "ino", Ino(), "offset",
+                 off / kBlockSize, "length", len / kBlockSize);
+
   if (off >= GetSize()) {
     *out_actual = 0;
     return ZX_OK;
@@ -425,6 +428,9 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 }
 
 zx_status_t File::Write(const void *data, size_t len, size_t offset, size_t *out_actual) {
+  TRACE_DURATION("f2fs", "File::Write", "event", "File::Write", "ino", Ino(), "offset",
+                 offset / kBlockSize, "length", len / kBlockSize);
+
   if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }
@@ -433,6 +439,9 @@ zx_status_t File::Write(const void *data, size_t len, size_t offset, size_t *out
 
 zx_status_t File::Append(const void *data, size_t len, size_t *out_end, size_t *out_actual) {
   size_t off = GetSize();
+  TRACE_DURATION("f2fs", "File::Append", "event", "File::Append", "ino", Ino(), "offset", off,
+                 "length", len);
+
   if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     *out_end = off;
     return ZX_ERR_BAD_STATE;
@@ -443,6 +452,8 @@ zx_status_t File::Append(const void *data, size_t len, size_t *out_end, size_t *
 }
 
 zx_status_t File::Truncate(size_t len) {
+  TRACE_DURATION("f2fs", "File::Truncate", "event", "File::Truncate", "ino", Ino(), "length", len);
+
   if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }

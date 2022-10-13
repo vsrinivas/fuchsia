@@ -121,9 +121,6 @@ zx_status_t Bcache::Readblk(block_t bno, void* data) {
   if (bno >= max_blocks_) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-#ifdef __Fuchsia__
-  TRACE_DURATION("f2fs", "Bcache::Readblk", "blk", bno);
-#endif
   storage::Operation operation = {};
   operation.type = storage::OperationType::kRead;
   operation.vmo_offset = 0;
@@ -142,9 +139,6 @@ zx_status_t Bcache::Writeblk(block_t bno, const void* data) {
   if (bno >= max_blocks_) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-#ifdef __Fuchsia__
-  TRACE_DURATION("f2fs", "Bcache::Writeblk", "blk", bno);
-#endif
   storage::Operation operation = {};
   operation.type = storage::OperationType::kWrite;
   operation.vmo_offset = 0;

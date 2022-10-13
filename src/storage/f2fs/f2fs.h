@@ -10,6 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/trace/event.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
@@ -17,6 +18,8 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <fidl/fuchsia.fs.startup/cpp/wire.h>
+#else
+#define TRACE_DURATION(...)
 #endif  // __Fuchsia__
 
 #include <fcntl.h>
