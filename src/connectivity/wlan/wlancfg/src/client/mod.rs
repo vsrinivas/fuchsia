@@ -314,15 +314,14 @@ async fn handle_client_request_save_network(
     let credential = Credential::try_from(
         network_config.credential.ok_or_else(|| NetworkConfigError::ConfigMissingCredential)?,
     )?;
-    let evicted_config =
-        saved_networks.store(NetworkIdentifier::from(net_id.clone()), credential.clone()).await?;
+    let evicted_config = saved_networks.store(net_id.clone(), credential.clone()).await?;
 
     // If a config was removed, disconnect from that network.
     let mut iface_manager = iface_manager.lock().await;
     if let Some(config) = evicted_config {
         let net_id = client_types::NetworkIdentifier {
             ssid: config.ssid,
-            security_type: config.security_type.into(),
+            security_type: config.security_type,
         };
         match iface_manager
             .disconnect(net_id, client_types::DisconnectReason::NetworkConfigUpdated)

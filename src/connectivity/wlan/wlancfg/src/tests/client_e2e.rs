@@ -692,7 +692,7 @@ fn save_and_connect(
     let mut networks = networks.unwrap();
     assert_eq!(networks.len(), 1);
     let network = networks.pop().unwrap();
-    assert_eq!(network.id.unwrap(), network_id.clone().into());
+    assert_eq!(network.id.unwrap(), network_id.clone());
     assert_eq!(network.state.unwrap(), types::ConnectionState::Connecting);
 
     // BSS selection scans occur for requested network. Return scan results.
@@ -708,7 +708,7 @@ fn save_and_connect(
         bss_description: random_fidl_bss_description!(
             protection =>  wlan_common::test_utils::fake_stas::FakeProtectionCfg::from(scanned_security),
             bssid: [0, 0, 0, 0, 0, 0],
-            ssid: TEST_SSID.clone().into(),
+            ssid: TEST_SSID.clone(),
             rssi_dbm: 10,
             snr_db: 10,
             channel: types::WlanChan::new(1, types::Cbw::Cbw20),
@@ -802,7 +802,7 @@ fn save_and_connect(
     let mut networks = networks.unwrap();
     assert_eq!(networks.len(), 1);
     let network = networks.pop().unwrap();
-    assert_eq!(network.id.unwrap(), network_id.clone().into());
+    assert_eq!(network.id.unwrap(), network_id.clone());
     assert_eq!(network.state.unwrap(), types::ConnectionState::Connected);
 }
 
@@ -924,7 +924,7 @@ fn save_and_fail_to_connect(
     assert_eq!(networks.len(), 1);
     let network = networks.pop().unwrap();
     assert_eq!(network.state.unwrap(), types::ConnectionState::Connecting);
-    assert_eq!(network.id.unwrap(), network_id.clone().into());
+    assert_eq!(network.id.unwrap(), network_id.clone());
 
     for i in 0..3 {
         // On first iteration, save request returns once the scan has been queued.
@@ -945,7 +945,7 @@ fn save_and_fail_to_connect(
             bss_description: random_fidl_bss_description!(
                 protection =>  wlan_common::test_utils::fake_stas::FakeProtectionCfg::from(scanned_security),
                 bssid: [0, 0, 0, 0, 0, 0],
-                ssid: TEST_SSID.clone().into(),
+                ssid: TEST_SSID.clone(),
                 rssi_dbm: 10,
                 snr_db: 10,
                 channel: types::WlanChan::new(1, types::Cbw::Cbw20),
@@ -973,5 +973,5 @@ fn save_and_fail_to_connect(
     assert_eq!(networks.len(), 1);
     let network = networks.pop().unwrap();
     assert_eq!(network.state.unwrap(), types::ConnectionState::Failed);
-    assert_eq!(network.id.unwrap(), network_id.clone().into());
+    assert_eq!(network.id.unwrap(), network_id.clone());
 }

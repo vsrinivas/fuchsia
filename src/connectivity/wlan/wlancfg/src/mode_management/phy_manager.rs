@@ -681,7 +681,7 @@ impl PhyManagerApi for PhyManager {
         for phy_id in self.phys.keys() {
             let result = set_ps_mode(&self.device_monitor, *phy_id, power_state).await?;
             if let Err(status) = fuchsia_zircon::ok(result) {
-                final_status = status.into();
+                final_status = status;
             }
         }
 
@@ -2508,7 +2508,7 @@ mod tests {
 
         // Suggest an AP MAC
         let mac = MacAddress::from_bytes(&[1, 2, 3, 4, 5, 6]).unwrap();
-        phy_manager.suggest_ap_mac(mac.clone());
+        phy_manager.suggest_ap_mac(mac);
 
         let get_ap_future = phy_manager.create_or_get_ap_iface();
         pin_mut!(get_ap_future);
@@ -2554,7 +2554,7 @@ mod tests {
 
         // Suggest an AP MAC
         let mac = MacAddress::from_bytes(&[1, 2, 3, 4, 5, 6]);
-        phy_manager.suggest_ap_mac(mac.clone().unwrap());
+        phy_manager.suggest_ap_mac(mac.unwrap());
 
         // Start client connections so that an IfaceRequest is issued for the client.
         let start_client_future =

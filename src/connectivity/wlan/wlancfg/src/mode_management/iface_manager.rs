@@ -1940,7 +1940,7 @@ mod tests {
         assert_eq!(iface_manager.clients.len(), 1);
         assert_eq!(
             iface_manager.clients[0].config,
-            Some(NetworkIdentifier::new(other_test_ssid, SecurityType::Wpa).into())
+            Some(NetworkIdentifier::new(other_test_ssid, SecurityType::Wpa))
         );
     }
 
@@ -2031,7 +2031,7 @@ mod tests {
 
         // Verify that the ClientIfaceContainer has been moved from unconfigured to configured.
         assert_eq!(iface_manager.clients.len(), 1);
-        assert_eq!(iface_manager.clients[0].config, Some(network_id.into()));
+        assert_eq!(iface_manager.clients[0].config, Some(network_id));
     }
 
     #[fuchsia::test]
@@ -2172,7 +2172,7 @@ mod tests {
         {
             let selection = client_types::ConnectSelection {
                 target: client_types::ScannedCandidate {
-                    network: network_id.clone().into(),
+                    network: network_id.clone(),
                     credential: credential,
                     bss_description: random_fidl_bss_description!(Wpa3, ssid: TEST_SSID.clone()),
                     observation: client_types::ScanObservation::Passive,
@@ -2245,7 +2245,7 @@ mod tests {
 
         // Verify that the ClientIfaceContainer has been moved from unconfigured to configured.
         assert_eq!(iface_manager.clients.len(), 1);
-        assert_eq!(iface_manager.clients[0].config, Some(network_id.into()));
+        assert_eq!(iface_manager.clients[0].config, Some(network_id));
     }
 
     /// Tests the case where connect is called for a WPA3 connection and a client iface exists but
@@ -3399,7 +3399,7 @@ mod tests {
         }
 
         // Record the initial start time.
-        let initial_start_time = iface_manager.aps[0].enabled_time.clone();
+        let initial_start_time = iface_manager.aps[0].enabled_time;
 
         // Now issue a second start command.
         let alternate_ssid = ap_types::Ssid::try_from("some_other_ssid").unwrap();
@@ -5272,7 +5272,7 @@ mod tests {
         let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let network = Some(client_types::ScannedCandidate {
-            network: network_id.into(),
+            network: network_id,
             credential: credential,
             bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
             observation: client_types::ScanObservation::Passive,
@@ -5342,7 +5342,7 @@ mod tests {
         let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let network = Some(client_types::ScannedCandidate {
-            network: network_id.into(),
+            network: network_id,
             credential: credential,
             bss_description: random_fidl_bss_description!(Open, bssid: [20, 30, 40, 50, 60, 70]),
             observation: client_types::ScanObservation::Passive,

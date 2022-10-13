@@ -374,7 +374,7 @@ fn insert_bss_to_network_bss_map(
                 bssid: scan_result.bss_description.bssid,
                 rssi: scan_result.bss_description.rssi_dbm,
                 snr_db: scan_result.bss_description.snr_db,
-                channel: scan_result.bss_description.channel.into(),
+                channel: scan_result.bss_description.channel,
                 timestamp: scan_result.timestamp,
                 observation: if observed_in_passive_scan {
                     types::ScanObservation::Passive
@@ -461,9 +461,7 @@ pub fn scan_result_to_policy_scan_result(
                                 // Get the frequency. On error, default to Some(0) rather than None
                                 // to protect against consumer code that expects this field to
                                 // always be set.
-                                let frequency = types::WlanChan::from(input.channel)
-                                    .get_center_freq()
-                                    .unwrap_or(0);
+                                let frequency = input.channel.get_center_freq().unwrap_or(0);
                                 fidl_policy::Bss {
                                     bssid: Some(input.bssid.0),
                                     rssi: Some(input.rssi),
@@ -1483,15 +1481,13 @@ mod tests {
         assert!(exec
             .run_singlethreaded(
                 saved_networks_manager
-                    .store(network_id.clone().into(), Credential::Password(b"randompass".to_vec()))
+                    .store(network_id.clone(), Credential::Password(b"randompass".to_vec()))
             )
             .expect("failed to store network")
             .is_none());
-        exec.run_singlethreaded(
-            saved_networks_manager.update_hidden_prob(network_id.clone().into(), 0.0),
-        );
+        exec.run_singlethreaded(saved_networks_manager.update_hidden_prob(network_id.clone(), 0.0));
         let config = exec
-            .run_singlethreaded(saved_networks_manager.lookup(&network_id.clone().into()))
+            .run_singlethreaded(saved_networks_manager.lookup(&network_id.clone()))
             .pop()
             .expect("failed to lookup");
         assert_eq!(config.hidden_probability, 0.0);
@@ -1560,10 +1556,8 @@ mod tests {
         };
         assert!(exec
             .run_singlethreaded(
-                saved_networks_manager.store(
-                    not_seen_net_id.clone().into(),
-                    Credential::Password(b"foobarbaz".to_vec())
-                )
+                saved_networks_manager
+                    .store(not_seen_net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
             )
             .expect("failed to store network")
             .is_none());
@@ -1633,19 +1627,17 @@ mod tests {
         };
         assert!(exec
             .run_singlethreaded(
-                saved_networks_manager.store(
-                    unseen_network.clone().into(),
-                    Credential::Password(b"randompass".to_vec())
-                )
+                saved_networks_manager
+                    .store(unseen_network.clone(), Credential::Password(b"randompass".to_vec()))
             )
             .expect("failed to store network")
             .is_none());
 
         exec.run_singlethreaded(
-            saved_networks_manager.update_hidden_prob(unseen_network.clone().into(), 1.0),
+            saved_networks_manager.update_hidden_prob(unseen_network.clone(), 1.0),
         );
         let config = exec
-            .run_singlethreaded(saved_networks_manager.lookup(&unseen_network.clone().into()))
+            .run_singlethreaded(saved_networks_manager.lookup(&unseen_network.clone()))
             .pop()
             .expect("failed to lookup");
         assert_eq!(config.hidden_probability, 1.0);
@@ -1867,16 +1859,14 @@ mod tests {
         };
         assert!(exec
             .run_singlethreaded(
-                saved_networks_manager.store(
-                    unseen_network.clone().into(),
-                    Credential::Password(b"randompass".to_vec())
-                )
+                saved_networks_manager
+                    .store(unseen_network.clone(), Credential::Password(b"randompass".to_vec()))
             )
             .expect("failed to store network")
             .is_none());
 
         exec.run_singlethreaded(
-            saved_networks_manager.update_hidden_prob(unseen_network.clone().into(), 1.0),
+            saved_networks_manager.update_hidden_prob(unseen_network.clone(), 1.0),
         );
 
         // Issue request to scan.
@@ -2104,13 +2094,11 @@ mod tests {
         assert!(exec
             .run_singlethreaded(
                 saved_networks_manager2
-                    .store(active_id.clone().into(), Credential::Password(b"randompass".to_vec()))
+                    .store(active_id.clone(), Credential::Password(b"randompass".to_vec()))
             )
             .expect("failed to store network")
             .is_none());
-        exec.run_singlethreaded(
-            saved_networks_manager2.update_hidden_prob(active_id.clone().into(), 1.0),
-        );
+        exec.run_singlethreaded(saved_networks_manager2.update_hidden_prob(active_id.clone(), 1.0));
 
         let MockScanData {
             passive_input_aps,
@@ -2330,7 +2318,7 @@ mod tests {
             let mut result = result.unwrap();
             // Two networks with the desired SSID are present
             assert_eq!(result.len(), 2);
-            result.sort_by_key(|r| r.security_type_detailed.clone());
+            result.sort_by_key(|r| r.security_type_detailed);
             // One network is WPA2WPA3
             assert_eq!(result[0].ssid, desired_ssid.clone());
             assert_eq!(result[0].security_type_detailed, types::SecurityTypeDetailed::Wpa2Wpa3Personal);

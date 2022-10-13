@@ -946,8 +946,8 @@ impl Telemetry {
                 latest_ap_state,
             } => {
                 let connect_start_time = match &self.connection_state {
-                    ConnectionState::Idle(state) => state.connect_start_time.clone(),
-                    ConnectionState::Disconnected(state) => state.connect_start_time.clone(),
+                    ConnectionState::Idle(state) => state.connect_start_time,
+                    ConnectionState::Disconnected(state) => state.connect_start_time,
                     ConnectionState::Connected(..) => {
                         warn!("Received ConnectResult event while still connected");
                         None
@@ -1078,7 +1078,7 @@ impl Telemetry {
                     Some(now)
                 } else {
                     match &self.connection_state {
-                        ConnectionState::Connected(state) => state.new_connect_start_time.clone(),
+                        ConnectionState::Connected(state) => state.new_connect_start_time,
                         _ => None,
                     }
                 };
@@ -2920,7 +2920,7 @@ mod tests {
         let ind = fidl_internal::SignalReportIndication { rssi_dbm: -40, snr_db: 30 };
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::OnSignalReport { ind: ind.clone(), rssi_velocity: 1 });
+            .send(TelemetryEvent::OnSignalReport { ind: ind, rssi_velocity: 1 });
 
         test_helper.advance_by(UNRESPONSIVE_FLAG_MIN_DURATION, test_fut.as_mut());
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
@@ -4361,18 +4361,15 @@ mod tests {
         let rssi_velocity_2 = 2;
         let ind_1 = fidl_internal::SignalReportIndication { rssi_dbm: -50, snr_db: 30 };
         let ind_2 = fidl_internal::SignalReportIndication { rssi_dbm: -61, snr_db: 40 };
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_1.clone(),
-            rssi_velocity: rssi_velocity_1,
-        });
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_1.clone(),
-            rssi_velocity: rssi_velocity_2,
-        });
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_2.clone(),
-            rssi_velocity: rssi_velocity_2,
-        });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_1, rssi_velocity: rssi_velocity_1 });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_1, rssi_velocity: rssi_velocity_2 });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_2, rssi_velocity: rssi_velocity_2 });
 
         // After an hour has passed, the RSSI velocity should be logged to cobalt
         test_helper.advance_by(1.hour(), test_fut.as_mut());
@@ -4399,10 +4396,9 @@ mod tests {
         // Send another different RSSI velocity
         let rssi_velocity_3 = 3;
         let ind_3 = fidl_internal::SignalReportIndication { rssi_dbm: -75, snr_db: 30 };
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_3.clone(),
-            rssi_velocity: rssi_velocity_3,
-        });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_3, rssi_velocity: rssi_velocity_3 });
         test_helper.advance_by(1.hour(), test_fut.as_mut());
 
         // Check that the previously logged values are not logged again, and the new value is
@@ -4451,18 +4447,16 @@ mod tests {
             .send(TelemetryEvent::OnSignalReport { ind: ind_min, rssi_velocity: -15 });
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::OnSignalReport { ind: ind_min.clone(), rssi_velocity: 11 });
+            .send(TelemetryEvent::OnSignalReport { ind: ind_min, rssi_velocity: 11 });
         test_helper
             .telemetry_sender
-            .send(TelemetryEvent::OnSignalReport { ind: ind_max.clone(), rssi_velocity: 20 });
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_overflow_1.clone(),
-            rssi_velocity: -10,
-        });
-        test_helper.telemetry_sender.send(TelemetryEvent::OnSignalReport {
-            ind: ind_overflow_2.clone(),
-            rssi_velocity: 10,
-        });
+            .send(TelemetryEvent::OnSignalReport { ind: ind_max, rssi_velocity: 20 });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_overflow_1, rssi_velocity: -10 });
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind_overflow_2, rssi_velocity: 10 });
         test_helper.advance_by(1.hour(), test_fut.as_mut());
 
         // Check that the min, max, underflow, and overflow buckets are used correctly.

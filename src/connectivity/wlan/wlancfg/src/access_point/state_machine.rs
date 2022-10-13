@@ -270,7 +270,7 @@ fn perform_manual_request(
             // listeners need to be notified of the failure.
             deps.state_tracker
                 .update_operating_state(types::OperatingState::Failed)
-                .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+                .map_err(|e| ExitReason(Err(e)))?;
 
             return Err(ExitReason(Err(format_err!(
                 "The stream of user requests ended unexpectedly"
@@ -331,13 +331,13 @@ async fn starting_state(
                 req.mode,
                 req.band,
             ))
-            .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+            .map_err(|e| ExitReason(Err(e)))?;
 
         stop_result.map_err(|e| ExitReason(Err(e)))?;
     }
 
     // If the stop operation was successful, update all listeners that the AP is stopped.
-    deps.state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+    deps.state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(e)))?;
 
     // Update all listeners that a new AP is starting if this is the first attempt to start the AP.
     if remaining_retries == AP_START_MAX_RETRIES {
@@ -348,7 +348,7 @@ async fn starting_state(
                 req.mode,
                 req.band,
             ))
-            .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+            .map_err(|e| ExitReason(Err(e)))?;
     }
 
     let mut ap_config = fidl_sme::ApConfig::from(req.clone());
@@ -380,7 +380,7 @@ async fn starting_state(
                         // If a new request comes in, clear out the current AP state.
                         deps.state_tracker
                             .set_stopped_state()
-                            .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+                            .map_err(|e| ExitReason(Err(e)))?;
                         return perform_manual_request(
                             deps,
                             req,
@@ -419,7 +419,7 @@ async fn starting_state(
 
     deps.state_tracker
         .update_operating_state(types::OperatingState::Active)
-        .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+        .map_err(|e| ExitReason(Err(e)))?;
     return Ok(started_state(deps, req).into_state());
 }
 
@@ -447,7 +447,7 @@ async fn stopping_state(
     // If the stop command fails, the SME is probably unusable.  If the state is not updated before
     // evaluating the stop result code, the AP state updates may end up with a lingering reference
     // to a started or starting AP.
-    deps.state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+    deps.state_tracker.set_stopped_state().map_err(|e| ExitReason(Err(e)))?;
     result.map_err(|e| ExitReason(Err(e)))?;
 
     // Ack the request to stop the AP.
@@ -494,7 +494,7 @@ async fn started_state(
                         // If querying AP status fails, notify listeners and exit the state
                         // machine.
                         deps.state_tracker.update_operating_state(types::OperatingState::Failed)
-                            .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
+                            .map_err(|e| { ExitReason(Err(e)) })?;
 
                         return Err(ExitReason(Err(anyhow::Error::from(e))));
                     }
@@ -503,11 +503,11 @@ async fn started_state(
                 match status_response.running_ap {
                     Some(sme_state) => {
                         deps.state_tracker.consume_sme_status_update(cbw, *sme_state)
-                            .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
+                            .map_err(|e| { ExitReason(Err(e)) })?;
                     }
                     None => {
                         deps.state_tracker.update_operating_state(types::OperatingState::Failed)
-                            .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
+                            .map_err(|e| { ExitReason(Err(e)) })?;
 
                         return transition_to_starting(
                             deps,

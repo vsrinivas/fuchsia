@@ -429,11 +429,7 @@ async fn connecting_state<'a>(
     let mut sme_connect_request = fidl_sme::ConnectRequest {
         ssid: options.connect_selection.target.network.ssid.to_vec(),
         bss_description: options.connect_selection.target.bss_description.clone(),
-        multiple_bss_candidates: options
-            .connect_selection
-            .target
-            .has_multiple_bss_candidates
-            .clone(),
+        multiple_bss_candidates: options.connect_selection.target.has_multiple_bss_candidates,
         authentication: authenticator.into(),
         deprecated_scan_type: fidl_fuchsia_wlan_common::ScanType::Active,
     };
@@ -450,8 +446,7 @@ async fn connecting_state<'a>(
                 multiple_bss_candidates: options
                     .connect_selection
                     .target
-                    .has_multiple_bss_candidates
-                    .clone(),
+                    .has_multiple_bss_candidates,
                 connect_txn_stream: stream,
                 bss_description: Box::new(parsed_bss_description),
             });
@@ -481,7 +476,7 @@ async fn connecting_state<'a>(
                             types::ScanObservation::Unknown => None,
                     };
                     common_options.saved_networks_manager.record_connect_result(
-                        options.connect_selection.target.network.clone().into(),
+                        options.connect_selection.target.network.clone(),
                         &options.connect_selection.target.credential,
                         connect_result.bss_description.bssid,
                         sme_result,
@@ -671,7 +666,7 @@ async fn connected_state(
                                 &options,
                                 connect_start_time,
                                 types::DisconnectReason::DisconnectDetectedFromSme,
-                                bss_quality_data.signal_data.clone(),
+                                bss_quality_data.signal_data,
                             ).await;
 
                             !fidl_info.is_sme_reconnecting
@@ -875,7 +870,7 @@ async fn record_disconnect(
     common_options
         .saved_networks_manager
         .record_disconnect(
-            &options.currently_fulfilled_connection.target.network.clone().into(),
+            &options.currently_fulfilled_connection.target.network.clone(),
             &options.currently_fulfilled_connection.target.credential,
             data,
         )
@@ -1039,7 +1034,7 @@ mod tests {
 
         // Store the network in the saved_networks_manager, so we can record connection success
         let save_fut = saved_networks_manager.store(
-            connect_selection.target.network.clone().into(),
+            connect_selection.target.network.clone(),
             connect_selection.target.credential.clone(),
         );
         pin_mut!(save_fut);
@@ -1049,7 +1044,7 @@ mod tests {
 
         // Check that the saved networks manager has the expected initial data
         let saved_networks = exec.run_singlethreaded(
-            saved_networks_manager.lookup(&connect_selection.target.network.clone().into()),
+            saved_networks_manager.lookup(&connect_selection.target.network.clone()),
         );
         assert_eq!(false, saved_networks[0].has_ever_connected);
         assert!(saved_networks[0].hidden_probability > 0.0);
@@ -1127,7 +1122,7 @@ mod tests {
 
         // Check that the saved networks manager has the connection recorded
         let saved_networks = exec.run_singlethreaded(
-            saved_networks_manager.lookup(&connect_selection.target.network.clone().into()),
+            saved_networks_manager.lookup(&connect_selection.target.network.clone()),
         );
         assert_eq!(true, saved_networks[0].has_ever_connected);
         assert_eq!(
@@ -1174,7 +1169,7 @@ mod tests {
 
         // Set how the SavedNetworksManager should respond to lookup_compatible for the scan.
         let expected_config =
-            network_config::NetworkConfig::new(id.clone().into(), credential.clone(), false)
+            network_config::NetworkConfig::new(id.clone(), credential.clone(), false)
                 .expect("failed to create network config");
         test_values.saved_networks_manager.set_lookup_compatible_response(vec![expected_config]);
 
@@ -1196,7 +1191,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(connect_selection.target.credential, req.authentication.credentials);
-                assert_eq!(req.bss_description, bss_description.clone().into());
+                assert_eq!(req.bss_description, bss_description.clone());
                 assert_eq!(req.deprecated_scan_type, fidl_fuchsia_wlan_common::ScanType::Active);
                 assert_eq!(req.multiple_bss_candidates, false);
                 // Send connection response.
@@ -1337,7 +1332,7 @@ mod tests {
             target: types::ScannedCandidate {
                 network: types::NetworkIdentifier {
                     ssid: next_network_ssid.clone(),
-                    security_type: type_.into(),
+                    security_type: type_,
                 },
                 credential: Credential::Password("Anything".as_bytes().to_vec()),
                 bss_description: bss_description.clone(),
@@ -1355,7 +1350,7 @@ mod tests {
 
         // Store the network in the saved_networks_manager, so we can record connection success
         let save_fut = saved_networks_manager.store(
-            connect_selection.target.network.clone().into(),
+            connect_selection.target.network.clone(),
             connect_selection.target.credential.clone(),
         );
         pin_mut!(save_fut);
@@ -1365,7 +1360,7 @@ mod tests {
 
         // Check that the saved networks manager has the expected initial data
         let saved_networks = exec.run_singlethreaded(
-            saved_networks_manager.lookup(&connect_selection.target.network.clone().into()),
+            saved_networks_manager.lookup(&connect_selection.target.network.clone()),
         );
         assert_eq!(false, saved_networks[0].has_ever_connected);
         assert!(saved_networks[0].hidden_probability > 0.0);
@@ -1783,8 +1778,7 @@ mod tests {
             ssid: next_network_ssid.clone(),
             security_type: next_security_type,
         };
-        let config_net_id =
-            network_config::NetworkIdentifier::from(next_network_identifier.clone());
+        let config_net_id = next_network_identifier.clone();
         let bss_description = random_fidl_bss_description!(Open, ssid: next_network_ssid.clone());
         // save network to check that failed connect is recorded
         assert!(exec
@@ -1904,8 +1898,7 @@ mod tests {
             ssid: next_network_ssid.clone(),
             security_type: types::SecurityType::Wpa2,
         };
-        let config_net_id =
-            network_config::NetworkIdentifier::from(next_network_identifier.clone());
+        let config_net_id = next_network_identifier.clone();
         let next_credential = Credential::Password("password".as_bytes().to_vec());
         // save network to check that failed connect is recorded
         let saved_networks_manager = common_options.saved_networks_manager.clone();
@@ -2590,7 +2583,7 @@ mod tests {
         let save_fut = test_values.saved_networks_manager.store(
             network_config::NetworkIdentifier {
                 ssid: network_ssid.clone(),
-                security_type: security.into(),
+                security_type: security,
             },
             credential.clone(),
         );
@@ -2796,11 +2789,11 @@ mod tests {
         let credential = Credential::Password(b"password".to_vec());
         let id = network_config::NetworkIdentifier {
             ssid: network_ssid.clone(),
-            security_type: security.into(),
+            security_type: security,
         };
         // Setup for network selection in the connecting state to select the intended network.
         let expected_config =
-            network_config::NetworkConfig::new(id.clone().into(), credential.clone(), false)
+            network_config::NetworkConfig::new(id.clone(), credential.clone(), false)
                 .expect("failed to create network config");
         test_values.saved_networks_manager.set_lookup_compatible_response(vec![expected_config]);
         let bss_description = random_fidl_bss_description!(Wpa2, ssid: network_ssid.clone());
@@ -2858,7 +2851,7 @@ mod tests {
 
         // The connection data should have been recorded at disconnect.
         let expected_recorded_connection = ConnectionRecord {
-            id: id.clone().into(),
+            id: id.clone(),
             credential: credential.clone(),
             data: PastConnectionData {
                 bssid: types::Bssid(bss_description.bssid),
@@ -3002,7 +2995,7 @@ mod tests {
                     security_type: types::SecurityType::Wpa2,
                 },
                 credential: Credential::Password(b"password".to_vec()),
-                bss_description: second_bss_desc.clone().into(),
+                bss_description: second_bss_desc.clone(),
                 observation: types::ScanObservation::Passive,
                 has_multiple_bss_candidates: true,
                 mutual_security_protocols: [SecurityDescriptor::WPA2_PERSONAL]
@@ -3178,7 +3171,7 @@ mod tests {
 
         // Store the network in the saved_networks_manager, so we can record connection success
         let save_fut = saved_networks_manager.store(
-            connect_selection.target.network.clone().into(),
+            connect_selection.target.network.clone(),
             connect_selection.target.credential.clone(),
         );
         pin_mut!(save_fut);
@@ -3386,7 +3379,7 @@ mod tests {
 
         // Store the network in the saved_networks_manager, so we can record connection success
         let save_fut = saved_networks_manager.store(
-            connect_selection.target.network.clone().into(),
+            connect_selection.target.network.clone(),
             connect_selection.target.credential.clone(),
         );
         pin_mut!(save_fut);

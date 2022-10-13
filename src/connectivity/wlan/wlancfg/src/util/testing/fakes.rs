@@ -281,8 +281,8 @@ pub fn create_inspect_persistence_channel() -> (mpsc::Sender<String>, mpsc::Rece
 pub fn random_connection_data() -> PastConnectionData {
     let mut rng = rand::thread_rng();
     let connect_time = fasync::Time::from_nanos(rng.gen::<u16>().into());
-    let time_to_connect = zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..10).into());
-    let uptime = zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..1000).into());
+    let time_to_connect = zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..10));
+    let uptime = zx::Duration::from_seconds(rng.gen_range::<i64, _>(5..1000));
     let disconnect_time = connect_time + time_to_connect + uptime;
     PastConnectionData::new(
         client_types::Bssid(

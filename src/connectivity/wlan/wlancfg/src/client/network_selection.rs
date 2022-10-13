@@ -95,7 +95,7 @@ impl InternalBss<'_> {
     /// BSS to connect to.
     fn score(&self) -> i16 {
         let mut score = self.scanned_bss.rssi as i16;
-        let channel = types::WlanChan::from(self.scanned_bss.channel);
+        let channel = self.scanned_bss.channel;
 
         // If the network is 5G and has a strong enough RSSI, give it a bonus
         if channel.is_5ghz() && score >= RSSI_CUTOFF_5G_PREFERENCE {
@@ -181,7 +181,7 @@ impl InternalBss<'_> {
     }
 
     fn to_string_without_pii(&self) -> String {
-        let channel = types::WlanChan::from(self.scanned_bss.channel);
+        let channel = self.scanned_bss.channel;
         let rssi = self.scanned_bss.rssi;
         let recent_failure_count = self.recent_failure_count();
         let recent_short_connection_count = self.recent_short_connections();
@@ -413,7 +413,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
                     saved_network_info: InternalSavedNetworkData {
                         network_id: types::NetworkIdentifier {
                             ssid: saved_config.ssid.clone(),
-                            security_type: saved_config.security_type.into(),
+                            security_type: saved_config.security_type,
                         },
                         credential: saved_config.credential.clone(),
                         has_ever_connected: saved_config.has_ever_connected,
@@ -877,14 +877,14 @@ mod tests {
         // insert the saved networks
         assert!(test_values
             .saved_network_manager
-            .store(test_id_1.clone().into(), credential_1.clone())
+            .store(test_id_1.clone(), credential_1.clone())
             .await
             .unwrap()
             .is_none());
 
         assert!(test_values
             .saved_network_manager
-            .store(test_id_2.clone().into(), credential_2.clone())
+            .store(test_id_2.clone(), credential_2.clone())
             .await
             .unwrap()
             .is_none());
@@ -893,13 +893,13 @@ mod tests {
         let mock_scan_results = vec![
             types::ScanResult {
                 ssid: test_ssid_1.clone(),
-                security_type_detailed: test_security_1.clone(),
+                security_type_detailed: test_security_1,
                 entries: vec![generate_random_bss(), generate_random_bss(), generate_random_bss()],
                 compatibility: types::Compatibility::Supported,
             },
             types::ScanResult {
                 ssid: test_ssid_2.clone(),
-                security_type_detailed: test_security_2.clone(),
+                security_type_detailed: test_security_2,
                 entries: vec![generate_random_bss()],
                 compatibility: types::Compatibility::DisallowedNotSupported,
             },
@@ -912,7 +912,7 @@ mod tests {
         test_values
             .saved_network_manager
             .record_connect_result(
-                test_id_1.clone().into(),
+                test_id_1.clone(),
                 &credential_1.clone(),
                 bssid_1,
                 fake_successful_connect_result(),
@@ -924,7 +924,7 @@ mod tests {
         test_values
             .saved_network_manager
             .record_connect_result(
-                test_id_1.clone().into(),
+                test_id_1.clone(),
                 &credential_1.clone(),
                 bssid_2,
                 fidl_sme::ConnectResult {
@@ -939,7 +939,7 @@ mod tests {
         // build our expected result
         let failure_time = test_values
             .saved_network_manager
-            .lookup(&test_id_1.clone().into())
+            .lookup(&test_id_1.clone())
             .await
             .get(0)
             .expect("failed to get config")
@@ -1450,7 +1450,7 @@ mod tests {
 
         // give them both the same number of failures
         networks[1].saved_network_info.recent_failures =
-            vec![connect_failure_with_bssid(bss_2.bssid.clone()); num_failures];
+            vec![connect_failure_with_bssid(bss_2.bssid); num_failures];
 
         // stronger network returned
         assert_eq!(
@@ -2120,31 +2120,27 @@ mod tests {
         // insert some new saved networks
         assert!(exec
             .run_singlethreaded(
-                test_values
-                    .saved_network_manager
-                    .store(test_id_1.clone().into(), credential_1.clone()),
+                test_values.saved_network_manager.store(test_id_1.clone(), credential_1.clone()),
             )
             .unwrap()
             .is_none());
         assert!(exec
             .run_singlethreaded(
-                test_values
-                    .saved_network_manager
-                    .store(test_id_2.clone().into(), credential_2.clone()),
+                test_values.saved_network_manager.store(test_id_2.clone(), credential_2.clone()),
             )
             .unwrap()
             .is_none());
 
         // Mark them as having connected. Make connection passive so that no active scans are made.
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
-            test_id_1.clone().into(),
+            test_id_1.clone(),
             &credential_1.clone(),
             types::Bssid([0, 0, 0, 0, 0, 0]),
             fake_successful_connect_result(),
             Some(fidl_common::ScanType::Passive),
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
-            test_id_2.clone().into(),
+            test_id_2.clone(),
             &credential_2.clone(),
             types::Bssid([0, 0, 0, 0, 0, 0]),
             fake_successful_connect_result(),
@@ -2362,9 +2358,7 @@ mod tests {
         // insert saved networks
         assert!(exec
             .run_singlethreaded(
-                test_values
-                    .saved_network_manager
-                    .store(test_id_1.clone().into(), credential_1.clone()),
+                test_values.saved_network_manager.store(test_id_1.clone(), credential_1.clone()),
             )
             .unwrap()
             .is_none());

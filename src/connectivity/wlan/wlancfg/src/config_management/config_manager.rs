@@ -315,7 +315,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
             // type to remove.
             let mut found_securities = SecurityType::list_variants();
             found_securities.retain(|security| {
-                let id = NetworkIdentifier::new(network_id.ssid.clone(), security.clone());
+                let id = NetworkIdentifier::new(network_id.ssid.clone(), *security);
                 saved_networks.contains_key(&id)
             });
             if found_securities.is_empty() {
@@ -347,7 +347,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         let saved_networks_guard = self.saved_networks.lock().await;
         let mut matching_configs = Vec::new();
         for security in compatible_policy_securities(&scan_security) {
-            let id = NetworkIdentifier::new(ssid.clone(), security.into());
+            let id = NetworkIdentifier::new(ssid.clone(), security);
             let saved_configs = saved_networks_guard.get(&id);
             if let Some(configs) = saved_configs {
                 matching_configs.extend(
@@ -443,7 +443,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                             ConnectFailure {
                                 time: fasync::Time::now(),
                                 reason: FailureReason::CredentialRejected,
-                                bssid: bssid.clone(),
+                                bssid: bssid,
                             },
                         );
                     }
@@ -453,7 +453,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                             ConnectFailure {
                                 time: fasync::Time::now(),
                                 reason: FailureReason::GeneralFailure,
-                                bssid: bssid.clone(),
+                                bssid: bssid,
                             },
                         );
                     }
@@ -526,7 +526,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                 // For each config of each targeted ID, check whether there is a scan result that
                 // could be used to connect. If not, update the hidden probability.
                 for target_id in target_ids.into_iter() {
-                    let configs = match saved_networks.get_mut(&target_id.clone().into()) {
+                    let configs = match saved_networks.get_mut(&target_id.clone()) {
                         Some(configs) => configs,
                         None => continue,
                     };
@@ -597,7 +597,7 @@ pub fn select_subset_potentially_hidden_networks(
         })
         .map(|network| types::NetworkIdentifier {
             ssid: network.ssid,
-            security_type: network.security_type.into(),
+            security_type: network.security_type,
         })
         .collect()
 }
@@ -1273,7 +1273,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
-                bssid.clone(),
+                bssid,
                 fidl_sme::ConnectResult {
                     code: fidl_ieee80211::StatusCode::Canceled,
                     ..fake_successful_connect_result()
@@ -1325,7 +1325,7 @@ mod tests {
         let credential = Credential::Psk(vec![1; 32]);
         let data = random_connection_data();
 
-        saved_networks.record_disconnect(&id, &credential, data.clone()).await;
+        saved_networks.record_disconnect(&id, &credential, data).await;
         // Verify that nothing happens if the network was not already saved.
         assert_eq!(saved_networks.saved_networks.lock().await.len(), 0);
         assert_eq!(saved_networks.known_network_count().await, 0);
@@ -1336,7 +1336,7 @@ mod tests {
             .await
             .expect("Failed to save network")
             .is_none());
-        saved_networks.record_disconnect(&id, &credential, data.clone()).await;
+        saved_networks.record_disconnect(&id, &credential, data).await;
 
         // Check that a data was recorded about the connection that just ended.
         let recent_connections = saved_networks
@@ -1909,7 +1909,7 @@ mod tests {
             security_type: types::SecurityType::Wpa2,
         };
         let mut net_config_hidden = NetworkConfig::new(
-            id_hidden.clone().into(),
+            id_hidden.clone(),
             Credential::Password(b"password".to_vec()),
             false,
         )
@@ -1921,7 +1921,7 @@ mod tests {
             security_type: types::SecurityType::Wpa2,
         };
         let mut net_config_not_hidden = NetworkConfig::new(
-            id_not_hidden.clone().into(),
+            id_not_hidden.clone(),
             Credential::Password(b"password".to_vec()),
             false,
         )
@@ -1933,7 +1933,7 @@ mod tests {
             security_type: types::SecurityType::Wpa2,
         };
         let mut net_config_maybe_hidden = NetworkConfig::new(
-            id_maybe_hidden.clone().into(),
+            id_maybe_hidden.clone(),
             Credential::Password(b"password".to_vec()),
             false,
         )
@@ -2017,7 +2017,7 @@ mod tests {
         assert_eq!(config_4.hidden_probability, PROB_HIDDEN_DEFAULT);
 
         let seen_ids = vec![];
-        let not_seen_ids = vec![id_1.clone().into(), id_2.clone().into(), id_3.clone().into()];
+        let not_seen_ids = vec![id_1.clone(), id_2.clone(), id_3.clone()];
         saved_networks.record_scan_result(ScanResultType::Directed(not_seen_ids), seen_ids).await;
 
         // Check that the configs' hidden probability has decreased
@@ -2052,13 +2052,13 @@ mod tests {
         let bssid_1 = data_1.bssid;
         let mut data_2 = random_connection_data();
         data_2.bssid = bssid_1;
-        past_connections.add(bssid_1, data_1.clone());
-        past_connections.add(bssid_1, data_2.clone());
+        past_connections.add(bssid_1, data_1);
+        past_connections.add(bssid_1, data_2);
 
         // Add a past connection with different bssid
         let data_3 = random_connection_data();
         let bssid_2 = data_3.bssid;
-        past_connections.add(bssid_2, data_3.clone());
+        past_connections.add(bssid_2, data_3);
         config.perf_stats.past_connections = past_connections;
 
         // Create SavedNetworksManager with configs that have past connections

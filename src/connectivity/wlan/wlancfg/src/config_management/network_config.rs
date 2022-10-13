@@ -353,7 +353,7 @@ impl From<&NetworkConfig> for fidl_policy::NetworkConfig {
     fn from(network_config: &NetworkConfig) -> Self {
         let network_id = fidl_policy::NetworkIdentifier {
             ssid: network_config.ssid.to_vec(),
-            type_: network_config.security_type.clone().into(),
+            type_: network_config.security_type.into(),
         };
         let credential = network_config.credential.clone().into();
         fidl_policy::NetworkConfig {
@@ -464,14 +464,14 @@ impl PartialEq<Option<fidl_security::Credentials>> for Credential {
             Some(Credentials::Wpa(ref credentials)) => match credentials {
                 WpaCredentials::Passphrase(ref passphrase) => {
                     if let Credential::Password(ref unparsed) = self {
-                        unparsed == &Vec::from(passphrase.clone())
+                        unparsed == &passphrase.clone()
                     } else {
                         false
                     }
                 }
                 WpaCredentials::Psk(ref psk) => {
                     if let Credential::Psk(ref unparsed) = self {
-                        unparsed == &Vec::from(psk.clone())
+                        unparsed == &Vec::from(*psk)
                     } else {
                         false
                     }
@@ -563,7 +563,7 @@ pub struct NetworkIdentifier {
 
 impl NetworkIdentifier {
     pub fn new(ssid: client_types::Ssid, security_type: SecurityType) -> Self {
-        NetworkIdentifier { ssid: ssid.into(), security_type }
+        NetworkIdentifier { ssid: ssid, security_type }
     }
 
     #[cfg(test)]
@@ -1063,17 +1063,17 @@ mod tests {
         let bssid_1 = client_types::Bssid([1; 6]);
         let failure_1_bssid_1 = ConnectFailure {
             time: curr_time - zx::Duration::from_seconds(10),
-            bssid: bssid_1.clone(),
+            bssid: bssid_1,
             reason: FailureReason::GeneralFailure,
         };
-        connect_failures.add(bssid_1.clone(), failure_1_bssid_1.clone());
+        connect_failures.add(bssid_1, failure_1_bssid_1);
 
         let failure_2_bssid_1 = ConnectFailure {
             time: curr_time - zx::Duration::from_seconds(5),
-            bssid: bssid_1.clone(),
+            bssid: bssid_1,
             reason: FailureReason::CredentialRejected,
         };
-        connect_failures.add(bssid_1.clone(), failure_2_bssid_1.clone());
+        connect_failures.add(bssid_1, failure_2_bssid_1);
 
         // Verify get_recent_for_network(curr_time - 10) retrieves both entries
         assert_eq!(
@@ -1085,10 +1085,10 @@ mod tests {
         let bssid_2 = client_types::Bssid([2; 6]);
         let failure_1_bssid_2 = ConnectFailure {
             time: curr_time - zx::Duration::from_seconds(3),
-            bssid: bssid_2.clone(),
+            bssid: bssid_2,
             reason: FailureReason::GeneralFailure,
         };
-        connect_failures.add(bssid_2.clone(), failure_1_bssid_2.clone());
+        connect_failures.add(bssid_2, failure_1_bssid_2);
 
         // Verify get_recent_for_network(curr_time - 10) includes entries from both BSSIDs
         assert_eq!(
@@ -1168,12 +1168,12 @@ mod tests {
         let bssid_1 = data_1_bssid_1.bssid;
         data_1_bssid_1.disconnect_time = curr_time - zx::Duration::from_seconds(10);
 
-        past_connections_list.add(bssid_1.clone(), data_1_bssid_1.clone());
+        past_connections_list.add(bssid_1, data_1_bssid_1);
 
         let mut data_2_bssid_1 = random_connection_data();
         data_2_bssid_1.bssid = bssid_1;
         data_2_bssid_1.disconnect_time = curr_time - zx::Duration::from_seconds(5);
-        past_connections_list.add(bssid_1.clone(), data_2_bssid_1.clone());
+        past_connections_list.add(bssid_1, data_2_bssid_1);
 
         // Verify get_recent_for_network(curr_time - 10) retrieves both entries
         assert_eq!(
@@ -1186,7 +1186,7 @@ mod tests {
         let mut data_1_bssid_2 = random_connection_data();
         let bssid_2 = data_1_bssid_2.bssid;
         data_1_bssid_2.disconnect_time = curr_time - zx::Duration::from_seconds(3);
-        past_connections_list.add(bssid_2.clone(), data_1_bssid_2.clone());
+        past_connections_list.add(bssid_2, data_1_bssid_2);
 
         // Verify get_recent_for_network(curr_time - 10) includes entries from both BSSIDs
         assert_eq!(
@@ -1244,7 +1244,7 @@ mod tests {
         let mut past_connection_data = random_connection_data();
         past_connection_data.disconnect_time = curr_time;
         // Add a past connection
-        past_connections_list.add(past_connection_data.clone());
+        past_connections_list.add(past_connection_data);
 
         // We should get back the added data when specifying the same or an earlier time.
         assert_eq!(past_connections_list.get_recent(curr_time).len(), 1);
