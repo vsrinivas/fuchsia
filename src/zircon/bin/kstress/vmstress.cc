@@ -375,6 +375,21 @@ int SingleVmoTestInstance::pager_thread() {
     }
   };
 
+  auto writeback_pages = [this](uint64_t off, uint64_t len) {
+    zx_status_t status = pager_.op_range(ZX_PAGER_OP_WRITEBACK_BEGIN, vmo_, off, len, 0);
+    if (status != ZX_OK) {
+      fprintf(stderr, "[test instance 0x%zx]: failed to begin writeback %d, error %d (%s)\n",
+              test_instance_id_, pager_.get(), status, zx_status_get_string(status));
+      return;
+    }
+    status = pager_.op_range(ZX_PAGER_OP_WRITEBACK_END, vmo_, off, len, 0);
+    if (status != ZX_OK) {
+      fprintf(stderr, "[test instance 0x%zx]: failed to end writeback %d, error %d (%s)\n",
+              test_instance_id_, pager_.get(), status, zx_status_get_string(status));
+      return;
+    }
+  };
+
   auto rng = RngGen();
 
 #if VMSTRESS_DEBUG
@@ -419,7 +434,7 @@ int SingleVmoTestInstance::pager_thread() {
         }
         break;
       }
-      case 6 ... 55:  // read from the port
+      case 6 ... 50:  // read from the port
       {
         fbl::AutoLock lock(&mtx_);
         if (requests_.size() == kNumVmoThreads) {
@@ -454,7 +469,7 @@ int SingleVmoTestInstance::pager_thread() {
           requests_.push_back(packet.page_request);
         }
         break;
-      case 56 ... 99:  // fullfil a random request
+      case 51 ... 90:  // fulfill a random request
         zx_packet_page_request_t req;
         {
           fbl::AutoLock lock(&mtx_);
@@ -471,6 +486,13 @@ int SingleVmoTestInstance::pager_thread() {
           dirty_pages(req.offset, req.length);
         }
         break;
+      case 91 ... 99:  // writeback a random range
+      {
+        off = uniform_rand(vmo_page_count, rng);
+        size = std::min(uniform_rand(vmo_page_count, rng), vmo_page_count - off);
+        writeback_pages(off * zx_system_get_page_size(), size * zx_system_get_page_size());
+        break;
+      }
     }
 
     fflush(stdout);
