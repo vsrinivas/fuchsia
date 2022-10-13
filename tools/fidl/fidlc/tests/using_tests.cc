@@ -330,26 +330,15 @@ TEST(UsingTests, BadTooManyProvidedLibraries) {
 
 TEST(UsingTests, BadLibraryDeclarationNameCollision) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency(&shared, "dep.fidl", R"FIDL(library dep;
-
-type A = struct{};
-)FIDL");
+  TestLibrary dependency(&shared);
+  dependency.AddFile("bad/fi-0038-a.test.fidl");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library(&shared, "lib.fidl",
-                      R"FIDL(
-library lib;
-
-using dep;
-
-type dep = struct{};
-
-type B = struct {a dep.A;}; // So the import is used.
-
-)FIDL");
+  TestLibrary library(&shared);
+  library.AddFile("bad/fi-0038-b.test.fidl");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeclNameConflictsWithLibraryImport);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dep");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependency");
 }
 
 TEST(UsingTests, BadAliasedLibraryDeclarationNameCollision) {

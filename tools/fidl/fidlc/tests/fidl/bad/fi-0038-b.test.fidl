@@ -1,0 +1,11 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.bad.fi0038b;
+
+using dependency;
+
+type dependency = struct {};
+
+// Without this, we'd get fi-0178 instead.
+const USE_VALUE uint32 = dependency.VALUE;

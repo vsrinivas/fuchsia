@@ -82,14 +82,13 @@ constexpr ErrorDef<37, std::string_view, std::string_view, SourceSpan, std::stri
     ErrNameOverlapCanonical(
         "the name '{}' conflicts with '{}' from {}; both are represented "
         "by the canonical form '{}' and are available {} of platform '{}'");
-constexpr UndocumentedErrorDef<38, flat::Name> ErrDeclNameConflictsWithLibraryImport(
+constexpr ErrorDef<38, flat::Name> ErrDeclNameConflictsWithLibraryImport(
     "Declaration name '{}' conflicts with a library import. Consider using the "
     "'as' keyword to import the library under a different name.");
-constexpr UndocumentedErrorDef<39, flat::Name, std::string_view>
-    ErrDeclNameConflictsWithLibraryImportCanonical(
-        "Declaration name '{}' conflicts with a library import due to its "
-        "canonical form '{}'. Consider using the 'as' keyword to import the "
-        "library under a different name.");
+constexpr ErrorDef<39, flat::Name, std::string_view> ErrDeclNameConflictsWithLibraryImportCanonical(
+    "Declaration name '{}' conflicts with a library import due to its "
+    "canonical form '{}'. Consider using the 'as' keyword to import the "
+    "library under a different name.");
 constexpr ErrorDef<40> ErrFilesDisagreeOnLibraryName(
     "Two files in the library disagree about the name of the library");
 constexpr UndocumentedErrorDef<41, std::vector<std::string_view>> ErrMultipleLibrariesWithSameName(
