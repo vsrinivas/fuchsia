@@ -26,12 +26,14 @@ type Fuzzer struct {
 	// Name is `package/binary`
 	Name string
 
-	pkg      string
-	manifest string
-	pkgUrl   string
-	url      string
-	args     []string
-	options  map[string]string
+	pkg       string
+	component string
+	manifest  string
+	pkgUrl    string
+	url       string
+	args      []string
+	options   map[string]string
+	useFfx    bool
 }
 
 // 1 is the default `exitcode` from SanitizerCommonFlags
@@ -45,21 +47,24 @@ var expectedFuzzerReturnCodes = []int{
 }
 
 // NewV1Fuzzer and NewV2Fuzzer construct a fuzzer object with the given pkg/fuzzer name
-func NewV1Fuzzer(build Build, pkg, fuzzer string) *Fuzzer {
-	return newFuzzer(build, pkg, fuzzer, "cmx")
+func NewV1Fuzzer(build Build, pkg, component string) *Fuzzer {
+	return newFuzzer(build, pkg, component, "cmx", false)
 }
-func NewV2Fuzzer(build Build, pkg, fuzzer string) *Fuzzer {
-	return newFuzzer(build, pkg, fuzzer, "cm")
+func NewV2Fuzzer(build Build, pkg, component string, useFfx bool) *Fuzzer {
+	return newFuzzer(build, pkg, component, "cm", useFfx)
 }
-func newFuzzer(build Build, pkg, fuzzer, manifestSuffix string) *Fuzzer {
+func newFuzzer(build Build, pkg, component, manifestExt string, useFfx bool) *Fuzzer {
+	manifest := fmt.Sprintf("%s.%s", component, manifestExt)
+	pkgUrl := "fuchsia-pkg://fuchsia.com/" + pkg
 	return &Fuzzer{
-		build:    build,
-		Name:     fmt.Sprintf("%s/%s", pkg, fuzzer),
-		pkg:      pkg,
-		manifest: fmt.Sprintf("%s.%s", fuzzer, manifestSuffix),
-		pkgUrl:   "fuchsia-pkg://fuchsia.com/" + pkg,
-		url: fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.%s",
-			pkg, fuzzer, manifestSuffix),
+		build:     build,
+		Name:      fmt.Sprintf("%s/%s", pkg, component),
+		pkg:       pkg,
+		component: component,
+		manifest:  manifest,
+		pkgUrl:    pkgUrl,
+		url:       fmt.Sprintf("%s#meta/%s", pkgUrl, manifest),
+		useFfx:    useFfx,
 	}
 }
 
@@ -75,11 +80,21 @@ func (f *Fuzzer) isV2() bool {
 	return strings.HasSuffix(f.manifest, ".cm")
 }
 
+// Return whether or not undercoat should command the fuzzer using `ffx fuzz`.
+func (f *Fuzzer) useFfxFuzz() bool {
+	return f.isV2() && f.useFfx
+}
+
+// Return whether or not undercoat should command the fuzzer using `fuzz_ctl`.
+func (f *Fuzzer) useFuzzCtl() bool {
+	return f.isV2() && !f.useFfxFuzz()
+}
+
 // Map paths as referenced by ClusterFuzz to internally-used paths as seen by
 // libFuzzer, SFTP, etc.
 func (f *Fuzzer) translatePath(relpath string) string {
-	if f.isV2() {
-		// Not necessary for v2
+	if f.useFfxFuzz() {
+		// Not necessary for ffx
 		return relpath
 	}
 
@@ -99,7 +114,7 @@ func (f *Fuzzer) translatePath(relpath string) string {
 // fuzzer package. The path may differ depending on whether it is identified as
 // a resource, data, or neither.
 func (f *Fuzzer) AbsPath(relpath string) string {
-	if f.isV2() {
+	if f.useFfxFuzz() {
 		if strings.HasPrefix(relpath, cachePrefix) {
 			// No-op if already "absolute"
 			return relpath
@@ -114,21 +129,32 @@ func (f *Fuzzer) AbsPath(relpath string) string {
 		}
 	}
 
-	relpath = f.translatePath(relpath)
-
 	if strings.HasPrefix(relpath, "/") {
 		return relpath
-	} else if strings.HasPrefix(relpath, "pkg/") {
+	}
+
+	relpath = f.translatePath(relpath)
+
+	if f.useFuzzCtl() {
+		return fmt.Sprintf("/tmp/fuzz_ctl/fuchsia.com/%s/%s/%s",
+			f.pkg, f.component, strings.TrimPrefix(relpath, "tmp/"))
+	}
+
+	if strings.HasPrefix(relpath, "pkg/") {
 		return fmt.Sprintf("/pkgfs/packages/%s/0/%s", f.pkg, relpath[4:])
-	} else if strings.HasPrefix(relpath, "data/") {
+	}
+
+	if strings.HasPrefix(relpath, "data/") {
 		return fmt.Sprintf("/data/r/sys/fuchsia.com:%s:0#meta:%s/%s",
 			f.pkg, f.manifest, relpath[5:])
-	} else if strings.HasPrefix(relpath, "tmp/") {
+	}
+
+	if strings.HasPrefix(relpath, "tmp/") {
 		return fmt.Sprintf("/tmp/r/sys/fuchsia.com:%s:0#meta:%s/%s",
 			f.pkg, f.manifest, relpath[4:])
-	} else {
-		return fmt.Sprintf("/%s", relpath)
 	}
+
+	return fmt.Sprintf("/%s", relpath)
 }
 
 // Parse command line arguments for the fuzzer. For '-key=val' style options,
@@ -255,14 +281,31 @@ func scanForArtifacts(out io.WriteCloser, in io.ReadCloser, artifactPrefix,
 		// - scanForPIDs doesn't block if an early exit occurs later in the chain.
 		defer in.Close()
 
+		outputCorpus := ""
+		testcasePath := ""
+		if config != nil {
+			outputCorpus = config.outputCorpus
+			testcasePath = config.testcasePath
+		}
+
 		artifacts := []string{}
 
+		//  Matching lines are produced by `fuzz_ctl` before any lines that match other regexes.
+		setOutputCorpusRegex := regexp.MustCompile(`Using '([^']+)' as the output corpus.`)
+		setTestcasePathRegex := regexp.MustCompile(`Using '([^']+)' as the test input.`)
+
+		//  Matching lines are produced by libFuzzer.
 		artifactRegex := regexp.MustCompile(`Test unit written to (\S+)`)
-		artifactRegexV2 := regexp.MustCompile(`(?:Input saved|Minimized input written) to '([^']+)'`)
 		testcaseRegex := regexp.MustCompile(`^Running: (tmp/.+)`)
+		corpusRegex := regexp.MustCompile(`\d+ files found in tmp/`)
+
+		// Matching lines are produced by libFuzzer when run as a V2 fuzzer.
 		testcaseRegexV2 := regexp.MustCompile(`^Running: /tmp/temp_corpus`)
 		outputCorpusRegex := regexp.MustCompile(`files found in /tmp/live_corpus`)
-		corpusRegex := regexp.MustCompile(`\d+ files found in tmp/`)
+
+		// Matching lines are produced by either `fuzz_ctl` or ffx fuzz`.
+		artifactRegexV2 := regexp.MustCompile(`(?:Input saved|Minimized input written) to '([^']+)'`)
+
 		scanner := bufio.NewScanner(in)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -308,15 +351,19 @@ func scanForArtifacts(out io.WriteCloser, in io.ReadCloser, artifactPrefix,
 				line = "Running: data/" + strings.TrimPrefix(m[1], "tmp/")
 			} else if m := testcaseRegexV2.FindStringSubmatch(line); m != nil {
 				// See above, with different logic for CFF
-				line = "Running: " + config.testcasePath
+				line = "Running: " + testcasePath
 			} else if m := outputCorpusRegex.FindStringSubmatch(line); m != nil {
 				// This is just to pass ClusterFuzz integration tests
-				if config.outputCorpus != "" {
-					line = strings.Replace(line, "/tmp/live_corpus", config.outputCorpus, 1)
+				if outputCorpus != "" {
+					line = strings.Replace(line, "/tmp/live_corpus", outputCorpus, 1)
 				}
 			} else if m := corpusRegex.FindStringSubmatch(line); m != nil {
 				// As above, this is just to pass ClusterFuzz integration tests.
 				line = strings.Replace(line, "tmp/", "data/", 1)
+			} else if m := setOutputCorpusRegex.FindStringSubmatch(line); m != nil {
+				outputCorpus = strings.Replace(m[1], "tmp/", "data/", 1)
+			} else if m := setTestcasePathRegex.FindStringSubmatch(line); m != nil {
+				testcasePath = strings.Replace(m[1], "tmp/", "data/", 1)
 			}
 
 			if _, err := io.WriteString(out, line+"\n"); err != nil {
@@ -338,16 +385,21 @@ func scanForArtifacts(out io.WriteCloser, in io.ReadCloser, artifactPrefix,
 func (f *Fuzzer) Prepare(conn Connector) error {
 	var dataPath string
 
-	if f.isV2() {
+	if f.useFfxFuzz() {
 		// Stop any existing session that may have gotten stuck, and reset the
 		// fuzzer's options and live corpus.
 		if _, err := conn.FfxRun("", "fuzz", "stop", f.url); err != nil {
 			return fmt.Errorf("error ensuring fuzzer is stopped: %s", err)
 		}
-
 		dataPath = ""
-	} else {
 
+	} else if f.useFuzzCtl() {
+		if err := conn.Command("fuzz_ctl", "reset", f.url).Run(); err != nil {
+			return fmt.Errorf("error resetting fuzzer %q: %s", f.pkgUrl, err)
+		}
+		return nil
+
+	} else {
 		// TODO(fxbug.dev/61521): We shouldn't rely on executing these commands
 		if err := conn.Command("pkgctl", "resolve", f.pkgUrl).Run(); err != nil {
 			return fmt.Errorf("error resolving fuzzer package %q: %s", f.pkgUrl, err)
@@ -565,7 +617,7 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 
 	var cmd InstanceCmd
 	var ffxConfig *ffxFuzzRunConfig
-	if f.isV2() {
+	if f.useFfxFuzz() {
 		config, err := f.parseArgsForFfx(conn)
 		if err != nil {
 			return nil, fmt.Errorf("error translating args: %s", err)
@@ -624,14 +676,24 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 			f.options["artifact_prefix"] = "tmp/"
 		}
 
-		cmdline := []string{f.url}
+		cmdline := []string{}
+		if f.useFuzzCtl() {
+			cmdline = append(cmdline, "run_libfuzzer")
+		}
+		cmdline = append(cmdline, f.url)
+
 		for k, v := range f.options {
 			cmdline = append(cmdline, fmt.Sprintf("-%s=%s", k, v))
 		}
 		for _, arg := range f.args {
 			cmdline = append(cmdline, arg)
 		}
-		cmd = conn.Command("run", cmdline...)
+
+		if f.useFuzzCtl() {
+			cmd = conn.Command("fuzz_ctl", cmdline...)
+		} else {
+			cmd = conn.Command("run", cmdline...)
+		}
 	}
 
 	// The overall flow of fuzzer output data is as follows:
@@ -645,7 +707,7 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 	if err != nil {
 		return nil, fmt.Errorf("error getting fuzzer stdout: %s", err)
 	}
-	if !f.isV2() {
+	if !f.useFfxFuzz() {
 		// ffx fuzz combines stdout and stderr into stdout for us already, but
 		// for v1 fuzzers we need to do this ourself
 		fuzzerStderr, err := cmd.StderrPipe()
@@ -715,7 +777,7 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 
 	var artifacts []string
 	for _, artifact := range <-artifactCh {
-		if f.isV2() {
+		if f.useFfxFuzz() {
 			// ffx has already copied the file to the host
 			ffxArtifactDir := filepath.Join(ffxConfig.outputDir, "artifacts")
 			hostArtifactPath := filepath.Join(ffxArtifactDir, path.Base(artifact))
@@ -742,7 +804,7 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 	// redundant work we just copy it into place in the cache now.
 	// TODO(fxbug.dev/108877): Avoid the extra copy here once we can override
 	// the corpus output directory.
-	if f.isV2() && ffxConfig.command == "merge" {
+	if f.useFfxFuzz() && ffxConfig.command == "merge" {
 		fetchedDir := filepath.Join(ffxConfig.outputDir, "corpus")
 		if err := conn.Put(fetchedDir+"/*", f.AbsPath(ffxConfig.outputCorpus)); err != nil {
 			return nil, fmt.Errorf("error copying merged corpus into place: %s", err)

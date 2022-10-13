@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/golang/glog"
@@ -342,6 +343,15 @@ type testEntry struct {
 
 // loadV2Fuzzers reads and parses tests.json.
 func (b *BaseBuild) loadV2Fuzzers() (map[string]*Fuzzer, error) {
+	ffxFuzzVal, ok := os.LookupEnv("UNDERCOAT_USE_FFX_FUZZ")
+	if !ok {
+		ffxFuzzVal = "0"
+	}
+	useFfxFuzz, err := strconv.ParseBool(ffxFuzzVal)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse UNDERCOAT_USE_FFX_FUZZ=%s: %s", ffxFuzzVal, err)
+	}
+
 	paths, err := b.Path("tests.json")
 	if err != nil {
 		return nil, err
@@ -378,7 +388,7 @@ func (b *BaseBuild) loadV2Fuzzers() (map[string]*Fuzzer, error) {
 		if m == nil {
 			return nil, fmt.Errorf("found test with unexpected url: %v", entry)
 		}
-		fuzzer := NewV2Fuzzer(b, m[1], m[2])
+		fuzzer := NewV2Fuzzer(b, m[1], m[2], useFfxFuzz)
 		fuzzers[fuzzer.Name] = fuzzer
 	}
 

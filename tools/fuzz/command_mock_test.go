@@ -27,86 +27,100 @@ type mockInstanceCmd struct {
 }
 
 func (c *mockInstanceCmd) getOutput() ([]byte, error) {
+	var args []string
 	switch c.name {
 	case "run":
-		re := regexp.MustCompile(`fuchsia-pkg://fuchsia\.com/([^#]+)#meta/([^\.]+)\.cmx`)
-		m := re.FindStringSubmatch(c.args[0])
-		if m == nil {
-			return nil, fmt.Errorf("unexpected run argument: %q", c.args[0])
+		args = c.args
+	case "fuzz_ctl":
+		if c.args[0] != "run_libfuzzer" {
+			return nil, fmt.Errorf("unexpected run_libfuzzer subcommand: %q", c.args[0])
 		}
-		fuzzerName := fmt.Sprintf("%s/%s", m[1], m[2])
-
-		// Look up arguments that we want to test
-		var artifactPrefix string
-		var mergeFile string
-		var corpusPath string
-		for _, arg := range c.args[1:] {
-			// Save first non-option arg
-			if corpusPath == "" && !strings.HasPrefix(arg, "-") {
-				corpusPath = arg
-				continue
-			}
-
-			if parts := strings.Split(arg, "="); parts[0] == "-artifact_prefix" {
-				artifactPrefix = parts[1]
-			} else if parts[0] == "-merge_control_file" {
-				mergeFile = parts[1]
-			}
-		}
-		if artifactPrefix == "" {
-			return nil, fmt.Errorf("run command missing artifact_prefix option: %q", c.args)
-		}
-		artifactLine := fmt.Sprintf("artifact_prefix='%s'; "+
-			"Test unit written to %scrash-1312", artifactPrefix, artifactPrefix)
-
-		if corpusPath == "" {
-			return nil, fmt.Errorf("run command missing output corpus dir: %q", c.args)
-		}
-		corpusLine := fmt.Sprintf("INFO:        4 files found in %s", corpusPath)
-
-		var output []string
-		switch fuzzerName {
-		case "foo/bar":
-			// Create 64k of filler to ensure we saturate any pipes on the
-			// output that aren't being properly serviced.
-			filler := make([]string, 1024)
-			for j := 0; j < 1024; j++ {
-				filler[j] = strings.Repeat("data", 64/4)
-			}
-			output = append(filler,
-				fmt.Sprintf("running %v", c.args),
-				corpusLine,
-				"Running: "+corpusPath+"/testcase",
-				fmt.Sprintf("==%d==", mockFuzzerPid),
-				"MS: ", // mut
-				"Deadly signal",
-				artifactLine,
-			)
-
-			// This wouldn't actually be emitted during a non-merge run, but we
-			// want to exercise an option with a path
-			if mergeFile != "" {
-				output = append(output,
-					fmt.Sprintf("MERGE-INNER: using the control file '%s'", mergeFile),
-				)
-			}
-		case "fail/nopid":
-			// No PID
-			output = []string{
-				fmt.Sprintf("running %v", c.args),
-				"MS: ", // mut
-				"Deadly signal",
-				artifactLine,
-			}
-		case "fail/notfound":
-			return nil, &InstanceCmdError{ReturnCode: 127, Command: c.name, Stderr: "not found"}
-		default:
-			output = []string{fmt.Sprintf("unknown fuzzer %q", fuzzerName)}
-		}
-		return []byte(strings.Join(output, "\n") + "\n"), nil
+		args = c.args[1:]
 	default:
 		return nil, fmt.Errorf("unknown command: %q", c.name)
 	}
+
+	re := regexp.MustCompile(`fuchsia-pkg://fuchsia\.com/([^#]+)#meta/([^\.]+)\.cmx?`)
+	m := re.FindStringSubmatch(args[0])
+	if m == nil {
+		return nil, fmt.Errorf("unexpected %s argument: %q", c.name, args[0])
+	}
+	fuzzerName := fmt.Sprintf("%s/%s", m[1], m[2])
+
+	// Look up arguments that we want to test
+	var artifactPrefix string
+	var mergeFile string
+	var corpusPath string
+	for _, arg := range args[1:] {
+		// Save first non-option arg
+		if corpusPath == "" && !strings.HasPrefix(arg, "-") {
+			corpusPath = arg
+			continue
+		}
+
+		if parts := strings.Split(arg, "="); parts[0] == "-artifact_prefix" {
+			artifactPrefix = parts[1]
+		} else if parts[0] == "-merge_control_file" {
+			mergeFile = parts[1]
+		}
+	}
+	if artifactPrefix == "" {
+		return nil, fmt.Errorf("%s command missing artifact_prefix option: %q", c.name, args)
+	}
+	artifactLine := fmt.Sprintf("artifact_prefix='%s'; "+
+		"Test unit written to %scrash-1312", artifactPrefix, artifactPrefix)
+
+	if corpusPath == "" {
+		return nil, fmt.Errorf("%s command missing output corpus dir: %q", c.name, args)
+	}
+	corpusLine := fmt.Sprintf("INFO:        4 files found in %s", corpusPath)
+
+	var output []string
+	switch fuzzerName {
+	case "cff/fuzzer":
+		break
+	case "foo/bar":
+		break
+	case "fail/nopid":
+		// No PID
+		output = []string{
+			fmt.Sprintf("running %v", args),
+			"MS: ", // mut
+			"Deadly signal",
+			artifactLine,
+		}
+		return []byte(strings.Join(output, "\n") + "\n"), nil
+	case "fail/notfound":
+		return nil, &InstanceCmdError{ReturnCode: 127, Command: c.name, Stderr: "not found"}
+	default:
+		output = []string{fmt.Sprintf("unknown fuzzer %q", fuzzerName)}
+		return []byte(strings.Join(output, "\n") + "\n"), nil
+	}
+
+	// Create 64k of filler to ensure we saturate any pipes on the
+	// output that aren't being properly serviced.
+	filler := make([]string, 1024)
+	for j := 0; j < 1024; j++ {
+		filler[j] = strings.Repeat("data", 64/4)
+	}
+	output = append(filler,
+		fmt.Sprintf("running %v", args),
+		corpusLine,
+		"Running: "+corpusPath+"/testcase",
+		fmt.Sprintf("==%d==", mockFuzzerPid),
+		"MS: ", // mut
+		"Deadly signal",
+		artifactLine,
+	)
+
+	// This wouldn't actually be emitted during a non-merge run, but we
+	// want to exercise an option with a path
+	if mergeFile != "" {
+		output = append(output,
+			fmt.Sprintf("MERGE-INNER: using the control file '%s'", mergeFile),
+		)
+	}
+	return []byte(strings.Join(output, "\n") + "\n"), nil
 }
 
 func (c *mockInstanceCmd) Output() ([]byte, error) {
@@ -172,6 +186,11 @@ func (c *mockInstanceCmd) Start() error {
 
 	// Record this command as having run
 	c.connector.CmdHistory = append(c.connector.CmdHistory, c.name)
+
+	// Record the sub-command if running `fuzz_ctl`.
+	if c.name == "fuzz_ctl" {
+		c.connector.FuzzCtlHistory = append(c.connector.FuzzCtlHistory, strings.Join(c.args, " "))
+	}
 
 	return nil
 }

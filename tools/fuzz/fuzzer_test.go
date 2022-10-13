@@ -35,6 +35,65 @@ func TestIsExample(t *testing.T) {
 	}
 }
 
+func TestIsV2(t *testing.T) {
+	build, _ := newMockBuild()
+	f, err := build.Fuzzer("foo/bar")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if f.isV2() {
+		t.Fatalf("incorrect version detection for fuzzer %s", f.Name)
+	}
+
+	f, err = build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if !f.isV2() {
+		t.Fatalf("incorrect version detection for fuzzer %s", f.Name)
+	}
+}
+
+func TestUseFuzzCtl(t *testing.T) {
+	build, _ := newMockBuild()
+	f, err := build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if !f.useFuzzCtl() {
+		t.Fatalf("fuzz_ctl incorrectly ignored by fuzzer %s", f.Name)
+	}
+
+	build.(*mockBuild).useFfxFuzz = true
+	f, err = build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if f.useFuzzCtl() {
+		t.Fatalf("fuzz_ctl incorrectly used by fuzzer %s", f.Name)
+	}
+}
+
+func TestUseFfxFuzz(t *testing.T) {
+	build, _ := newMockBuild()
+	f, err := build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if f.useFfxFuzz() {
+		t.Fatalf("ffx fuzz incorrectly used by fuzzer %s", f.Name)
+	}
+
+	build.(*mockBuild).useFfxFuzz = true
+	f, err = build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if !f.useFfxFuzz() {
+		t.Fatalf("ffx fuzz incorrectly ignored by fuzzer %s", f.Name)
+	}
+}
+
 func TestAbsPath(t *testing.T) {
 	build, _ := newMockBuild()
 
@@ -59,8 +118,34 @@ func TestAbsPath(t *testing.T) {
 	}
 }
 
-func TestAbsPathV2(t *testing.T) {
+func TestAbsPathUsingFuzzCtl(t *testing.T) {
 	build, _ := newMockBuild()
+
+	f, err := build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+
+	absPaths := map[string]string{
+		"pkg/data/relpath":  "/tmp/fuzz_ctl/fuchsia.com/cff/fuzzer/pkg/data/relpath",
+		"/pkg/data/relpath": "/pkg/data/relpath",
+		"data/relpath":      "/tmp/fuzz_ctl/fuchsia.com/cff/fuzzer/relpath",
+		"/data/relpath":     "/data/relpath",
+		"relpath":           "/tmp/fuzz_ctl/fuchsia.com/cff/fuzzer/relpath",
+		"/relpath":          "/relpath",
+	}
+
+	for relpath, expected := range absPaths {
+		got := f.AbsPath(relpath)
+		if expected != got {
+			t.Fatalf("expected %q, got %q", expected, got)
+		}
+	}
+}
+
+func TestAbsPathUsingFfxFuzz(t *testing.T) {
+	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
 
 	f, err := build.Fuzzer("cff/fuzzer")
 	if err != nil {
@@ -103,277 +188,9 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func TestPrepare(t *testing.T) {
-	build, _ := newMockBuild()
-	f, err := build.Fuzzer("foo/bar")
-	if err != nil {
-		t.Fatalf("failed to load fuzzer: %s", err)
-	}
-
-	conn := NewMockConnector(t)
-	conn.connected = true
-	if err := f.Prepare(conn); err != nil {
-		t.Fatalf("failed to prepare fuzzer: %s", err)
-	}
-
-	if len(conn.FfxHistory) != 0 {
-		t.Fatalf("incorrect ffx history: %v", conn.FfxHistory)
-	}
-
-	if !reflect.DeepEqual(conn.CmdHistory, []string{"pkgctl", "killall", "rm"}) {
-		t.Fatalf("incorrect command history: %v", conn.CmdHistory)
-	}
-}
-
-func TestPrepareV2(t *testing.T) {
-	build, _ := newMockBuild()
-	f, err := build.Fuzzer("cff/fuzzer")
-	if err != nil {
-		t.Fatalf("failed to load fuzzer: %s", err)
-	}
-
-	conn := NewMockConnector(t)
-	conn.connected = true
-	if err := f.Prepare(conn); err != nil {
-		t.Fatalf("failed to prepare fuzzer: %s", err)
-	}
-
-	expected := []string{"fuzz stop fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm"}
-	if diff := cmp.Diff(expected, conn.FfxHistory); diff != "" {
-		t.Fatalf("incorrect ffx history (-want +got):\n%s", diff)
-	}
-
-	// MockConnector calls `rm`
-	if !reflect.DeepEqual(conn.CmdHistory, []string{"rm"}) {
-		t.Fatalf("incorrect command history: %v", conn.CmdHistory)
-	}
-}
-
-func TestIsCFF(t *testing.T) {
-	build, _ := newMockBuild()
-	f, err := build.Fuzzer("foo/bar")
-	if err != nil {
-		t.Fatalf("failed to load fuzzer: %s", err)
-	}
-	if f.isV2() {
-		t.Fatalf("incorrect version detection for fuzzer %s", f.Name)
-	}
-
-	f, err = build.Fuzzer("cff/fuzzer")
-	if err != nil {
-		t.Fatalf("failed to load fuzzer: %s", err)
-	}
-	if !f.isV2() {
-		t.Fatalf("incorrect version detection for fuzzer %s", f.Name)
-	}
-}
-
-const (
-	FuzzerNormal = iota
-	FuzzerSymbolizerFailure
-	FuzzerSyslogFailure
-)
-
-// Run fuzzer and collect its output and artifacts. Scenario should be one of
-// those listed above.
-func runFuzzer(t *testing.T, name string, args []string, scenario int) (string, []string, error) {
-	build, _ := newMockBuild()
-	conn := NewMockConnector(t)
-
-	switch scenario {
-	case FuzzerSymbolizerFailure:
-		build.(*mockBuild).brokenSymbolizer = true
-	case FuzzerSyslogFailure:
-		conn.shouldFailToGetSysLog = true
-	}
-
-	f, err := build.Fuzzer(name)
-	if err != nil {
-		t.Fatalf("failed to load fuzzer: %s", err)
-	}
-
-	f.Parse(append(args, "data/corpus"))
-
-	var outBuf bytes.Buffer
-	artifacts, err := f.Run(conn, &outBuf, "/some/artifactDir")
-
-	return outBuf.String(), artifacts, err
-}
-
-func TestRun(t *testing.T) {
-	out, artifacts, err := runFuzzer(t, "foo/bar",
-		[]string{"-merge_control_file=data/.mergefile"}, FuzzerNormal)
-	if err != nil {
-		t.Fatalf("failed to run fuzzer: %s", err)
-	}
-
-	// Check for syslog insertion
-	if !strings.Contains(out, fmt.Sprintf("syslog for %d", mockFuzzerPid)) {
-		t.Fatalf("fuzzer output missing syslog: %q", out)
-	}
-
-	// Check for symbolization
-	if !strings.Contains(out, "wow.c:1") {
-		t.Fatalf("fuzzer output not properly symbolized: %q", out)
-	}
-
-	// Check for artifact detection
-	artifactAbsPath := "/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/crash-1312"
-	if !reflect.DeepEqual(artifacts, []string{artifactAbsPath}) {
-		t.Fatalf("unexpected artifact list: %s", artifacts)
-	}
-
-	// Check for artifact path rewriting
-	if !strings.Contains(out, "/some/artifactDir/crash-1312") {
-		t.Fatalf("artifact prefix not rewritten: %q", out)
-	}
-
-	// Check that paths in libFuzzer options/args are translated
-	if !strings.Contains(out, "tmp/.mergefile") {
-		t.Fatalf("mergefile prefix not rewritten: %q", out)
-	}
-
-	if !strings.Contains(out, "tmp/corpus") {
-		t.Fatalf("corpus prefix not rewritten: %q", out)
-	}
-
-	if !strings.Contains(out, "\nRunning: data/corpus/testcase\n") {
-		t.Fatalf("testcase prefix not restored: %q", out)
-	}
-}
-
-func TestRunWithInvalidArtifactPrefix(t *testing.T) {
-	args := []string{"-artifact_prefix=foo/bar"}
-	_, _, err := runFuzzer(t, "foo/bar", args, FuzzerNormal)
-	if err == nil || !strings.Contains(err.Error(), "artifact_prefix not in mutable") {
-		t.Fatalf("expected failure to run but got: %s", err)
-	}
-}
-
-func TestMissingPID(t *testing.T) {
-	output, _, err := runFuzzer(t, "fail/nopid", nil, FuzzerNormal)
-
-	if err != nil {
-		t.Fatalf("expected to succeed but got: %s", err)
-	}
-
-	if !strings.Contains(output, "missing pid") {
-		t.Fatalf("expected missing pid but got: %q", output)
-	}
-}
-
-func TestSyslogFailure(t *testing.T) {
-	output, _, err := runFuzzer(t, "foo/bar", nil, FuzzerSyslogFailure)
-
-	if err != nil {
-		t.Fatalf("expected to succeed but got: %s", err)
-	}
-
-	if !strings.Contains(output, "failed to fetch syslog") {
-		t.Fatalf("expected syslog fetch failure but got: %q", output)
-	}
-}
-
-func TestMissingSymbolizer(t *testing.T) {
-	_, _, err := runFuzzer(t, "foo/bar", nil, FuzzerSymbolizerFailure)
-	if err == nil || !strings.Contains(err.Error(), "failed during symbolization") {
-		t.Fatalf("expected failure to symbolize but got: %s", err)
-	}
-}
-
-func TestMissingFuzzerPackage(t *testing.T) {
-	_, _, err := runFuzzer(t, "fail/notfound", nil, FuzzerNormal)
-	if err == nil || !strings.Contains(err.Error(), "not found") {
-		t.Fatalf("expected failure to find package but got: %s", err)
-	}
-}
-
-func TestSetCFFOptions(t *testing.T) {
-	build, _ := newMockBuild()
-	conn := NewMockConnector(t)
-
-	f, err := build.Fuzzer("cff/fuzzer")
-	if err != nil {
-		t.Fatalf("failed to load fuzzer: %s", err)
-	}
-
-	// All valid options
-	args := []string{"-runs=3", "-max_total_time=10", "-malloc_limit_mb=42",
-		"-artifact_prefix=data/", "-seed=123", "-jobs=0", "-max_len=3141",
-		"-print_final_stats=1"}
-	f.Parse(args)
-
-	if err := f.setCFFOptions(conn); err != nil {
-		t.Fatalf("failed to set CFF options: %s", err)
-	}
-
-	expected := []string{
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm runs 3",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm max_total_time 10s",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm seed 123",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm max_input_size 3141b",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm mutation_depth 5",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm detect_leaks false",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm run_limit 1200s",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm malloc_limit 42mb",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm oom_limit 2gb",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm purge_interval 1s",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm print_final_stats 1",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm use_value_profile false",
-	}
-
-	if diff := cmp.Diff(expected, conn.FfxHistory, sortSlicesOpt); diff != "" {
-		t.Fatalf("ffx fuzz set commands not as expected (-want +got):\n%s", diff)
-	}
-
-	// Invalid option
-
-	args = []string{"-libfuzzer_feature=unsupported"}
-	f.Parse(args)
-
-	if err := f.setCFFOptions(conn); err == nil {
-		t.Fatalf("expected error for unsupported libfuzzer feature")
-	}
-
-	args = []string{"-jobs=1"}
-	f.Parse(args)
-
-	if err := f.setCFFOptions(conn); err == nil {
-		t.Fatalf("expected error for jobs != 0")
-	}
-}
-
-func TestMarkOutputCorpus(t *testing.T) {
-	build, _ := newMockBuild()
-	conn := NewMockConnector(t)
-
-	f, err := build.Fuzzer("cff/fuzzer")
-	if err != nil {
-		t.Fatalf("failed to load fuzzer: %s", err)
-	}
-
-	corpusPath := "some/corpus"
-	f.markOutputCorpus(conn, corpusPath)
-
-	if len(conn.PathsPut) != 1 {
-		t.Fatalf("no Put was made")
-	}
-	putCmd := conn.PathsPut[0]
-	if putCmd.dst != f.AbsPath(corpusPath) {
-		t.Fatalf("Put was to unexpected destination: %s", putCmd.dst)
-	}
-
-	if filepath.Base(putCmd.src) != liveCorpusMarkerName {
-		t.Fatalf("Put was with wrong filename: %s", putCmd.src)
-	}
-
-	if diff := cmp.Diff(f.url, conn.LastPutFileContent); diff != "" {
-		t.Fatalf("corpus marker has wrong contents (-want +got):\n%s", diff)
-	}
-}
-
 func TestParseArgsForFfx(t *testing.T) {
 	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
 	conn := NewMockConnector(t)
 
 	f, err := build.Fuzzer("cff/fuzzer")
@@ -468,6 +285,305 @@ func TestParseArgsForFfx(t *testing.T) {
 	}
 }
 
+func TestPrepare(t *testing.T) {
+	build, _ := newMockBuild()
+	f, err := build.Fuzzer("foo/bar")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+
+	conn := NewMockConnector(t)
+	conn.connected = true
+	if err := f.Prepare(conn); err != nil {
+		t.Fatalf("failed to prepare fuzzer: %s", err)
+	}
+
+	if len(conn.FfxHistory) != 0 {
+		t.Fatalf("incorrect ffx history: %v", conn.FfxHistory)
+	}
+
+	if !reflect.DeepEqual(conn.CmdHistory, []string{"pkgctl", "killall", "rm"}) {
+		t.Fatalf("incorrect command history: %v", conn.CmdHistory)
+	}
+}
+
+func TestPrepareUsingFuzzCtl(t *testing.T) {
+	build, _ := newMockBuild()
+	f, err := build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+
+	conn := NewMockConnector(t)
+	conn.connected = true
+	if err := f.Prepare(conn); err != nil {
+		t.Fatalf("failed to prepare fuzzer: %s", err)
+	}
+
+	if !reflect.DeepEqual(conn.CmdHistory, []string{"fuzz_ctl"}) {
+		t.Fatalf("incorrect command history: %v", conn.CmdHistory)
+	}
+
+	expected := []string{"reset fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm"}
+	if diff := cmp.Diff(expected, conn.FuzzCtlHistory); diff != "" {
+		t.Fatalf("incorrect fuzz_ctl history (-want +got):\n%s", diff)
+	}
+
+	if len(conn.FfxHistory) != 0 {
+		t.Fatalf("incorrect ffx history: %v", conn.FfxHistory)
+	}
+}
+
+func TestPrepareUsingFfxFuzz(t *testing.T) {
+	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
+	f, err := build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+
+	conn := NewMockConnector(t)
+	conn.connected = true
+	if err := f.Prepare(conn); err != nil {
+		t.Fatalf("failed to prepare fuzzer: %s", err)
+	}
+
+	// MockConnector calls `rm`
+	if !reflect.DeepEqual(conn.CmdHistory, []string{"rm"}) {
+		t.Fatalf("incorrect command history: %v", conn.CmdHistory)
+	}
+
+	if len(conn.FuzzCtlHistory) != 0 {
+		t.Fatalf("incorrect fuzz_ctl history: %v", conn.FuzzCtlHistory)
+	}
+
+	expected := []string{"fuzz stop fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm"}
+	if diff := cmp.Diff(expected, conn.FfxHistory); diff != "" {
+		t.Fatalf("incorrect ffx history (-want +got):\n%s", diff)
+	}
+}
+
+func TestSetOptionsUsingFfxFuzz(t *testing.T) {
+	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
+	conn := NewMockConnector(t)
+
+	f, err := build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+
+	// All valid options
+	args := []string{"-runs=3", "-max_total_time=10", "-malloc_limit_mb=42",
+		"-artifact_prefix=data/", "-seed=123", "-jobs=0", "-max_len=3141",
+		"-print_final_stats=1"}
+	f.Parse(args)
+
+	if err := f.setCFFOptions(conn); err != nil {
+		t.Fatalf("failed to set CFF options: %s", err)
+	}
+
+	expected := []string{
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm runs 3",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm max_total_time 10s",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm seed 123",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm max_input_size 3141b",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm mutation_depth 5",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm detect_leaks false",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm run_limit 1200s",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm malloc_limit 42mb",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm oom_limit 2gb",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm purge_interval 1s",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm print_final_stats 1",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm use_value_profile false",
+	}
+
+	if diff := cmp.Diff(expected, conn.FfxHistory, sortSlicesOpt); diff != "" {
+		t.Fatalf("ffx fuzz set commands not as expected (-want +got):\n%s", diff)
+	}
+
+	// Invalid option
+
+	args = []string{"-libfuzzer_feature=unsupported"}
+	f.Parse(args)
+
+	if err := f.setCFFOptions(conn); err == nil {
+		t.Fatalf("expected error for unsupported libfuzzer feature")
+	}
+
+	args = []string{"-jobs=1"}
+	f.Parse(args)
+
+	if err := f.setCFFOptions(conn); err == nil {
+		t.Fatalf("expected error for jobs != 0")
+	}
+}
+
+func TestMarkOutputCorpusForFfx(t *testing.T) {
+	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
+	conn := NewMockConnector(t)
+
+	f, err := build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+
+	corpusPath := "some/corpus"
+	f.markOutputCorpus(conn, corpusPath)
+
+	if len(conn.PathsPut) != 1 {
+		t.Fatalf("no Put was made")
+	}
+	putCmd := conn.PathsPut[0]
+	if putCmd.dst != f.AbsPath(corpusPath) {
+		t.Fatalf("Put was to unexpected destination: %s", putCmd.dst)
+	}
+
+	if filepath.Base(putCmd.src) != liveCorpusMarkerName {
+		t.Fatalf("Put was with wrong filename: %s", putCmd.src)
+	}
+
+	if diff := cmp.Diff(f.url, conn.LastPutFileContent); diff != "" {
+		t.Fatalf("corpus marker has wrong contents (-want +got):\n%s", diff)
+	}
+}
+
+// Construct and run fuzzer and collect its output and artifacts using a default `mockBuild`.
+func runWithDefaults(t *testing.T, name string, args []string) (string, []string, error) {
+	build, _ := newMockBuild()
+	return runWithBuild(t, build, name, args)
+}
+
+// Construct and run fuzzer and collect its output and artifacts using a given `build`.
+func runWithBuild(t *testing.T, build Build, name string, args []string) (string, []string, error) {
+	conn := NewMockConnector(t)
+	return runWithConnector(t, build, conn, name, args)
+}
+
+// Construct and run fuzzer and collect its output and artifacts using a given `mockConnector`.
+func runWithConnector(t *testing.T, build Build, conn *mockConnector, name string, args []string) (string, []string, error) {
+	f, err := build.Fuzzer(name)
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	return runWithFuzzer(t, conn, f, args)
+}
+
+// Run a given `Fuzzer` and collect its output and artifacts.
+func runWithFuzzer(t *testing.T, conn *mockConnector, f *Fuzzer, args []string) (string, []string, error) {
+	f.Parse(append(args, "data/corpus"))
+
+	var outBuf bytes.Buffer
+	artifacts, err := f.Run(conn, &outBuf, "/some/artifactDir")
+
+	return outBuf.String(), artifacts, err
+}
+
+func testRun(t *testing.T, name string) {
+	build, _ := newMockBuild()
+	conn := NewMockConnector(t)
+	f, err := build.Fuzzer(name)
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+
+	out, artifacts, err := runWithFuzzer(t, conn, f, []string{"-merge_control_file=data/.mergefile"})
+	if err != nil {
+		t.Fatalf("failed to run fuzzer: %s", err)
+	}
+
+	// Check for syslog insertion
+	if !strings.Contains(out, fmt.Sprintf("syslog for %d", mockFuzzerPid)) {
+		t.Fatalf("fuzzer output missing syslog: %q", out)
+	}
+
+	// Check for symbolization
+	if !strings.Contains(out, "wow.c:1") {
+		t.Fatalf("fuzzer output not properly symbolized: %q", out)
+	}
+
+	// Check for artifact detection
+	artifactAbsPath := f.AbsPath("tmp/crash-1312")
+	if !reflect.DeepEqual(artifacts, []string{artifactAbsPath}) {
+		t.Fatalf("unexpected artifact list: %s", artifacts)
+	}
+
+	// Check for artifact path rewriting
+	if !strings.Contains(out, "/some/artifactDir/crash-1312") {
+		t.Fatalf("artifact prefix not rewritten: %q", out)
+	}
+
+	// Check that paths in libFuzzer options/args are translated
+	if !f.useFuzzCtl() && !strings.Contains(out, "tmp/.mergefile") {
+		t.Fatalf("mergefile prefix not rewritten: %q", out)
+	}
+
+	if !f.useFuzzCtl() && !strings.Contains(out, "tmp/corpus") {
+		t.Fatalf("corpus prefix not rewritten: %q", out)
+	}
+
+	if !strings.Contains(out, "\nRunning: data/corpus/testcase\n") {
+		t.Fatalf("testcase prefix not restored: %q", out)
+	}
+}
+
+func TestRun(t *testing.T) {
+	testRun(t, "foo/bar")
+}
+
+func TestRunUsingFuzzCtl(t *testing.T) {
+	testRun(t, "cff/fuzzer")
+}
+
+func TestRunWithInvalidArtifactPrefix(t *testing.T) {
+	_, _, err := runWithDefaults(t, "foo/bar", []string{"-artifact_prefix=foo/bar"})
+	if err == nil || !strings.Contains(err.Error(), "artifact_prefix not in mutable") {
+		t.Fatalf("expected failure to run but got: %s", err)
+	}
+}
+
+func TestMissingPID(t *testing.T) {
+	output, _, err := runWithDefaults(t, "fail/nopid", nil)
+	if err != nil {
+		t.Fatalf("expected to succeed but got: %s", err)
+	}
+
+	if !strings.Contains(output, "missing pid") {
+		t.Fatalf("expected missing pid but got: %q", output)
+	}
+}
+
+func TestSyslogFailure(t *testing.T) {
+	build, _ := newMockBuild()
+	conn := NewMockConnector(t)
+	conn.shouldFailToGetSysLog = true
+	output, _, err := runWithConnector(t, build, conn, "foo/bar", nil)
+	if err != nil {
+		t.Fatalf("expected to succeed but got: %s", err)
+	}
+
+	if !strings.Contains(output, "failed to fetch syslog") {
+		t.Fatalf("expected syslog fetch failure but got: %q", output)
+	}
+}
+
+func TestMissingSymbolizer(t *testing.T) {
+	build, _ := newMockBuild()
+	build.(*mockBuild).brokenSymbolizer = true
+	_, _, err := runWithBuild(t, build, "foo/bar", nil)
+	if err == nil || !strings.Contains(err.Error(), "failed during symbolization") {
+		t.Fatalf("expected failure to symbolize but got: %s", err)
+	}
+}
+
+func TestMissingFuzzerPackage(t *testing.T) {
+	_, _, err := runWithDefaults(t, "fail/notfound", nil)
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected failure to find package but got: %s", err)
+	}
+}
+
 func runFuzzerV2(t *testing.T, conn *mockConnector, fuzzer *Fuzzer,
 	args []string) (string, []string) {
 
@@ -504,8 +620,9 @@ func expectLiveCorpusContents(t *testing.T, conn *mockConnector, targetPaths []s
 	}
 }
 
-func TestRunV2Fuzz(t *testing.T) {
+func TestFuzzUsingFfxFuzz(t *testing.T) {
 	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
 
 	f, err := build.Fuzzer("cff/fuzzer")
 	if err != nil {
@@ -556,8 +673,9 @@ func TestRunV2Fuzz(t *testing.T) {
 	}
 }
 
-func TestRunV2Try(t *testing.T) {
+func TestTryUsingFfxFuzz(t *testing.T) {
 	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
 
 	f, err := build.Fuzzer("cff/fuzzer")
 	if err != nil {
@@ -598,8 +716,9 @@ func TestRunV2Try(t *testing.T) {
 	}
 }
 
-func TestRunV2Minimize(t *testing.T) {
+func TestMinimizeUsingFfxFuzz(t *testing.T) {
 	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
 
 	f, err := build.Fuzzer("cff/fuzzer")
 	if err != nil {
@@ -632,8 +751,9 @@ func TestRunV2Minimize(t *testing.T) {
 	}
 }
 
-func TestRunV2Merge(t *testing.T) {
+func TestMergeUsingFfxFuzz(t *testing.T) {
 	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
 
 	f, err := build.Fuzzer("cff/fuzzer")
 	if err != nil {

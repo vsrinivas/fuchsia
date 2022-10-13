@@ -38,8 +38,9 @@ type mockConnector struct {
 	Dirs []string
 
 	// Store history of commands run on this connection
-	CmdHistory []string
-	FfxHistory []string
+	CmdHistory     []string
+	FuzzCtlHistory []string
+	FfxHistory     []string
 
 	CleanedUp bool
 }

@@ -27,6 +27,7 @@ import (
 // - fx set core.x64 \
 //     --with-base //tools/fuzz:tests \
 //     --with-base //tools/fuzz/testing:undercoat-test-fuzzers \
+//     --with-base //examples/fuzzers \
 //     --with-base //bundles:tools \
 //     --fuzz-with asan && fx build
 //
@@ -569,6 +570,11 @@ func TestFuzzNoisy(t *testing.T) {
 	out = runCommandOk(t, "run_fuzzer", "-handle", handle, "-fuzzer", noisy_fuzzer, "--",
 		"-max_total_time=1")
 	glog.Info(out)
+
+	// v1 fuzzers cannot suppress stdout/syslog.
+	if strings.Contains(out, "noisy_fuzzer.cmx") {
+		return
+	}
 
 	if !strings.Contains(out, "libFuzzer starting") {
 		t.Fatalf("output missing stderr: %s", out)

@@ -15,6 +15,7 @@ import (
 type mockBuild struct {
 	paths            map[string]string
 	brokenSymbolizer bool
+	useFfxFuzz       bool
 }
 
 func newMockBuild() (Build, error) {
@@ -71,7 +72,7 @@ func (b *mockBuild) Fuzzer(name string) (*Fuzzer, error) {
 	case "fail/notfound":
 		return NewV1Fuzzer(b, "fail", "notfound"), nil
 	case "cff/fuzzer":
-		return NewV2Fuzzer(b, "cff", "fuzzer"), nil
+		return NewV2Fuzzer(b, "cff", "fuzzer", b.useFfxFuzz), nil
 	default:
 		return nil, fmt.Errorf("invalid fuzzer name %q", name)
 	}
