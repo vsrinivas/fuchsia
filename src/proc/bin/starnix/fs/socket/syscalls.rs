@@ -4,7 +4,7 @@
 
 use fuchsia_zircon as zx;
 use std::convert::TryInto;
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::AsBytes;
 
 use super::*;
 use crate::fs::buffers::*;
@@ -83,55 +83,7 @@ fn parse_socket_address(
     let mut address = vec![0u8; address_length];
     task.mm.read_memory(user_socket_address, &mut address)?;
 
-    let mut family_bytes = [0u8; SA_FAMILY_SIZE];
-    family_bytes[..SA_FAMILY_SIZE].copy_from_slice(&address[..SA_FAMILY_SIZE]);
-    let family = uapi::__kernel_sa_family_t::from_ne_bytes(family_bytes);
-
-    let address = match family {
-        AF_UNIX => {
-            let template = sockaddr_un::default();
-            let sun_path = &address[SA_FAMILY_SIZE..];
-            if sun_path.len() > template.sun_path.len() {
-                return error!(EINVAL);
-            }
-            if sun_path.is_empty() {
-                // Possibly an autobind address, depending on context.
-                SocketAddress::Unix(vec![])
-            } else {
-                let null_index =
-                    sun_path.iter().position(|&r| r == b'\0').unwrap_or(sun_path.len());
-                if null_index == 0 {
-                    // If there is a null byte at the start of the sun_path, then the
-                    // address is abstract.
-                    SocketAddress::Unix(sun_path.to_vec())
-                } else {
-                    // Otherwise, the name is a path.
-                    SocketAddress::Unix(sun_path[..null_index].to_vec())
-                }
-            }
-        }
-        AF_VSOCK => {
-            let vsock_address = sockaddr_vm::read_from(&*address);
-            if let Some(address) = vsock_address {
-                SocketAddress::Vsock(address.svm_port)
-            } else {
-                SocketAddress::Unspecified
-            }
-        }
-        AF_INET => {
-            let sockaddr_len = std::mem::size_of::<sockaddr_in>();
-            let addrlen = std::cmp::min(address_length, sockaddr_len);
-            SocketAddress::Inet(address[..addrlen].to_vec())
-        }
-        AF_INET6 => {
-            let sockaddr_len = std::mem::size_of::<sockaddr_in6>();
-            let addrlen = std::cmp::min(address_length, sockaddr_len);
-            SocketAddress::Inet6(address[..addrlen].to_vec())
-        }
-        AF_NETLINK => SocketAddress::default_for_domain(SocketDomain::Netlink),
-        _ => SocketAddress::Unspecified,
-    };
-    Ok(address)
+    SocketAddress::from_bytes(address)
 }
 
 fn maybe_parse_socket_address(

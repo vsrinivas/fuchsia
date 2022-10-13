@@ -200,9 +200,10 @@ impl SocketOps for InetSocket {
 
         current_task.mm.write_all(&buffers, &info.message)?;
 
-        let address = match info.address.len() {
-            0 => None,
-            _ => Some(SocketAddress::bytes_into_inet(info.address)?),
+        let address = if !info.address.is_empty() {
+            Some(SocketAddress::from_bytes(info.address)?)
+        } else {
+            None
         };
 
         // TODO: Handle ancillary_data.
