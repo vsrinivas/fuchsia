@@ -329,8 +329,7 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
     bind_driver_manager_->BindAllDevicesDriverIndex(config);
   });
 
-  const zx_status_t status = devfs_.initialize(*sys_device_);
-  ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
+  devfs_.initialize(*sys_device_);
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   LOGF(INFO, "V1 drivers loaded and published");

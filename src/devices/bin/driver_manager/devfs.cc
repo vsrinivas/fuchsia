@@ -233,28 +233,51 @@ Devnode::Devnode(Devfs& devfs, PseudoDir& parent, Target target, fbl::String nam
       parent_(&parent),
       node_(fbl::MakeRefCounted<VnodeImpl>(*this, std::move(target))),
       name_(std::move(name)) {
-  parent.unpublished.push_back(this);
-}
-
-std::optional<std::reference_wrapper<fs::Vnode>> Devfs::Lookup(PseudoDir& parent,
-                                                               std::string_view name) {
   {
-    fbl::RefPtr<fs::Vnode> out;
-    switch (const zx_status_t status = parent.Lookup(name, &out); status) {
-      case ZX_OK:
-        return *out;
-      case ZX_ERR_NOT_FOUND:
-        break;
-      default:
-        ZX_PANIC("%s", zx_status_get_string(status));
+    const std::string_view name = this->name();
+    std::optional<std::reference_wrapper<fs::Vnode>> other =
+        [&parent, name]() -> std::optional<std::reference_wrapper<fs::Vnode>> {
+      {
+        fbl::RefPtr<fs::Vnode> out;
+        switch (const zx_status_t status = parent.Lookup(name, &out); status) {
+          case ZX_OK:
+            return *out;
+          case ZX_ERR_NOT_FOUND:
+            break;
+          default:
+            ZX_PANIC("%s", zx_status_get_string(status));
+        }
+      }
+      for (auto& child : parent.unpublished) {
+        if (child.name() == name) {
+          return child.node();
+        }
+      }
+      return {};
+    }();
+    if (other.has_value()) {
+      // As of this writing, composite devices all attach at the root node in devfs, including
+      // duplicates. Because this is load-bearing, we cannot easily change it.
+      //
+      // To preserve the invariant that directory entries do not contain duplicates, we do not add
+      // this to the parent. Hopefully the first device to arrive is sufficient. Unhook the parent
+      // to prevent double cleanup.
+      //
+      // TODO(https://fxbug.dev/110922): Remove this logic when composite devices no longer surface
+      // this way in devfs.
+      const bool is_composite = std::visit(
+          overloaded{[](const NoRemote&) { return false; }, [](const Service&) { return false; },
+                     [](const Device& device) { return device.is_composite(); }},
+          this->target());
+      ZX_ASSERT_MSG(is_composite, "non-composite duplicate devfs element '%.*s': this=%p other=%p",
+                    static_cast<int>(name.size()), name.data(), this, &other.value());
+      parent_ = nullptr;
+      LOGF(WARNING, "skipping duplicate devfs element '%.*s': this=%p other=%p",
+           static_cast<int>(name.size()), name.data(), this, &other.value());
+      return;
     }
   }
-  for (auto& child : parent.unpublished) {
-    if (child.name() == name) {
-      return child.node();
-    }
-  }
-  return {};
+  parent.unpublished.push_back(this);
 }
 
 Devnode::~Devnode() {
@@ -286,7 +309,14 @@ Devnode::~Devnode() {
 }
 
 void Devnode::publish() {
-  ZX_ASSERT(parent_ != nullptr);
+  // parent is nullptr if this node's name collides with another node. Hopefully that node is also
+  // being advertised.
+  //
+  // TODO(https://fxbug.dev/110922): Remove this condition when composite devices no longer surface
+  // this way in devfs.
+  if (parent_ == nullptr) {
+    return;
+  }
   PseudoDir& parent = *parent_;
 
   // NB: We can't blindly erase from the unpublished list because it is an error to erase a
@@ -314,10 +344,16 @@ void Devfs::advertise_modified(Device& device) {
     auto& dn_opt = *ptr;
     if (dn_opt.has_value()) {
       const Devnode& dn = dn_opt.value();
-      ZX_ASSERT(dn.parent_ != nullptr);
-      PseudoDir& parent = *dn.parent_;
-      for (const auto event : {fio::wire::WatchEvent::kRemoved, fio::wire::WatchEvent::kAdded}) {
-        parent.Notify(dn.name(), event);
+      // parent is nullptr if this node's name collides with another node. Hopefully that node is
+      // also being advertised.
+      //
+      // TODO(https://fxbug.dev/110922): Remove this condition when composite devices no longer
+      // surface this way in devfs.
+      if (dn.parent_ != nullptr) {
+        PseudoDir& parent = *dn.parent_;
+        for (const auto event : {fio::wire::WatchEvent::kRemoved, fio::wire::WatchEvent::kAdded}) {
+          parent.Notify(dn.name(), event);
+        }
       }
     }
   }
@@ -358,17 +394,7 @@ zx_status_t Devfs::initialize(Device& device) {
     return ZX_ERR_INTERNAL;
   }
 
-  {
-    PseudoDir& parent_directory = parent.self.value().node().children();
-    const std::string_view name = device.name();
-    const std::optional other = Lookup(parent_directory, name);
-    if (other.has_value()) {
-      LOGF(WARNING, "rejecting duplicate device name '%.*s'", static_cast<int>(name.size()),
-           name.data());
-      return ZX_ERR_ALREADY_EXISTS;
-    }
-    device.self.emplace(*this, parent_directory, device, name);
-  }
+  device.self.emplace(*this, parent.self.value().node().children(), device, device.name());
 
   switch (const uint32_t id = device.protocol_id(); id) {
     case ZX_PROTOCOL_TEST_PARENT:
