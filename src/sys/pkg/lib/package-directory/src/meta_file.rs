@@ -7,11 +7,10 @@ use {
     anyhow::Context as _,
     async_trait::async_trait,
     fidl::{endpoints::ServerEnd, HandleBased as _},
-    fidl_fuchsia_io as fio,
-    fuchsia_syslog::fx_log_err,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     once_cell::sync::OnceCell,
     std::sync::Arc,
+    tracing::error,
     vfs::{
         common::send_on_open_with_error, directory::entry::EntryInfo,
         execution_scope::ExecutionScope, path::Path as VfsPath,
@@ -123,7 +122,7 @@ impl<S: crate::NonMetaStorage> vfs::file::File for MetaFile<S> {
         }
 
         let vmo = self.vmo().await.map_err(|e: anyhow::Error| {
-            fx_log_err!("Failed to get MetaFile VMO during get_backing_memory: {:#}", e);
+            error!("Failed to get MetaFile VMO during get_backing_memory: {:#}", e);
             zx::Status::INTERNAL
         })?;
 
@@ -135,10 +134,7 @@ impl<S: crate::NonMetaStorage> vfs::file::File for MetaFile<S> {
                     self.location.length,
                 )
                 .map_err(|e: zx::Status| {
-                    fx_log_err!(
-                        "Failed to create private child VMO during get_backing_memory: {:#}",
-                        e
-                    );
+                    error!("Failed to create private child VMO during get_backing_memory: {:#}", e);
                     e
                 })?;
             Ok(vmo)
@@ -152,7 +148,7 @@ impl<S: crate::NonMetaStorage> vfs::file::File for MetaFile<S> {
                     zx::Rights::NONE
                 };
             let vmo = vmo.duplicate_handle(rights).map_err(|e: zx::Status| {
-                fx_log_err!("Failed to clone VMO handle during get_backing_memory: {:#}", e);
+                error!("Failed to clone VMO handle during get_backing_memory: {:#}", e);
                 e
             })?;
             Ok(vmo)
@@ -212,12 +208,12 @@ impl<S: crate::NonMetaStorage> vfs::file::FileIo for MetaFile<S> {
             .read_at(count, offset_far)
             .await
             .map_err(|e: fidl::Error| {
-                fx_log_err!("meta.far read_at fidl error: {:#}", e);
+                error!("meta.far read_at fidl error: {:#}", e);
                 zx::Status::INTERNAL
             })?
             .map_err(zx::Status::from_raw)
             .map_err(|e: zx::Status| {
-                fx_log_err!("meta.far read_at protocol error: {:#}", e);
+                error!("meta.far read_at protocol error: {:#}", e);
                 e
             })?;
         let () = buffer[..bytes.len()].copy_from_slice(&bytes);

@@ -18,10 +18,10 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_fs::file::AsyncReadAtExt as _,
     fuchsia_pkg::MetaContents,
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     futures::stream::StreamExt as _,
     std::{collections::HashMap, sync::Arc},
+    tracing::error,
     vfs::{
         common::send_on_open_with_error,
         directory::{
@@ -307,10 +307,7 @@ impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for RootDir
         if let Some(blob) = self.non_meta_files.get(canonical_path) {
             let () =
                 self.non_meta_storage.open(blob, flags, mode, server_end).unwrap_or_else(|e| {
-                    fx_log_err!(
-                        "Error forwarding content blob open to blobfs: {:#}",
-                        anyhow::anyhow!(e)
-                    )
+                    error!("Error forwarding content blob open to blobfs: {:#}", anyhow::anyhow!(e))
                 });
             return;
         }
