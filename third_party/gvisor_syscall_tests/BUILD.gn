@@ -7,8 +7,6 @@ import("//build/test.gni")
 
 source_set("expectations") {
   sources = [
-    "expects/common.cc",
-    "expects/common.h",
     "expects/expectations.cc",
     "expects/expectations.h",
   ]
@@ -215,22 +213,13 @@ source_set("${tcp_blocking_test_label}_socket_tests") {
   sources = [
     "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
     "gvisor/test/syscalls/linux/ip_socket_test_util.h",
-    "gvisor/test/syscalls/linux/socket_generic.h",
-    "gvisor/test/syscalls/linux/socket_generic_test_cases.cc",
-    "gvisor/test/syscalls/linux/socket_ip_tcp_generic.cc",
-    "gvisor/test/syscalls/linux/socket_ip_tcp_generic.h",
-    "gvisor/test/syscalls/linux/socket_ip_tcp_generic_loopback.cc",
-    "gvisor/test/syscalls/linux/socket_ip_tcp_loopback.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_loopback_blocking.cc",
     "gvisor/test/syscalls/linux/socket_stream_blocking.cc",
     "gvisor/test/syscalls/linux/socket_stream_blocking.h",
-    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.cc",
-    "gvisor/test/syscalls/linux/unix_domain_socket_test_util.h",
   ]
   deps = [
     ":gvisor_test_util",
     "//third_party/abseil-cpp/absl/strings:str_format",
-    "//third_party/abseil-cpp/absl/time",
   ]
 
   testonly = true
