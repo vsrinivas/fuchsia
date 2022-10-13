@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::mocks,
     device_watcher::recursive_wait_and_open_node,
     fidl::endpoints::{create_proxy, Proxy},
     fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost,
@@ -23,8 +22,7 @@ use {
     uuid::Uuid,
 };
 
-const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
-const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
+mod mocks;
 
 // We use a static key-bag so that the crypt instance can be shared across test executions safely.
 // These keys match the DATA_KEY and METADATA_KEY respectively, when wrapped with the "zxcrypt"
@@ -110,14 +108,26 @@ pub async fn create_hermetic_crypt_service(
     realm
 }
 
-#[derive(Default)]
 pub struct TestFixtureBuilder {
+    fshost_component_name: &'static str,
+    data_filesystem_format: &'static str,
+
     with_ramdisk: bool,
     ramdisk_size: u64,
     format_data: bool,
 }
 
 impl TestFixtureBuilder {
+    pub fn new(fshost_component_name: &'static str, data_filesystem_format: &'static str) -> Self {
+        Self {
+            fshost_component_name,
+            data_filesystem_format,
+            with_ramdisk: false,
+            ramdisk_size: 0,
+            format_data: false,
+        }
+    }
+
     pub fn with_ramdisk(self) -> Self {
         self.with_sized_ramdisk(234881024)
     }
@@ -136,7 +146,7 @@ impl TestFixtureBuilder {
     pub async fn build(self) -> TestFixture {
         let mocks = mocks::new_mocks().await;
         let builder = RealmBuilder::new().await.unwrap();
-        let fshost_url = format!("#meta/{}.cm", FSHOST_COMPONENT_NAME);
+        let fshost_url = format!("#meta/{}.cm", self.fshost_component_name);
         println!("using {} as test-fshost", fshost_url);
         let fshost = builder
             .add_child("test-fshost", fshost_url, ChildOptions::new().eager())
@@ -320,20 +330,20 @@ impl TestFixtureBuilder {
         .expect("create_fvm_volume failed");
 
         if self.format_data {
-            init_data(ramdisk_path, &dev).await;
+            self.init_data(ramdisk_path, &dev).await;
         }
 
         ramdisk.destroy().expect("destroy failed");
 
         vmo_dup
     }
-}
 
-async fn init_data(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
-    match DATA_FILESYSTEM_FORMAT {
-        "fxfs" => init_data_fxfs(ramdisk_path, dev).await,
-        "minfs" => init_data_minfs(ramdisk_path, dev).await,
-        _ => panic!("unsupported data filesystem format type"),
+    async fn init_data(&self, ramdisk_path: &str, dev: &fio::DirectoryProxy) {
+        match self.data_filesystem_format {
+            "fxfs" => init_data_fxfs(ramdisk_path, dev).await,
+            "minfs" => init_data_minfs(ramdisk_path, dev).await,
+            _ => panic!("unsupported data filesystem format type"),
+        }
     }
 }
 
@@ -448,8 +458,6 @@ impl TestFixture {
         dev
     }
 
-    // Not all test binaries use this function.
-    #[allow(dead_code)]
     pub async fn check_fs_type(&self, dir: &str, fs_type: u32) {
         let (status, info) = self.dir(dir).query_filesystem().await.expect("query failed");
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
@@ -457,8 +465,6 @@ impl TestFixture {
         assert_eq!(info.unwrap().fs_type, fs_type);
     }
 
-    // Not all test binaries use this function.
-    #[allow(dead_code)]
     pub fn ramdisk_vmo(&self) -> Option<&zx::Vmo> {
         self.ramdisk_vmo.as_ref()
     }

@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::test_fixture::TestFixtureBuilder, fidl::endpoints::create_proxy, fidl_fuchsia_io as fio,
+    fidl::endpoints::create_proxy, fidl_fuchsia_io as fio, fshost_test_fixture::TestFixtureBuilder,
 };
 
-mod mocks;
-mod test_fixture;
-
+const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
 const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
 
 const VFS_TYPE_BLOBFS: u32 = 0x9e694d21;
@@ -30,7 +28,11 @@ fn data_fs_type() -> u32 {
 
 #[fuchsia::test]
 async fn blobfs_and_data_mounted() {
-    let fixture = TestFixtureBuilder::default().with_ramdisk().format_data().build().await;
+    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+        .with_ramdisk()
+        .format_data()
+        .build()
+        .await;
 
     fixture.dir("blob").describe_deprecated().await.expect("describe failed");
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
@@ -48,7 +50,10 @@ async fn blobfs_and_data_mounted() {
 
 #[fuchsia::test]
 async fn data_formatted() {
-    let fixture = TestFixtureBuilder::default().with_ramdisk().build().await;
+    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+        .with_ramdisk()
+        .build()
+        .await;
 
     fixture.dir("data").describe_deprecated().await.expect("describe failed");
     fixture.check_fs_type("data", data_fs_type()).await;

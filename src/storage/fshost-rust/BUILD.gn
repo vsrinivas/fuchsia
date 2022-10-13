@@ -72,6 +72,6 @@ group("tests") {
   testonly = true
   public_deps = [
     ":fshost_rust_tests",
-    "tests:tests",
+    "integration:tests",
   ]
 }

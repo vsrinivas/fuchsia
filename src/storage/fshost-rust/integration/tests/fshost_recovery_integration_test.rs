@@ -6,7 +6,6 @@
 //! among other things, sets the fvm_ramdisk flag to prevent binding of the on-disk filesystems.)
 
 use {
-    crate::test_fixture::{create_hermetic_crypt_service, TestFixture, TestFixtureBuilder},
     device_watcher::recursive_wait_and_open_node,
     either::Either,
     fidl::endpoints::Proxy as _,
@@ -16,6 +15,7 @@ use {
     fidl_fuchsia_hardware_block_volume::VolumeMarker,
     fidl_fuchsia_io as fio,
     fs_management::{filesystem::Filesystem, Fxfs, Minfs},
+    fshost_test_fixture::{create_hermetic_crypt_service, TestFixture, TestFixtureBuilder},
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::{self as zx, HandleBased as _},
     key_bag::{KeyBagManager, WrappingKey, AES128_KEY_SIZE},
@@ -24,9 +24,7 @@ use {
     storage_isolated_driver_manager::{fvm::bind_fvm_driver, zxcrypt::unseal_insecure_zxcrypt},
 };
 
-mod mocks;
-mod test_fixture;
-
+const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
 const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
 
 fn generate_insecure_key(name: &[u8]) -> WrappingKey {
@@ -141,7 +139,10 @@ async fn write_data_file_common(fixture: TestFixture, expected_volume_size: u64)
 
 #[fuchsia::test]
 async fn write_data_file_unformatted() {
-    let fixture = TestFixtureBuilder::default().with_ramdisk().build().await;
+    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+        .with_ramdisk()
+        .build()
+        .await;
     // Matches the configured value in //src/storage/fshost/fshost.gni in
     // default_integration_test_options, which fshost will use when reformatting the volume.
     const EXPECTED_VOLUME_SIZE: u64 = 117440512;
@@ -150,7 +151,10 @@ async fn write_data_file_unformatted() {
 
 #[fuchsia::test]
 async fn write_data_file_unformatted_small_disk() {
-    let fixture = TestFixtureBuilder::default().with_sized_ramdisk(25165824).build().await;
+    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+        .with_sized_ramdisk(25165824)
+        .build()
+        .await;
     // The expected size is everything left in the FVM block device.
     const EXPECTED_VOLUME_SIZE: u64 = 23691264;
     write_data_file_common(fixture, EXPECTED_VOLUME_SIZE).await;
@@ -158,7 +162,11 @@ async fn write_data_file_unformatted_small_disk() {
 
 #[fuchsia::test]
 async fn write_data_file_formatted() {
-    let fixture = TestFixtureBuilder::default().format_data().with_ramdisk().build().await;
+    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+        .format_data()
+        .with_ramdisk()
+        .build()
+        .await;
     // Matches the value we configured the volume to in TestFixture.
     const EXPECTED_VOLUME_SIZE: u64 = 16 * 1024 * 1024;
     write_data_file_common(fixture, EXPECTED_VOLUME_SIZE).await;
