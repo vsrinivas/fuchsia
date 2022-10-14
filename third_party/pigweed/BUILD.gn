@@ -11,6 +11,11 @@ source_set("pw_assert") {
   visibility = [ "//src/connectivity/bluetooth/core/bt-host/*" ]
 }
 
+source_set("pw_span") {
+  public_deps = [ "src/pw_span" ]
+  visibility = [ "//src/connectivity/bluetooth/core/bt-host/*" ]
+}
+
 source_set("pw_string") {
   public_deps = [ "src/pw_string" ]
   visibility = [ "//src/connectivity/bluetooth/core/bt-host/*" ]
