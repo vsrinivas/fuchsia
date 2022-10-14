@@ -623,11 +623,15 @@ async fn add_interface_with_no_matching_interface<E: netemul::Endpoint>(name: &s
 }
 
 // Tests the case where the MAC address provided to `Controller.AddInterface`
-// matches an interface on the system Netstack, but not in devfs.
-#[variants_test]
-async fn add_interface_with_no_matching_interface_in_devfs<E: netemul::Endpoint>(name: &str) {
+// matches an interface on the system Netstack, but not in devfs. This case is
+// only relevant for Ethernet interfaces, because Netdevice interfaces do not
+// need to iterate through devfs in order to acquire the device proxy.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn add_interface_with_no_matching_interface_in_devfs() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm = create_netstack_realm(name, &sandbox).expect("failed to create netstack realm");
+    let realm =
+        create_netstack_realm("add_interface_with_no_matching_interface_in_devfs", &sandbox)
+            .expect("failed to create netstack realm");
 
     let network_test_realm = realm
         .connect_to_protocol::<fntr::ControllerMarker>()
@@ -639,9 +643,13 @@ async fn add_interface_with_no_matching_interface_in_devfs<E: netemul::Endpoint>
         .expect("start_hermetic_network_realm failed")
         .expect("start_hermetic_network_realm error");
 
-    let _: netemul::TestInterface<'_> =
-        add_interface_to_netstack::<E>(INTERFACE1_MAC_ADDRESS, INTERFACE1_NAME, &sandbox, &realm)
-            .await;
+    let _iface = add_interface_to_netstack::<netemul::Ethernet>(
+        INTERFACE1_MAC_ADDRESS,
+        INTERFACE1_NAME,
+        &sandbox,
+        &realm,
+    )
+    .await;
 
     // The Network Test Realm requires that the matching interface be present in
     // both the system's Netstack and devfs. In this case, it is only present in
