@@ -5,6 +5,8 @@
 // TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
 // ignore_for_file: deprecated_member_use
 
+import 'dart:math';
+
 import 'package:ermine/src/services/preferences_service.dart';
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/settings/about_settings.dart';
@@ -231,7 +233,9 @@ class _ListSettings extends StatelessWidget {
                         Text(Strings.brightness),
                         Expanded(
                           child: Slider(
-                            value: appState.settingsState.brightnessLevel ?? 1,
+                            value: max(
+                                appState.settingsState.brightnessLevel ?? 1,
+                                0.05),
                             onChanged:
                                 appState.settingsState.setBrightnessLevel,
                             min: 0.05,
