@@ -114,6 +114,9 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
   // Stores the koid of the view which is currently in a11y focus.
   zx_koid_t currently_focused_view_ = ZX_KOID_INVALID;
 
+  // Stores the koid of the view which is currently in input focus.
+  zx_koid_t current_input_focus_ = ZX_KOID_INVALID;
+
   // Interface used to request Focus Chain Updates.
   AccessibilityFocusChainRequester* const focus_chain_requester_ = nullptr;
 

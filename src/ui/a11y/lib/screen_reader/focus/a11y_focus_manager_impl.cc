@@ -54,7 +54,7 @@ void A11yFocusManagerImpl::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
   // We don't want to send a focus chain update request if we're transferring focus
   // within the same view OR the newly focused view contains a visible virtual
   // keyboard.
-  if (koid == currently_focused_view_ ||
+  if (koid == current_input_focus_ ||
       virtual_keyboard_manager_->ViewHasVisibleVirtualkeyboard(koid)) {
     UpdateFocus(koid, node_id);
     set_focus_callback(true);
@@ -78,6 +78,7 @@ void A11yFocusManagerImpl::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
                            << ". A11y focus will not be updated.";
           callback(false);
         } else {
+          current_input_focus_ = koid;
           // Update current a11y focus to the given viewref and node_id.
           UpdateFocus(koid, node_id);
           callback(true);
@@ -100,6 +101,8 @@ void A11yFocusManagerImpl::UpdateFocus(zx_koid_t newly_focused_view, uint32_t ne
 }
 
 void A11yFocusManagerImpl::OnViewFocus(zx_koid_t view_ref_koid) {
+  current_input_focus_ = view_ref_koid;
+
   uint32_t newly_focused_node_id = kRootNodeId;
   if (focused_node_in_view_map_.find(view_ref_koid) != focused_node_in_view_map_.end()) {
     newly_focused_node_id = focused_node_in_view_map_[view_ref_koid];
