@@ -7,6 +7,12 @@
 
 namespace netstack_syscall_test {
 
-void AddNonPassingTests(TestMap& tests) { AddSkippedTestsLoopbackIsolated(tests); }
+void AddNonPassingTests(TestMap& tests) {
+    AddSkippedTestsLoopbackIsolated(tests);
+
+    // Tests that flake in Fuchsia's CQ.
+    // https://fxbug.dev/112131
+    SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPPassiveCloseNoTimeWaitReuseTest/ListenV4Loopback_ConnectV4MappedLoopback");
+}
 
 }  // namespace netstack_syscall_test
