@@ -16,8 +16,8 @@ static_library("fuchsia-tcti") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp:cpp-macros",
+    "//zircon/system/ulib/fbl",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.tpm" ]
 }
 
 executable("fuchsia-tcti-tests-bin") {

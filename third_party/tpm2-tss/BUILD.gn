@@ -393,11 +393,37 @@ static_library("tss2-esys") {
   ]
 }
 
+static_library("tss2-tcti-fuchsia") {
+  include_dirs = [
+    "src/include/tss2",
+    "src/src",
+  ]
+  sources = [
+    "src/src/tss2-tcti/tcti-common.c",
+    "src/src/tss2-tcti/tcti-common.h",
+    "src/src/tss2-tcti/tcti-fuchsia.c",
+    "src/src/tss2-tcti/tcti-fuchsia.h",
+    "src/src/util/io.c",
+    "src/src/util/io.h",
+    "src/src/util/log.c",
+    "src/src/util/log.h",
+  ]
+  configs += [
+    "//build/config:Wno-conversion",
+    "//build/config:Wno-extra-semi",
+  ]
+  deps = [
+    ":tss2-mu",
+    "//src/security/lib/fuchsia-tcti",
+  ]
+}
+
 group("tpm2-tss") {
   deps = [
     ":tss2-esys",
     ":tss2-mu",
     ":tss2-rc",
     ":tss2-sys",
+    ":tss2-tcti-fuchsia",
   ]
 }
