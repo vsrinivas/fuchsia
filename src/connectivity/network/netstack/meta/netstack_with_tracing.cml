@@ -8,10 +8,6 @@
     },
     use: [
         {
-            storage: "cache",
-            path: "/cache",
-        },
-        {
             protocol: [
                 "fuchsia.stash.SecureStore",
                 "fuchsia.tracing.provider.Registry",

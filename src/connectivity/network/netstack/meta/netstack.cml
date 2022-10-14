@@ -8,10 +8,6 @@
     },
     use: [
         {
-            storage: "cache",
-            path: "/cache",
-        },
-        {
             protocol: [
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.stash.SecureStore",

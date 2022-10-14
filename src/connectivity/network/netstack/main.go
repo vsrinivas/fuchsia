@@ -10,13 +10,11 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"syscall/zx"
@@ -525,35 +523,7 @@ func Main() {
 	// cat iquery.json | \
 	// jq '.[] | select(.path | contains("/pprof/")) | .contents.root.pprof.goroutine[4:]' | \
 	// xargs echo | base64 --decode > goroutine
-	func() {
-		isolatedCache := filepath.Join("", "cache")
-		if _, err := os.Stat(isolatedCache); err != nil {
-			if os.IsNotExist(err) {
-				_ = syslog.Warnf("isolated-cache-storage is not available; snapshots will not include pprof data: %s", err)
-				return
-			}
-			_ = syslog.Fatalf("%s", err)
-		}
-		pprofCache := filepath.Join(isolatedCache, "pprof")
-		if err := os.Mkdir(pprofCache, os.ModePerm); err != nil && !os.IsExist(err) {
-			var zxError *zx.Error
-			if errors.As(err, &zxError) && zxError.Status == zx.ErrNoSpace {
-				_ = syslog.Warnf("isolated-cache-storage is full; snapshots will not include pprof data: %s", err)
-				return
-			}
-			_ = syslog.Fatalf("%s", err)
-		}
-		dir, run, err := pprof.Setup(pprofCache)
-		if err != nil {
-			_ = syslog.Fatalf("%s", err)
-		}
-		componentCtx.OutgoingService.AddDiagnostics("pprof", dir)
-		go func() {
-			if err := run(); err != nil {
-				_ = syslog.Errorf("pprof directory serving error; snapshots will not include pprof data: %s", err)
-			}
-		}()
-	}()
+	componentCtx.OutgoingService.AddDiagnostics("pprof", pprof.NewNode())
 
 	{
 		stub := netstack.NetstackWithCtxStub{Impl: &netstackImpl{ns: ns}}

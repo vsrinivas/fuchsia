@@ -9,9 +9,6 @@
         "binary": "bin/netstack"
     },
     "sandbox": {
-        "features": [
-            "isolated-cache-storage"
-        ],
         "services": [
             "fuchsia.stash.SecureStore"
         ]

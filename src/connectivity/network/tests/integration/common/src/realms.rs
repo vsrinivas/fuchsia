@@ -267,18 +267,11 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                                 itertools::Either::Left(std::iter::empty())
                             }
                             NetstackVersion::ProdNetstack2 => itertools::Either::Right(
-                                [
-                                    fnetemul::Capability::ChildDep(protocol_dep::<
-                                        fstash::SecureStoreMarker,
-                                    >(
-                                        constants::secure_stash::COMPONENT_NAME,
-                                    )),
-                                    fnetemul::Capability::StorageDep(fnetemul::StorageDep {
-                                        variant: Some(fnetemul::StorageVariant::Cache),
-                                        path: Some("/cache".to_string()),
-                                        ..fnetemul::StorageDep::EMPTY
-                                    }),
-                                ]
+                                [fnetemul::Capability::ChildDep(protocol_dep::<
+                                    fstash::SecureStoreMarker,
+                                >(
+                                    constants::secure_stash::COMPONENT_NAME,
+                                ))]
                                 .into_iter(),
                             ),
                         })
