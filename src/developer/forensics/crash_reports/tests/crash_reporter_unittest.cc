@@ -181,16 +181,13 @@ class CrashReporterTest : public UnitTestFixture {
     report_store_ =
         std::make_unique<ScopedTestReportStore>(annotation_manager_.get(), info_context_);
 
-    snapshot_collector_ = std::make_unique<SnapshotCollector>(
-        dispatcher(), &clock_, data_provider_server_.get(),
-        report_store_->GetReportStore().GetSnapshotStore(), kSnapshotSharedRequestWindow),
     crash_server_ =
         std::make_unique<StubCrashServer>(dispatcher(), services(), upload_attempt_results);
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config, crash_register_.get(), &tags_,
-        snapshot_collector_.get(), crash_server_.get(), &report_store_->GetReportStore(),
-        kResetOffset);
+        crash_server_.get(), &report_store_->GetReportStore(), data_provider_server_.get(),
+        kSnapshotSharedRequestWindow, kResetOffset);
     FX_CHECK(crash_reporter_);
   }
 
@@ -438,7 +435,6 @@ class CrashReporterTest : public UnitTestFixture {
 
  protected:
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
-  std::unique_ptr<SnapshotCollector> snapshot_collector_;
   std::unique_ptr<CrashRegister> crash_register_;
   std::unique_ptr<CrashReporter> crash_reporter_;
 };

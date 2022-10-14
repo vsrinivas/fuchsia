@@ -77,8 +77,6 @@ class SnapshotStoreTest : public UnitTestFixture {
   }
 
   void AddDefaultSnapshot(const SnapshotUuid& uuid = kTestUuid) {
-    snapshot_store_->StartSnapshot(uuid);
-    snapshot_store_->IncrementClientCount(uuid);
     snapshot_store_->AddSnapshot(uuid, GetDefaultAttachment());
   }
 
@@ -99,23 +97,7 @@ class SnapshotStoreTest : public UnitTestFixture {
   std::unique_ptr<SnapshotStore> snapshot_store_;
 };
 
-TEST_F(SnapshotStoreTest, Check_AddEmpty) {
-  snapshot_store_->StartSnapshot(kTestUuid);
-
-  // This next call should not crash if AddEmpty functions correctly.
-  snapshot_store_->IncrementClientCount(kTestUuid);
-}
-
-TEST_F(SnapshotStoreTest, Check_GetSnapshotNeverAdded) {
-  snapshot_store_->StartSnapshot(kTestUuid);
-
-  // Ask for snapshot before adding it.
-  auto snapshot = AsManaged(snapshot_store_->GetSnapshot(kTestUuid));
-  ASSERT_FALSE(snapshot.LockArchive());
-}
-
 TEST_F(SnapshotStoreTest, Check_GetSnapshot) {
-  snapshot_store_->StartSnapshot(kTestUuid);
   snapshot_store_->AddSnapshot(kTestUuid, GetDefaultAttachment());
 
   auto snapshot = AsManaged(snapshot_store_->GetSnapshot(kTestUuid));
@@ -152,7 +134,7 @@ TEST_F(SnapshotStoreTest, Check_ArchivesMaxSizeIsEnforced) {
                                                }));
 }
 
-TEST_F(SnapshotStoreTest, Check_Release) {
+TEST_F(SnapshotStoreTest, Check_Delete) {
   AddDefaultSnapshot();
 
   {
@@ -160,7 +142,7 @@ TEST_F(SnapshotStoreTest, Check_Release) {
     ASSERT_TRUE(snapshot.LockArchive());
   }
 
-  snapshot_store_->Release(kTestUuid);
+  snapshot_store_->DeleteSnapshot(kTestUuid);
   {
     auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kTestUuid));
     EXPECT_THAT(snapshot.PresenceAnnotations(),
@@ -230,7 +212,7 @@ TEST_F(SnapshotStoreTest, Check_ReadPreviouslyGarbageCollected) {
     ASSERT_TRUE(snapshot.LockArchive());
   }
 
-  snapshot_store_->Release(kTestUuid);
+  snapshot_store_->DeleteSnapshot(kTestUuid);
   {
     auto snapshot = AsMissing(snapshot_store_->GetSnapshot(kTestUuid));
     EXPECT_THAT(snapshot.PresenceAnnotations(),

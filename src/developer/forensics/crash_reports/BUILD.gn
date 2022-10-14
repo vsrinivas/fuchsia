@@ -118,7 +118,7 @@ source_set("crash_server") {
     ":log_tags",
     ":report",
     ":sized_data_reader",
-    ":snapshot_collector",
+    ":snapshot",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_hlcpp",
     "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_hlcpp",
     "//sdk/lib/syslog/cpp",
@@ -305,7 +305,10 @@ source_set("snapshot") {
     "//src/developer/forensics/utils:sized_data",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    ":constants",
+    "//sdk/lib/syslog/cpp",
+  ]
 }
 
 source_set("snapshot_collector") {
@@ -317,6 +320,7 @@ source_set("snapshot_collector") {
   public_deps = [
     ":annotation_map",
     ":constants",
+    ":queue",
     ":store",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",

@@ -42,12 +42,13 @@ void AddAnnotation<std::string>(const std::string& key, const std::string& value
 
 SnapshotCollector::SnapshotCollector(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
                                      feedback_data::DataProviderInternal* data_provider,
-                                     SnapshotStore* snapshot_store,
+                                     SnapshotStore* snapshot_store, Queue* queue,
                                      zx::duration shared_request_window)
     : dispatcher_(dispatcher),
       clock_(clock),
       data_provider_(data_provider),
       snapshot_store_(snapshot_store),
+      queue_(queue),
       shared_request_window_(shared_request_window) {}
 
 feedback::Annotations SnapshotCollector::GetMissingSnapshotAnnotations(const SnapshotUuid& uuid) {
@@ -91,55 +92,50 @@ feedback::Annotations SnapshotCollector::GetMissingSnapshotAnnotations(const Sna
     uuid = MakeNewSnapshotRequest(current_time, timeout);
   }
 
-  snapshot_store_->IncrementClientCount(uuid);
-
   const zx::time deadline = current_time + timeout;
 
   auto* request = FindSnapshotRequest(uuid);
   FX_CHECK(request);
   request->promise_ids.insert(report_id);
 
-  // Even though we already know the eventual snapshot uuid, we will wait to set the value in
-  // |report_results_| until after the snapshot request is complete.
-  report_results_[report_id] = std::nullopt;
-
   // The snapshot for |uuid| may not be ready, so the logic for returning |uuid| to the client
   // needs to be wrapped in an asynchronous task that can be re-executed when the conditions for
   // returning a UUID are met, e.g., the snapshot for |uuid| is received from |data_provider_| or
   // the call to GetSnapshotUuid times out.
-  return ::fpromise::make_promise(
-      [this, uuid, deadline, report_id, GetReport = std::move(GetReport)](
-          ::fpromise::context& context) mutable -> ::fpromise::result<Report> {
-        auto erase_request_task =
-            fit::defer([this, report_id] { report_results_.erase(report_id); });
+  return ::fpromise::make_promise([this, uuid, deadline, report_id,
+                                   GetReport =
+                                       std::move(GetReport)](::fpromise::context& context) mutable
+                                  -> ::fpromise::result<Report> {
+    auto erase_request_task = fit::defer([this, report_id] { report_results_.erase(report_id); });
 
-        if (shutdown_) {
-          return GetReport(kShutdownSnapshotUuid,
-                           GetMissingSnapshotAnnotations(kShutdownSnapshotUuid));
-        }
+    if (shutdown_) {
+      return GetReport(kShutdownSnapshotUuid, GetMissingSnapshotAnnotations(kShutdownSnapshotUuid));
+    }
 
-        // The snapshot data was deleted before the promise executed. This should only occur if a
-        // snapshot is dropped immediately after it is received because its annotations and archive
-        // are too large and it is one of the oldest in the FIFO.
-        if (!snapshot_store_->SnapshotExists(uuid)) {
-          return GetReport(kGarbageCollectedSnapshotUuid,
-                           GetMissingSnapshotAnnotations(kGarbageCollectedSnapshotUuid));
-        }
+    // The snapshot data was deleted before the promise executed. This should only occur if a
+    // snapshot is dropped immediately after it is received because its annotations and archive
+    // are too large and it is one of the oldest in the FIFO.
+    if (snapshot_store_->IsGarbageCollected(uuid)) {
+      return GetReport(kGarbageCollectedSnapshotUuid,
+                       GetMissingSnapshotAnnotations(kGarbageCollectedSnapshotUuid));
+    }
 
-        if (report_results_[report_id].has_value()) {
-          return GetReport(report_results_[report_id].value().uuid,
-                           *report_results_[report_id].value().annotations);
-        }
+    if (report_results_.find(report_id) != report_results_.end()) {
+      return GetReport(report_results_[report_id].uuid, *report_results_[report_id].annotations);
+    }
 
-        if (clock_->Now() >= deadline) {
-          return GetReport(kTimedOutSnapshotUuid,
-                           GetMissingSnapshotAnnotations(kTimedOutSnapshotUuid));
-        }
+    if (clock_->Now() >= deadline) {
+      auto* request = FindSnapshotRequest(uuid);
+      FX_CHECK(request);
+      request->timed_out_reports_.insert(report_id);
 
-        WaitForSnapshot(uuid, deadline, context.suspend_task());
-        erase_request_task.cancel();
-        return ::fpromise::pending();
-      });
+      return GetReport(kTimedOutSnapshotUuid, GetMissingSnapshotAnnotations(kTimedOutSnapshotUuid));
+    }
+
+    WaitForSnapshot(uuid, deadline, context.suspend_task());
+    erase_request_task.cancel();
+    return ::fpromise::pending();
+  });
 }
 
 void SnapshotCollector::Shutdown() {
@@ -158,8 +154,6 @@ SnapshotUuid SnapshotCollector::MakeNewSnapshotRequest(const zx::time start_time
       .blocked_promises = {},
       .delayed_get_snapshot = async::TaskClosure(),
   }));
-
-  snapshot_store_->StartSnapshot(uuid);
 
   snapshot_requests_.back()->delayed_get_snapshot.set_handler([this, timeout, uuid]() {
     zx::duration collection_timeout_per_data = timeout;
@@ -231,15 +225,20 @@ void SnapshotCollector::CompleteWithSnapshot(const SnapshotUuid& uuid,
         .uuid = uuid,
         .annotations = shared_annotations,
     };
+
+    if (request->timed_out_reports_.count(id) == 0) {
+      queue_->AddReportUsingSnapshot(uuid, id);
+    }
+  }
+
+  // Do not add the snapshot to the store if all reports needing this snapshot timed out.
+  if (request->promise_ids.size() != request->timed_out_reports_.size()) {
+    snapshot_store_->AddSnapshot(uuid, std::move(archive));
   }
 
   snapshot_requests_.erase(std::remove_if(
       snapshot_requests_.begin(), snapshot_requests_.end(),
       [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; }));
-
-  // Now that all crash reports associated with this snapshot have extracted the necessary
-  // annotations we can move the snapshot to |snapshot_store_|.
-  snapshot_store_->AddSnapshot(uuid, std::move(archive));
 }
 
 bool SnapshotCollector::UseLatestRequest() const {

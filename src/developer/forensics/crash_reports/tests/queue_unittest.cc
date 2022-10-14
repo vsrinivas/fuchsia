@@ -143,9 +143,12 @@ class QueueTest : public UnitTestFixture {
     queue_->WatchNetwork(&network_watcher_);
   }
 
+  SnapshotStore* GetSnapshotStore() { return report_store_->GetReportStore().GetSnapshotStore(); }
+
   std::optional<ReportId> AddNewReport(const bool is_hourly_report,
                                        const bool empty_annotations = false) {
     ++report_id_;
+    queue_->AddReportUsingSnapshot(kSnapshotUuidValue, report_id_);
     Report report = (is_hourly_report) ? MakeHourlyReport(report_id_, empty_annotations)
                                        : MakeReport(report_id_, empty_annotations);
 
@@ -604,6 +607,106 @@ TEST_F(QueueTest, ReportDeletedByStore) {
   RunLoopFor(kPeriodicUploadDuration);
 
   EXPECT_FALSE(queue_->Contains(*report_id));
+}
+
+TEST_F(QueueTest, SnapshotKeptAllReportsAdded) {
+  SetUpQueue({kUploadSuccessful, kUploadSuccessful});
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+
+  // report_id_ will get incremented when we call AddNewReport. Add all clients before any get added
+  // to Queue.
+  queue_->AddReportUsingSnapshot(kSnapshotUuidValue, report_id_ + 1);
+  queue_->AddReportUsingSnapshot(kSnapshotUuidValue, report_id_ + 2);
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = kAttachmentKey;
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+
+  GetSnapshotStore()->AddSnapshot(kSnapshotUuidValue, std::move(snapshot));
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  const auto report_id2 = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id2);
+  EXPECT_TRUE(queue_->Contains(*report_id2));
+
+  RunLoopFor(kUploadResponseDelay);
+
+  // Queue shouldn't delete the snapshot if there's still an internal client.
+  ASSERT_FALSE(queue_->Contains(*report_id));
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+
+  RunLoopFor(kUploadResponseDelay);
+
+  EXPECT_FALSE(queue_->Contains(*report_id2));
+  EXPECT_FALSE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+}
+
+TEST_F(QueueTest, SnapshotKeptNotAllReportsAdded) {
+  SetUpQueue({kUploadSuccessful, kUploadSuccessful});
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+
+  // report_id_ will get incremented when we call AddNewReport. Add all clients before any get added
+  // to Queue.
+  queue_->AddReportUsingSnapshot(kSnapshotUuidValue, report_id_ + 1);
+  queue_->AddReportUsingSnapshot(kSnapshotUuidValue, report_id_ + 2);
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = kAttachmentKey;
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+
+  GetSnapshotStore()->AddSnapshot(kSnapshotUuidValue, std::move(snapshot));
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  RunLoopFor(kUploadResponseDelay);
+
+  // Queue shouldn't delete the snapshot if there's still a client in SnapshotCollector.
+  ASSERT_FALSE(queue_->Contains(*report_id));
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+
+  const auto report_id2 = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id2);
+  EXPECT_TRUE(queue_->Contains(*report_id2));
+
+  RunLoopFor(kUploadResponseDelay);
+
+  EXPECT_FALSE(queue_->Contains(*report_id2));
+  EXPECT_FALSE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+}
+
+TEST_F(QueueTest, Check_SpecialCaseClientsRemoved) {
+  SetUpQueue({
+      kUploadSuccessful,
+  });
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = kAttachmentKey;
+  FX_CHECK(fsl::VmoFromString("", &snapshot.value));
+
+  GetSnapshotStore()->AddSnapshot(kSnapshotUuidValue, std::move(snapshot));
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
+
+  ++report_id_;
+  queue_->AddReportUsingSnapshot(kSnapshotUuidValue, report_id_);
+  Report report = MakeReport(report_id_, {});
+
+  // Modify report to have special case uuid.
+  report.SnapshotUuid() = kShutdownSnapshotUuid;
+
+  queue_->Add(std::move(report));
+
+  EXPECT_TRUE(queue_->Contains(report_id_));
+
+  // Queue should delete snapshot despite the report ending up with a special case snapshot uuid.
+  EXPECT_FALSE(GetSnapshotStore()->SnapshotExists(kSnapshotUuidValue));
 }
 
 }  // namespace

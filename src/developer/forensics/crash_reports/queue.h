@@ -21,6 +21,7 @@
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/report_store.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
+#include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {
@@ -40,6 +41,13 @@ class Queue {
   void WatchNetwork(NetworkWatcher* network_watcher);
 
   bool Add(Report report);
+
+  // Identifies |report| as a crash report that used the snapshot referred to by |uuid|.
+  //
+  // Note: this is needed because the Queue manages the lifetime of snapshots. Reports are added
+  // asynchronously and it may be possible for the Queue to think all reports using a snapshot are
+  // retired depending on how Add and Upload are ordered.
+  void AddReportUsingSnapshot(const SnapshotUuid& uuid, ReportId report);
 
   uint64_t Size() const;
   bool IsEmpty() const;
@@ -112,6 +120,16 @@ class Queue {
   void DeleteAll();
   void UnblockAllEveryFifteenMinutes();
 
+  // Deletes the snapshot referred to by |uuid| if there are no reports associated with the snapshot
+  // in |snapshot_clients_|.
+  void DeleteSnapshotIfNoClients(const SnapshotUuid& uuid);
+
+  // Returns the number of crash reports that use the snapshot referred to by |uuid|.
+  //
+  // Note: it's technically possible for this value to be too large if a report hasn't been added,
+  // but its association to a snapshot has been recorded with AddSnapshotClient.
+  size_t NumReportsUsingSnapshot(const SnapshotUuid& uuid);
+
   std::string ReportIdsStr(const std::deque<PendingReport>& reports) const;
 
   // Utility class for recording metrics about reports.
@@ -150,6 +168,9 @@ class Queue {
   std::optional<PendingReport> active_report_;
   std::deque<PendingReport> ready_reports_;
   std::deque<PendingReport> blocked_reports_;
+
+  // Which snapshot is associated with what reports.
+  std::map<SnapshotUuid, std::set<ReportId>> snapshot_clients_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Queue);
 };

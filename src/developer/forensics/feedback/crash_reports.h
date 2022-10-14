@@ -18,7 +18,6 @@
 #include "src/developer/forensics/crash_reports/info/main_service_info.h"
 #include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/report_store.h"
-#include "src/developer/forensics/crash_reports/snapshot_collector.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
 #include "src/developer/forensics/utils/errors.h"
@@ -55,7 +54,6 @@ class CrashReports {
   crash_reports::LogTags tags_;
   crash_reports::CrashServer crash_server_;
   crash_reports::ReportStore report_store_;
-  crash_reports::SnapshotCollector snapshot_collector_;
   crash_reports::CrashRegister crash_register_;
   crash_reports::CrashReporter crash_reporter_;
 

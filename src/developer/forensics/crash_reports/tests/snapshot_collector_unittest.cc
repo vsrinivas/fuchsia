@@ -19,8 +19,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/tests/scoped_test_report_store.h"
+#include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
@@ -43,6 +45,8 @@ using testing::Pair;
 using testing::UnorderedElementsAreArray;
 
 constexpr zx::duration kWindow{zx::min(1)};
+constexpr zx::duration kUploadResponseDelay = zx::sec(0);
+constexpr CrashServer::UploadStatus kUploadSuccessful = CrashServer::UploadStatus::kSuccess;
 
 const std::map<std::string, std::string> kDefaultAnnotations = {
     {"annotation.key.one", "annotation.value.one"},
@@ -73,14 +77,29 @@ class SnapshotCollectorTest : public UnitTestFixture {
         clock_(),
         executor_(dispatcher()),
         snapshot_collector_(nullptr),
-
         path_(files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {
     report_store_ = std::make_unique<ScopedTestReportStore>(
         &annotation_manager_,
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services()));
   }
 
+  void SetUp() override {
+    info_context_ =
+        std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
+    SetUpQueue();
+  }
+
  protected:
+  void SetUpQueue(const std::vector<CrashServer::UploadStatus>& upload_attempt_results =
+                      std::vector<CrashServer::UploadStatus>{}) {
+    crash_server_ = std::make_unique<StubCrashServer>(dispatcher(), services(),
+                                                      upload_attempt_results, kUploadResponseDelay);
+
+    queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, &tags_,
+                                     &report_store_->GetReportStore(), crash_server_.get());
+    queue_->WatchReportingPolicy(&reporting_policy_watcher_);
+  }
+
   void SetUpDefaultSnapshotManager() {
     SetUpSnapshotManager(StorageSize::Megabytes(1u), StorageSize::Megabytes(1u));
   }
@@ -88,9 +107,9 @@ class SnapshotCollectorTest : public UnitTestFixture {
   void SetUpSnapshotManager(StorageSize max_annotations_size, StorageSize max_archives_size) {
     FX_CHECK(data_provider_server_);
     clock_.Set(zx::time(0u));
-    snapshot_collector_ = std::make_unique<SnapshotCollector>(
-        dispatcher(), &clock_, data_provider_server_.get(),
-        report_store_->GetReportStore().GetSnapshotStore(), kWindow);
+    snapshot_collector_ =
+        std::make_unique<SnapshotCollector>(dispatcher(), &clock_, data_provider_server_.get(),
+                                            GetSnapshotStore(), queue_.get(), kWindow);
   }
 
   std::set<std::string> ReadGarbageCollectedSnapshots() {
@@ -140,18 +159,23 @@ class SnapshotCollectorTest : public UnitTestFixture {
 
   bool is_server_bound() { return data_provider_server_->IsBound(); }
 
-  Snapshot GetSnapshot(const std::string& uuid) {
-    return report_store_->GetReportStore().GetSnapshotStore()->GetSnapshot(uuid);
-  }
+  SnapshotStore* GetSnapshotStore() { return report_store_->GetReportStore().GetSnapshotStore(); }
+
+  Snapshot GetSnapshot(const std::string& uuid) { return GetSnapshotStore()->GetSnapshot(uuid); }
 
   timekeeper::TestClock clock_;
   async::Executor executor_;
   std::unique_ptr<SnapshotCollector> snapshot_collector_;
   feedback::AnnotationManager annotation_manager_{dispatcher(), {}};
   std::unique_ptr<ScopedTestReportStore> report_store_;
+  std::unique_ptr<Queue> queue_;
 
  private:
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
+  LogTags tags_;
+  std::shared_ptr<InfoContext> info_context_;
+  std::unique_ptr<StubCrashServer> crash_server_;
+  StaticReportingPolicyWatcher<ReportingPolicy::kUpload> reporting_policy_watcher_;
   files::ScopedTempDir tmp_dir_;
   std::string path_;
 };
@@ -265,6 +289,11 @@ TEST_F(SnapshotCollectorTest, Check_Timeout) {
   std::optional<Report> report{std::nullopt};
   ScheduleGetReportAndThen(zx::sec(0), 0,
                            ([&report](Report& new_report) { report = std::move(new_report); }));
+
+  // TODO(fxbug.dev/111793): Check annotations to get intended snapshot uuid. Delete unnecessary
+  // SnapshotStore::Size function.
+  ASSERT_EQ(GetSnapshotStore()->Size(), 0u);
+
   RunLoopFor(kWindow);
 
   ASSERT_TRUE(report.has_value());
@@ -273,6 +302,7 @@ TEST_F(SnapshotCollectorTest, Check_Timeout) {
                                                   Pair("debug.snapshot.error", "timeout"),
                                                   Pair("debug.snapshot.present", "false"),
                                               }));
+  EXPECT_EQ(GetSnapshotStore()->Size(), 0u);
 }
 
 TEST_F(SnapshotCollectorTest, Check_Shutdown) {
@@ -321,6 +351,46 @@ TEST_F(SnapshotCollectorTest, Check_SetsPresenceAnnotations) {
                   Pair("debug.snapshot.shared-request.num-clients", std::to_string(1)),
                   Pair("debug.snapshot.shared-request.uuid", report->SnapshotUuid()),
               }));
+}
+
+TEST_F(SnapshotCollectorTest, Check_ClientsAddedToQueue) {
+  SetUpDefaultDataProviderServer();
+  SetUpQueue({
+      kUploadSuccessful,
+      kUploadSuccessful,
+  });
+  SetUpDefaultSnapshotManager();
+
+  // Generate 2 reports sharing the same snapshot.
+  std::optional<Report> report1{std::nullopt};
+  ScheduleGetReportAndThen(zx::duration::infinite(), 0,
+                           ([&report1](Report& new_report) { report1 = std::move(new_report); }));
+
+  std::optional<Report> report2{std::nullopt};
+  ScheduleGetReportAndThen(zx::duration::infinite(), 1,
+                           ([&report2](Report& new_report) { report2 = std::move(new_report); }));
+
+  RunLoopFor(kWindow);
+  ASSERT_TRUE(report1.has_value());
+  ASSERT_TRUE(report2.has_value());
+  ASSERT_EQ(report1->SnapshotUuid(), report2->SnapshotUuid());
+
+  // Add to queue to ensure we don't delete the snapshot prematurely after upload of the first
+  // report.
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(report1->SnapshotUuid()));
+  queue_->Add(std::move(*report1));
+
+  // Run loop until idle so Queue will finish "upload".
+  RunLoopUntilIdle();
+
+  const SnapshotUuid uuid2 = report2->SnapshotUuid();
+  ASSERT_TRUE(GetSnapshotStore()->SnapshotExists(uuid2));
+  queue_->Add(std::move(*report2));
+
+  // Run loop until idle so Queue will finish "upload".
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(GetSnapshotStore()->SnapshotExists(uuid2));
 }
 
 }  // namespace

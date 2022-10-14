@@ -102,63 +102,30 @@ MissingSnapshot SnapshotStore::GetMissingSnapshot(const SnapshotUuid& uuid) {
   return std::get<MissingSnapshot>(snapshot);
 }
 
-void SnapshotStore::IncrementClientCount(const SnapshotUuid& uuid) {
-  auto* data = FindSnapshotData(uuid);
-  FX_CHECK(data);
-
-  data->num_clients_with_uuid += 1;
-}
-
-bool SnapshotStore::Release(const SnapshotUuid& uuid) {
-  if (uuid == kGarbageCollectedSnapshotUuid || uuid == kNotPersistedSnapshotUuid ||
-      uuid == kTimedOutSnapshotUuid || uuid == kNoUuidSnapshotUuid) {
-    return false;
-  }
-
+void SnapshotStore::DeleteSnapshot(const SnapshotUuid& uuid) {
   auto* data = FindSnapshotData(uuid);
 
   // The snapshot was likely dropped due to size constraints.
   if (!data) {
-    return false;
-  }
-
-  data->num_clients_with_uuid -= 1;
-
-  // There are still clients that need the snapshot.
-  if (data->num_clients_with_uuid > 0) {
-    return false;
+    return;
   }
 
   // TODO(fxbug.dev/102479): drop from persistence instead if that's where the snapshot is located.
   DropArchive(data);
-
   RecordAsGarbageCollected(uuid);
   data_.erase(uuid);
-
   cpp20::internal::remove_then_erase(insertion_order_, uuid);
-
-  return true;
-}
-
-void SnapshotStore::StartSnapshot(const SnapshotUuid& uuid) {
-  data_.emplace(uuid, SnapshotData{
-                          .num_clients_with_uuid = 0,
-                          .archive_size = StorageSize::Bytes(0u),
-                          .archive = nullptr,
-                      });
 }
 
 void SnapshotStore::AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Attachment archive) {
-  auto* data = FindSnapshotData(uuid);
-
-  FX_CHECK(data);
+  auto& data = data_[uuid];
 
   if (!archive.key.empty() && archive.value.vmo.is_valid()) {
-    data->archive = MakeShared(ManagedSnapshot::Archive(archive));
+    data.archive_size += StorageSize::Bytes(archive.key.size());
+    data.archive_size += StorageSize::Bytes(archive.value.size);
+    current_archives_size_ += data.archive_size;
 
-    data->archive_size += StorageSize::Bytes(data->archive->key.size());
-    data->archive_size += StorageSize::Bytes(data->archive->value.size());
-    current_archives_size_ += data->archive_size;
+    data.archive = MakeShared(ManagedSnapshot::Archive(archive));
   }
 
   insertion_order_.push_back(uuid);
@@ -187,6 +154,12 @@ void SnapshotStore::EnforceSizeLimits(const SnapshotUuid& uuid) {
 bool SnapshotStore::SnapshotExists(const SnapshotUuid& uuid) {
   auto* data = FindSnapshotData(uuid);
   return data != nullptr;
+}
+
+size_t SnapshotStore::Size() const { return data_.size(); }
+
+bool SnapshotStore::IsGarbageCollected(const SnapshotUuid& uuid) const {
+  return garbage_collected_snapshots_.find(uuid) != garbage_collected_snapshots_.end();
 }
 
 bool SnapshotStore::SizeLimitsExceeded() const {

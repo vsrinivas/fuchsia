@@ -17,28 +17,32 @@ namespace forensics::crash_reports {
 //
 // To limit memory usage, the managed snapshots' archive cannot exceed |max_archives_size_| in size.
 //
-// When space is constrained, calling EnforceSizeLimits will tell SnapshotStore to drop the archives
-// for |uuid|. Additionally, SnapshotStore tracks the number of clients that have called
-// IncrementClientCount for a given Uuid and will automatically delete a snapshot when each client
-// has called Release.
+// When space is constrained, calling AddSnapshot will cause SnapshotStore to drop the oldest
+// archive until there is enough space for the new archive.
 class SnapshotStore {
  public:
   SnapshotStore(feedback::AnnotationManager* annotation_manager,
                 std::string garbage_collected_snapshots_path, StorageSize max_archives_size);
 
-  // Starts a snapshot associated with |uuid| that doesn't have any data. Must be called before most
-  // other functions requiring a uuid.
-  void StartSnapshot(const SnapshotUuid& uuid);
-
-  // Stores the given data in memory for later retrieval. Must call StartSnapshot for |uuid| first.
+  // Stores the given data in memory for later retrieval.
   void AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Attachment archive);
 
-  // Tell SnapshotStore that an additional client needs the snapshot for |uuid|. Must call
-  // StartSnapshot for |uuid| first.
-  void IncrementClientCount(const SnapshotUuid& uuid);
+  // Deletes the data for |uuid| from memory, if it still exists.
+  void DeleteSnapshot(const SnapshotUuid& uuid);
 
   // Returns true if data for |uuid| is currently stored in the SnapshotStore.
   bool SnapshotExists(const SnapshotUuid& uuid);
+
+  // Returns the number of snapshots stored in SnapshotStore.
+  //
+  // Note: intended primarily for testing.
+  //
+  // TODO(fxbug.dev/111793): Consider deleting this function after reports with timed out snapshots
+  // aren't associated with their original snapshot uuids (fxbug.dev/111317).
+  size_t Size() const;
+
+  // Returns true if data for |uuid| was garbage collected.
+  bool IsGarbageCollected(const SnapshotUuid& uuid) const;
 
   // Returns true if the size of the currently stored archives is greater than the limit.
   bool SizeLimitsExceeded() const;
@@ -56,18 +60,11 @@ class SnapshotStore {
   // SpecialCaseSnapshot.
   MissingSnapshot GetMissingSnapshot(const SnapshotUuid& uuid);
 
-  // Tell SnapshotStore that a client no longer needs the snapshot for |uuid|. If the difference
-  // between the number of calls to AddClient and Release reaches 0, the snapshot for |uuid| will be
-  // dropped by SnapshotStore and the function will return true.
-  bool Release(const SnapshotUuid& uuid);
-
  private:
   // State associated with a snapshot.
-  //   * The number of clients with its uuid.
   //   * The size of its archive.
   //   * The snapshot archive.
   struct SnapshotData {
-    size_t num_clients_with_uuid;
     StorageSize archive_size;
     std::shared_ptr<const ManagedSnapshot::Archive> archive;
   };
@@ -110,4 +107,4 @@ class SnapshotStore {
 
 }  // namespace forensics::crash_reports
 
-#endif
+#endif  // SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_STORE_H_

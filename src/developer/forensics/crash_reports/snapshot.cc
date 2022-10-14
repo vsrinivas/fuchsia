@@ -6,8 +6,16 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/forensics/crash_reports/constants.h"
+
 namespace forensics {
 namespace crash_reports {
+
+bool IsSpecialCaseSnapshot(const SnapshotUuid& uuid) {
+  return uuid == kNoUuidSnapshotUuid || uuid == kGarbageCollectedSnapshotUuid ||
+         uuid == kShutdownSnapshotUuid || uuid == kTimedOutSnapshotUuid ||
+         uuid == kNotPersistedSnapshotUuid;
+}
 
 ManagedSnapshot::Archive::Archive(const fuchsia::feedback::Attachment& attachment)
     : key(attachment.key), value() {

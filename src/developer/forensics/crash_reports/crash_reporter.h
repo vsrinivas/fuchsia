@@ -42,8 +42,9 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporter(async_dispatcher_t* dispatcher,
                 const std::shared_ptr<sys::ServiceDirectory>& services, timekeeper::Clock* clock,
                 const std::shared_ptr<InfoContext>& info_context, Config config,
-                CrashRegister* crash_register, LogTags* tags, SnapshotCollector* snapshot_collector,
-                CrashServer* crash_server, ReportStore* report_store,
+                CrashRegister* crash_register, LogTags* tags, CrashServer* crash_server,
+                ReportStore* report_store, feedback_data::DataProviderInternal* data_provider,
+                zx::duration snapshot_collector_window_duration,
                 zx::duration product_quota_reset_offset = ProductQuotas::RandomResetOffset());
 
   // The crash reporter should stop uploading crash reports and persist any future and pending crash
@@ -64,10 +65,10 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashRegister* crash_register_;
   UtcClockReadyWatcher utc_clock_ready_watcher_;
   const UtcTimeProvider utc_provider_;
-  SnapshotCollector* snapshot_collector_;
   CrashServer* crash_server_;
   SnapshotStore* snapshot_store_;
   Queue queue_;
+  SnapshotCollector snapshot_collector_;
 
   ProductQuotas product_quotas_;
   CrashReporterInfo info_;

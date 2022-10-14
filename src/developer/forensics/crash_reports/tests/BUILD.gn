@@ -254,7 +254,11 @@ executable("sized_data_reader_unittest_exe") {
 executable("snapshot_collector_unittest_exe") {
   testonly = true
 
-  sources = [ "snapshot_collector_unittest.cc" ]
+  sources = [
+    "snapshot_collector_unittest.cc",
+    "stub_crash_server.cc",
+    "stub_crash_server.h",
+  ]
 
   deps = [
     ":scoped_test_report_store",

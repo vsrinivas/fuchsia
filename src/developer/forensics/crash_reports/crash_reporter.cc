@@ -76,14 +76,12 @@ std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
 
 }  // namespace
 
-CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
-                             const std::shared_ptr<sys::ServiceDirectory>& services,
-                             timekeeper::Clock* clock,
-                             const std::shared_ptr<InfoContext>& info_context, Config config,
-                             CrashRegister* crash_register, LogTags* tags,
-                             SnapshotCollector* snapshot_collector, CrashServer* crash_server,
-                             ReportStore* report_store,
-                             const zx::duration product_quota_reset_offset)
+CrashReporter::CrashReporter(
+    async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
+    timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context, Config config,
+    CrashRegister* crash_register, LogTags* tags, CrashServer* crash_server,
+    ReportStore* report_store, feedback_data::DataProviderInternal* data_provider,
+    zx::duration snapshot_collector_window_duration, const zx::duration product_quota_reset_offset)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
@@ -91,10 +89,11 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       crash_register_(crash_register),
       utc_clock_ready_watcher_(dispatcher_, zx::unowned_clock(zx_utc_reference_get())),
       utc_provider_(&utc_clock_ready_watcher_, clock),
-      snapshot_collector_(snapshot_collector),
       crash_server_(crash_server),
       snapshot_store_(report_store->GetSnapshotStore()),
       queue_(dispatcher_, services_, info_context, tags_, report_store, crash_server_),
+      snapshot_collector_(dispatcher, clock, data_provider, report_store->GetSnapshotStore(),
+                          &queue_, snapshot_collector_window_duration),
       product_quotas_(dispatcher_, clock, config.daily_per_product_quota,
                       feedback::kProductQuotasPath, &utc_clock_ready_watcher_,
                       product_quota_reset_offset),
@@ -122,7 +121,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
 
 void CrashReporter::PersistAllCrashReports() {
   queue_.StopUploading();
-  snapshot_collector_->Shutdown();
+  snapshot_collector_.Shutdown();
 }
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
@@ -180,8 +179,8 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
   const auto current_time = utc_provider_.CurrentTime();
 
   auto p = snapshot_collector_
-               ->GetReport(kSnapshotTimeout, std::move(report), report_id, current_time, product,
-                           is_hourly_snapshot, reporting_policy_watcher_->CurrentPolicy())
+               .GetReport(kSnapshotTimeout, std::move(report), report_id, current_time, product,
+                          is_hourly_snapshot, reporting_policy_watcher_->CurrentPolicy())
                .then([this, report_id, is_hourly_snapshot,
                       record_failure](fpromise::result<Report>& result) {
                  if (is_hourly_snapshot) {

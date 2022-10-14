@@ -12,6 +12,7 @@
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/queue_info.h"
+#include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -119,6 +120,17 @@ bool Queue::Add(Report report) {
   // Only allow a single hourly report in the queue at a time.
   if (report.IsHourlyReport()) {
     FX_CHECK(!HasHourlyReport());
+  }
+
+  // Remove clients with special case snapshots. These clients will be present in
+  // |snapshot_clients_|, but will be listed under their intended snapshot uuid rather than under
+  // the special case snapshot uuid.
+  if (snapshot_clients_.count(report.SnapshotUuid()) == 0) {
+    FX_CHECK(IsSpecialCaseSnapshot(report.SnapshotUuid()));
+    for (auto& [uuid, reports] : snapshot_clients_) {
+      reports.erase(report.Id());
+      DeleteSnapshotIfNoClients(uuid);
+    }
   }
 
   return Add(PendingReport(std::move(report)), /*consider_eager_upload=*/true,
@@ -298,9 +310,32 @@ void Queue::Retire(const PendingReport pending_report, const Queue::RetireReason
   }
 
   metrics_.Retire(pending_report, reason, server_report_id);
-  report_store_->GetSnapshotStore()->Release(pending_report.snapshot_uuid);
   tags_->Unregister(pending_report.report_id);
   report_store_->Remove(pending_report.report_id);
+
+  // Remove clients that don't have special case snapshots.
+  snapshot_clients_[pending_report.snapshot_uuid].erase(pending_report.report_id);
+  if (snapshot_clients_[pending_report.snapshot_uuid].empty()) {
+    snapshot_clients_.erase(pending_report.snapshot_uuid);
+  }
+
+  DeleteSnapshotIfNoClients(pending_report.snapshot_uuid);
+}
+
+void Queue::AddReportUsingSnapshot(const SnapshotUuid& uuid, ReportId report) {
+  snapshot_clients_[uuid].insert(report);
+}
+
+void Queue::DeleteSnapshotIfNoClients(const SnapshotUuid& uuid) {
+  if (NumReportsUsingSnapshot(uuid) == 0) {
+    report_store_->GetSnapshotStore()->DeleteSnapshot(uuid);
+  }
+}
+
+size_t Queue::NumReportsUsingSnapshot(const SnapshotUuid& uuid) {
+  return (snapshot_clients_.find(uuid) != snapshot_clients_.end())
+             ? snapshot_clients_.at(uuid).size()
+             : 0;
 }
 
 void Queue::BlockAll() {

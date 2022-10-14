@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/product.h"
+#include "src/developer/forensics/crash_reports/queue.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
@@ -37,7 +38,8 @@ class SnapshotCollector {
  public:
   SnapshotCollector(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
                     feedback_data::DataProviderInternal* data_provider,
-                    SnapshotStore* snapshot_store, zx::duration shared_request_window);
+                    SnapshotStore* snapshot_store, Queue* queue,
+                    zx::duration shared_request_window);
 
   // Returns a promise of a report. The report may have a snapshot uuid, with that snapshot
   // containing the most up-to-date system data (a new snapshot will be created if all existing
@@ -78,6 +80,9 @@ class SnapshotCollector {
     // The actual request that we delay by |shared_request_window_| after the SnapshotRequest is
     // created.
     async::TaskClosure delayed_get_snapshot;
+
+    // ReportIds of reports that timed out while waiting for the snapshot to generate.
+    std::set<ReportId> timed_out_reports_;
   };
 
   struct ReportResults {
@@ -117,11 +122,12 @@ class SnapshotCollector {
 
   feedback_data::DataProviderInternal* data_provider_;
   SnapshotStore* snapshot_store_;
+  Queue* queue_;
 
   zx::duration shared_request_window_;
 
   std::vector<std::unique_ptr<SnapshotRequest>> snapshot_requests_;
-  std::map<uint64_t, std::optional<ReportResults>> report_results_;
+  std::map<ReportId, ReportResults> report_results_;
 
   bool shutdown_{false};
 };
