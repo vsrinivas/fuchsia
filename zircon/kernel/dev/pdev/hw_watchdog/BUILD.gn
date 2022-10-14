@@ -4,15 +4,19 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/cpp/library_headers.gni")
 
-zx_library("hw_watchdog") {
+library_headers("headers") {
+  headers = [ "pdev/watchdog.h" ]
+}
+
+source_set("hw_watchdog") {
   sources = [
     "console.cc",
     "hw_watchdog.cc",
   ]
+  public_deps = [ ":headers" ]
   deps = [
-    "//zircon/kernel/dev/pdev",
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/debuglog",

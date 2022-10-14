@@ -4,20 +4,21 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("includes") {
-  include_dirs = [ "include" ]
+import("//build/cpp/library_headers.gni")
+
+library_headers("headers") {
+  headers = [ "dev/uart/dw8250/init.h" ]
 }
 
 source_set("dw8250") {
-  public = [ "include/dev/uart/dw8250/init.h " ]
   sources = [ "uart.cc" ]
+  public_deps = [ ":headers" ]
   deps = [
-    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/dev/interrupt",
     "//zircon/kernel/dev/pdev/uart",
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/cbuf",
     "//zircon/kernel/lib/debuglog",
     "//zircon/system/ulib/zxc",
   ]
-  public_configs = [ ":includes" ]
 }

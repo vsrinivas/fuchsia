@@ -4,21 +4,30 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/cpp/library_headers.gni")
 
-zx_library("v2") {
+library_headers("headers") {
+  headers = [
+    "dev/interrupt/arm_gicv2_init.h",
+    "dev/interrupt/arm_gicv2_regs.h",
+    "dev/interrupt/arm_gicv2m_msi.h",
+    "dev/interrupt/arm_gicv2m.h",
+  ]
+}
+
+source_set("v2") {
   sources = [
     "arm_gicv2.cc",
     "arm_gicv2m.cc",
     "arm_gicv2m_msi.cc",
     "arm_gicv2m_pcie.cc",
   ]
+  public_deps = [ ":headers" ]
   deps = [
     ":test",
     "//zircon/kernel/dev/interrupt",
     "//zircon/kernel/dev/interrupt/arm_gic/common",
     "//zircon/kernel/dev/pcie",
-    "//zircon/kernel/dev/pdev",
     "//zircon/kernel/dev/pdev/interrupt",
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/init",
@@ -32,8 +41,8 @@ zx_library("v2") {
 source_set("test") {
   # TODO: testonly = true
   sources = [ "arm_gicv2_test.cc" ]
-  include_dirs = [ "include" ]
   deps = [
+    ":headers",
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/unittest",
   ]

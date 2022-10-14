@@ -4,12 +4,14 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/cpp/library_headers.gni")
 
-zx_library("psci") {
+library_headers("headers") {
+  headers = [ "dev/psci.h" ]
+}
+
+source_set("psci") {
   sources = [ "psci.cc" ]
-  deps = [
-    "//zircon/kernel/dev/pdev",
-    "//zircon/kernel/lib/console",
-  ]
+  public_deps = [ ":headers" ]
+  deps = [ "//zircon/kernel/lib/console" ]
 }

@@ -4,10 +4,16 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/cpp/library_headers.gni")
+
+library_headers("headers") {
+  headers = [ "pdev/power.h" ]
+}
+
 source_set("power") {
   sources = [ "power.cc" ]
+  public_deps = [ ":headers" ]
   deps = [
-    "//zircon/kernel/dev/pdev",
     "//zircon/kernel/dev/psci",
     "//zircon/kernel/lib/arch",
   ]

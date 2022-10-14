@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_INTERRUPT_H_
-#define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_INTERRUPT_H_
+#ifndef ZIRCON_KERNEL_DEV_PDEV_INTERRUPT_INCLUDE_PDEV_INTERRUPT_H_
+#define ZIRCON_KERNEL_DEV_PDEV_INTERRUPT_INCLUDE_PDEV_INTERRUPT_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -51,4 +51,4 @@ void pdev_register_interrupts(const struct pdev_interrupt_ops* ops);
 
 __END_CDECLS
 
-#endif  // ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_INTERRUPT_H_
+#endif  // ZIRCON_KERNEL_DEV_PDEV_INTERRUPT_INCLUDE_PDEV_INTERRUPT_H_

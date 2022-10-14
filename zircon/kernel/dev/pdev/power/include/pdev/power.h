@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_POWER_H_
-#define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_POWER_H_
+#ifndef ZIRCON_KERNEL_DEV_PDEV_POWER_INCLUDE_PDEV_POWER_H_
+#define ZIRCON_KERNEL_DEV_PDEV_POWER_INCLUDE_PDEV_POWER_H_
 
 #include <zircon/compiler.h>
 
@@ -25,4 +25,4 @@ void pdev_register_power(const struct pdev_power_ops* ops);
 
 __END_CDECLS
 
-#endif  // ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_POWER_H_
+#endif  // ZIRCON_KERNEL_DEV_PDEV_POWER_INCLUDE_PDEV_POWER_H_

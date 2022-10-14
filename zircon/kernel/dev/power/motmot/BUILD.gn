@@ -4,19 +4,18 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("includes") {
-  include_dirs = [ "include" ]
+import("//build/cpp/library_headers.gni")
+
+library_headers("headers") {
+  headers = [ "dev/power/motmot/init.h" ]
 }
 
 source_set("motmot") {
-  public = [ "include/dev/power/motmot/init.h" ]
   sources = [ "power.cc" ]
+  public_deps = [ ":headers" ]
   deps = [
-    "//zircon/kernel/dev/pdev",
     "//zircon/kernel/dev/pdev/power",
     "//zircon/kernel/dev/psci",
     "//zircon/kernel/lib/debuglog",
   ]
-
-  public_configs = [ ":includes" ]
 }

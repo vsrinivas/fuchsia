@@ -4,18 +4,17 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("includes") {
-  include_dirs = [ "include" ]
+import("//build/cpp/library_headers.gni")
+
+library_headers("headers") {
+  headers = [ "dev/power/as370/init.h" ]
 }
 
 source_set("as370") {
-  public = [ "include/dev/power/as370/init.h" ]
   sources = [ "power.cc" ]
+  public_deps = [ ":headers" ]
   deps = [
-    "//zircon/kernel/dev/pdev",
     "//zircon/kernel/dev/pdev/power",
     "//zircon/kernel/dev/psci",
   ]
-
-  public_configs = [ ":includes" ]
 }

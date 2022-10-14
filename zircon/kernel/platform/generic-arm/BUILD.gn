@@ -18,7 +18,6 @@ source_set("generic-arm") {
     "//zircon/kernel/dev/interrupt/arm_gic/v2",
     "//zircon/kernel/dev/interrupt/arm_gic/v3",
     "//zircon/kernel/dev/pcie",
-    "//zircon/kernel/dev/pdev",
     "//zircon/kernel/dev/pdev/power",
     "//zircon/kernel/dev/power/as370",
     "//zircon/kernel/dev/psci",

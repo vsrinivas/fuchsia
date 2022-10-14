@@ -4,13 +4,17 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/cpp/library_headers.gni")
 
-zx_library("arm_generic") {
+library_headers("headers") {
+  headers = [ "dev/timer/arm_generic.h" ]
+}
+
+source_set("arm_generic") {
   sources = [ "arm_generic_timer.cc" ]
+  public_deps = [ ":headers" ]
   deps = [
     "//zircon/kernel/dev/interrupt",
-    "//zircon/kernel/dev/pdev",
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/counters",

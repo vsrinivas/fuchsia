@@ -4,16 +4,17 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-config("includes") {
-  include_dirs = [ "include" ]
+import("//build/cpp/library_headers.gni")
+
+library_headers("headers") {
+  headers = [ "dev/hw_watchdog/generic32/init.h" ]
 }
 
 source_set("generic32") {
-  public = [ "include/dev/hw_watchdog/generic32/init.h" ]
   sources = [ "hw_watchdog.cc" ]
+  public_deps = [ ":headers" ]
   deps = [
-    "//zircon/kernel/dev/pdev",
+    "//zircon/kernel/dev/pdev/hw_watchdog",
     "//zircon/kernel/lib/boot-options",
   ]
-  public_configs = [ ":includes" ]
 }

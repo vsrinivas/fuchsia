@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_WATCHDOG_H_
-#define ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_WATCHDOG_H_
+#ifndef ZIRCON_KERNEL_DEV_PDEV_HW_WATCHDOG_INCLUDE_PDEV_WATCHDOG_H_
+#define ZIRCON_KERNEL_DEV_PDEV_HW_WATCHDOG_INCLUDE_PDEV_WATCHDOG_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -27,4 +27,4 @@ void pdev_register_watchdog(const pdev_watchdog_ops_t* ops);
 
 __END_CDECLS
 
-#endif  // ZIRCON_KERNEL_DEV_PDEV_INCLUDE_PDEV_WATCHDOG_H_
+#endif  // ZIRCON_KERNEL_DEV_PDEV_HW_WATCHDOG_INCLUDE_PDEV_WATCHDOG_H_

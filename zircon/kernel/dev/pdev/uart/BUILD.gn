@@ -4,10 +4,14 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/cpp/library_headers.gni")
+
+library_headers("headers") {
+  headers = [ "pdev/uart.h" ]
+}
+
 source_set("uart") {
   sources = [ "uart.cc" ]
-  deps = [
-    "//zircon/kernel/dev/pdev",
-    "//zircon/kernel/lib/arch",
-  ]
+  public_deps = [ ":headers" ]
+  deps = [ "//zircon/kernel/lib/arch" ]
 }

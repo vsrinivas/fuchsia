@@ -4,19 +4,26 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+import("//build/cpp/library_headers.gni")
 
-zx_library("v3") {
+library_headers("headers") {
+  headers = [
+    "dev/interrupt/arm_gicv3_init.h",
+    "dev/interrupt/arm_gicv3_regs.h",
+  ]
+}
+
+source_set("v3") {
   sources = [
     "arm_gicv3.cc",
     "arm_gicv3_pcie.cc",
   ]
+  public_deps = [ ":headers" ]
   deps = [
     "//zircon/kernel/dev/interrupt",
     "//zircon/kernel/dev/interrupt/arm_gic/common",
     "//zircon/kernel/dev/interrupt/arm_gic/v2:headers",
     "//zircon/kernel/dev/pcie",
-    "//zircon/kernel/dev/pdev",
     "//zircon/kernel/dev/pdev/interrupt",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/ktrace",
