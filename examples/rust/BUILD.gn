@@ -12,7 +12,7 @@ group("rust") {
 group("tests") {
   testonly = true
   deps = [
-    ":garnet-rust-examples",
+    ":rust-examples",
     "cdylib:tests",
     "rust_static_linking:tests",
     "staticlib:tests",
@@ -31,7 +31,7 @@ fuchsia_unittest_component("testing_integration_test_two") {
   deps = [ "testing:testing_integration_test_two" ]
 }
 
-fuchsia_test_package("garnet-rust-examples") {
+fuchsia_test_package("rust-examples") {
   test_components = [
     ":testing_lib_test",
     ":testing_integration_test",

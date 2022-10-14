@@ -41,5 +41,5 @@ group("bluetooth") {
 
 group("rust") {
   testonly = true
-  public_deps = [ "//examples/rust:garnet-rust-examples" ]
+  public_deps = [ "//examples/rust:rust-examples" ]
 }
