@@ -239,9 +239,11 @@ void Download::Finish() {
   if (!result_cb_)
     return;
 
-  debug::MessageLoop::Current()->PostTask(
-      FROM_HERE, [result_cb = std::move(result_cb_), err = std::move(err_),
-                  path = std::move(path_)]() mutable { result_cb(err, path); });
+  if (debug::MessageLoop::Current()) {
+    debug::MessageLoop::Current()->PostTask(
+        FROM_HERE, [result_cb = std::move(result_cb_), err = std::move(err_),
+                    path = std::move(path_)]() mutable { result_cb(err, path); });
+  }
 
   result_cb_ = nullptr;
 }

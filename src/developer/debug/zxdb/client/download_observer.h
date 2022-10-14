@@ -14,7 +14,7 @@ class DownloadObserver {
   // Called when a download is first created and activated.
   virtual void OnDownloadsStarted() {}
 
-  // Called when a download is first created and activated.
+  // Called when a download is done.
   virtual void OnDownloadsStopped(size_t num_succeeded, size_t num_failed) {}
 };
 
