@@ -12,7 +12,6 @@ use {
     fuchsia_url::PinnedAbsolutePackageUrl,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
-    log::warn,
     omaha_client::{
         cup_ecdsa::RequestMetadata,
         installer::{AppInstallResult, Installer, ProgressObserver},
@@ -21,6 +20,7 @@ use {
     },
     std::sync::Arc,
     thiserror::Error,
+    tracing::warn,
 };
 
 /// An Omaha Installer implementation that uses the `isolated-swd` Updater to perform the OTA
@@ -145,7 +145,7 @@ fn try_create_install_plan(
     };
 
     if !rest.is_empty() {
-        warn!("Only 1 app is supported, found {}", response.apps.len());
+        warn!(found = response.apps.len(), "Only 1 app is supported");
     }
 
     if app.status != OmahaStatus::Ok {
@@ -186,7 +186,7 @@ fn try_create_install_plan(
 
     let rest_count = urls.count();
     if rest_count != 0 {
-        warn!("Only 1 url is supported, found {}", rest_count + 1);
+        warn!(found = rest_count + 1, "Only 1 url is supported");
     }
 
     let mut packages = update_check.get_all_packages();
@@ -196,7 +196,7 @@ fn try_create_install_plan(
 
     let rest_count = packages.count();
     if rest_count != 0 {
-        warn!("Only 1 package is supported, found {}", rest_count + 1);
+        warn!(found = rest_count + 1, "Only 1 package is supported");
     }
 
     let full_url = url.to_owned() + &package.name;

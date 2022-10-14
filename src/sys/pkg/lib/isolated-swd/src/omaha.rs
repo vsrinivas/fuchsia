@@ -24,7 +24,6 @@ use {
     fidl_fuchsia_io as fio,
     futures::lock::Mutex,
     futures::prelude::*,
-    log::error,
     omaha_client::{
         app_set::VecAppSet,
         common::App,
@@ -38,6 +37,7 @@ use {
         time::StandardTimeSource,
     },
     std::{rc::Rc, sync::Arc},
+    tracing::error,
     version::Version,
 };
 
@@ -287,11 +287,8 @@ mod tests {
         Ok(updater)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     pub async fn test_omaha_update() -> Result<(), Error> {
-        // Set up the logger so we get log output from Omaha.
-        fuchsia_syslog::init().expect("Failed to init logger");
-
         let updater = build_updater().await.context("Building updater")?;
         let package_path = format!("update?hash={}", updater.update_merkle_root);
         let update_response = json!({"response":{
@@ -350,10 +347,8 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     pub async fn test_omaha_updater_reports_failure() -> Result<(), Error> {
-        // Set up the logger so we get log output from Omaha.
-        fuchsia_syslog::init().expect("Failed to init logger");
         let app_set = get_test_app_set();
         let config = get_test_config();
         let updater = build_updater().await.context("Building updater")?;

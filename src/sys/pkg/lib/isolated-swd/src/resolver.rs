@@ -13,9 +13,9 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs, ServiceObj},
     },
-    fuchsia_syslog::fx_log_err,
     futures::prelude::*,
     std::sync::Arc,
+    tracing::error,
 };
 
 const RESOLVER_URL: &str =
@@ -40,10 +40,10 @@ impl IsolatedBootArgs {
                     if key == "tuf_repo_config" {
                         responder.send(self.channel.as_ref().map(|c| c.as_str())).unwrap();
                     } else {
-                        fx_log_err!("Unexpected arguments GetString: {}, closing channel.", key);
+                        error!("Unexpected arguments GetString: {}, closing channel.", key);
                     }
                 }
-                _ => fx_log_err!("Unexpected arguments request, closing channel."),
+                _ => error!("Unexpected arguments request, closing channel."),
             }
         }
     }
