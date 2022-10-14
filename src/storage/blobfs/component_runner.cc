@@ -23,7 +23,7 @@
 namespace blobfs {
 
 ComponentRunner::ComponentRunner(async::Loop& loop, ComponentOptions config)
-    : fs::PagedVfs(loop.dispatcher()), loop_(loop), config_(config) {
+    : fs::PagedVfs(loop.dispatcher(), config.pager_threads), loop_(loop), config_(config) {
   outgoing_ = fbl::MakeRefCounted<fs::PseudoDir>();
   auto startup = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing_->AddEntry("startup", startup);
