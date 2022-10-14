@@ -12,11 +12,11 @@ use {
 
 use crate::peers::Peers;
 
+mod descriptor;
 mod peer_info;
 mod peer_task;
 mod peers;
 mod sdp_data;
-mod types;
 
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {

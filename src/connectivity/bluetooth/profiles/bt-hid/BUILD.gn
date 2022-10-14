@@ -32,15 +32,16 @@ rustc_binary("bin") {
   test_deps = [
     "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
     "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [
+    "src/descriptor.rs",
     "src/main.rs",
     "src/peer_info.rs",
     "src/peer_task.rs",
     "src/peers.rs",
     "src/sdp_data.rs",
-    "src/types.rs",
   ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]

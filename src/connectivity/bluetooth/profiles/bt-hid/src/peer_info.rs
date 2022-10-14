@@ -11,7 +11,30 @@ use {
     tracing::{debug, info, warn},
 };
 
-use crate::{sdp_data, types::DescriptorList};
+use crate::{
+    descriptor::{DescriptorList, DescriptorReadError},
+    sdp_data,
+};
+
+#[derive(Debug)]
+enum HidDataElementError {
+    // The general error for an inability to convert a data element to the expected native type.
+    DataElementConversion(DataElementConversionError),
+    // A more specific error describing a failure to read or parse a HID descriptor.
+    DescriptorRead(DescriptorReadError),
+}
+
+impl From<DataElementConversionError> for HidDataElementError {
+    fn from(error: DataElementConversionError) -> Self {
+        Self::DataElementConversion(error)
+    }
+}
+
+impl From<DescriptorReadError> for HidDataElementError {
+    fn from(error: DescriptorReadError) -> Self {
+        Self::DescriptorRead(error)
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum PeerInfoError {
@@ -91,36 +114,59 @@ impl PeerInfo {
         &mut self,
         attribute_id: HidAttribute,
         attribute: Attribute,
-    ) -> Result<(), DataElementConversionError> {
+    ) -> Result<(), HidDataElementError> {
         match attribute_id {
             HidAttribute::ParserVersion => {
-                self.parser_version = Some(attribute.element.try_into()?)
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.parser_version = Some(value);
             }
             HidAttribute::DeviceSubclass => {
-                self.device_subclass = Some(attribute.element.try_into()?)
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.device_subclass = Some(value);
             }
-            HidAttribute::CountryCode => self.country_code = Some(attribute.element.try_into()?),
-            HidAttribute::VirtualCable => self.virtual_cable = Some(attribute.element.try_into()?),
+            HidAttribute::CountryCode => {
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.country_code = Some(value);
+            }
+            HidAttribute::VirtualCable => {
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.virtual_cable = Some(value);
+            }
             HidAttribute::ReconnectInitiate => {
-                self.reconnect_initiate = Some(attribute.element.try_into()?)
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.reconnect_initiate = Some(value);
             }
             HidAttribute::DescriptorList => {
-                self.descriptor_list = Some(attribute.element.try_into()?)
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.descriptor_list = Some(value);
             }
-            HidAttribute::BatteryPower => self.battery_power = Some(attribute.element.try_into()?),
-            HidAttribute::RemoteWake => self.remote_wake = Some(attribute.element.try_into()?),
+            HidAttribute::BatteryPower => {
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.battery_power = Some(value);
+            }
+            HidAttribute::RemoteWake => {
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.remote_wake = Some(value);
+            }
             HidAttribute::SupervisionTimeout => {
-                self.supervision_timeout = Some(attribute.element.try_into()?)
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.supervision_timeout = Some(value);
             }
             HidAttribute::NormallyConnectable => {
-                self.normally_connectable = Some(attribute.element.try_into()?)
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.normally_connectable = Some(value);
             }
-            HidAttribute::BootDevice => self.boot_device = Some(attribute.element.try_into()?),
+            HidAttribute::BootDevice => {
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.boot_device = Some(value);
+            }
             HidAttribute::SsrHostMaxLatency => {
-                self.ssr_host_max_latency = Some(attribute.element.try_into()?)
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.ssr_host_max_latency = Some(value);
             }
             HidAttribute::SsrHostMinTimeout => {
-                self.ssr_host_min_timeout = Some(attribute.element.try_into()?)
+                let value = attribute.element.try_into().map_err(HidDataElementError::from)?;
+                self.ssr_host_min_timeout = Some(value);
             }
         }
 
@@ -142,8 +188,8 @@ impl PeerInfo {
 
         if let Err(err) = self.set_attribute(attribute_id, attribute) {
             warn!(
-                "Unable to set SDP attribute {:?} with ID {:?} from peer {:}",
-                err.data_element, attribute_id, peer_id
+                "Unable to read SDP attribute with ID {:?} from peer {:} with error {:?}",
+                attribute_id, peer_id, err
             );
         }
     }
