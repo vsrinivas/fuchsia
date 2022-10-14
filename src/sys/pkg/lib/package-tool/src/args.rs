@@ -112,6 +112,9 @@ pub struct RepoPublishCommand {
     )]
     pub metadata_current_time: DateTime<Utc>,
 
+    #[argh(switch, description = "generate a new root metadata along side all the other metadata")]
+    pub refresh_root: bool,
+
     #[argh(switch, description = "clean the repository so only new publications remain")]
     pub clean: bool,
 

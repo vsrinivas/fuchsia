@@ -119,8 +119,13 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     repo_builder = repo_builder
         .current_time(cmd.metadata_current_time)
         .time_versioning(cmd.time_versioning)
-        .refresh_non_root_metadata(true)
         .inherit_from_trusted_targets(!cmd.clean);
+
+    repo_builder = if cmd.refresh_root {
+        repo_builder.refresh_metadata(true)
+    } else {
+        repo_builder.refresh_non_root_metadata(true)
+    };
 
     // Publish all the packages.
     for package in packages {
@@ -174,6 +179,7 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: false,
             depfile: None,
             copy_mode: CopyMode::Copy,
@@ -201,6 +207,7 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: false,
             depfile: None,
             copy_mode: CopyMode::Copy,
@@ -250,6 +257,7 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: false,
             depfile: None,
             copy_mode: CopyMode::Copy,
@@ -293,10 +301,10 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: false,
             depfile: None,
             copy_mode: CopyMode::Copy,
-
             repo_path: repo_path.to_path_buf(),
         };
 
@@ -305,6 +313,48 @@ mod tests {
         // Even though we didn't add any packages, we still should have refreshed the metadata.
         assert_matches!(repo_client.update().await, Ok(true));
         assert_eq!(repo_client.database().trusted_root().version(), 1);
+        assert_eq!(repo_client.database().trusted_targets().map(|m| m.version()), Some(2));
+        assert_eq!(repo_client.database().trusted_snapshot().map(|m| m.version()), Some(2));
+        assert_eq!(repo_client.database().trusted_timestamp().map(|m| m.version()), Some(2));
+    }
+
+    #[fuchsia::test]
+    async fn test_publish_refreshes_root_metadata() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let repo_path = Utf8Path::from_path(tempdir.path()).unwrap();
+
+        test_utils::make_empty_pm_repo_dir(repo_path);
+
+        // Connect to the repo before we run the command to make sure we generate new metadata.
+        let repo = PmRepository::new(repo_path.to_path_buf());
+        let mut repo_client = RepoClient::from_trusted_remote(repo).await.unwrap();
+
+        assert_matches!(repo_client.update().await, Ok(true));
+        assert_eq!(repo_client.database().trusted_root().version(), 1);
+        assert_eq!(repo_client.database().trusted_targets().map(|m| m.version()), Some(1));
+        assert_eq!(repo_client.database().trusted_snapshot().map(|m| m.version()), Some(1));
+        assert_eq!(repo_client.database().trusted_timestamp().map(|m| m.version()), Some(1));
+
+        let cmd = RepoPublishCommand {
+            signing_keys: None,
+            trusted_keys: None,
+            trusted_root: None,
+            package_manifests: vec![],
+            package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
+            time_versioning: false,
+            refresh_root: true,
+            clean: false,
+            depfile: None,
+            copy_mode: CopyMode::Copy,
+            repo_path: repo_path.to_path_buf(),
+        };
+
+        assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
+
+        // Even though we didn't add any packages, we still should have refreshed the metadata.
+        assert_matches!(repo_client.update().await, Ok(true));
+        assert_eq!(repo_client.database().trusted_root().version(), 2);
         assert_eq!(repo_client.database().trusted_targets().map(|m| m.version()), Some(2));
         assert_eq!(repo_client.database().trusted_snapshot().map(|m| m.version()), Some(2));
         assert_eq!(repo_client.database().trusted_timestamp().map(|m| m.version()), Some(2));
@@ -331,6 +381,7 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: false,
             depfile: None,
             copy_mode: CopyMode::Copy,
@@ -348,6 +399,7 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: false,
             depfile: None,
             copy_mode: CopyMode::Copy,
@@ -378,6 +430,7 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: now,
             time_versioning: true,
+            refresh_root: false,
             clean: false,
             depfile: None,
             copy_mode: CopyMode::Copy,
@@ -456,6 +509,7 @@ mod tests {
             ],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: false,
             depfile: Some(depfile_path.clone()),
             copy_mode: CopyMode::Copy,
@@ -522,6 +576,7 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: false,
             depfile: None,
             copy_mode: CopyMode::Copy,
@@ -552,6 +607,7 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: true,
             depfile: None,
             copy_mode: CopyMode::Copy,
@@ -587,6 +643,7 @@ mod tests {
             package_list_manifests: vec![],
             metadata_current_time: Utc::now(),
             time_versioning: false,
+            refresh_root: false,
             clean: true,
             depfile: None,
             copy_mode: CopyMode::Copy,
