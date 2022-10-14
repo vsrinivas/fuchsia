@@ -113,6 +113,7 @@ using GfxEvent = fuchsia::ui::gfx::Event;
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
 using component_testing::ConfigValue;
+using component_testing::DirectoryContents;
 using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
@@ -166,6 +167,9 @@ std::vector<UIStackConfig> UIStackConfigsToTest() {
 
   // GFX x SM
   configs.push_back({.use_scene_manager = true, .use_flatland = false, .display_rotation = 90});
+
+  // Flatland X SM
+  configs.push_back({.use_scene_manager = true, .use_flatland = true, .display_rotation = 90});
 
   return configs;
 }
@@ -569,6 +573,10 @@ class FlutterInputTestBase : public TouchInputBase<Ts...> {
              .targets = {target}},
             {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
              .source = ui_testing::PortableUITest::kTestUIStackRef,
+             .targets = {target}},
+            {.capabilities = {Protocol{fuchsia::ui::composition::Flatland::Name_},
+                              Protocol{fuchsia::ui::composition::Allocator::Name_}},
+             .source = ui_testing::PortableUITest::kTestUIStackRef,
              .targets = {target}}};
   }
 
@@ -626,36 +634,55 @@ TEST_P(FlutterSwipeTest, SwipeTest) {
 }
 
 template <typename... Ts>
-class GfxInputTestIpBase : public TouchInputBase<Ts...> {
+class CppInputTestIpBase : public TouchInputBase<Ts...> {
  protected:
+  virtual std::string_view GetViewProvider() = 0;
+
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
-    return {std::make_pair(kCppGfxClient, kCppGfxClientUrl)};
+    return {std::make_pair(kCppGfxClient, kCppGfxClientUrl),
+            std::make_pair(kCppFlatlandClient, kCppFlatlandClientUrl)};
   }
 
   std::vector<Route> GetTestRoutes() override {
+    const std::string_view view_provider = GetViewProvider();
     return {
         {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
-         .source = ChildRef{kCppGfxClient},
+         .source = ChildRef{view_provider},
          .targets = {ParentRef()}},
         {.capabilities = {Protocol{fuchsia::ui::test::input::TouchInputListener::Name_}},
          .source = ChildRef{kMockResponseListener},
-         .targets = {ChildRef{kCppGfxClient}}},
+         .targets = {ChildRef{kCppGfxClient}, ChildRef{kCppFlatlandClient}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
          .source = ui_testing::PortableUITest::kTestUIStackRef,
          .targets = {ChildRef{kCppGfxClient}}},
+        {.capabilities = {Protocol{fuchsia::ui::composition::Flatland::Name_},
+                          Protocol{fuchsia::ui::composition::Allocator::Name_}},
+         .source = ui_testing::PortableUITest::kTestUIStackRef,
+         .targets = {ChildRef{kCppFlatlandClient}}},
     };
   }
 
+  static constexpr auto kCppGfxClient = "touch-gfx-client";
+  static constexpr auto kCppFlatlandClient = "touch-flatland-client";
+
  private:
-  static constexpr auto kCppGfxClient = "gfx_client";
   static constexpr auto kCppGfxClientUrl = "#meta/touch-gfx-client.cm";
+  static constexpr auto kCppFlatlandClientUrl = "#meta/touch-flatland-client.cm";
 };
 
-class GfxInputTestIp : public GfxInputTestIpBase<> {};
-INSTANTIATE_TEST_SUITE_P(GfxInputTestIpParametized, GfxInputTestIp,
+class CppInputTestIp : public CppInputTestIpBase<> {
+ protected:
+  std::string_view GetViewProvider() override {
+    auto ui_stack_config = std::get<0>(GetParam());
+    std::string_view view_provider =
+        ui_stack_config.use_flatland ? kCppFlatlandClient : kCppGfxClient;
+    return view_provider;
+  }
+};
+INSTANTIATE_TEST_SUITE_P(CppInputTestIpParametized, CppInputTestIp,
                          testing::ValuesIn(AsTuples(UIStackConfigsToTest())));
 
-TEST_P(GfxInputTestIp, CppGfxClientTap) {
+TEST_P(CppInputTestIp, CppClientTap) {
   // Launch client view, and wait until it's rendering to proceed with the test.
   FX_LOGS(INFO) << "Initializing scene";
   LaunchClient();
@@ -665,19 +692,27 @@ TEST_P(GfxInputTestIp, CppGfxClientTap) {
   RunLoopUntil([this] {
     return LastEventReceivedMatches(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
                                     /*expected_y=*/static_cast<float>(display_width()) / 4.f,
-                                    "touch-gfx-client");
+                                    static_cast<std::string>(GetViewProvider()));
   });
 }
 
-class GfxSwipeTest : public GfxInputTestIpBase<InjectSwipeParams> {};
+class CppSwipeTest : public CppInputTestIpBase<InjectSwipeParams> {
+ protected:
+  std::string_view GetViewProvider() override {
+    auto ui_stack_config = std::get<0>(GetParam());
+    std::string_view view_provider =
+        ui_stack_config.use_flatland ? kCppFlatlandClient : kCppGfxClient;
+    return view_provider;
+  }
+};
 
 INSTANTIATE_TEST_SUITE_P(
-    GfxSwipeTestParameterized, GfxSwipeTest,
+    CppSwipeTestParameterized, CppSwipeTest,
     testing::Combine(testing::ValuesIn(UIStackConfigsToTest()),
                      testing::Values(GetRightSwipeParams(), GetDownwardSwipeParams(),
                                      GetLeftSwipeParams(), GetUpwardSwipeParams())));
 
-TEST_P(GfxSwipeTest, CppGFXClientSwipeTest) {
+TEST_P(CppSwipeTest, CppClientSwipeTest) {
   // Launch client view, and wait until it's rendering to proceed with the test.
   FX_LOGS(INFO) << "Initializing scene";
   LaunchClient();
@@ -685,8 +720,8 @@ TEST_P(GfxSwipeTest, CppGFXClientSwipeTest) {
 
   const auto& [direction, begin_x, begin_y, expected_events] = std::get<1>(GetParam());
 
-  // Inject a swipe on the display. As the child view is rotated by 90 degrees, the direction of the
-  // swipe also gets rotated by 90 degrees.
+  // Inject a swipe on the display. As the child view is rotated by 90 degrees, the direction of
+  // the swipe also gets rotated by 90 degrees.
   InjectEdgeToEdgeSwipe(direction, begin_x, begin_y);
 
   //  Client sends a response for 1 Down and |swipe_length| Move PointerEventPhase events.
@@ -783,6 +818,10 @@ class WebEngineTestIp : public TouchInputBase<> {
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_},
                           Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+         .source = kTestUIStackRef,
+         .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::ui::composition::Flatland::Name_},
+                          Protocol{fuchsia::ui::composition::Allocator::Name_}},
          .source = kTestUIStackRef,
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
@@ -911,7 +950,10 @@ class EmbeddingFlutterTestIp {
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
          .source = ui_testing::PortableUITest::kTestUIStackRef,
          .targets = {ChildRef{kEmbeddingFlutter}}},
-
+        {.capabilities = {Protocol{fuchsia::ui::composition::Flatland::Name_},
+                          Protocol{fuchsia::ui::composition::Allocator::Name_}},
+         .source = ui_testing::PortableUITest::kTestUIStackRef,
+         .targets = {ChildRef{kEmbeddingFlutter}}},
         // Needed for Flutter runner.
         {.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
                           Protocol{fuchsia::sysmem::Allocator::Name_},

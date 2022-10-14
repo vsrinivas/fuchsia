@@ -1,0 +1,38 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+
+fuchsia_component("component") {
+  testonly = true
+  component_name = "touch-flatland-client"
+  manifest = "meta/touch-flatland-client.cml"
+  deps = [ ":touch-flatland-client-binary" ]
+}
+
+fuchsia_package("touch-flatland-client") {
+  testonly = true
+  deps = [ ":component" ]
+}
+
+executable("touch-flatland-client-binary") {
+  testonly = true
+  output_name = "touch-flatland-client"
+  sources = [ "touch-flatland-client.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_hlcpp",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_hlcpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:cpp-macros",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/ui/flatland-frame-scheduling:simple_present",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
+  ]
+}

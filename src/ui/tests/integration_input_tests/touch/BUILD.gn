@@ -79,6 +79,7 @@ fuchsia_test_package("touch-input-test") {
     "//src/ui/tests/integration_input_tests/touch/embedding-flutter:realm",
     "//src/ui/tests/integration_input_tests/touch/one-chromium:component",
     "//src/ui/tests/integration_input_tests/touch/one-flutter:realm",
+    "//src/ui/tests/integration_input_tests/touch/touch-flatland-client:component",
     "//src/ui/tests/integration_input_tests/touch/touch-gfx-client:component",
   ]
   test_specs = {
@@ -167,6 +168,7 @@ group("tests") {
     "//src/ui/tests/integration_input_tests/touch/embedding-flutter",
     "//src/ui/tests/integration_input_tests/touch/one-chromium",
     "//src/ui/tests/integration_input_tests/touch/one-flutter",
+    "//src/ui/tests/integration_input_tests/touch/touch-flatland-client",
     "//src/ui/tests/integration_input_tests/touch/touch-gfx-client",
   ]
 }

@@ -217,6 +217,17 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
                                       std::move(view_ref_control), std::move(view_ref));
   }
 
+  // |fuchsia::ui::app::ViewProvider|
+  void CreateView2(fuchsia::ui::app::CreateView2Args args) override {
+    fuchsia::web::CreateView2Args web_args;
+    auto& view_creation_token = *args.mutable_view_creation_token();
+    web_args.set_view_creation_token(std::move(view_creation_token));
+
+    // Chrome requires "--ozone-platform=flatland" in order for it to run flatland based tests on
+    // arm64. Currently the tests using one-chromium run only on x64 so the flag is not required.
+    web_frame_->CreateView2(std::move(web_args));
+  }
+
   void SendMessageToWebPage(fidl::InterfaceRequest<fuchsia::web::MessagePort> message_port,
                             const std::string& message) {
     fuchsia::web::WebMessage web_message;

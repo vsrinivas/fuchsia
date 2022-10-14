@@ -12,20 +12,31 @@ import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_test_input/fidl_async.dart' as test_touch;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_scenic/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
 
-Future<void> main(List<String> args) async {
-  WidgetsFlutterBinding.ensureInitialized();
+final _context = ComponentContext.create();
 
-  runApp(MaterialApp(debugShowCheckedModeBanner: false, home: TestApp()));
+Future<void> main(List<String> args) async {
+  ScenicProxy scenic = ScenicProxy();
+  Incoming.fromSvcPath().connectToService(scenic);
+
+  WidgetsFlutterBinding.ensureInitialized();
+  final useFlatland = await scenic.usesFlatland();
+  runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: TestApp(useFlatland: useFlatland)));
 }
 
 // Creates an app that changes color and calls test.touch.ResponseListenter.Respond when tapped.
 // Launches a child app that takes up the left half of the display on startup.
 class TestApp extends StatefulWidget {
+  final bool useFlatland;
+  TestApp({this.useFlatland = false});
+
   @override
   _TestAppState createState() => _TestAppState();
 }
@@ -34,23 +45,33 @@ class _TestAppState extends State<TestApp> {
   static const _red = Color.fromARGB(255, 255, 0, 0);
   static const _blue = Color.fromARGB(255, 0, 0, 255);
 
-  final _context = ComponentContext.create();
-
   final _connection = ValueNotifier<FuchsiaViewConnection>(null);
   final _responseListener = test_touch.TouchInputListenerProxy();
   final _backgroundColor = ValueNotifier(_blue);
 
-  _TestAppState() {
+  @override
+  void initState() {
+    super.initState();
+
     Incoming.fromSvcPath()
       ..connectToService(_responseListener)
       ..close();
 
-    _connection.value = FuchsiaViewConnection(_launchApp('child-view'),
-        onViewStateChanged: (_, state) {
-      if (state) {
-        print('Child view ready');
-      }
-    });
+    if (widget.useFlatland) {
+      _connection.value = FuchsiaViewConnection.flatland(
+          _launchFlatlandApp('child-view'), onViewStateChanged: (_, state) {
+        if (state) {
+          print('Child view ready');
+        }
+      });
+    } else {
+      _connection.value = FuchsiaViewConnection(_launchApp('child-view'),
+          onViewStateChanged: (_, state) {
+        if (state) {
+          print('Child view ready');
+        }
+      });
+    }
 
     // We inspect the lower-level data packets, instead of using the higher-level gesture library.
     WidgetsBinding.instance.window.onPointerDataPacket =
@@ -128,4 +149,24 @@ ViewHolderToken _launchApp(String debugName) {
   viewProvider.ctrl.close();
 
   return viewHolderToken;
+}
+
+ViewportCreationToken _launchFlatlandApp(String debugName) {
+  print('Launching child : $debugName');
+
+  ViewProviderProxy viewProvider = ViewProviderProxy();
+  Incoming.fromSvcPath()
+    ..connectToService(viewProvider)
+    ..close();
+
+  final viewTokens = ChannelPair();
+  assert(viewTokens.status == ZX.OK);
+  final viewportCreationToken = ViewportCreationToken(value: viewTokens.first);
+  final viewCreationToken = ViewCreationToken(value: viewTokens.second);
+
+  final createViewArgs = CreateView2Args(viewCreationToken: viewCreationToken);
+  viewProvider.createView2(createViewArgs);
+  viewProvider.ctrl.close();
+
+  return viewportCreationToken;
 }
