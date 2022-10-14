@@ -107,14 +107,12 @@ class FakeSessionmgr : public fuchsia::modular::internal::testing::Sessionmgr_Te
 
 class BasemgrImplTestFixture : public gtest::RealLoopFixture {
  public:
-  BasemgrImplTestFixture() : basemgr_inspector_(&inspector) {}
-
   void SetUp() override {}
 
   void CreateBasemgrImpl(fuchsia::modular::session::ModularConfig config) {
     basemgr_impl_ = std::make_unique<BasemgrImpl>(
-        ModularConfigAccessor(std::move(config)), outgoing_directory_, &basemgr_inspector_, false,
-        GetLauncher(), std::move(presenter_), std::move(device_administrator_),
+        ModularConfigAccessor(std::move(config)), outgoing_directory_, false, GetLauncher(),
+        std::move(presenter_), std::move(device_administrator_),
         /*session_restarter_=*/nullptr,
         /*child_listener=*/nullptr, std::move(view_provider_), std::move(on_shutdown_));
   }
@@ -142,8 +140,6 @@ class BasemgrImplTestFixture : public gtest::RealLoopFixture {
   fit::function<void()> on_shutdown_ = [&]() { did_shut_down_ = true; };
   std::shared_ptr<sys::OutgoingDirectory> outgoing_directory_ =
       std::make_shared<sys::OutgoingDirectory>();
-  inspect::Inspector inspector;
-  BasemgrInspector basemgr_inspector_;
   fuchsia::ui::policy::PresenterPtr presenter_;
   fuchsia::hardware::power::statecontrol::AdminPtr device_administrator_;
   fuchsia::ui::app::ViewProviderPtr view_provider_;

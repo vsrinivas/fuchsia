@@ -5,6 +5,11 @@
 import("//build/components.gni")
 import("//src/ui/build_args.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":basemgr_unittests" ]
+}
+
 executable("basemgr_bin") {
   output_name = "basemgr"
   sources = [ "main.cc" ]
@@ -91,17 +96,6 @@ fuchsia_package("basemgr") {
   ]
 }
 
-source_set("bounded_inspect_list_node") {
-  sources = [
-    "bounded_inspect_list_node.cc",
-    "bounded_inspect_list_node.h",
-  ]
-
-  deps = [ "//src/lib/fxl" ]
-
-  public_deps = [ "//sdk/lib/sys/inspect/cpp" ]
-}
-
 source_set("lib") {
   sources = [
     "child_listener.cc",
@@ -133,7 +127,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    ":bounded_inspect_list_node",
     "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
     "//sdk/fidl/fuchsia.modular:fuchsia.modular_hlcpp",
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_hlcpp",
@@ -320,23 +313,6 @@ fuchsia_unittest_component("basemgr-non-hermetic-test") {
   deps = [ ":basemgr_non_hermetic_test" ]
 }
 
-executable("bounded_inspect_list_node_unittest") {
-  testonly = true
-
-  sources = [ "bounded_inspect_list_node_unittest.cc" ]
-
-  deps = [
-    ":bounded_inspect_list_node",
-    "//sdk/lib/inspect/testing/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-fuchsia_unittest_component("bounded-inspect-list-node-unittest") {
-  deps = [ ":bounded_inspect_list_node_unittest" ]
-}
-
 executable("inspector_unittest") {
   testonly = true
 
@@ -374,7 +350,6 @@ fuchsia_test_package("basemgr_unittests") {
     ":basemgr-v2-to-v1-unittest",
     ":basemgr-non-hermetic-test",
     ":session-context-impl-unittest",
-    ":bounded-inspect-list-node-unittest",
     ":basemgr-inspector-unittest",
     ":reboot-rate-limiter-unittest",
     ":session-provider-unittest",

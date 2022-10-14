@@ -76,8 +76,8 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
 
 BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                          std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
-                         BasemgrInspector* inspector, bool use_flatland,
-                         fuchsia::sys::LauncherPtr launcher, SceneOwnerPtr scene_owner,
+                         bool use_flatland, fuchsia::sys::LauncherPtr launcher,
+                         SceneOwnerPtr scene_owner,
                          fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                          fuchsia::session::RestarterPtr session_restarter,
                          std::unique_ptr<ChildListener> child_listener,
@@ -85,7 +85,6 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                          fit::function<void()> on_shutdown)
     : config_accessor_(std::move(config_accessor)),
       outgoing_services_(std::move(outgoing_services)),
-      inspector_(inspector),
       launcher_(std::move(launcher)),
       scene_owner_(std::move(scene_owner)),
       child_listener_(std::move(child_listener)),
@@ -246,7 +245,6 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
 
     auto start_session_result = session_provider_->StartSession(std::move(view_params));
     FX_CHECK(start_session_result.is_ok());
-    inspector_->AddSessionStartedAt(zx_clock_get_monotonic());
 
     // TODO(fxbug.dev/56132): Ownership of the Presenter should be moved to the session shell.
     scene_manager->set_error_handler([](zx_status_t error) {
@@ -273,7 +271,6 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
 
     auto start_session_result = session_provider_->StartSession(std::move(view_params));
     FX_CHECK(start_session_result.is_ok());
-    inspector_->AddSessionStartedAt(zx_clock_get_monotonic());
 
     fuchsia::session::scene::ManagerPtr* scene_manager =
         std::get_if<fuchsia::session::scene::ManagerPtr>(&scene_owner_);

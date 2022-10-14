@@ -122,7 +122,7 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
   FX_CHECK(!use_flatland);
 #endif
   return std::make_unique<modular::BasemgrImpl>(
-      std::move(config_accessor), component_context->outgoing(), inspector, use_flatland,
+      std::move(config_accessor), component_context->outgoing(), use_flatland,
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
 #ifdef USE_SCENE_MANAGER
       component_context->svc()->Connect<fuchsia::session::scene::Manager>(),

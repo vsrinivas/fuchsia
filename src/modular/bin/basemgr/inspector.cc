@@ -14,22 +14,13 @@ namespace {
 constexpr char kChildRestartTrackerName[] = "eager_children_restarts";
 }
 
-BasemgrInspector::BasemgrInspector(inspect::Inspector* inspector)
-    : inspector_(inspector),
-      session_started_at_list_(/*capacity=*/kInspectSessionStartedAtCapacity) {
+BasemgrInspector::BasemgrInspector(inspect::Inspector* inspector) : inspector_(inspector) {
   FX_DCHECK(inspector_);
-
-  session_started_at_list_.AttachInspect(inspector->GetRoot(), kInspectSessionStartedAtNodeName);
 }
 
 void BasemgrInspector::AddConfig(const fuchsia::modular::session::ModularConfig& config) {
   auto config_json = modular::ConfigToJsonString(config);
   inspector_->GetRoot().CreateString(modular_config::kInspectConfig, config_json, &static_values_);
-}
-
-void BasemgrInspector::AddSessionStartedAt(zx_time_t timestamp) {
-  auto& item = session_started_at_list_.CreateItem();
-  item.node.RecordInt(kInspectTimePropertyName, timestamp);
 }
 
 inspect::Node BasemgrInspector::CreateChildRestartTrackerNode() {

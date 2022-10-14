@@ -28,7 +28,6 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/child_listener.h"
-#include "src/modular/bin/basemgr/inspector.h"
 #include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
@@ -69,7 +68,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |config_accessor| Contains configuration for starting sessions.
   //    This is normally read from files in basemgr's /config/data directory.
   // |outgoing| The component's outgoing directory for publishing protocols.
-  // |inspector| Inspect tree for publishing diagnostics.
   // |launcher| Environment service for creating component instances.
   // |scene_owner| Legacy Service to initialize the presentation.
   // |graphical_presenter| Service to initialize the presentation.
@@ -77,9 +75,8 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |view_provider| Connection to ViewProvider exposed by a v2 session shell.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
   BasemgrImpl(modular::ModularConfigAccessor config_accessor,
-              std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
-              BasemgrInspector* inspector, bool use_flatland, fuchsia::sys::LauncherPtr launcher,
-              SceneOwnerPtr scene_owner,
+              std::shared_ptr<sys::OutgoingDirectory> outgoing_services, bool use_flatland,
+              fuchsia::sys::LauncherPtr launcher, SceneOwnerPtr scene_owner,
               fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
               fuchsia::session::RestarterPtr session_restarter,
               std::unique_ptr<ChildListener> child_listener,
@@ -142,9 +139,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Used to export protocols like Lifecycle
   const std::shared_ptr<sys::OutgoingDirectory> outgoing_services_;
-
-  // Used to store metrics in the inspect tree. Not owned.
-  BasemgrInspector* inspector_;
 
   // Used to launch component instances.
   fuchsia::sys::LauncherPtr launcher_;

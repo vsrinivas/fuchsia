@@ -11,7 +11,8 @@ use {
         LaunchConfiguration, LaunchError, LauncherRequest, LauncherRequestStream, RestartError,
         RestarterRequest, RestarterRequestStream,
     },
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::server::{ServiceFs, ServiceObjLocal},
+    fuchsia_inspect_contrib::nodes::BoundedListNode,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryFutureExt, TryStreamExt},
     std::{future::Future, sync::Arc},
@@ -21,12 +22,35 @@ use {
 /// Maximum number of concurrent connections to the protocols served by SessionManager.
 const MAX_CONCURRENT_CONNECTIONS: usize = 10_000;
 
+/// The name for the inspect node that tracks session restart timestamps.
+const DIANGNOSTICS_SESSION_STARTED_AT_NAME: &str = "session_started_at";
+
+/// The max size for the session restart timestamps list.
+const DIANGNOSTICS_SESSION_STARTED_AT_SIZE: usize = 100;
+
+/// The name of the property for each entry in the session_started_at list for
+/// the start timestamp.
+const DIAGNOSTICS_TIME_PROPERTY_NAME: &str = "@time";
+
 /// A request to connect to a protocol exposed by SessionManager.
-enum IncomingRequest {
+pub enum IncomingRequest {
     Manager(felement::ManagerRequestStream),
     GraphicalPresenter(felement::GraphicalPresenterRequestStream),
     Launcher(LauncherRequestStream),
     Restarter(RestarterRequestStream),
+}
+
+struct Diagnostics {
+    /// A list of session start/restart timestamps.
+    session_started_at: BoundedListNode,
+}
+
+impl Diagnostics {
+    pub fn record_session_start(&mut self) {
+        self.session_started_at
+            .create_entry()
+            .record_int(DIAGNOSTICS_TIME_PROPERTY_NAME, zx::Time::get_monotonic().into_nanos());
+    }
 }
 
 struct SessionManagerState {
@@ -43,6 +67,9 @@ struct SessionManagerState {
 
     /// The realm in which sessions will be launched.
     realm: fcomponent::RealmProxy,
+
+    /// Collection of diagnostics nodes.
+    diagnostics: Diagnostics,
 }
 
 /// Manages the session lifecycle and provides services to control the session.
@@ -56,9 +83,18 @@ impl SessionManager {
     ///
     /// # Parameters
     /// - `realm`: The realm in which sessions will be launched.
-    pub fn new(realm: fcomponent::RealmProxy) -> Self {
-        let state =
-            SessionManagerState { session_url: None, session_exposed_dir_channel: None, realm };
+    pub fn new(realm: fcomponent::RealmProxy, inspector: &fuchsia_inspect::Inspector) -> Self {
+        let session_started_at = BoundedListNode::new(
+            inspector.root().create_child(DIANGNOSTICS_SESSION_STARTED_AT_NAME),
+            DIANGNOSTICS_SESSION_STARTED_AT_SIZE,
+        );
+        let diagnostics = Diagnostics { session_started_at };
+        let state = SessionManagerState {
+            session_url: None,
+            session_exposed_dir_channel: None,
+            realm,
+            diagnostics,
+        };
         SessionManager { state: Arc::new(Mutex::new(state)) }
     }
 
@@ -72,6 +108,7 @@ impl SessionManager {
         state.session_exposed_dir_channel =
             Some(startup::launch_session(&session_url, &state.realm).await?);
         state.session_url = Some(session_url);
+        state.diagnostics.record_session_start();
         Ok(())
     }
 
@@ -81,8 +118,10 @@ impl SessionManager {
     ///
     /// # Errors
     /// Returns an error if there is an issue serving the `svc` directory handle.
-    pub async fn serve(&mut self) -> Result<(), Error> {
-        let mut fs = ServiceFs::new_local();
+    pub async fn serve(
+        &mut self,
+        fs: &mut ServiceFs<ServiceObjLocal<'_, IncomingRequest>>,
+    ) -> Result<(), Error> {
         fs.dir("svc")
             .add_fidl_service(IncomingRequest::Manager)
             .add_fidl_service(IncomingRequest::GraphicalPresenter)
@@ -316,6 +355,7 @@ impl SessionManager {
                 .map(|session_exposed_dir_channel| {
                     state.session_url = Some(session_url);
                     state.session_exposed_dir_channel = Some(session_exposed_dir_channel);
+                    state.diagnostics.record_session_start();
                 })
         } else {
             Err(LaunchError::NotFound)
@@ -345,6 +385,7 @@ impl SessionManager {
                 })
                 .map(|session_exposed_dir_channel| {
                     state.session_exposed_dir_channel = Some(session_exposed_dir_channel);
+                    state.diagnostics.record_session_start();
                 })
         } else {
             Err(RestartError::NotRunning)
@@ -362,6 +403,7 @@ mod tests {
             LaunchConfiguration, LauncherMarker, LauncherProxy, RestartError, RestarterMarker,
             RestarterProxy,
         },
+        fuchsia_inspect::{self, assert_data_tree, testing::AnyProperty},
         futures::prelude::*,
         session_testing::spawn_noop_directory_server,
     };
@@ -426,7 +468,8 @@ mod tests {
         })
         .unwrap();
 
-        let session_manager = SessionManager::new(realm);
+        let inspector = fuchsia_inspect::Inspector::new();
+        let session_manager = SessionManager::new(realm, &inspector);
         let (launcher, _restarter) = serve_session_manager_services(session_manager);
 
         assert!(launcher
@@ -436,6 +479,13 @@ mod tests {
             })
             .await
             .is_ok());
+        assert_data_tree!(inspector, root: {
+            session_started_at: {
+                "0": {
+                    "@time": AnyProperty
+                }
+            }
+        });
     }
 
     /// Verifies that Launcher.Restart restarts an existing session.
@@ -466,7 +516,8 @@ mod tests {
         })
         .unwrap();
 
-        let session_manager = SessionManager::new(realm);
+        let inspector = fuchsia_inspect::Inspector::new();
+        let session_manager = SessionManager::new(realm, &inspector);
         let (launcher, restarter) = serve_session_manager_services(session_manager);
 
         assert!(launcher
@@ -479,6 +530,17 @@ mod tests {
             .is_ok());
 
         assert!(restarter.restart().await.expect("could not call Restart").is_ok());
+
+        assert_data_tree!(inspector, root: {
+            session_started_at: {
+                "0": {
+                    "@time": AnyProperty
+                },
+                "1": {
+                    "@time": AnyProperty
+                }
+            }
+        });
     }
 
     /// Verifies that Launcher.Restart return an error if there is no running existing session.
@@ -489,13 +551,18 @@ mod tests {
         })
         .unwrap();
 
-        let session_manager = SessionManager::new(realm);
+        let inspector = fuchsia_inspect::Inspector::new();
+        let session_manager = SessionManager::new(realm, &inspector);
         let (_launcher, restarter) = serve_session_manager_services(session_manager);
 
         assert_eq!(
             Err(RestartError::NotRunning),
             restarter.restart().await.expect("could not call Restart")
         );
+
+        assert_data_tree!(inspector, root: {
+            session_started_at: {}
+        });
     }
 
     #[fuchsia::test]
