@@ -28,4 +28,10 @@ fuchsia_unittest_package("crasher_test") {
     "//src/developer/forensics/crasher/cpp:cpp_crasher_test",
     "//src/developer/forensics/crasher/rust:rust_crasher_test",
   ]
+
+  # Never run these tests on build bots as by construction they would be crashing and reported as
+  # failures.
+  test_specs = {
+    environments = []
+  }
 }

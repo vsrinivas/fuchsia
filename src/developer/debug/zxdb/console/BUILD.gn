@@ -288,3 +288,16 @@ source_set("tests") {
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
+
+source_set("test_support") {
+  testonly = true
+  sources = [
+    "command_sequence.h",
+    "mock_console.cc",
+  ]
+
+  deps = [
+    ":console",
+    "//src/developer/debug/zxdb/client:test_support",
+  ]
+}

@@ -7,24 +7,28 @@
 
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/console/mock_console.h"
 
 namespace zxdb {
 
-class E2eTest : public TestWithLoop {
+class E2eTest : public TestWithLoop,
+                public ProcessObserver,
+                public ThreadObserver,
+                public BreakpointObserver {
  public:
-  E2eTest() = default;
-  ~E2eTest() override = default;
+  E2eTest();
+  ~E2eTest() override;
 
-  void SetUp() override;
+  void ConfigureSymbolsWithFile(std::string_view symbol_file_path);
 
-  void TearDown() override;
-
-  Session& session() { return *session_; }
+  Session& session() const { return *session_; }
+  MockConsole& console() const { return *console_; }
 
  private:
   Err ConnectToDebugAgent();
 
   std::unique_ptr<Session> session_;
+  std::unique_ptr<MockConsole> console_;
 
   std::string socket_path_;
 };
