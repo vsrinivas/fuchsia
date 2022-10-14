@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use anyhow::{self, format_err, Error};
-use fidl::endpoints::ClientEnd;
+use fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker as _, Proxy};
 use fidl_fuchsia_dash::LauncherError;
 use fidl_fuchsia_hardware_pty as pty;
 use fidl_fuchsia_io as fio;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::future::{AbortHandle, Abortable};
 use futures::io::{ReadHalf, WriteHalf};
@@ -61,7 +60,16 @@ async fn client_to_dash_loop(
 pub async fn spawn_pty_forwarder(
     socket: zx::Socket,
 ) -> Result<ClientEnd<pty::DeviceMarker>, LauncherError> {
-    let server = connect_to_protocol::<pty::DeviceMarker>().map_err(|_| LauncherError::Pty)?;
+    // We need to use open because the rights we use are meaningful for pty devices.
+    let protocol_path = format!("/svc/{}", pty::DeviceMarker::PROTOCOL_NAME);
+    let server = fuchsia_fs::node::open_in_namespace(
+        &protocol_path,
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+    )
+    .map_err(|_: fuchsia_fs::node::OpenError| LauncherError::Pty)?;
+    let server = pty::DeviceProxy::from_channel(
+        server.into_channel().map_err(|_: fio::NodeProxy| LauncherError::Pty)?,
+    );
 
     // Open a new controlling client and make it active.
     let (stdio, to_pty_stdio) =

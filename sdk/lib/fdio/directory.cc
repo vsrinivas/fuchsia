@@ -17,7 +17,7 @@ namespace fio = fuchsia_io;
 
 // TODO(https://fxbug.dev/101092): Shrink this to 0.
 constexpr uint32_t kServiceFlags = static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
-                                                         fio::wire::OpenFlags::kRightWritable);
+                                                         fio::wire::OpenFlags::kPosixWritable);
 
 __EXPORT
 zx_status_t fdio_service_connect(const char* path, zx_handle_t h) {

@@ -106,22 +106,11 @@ static zx_status_t open_client(const fbl::unique_fd& fd, uint32_t client_id, int
 }
 
 TEST(PtyTests, pty_test) {
-  // Connect to the PTY service.  We have to do this dance rather than just
-  // using open() because open() uses the DESCRIBE flag internally, and the
-  // plumbing of the PTY service through svchost causes the DESCRIBE to get
-  // consumed by the wrong code, resulting in the wrong NodeInfoDeprecated being provided.
-  // This manifests as a loss of fd signals.
-  fbl::unique_fd ps;
-  {
-    zx::status client_end = component::Connect<fpty::Device>();
-    ASSERT_OK(client_end.status_value());
-
-    ASSERT_OK(fdio_fd_create(client_end->channel().release(), ps.reset_and_get_address()));
-    ASSERT_TRUE(ps.is_valid());
-    int flags;
-    ASSERT_GE(flags = fcntl(ps.get(), F_GETFL), 0, "%s", strerror(errno));
-    ASSERT_EQ(fcntl(ps.get(), F_SETFL, flags | O_NONBLOCK), 0, "%s", strerror(errno));
-  }
+  fbl::unique_fd ps(open(fidl::DiscoverableProtocolDefaultPath<fpty::Device>, O_RDWR));
+  ASSERT_TRUE(ps.is_valid(), "%s", strerror(errno));
+  int flags;
+  ASSERT_GE(flags = fcntl(ps.get(), F_GETFL), 0, "%s", strerror(errno));
+  ASSERT_EQ(fcntl(ps.get(), F_SETFL, flags | O_NONBLOCK), 0, "%s", strerror(errno));
 
   fdio_cpp::UnownedFdioCaller ps_io(ps.get());
 
