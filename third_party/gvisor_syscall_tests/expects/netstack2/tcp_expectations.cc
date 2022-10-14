@@ -7,8 +7,14 @@
 namespace netstack_syscall_test {
 
 void AddNonPassingTests(TestMap& tests) {
+  // Tests that flake in Fuchsia's CQ.
+  // https://fxbug.dev/112125
+  SkipTest(tests, "AllInetTests/TcpSocketTest.ClosedWriteBlockingSocket/*");
+  // https://fxbug.dev/112126
+  SkipTest(tests, "AllInetTests/TcpSocketTest.PollWithFullBufferBlocks/*");
   // https://fxbug.dev/112041
   SkipTest(tests, "AllInetTests/SimpleTcpSocketTest.SynRcvdOnListenerShutdown/*");
+
   // https://fxbug.dev/73028
   SkipTest(tests, "AllTCPSockets/TCPSocketPairTest.RSTCausesPollHUP/*");
   // third_party/gvisor/test/syscalls/linux/socket_ip_tcp_generic.cc:125
