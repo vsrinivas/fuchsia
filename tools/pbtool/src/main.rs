@@ -8,7 +8,9 @@
 //! archives.
 
 mod build_archive;
+mod transfer_manifest;
 
+use crate::transfer_manifest::GenerateTransferManifest;
 use anyhow::Result;
 use argh::FromArgs;
 use build_archive::GenerateBuildArchive;
@@ -27,11 +29,13 @@ struct Command {
 enum Subcommand {
     /// Generate a build archive.
     GenerateBuildArchive(GenerateBuildArchive),
+    GenerateTransferManifest(GenerateTransferManifest),
 }
 
 fn main() -> Result<()> {
     let command = argh::from_env::<Command>();
     match command.sub {
         Subcommand::GenerateBuildArchive(cmd) => cmd.generate(),
+        Subcommand::GenerateTransferManifest(cmd) => cmd.generate(),
     }
 }

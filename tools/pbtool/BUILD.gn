@@ -14,8 +14,10 @@ rustc_binary("pbtool") {
   deps = [
     "//build/sdk/meta:rust",
     "//src/lib/assembly/assembly_manifest",
+    "//src/lib/transfer_manifest",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:pathdiff",
     "//third_party/rust_crates:serde_json",
   ]
 
@@ -27,6 +29,7 @@ rustc_binary("pbtool") {
   sources = [
     "src/build_archive.rs",
     "src/main.rs",
+    "src/transfer_manifest.rs",
   ]
 }
 

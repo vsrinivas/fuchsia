@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/python/python_action.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
 
@@ -45,11 +46,15 @@ template("product_bundle") {
 
   labels = {
     hermetic_inputs = "${target_name}_hermetic_inputs"
+    product_bundle = "${target_name}_product_bundle"
+    transfer_manifest = "${target_name}_transfer_manifest"
   }
 
   files = {
     hermetic_inputs = "${target_out_dir}/${target_name}_hermetic_inputs"
     outdir = "$target_out_dir/$target_name"
+    product_bundle_manifest = "${outdir}/product_bundle.json"
+    transfer_manifest = "${outdir}/transfer.json"
   }
 
   python_action(labels.hermetic_inputs) {
@@ -91,7 +96,7 @@ template("product_bundle") {
     }
   }
 
-  ffx_action(target_name) {
+  ffx_action(labels.product_bundle) {
     no_output_dir_leaks = false
     forward_variables_from(invoker,
                            [
@@ -145,7 +150,7 @@ template("product_bundle") {
     ]
 
     outputs += [
-      "${files.outdir}/product_bundle.json",
+      files.product_bundle_manifest,
       "${files.outdir}/upload.json",
     ]
 
@@ -174,6 +179,41 @@ template("product_bundle") {
       ]
       inputs += [ invoker.system_r ]
     }
+  }
+
+  compiled_action(labels.transfer_manifest) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//tools/pbtool"
+
+    deps = [ ":${labels.product_bundle}" ]
+    inputs = [ files.product_bundle_manifest ]
+    outputs = [ files.transfer_manifest ]
+
+    args = [
+      "generate-transfer-manifest",
+      "--product-bundle",
+      rebase_path(files.outdir, root_build_dir),
+      "--output",
+      rebase_path(files.transfer_manifest, root_build_dir),
+    ]
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    public_deps = [
+      ":${labels.product_bundle}",
+      ":${labels.transfer_manifest}",
+    ]
 
     metadata = {
       product_bundles = [
@@ -182,6 +222,8 @@ template("product_bundle") {
           path = rebase_path(files.outdir, root_build_dir)
           upload_manifest_path =
               rebase_path("${files.outdir}/upload.json", root_build_dir)
+          transfer_manifest_path =
+              rebase_path(files.transfer_manifest, root_build_dir)
         },
       ]
     }
