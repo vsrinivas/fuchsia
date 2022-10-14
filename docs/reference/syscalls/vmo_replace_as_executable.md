@@ -27,7 +27,8 @@ adding the right **ZX_RIGHT_EXECUTE**.
 
 *handle* must be of type **ZX_OBJ_TYPE_VMO**.
 
-*vmex* must have resource kind **ZX_RSRC_KIND_VMEX**.
+*vmex* must have resource kind **ZX_RSRC_KIND_SYSTEM** with base
+**ZX_RSRC_SYSTEM_VMEX_BASE**.
 
 ## Return value
 
@@ -37,7 +38,8 @@ of failure, a negative error value is returned.
 ## Errors
 
 **ZX_ERR_BAD_HANDLE**  *handle* isn't a valid VM object handle, or
-*vmex* isn't a valid **ZX_RSRC_KIND_VMEX** resource handle.
+*vmex* isn't a valid **ZX_RSRC_KIND_SYSTEM** resource handle with base
+**ZX_RSRC_SYSTEM_VMEX_BASE**.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.

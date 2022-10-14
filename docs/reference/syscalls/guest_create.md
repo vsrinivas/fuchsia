@@ -22,7 +22,8 @@ zx_status_t zx_guest_create(zx_handle_t resource,
 within the hypervisor, with *vmar_handle* used to represent the physical address
 space of the guest.
 
-To create a guest, a *resource* of **ZX_RSRC_KIND_HYPERVISOR** must be supplied.
+To create a guest, a *resource* of **ZX_RSRC_KIND_SYSTEM** with
+**ZX_RSRC_SYSTEM_HYPERVISOR_BASE** must be supplied.
 
 In order to begin execution within the guest, a VMO should be mapped into
 *vmar_handle* using [`zx_vmar_map()`], and a VCPU must be created using
@@ -45,7 +46,8 @@ See [`zx_vmo_create()`] for the set of rights applied to *vmar_handle*.
 
 ## Rights
 
-*resource* must have resource kind **ZX_RSRC_KIND_HYPERVISOR**.
+*resource* must have resource kind **ZX_RSRC_KIND_SYSTEM** with base
+**ZX_RSRC_SYSTEM_HYPERVISOR_BASE**.
 
 ## Return value
 
@@ -56,7 +58,8 @@ returned.
 
 **ZX_ERR_NOT_SUPPORTED** The hypervisor is not supported by the device.
 
-**ZX_ERR_ACCESS_DENIED** *resource* is not of **ZX_RSRC_KIND_HYPERVISOR**.
+**ZX_ERR_ACCESS_DENIED** *resource* is not of kind **ZX_RSRC_KIND_SYSTEM** with
+base **ZX_RSRC_SYSTEM_HYPERVISOR_BASE**.
 
 **ZX_ERR_INVALID_ARGS** *guest_handle* or *vmar_handle* is an invalid pointer,
 or *options* is nonzero.
