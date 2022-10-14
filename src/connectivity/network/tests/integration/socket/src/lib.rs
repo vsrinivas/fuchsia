@@ -158,6 +158,8 @@ enum UdpCacheInvalidationReason {
     IPv6OnlyCalled,
     BroadcastCalled,
     AddressRemoved,
+    SetConfigurationCalled,
+    SetInterfaceIpForwardingDeprecatedCalled,
 }
 
 enum ToAddrExpectation {
@@ -255,10 +257,15 @@ async fn execute_and_validate_preflights(
 }
 
 #[test_case("connect_called", UdpCacheInvalidationReason::ConnectCalled)]
-#[test_case("iface_disabled", UdpCacheInvalidationReason::InterfaceDisabled)]
 #[test_case("ipv6_only_called", UdpCacheInvalidationReason::IPv6OnlyCalled)]
 #[test_case("broadcast_called", UdpCacheInvalidationReason::BroadcastCalled)]
-#[test_case("address_removed", UdpCacheInvalidationReason::AddressRemoved)]
+#[test_case("Control.Disable", UdpCacheInvalidationReason::InterfaceDisabled)]
+#[test_case("Control.RemoveAddress", UdpCacheInvalidationReason::AddressRemoved)]
+#[test_case("Control.SetConfiguration", UdpCacheInvalidationReason::SetConfigurationCalled)]
+#[test_case(
+    "Stack.SetInterfaceIpForwardingDeprecated",
+    UdpCacheInvalidationReason::SetInterfaceIpForwardingDeprecatedCalled
+)]
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_udp_send_msg_preflight_fidl(
     test_name: &str,
@@ -411,6 +418,28 @@ async fn test_udp_send_msg_preflight_fidl(
                 .expect("remove_address fidl error")
                 .expect("failed to remove address");
             assert!(removed, "address was not removed from interface");
+        }
+        UdpCacheInvalidationReason::SetConfigurationCalled => {
+            let _prev_config = iface
+                .control()
+                .set_configuration(fnet_interfaces_admin::Configuration {
+                    ipv4: Some(fnet_interfaces_admin::Ipv4Configuration {
+                        forwarding: Some(true),
+                        ..fnet_interfaces_admin::Ipv4Configuration::EMPTY
+                    }),
+                    ..fnet_interfaces_admin::Configuration::EMPTY
+                })
+                .await
+                .expect("set_configuration fidl error")
+                .expect("failed to set interface configuration");
+        }
+        UdpCacheInvalidationReason::SetInterfaceIpForwardingDeprecatedCalled => {
+            let () = iface
+                .stack()
+                .set_interface_ip_forwarding_deprecated(iface.id(), fnet::IpVersion::V4, true)
+                .await
+                .expect("set_interface_ip_forwarding_deprecated fidl error")
+                .expect("failed to set IPv4 forwarding on interface");
         }
     }
 

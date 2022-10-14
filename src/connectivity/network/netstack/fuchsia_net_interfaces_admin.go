@@ -523,6 +523,10 @@ func (ci *adminControlImpl) SetConfiguration(_ fidl.Context, config admin.Config
 		previousConfig.SetIpv6(previousIpv6Config)
 	}
 
+	// Invalidate all clients' destination caches, as disabling forwarding may
+	// cause an existing cached route to become invalid.
+	ifs.ns.resetDestinationCache()
+
 	return admin.ControlSetConfigurationResultWithResponse(admin.ControlSetConfigurationResponse{
 		PreviousConfig: previousConfig,
 	}), nil

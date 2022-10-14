@@ -272,6 +272,10 @@ func (ni *stackImpl) SetInterfaceIpForwardingDeprecated(_ fidl.Context, id uint6
 	ifs.mu.Lock()
 	defer ifs.mu.Unlock()
 
+	// Invalidate all clients' destination caches, as disabling forwarding may
+	// cause an existing cached route to become invalid.
+	ifs.ns.resetDestinationCache()
+
 	// We ignore the returned previous forwarding configuration as this FIDL
 	// method has no use for it.
 	switch _, err := ni.ns.stack.SetNICForwarding(tcpip.NICID(id), netProto, enabled); err.(type) {
