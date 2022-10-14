@@ -63,7 +63,6 @@ zx_status_t fdio::zxio_allocator(zxio_object_type_t type, zxio_storage_t** out_s
     case ZXIO_OBJECT_TYPE_SERVICE:
     case ZXIO_OBJECT_TYPE_TTY:
     case ZXIO_OBJECT_TYPE_VMO:
-    case ZXIO_OBJECT_TYPE_VMOFILE:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
     case ZXIO_OBJECT_TYPE_PIPE:

@@ -650,46 +650,6 @@ TEST_F(CreateWithOnOpenTest, Tty) {
       << "pending is " << std::showbase << std::hex << pending;
 }
 
-class TestVmofileServerWithDescribe : public zxio_tests::TestVmofileServer {
- public:
-  void set_vmofile(fuchsia_io::wire::VmofileDeprecated vmofile) { vmofile_ = std::move(vmofile); }
-
- protected:
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
-    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithVmofileDeprecated(
-        fidl::ObjectView<decltype(vmofile_)>::FromExternal(&vmofile_)));
-  }
-
- private:
-  fuchsia_io::wire::VmofileDeprecated vmofile_;
-};
-
-using CreateVmofileTest = CreateTestBase<TestVmofileServerWithDescribe>;
-
-TEST_F(CreateVmofileTest, File) {
-  const uint64_t vmo_size = 5678;
-  const uint64_t file_start_offset = 1234;
-  const uint64_t file_length = 345;
-  const uint64_t offset_within_file = 234;
-
-  node_server().set_seek_offset(offset_within_file);
-
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(vmo_size, 0u, &vmo));
-
-  node_server().set_vmofile({
-      .vmo = std::move(vmo),
-      .offset = file_start_offset,
-      .length = file_length,
-  });
-
-  StartServerThread();
-
-  ASSERT_OK(zxio_create(TakeClientChannel().release(), storage()));
-
-  ASSERT_OK(zxio_close(zxio()));
-}
-
 TEST(CreateVmofileWithTypeTest, File) {
   const uint64_t vmo_size = 5678;
   const uint64_t file_start_offset = 1234;
@@ -717,7 +677,7 @@ TEST(CreateVmofileWithTypeTest, File) {
   ASSERT_OK(zxio_close(zxio));
 }
 
-TEST(CreateVmofileWithTypeWrapperTest, File) {
+TEST(CreateVmoWithTypeWrapperTest, File) {
   const uint64_t vmo_size = 5678;
   const uint64_t file_start_offset = 1234;
 
@@ -742,51 +702,4 @@ TEST(CreateVmofileWithTypeWrapperTest, File) {
   EXPECT_EQ(static_cast<size_t>(file_start_offset), seek_current_offset);
 
   ASSERT_OK(zxio_close(zxio));
-}
-
-using CreateVmofileWithOnOpenTest = CreateTestBase<zxio_tests::TestVmofileServer>;
-
-TEST_F(CreateVmofileWithOnOpenTest, File) {
-  const uint64_t vmo_size = 5678;
-  const uint64_t file_start_offset = 1234;
-  const uint64_t file_length = 345;
-  const uint64_t offset_within_file = 234;
-
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(vmo_size, 0u, &vmo));
-
-  fuchsia_io::wire::VmofileDeprecated vmofile = {
-      .vmo = std::move(vmo),
-      .offset = file_start_offset,
-      .length = file_length,
-  };
-  SendOnOpenEvent(fuchsia_io::wire::NodeInfoDeprecated::WithVmofileDeprecated(
-      fidl::ObjectView<decltype(vmofile)>::FromExternal(&vmofile)));
-
-  node_server().set_seek_offset(offset_within_file);
-
-  StartServerThread();
-
-  ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
-
-  // Sanity check the zxio object.
-  zxio_node_attributes_t attr;
-  EXPECT_OK(zxio_attr_get(zxio(), &attr));
-
-  EXPECT_TRUE(attr.has.content_size);
-  EXPECT_EQ(attr.content_size, file_length);
-
-  size_t seek_current_offset = 0u;
-  EXPECT_OK(zxio_seek(zxio(), ZXIO_SEEK_ORIGIN_CURRENT, 0, &seek_current_offset));
-  EXPECT_EQ(static_cast<size_t>(offset_within_file), seek_current_offset);
-
-  size_t seek_start_offset = 0u;
-  EXPECT_OK(zxio_seek(zxio(), ZXIO_SEEK_ORIGIN_START, 0, &seek_start_offset));
-  EXPECT_EQ(0, seek_start_offset);
-
-  size_t seek_end_offset = 0u;
-  EXPECT_OK(zxio_seek(zxio(), ZXIO_SEEK_ORIGIN_END, 0, &seek_end_offset));
-  EXPECT_EQ(static_cast<size_t>(file_length), seek_end_offset);
-
-  ASSERT_OK(zxio_close(zxio()));
 }

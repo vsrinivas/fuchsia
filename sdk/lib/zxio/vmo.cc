@@ -117,6 +117,10 @@ zx_status_t zxio_vmo_truncate(zxio_t* io, uint64_t length) {
 }
 
 static zx_status_t zxio_vmo_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo) {
+  if (out_vmo == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   zxio_vmo_t& file = *reinterpret_cast<zxio_vmo_t*>(io);
   zx::vmo& vmo = file.vmo;
 
@@ -125,7 +129,60 @@ static zx_status_t zxio_vmo_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handl
     return status;
   }
 
-  return zxio_vmo_get_common(vmo, size, flags, out_vmo);
+  // Ensure that we return a VMO handle with only the rights requested by the client.
+
+  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
+  rights |= flags & ZXIO_VMO_READ ? ZX_RIGHT_READ : 0;
+  rights |= flags & ZXIO_VMO_WRITE ? ZX_RIGHT_WRITE : 0;
+  rights |= flags & ZXIO_VMO_EXECUTE ? ZX_RIGHT_EXECUTE : 0;
+
+  if (flags & ZXIO_VMO_PRIVATE_CLONE) {
+    // Allow ZX_RIGHT_SET_PROPERTY only if creating a private child VMO so that the user can set
+    // ZX_PROP_NAME (or similar).
+    rights |= ZX_RIGHT_SET_PROPERTY;
+
+    uint32_t options = ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
+    if (flags & ZXIO_VMO_EXECUTE) {
+      // Creating a ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if
+      // the parent VMO has it, and we can't arbitrarily add ZX_RIGHT_EXECUTE here on the client
+      // side. Adding ZX_VMO_CHILD_NO_WRITE still creates a snapshot and a new VMO object, which
+      // e.g. can have a unique ZX_PROP_NAME value, but the returned handle lacks ZX_RIGHT_WRITE and
+      // maintains ZX_RIGHT_EXECUTE.
+      if (flags & ZXIO_VMO_WRITE) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      options |= ZX_VMO_CHILD_NO_WRITE;
+    }
+
+    zx::vmo child_vmo;
+    zx_status_t status = vmo.create_child(options, 0u, size, &child_vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE adds ZX_RIGHT_WRITE automatically, but we shouldn't
+    // return a handle with that right unless requested using ZXIO_VMO_WRITE.
+    //
+    // TODO(fxbug.dev/36877): Supporting ZXIO_VMO_PRIVATE_CLONE & ZXIO_VMO_WRITE for Vmofiles is a
+    // bit weird and inconsistent. See bug for more info.
+    zx::vmo result;
+    status = child_vmo.replace(rights, &result);
+    if (status != ZX_OK) {
+      return status;
+    }
+    *out_vmo = result.release();
+    return ZX_OK;
+  }
+
+  // For !ZXIO_VMO_PRIVATE_CLONE we just duplicate another handle to the Vmofile's VMO with
+  // appropriately scoped rights.
+  zx::vmo result;
+  zx_status_t status = vmo.duplicate(rights, &result);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_vmo = result.release();
+  return ZX_OK;
 }
 
 static constexpr zxio_ops_t zxio_vmo_ops = []() {

@@ -18,15 +18,15 @@ __BEGIN_CDECLS
 // Overview
 //
 // The zxio library provides an ergonomic C interface to the fuchsia.io family
-// of protocols.  These protocols are optimized for efficiency at the cost of
+// of protocols. These protocols are optimized for efficiency at the cost of
 // ergonomics. This library provides a more ergonomic interface to the same
 // underlying protocol without sacrificing (much) performance.
 //
 // This library is organized around a zxio object type |zxio_t| defined in
-// types.h.  A zxio object abstracts over several related protocols (e.g.,
-// vmofile, file, and directory) to provide a uniform interface. Advanced
-// clients can also provide their own implementation of the underlying ops table
-// to provide drop-in replacements for zxio objects with different backends.
+// types.h. A zxio object abstracts over several related protocols (e.g. file,
+// directory) to provide a uniform interface. Advanced clients can also provide
+// their own implementation of the underlying ops table to provide drop-in
+// replacements for zxio objects with different backends.
 
 // Threading model
 
@@ -422,8 +422,8 @@ ZXIO_EXPORT zx_status_t zxio_add_inotify_filter(zxio_t* io, const char* path, si
                                                 uint32_t mask, uint32_t watch_descriptor,
                                                 zx_handle_t socket);
 
-// Remove a file relative to the given directory.  |flags| has the same values and semantics as
-// POSIX's unlinkat |flags| argument.
+// Remove a file relative to the given directory. |flags| has the same values
+// and semantics as POSIX's unlinkat |flags| argument.
 ZXIO_EXPORT zx_status_t zxio_unlink(zxio_t* directory, const char* name, size_t name_len,
                                     int flags);
 

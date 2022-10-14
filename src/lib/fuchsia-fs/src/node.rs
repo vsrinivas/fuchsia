@@ -90,7 +90,6 @@ pub enum Kind {
     Service,
     File,
     Directory,
-    VmofileDeprecated,
     Tty,
     SynchronousDatagramSocket,
     StreamSocket,
@@ -106,7 +105,6 @@ impl Kind {
             fio::NodeInfoDeprecated::Service(_) => Kind::Service,
             fio::NodeInfoDeprecated::File(_) => Kind::File,
             fio::NodeInfoDeprecated::Directory(_) => Kind::Directory,
-            fio::NodeInfoDeprecated::VmofileDeprecated(_) => Kind::VmofileDeprecated,
             fio::NodeInfoDeprecated::Tty(_) => Kind::Tty,
             fio::NodeInfoDeprecated::SynchronousDatagramSocket(_) => {
                 Kind::SynchronousDatagramSocket
@@ -120,8 +118,7 @@ impl Kind {
 
     fn expect_file(info: fio::NodeInfoDeprecated) -> Result<(), Kind> {
         match info {
-            fio::NodeInfoDeprecated::File(fio::FileObject { event: _, stream: None })
-            | fio::NodeInfoDeprecated::VmofileDeprecated(fio::VmofileDeprecated { .. }) => Ok(()),
+            fio::NodeInfoDeprecated::File(fio::FileObject { event: _, stream: None }) => Ok(()),
             other => Err(Kind::kind_of(&other)),
         }
     }

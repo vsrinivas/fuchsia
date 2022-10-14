@@ -85,9 +85,6 @@ zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
     case fio::wire::NodeInfoDeprecated::Tag::kTty:
       type = ZXIO_OBJECT_TYPE_TTY;
       break;
-    case fio::wire::NodeInfoDeprecated::Tag::kVmofileDeprecated:
-      type = ZXIO_OBJECT_TYPE_VMOFILE;
-      break;
   }
   zx_status_t status = allocator(type, &storage, out_context);
   if (status != ZX_OK || storage == nullptr) {

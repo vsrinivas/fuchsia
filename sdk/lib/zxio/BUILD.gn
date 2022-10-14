@@ -78,7 +78,6 @@ source_set("zxio") {
     "socket_address.cc",
     "transitional.cc",
     "vmo.cc",
-    "vmofile.cc",
     "zxio.cc",
   ]
   public_deps = [ ":headers" ]

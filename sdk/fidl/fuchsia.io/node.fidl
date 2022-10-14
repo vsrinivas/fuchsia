@@ -40,15 +40,7 @@ type NodeInfoDeprecated = strict resource union {
 
     4: reserved;
 
-    /// The connection composes [`File`]. Its implementation is backed by a VMO.
-    5: vmofile_deprecated resource struct {
-        /// The VMO which backs this file.
-        vmo zx.handle:VMO;
-        /// The index into `vmo` which represents the first byte of the file.
-        offset uint64;
-        /// The number of bytes, starting at `offset`, which may be used to represent this file.
-        length uint64;
-    };
+    5: reserved;
 
     6: reserved;
 

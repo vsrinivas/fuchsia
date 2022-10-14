@@ -200,54 +200,6 @@ TEST(FileDescriptorTest, TransferVMO) {
   ASSERT_EQ(-1, close(fd));
 }
 
-TEST(FileDescriptorTest, TransferVMOFile) {
-  class Server final : public fidl::testing::WireTestBase<fuchsia_io::File> {
-   public:
-    explicit Server(zx::vmo vmo) : vmo_(std::move(vmo)) {}
-
-    void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
-      ADD_FAILURE("%s should not be called", name.c_str());
-      completer.Close(ZX_ERR_NOT_SUPPORTED);
-    }
-
-    void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
-      fuchsia_io::wire::VmofileDeprecated vmofile;
-      EXPECT_OK(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmofile.vmo));
-      completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithVmofileDeprecated(
-          fidl::ObjectView<fuchsia_io::wire::VmofileDeprecated>::FromExternal(&vmofile)));
-    }
-
-    void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
-      completer.ReplySuccess(0);
-    }
-
-   private:
-    zx::vmo vmo_;
-  };
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
-  ASSERT_OK(endpoints.status_value());
-
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(0, 0, &vmo));
-
-  Server server(std::move(vmo));
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(endpoints->server), &server));
-  ASSERT_OK(loop.StartThread("fake-vmofile-server"));
-
-  fbl::unique_fd fd;
-  ASSERT_OK(fdio_fd_create(endpoints->client.channel().release(), fd.reset_and_get_address()));
-
-  zx::handle handle;
-  ASSERT_OK(fdio_fd_transfer(fd.release(), handle.reset_and_get_address()));
-  ASSERT_TRUE(handle.is_valid());
-
-  zx_info_handle_basic_t info;
-  ASSERT_OK(handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
-  ASSERT_EQ(ZX_OBJ_TYPE_CHANNEL, info.type);
-}
-
 TEST(FileDescriptorTest, TransferAfterDup) {
   zx::socket h1, h2;
   ASSERT_OK(zx::socket::create(0, &h1, &h2));

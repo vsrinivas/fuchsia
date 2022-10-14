@@ -162,17 +162,7 @@ zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::eventpair event,
 // The file will be sized to match the underlying VMO by reading the size of the
 // VMO from the kernel. The size of a VMO is always a multiple of the page size,
 // which means the size of the file will also be a multiple of the page size.
-//
-// The |offset| is the initial seek offset within the file.
 zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx::stream stream);
-
-// vmofile ---------------------------------------------------------------------
-
-zx_status_t zxio_vmofile_init(zxio_storage_t* file, fidl::WireSyncClient<fuchsia_io::File> control,
-                              zx::vmo vmo, zx_off_t offset, zx_off_t length, zx_off_t seek);
-
-zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t size, zxio_vmo_flags_t flags,
-                                zx_handle_t* out_vmo);
 
 zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
                                       fuchsia_io::wire::NodeInfoDeprecated& node_info,

@@ -60,8 +60,7 @@ impl NodeType {
         let dir_proxy = open_in_namespace(path_as_str, OpenFlags::RIGHT_READABLE)?;
         Ok(match dir_proxy.describe_deprecated().await {
             Ok(fio::NodeInfoDeprecated::Directory(_)) => NodeType::Directory,
-            Ok(fio::NodeInfoDeprecated::File(_))
-            | Ok(fio::NodeInfoDeprecated::VmofileDeprecated(_)) => NodeType::File,
+            Ok(fio::NodeInfoDeprecated::File(_)) => NodeType::File,
             _ => NodeType::Unknown,
         })
     }

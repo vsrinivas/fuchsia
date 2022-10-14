@@ -1972,12 +1972,6 @@
         "type": "fuchsia.io/Tty"
     },
     {
-        "kind": "union/member",
-        "name": "fuchsia.io/NodeInfoDeprecated.vmofile_deprecated",
-        "ordinal": "5",
-        "type": "fuchsia.io/VmofileDeprecated"
-    },
-    {
         "kind": "union",
         "name": "fuchsia.io/NodeInfoDeprecated",
         "resourceness": "resource",
@@ -2445,29 +2439,6 @@
         "name": "fuchsia.io/VmoFlags",
         "strictness": "strict",
         "type": "uint32"
-    },
-    {
-        "kind": "struct/member",
-        "name": "fuchsia.io/VmofileDeprecated.length",
-        "ordinal": "3",
-        "type": "uint64"
-    },
-    {
-        "kind": "struct/member",
-        "name": "fuchsia.io/VmofileDeprecated.offset",
-        "ordinal": "2",
-        "type": "uint64"
-    },
-    {
-        "kind": "struct/member",
-        "name": "fuchsia.io/VmofileDeprecated.vmo",
-        "ordinal": "1",
-        "type": "zx/handle:VMO"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/VmofileDeprecated",
-        "resourceness": "resource"
     },
     {
         "kind": "const",
