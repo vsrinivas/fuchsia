@@ -164,7 +164,7 @@ constexpr UndocumentedErrorDef<68, std::string_view> ErrFlexibleEnumMemberWithMa
     "the @unknown attribute. see "
     "<https://fuchsia.dev/fuchsia-src/reference/fidl/language/attributes#unknown> "
     "for more info.");
-constexpr UndocumentedErrorDef<69, const flat::Type *> ErrBitsTypeMustBeUnsignedIntegralPrimitive(
+constexpr ErrorDef<69, const flat::Type *> ErrBitsTypeMustBeUnsignedIntegralPrimitive(
     "bits may only be of unsigned integral primitive type, found {}");
 constexpr ErrorDef<70, const flat::Type *> ErrEnumTypeMustBeIntegralPrimitive(
     "enums may only be of integral primitive type, found {}");

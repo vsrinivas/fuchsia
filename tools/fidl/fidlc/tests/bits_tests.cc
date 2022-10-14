@@ -40,15 +40,8 @@ type Fruit = bits {
 }
 
 TEST(BitsTests, BadSigned) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Fruit = bits : int64 {
-    ORANGE = 1;
-    APPLE = 2;
-    BANANA = 4;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0069.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBitsTypeMustBeUnsignedIntegralPrimitive);
 }
 
