@@ -140,6 +140,7 @@ impl TextSettingsHandler {
             Some(id) => match id {
                 finput::KeymapId::FrAzerty => Some("FR_AZERTY".to_owned()),
                 finput::KeymapId::UsDvorak => Some("US_DVORAK".to_owned()),
+                finput::KeymapId::UsColemak => Some("US_COLEMAK".to_owned()),
                 finput::KeymapId::UsQwerty | finput::KeymapIdUnknown!() => {
                     Some("US_QWERTY".to_owned())
                 }
@@ -220,6 +221,10 @@ mod tests {
             Test {
                 keymap_id: Some(finput::KeymapId::UsDvorak),
                 expected: Some("US_DVORAK".to_owned()),
+            },
+            Test {
+                keymap_id: Some(finput::KeymapId::UsColemak),
+                expected: Some("US_COLEMAK".to_owned()),
             },
         ];
         for test in tests {

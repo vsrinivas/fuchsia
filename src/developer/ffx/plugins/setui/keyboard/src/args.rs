@@ -13,7 +13,13 @@ use std::num::ParseIntError;
 #[argh(subcommand, name = "keyboard")]
 /// get or set keyboard settings
 pub struct Keyboard {
-    /// keymap selection for the keyboard. Valid options are UsQwerty, FrAzerty, and UsDvorak.
+    /// keymap selection for the keyboard. Valid options are
+    ///
+    ///   - UsQwerty
+    ///   - FrAzerty
+    ///   - UsDvorak
+    ///   - UsColemak
+    ///
     #[argh(option, short = 'k', from_str_fn(str_to_keymap))]
     pub keymap: Option<fidl_fuchsia_input::KeymapId>,
 
@@ -63,6 +69,7 @@ fn str_to_keymap(src: &str) -> Result<fidl_fuchsia_input::KeymapId, String> {
         "usqwerty" => fidl_fuchsia_input::KeymapId::UsQwerty,
         "frazerty" => fidl_fuchsia_input::KeymapId::FrAzerty,
         "usdvorak" => fidl_fuchsia_input::KeymapId::UsDvorak,
+        "uscolemak" => fidl_fuchsia_input::KeymapId::UsColemak,
         _ => return Err(String::from("Couldn't parse keymap id.")),
     })
 }

@@ -24,6 +24,9 @@ lazy_static! {
 
     /// A FR AZERTY keymap.
     pub static ref FR_AZERTY: Keymap<'static> = Keymap::new(&defs::FR_AZERTY_MAP);
+
+    /// A US COLEMAK keymap.
+    pub static ref US_COLEMAK: Keymap<'static> = Keymap::new(&defs::COLEMAK_MAP);
 }
 
 /// Gets a keymap based on the supplied `keymap` selector.  If no keymap is
@@ -32,6 +35,7 @@ pub fn select_keymap<'a>(keymap: &Option<String>) -> &'a Keymap<'a> {
     match keymap {
         Some(ref k) if k == "FR_AZERTY" => &FR_AZERTY,
         Some(ref k) if k == "US_DVORAK" => &US_DVORAK,
+        Some(ref k) if k == "US_COLEMAK" => &US_COLEMAK,
         _ => &US_QWERTY,
     }
 }
@@ -650,8 +654,14 @@ mod tests {
 
     const HID_USAGE_KEY_A: u32 = 0x04;
     const HID_USAGE_KEY_B: u32 = 0x05;
+    const HID_USAGE_KEY_C: u32 = 0x06;
+    const HID_USAGE_KEY_K: u32 = 0x0e;
     const HID_USAGE_KEY_L: u32 = 0x0f;
+    const HID_USAGE_KEY_M: u32 = 0x10;
+    const HID_USAGE_KEY_N: u32 = 0x11;
+    const HID_USAGE_KEY_U: u32 = 0x18;
     const HID_USAGE_KEY_1: u32 = 0x1e;
+    const HID_USAGE_KEY_SEMICOLON: u32 = 0x33;
 
     // The effects of Shift and CapsLock on keys are different for non-letters.
     #[test]
@@ -792,6 +802,67 @@ mod tests {
                 HID_USAGE_KEY_L,
                 &ModifierState::new(),
                 &LockStateKeys::new().with(LockState::CAPS_LOCK),
+            )?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn spotcheck_us_colemak_keymap() -> Result<()> {
+        assert_eq!(
+            'c' as u32,
+            US_COLEMAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_C,
+                &ModifierState::new().with(Modifiers::CAPS_LOCK),
+                &LockStateKeys::new(),
+            )?
+        );
+        assert_eq!(
+            'O' as u32,
+            US_COLEMAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_SEMICOLON,
+                &ModifierState::new(),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
+            )?
+        );
+        assert_eq!(
+            'L' as u32,
+            US_COLEMAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_U,
+                &ModifierState::new(),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
+            )?
+        );
+        assert_eq!(
+            'e' as u32,
+            US_COLEMAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_K,
+                &ModifierState::new(),
+                &LockStateKeys::new(),
+            )?
+        );
+        assert_eq!(
+            'M' as u32,
+            US_COLEMAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_M,
+                &ModifierState::new(),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
+            )?
+        );
+        assert_eq!(
+            'A' as u32,
+            US_COLEMAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_A,
+                &ModifierState::new().with(Modifiers::LEFT_SHIFT),
+                &LockStateKeys::new(),
+            )?
+        );
+        assert_eq!(
+            'k' as u32,
+            US_COLEMAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_N,
+                &ModifierState::new(),
+                &LockStateKeys::new(),
             )?
         );
         Ok(())

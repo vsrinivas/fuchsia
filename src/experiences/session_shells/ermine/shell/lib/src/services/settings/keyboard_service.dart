@@ -18,7 +18,8 @@ class KeyboardService implements TaskService {
   final Map<KeymapId, String> _keymapIds = {
     KeymapId.usQwerty: 'usQwerty',
     KeymapId.frAzerty: 'frAzerty',
-    KeymapId.usDvorak: 'usDvorak'
+    KeymapId.usDvorak: 'usDvorak',
+    KeymapId.usColemak: 'usColemak'
   };
 
   KeyboardProxy? _proxy;

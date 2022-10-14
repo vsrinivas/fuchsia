@@ -627,6 +627,11 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.input/KeymapId.US_COLEMAK",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.input/KeymapId.US_DVORAK",
         "value": "2"
     },

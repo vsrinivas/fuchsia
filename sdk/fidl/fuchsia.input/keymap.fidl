@@ -15,4 +15,7 @@ type KeymapId = flexible enum {
     FR_AZERTY = 1;
     /// The US Dvorak keymap.
     US_DVORAK = 2;
+    /// The US Colemak keymap.
+    @available(added=10)
+    US_COLEMAK = 3;
 };

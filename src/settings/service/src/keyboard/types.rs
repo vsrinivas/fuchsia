@@ -28,6 +28,9 @@ pub(crate) enum KeymapId {
 
     /// The US Dvorak keymap.
     UsDvorak,
+
+    /// The US Colemak keymap.
+    UsColemak,
 }
 
 impl TryFrom<fidl_fuchsia_input::KeymapId> for KeymapId {
@@ -38,6 +41,7 @@ impl TryFrom<fidl_fuchsia_input::KeymapId> for KeymapId {
             fidl_fuchsia_input::KeymapId::UsQwerty => Ok(KeymapId::UsQwerty),
             fidl_fuchsia_input::KeymapId::FrAzerty => Ok(KeymapId::FrAzerty),
             fidl_fuchsia_input::KeymapId::UsDvorak => Ok(KeymapId::UsDvorak),
+            fidl_fuchsia_input::KeymapId::UsColemak => Ok(KeymapId::UsColemak),
             _ => Err(format!("Received an invalid keymap id: {:?}.", src)),
         }
     }
@@ -49,6 +53,7 @@ impl From<KeymapId> for fidl_fuchsia_input::KeymapId {
             KeymapId::UsQwerty => fidl_fuchsia_input::KeymapId::UsQwerty,
             KeymapId::FrAzerty => fidl_fuchsia_input::KeymapId::FrAzerty,
             KeymapId::UsDvorak => fidl_fuchsia_input::KeymapId::UsDvorak,
+            KeymapId::UsColemak => fidl_fuchsia_input::KeymapId::UsColemak,
         }
     }
 }
