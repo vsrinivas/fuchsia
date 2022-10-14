@@ -10,7 +10,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum DiskFormat {
     Unknown,
     Gpt,

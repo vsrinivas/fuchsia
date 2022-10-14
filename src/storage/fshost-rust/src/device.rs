@@ -5,24 +5,17 @@
 pub mod constants;
 
 use {
-    self::constants::{FVM_MAGIC, GPT_MAGIC},
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
     fidl::endpoints::{create_endpoints, Proxy},
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_hardware_block::BlockProxy,
     fidl_fuchsia_hardware_block_volume::VolumeAndNodeProxy,
     fidl_fuchsia_io::OpenFlags,
+    fs_management::format::{detect_disk_format, DiskFormat},
     fuchsia_component::client::connect_to_protocol_at_path,
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx},
 };
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ContentFormat {
-    Unknown,
-    Gpt,
-    Fvm,
-}
 
 #[async_trait]
 pub trait Device: Send + Sync {
@@ -34,7 +27,7 @@ pub trait Device: Send + Sync {
 
     /// Returns the format as determined by content sniffing. This should be used sparingly when
     /// other means of determining the format are not possible.
-    async fn content_format(&mut self) -> Result<ContentFormat, Error>;
+    async fn content_format(&mut self) -> Result<DiskFormat, Error>;
 
     /// Returns the topological path.
     fn topological_path(&self) -> &str;
@@ -68,7 +61,7 @@ pub struct BlockDevice {
     volume_proxy: VolumeAndNodeProxy,
 
     // Memoized fields.
-    content_format: Option<ContentFormat>,
+    content_format: Option<DiskFormat>,
     partition_label: Option<String>,
     partition_type: Option<[u8; 16]>,
 }
@@ -119,30 +112,13 @@ impl Device for BlockDevice {
         false
     }
 
-    async fn content_format(&mut self) -> Result<ContentFormat, Error> {
+    async fn content_format(&mut self) -> Result<DiskFormat, Error> {
         if let Some(format) = self.content_format {
             return Ok(format);
         }
-        let info = self.get_block_info().await?;
-        let size = info.block_size as u64 * 2;
-        let vmo = zx::Vmo::create(size)?;
-        let status = self
-            .volume_proxy
-            .read_blocks(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, size, 0, 0)
-            .await?;
-        zx::Status::ok(status)?;
-        let mut data = vec![0; size as usize];
-        vmo.read(&mut data, 0)?;
-        self.content_format = Some({
-            if &data[..8] == &FVM_MAGIC {
-                ContentFormat::Fvm
-            } else if &data[info.block_size as usize..info.block_size as usize + 16] == &GPT_MAGIC {
-                ContentFormat::Gpt
-            } else {
-                ContentFormat::Unknown
-            }
-        });
-        Ok(self.content_format.unwrap())
+
+        let block_proxy = self.proxy().context("Failed to get proxy")?;
+        return Ok(detect_disk_format(&block_proxy).await);
     }
 
     fn topological_path(&self) -> &str {
@@ -191,86 +167,5 @@ impl Device for BlockDevice {
         .await?;
         let block_device = BlockDevice::new(child_path).await?;
         Ok(Box::new(block_device))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        super::{BlockDevice, ContentFormat, Device, FVM_MAGIC, GPT_MAGIC},
-        fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_hardware_block::BlockInfo,
-        fidl_fuchsia_hardware_block_volume::{VolumeAndNodeMarker, VolumeAndNodeRequest},
-        fuchsia_zircon as zx,
-        futures::{pin_mut, select, FutureExt, TryStreamExt},
-    };
-
-    async fn get_content_format(content: &[u8]) -> ContentFormat {
-        let (proxy, mut stream) = create_proxy_and_stream::<VolumeAndNodeMarker>().unwrap();
-
-        let mock_device = async {
-            while let Some(request) = stream.try_next().await.unwrap() {
-                match request {
-                    VolumeAndNodeRequest::GetInfo { responder } => {
-                        responder
-                            .send(
-                                zx::sys::ZX_OK,
-                                Some(&mut BlockInfo {
-                                    block_count: 1000,
-                                    block_size: 512,
-                                    max_transfer_size: 1024 * 1024,
-                                    flags: 0,
-                                    reserved: 0,
-                                }),
-                            )
-                            .unwrap();
-                    }
-                    VolumeAndNodeRequest::ReadBlocks {
-                        vmo,
-                        length,
-                        dev_offset,
-                        vmo_offset,
-                        responder,
-                    } => {
-                        assert_eq!(dev_offset, 0);
-                        assert_eq!(length, 1024);
-                        vmo.write(content, vmo_offset).unwrap();
-                        responder.send(zx::sys::ZX_OK).unwrap();
-                    }
-                    _ => unreachable!(),
-                }
-            }
-        }
-        .fuse();
-
-        pin_mut!(mock_device);
-
-        select! {
-            _ = mock_device => unreachable!(),
-            format = async {
-                let mut device = BlockDevice::from_proxy(
-                    proxy, "/mock_device", "/mock_device_topo_path");
-                device.content_format().await.expect("content_format failed")
-            }.fuse() => return format,
-        }
-    }
-
-    #[fuchsia::test]
-    async fn content_format_gpt() {
-        let mut data = vec![0; 1024];
-        data[512..512 + GPT_MAGIC.len()].copy_from_slice(&GPT_MAGIC);
-        assert_eq!(get_content_format(&data).await, ContentFormat::Gpt);
-    }
-
-    #[fuchsia::test]
-    async fn content_format_fvm() {
-        let mut data = vec![0; 1024];
-        data[0..0 + FVM_MAGIC.len()].copy_from_slice(&FVM_MAGIC);
-        assert_eq!(get_content_format(&data).await, ContentFormat::Fvm);
-    }
-
-    #[fuchsia::test]
-    async fn content_format_unknown() {
-        assert_eq!(get_content_format(&vec![0; 1024]).await, ContentFormat::Unknown);
     }
 }

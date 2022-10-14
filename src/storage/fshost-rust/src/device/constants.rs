@@ -2,12 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// -- First block magics --
-pub const FVM_MAGIC: [u8; 8] = [0x46, 0x56, 0x4d, 0x20, 0x50, 0x41, 0x52, 0x54];
-pub const GPT_MAGIC: [u8; 16] = [
-    0x45, 0x46, 0x49, 0x20, 0x50, 0x41, 0x52, 0x54, 0x00, 0x00, 0x01, 0x00, 0x5c, 0x00, 0x00, 0x00,
-];
-
 // -- Partition labels --
 pub const BLOBFS_PARTITION_LABEL: &str = "blobfs";
 pub const DATA_PARTITION_LABEL: &str = "data";

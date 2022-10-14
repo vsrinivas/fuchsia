@@ -10,12 +10,13 @@ use {
                 BOOTPART_DRIVER_PATH, DATA_PARTITION_LABEL, DATA_TYPE_GUID, FVM_DRIVER_PATH,
                 GPT_DRIVER_PATH, NAND_BROKER_DRIVER_PATH,
             },
-            ContentFormat, Device,
+            Device,
         },
         environment::Environment,
     },
     anyhow::Error,
     async_trait::async_trait,
+    fs_management::format::DiskFormat,
     std::{collections::BTreeMap, ops::Bound},
 };
 
@@ -61,9 +62,9 @@ impl Matchers {
             matchers.push(Box::new(NandMatcher::new()));
         }
         let gpt_matcher =
-            Box::new(PartitionMapMatcher::new(ContentFormat::Gpt, false, GPT_DRIVER_PATH, ""));
+            Box::new(PartitionMapMatcher::new(DiskFormat::Gpt, false, GPT_DRIVER_PATH, ""));
         let mut fvm_matcher =
-            Box::new(PartitionMapMatcher::new(ContentFormat::Fvm, false, FVM_DRIVER_PATH, "/fvm"));
+            Box::new(PartitionMapMatcher::new(DiskFormat::Fvm, false, FVM_DRIVER_PATH, "/fvm"));
 
         if config.blobfs {
             fvm_matcher.child_matchers.push(Box::new(BlobfsMatcher::new()));
@@ -79,7 +80,7 @@ impl Matchers {
         }
         if config.gpt_all {
             matchers.push(Box::new(PartitionMapMatcher::new(
-                ContentFormat::Gpt,
+                DiskFormat::Gpt,
                 true,
                 GPT_DRIVER_PATH,
                 "",
@@ -172,7 +173,7 @@ impl Matcher for NandMatcher {
 // matchers that will match against partitions of partition maps.
 struct PartitionMapMatcher {
     // The content format expected.
-    content_format: ContentFormat,
+    content_format: DiskFormat,
 
     // If true, match against multiple devices. Otherwise, only the first is matched.
     allow_multiple: bool,
@@ -193,7 +194,7 @@ struct PartitionMapMatcher {
 
 impl PartitionMapMatcher {
     fn new(
-        content_format: ContentFormat,
+        content_format: DiskFormat,
         allow_multiple: bool,
         driver_path: &'static str,
         path_suffix: &'static str,
@@ -333,7 +334,7 @@ impl Matcher for DataMatcher {
 #[cfg(test)]
 mod tests {
     use {
-        super::{ContentFormat, Device, Environment, Matchers},
+        super::{Device, DiskFormat, Environment, Matchers},
         crate::{
             config::default_config,
             device::constants::{
@@ -353,7 +354,7 @@ mod tests {
     struct MockDevice {
         block_flags: u32,
         is_nand: bool,
-        content_format: ContentFormat,
+        content_format: DiskFormat,
         topological_path: String,
         partition_label: Option<String>,
         partition_type: Option<[u8; 16]>,
@@ -364,7 +365,7 @@ mod tests {
             MockDevice {
                 block_flags: 0,
                 is_nand: false,
-                content_format: ContentFormat::Unknown,
+                content_format: DiskFormat::Unknown,
                 topological_path: "mock_device".to_string(),
                 partition_label: None,
                 partition_type: None,
@@ -378,7 +379,7 @@ mod tests {
             self.is_nand = v;
             self
         }
-        fn set_content_format(mut self, format: ContentFormat) -> Self {
+        fn set_content_format(mut self, format: DiskFormat) -> Self {
             self.content_format = format;
             self
         }
@@ -404,7 +405,7 @@ mod tests {
         fn is_nand(&self) -> bool {
             self.is_nand
         }
-        async fn content_format(&mut self) -> Result<ContentFormat, Error> {
+        async fn content_format(&mut self) -> Result<DiskFormat, Error> {
             Ok(self.content_format)
         }
         fn topological_path(&self) -> &str {
@@ -544,7 +545,7 @@ mod tests {
         let mut env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
 
         // Check no match when disabled in config.
-        let mut device = MockDevice::new().set_content_format(ContentFormat::Gpt);
+        let mut device = MockDevice::new().set_content_format(DiskFormat::Gpt);
         assert!(!Matchers::new(&fshost_config::Config {
             blobfs: false,
             data: false,
@@ -579,7 +580,7 @@ mod tests {
                 .set_partition_type(&BLOBFS_TYPE_GUID)
         }
 
-        let mut fvm_device = MockDevice::new().set_content_format(ContentFormat::Fvm);
+        let mut fvm_device = MockDevice::new().set_content_format(DiskFormat::Fvm);
         let mut env = MockEnv::new().expect_attach_driver(FVM_DRIVER_PATH).expect_mount_blobfs();
 
         let mut matchers = Matchers::new(&default_config());
@@ -626,7 +627,7 @@ mod tests {
         // Attach FVM device.
         assert!(matchers
             .match_device(
-                &mut MockDevice::new().set_content_format(ContentFormat::Fvm),
+                &mut MockDevice::new().set_content_format(DiskFormat::Fvm),
                 &mut MockEnv::new().expect_attach_driver(FVM_DRIVER_PATH)
             )
             .await
