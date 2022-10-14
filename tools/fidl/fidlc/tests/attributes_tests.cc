@@ -1176,13 +1176,8 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadLiteralNumericTypesWithoutSchema) {
-  TestLibrary library(R"FIDL(
-library example;
-
-@attr(foo=1, bar=2.3)
-type MyStruct = struct {};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0124.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCanOnlyUseStringOrBool,
                                       fidl::ErrCanOnlyUseStringOrBool);
 }

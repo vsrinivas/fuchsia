@@ -306,7 +306,7 @@ constexpr UndocumentedErrorDef<123, std::string_view, std::string_view, SourceSp
     ErrDuplicateAttributeCanonical(
         "attribute '{}' conflicts with attribute '{}' from {}; both are "
         "represented by the canonical form '{}'");
-constexpr UndocumentedErrorDef<124, const flat::AttributeArg *, const flat::Attribute *>
+constexpr ErrorDef<124, const flat::AttributeArg *, const flat::Attribute *>
     ErrCanOnlyUseStringOrBool(
         "argument '{}' on user-defined attribute '{}' cannot be a numeric "
         "value; use a bool or string instead");
