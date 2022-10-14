@@ -454,16 +454,14 @@ protocol A {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
 }
 
+TEST(AttributesTests, BadUnknownArgument) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0129.test.fidl");
+}
+
 TEST(AttributesTests, BadEmptyTransport) {
-  TestLibrary library(R"FIDL(
-library fidl.test.transportattributes;
-
-@transport
-protocol A {
-    MethodA();
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0128.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAnonymousAttributeArg);
 }
 
@@ -781,14 +779,8 @@ type MyUnion = resource union {
 }
 
 TEST(AttributesTests, BadAttributeValue) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-@for_deprecated_c_bindings("Complex")
-protocol P {
-    Method();
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0132.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeDisallowsArgs);
 }
 
@@ -907,26 +899,16 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadMultipleArgumentsDuplicateNames) {
-  TestLibrary library(R"FIDL(
-library example;
-
-@foo(bar="abc", bar="def")
-type MyStruct = struct {};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0130.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeArg);
 }
 
 TEST(AttributesTests, BadMultipleArgumentsDuplicateCanonicalNames) {
-  TestLibrary library(R"FIDL(
-library example;
-
-@foo(Bar_baz="abc", bar__baz="def")
-type MyStruct = struct {};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0131.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeArgCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "canonical form 'bar_baz'");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "canonical form 'custom_arg'");
 }
 
 TEST(AttributesTests, GoodSingleArgumentIsNotNamed) {
@@ -1009,38 +991,21 @@ type MyOtherStruct = struct {};
 // If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that only
 // a single argument is allowed, naming that argument is an error.
 TEST(AttributesTests, BadSingleSchemaArgumentIsNamed) {
-  TestLibrary library(R"FIDL(
-library example;
-
-@foo(value="bar")
-type MyStruct = struct {};
-
-)FIDL");
-  library.AddAttributeSchema("foo").AddArg(
-      "value",
-      fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString,
-                                     fidl::flat::AttributeArgSchema::Optionality::kRequired));
+  TestLibrary library;
+  library.AddFile("bad/fi-0125.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgMustNotBeNamed);
 }
 
 // If a schema is provided (ie, this is an "official" FIDL attribute), and it specifies that
 // multiple arguments are allowed, a single unnamed argument is an error.
 TEST(AttributesTests, BadSingleSchemaArgumentIsNotNamed) {
-  TestLibrary library(R"FIDL(
-library example;
-
-@foo("bar")
-type MyStruct = struct {};
-
-)FIDL");
-  library.AddAttributeSchema("foo")
-      .AddArg("value", fidl::flat::AttributeArgSchema(
-                           fidl::flat::ConstantValue::Kind::kString,
-                           fidl::flat::AttributeArgSchema::Optionality::kRequired))
-      .AddArg("other", fidl::flat::AttributeArgSchema(
-                           fidl::flat::ConstantValue::Kind::kString,
-                           fidl::flat::AttributeArgSchema::Optionality::kOptional));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgNotNamed);
+  TestLibrary library;
+  library.AddFile("bad/fi-0126.test.fidl");
+  // Here we are demonstrating ErrAttributeArgNotNamed. There is another error
+  // because @available is the only attribute that takes multiple arguments, and
+  // omitting the required "added" causes another error.
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrAttributeArgNotNamed,
+                                      fidl::ErrLibraryAvailabilityMissingAdded);
 }
 
 TEST(AttributesTests, GoodMultipleSchemaArgumentsRequiredOnly) {
@@ -1124,14 +1089,9 @@ type MyStruct3 = struct {};
 }
 
 TEST(AttributesTests, BadMultipleSchemaArgumentsRequiredMissing) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-@multiple_args(optional="foo")
-type MyStruct = struct {};
-
-)FIDL");
-  library.AddAttributeSchema("multiple_args")
+  TestLibrary library;
+  library.AddFile("bad/fi-0127.test.fidl");
+  library.AddAttributeSchema("has_required_arg")
       .AddArg("required", fidl::flat::AttributeArgSchema(
                               fidl::flat::ConstantValue::Kind::kString,
                               fidl::flat::AttributeArgSchema::Optionality::kRequired))
@@ -1139,7 +1099,7 @@ type MyStruct = struct {};
                               fidl::flat::ConstantValue::Kind::kString,
                               fidl::flat::AttributeArgSchema::Optionality::kOptional));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingRequiredAttributeArg);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "multiple_args");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "required");
 }
 
 TEST(AttributesTests, GoodLiteralTypesWithoutSchema) {

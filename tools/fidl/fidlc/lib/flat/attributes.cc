@@ -19,7 +19,7 @@ std::unique_ptr<AttributeArg> AttributeArg::Clone() const {
 const AttributeArg* Attribute::GetArg(std::string_view arg_name) const {
   std::string name = utils::canonicalize(arg_name);
   for (const auto& arg : args) {
-    if (arg->name.value().data() == name) {
+    if (arg->name && arg->name.value().data() == name) {
       return arg.get();
     }
   }

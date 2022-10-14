@@ -310,30 +310,29 @@ constexpr ErrorDef<124, const flat::AttributeArg *, const flat::Attribute *>
     ErrCanOnlyUseStringOrBool(
         "argument '{}' on user-defined attribute '{}' cannot be a numeric "
         "value; use a bool or string instead");
-constexpr UndocumentedErrorDef<125> ErrAttributeArgMustNotBeNamed(
+constexpr ErrorDef<125> ErrAttributeArgMustNotBeNamed(
     "attributes that take a single argument must not name that argument");
-constexpr UndocumentedErrorDef<126, const flat::Constant *> ErrAttributeArgNotNamed(
+constexpr ErrorDef<126, const flat::Constant *> ErrAttributeArgNotNamed(
     "attributes that take multiple arguments must name all of them explicitly, but '{}' was not");
-constexpr UndocumentedErrorDef<127, const flat::Attribute *, std::string_view>
-    ErrMissingRequiredAttributeArg("attribute '{}' is missing the required '{}' argument");
-constexpr UndocumentedErrorDef<128, const flat::Attribute *>
-    ErrMissingRequiredAnonymousAttributeArg("attribute '{}' is missing its required argument");
-constexpr UndocumentedErrorDef<129, const flat::Attribute *, std::string_view>
-    ErrUnknownAttributeArg("attribute '{}' does not support the '{}' argument");
-constexpr UndocumentedErrorDef<130, const flat::Attribute *, std::string_view, SourceSpan>
+constexpr ErrorDef<127, const flat::Attribute *, std::string_view> ErrMissingRequiredAttributeArg(
+    "attribute '{}' is missing the required '{}' argument");
+constexpr ErrorDef<128, const flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
+    "attribute '{}' is missing its required argument");
+constexpr ErrorDef<129, const flat::Attribute *, std::string_view> ErrUnknownAttributeArg(
+    "attribute '{}' does not support the '{}' argument");
+constexpr ErrorDef<130, const flat::Attribute *, std::string_view, SourceSpan>
     ErrDuplicateAttributeArg(
         "attribute '{}' provides the '{}' argument multiple times; previous was at {}");
-constexpr UndocumentedErrorDef<131, const flat::Attribute *, std::string_view, std::string_view,
-                               SourceSpan, std::string_view>
+constexpr ErrorDef<131, const flat::Attribute *, std::string_view, std::string_view, SourceSpan,
+                   std::string_view>
     ErrDuplicateAttributeArgCanonical(
         "attribute '{}' argument '{}' conflicts with argument '{}' from {}; both "
         "are represented by the canonical form '{}'");
-constexpr UndocumentedErrorDef<132, const flat::Attribute *> ErrAttributeDisallowsArgs(
+constexpr ErrorDef<132, const flat::Attribute *> ErrAttributeDisallowsArgs(
     "attribute '{}' does not support arguments");
-constexpr UndocumentedErrorDef<133, std::string_view, const flat::Attribute *>
-    ErrAttributeArgRequiresLiteral(
-        "argument '{}' of attribute '{}' does not support referencing constants; "
-        "please use a literal instead");
+constexpr ErrorDef<133, std::string_view, const flat::Attribute *> ErrAttributeArgRequiresLiteral(
+    "argument '{}' of attribute '{}' does not support referencing constants; "
+    "please use a literal instead");
 constexpr UndocumentedErrorDef<134, const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
     "declaration did not satisfy constraint of attribute '{}'");
 constexpr UndocumentedErrorDef<135, std::string_view> ErrInvalidDiscoverableName(

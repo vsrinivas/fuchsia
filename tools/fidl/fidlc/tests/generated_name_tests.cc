@@ -354,16 +354,8 @@ type Foo = struct {
 }
 
 TEST(GeneratedNameTests, BadNonLiteralArgument) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-const NAME string = "baz";
-
-type Foo = struct {
-  bar @generated_name(NAME) struct {};
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0133.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgRequiresLiteral);
 }
 
