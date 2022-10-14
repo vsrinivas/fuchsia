@@ -103,7 +103,7 @@ constexpr UndocumentedErrorDef<45, const raw::AttributeList *>
     ErrAttributesNotAllowedOnLibraryImport("no attributes allowed on library import, found: {}");
 constexpr ErrorDef<46, std::vector<std::string_view>> ErrUnknownLibrary(
     "Could not find library named {}. Did you include its sources with --files?");
-constexpr UndocumentedErrorDef<47, SourceSpan> ErrProtocolComposedMultipleTimes(
+constexpr ErrorDef<47, SourceSpan> ErrProtocolComposedMultipleTimes(
     "protocol composed multiple times; previous was at {}");
 constexpr UndocumentedErrorDef<48> ErrOptionalTableMember("Table members cannot be optional");
 constexpr UndocumentedErrorDef<49> ErrOptionalUnionMember("Union members cannot be optional");

@@ -535,19 +535,8 @@ TEST(ProtocolTests, BadCannotMutuallyCompose) {
 }
 
 TEST(ProtocolTests, BadCannotComposeSameProtocolTwice) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol Parent {
-    Method();
-};
-
-protocol Child {
-    compose Parent;
-    compose Parent;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0047.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrProtocolComposedMultipleTimes);
 }
 
