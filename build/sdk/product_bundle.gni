@@ -144,15 +144,11 @@ template("product_bundle") {
       "create",
       "--partitions",
       rebase_path(invoker.partitions, root_build_dir),
-      "--include-upload-manifest",
       "--out-dir",
       rebase_path(files.outdir, root_build_dir),
     ]
 
-    outputs += [
-      files.product_bundle_manifest,
-      "${files.outdir}/upload.json",
-    ]
+    outputs += [ files.product_bundle_manifest ]
 
     inputs = [ invoker.partitions ]
 
@@ -220,8 +216,6 @@ template("product_bundle") {
         {
           label = get_label_info(":$target_name", "label_with_toolchain")
           path = rebase_path(files.outdir, root_build_dir)
-          upload_manifest_path =
-              rebase_path("${files.outdir}/upload.json", root_build_dir)
           transfer_manifest_path =
               rebase_path(files.transfer_manifest, root_build_dir)
         },

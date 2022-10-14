@@ -1259,8 +1259,6 @@ build_api_module("product_size_checker_output") {
 # Type: list(scope)
 #   path
 #     Required: Path to the product bundle directory.
-#   update_manifest_path
-#     Required: Path to the product bundle update manifest.
 #   transfer_manifest_path
 #     Required: Path to the transfer manifest listing the product bundle artifacts.
 #   label
