@@ -210,7 +210,8 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
 
   // Disconnect source -> consumer.
   {
-    auto result = Node::DeleteEdge(q, graph.detached_thread(), source, h.consumer_node);
+    auto result =
+        Node::DeleteEdge(q, graph.detached_thread(), source, h.consumer_node, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
     EXPECT_THAT(h.consumer_node->sources(), ElementsAre());
   }

@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -25,6 +26,7 @@
 #include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
 #include "src/media/audio/services/mixer/fidl/graph_thread.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
+#include "src/media/audio/services/mixer/mix/gain_control.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 
 namespace media_audio {
@@ -121,7 +123,7 @@ class Node {
   //
   // Returns an error if the edge is not allowed.
   struct CreateEdgeOptions {
-    // TODO(fxbug.dev/87651): Convert this to list of `GainControl`s to use in `MixerGainControls`.
+    std::unordered_map<GainControlId, GainControl> newly_added_gain_controls = {};
     std::unordered_set<GainControlId> gain_ids = {};
     Sampler::Type sampler_type = Sampler::Type::kDefault;
   };
@@ -132,9 +134,12 @@ class Node {
   // Deletes the edge from `source` -> `dest`. This is the inverse of `CreateEdge`.
   //
   // Returns an error if the edge does not exist.
+  struct DeleteEdgeOptions {
+    std::unordered_set<GainControlId> newly_removed_gain_controls = {};
+  };
   static fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> DeleteEdge(
       GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
-      NodePtr dest);
+      NodePtr dest, DeleteEdgeOptions options);
 
   // TODO(fxbug.dev/87651): Consider renaming Destroy. It does destroy some internal resources (e.g.
   // child nodes) but it doesn't fully destroy the `node`, hence the name may be somewhat confusing.

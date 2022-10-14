@@ -141,6 +141,22 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(GlobalTaskQueue& global
   // exist either.
   FX_CHECK(!HasNode(dest->sources(), source));
 
+  // Populate `add_source_options`.
+  PipelineStage::AddSourceOptions add_source_options = {
+      .gain_ids = std::move(options.gain_ids),
+  };
+
+  const bool is_dest_mixer = (dest->type() == Node::Type::kMixer);
+  if (is_dest_mixer) {
+    // TODO(fxbug.dev/87651): Refactor this based on the new clock leader assignment rules.
+    add_source_options.clock_sync =
+        ClockSynchronizer::SelectModeAndCreate(source->reference_clock(), dest->reference_clock());
+    add_source_options.sampler = Sampler::Create(source_format, dest_format, options.sampler_type);
+    if (!add_source_options.sampler) {
+      return fpromise::error(CreateEdgeError::kIncompatibleFormats);
+    }
+  }
+
   // Create this edge.
   dest->AddSource(source);
   source->SetDest(dest);
@@ -161,26 +177,6 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(GlobalTaskQueue& global
   // `source` get batched into the `dest->thread()` async task.
   auto stages_to_update_downstream_consumers = RecomputeMaxDownstreamConsumers(*source);
 
-  // Populate `add_source_options` if destination node is a mixer.
-  PipelineStage::AddSourceOptions add_source_options;
-  if (dest->type() == Node::Type::kMixer) {
-    // TODO(fxbug.dev/87651): Refactor this based on the new clock leader assignment rules.
-    add_source_options.clock_sync =
-        ClockSynchronizer::SelectModeAndCreate(source->reference_clock(), dest->reference_clock());
-    add_source_options.gain_ids = std::move(options.gain_ids);
-    add_source_options.sampler = Sampler::Create(source_format, dest_format, options.sampler_type);
-
-    if (!add_source_options.sampler) {
-      return fpromise::error(CreateEdgeError::kIncompatibleFormats);
-    }
-  }
-
-  // Populate destination gains if source node is a mixer.
-  std::optional<std::unordered_set<GainControlId>> mixer_dest_gain_ids = std::nullopt;
-  if (source->type() == Node::Type::kMixer) {
-    mixer_dest_gain_ids = std::move(options.gain_ids);
-  }
-
   // Update the PipelineStages asynchronously.
   // Fist apply updates that must happen on dest's thread, which includes connecting source -> dest.
   global_queue.Push(dest->thread()->id(),
@@ -190,9 +186,13 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(GlobalTaskQueue& global
                      stages_to_update_downstream_consumers =
                          std::move(stages_to_update_downstream_consumers[dest->thread()->id()]),  //
                      new_thread = dest->thread()->pipeline_thread(),                              //
-                     old_thread = detached_thread->pipeline_thread(),
-                     add_source_options = std::move(add_source_options),
-                     mixer_dest_gain_ids = std::move(mixer_dest_gain_ids)]() mutable {
+                     old_thread = detached_thread->pipeline_thread(),                             //
+                     is_dest_mixer,                                                               //
+                     // We exclude the source mixer when both source and destination are mixers in
+                     // order to avoid adding the passed in gain controls to this edge twice.
+                     is_source_mixer = !is_dest_mixer && (source->type() == Node::Type::kMixer),  //
+                     newly_added_gain_controls = std::move(options.newly_added_gain_controls),    //
+                     add_source_options = std::move(add_source_options)]() mutable {
                       // Before we acquire a checker, verify the dest_stage has the expected thread.
                       FX_CHECK(dest_stage->thread() == new_thread)
                           << dest_stage->thread()->name() << " != " << new_thread->name();
@@ -211,11 +211,18 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(GlobalTaskQueue& global
                       }
 
                       ScopedThreadChecker checker(dest_stage->thread()->checker());
-                      if (mixer_dest_gain_ids) {
+                      if (is_source_mixer || is_dest_mixer) {
                         // TODO(fxbug.dev/87651): Consider generalizing this logic for
                         // `PipelineStage` without having to do an explicit cast.
-                        static_cast<MixerStage*>(source_stage.get())
-                            ->SetDestGains(std::move(*mixer_dest_gain_ids));
+                        auto* mixer_stage = static_cast<MixerStage*>(
+                            is_dest_mixer ? dest_stage.get() : source_stage.get());
+                        auto& gain_controls = mixer_stage->gain_controls();
+                        for (auto& [gain_id, gain_control] : newly_added_gain_controls) {
+                          gain_controls.Add(gain_id, std::move(gain_control));
+                        }
+                        if (is_source_mixer) {
+                          mixer_stage->SetDestGains(std::move(add_source_options.gain_ids));
+                        }
                       }
                       dest_stage->AddSource(source_stage, std::move(add_source_options));
                     });
@@ -239,7 +246,7 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(GlobalTaskQueue& global
 
 fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
-    NodePtr dest) {
+    NodePtr dest, DeleteEdgeOptions options) {
   FX_CHECK(source);
   FX_CHECK(dest);
 
@@ -309,34 +316,48 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
       MoveNodeToThread(*source, /*new_thread=*/detached_thread, /*expected_thread=*/dest->thread());
 
   // The PipelineStages are updated asynchronously.
-  global_queue.Push(dest->thread()->id(),
-                    [dest_stage = dest->pipeline_stage(),         //
-                     source_stage = source->pipeline_stage(),     //
-                     stages_to_move = std::move(stages_to_move),  //
-                     stages_to_update_downstream_consumers =
-                         std::move(stages_to_update_downstream_consumers[dest->thread()->id()]),  //
-                     new_thread = detached_thread->pipeline_thread(),                             //
-                     old_thread = dest->thread()->pipeline_thread()]() {
-                      // Before we acquire a checker, verify the dest_stage has the expected thread.
-                      FX_CHECK(dest_stage->thread() == old_thread)
-                          << dest_stage->thread()->name() << " != " << new_thread->name();
+  global_queue.Push(
+      dest->thread()->id(),
+      [dest_stage = dest->pipeline_stage(),         //
+       source_stage = source->pipeline_stage(),     //
+       stages_to_move = std::move(stages_to_move),  //
+       stages_to_update_downstream_consumers =
+           std::move(stages_to_update_downstream_consumers[dest->thread()->id()]),  //
+       new_thread = detached_thread->pipeline_thread(),                             //
+       old_thread = dest->thread()->pipeline_thread(),                              //
+       is_dest_mixer = (dest->type() == Node::Type::kMixer),                        //
+       is_source_mixer = (source->type() == Node::Type::kMixer),                    //
+       newly_removed_gain_controls = std::move(options.newly_removed_gain_controls)]() {
+        // Before we acquire a checker, verify the dest_stage has the expected thread.
+        FX_CHECK(dest_stage->thread() == old_thread)
+            << dest_stage->thread()->name() << " != " << new_thread->name();
 
-                      ScopedThreadChecker checker(dest_stage->thread()->checker());
-                      dest_stage->RemoveSource(source_stage);
+        ScopedThreadChecker checker(dest_stage->thread()->checker());
+        dest_stage->RemoveSource(source_stage);
+        if (is_dest_mixer || is_source_mixer) {
+          // TODO(fxbug.dev/87651): Consider generalizing this logic for
+          // `PipelineStage` without having to do an explicit cast.
+          auto& gain_controls =
+              static_cast<MixerStage*>(is_dest_mixer ? dest_stage.get() : source_stage.get())
+                  ->gain_controls();
+          for (auto& gain_id : newly_removed_gain_controls) {
+            gain_controls.Remove(gain_id);
+          }
+        }
 
-                      // Move all disconnected stages to the detached thread.
-                      for (auto& stage : stages_to_move) {
-                        FX_CHECK(stage->thread() == old_thread)
-                            << stage->thread()->name() << " != " << old_thread->name();
-                        stage->set_thread(new_thread);
-                      }
+        // Move all disconnected stages to the detached thread.
+        for (auto& stage : stages_to_move) {
+          FX_CHECK(stage->thread() == old_thread)
+              << stage->thread()->name() << " != " << old_thread->name();
+          stage->set_thread(new_thread);
+        }
 
-                      // Update downstream consumer counts.
-                      for (auto& [stage, count] : stages_to_update_downstream_consumers) {
-                        ScopedThreadChecker checker(stage->thread()->checker());
-                        stage->set_max_downstream_consumers(count);
-                      }
-                    });
+        // Update downstream consumer counts.
+        for (auto& [stage, count] : stages_to_update_downstream_consumers) {
+          ScopedThreadChecker checker(stage->thread()->checker());
+          stage->set_max_downstream_consumers(count);
+        }
+      });
 
   // Apply updates that must happen on other threads.
   for (auto& [thread_id, changes] : stages_to_update_downstream_consumers) {
@@ -384,8 +405,9 @@ void Node::Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detache
       }
     };
 
-    auto result = DeleteEdge(global_queue, detached_thread, lift_source_to_parent(source),
-                             lift_dest_to_parent(dest));
+    auto result =
+        DeleteEdge(global_queue, detached_thread, lift_source_to_parent(std::move(source)),
+                   lift_dest_to_parent(std::move(dest)), /*options=*/{});
     FX_CHECK(result.is_ok()) << result.error();
   };
 
@@ -412,8 +434,8 @@ void Node::Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detache
       }
     }
     for (size_t k = child_dests.size(); k > 0; k--) {
-      if (auto dest = child_dests[k - 1]->dest(); dest) {
-        delete_edge(node, dest);
+      if (auto child_dest = child_dests[k - 1]->dest(); child_dest) {
+        delete_edge(node, std::move(child_dest));
       }
     }
 

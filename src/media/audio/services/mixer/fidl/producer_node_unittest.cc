@@ -142,7 +142,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
 
   // Disconnect producer -> dest.
   {
-    auto result = Node::DeleteEdge(*q, graph.detached_thread(), producer, dest);
+    auto result = Node::DeleteEdge(*q, graph.detached_thread(), producer, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -234,7 +234,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
 
   // Disconnect producer -> dest.
   {
-    auto result = Node::DeleteEdge(*q, graph.detached_thread(), producer, dest);
+    auto result = Node::DeleteEdge(*q, graph.detached_thread(), producer, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 

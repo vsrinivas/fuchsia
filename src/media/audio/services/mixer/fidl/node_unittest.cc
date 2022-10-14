@@ -697,7 +697,7 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToOrdinaryNotConnected) {
 
   auto q = graph.global_task_queue();
   auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(2));
+                                 /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
@@ -709,7 +709,7 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToOrdinaryConnectedBackwards) {
 
   auto q = graph.global_task_queue();
   auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(2),
-                                 /*dest=*/graph.node(1));
+                                 /*dest=*/graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
@@ -727,7 +727,7 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToOrdinarySuccess) {
   ASSERT_EQ(dest->thread(), graph.thread(kThreadId));
 
   auto q = graph.global_task_queue();
-  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->dest(), nullptr);
@@ -747,7 +747,7 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaNotConnected) {
 
   auto q = graph.global_task_queue();
   auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(2));
+                                 /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
@@ -760,7 +760,7 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaConnectedBackwards) {
 
   auto q = graph.global_task_queue();
   auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(2),
-                                 /*dest=*/graph.node(1));
+                                 /*dest=*/graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
@@ -787,7 +787,7 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaSuccess) {
       });
 
   auto q = graph.global_task_queue();
-  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->dest(), nullptr);
@@ -807,7 +807,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinaryNotConnected) {
 
   auto q = graph.global_task_queue();
   auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(2));
+                                 /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
@@ -820,7 +820,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinaryConnectedBackwards) {
 
   auto q = graph.global_task_queue();
   auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(2),
-                                 /*dest=*/graph.node(1));
+                                 /*dest=*/graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
@@ -847,7 +847,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinarySuccess) {
       });
 
   auto q = graph.global_task_queue();
-  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->child_sources().size(), 0u);
@@ -870,7 +870,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaNotConnected) {
 
   auto q = graph.global_task_queue();
   auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(1),
-                                 /*dest=*/graph.node(2));
+                                 /*dest=*/graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
@@ -887,7 +887,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaConnectedBackwards) {
 
   auto q = graph.global_task_queue();
   auto result = Node::DeleteEdge(*q, graph.detached_thread(), /*source=*/graph.node(2),
-                                 /*dest=*/graph.node(1));
+                                 /*dest=*/graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
 }
@@ -927,7 +927,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
       });
 
   auto q = graph.global_task_queue();
-  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
+  auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
   ASSERT_TRUE(result.is_ok());
 
   EXPECT_EQ(source->child_sources().size(), 0u);
@@ -1021,7 +1021,7 @@ TEST(NodeCreateDeleteEdgeTest, ThreadMoves) {
 
   // Delete source -> dest.
   {
-    auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
+    auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -1129,7 +1129,7 @@ TEST(NodeCreateDeleteEdgeTest, MaxDownstreamConsumers) {
 
   // Delete source -> dest.
   {
-    auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest);
+    auto result = Node::DeleteEdge(*q, graph.detached_thread(), source, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -1324,7 +1324,7 @@ TEST_F(NodeDestroyTest, MetaToOrdinaryWithBuiltinChild) {
 
   NodePtr destroyed;
   source->SetOnDestroyChildDest(
-      [&destroyed](NodePtr child_source) mutable { destroyed = child_source; });
+      [&destroyed](NodePtr child_source) mutable { destroyed = std::move(child_source); });
 
   // When destroying node 2, we disconnect from child node 3, but don't delete child node 3 because
   // it's a builtin child of meta node 1.

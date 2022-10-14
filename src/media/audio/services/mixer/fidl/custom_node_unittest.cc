@@ -189,8 +189,9 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_source_node->dest(), nullptr);
 
   // Disconnect graph node `1` from `child_source_node`.
-  ASSERT_TRUE(
-      Node::DeleteEdge(*q, graph.detached_thread(), graph.node(1), child_source_node).is_ok());
+  ASSERT_TRUE(Node::DeleteEdge(*q, graph.detached_thread(), graph.node(1), child_source_node,
+                               /*options=*/{})
+                  .is_ok());
   EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
             zx::nsec(1'500'000'000));
   EXPECT_THAT(child_source_node->sources(), ElementsAre());
@@ -206,7 +207,8 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
 
   // Disconnect `child_dest_node` from graph node `3`.
   ASSERT_TRUE(
-      Node::DeleteEdge(*q, graph.detached_thread(), child_dest_node, graph.node(3)).is_ok());
+      Node::DeleteEdge(*q, graph.detached_thread(), child_dest_node, graph.node(3), /*options=*/{})
+          .is_ok());
   EXPECT_EQ(child_dest_node->GetSelfPresentationDelayForSource(/*source=*/nullptr), zx::nsec(0));
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());
   EXPECT_EQ(child_dest_node->dest(), nullptr);

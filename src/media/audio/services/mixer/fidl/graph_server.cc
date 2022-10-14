@@ -237,6 +237,7 @@ ParseCreateEdgeOptions(const GraphServer::CreateEdgeRequestView& request) {
       options.gain_ids.insert(gain_id);
     }
   }
+  // TODO(fxbug.dev/87651): Populate `newly_added_gain_controls`.
   return fpromise::ok(std::move(options));
 }
 
@@ -678,7 +679,9 @@ void GraphServer::DeleteEdge(DeleteEdgeRequestView request, DeleteEdgeCompleter:
 
   auto& source = source_it->second;
   auto& dest = dest_it->second;
-  auto result = Node::DeleteEdge(*global_task_queue_, detached_thread_, source, dest);
+  // TODO(fxbug.dev/87651): Populate `options`.
+  auto result =
+      Node::DeleteEdge(*global_task_queue_, detached_thread_, source, dest, /*options=*/{});
   if (!result.is_ok()) {
     completer.ReplyError(result.error());
     return;

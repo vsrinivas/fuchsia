@@ -5,8 +5,14 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_MIXER_NODE_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_MIXER_NODE_H_
 
+#include <memory>
+#include <optional>
+#include <string_view>
+
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
+
 namespace media_audio {
 
 // An ordinary node that wraps `MixerStage`.
