@@ -291,7 +291,7 @@ pub const ENOTSUP: ErrnoCode = EOPNOTSUPP;
 /// Use `error!` instead if you want the `Errno` to be wrapped in an `Err`.
 macro_rules! errno {
     ($err:ident) => {
-        Errno::new(
+        crate::types::errno::Errno::new(
             crate::types::errno::$err,
             stringify!($err),
             None,
@@ -299,7 +299,7 @@ macro_rules! errno {
         )
     };
     ($err:ident, $context:expr) => {
-        Errno::new(
+        crate::types::errno::Errno::new(
             crate::types::errno::$err,
             stringify!($err),
             Some($context.to_string()),
