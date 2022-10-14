@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/input/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <fuchsia/ui/input3/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/zx/status.h>
 
 #include <virtio/input.h>
 
-#include "fuchsia/input/cpp/fidl.h"
-#include "fuchsia/logger/cpp/fidl.h"
-#include "fuchsia/ui/input3/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/input.h"
 #include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
