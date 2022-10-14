@@ -8,6 +8,7 @@ group("device_tests") {
     ":virtio_balloon_test",
     ":virtio_block_test",
     ":virtio_console_test",
+    ":virtio_gpu_test",
   ]
 }
 
@@ -86,5 +87,25 @@ source_set("virtio_console_test") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
+source_set("virtio_gpu_test") {
+  testonly = true
+
+  sources = [ "virtio_gpu_test.cc" ]
+
+  deps = [
+    ":test_with_device",
+    ":virtio_queue_fake",
+    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/ui/testing/ui_test_manager",
+    "//zircon/system/ulib/virtio",
   ]
 }
