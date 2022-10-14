@@ -22,6 +22,8 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<error-catalog/_fi-0006.md>>
 
+<<error-catalog/_fi-0007.md>>
+
 <<error-catalog/_fi-0008.md>>
 
 <<error-catalog/_fi-0012.md>>

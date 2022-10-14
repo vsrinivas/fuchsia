@@ -10,6 +10,12 @@
 
 namespace {
 
+TEST(ParsingTests, BadUnexpectedToken) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0007.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedToken);
+}
+
 TEST(RecoverableParsingTests, BadRecoverAtEndOfFile) {
   TestLibrary library(R"FIDL(
 library example;
