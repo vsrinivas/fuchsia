@@ -730,9 +730,18 @@ impl SimpleAllocator {
         self.inner.lock().unwrap().info.layers.clone()
     }
 
-    /// Returns all the current owner byte limits.
+    /// Returns all the current owner byte limits (in pairs of `(owner_object_id, bytes)`).
     pub fn owner_byte_limits(&self) -> Vec<(u64, u64)> {
         self.inner.lock().unwrap().info.limit_bytes.iter().map(|(k, v)| (*k, *v)).collect()
+    }
+
+    /// Returns (allocated_bytes, byte_limit) for the given owner.
+    pub fn owner_allocation_info(&self, owner_object_id: u64) -> (u64, Option<u64>) {
+        let inner = self.inner.lock().unwrap();
+        (
+            inner.owner_bytes.get(&owner_object_id).map(|b| b.used_bytes()).unwrap_or(0u64),
+            inner.info.limit_bytes.get(&owner_object_id).copied(),
+        )
     }
 
     fn needs_sync(&self) -> bool {

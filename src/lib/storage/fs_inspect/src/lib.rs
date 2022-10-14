@@ -14,11 +14,16 @@ use {
     async_trait::async_trait,
     fuchsia_inspect::{LazyNode, Node},
     futures::FutureExt,
-    std::{string::String, sync::Weak},
+    std::{
+        collections::HashMap,
+        string::String,
+        sync::{Mutex, Weak},
+    },
 };
 
 const INFO_NODE_NAME: &'static str = "fs.info";
 const USAGE_NODE_NAME: &'static str = "fs.usage";
+const VOLUMES_NODE_NAME: &'static str = "fs.volumes";
 
 /// Trait that Rust filesystems should implement to expose required Inspect data.
 ///
@@ -30,11 +35,19 @@ pub trait FsInspect {
     async fn get_usage_data(&self) -> UsageData;
 }
 
+/// Trait that Rust filesystems which are multi-volume should implement for each volume.
+#[async_trait]
+pub trait FsInspectVolume {
+    async fn get_volume_data(&self) -> VolumeData;
+}
+
 /// Maintains ownership of the various inspect nodes/properties. Will be removed from the root node
 /// they were attached to when dropped.
 pub struct FsInspectTree {
     _info: LazyNode,
     _usage: LazyNode,
+    volumes_node: Node,
+    volumes: Mutex<HashMap<String, LazyNode>>,
 }
 
 impl FsInspectTree {
@@ -67,7 +80,41 @@ impl FsInspectTree {
             .boxed()
         });
 
-        FsInspectTree { _info: info_node, _usage: usage_node }
+        let volumes_node = root.create_child(VOLUMES_NODE_NAME);
+
+        FsInspectTree {
+            _info: info_node,
+            _usage: usage_node,
+            volumes_node,
+            volumes: Mutex::new(HashMap::new()),
+        }
+    }
+
+    /// Registers a provider for per-volume data.  If `volume` is dropped, the node will remain
+    /// present in the inspect tree but yield no data, until `Self::unregister_volume` is called.
+    pub fn register_volume(
+        &self,
+        name: String,
+        volume: Weak<dyn FsInspectVolume + Send + Sync + 'static>,
+    ) {
+        self.volumes.lock().unwrap().insert(
+            name.clone(),
+            self.volumes_node.create_lazy_child(name, move || {
+                let volume = volume.clone();
+                async move {
+                    let inspector = fuchsia_inspect::Inspector::new();
+                    if let Some(volume) = volume.upgrade() {
+                        volume.get_volume_data().await.record_into(inspector.root());
+                    }
+                    Ok(inspector)
+                }
+                .boxed()
+            }),
+        );
+    }
+
+    pub fn unregister_volume(&self, name: String) {
+        self.volumes.lock().unwrap().remove(&name);
     }
 }
 
@@ -84,25 +131,16 @@ pub struct InfoData {
 }
 
 impl InfoData {
-    const ID_KEY: &'static str = "id";
-    const FS_TYPE_KEY: &'static str = "type";
-    const NAME_KEY: &'static str = "name";
-    const VERSION_MAJOR_KEY: &'static str = "version_major";
-    const VERSION_MINOR_KEY: &'static str = "version_minor";
-    const BLOCK_SIZE: &'static str = "block_size";
-    const MAX_FILENAME_LENGTH: &'static str = "max_filename_length";
-    const OLDEST_VERSION_KEY: &'static str = "oldest_version";
-
     fn record_into(self, node: &Node) {
-        node.record_uint(Self::ID_KEY, self.id);
-        node.record_uint(Self::FS_TYPE_KEY, self.fs_type);
-        node.record_string(Self::NAME_KEY, self.name);
-        node.record_uint(Self::VERSION_MAJOR_KEY, self.version_major);
-        node.record_uint(Self::VERSION_MINOR_KEY, self.version_minor);
-        node.record_uint(Self::BLOCK_SIZE, self.block_size);
-        node.record_uint(Self::MAX_FILENAME_LENGTH, self.max_filename_length);
+        node.record_uint("id", self.id);
+        node.record_uint("type", self.fs_type);
+        node.record_string("name", self.name);
+        node.record_uint("version_major", self.version_major);
+        node.record_uint("version_minor", self.version_minor);
+        node.record_uint("block_size", self.block_size);
+        node.record_uint("max_filename_length", self.max_filename_length);
         if self.oldest_version.is_some() {
-            node.record_string(Self::OLDEST_VERSION_KEY, self.oldest_version.as_ref().unwrap());
+            node.record_string("oldest_version", self.oldest_version.as_ref().unwrap());
         }
     }
 }
@@ -116,15 +154,29 @@ pub struct UsageData {
 }
 
 impl UsageData {
-    const TOTAL_BYTES_KEY: &'static str = "total_bytes";
-    const USED_BYTES_KEY: &'static str = "used_bytes";
-    const TOTAL_NODES_KEY: &'static str = "total_nodes";
-    const USED_NODES_KEY: &'static str = "used_nodes";
-
     fn record_into(self, node: &Node) {
-        node.record_uint(Self::TOTAL_BYTES_KEY, self.total_bytes);
-        node.record_uint(Self::USED_BYTES_KEY, self.used_bytes);
-        node.record_uint(Self::TOTAL_NODES_KEY, self.total_nodes);
-        node.record_uint(Self::USED_NODES_KEY, self.used_nodes);
+        node.record_uint("total_bytes", self.total_bytes);
+        node.record_uint("used_bytes", self.used_bytes);
+        node.record_uint("total_nodes", self.total_nodes);
+        node.record_uint("used_nodes", self.used_nodes);
+    }
+}
+
+/// fs.volume/{name} roperties
+pub struct VolumeData {
+    pub used_bytes: u64,
+    pub bytes_limit: Option<u64>,
+    pub used_nodes: u64,
+    pub encrypted: bool,
+}
+
+impl VolumeData {
+    fn record_into(self, node: &Node) {
+        node.record_uint("used_bytes", self.used_bytes);
+        if let Some(bytes_limit) = self.bytes_limit {
+            node.record_uint("bytes_limit", bytes_limit);
+        }
+        node.record_uint("used_nodes", self.used_nodes);
+        node.record_bool("encrypted", self.encrypted);
     }
 }

@@ -19,12 +19,11 @@ use {
             pager::{Pager, PagerExecutor},
             vmo_data_buffer::VmoDataBuffer,
         },
-        serialized_types::LATEST_VERSION,
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
     fidl_fuchsia_io as fio,
-    fs_inspect::{FsInspect, InfoData, UsageData},
+    fs_inspect::{FsInspectVolume, VolumeData},
     fuchsia_async as fasync,
     futures::{self, channel::oneshot, FutureExt},
     std::{
@@ -36,7 +35,6 @@ use {
 };
 
 pub const DEFAULT_FLUSH_PERIOD: Duration = Duration::from_secs(20);
-const FXFS_INFO_NAME: &'static str = "fxfs";
 
 /// FxVolume represents an opened volume. It is also a (weak) cache for all opened Nodes within the
 /// volume.
@@ -256,30 +254,13 @@ impl AsRef<ObjectStore> for FxVolume {
 }
 
 #[async_trait]
-impl FsInspect for FxVolume {
-    fn get_info_data(&self) -> InfoData {
-        InfoData {
-            id: self.fs_id,
-            fs_type: fidl_fuchsia_fs::VfsType::Fxfs.into_primitive().into(),
-            name: FXFS_INFO_NAME.into(),
-            version_major: LATEST_VERSION.major.into(),
-            version_minor: LATEST_VERSION.minor.into(),
-            block_size: self.store.block_size(),
-            max_filename_length: fio::MAX_FILENAME,
-            // TODO(fxbug.dev/93770): Determine how to report oldest on-disk version if required.
-            oldest_version: None,
-        }
-    }
-
-    async fn get_usage_data(&self) -> UsageData {
-        let info = self.store.filesystem().get_info();
+impl FsInspectVolume for FxVolume {
+    async fn get_volume_data(&self) -> VolumeData {
         let object_count = self.store().object_count();
-        UsageData {
-            total_bytes: info.total_bytes,
-            used_bytes: info.used_bytes,
-            total_nodes: TOTAL_NODES,
-            used_nodes: object_count,
-        }
+        let (used_bytes, bytes_limit) =
+            self.store.filesystem().allocator().owner_allocation_info(self.store.store_object_id());
+        let encrypted = self.store().crypt().is_some();
+        VolumeData { bytes_limit, used_bytes, used_nodes: object_count, encrypted }
     }
 }
 

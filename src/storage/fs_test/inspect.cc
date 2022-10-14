@@ -21,6 +21,7 @@ namespace {
 using namespace ::testing;
 using namespace inspect::testing;
 
+using inspect::BoolPropertyValue;
 using inspect::StringPropertyValue;
 using inspect::UintPropertyValue;
 
@@ -125,7 +126,7 @@ fs_inspect::UsageData GetUsageProperties(const inspect::NodeValue& usage_node) {
   };
 }
 
-// Parse the given fs.volume node properties into a corresponding FvmData struct.
+// Parse the given fs.fvm node properties into a corresponding FvmData struct.
 // Properties within the given node must both exist and be the correct type.
 fs_inspect::FvmData GetFvmProperties(const inspect::NodeValue& fvm_node) {
   using fs_inspect::FvmData;
@@ -142,6 +143,20 @@ fs_inspect::FvmData GetFvmProperties(const inspect::NodeValue& fvm_node) {
           },
       .out_of_space_events =
           fvm_node.get_property<UintPropertyValue>(FvmData::kPropOutOfSpaceEvents)->value(),
+  };
+}
+
+// Parse the given fs.volumes.{name} node properties into a corresponding VolumeData struct.
+// Properties within the given node must both exist and be the correct type.
+fs_inspect::VolumeData GetVolumeProperties(const inspect::NodeValue& volume_node) {
+  using fs_inspect::VolumeData;
+  return VolumeData{
+      .used_bytes =
+          volume_node.get_property<UintPropertyValue>(VolumeData::kPropVolumeUsedBytes)->value(),
+      .used_nodes =
+          volume_node.get_property<UintPropertyValue>(VolumeData::kPropVolumeUsedNodes)->value(),
+      .encrypted =
+          volume_node.get_property<BoolPropertyValue>(VolumeData::kPropVolumeEncrypted)->value(),
   };
 }
 
@@ -199,6 +214,14 @@ class InspectTest : public FilesystemTest {
     return GetFvmProperties(Root().GetByPath({fs_inspect::kFvmNodeName})->node());
   }
 
+  // Obtains FvmData containing values from the latest snapshot's fs.volumes.`volume_name` node.
+  // All calls to UpdateAndValidateSnapshot() must be wrapped by ASSERT_NO_FATAL_FAILURE,
+  // otherwise this function can dereference a nullptr causing a segfault.
+  fs_inspect::VolumeData GetVolumeData(const char* volume_name) const {
+    return GetVolumeProperties(
+        Root().GetByPath({fs_inspect::kVolumesNodeName, volume_name})->node());
+  }
+
  private:
   // Last snapshot taken of the inspect tree.
   inspect::Hierarchy snapshot_ = {};
@@ -222,12 +245,19 @@ TEST_P(InspectTest, ValidateInfoNode) {
 // Validate values in the fs.usage node.
 TEST_P(InspectTest, ValidateUsageNode) {
   fs_inspect::UsageData usage_data = GetUsageData();
-  EXPECT_GT(usage_data.total_nodes, 0u);
-  EXPECT_GT(usage_data.total_bytes, 0u);
   EXPECT_LE(usage_data.total_bytes,
             fs().options().device_block_count * fs().options().device_block_size);
+
+  // Multi-volume systems will have further functionality exercised in ValidateVolumeNode (where the
+  // bytes/nodes are accounted for).
+  if (fs().GetTraits().is_multi_volume) {
+    return;
+  }
+
   uint64_t orig_used_bytes = usage_data.used_bytes;
   uint64_t orig_used_nodes = usage_data.used_nodes;
+  EXPECT_GT(usage_data.total_nodes, 0u);
+  EXPECT_GT(usage_data.total_bytes, 0u);
 
   // Write a file to disk.
   std::string test_filename = GetPath("test_file");
@@ -271,6 +301,36 @@ TEST_P(InspectTest, ValidateFvmNode) {
 
   // We do not set a volume size limit in fs_test currently, so this should always be zero.
   EXPECT_EQ(fvm_data.size_info.size_limit_bytes, 0u);
+}
+
+// Validate values in the fs.volumes/{name} nodes.
+TEST_P(InspectTest, ValidateVolumeNode) {
+  if (!fs().GetTraits().is_multi_volume) {
+    return;
+  }
+  fs_inspect::VolumeData volume_data = GetVolumeData("default");
+  EXPECT_EQ(volume_data.bytes_limit, std::nullopt);
+  EXPECT_TRUE(volume_data.encrypted);
+  uint64_t orig_used_bytes = volume_data.used_bytes;
+  uint64_t orig_used_nodes = volume_data.used_nodes;
+
+  // Write a file to disk.
+  std::string test_filename = GetPath("test_file");
+  const size_t kDataWriteSize = 128ul * 1024ul;
+
+  fbl::unique_fd fd(open(test_filename.c_str(), O_CREAT | O_RDWR, 0666));
+  ASSERT_TRUE(fd);
+  std::vector<uint8_t> data(kDataWriteSize);
+  ASSERT_EQ(write(fd.get(), data.data(), data.size()), static_cast<ssize_t>(data.size()));
+  ASSERT_EQ(fsync(fd.get()), 0);
+
+  // Take a new inspect snapshot, ensure used_bytes/used_nodes are updated correctly.
+  ASSERT_NO_FATAL_FAILURE(UpdateAndValidateSnapshot());
+  volume_data = GetVolumeData("default");
+  // Used bytes should increase by at least the amount of written data, and we should now use
+  // at least one more inode than before.
+  EXPECT_GE(volume_data.used_bytes, orig_used_bytes + kDataWriteSize);
+  EXPECT_GE(volume_data.used_nodes, orig_used_nodes + 1);
 }
 
 std::vector<TestFilesystemOptions> GetTestCombinations() {

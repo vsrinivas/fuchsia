@@ -30,7 +30,7 @@ use {
         CheckOptions, CryptMarker, CryptProxy, MountOptions, VolumeRequest, VolumeRequestStream,
     },
     fidl_fuchsia_io as fio,
-    fs_inspect::{FsInspect, FsInspectTree},
+    fs_inspect::{FsInspectTree, FsInspectVolume},
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, Status},
     futures::TryStreamExt,
@@ -54,29 +54,29 @@ pub struct VolumesDirectory {
     root_volume: RootVolume,
     directory_node: Arc<vfs::directory::immutable::Simple>,
     mounted_volumes: Mutex<HashMap<u64, FxVolumeAndRoot>>,
-    // TODO(fxbug.dev/99792): The inspect hierarchy assumes a single volume.  For now, we bind
-    // _inspect_tree to the first volume which is created or mounted, but eventually it should cover
-    // all volumes.
-    _inspect_tree: Mutex<Option<FsInspectTree>>,
+    inspect_tree: Weak<FsInspectTree>,
 }
 
 impl VolumesDirectory {
     /// Fills the VolumesDirectory with all volumes in |root_volume|.  No volume is opened during
     /// this.
-    pub async fn new(root_volume: RootVolume) -> Result<Arc<Self>, Error> {
+    pub async fn new(
+        root_volume: RootVolume,
+        inspect_tree: Weak<FsInspectTree>,
+    ) -> Result<Arc<Self>, Error> {
         let layer_set = root_volume.volume_directory().store().tree().layer_set();
         let mut merger = layer_set.merger();
         let me = Arc::new(Self {
             root_volume,
             directory_node: vfs::directory::immutable::simple(),
             mounted_volumes: Mutex::new(HashMap::new()),
-            _inspect_tree: Mutex::new(None),
+            inspect_tree,
         });
         let mut iter = me.root_volume.volume_directory().iter(&mut merger).await?;
         while let Some((name, store_id, object_descriptor)) = iter.get() {
             ensure!(*object_descriptor == ObjectDescriptor::Volume, FxfsError::Inconsistent);
 
-            me.add_directory_entry(name, store_id);
+            me.add_directory_entry(&name, store_id);
 
             iter.advance().await?;
         }
@@ -92,14 +92,17 @@ impl VolumesDirectory {
 
     fn add_directory_entry(self: &Arc<Self>, name: &str, store_id: u64) {
         let weak = Arc::downgrade(self);
+        let name_owned = Arc::new(name.to_string());
         self.directory_node
             .add_entry(
                 name,
                 vfs::service::host(move |requests| {
                     let weak = weak.clone();
+                    let name = name_owned.clone();
                     async move {
                         if let Some(me) = weak.upgrade() {
-                            let _ = me.handle_volume_requests(requests, store_id).await;
+                            let _ =
+                                me.handle_volume_requests(name.as_ref(), requests, store_id).await;
                         }
                     }
                 }),
@@ -125,7 +128,8 @@ impl VolumesDirectory {
             matches!(self.directory_node.get_entry(name), Err(Status::NOT_FOUND)),
             FxfsError::AlreadyExists
         );
-        let volume = self.mount_store(self.root_volume.new_volume(name, crypt).await?).await?;
+        let volume =
+            self.mount_store(name, self.root_volume.new_volume(name, crypt).await?).await?;
         self.add_directory_entry(name, volume.volume().store().store_object_id());
         Ok(volume)
     }
@@ -149,12 +153,13 @@ impl VolumesDirectory {
             !self.mounted_volumes.lock().unwrap().contains_key(&store.store_object_id()),
             FxfsError::AlreadyBound
         );
-        self.mount_store(store).await
+        self.mount_store(name, store).await
     }
 
     // Mounts the given store.  A lock *must* be held on the volume directory.
     async fn mount_store(
         self: &Arc<Self>,
+        name: &str,
         store: Arc<ObjectStore>,
     ) -> Result<FxVolumeAndRoot, Error> {
         let store_id = store.store_object_id();
@@ -163,12 +168,12 @@ impl VolumesDirectory {
         let volume = FxVolumeAndRoot::new(store, unique_id.get_koid().unwrap().raw_koid()).await?;
         volume.volume().start_flush_task(DEFAULT_FLUSH_PERIOD);
         self.mounted_volumes.lock().unwrap().insert(store_id, volume.clone());
-        self._inspect_tree.lock().unwrap().get_or_insert_with(|| {
-            FsInspectTree::new(
-                Arc::downgrade(volume.volume()) as Weak<dyn FsInspect + Send + Sync>,
-                &crate::metrics::FXFS_ROOT_NODE.lock().unwrap(),
+        if let Some(inspect) = self.inspect_tree.upgrade() {
+            inspect.register_volume(
+                name.to_string(),
+                Arc::downgrade(volume.volume()) as Weak<dyn FsInspectVolume + Send + Sync>,
             )
-        });
+        }
         Ok(volume)
     }
 
@@ -197,6 +202,9 @@ impl VolumesDirectory {
             !self.mounted_volumes.lock().unwrap().contains_key(&object_id),
             FxfsError::AlreadyBound
         );
+        if let Some(inspect) = self.inspect_tree.upgrade() {
+            inspect.unregister_volume(name.to_string());
+        }
         self.root_volume.delete_volume(name).await?;
         // This shouldn't fail because the entry should exist.
         self.directory_node.remove_entry(name, /* must_be_directory: */ false).unwrap();
@@ -307,6 +315,7 @@ impl VolumesDirectory {
 
     async fn handle_volume_requests(
         self: &Arc<Self>,
+        name: &str,
         mut requests: VolumeRequestStream,
         store_id: u64,
     ) -> Result<(), Error> {
@@ -319,12 +328,13 @@ impl VolumesDirectory {
                     }),
                 )?,
                 VolumeRequest::Mount { responder, outgoing_directory, options } => responder.send(
-                    &mut self.handle_mount(store_id, outgoing_directory, options).await.map_err(
-                        |e| {
-                            error!(?e, store_id, "Failed to mount volume");
+                    &mut self
+                        .handle_mount(name, store_id, outgoing_directory, options)
+                        .await
+                        .map_err(|e| {
+                            error!(?e, name, store_id, "Failed to mount volume");
                             map_to_raw_status(e)
-                        },
-                    ),
+                        }),
                 )?,
                 VolumeRequest::SetLimit { responder, bytes } => responder.send(
                     &mut self.handle_set_limit(store_id, bytes).await.map_err(|e| {
@@ -363,6 +373,7 @@ impl VolumesDirectory {
 
     async fn handle_mount(
         self: &Arc<Self>,
+        name: &str,
         store_id: u64,
         outgoing_directory: ServerEnd<fio::DirectoryMarker>,
         options: MountOptions,
@@ -389,7 +400,7 @@ impl VolumesDirectory {
         };
 
         let volume =
-            self.mount_store(self.root_volume.volume_from_id(store_id, crypt).await?).await?;
+            self.mount_store(name, self.root_volume.volume_from_id(store_id, crypt).await?).await?;
 
         self.serve_volume(&volume, outgoing_directory).await
     }
@@ -468,7 +479,10 @@ mod tests {
         fuchsia_component::client::connect_to_protocol_at_dir_svc,
         fuchsia_zircon::Status,
         futures::join,
-        std::{sync::Arc, time::Duration},
+        std::{
+            sync::{Arc, Weak},
+            time::Duration,
+        },
         storage_device::{fake_device::FakeDevice, DeviceHolder},
         vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
     };
@@ -478,7 +492,9 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let crypt = Arc::new(InsecureCrypt::new()) as Arc<dyn Crypt>;
         {
@@ -496,7 +512,9 @@ mod tests {
         device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let error = volumes_directory
             .create_volume("encrypted", Some(crypt.clone()))
@@ -511,7 +529,9 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let crypt = Arc::new(InsecureCrypt::new()) as Arc<dyn Crypt>;
         let volume_id = {
@@ -529,7 +549,9 @@ mod tests {
         device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         {
             let vol = volumes_directory
@@ -549,7 +571,9 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         {
             let vol = volumes_directory
@@ -566,7 +590,9 @@ mod tests {
         device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let error = volumes_directory
             .create_volume("unencrypted", None)
@@ -585,7 +611,9 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let volume_id = {
             let vol = volumes_directory
@@ -602,7 +630,9 @@ mod tests {
         device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         {
             let vol = volumes_directory
@@ -622,7 +652,9 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         // Add an encrypted volume...
         let crypt = Arc::new(InsecureCrypt::new()) as Arc<dyn Crypt>;
@@ -648,7 +680,9 @@ mod tests {
         device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let readdir = |dir: Arc<fio::DirectoryProxy>| async move {
             let status = dir.rewind().await.expect("FIDL call failed");
@@ -699,7 +733,9 @@ mod tests {
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let crypt = Arc::new(InsecureCrypt::new()) as Arc<dyn Crypt>;
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
         volumes_directory
             .create_volume(VOLUME_NAME, Some(crypt.clone()))
             .await
@@ -722,7 +758,9 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let crypt = Arc::new(InsecureCrypt::new()) as Arc<dyn Crypt>;
         let store_id = {
@@ -839,7 +877,9 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let crypt = Arc::new(InsecureCrypt::new()) as Arc<dyn Crypt>;
         let vol = volumes_directory
@@ -869,7 +909,7 @@ mod tests {
         {
             let filesystem = FxFilesystem::new_empty(device).await.unwrap();
             let volumes_directory =
-                VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap())
+                VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
                     .await
                     .unwrap();
 
@@ -913,7 +953,7 @@ mod tests {
             let filesystem = FxFilesystem::open(device as DeviceHolder).await.unwrap();
             fsck(filesystem.clone()).await.expect("Fsck");
             let volumes_directory =
-                VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap())
+                VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
                     .await
                     .unwrap();
             {
@@ -1001,7 +1041,9 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(BLOCK_SIZE.try_into().unwrap(), 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let vol = VolumeInfo::new(&volumes_directory, "foo").await;
         vol.volume_proxy.set_limit(BYTES_LIMIT).await.unwrap().expect("To set limits");
@@ -1067,7 +1109,9 @@ mod tests {
             DeviceHolder::new(FakeDevice::new(BLOCK_SIZE.try_into().unwrap(), BLOCK_COUNT));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let volumes_directory =
-            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap()).await.unwrap();
+            VolumesDirectory::new(root_volume(filesystem.clone()).await.unwrap(), Weak::new())
+                .await
+                .unwrap();
 
         let a = VolumeInfo::new(&volumes_directory, "foo").await;
         let b = VolumeInfo::new(&volumes_directory, "bar").await;

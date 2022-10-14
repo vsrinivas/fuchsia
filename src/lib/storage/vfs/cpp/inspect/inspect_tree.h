@@ -34,6 +34,7 @@ namespace fs_inspect {
 constexpr char kInfoNodeName[] = "fs.info";
 constexpr char kUsageNodeName[] = "fs.usage";
 constexpr char kFvmNodeName[] = "fs.fvm";
+constexpr char kVolumesNodeName[] = "fs.volumes";
 constexpr char kDetailNodeName[] = "fs.detail";
 
 // Callbacks that a filesystem must provide to expose a standard inspect hierarchy.

@@ -64,7 +64,7 @@ struct UsageData {
   static constexpr char kPropUsedNodes[] = "used_nodes";
 };
 
-// fs.fvm properties
+// fs.fvm properties (supported only for FVM-enabled filesystems)
 struct FvmData {
   struct SizeInfo {
     // Current size of the volume that FVM has allocated for the filesystem.
@@ -88,6 +88,21 @@ struct FvmData {
   static constexpr char kPropSizeLimitBytes[] = "size_limit_bytes";
   static constexpr char kPropAvailableSpaceBytes[] = "available_space_bytes";
   static constexpr char kPropOutOfSpaceEvents[] = "out_of_space_events";
+};
+
+// fs.volumes/{name} properties (supported only for multi-volume filesystems)
+struct VolumeData {
+  uint64_t used_bytes;
+  std::optional<uint64_t> bytes_limit;
+  uint64_t used_nodes;
+  bool encrypted;
+
+  // Inspect Property Names
+
+  static constexpr char kPropVolumeUsedBytes[] = "used_bytes";
+  static constexpr char kPropVolumeBytesLimit[] = "bytes_limit";
+  static constexpr char kPropVolumeUsedNodes[] = "used_nodes";
+  static constexpr char kPropVolumeEncrypted[] = "encrypted";
 };
 
 namespace detail {

@@ -4,16 +4,21 @@
 
 use {
     crate::{
-        filesystem::{mkfs, FxFilesystem, OpenFxFilesystem, OpenOptions},
+        filesystem::{mkfs, Filesystem, FxFilesystem, OpenFxFilesystem, OpenOptions},
         fsck,
         log::*,
         object_store::volume::root_volume,
         platform::fuchsia::{
             errors::map_to_status, pager::PagerExecutor, volumes_directory::VolumesDirectory,
         },
+        serialized_types::LATEST_VERSION,
     },
     anyhow::{Context, Error},
-    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, RequestStream},
+    async_trait::async_trait,
+    fidl::{
+        endpoints::{ClientEnd, DiscoverableProtocolMarker, RequestStream},
+        AsHandleRef,
+    },
     fidl_fuchsia_fs::{AdminMarker, AdminRequest, AdminRequestStream},
     fidl_fuchsia_fs_startup::{
         CheckOptions, StartOptions, StartupMarker, StartupRequest, StartupRequestStream,
@@ -22,13 +27,14 @@ use {
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
+    fs_inspect::{FsInspect, FsInspectTree, InfoData, UsageData},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::TryStreamExt,
     inspect_runtime::service::{TreeServerSendPreference, TreeServerSettings},
     remote_block_device::RemoteBlockClient,
     std::ops::Deref,
-    std::sync::Arc,
+    std::sync::{Arc, Weak},
     storage_device::{block_device::BlockDevice, DeviceHolder},
     vfs::{
         directory::{entry::DirectoryEntry, helper::DirectlyMutable},
@@ -36,6 +42,8 @@ use {
         path::Path,
     },
 };
+
+const FXFS_INFO_NAME: &'static str = "fxfs";
 
 pub fn map_to_raw_status(e: Error) -> zx::sys::zx_status_t {
     map_to_status(e).into_raw()
@@ -65,19 +73,73 @@ pub struct Component {
     outgoing_dir: Arc<vfs::directory::immutable::Simple>,
 }
 
+// Wrapper type to add `FsInspect` support to an `OpenFxFilesystem`.
+struct InspectedFxFilesystem(OpenFxFilesystem, /*fs_id=*/ u64);
+
+impl From<OpenFxFilesystem> for InspectedFxFilesystem {
+    fn from(fs: OpenFxFilesystem) -> Self {
+        Self(fs, zx::Event::create().unwrap().get_koid().unwrap().raw_koid())
+    }
+}
+
+impl Deref for InspectedFxFilesystem {
+    type Target = Arc<FxFilesystem>;
+    fn deref(&self) -> &Self::Target {
+        &self.0.deref()
+    }
+}
+
+#[async_trait]
+impl FsInspect for InspectedFxFilesystem {
+    fn get_info_data(&self) -> InfoData {
+        InfoData {
+            id: self.1,
+            fs_type: fidl_fuchsia_fs::VfsType::Fxfs.into_primitive().into(),
+            name: FXFS_INFO_NAME.into(),
+            version_major: LATEST_VERSION.major.into(),
+            version_minor: LATEST_VERSION.minor.into(),
+            block_size: self.0.block_size() as u64,
+            max_filename_length: fio::MAX_FILENAME,
+            // TODO(fxbug.dev/93770): Determine how to report oldest on-disk version if required.
+            oldest_version: None,
+        }
+    }
+
+    async fn get_usage_data(&self) -> UsageData {
+        let info = self.0.get_info();
+        UsageData {
+            total_bytes: info.total_bytes,
+            used_bytes: info.used_bytes,
+            // TODO(fxbug.dev/94075): Should these be moved to per-volume nodes?
+            total_nodes: 0,
+            used_nodes: 0,
+        }
+    }
+}
+
+struct RunningState {
+    // We have to wrap this in an Arc, even though it itself basically just wraps an Arc, so that
+    // FsInspectTree can reference `fs` as a Weak<dyn FsInspect>`.
+    fs: Arc<InspectedFxFilesystem>,
+    volumes: Arc<VolumesDirectory>,
+    _inspect_tree: Arc<FsInspectTree>,
+}
+
 enum State {
     ComponentStarted,
-    Running(OpenFxFilesystem, Arc<VolumesDirectory>),
+    Running(RunningState),
 }
 
 impl State {
     async fn stop(&mut self, outgoing_dir: &vfs::directory::immutable::Simple) {
-        if let State::Running(fs, volumes) = std::mem::replace(self, State::ComponentStarted) {
+        if let State::Running(RunningState { fs, volumes, .. }) =
+            std::mem::replace(self, State::ComponentStarted)
+        {
             info!("Stopping Fxfs runtime; remaining connections will be forcibly closed");
             let _ = outgoing_dir
                 .remove_entry_impl("volumes".into(), /* must_be_directory: */ false);
             volumes.terminate().await;
-            let _ = fs.close().await;
+            let _ = fs.deref().close().await;
         }
     }
 }
@@ -217,7 +279,12 @@ impl Component {
             OpenOptions::read_only(options.read_only),
         )
         .await?;
-        let volumes = VolumesDirectory::new(root_volume(fs.clone()).await?).await?;
+        let root_volume = root_volume(fs.clone()).await?;
+        let fs: Arc<InspectedFxFilesystem> = Arc::new(fs.into());
+        let weak_fs = Arc::downgrade(&fs) as Weak<dyn FsInspect + Send + Sync>;
+        let inspect_tree =
+            Arc::new(FsInspectTree::new(weak_fs, &crate::metrics::FXFS_ROOT_NODE.lock().unwrap()));
+        let volumes = VolumesDirectory::new(root_volume, Arc::downgrade(&inspect_tree)).await?;
 
         self.outgoing_dir.add_entry_impl(
             "volumes".to_string(),
@@ -225,7 +292,7 @@ impl Component {
             /* overwrite: */ true,
         )?;
 
-        *state = State::Running(fs, volumes);
+        *state = State::Running(RunningState { fs, volumes, _inspect_tree: inspect_tree });
         info!("Mounted");
         Ok(())
     }
@@ -262,7 +329,7 @@ impl Component {
                 let fs = fs_container.clone();
                 (Some(fs_container), fs)
             }
-            State::Running(ref fs, ..) => (None, fs.deref().clone()),
+            State::Running(RunningState { ref fs, .. }) => (None, fs.deref().deref().clone()),
         };
         let res = fsck::fsck(fs.clone()).await;
         if let Some(fs_container) = fs_container {
@@ -300,12 +367,13 @@ impl Component {
     }
 
     async fn handle_volumes_requests(&self, mut stream: VolumesRequestStream) {
-        let volumes = if let State::Running(_, volumes) = &*self.state.lock().await {
-            volumes.clone()
-        } else {
-            let _ = stream.into_inner().0.shutdown_with_epitaph(zx::Status::BAD_STATE);
-            return;
-        };
+        let volumes =
+            if let State::Running(RunningState { ref volumes, .. }) = &*self.state.lock().await {
+                volumes.clone()
+            } else {
+                let _ = stream.into_inner().0.shutdown_with_epitaph(zx::Status::BAD_STATE);
+                return;
+            };
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
                 VolumesRequest::Create { name, crypt, outgoing_directory, responder } => {
