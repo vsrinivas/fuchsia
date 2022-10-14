@@ -7,14 +7,12 @@ use {
     assert_matches::assert_matches,
     cobalt_client::traits::AsEventCodes,
     cobalt_sw_delivery_registry as metrics,
-    fidl::endpoints::create_endpoints,
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{
         serve::{responder, HttpResponder},
         Package, PackageBuilder, RepositoryBuilder,
     },
-    fuchsia_zircon::Status,
     lib::{make_repo, make_repo_config, MountsBuilder, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH},
     serde_json::json,
     std::{net::Ipv4Addr, sync::Arc},
@@ -268,31 +266,6 @@ async fn resolve_duration_failure() {
     env.stop().await;
 }
 
-#[fuchsia::test]
-async fn resolve_duration_font_test_failure() {
-    let env = TestEnvBuilder::new().build().await;
-    let (_, server) = create_endpoints().unwrap();
-    assert_eq!(
-        env.proxies
-            .font_resolver
-            .resolve("fuchsia-pkg://example.com/some-nonexistent-pkg", server)
-            .await
-            .unwrap()
-            .unwrap_err(),
-        Status::NOT_FOUND.into_raw()
-    );
-    assert_integer_events(
-        &env,
-        metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID,
-        vec![(
-            metrics::ResolveDurationMigratedMetricDimensionResult::Failure,
-            metrics::ResolveDurationMigratedMetricDimensionResolverType::Font,
-        )],
-    )
-    .await;
-    env.stop().await;
-}
-
 // Fetching one blob successfully should emit one success fetch blob event.
 #[fuchsia::test]
 async fn pkg_resolver_fetch_blob_success() {
@@ -419,43 +392,6 @@ async fn update_tuf_client_error() {
         vec![metrics::UpdateTufClientMigratedMetricDimensionResult::MissingMetadata],
     )
     .await;
-}
-
-#[fuchsia::test]
-async fn font_resolver_is_font_package_check_not_font() {
-    let env = TestEnvBuilder::new().build().await;
-    let repo =
-        Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
-    let served_repository = repo.server().start().unwrap();
-    let () = env
-        .proxies
-        .repo_manager
-        .add(
-            served_repository.make_repo_config("fuchsia-pkg://example.com".parse().unwrap()).into(),
-        )
-        .await
-        .unwrap()
-        .unwrap();
-
-    // No font packages have been registered with the font resolver, so resolves of any packages
-    // (existing or not) will fail with NOT_FOUND and emit an event with the NotFont dimension.
-    let (_, server) = create_endpoints().unwrap();
-    assert_eq!(
-        env.proxies
-            .font_resolver
-            .resolve("fuchsia-pkg://example.com/some-nonexistent-pkg", server)
-            .await
-            .unwrap()
-            .unwrap_err(),
-        Status::NOT_FOUND.into_raw()
-    );
-
-    env.assert_count_events(
-        metrics::IS_FONT_PACKAGE_CHECK_MIGRATED_METRIC_ID,
-        vec![metrics::IsFontPackageCheckMigratedMetricDimensionResult::NotFont],
-    )
-    .await;
-    env.stop().await;
 }
 
 #[fuchsia::test]

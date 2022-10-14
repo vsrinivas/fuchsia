@@ -14,10 +14,10 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_pkg::{
-        self as fpkg, CupMarker, CupProxy, ExperimentToggle as Experiment, FontResolverMarker,
-        FontResolverProxy, GetInfoError, PackageCacheMarker, PackageResolverAdminMarker,
-        PackageResolverAdminProxy, PackageResolverMarker, PackageResolverProxy,
-        RepositoryManagerMarker, RepositoryManagerProxy, WriteError,
+        self as fpkg, CupMarker, CupProxy, ExperimentToggle as Experiment, GetInfoError,
+        PackageCacheMarker, PackageResolverAdminMarker, PackageResolverAdminProxy,
+        PackageResolverMarker, PackageResolverProxy, RepositoryManagerMarker,
+        RepositoryManagerProxy, WriteError,
     },
     fidl_fuchsia_pkg_ext::{
         self as pkg, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs,
@@ -750,7 +750,6 @@ pub struct Proxies {
     pub resolver: PackageResolverProxy,
     pub repo_manager: RepositoryManagerProxy,
     pub rewrite_engine: RewriteEngineProxy,
-    pub font_resolver: FontResolverProxy,
     pub cup: CupProxy,
 }
 
@@ -769,9 +768,6 @@ impl Proxies {
             rewrite_engine: instance
                 .connect_to_protocol_at_exposed_dir::<RewriteEngineMarker>()
                 .expect("connect to rewrite engine"),
-            font_resolver: instance
-                .connect_to_protocol_at_exposed_dir::<FontResolverMarker>()
-                .expect("connect to font resolver"),
             cup: instance
                 .connect_to_protocol_at_exposed_dir::<CupMarker>()
                 .expect("connect to cup"),

@@ -15,7 +15,6 @@
         {
             protocol: [
                 "fuchsia.pkg.Cup",
-                "fuchsia.pkg.FontResolver",
                 "fuchsia.pkg.PackageResolver",
                 "fuchsia.pkg.PackageResolverAdmin",
                 "fuchsia.pkg.RepositoryManager",
@@ -70,7 +69,6 @@
         {
             protocol: [
                 "fuchsia.pkg.Cup",
-                "fuchsia.pkg.FontResolver",
                 "fuchsia.pkg.PackageResolver",
                 "fuchsia.pkg.PackageResolverAdmin",
                 "fuchsia.pkg.RepositoryManager",
