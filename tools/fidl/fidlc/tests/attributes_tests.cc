@@ -1517,6 +1517,13 @@ type MyStruct = struct {};
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
+TEST(AttributesTests, BadInvalidLiteralWithRealSchema) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0065-c.test.fidl");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
+                                      fidl::ErrCouldNotResolveAttributeArg);
+}
+
 TEST(AttributesTests, GoodReferencedTypesWithSchema) {
   TestLibrary library(R"FIDL(
 library fidl.test;

@@ -1,0 +1,8 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.bad.fi0065b;
+
+const ONE uint8 = 0x0001;
+const TWO_FIFTY_SIX uint16 = 0x0100;
+const TWO_FIFTY_SEVEN uint8 = ONE | TWO_FIFTY_SIX;

@@ -152,7 +152,7 @@ constexpr UndocumentedErrorDef<63, flat::Name> ErrExpectedValueButGotType(
 constexpr UndocumentedErrorDef<64, flat::Name, flat::Name> ErrMismatchedNameTypeAssignment(
     "mismatched named type assignment: cannot define a constant or default value of type {} "
     "using a value of type {}");
-constexpr UndocumentedErrorDef<65, const flat::Constant *, const flat::Type *, const flat::Type *>
+constexpr ErrorDef<65, const flat::Constant *, const flat::Type *, const flat::Type *>
     ErrTypeCannotBeConvertedToType("{} (type {}) cannot be converted to type {}");
 constexpr ErrorDef<66, const flat::Constant *, const flat::Type *> ErrConstantOverflowsType(
     "{} overflows type {}");

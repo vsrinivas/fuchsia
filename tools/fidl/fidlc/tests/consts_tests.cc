@@ -69,11 +69,8 @@ const c bool = false;
 }
 
 TEST(ConstsTests, BadConstTestBoolWithString) {
-  TestLibrary library(R"FIDL(
-library example;
-
-const c bool = "foo";
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0065-a.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "\"foo\"");
@@ -628,13 +625,8 @@ const Result uint16 = MyBits.A | MyBits.B | MyBits.D;
 }
 
 TEST(ConstsTests, BadOrOperatorDifferentTypesTest) {
-  TestLibrary library(R"FIDL(
-library example;
-
-const one uint8 = 0x0001;
-const two_fifty_six uint16 = 0x0100;
-const two_fifty_seven uint8 = one | two_fifty_six;
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0065-b.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "uint8");
