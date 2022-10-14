@@ -59,13 +59,17 @@ impl<E: Environment> Manager<E> {
                 Ok(device) => device,
             };
 
+            tracing::info!(path = %device.topological_path(), "Matching device");
+
             match self.matcher.match_device(&mut device, &mut self.environment).await {
                 Ok(true) => {}
-                Ok(false) => {
-                    tracing::info!(path = %device.topological_path(), "Ignored device");
-                }
+                Ok(false) => tracing::info!(path = %device.topological_path(), "Ignored device"),
                 Err(e) => {
-                    tracing::error!(path = %device.topological_path(), "Failed to match device: {}", e);
+                    tracing::error!(
+                        path = %device.topological_path(),
+                        "Failed to match device: {}",
+                        e
+                    );
                 }
             }
         }

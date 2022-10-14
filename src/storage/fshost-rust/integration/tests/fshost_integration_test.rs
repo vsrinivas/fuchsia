@@ -34,16 +34,15 @@ async fn blobfs_and_data_mounted() {
         .build()
         .await;
 
-    fixture.dir("blob").describe_deprecated().await.expect("describe failed");
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
+    fixture.check_fs_type("data", data_fs_type()).await;
 
     let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
     fixture
         .dir("data")
         .open(fio::OpenFlags::RIGHT_READABLE, 0, "foo", server)
         .expect("open failed");
-    fixture.check_fs_type("data", data_fs_type()).await;
-    file.describe_deprecated().await.expect("describe failed");
+    file.get_attr().await.expect("get_attr failed");
 
     fixture.tear_down().await;
 }
@@ -55,7 +54,39 @@ async fn data_formatted() {
         .build()
         .await;
 
-    fixture.dir("data").describe_deprecated().await.expect("describe failed");
+    fixture.check_fs_type("data", data_fs_type()).await;
+
+    fixture.tear_down().await;
+}
+
+#[fuchsia::test]
+async fn data_mounted_no_zxcrypt() {
+    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+        .with_ramdisk()
+        .format_data()
+        .no_zxcrypt()
+        .build()
+        .await;
+
+    fixture.check_fs_type("data", data_fs_type()).await;
+    let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
+    fixture
+        .dir("data")
+        .open(fio::OpenFlags::RIGHT_READABLE, 0, "foo", server)
+        .expect("open failed");
+    file.get_attr().await.expect("get_attr failed");
+
+    fixture.tear_down().await;
+}
+
+#[fuchsia::test]
+async fn data_formatted_no_zxcrypt() {
+    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+        .with_ramdisk()
+        .no_zxcrypt()
+        .build()
+        .await;
+
     fixture.check_fs_type("data", data_fs_type()).await;
 
     fixture.tear_down().await;

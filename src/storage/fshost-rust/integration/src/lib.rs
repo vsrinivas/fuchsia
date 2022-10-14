@@ -115,6 +115,10 @@ pub struct TestFixtureBuilder {
     with_ramdisk: bool,
     ramdisk_size: u64,
     format_data: bool,
+
+    // Whether or not to add a zxcrypt layer between fvm and the main filesystem, if the filesystem
+    // supports it. Doesn't do anything for fxfs.
+    zxcrypt: bool,
 }
 
 impl TestFixtureBuilder {
@@ -125,6 +129,7 @@ impl TestFixtureBuilder {
             with_ramdisk: false,
             ramdisk_size: 0,
             format_data: false,
+            zxcrypt: true,
         }
     }
 
@@ -143,6 +148,11 @@ impl TestFixtureBuilder {
         self
     }
 
+    pub fn no_zxcrypt(mut self) -> Self {
+        self.zxcrypt = false;
+        self
+    }
+
     pub async fn build(self) -> TestFixture {
         let mocks = mocks::new_mocks().await;
         let builder = RealmBuilder::new().await.unwrap();
@@ -152,6 +162,11 @@ impl TestFixtureBuilder {
             .add_child("test-fshost", fshost_url, ChildOptions::new().eager())
             .await
             .unwrap();
+
+        builder.init_mutable_config_from_package(&fshost).await.unwrap();
+        // fshost config overrides
+        builder.set_config_value_bool(&fshost, "no_zxcrypt", !self.zxcrypt).await.unwrap();
+
         let mocks = builder
             .add_local_child("mocks", move |h| mocks(h).boxed(), ChildOptions::new())
             .await
@@ -341,25 +356,28 @@ impl TestFixtureBuilder {
     async fn init_data(&self, ramdisk_path: &str, dev: &fio::DirectoryProxy) {
         match self.data_filesystem_format {
             "fxfs" => init_data_fxfs(ramdisk_path, dev).await,
-            "minfs" => init_data_minfs(ramdisk_path, dev).await,
+            "minfs" => init_data_minfs(ramdisk_path, dev, self.zxcrypt).await,
             _ => panic!("unsupported data filesystem format type"),
         }
     }
 }
 
-async fn init_data_minfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
+async fn init_data_minfs(ramdisk_path: &str, dev: &fio::DirectoryProxy, zxcrypt: bool) {
     let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
-    recursive_wait_and_open_node(&dev, &data_path.strip_prefix("/dev/").unwrap())
-        .await
-        .expect("recursive_wait_and_open_node failed");
-    let zxcrypt_path = zxcrypt::set_up_insecure_zxcrypt(Path::new(&data_path))
-        .await
-        .expect("failed to set up zxcrypt");
-    let zxcrypt_path = zxcrypt_path.as_os_str().to_str().unwrap();
-    let data_device =
-        recursive_wait_and_open_node(dev, zxcrypt_path.strip_prefix("/dev/").unwrap())
+    let mut data_device =
+        recursive_wait_and_open_node(&dev, &data_path.strip_prefix("/dev/").unwrap())
             .await
             .expect("recursive_wait_and_open_node failed");
+    if zxcrypt {
+        let zxcrypt_path = zxcrypt::set_up_insecure_zxcrypt(Path::new(&data_path))
+            .await
+            .expect("failed to set up zxcrypt");
+        let zxcrypt_path = zxcrypt_path.as_os_str().to_str().unwrap();
+        data_device =
+            recursive_wait_and_open_node(dev, zxcrypt_path.strip_prefix("/dev/").unwrap())
+                .await
+                .expect("recursive_wait_and_open_node failed");
+    }
     let mut minfs =
         fs_management::Minfs::from_channel(data_device.into_channel().unwrap().into_zx_channel())
             .expect("from_channel failed");

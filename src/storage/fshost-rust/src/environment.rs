@@ -148,16 +148,21 @@ impl<'a> Environment for FshostEnvironment<'a> {
             }
             // Default to minfs
             _ => {
-                self.attach_driver(device, "zxcrypt.so").await?;
-                zxcrypt::unseal_or_format(device).await?;
+                let proxy = if self.config.no_zxcrypt {
+                    device.proxy()?
+                } else {
+                    self.attach_driver(device, "zxcrypt.so").await?;
+                    zxcrypt::unseal_or_format(device).await?;
 
-                // Instead of waiting for the zxcrypt device to go through the watcher and then
-                // matching it again, just wait for it to appear and immediately use it. The block
-                // watcher will find the zxcrypt device later and pass it through the matchers, but
-                // it won't match anything since the fvm matcher only matches immediate children.
-                let device = device.get_child("/zxcrypt/unsealed/block").await?;
+                    // Instead of waiting for the zxcrypt device to go through the watcher and then
+                    // matching it again, just wait for it to appear and immediately use it. The
+                    // block watcher will find the zxcrypt device later and pass it through the
+                    // matchers, but it won't match anything since the fvm matcher only matches
+                    // immediate children.
+                    device.get_child("/zxcrypt/unsealed/block").await?.proxy()?
+                };
 
-                let mut fs = Minfs::from_channel(device.proxy()?.into_channel().unwrap().into())?;
+                let mut fs = Minfs::from_channel(proxy.into_channel().unwrap().into())?;
                 Filesystem::Serving(match fs.serve().await {
                     Ok(fs) => fs,
                     Err(e) => {
