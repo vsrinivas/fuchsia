@@ -104,6 +104,10 @@ config("grpc_config_private") {
     "-Wno-unreachable-code-break",
     "-Wno-unreachable-code-return",
     "-Wno-unused-variable",
+
+    # TODO(fxbug.dev/112082): Remove after integrating
+    # https://github.com/grpc/grpc/pull/31306
+    "-Wno-thread-safety-analysis",
   ]
 }
 
