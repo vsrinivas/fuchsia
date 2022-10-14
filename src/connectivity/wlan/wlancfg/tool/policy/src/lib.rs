@@ -249,7 +249,12 @@ pub async fn handle_get_saved_networks(
     Ok(saved_networks)
 }
 
-/// Listens for client state updates and prints each update that is received.
+/// Listens for client state updates and prints each update that is received. Updates are printed
+/// in the following format:
+///
+/// Update:
+///     <SSIDA>:                  <state> - <status_if_any>,
+///     <SSIDB_LONGER>:           <state> - <status_if_any>,
 pub async fn handle_listen(
     mut server_stream: wlan_policy::ClientStateUpdatesRequestStream,
 ) -> Result<(), Error> {
@@ -286,6 +291,8 @@ pub async fn handle_listen(
             None => continue,
         };
 
+        let mut updates = vec![];
+        // Create update string for each network. Pad the SSID so the updates align
         for net_state in networks {
             if net_state.id.is_none() || net_state.state.is_none() {
                 continue;
@@ -294,16 +301,33 @@ pub async fn handle_listen(
             let ssid = std::str::from_utf8(&id.ssid).unwrap();
             match net_state.state.unwrap() {
                 wlan_policy::ConnectionState::Failed => {
-                    println!("{:32}: connection failed - {:?}", ssid, net_state.status);
+                    updates.push(format!(
+                        "\t{:32} connection failed - {:?}",
+                        format!("{}:", ssid),
+                        net_state.status
+                    ));
                 }
                 wlan_policy::ConnectionState::Disconnected => {
-                    println!("{:32}: connection disconnected - {:?}", ssid, net_state.status);
+                    updates.push(format!(
+                        "\t{:32} connection disconnected - {:?}",
+                        format!("{}:", ssid),
+                        net_state.status
+                    ));
                 }
                 wlan_policy::ConnectionState::Connecting => {
-                    println!("{:32}: connecting", ssid);
+                    updates.push(format!("\t{:32} connecting", format!("{}:", ssid)));
                 }
-                wlan_policy::ConnectionState::Connected => println!("{:32}: connected", ssid),
+                wlan_policy::ConnectionState::Connected => {
+                    updates.push(format!("\t{:32} connected", format!("{}:", ssid)))
+                }
             }
+        }
+
+        // Sort updates by SSID
+        updates.sort_by_key(|s| s.to_lowercase());
+        println!("Update:");
+        for update in updates {
+            println!("{}", update);
         }
     }
     Ok(())
