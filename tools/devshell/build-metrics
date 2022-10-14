@@ -16,6 +16,9 @@
 ##  fx build-metrics disable
 ##       Disable build metrics collection in fx build.
 ##
+##  fx build-metrics login
+##       Authenticate to be able to write data to BQ.
+##
 ##  fx build-metrics upload
 ##       Upload any logs/metrics that may have accumulated.
 ##
@@ -114,6 +117,8 @@ EOF
 __successfully_read_config=0
 build-metrics-read-config || __successfully_read_config="$?"
 
+readonly _upload_script=build/rbe/upload_reproxy_logs.sh
+
 case "$action" in
   -h|--help)
     usage
@@ -174,11 +179,16 @@ case "$action" in
     echo "Build metrics collection disabled at user's request"
     ;;
 
+  login)
+    echo "Logging in to upload metrics and logs to BQ."
+    "$_upload_script" --auth-only
+    exit "$?"
+    ;;
+
   upload)
     echo "Uploading accumulated build logs and metrics to BQ."
     # Does not require that build-metrics be enabled in advance because
     # the logs and metrics files are always being produced.
-    _upload_script=build/rbe/upload_reproxy_logs.sh
     # Scan for log dirs where build/rbe/fuchsia-reproxy-wrap.sh produces them.
     _logs_dir="${TMPDIR:-/tmp}"
     "$_upload_script" "${action_args[@]}" "$_logs_dir"/reproxy.*
