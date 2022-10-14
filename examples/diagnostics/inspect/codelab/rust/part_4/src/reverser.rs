@@ -99,11 +99,12 @@ mod tests {
         super::*,
         anyhow::Error,
         fidl_fuchsia_examples_inspect::{ReverserMarker, ReverserProxy},
-        // [START include_testing]
-        fuchsia_inspect::{self, assert_data_tree},
-        // [END include_testing]
         futures::channel::oneshot,
     };
+
+    // [START include_testing]
+    use fuchsia_inspect::assert_data_tree;
+    // [END include_testing]
 
     #[fuchsia::test]
     async fn test_reverser() -> Result<(), Error> {
