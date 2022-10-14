@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//tools/cmc/build/cmc.gni")
 
 # Defines a starnix runner package with a provided configuration file and system image.
 #
@@ -11,6 +12,9 @@ import("//build/components.gni")
 # `config` (required, string): path to a JSON configuration file.
 #
 # `system_image` (optional, string): path to a system image file for the galaxy.
+#
+# `manifest` (optional, string): path to an additional manifest to merge with
+#                                the default one.
 #
 # `deps` (optional, list of targets): additional dependencies.
 template("starnix_galaxy_package") {
@@ -28,9 +32,34 @@ template("starnix_galaxy_package") {
     system_image_target = "${target_name}_system_image"
   }
 
+  galaxy_manifest = "//src/proc/bin/starnix/meta/starnix_runner.cml"
+  galaxy_manifest_deps = []
+  if (defined(invoker.manifest)) {
+    merged_manifest_target = "${target_name}_merged_manifest"
+    cmc_merge(merged_manifest_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+      visibility = [ ":*" ]
+
+      sources = [
+        galaxy_manifest,
+        invoker.manifest,
+      ]
+
+      output_name = "$target_name.cml"
+    }
+    merge_outputs = get_target_outputs(":${merged_manifest_target}")
+    galaxy_manifest = merge_outputs[0]
+    galaxy_manifest_deps += [ ":${merged_manifest_target}" ]
+  }
+
   fuchsia_component_manifest(manifest_target) {
     component_name = "starnix_runner"
-    manifest = "//src/proc/bin/starnix/meta/starnix_runner.cml"
+    manifest = galaxy_manifest
+    deps = galaxy_manifest_deps
   }
 
   fuchsia_component(component_target) {
