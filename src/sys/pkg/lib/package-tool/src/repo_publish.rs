@@ -16,7 +16,7 @@ use {
         fs::File,
         io::{BufWriter, Write},
     },
-    tuf::Error as TufError,
+    tuf::{metadata::RawSignedMetadata, Error as TufError},
 };
 
 pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
@@ -77,22 +77,32 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
 
     // Try to connect to the repository. This should succeed if we have at least some root metadata
     // in the repository. If none exists, we'll create a new repository.
-    let client = match RepoClient::from_trusted_remote(&repo).await {
-        Ok(mut client) => {
-            // Make sure our client has the latest metadata. It's okay if this fails with missing
-            // metadata since we'll create it when we publish to the repository.
-            match client.update().await {
-                Ok(_) | Err(RepoError::Tuf(TufError::MetadataNotFound { .. })) => {}
-                Err(err) => {
-                    return Err(err.into());
-                }
-            }
+    let client = if let Some(trusted_root_path) = cmd.trusted_root {
+        let buf = async_fs::read(&trusted_root_path)
+            .await
+            .with_context(|| format!("reading trusted root {}", trusted_root_path))?;
 
-            Some(client)
-        }
-        Err(RepoError::Tuf(TufError::MetadataNotFound { .. })) => None,
-        Err(err) => {
-            return Err(err.into());
+        let trusted_root = RawSignedMetadata::new(buf);
+
+        Some(RepoClient::from_trusted_root(&trusted_root, &repo).await?)
+    } else {
+        match RepoClient::from_trusted_remote(&repo).await {
+            Ok(mut client) => {
+                // Make sure our client has the latest metadata. It's okay if this fails with missing
+                // metadata since we'll create it when we publish to the repository.
+                match client.update().await {
+                    Ok(_) | Err(RepoError::Tuf(TufError::MetadataNotFound { .. })) => {}
+                    Err(err) => {
+                        return Err(err.into());
+                    }
+                }
+
+                Some(client)
+            }
+            Err(RepoError::Tuf(TufError::MetadataNotFound { .. })) => None,
+            Err(err) => {
+                return Err(err.into());
+            }
         }
     };
 
@@ -158,6 +168,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: None,
+            trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -183,6 +194,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: Some(repo_keys_path),
+            trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -230,6 +242,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: None,
+            trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -271,6 +284,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: None,
+            trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -307,6 +321,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: None,
+            trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -322,6 +337,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: Some(keys_path),
+            trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -348,6 +364,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: None,
+            trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
             time_versioning: true,
@@ -412,6 +429,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: None,
+            trusted_root: None,
             package_manifests: vec![pkg1_manifest_path.clone(), pkg2_manifest_path.clone()],
             package_list_manifests: vec![
                 pkg_list1_manifest_path.clone(),
@@ -479,6 +497,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: None,
+            trusted_root: None,
             package_manifests: vec![pkg3_manifest_path],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -507,6 +526,7 @@ mod tests {
         let cmd = RepoPublishCommand {
             signing_keys: None,
             trusted_keys: None,
+            trusted_root: None,
             package_manifests: vec![pkg4_manifest_path],
             package_list_manifests: vec![],
             time_versioning: false,
@@ -526,5 +546,37 @@ mod tests {
         assert!(trusted_targets.targets().get("package2/0").is_none());
         assert!(trusted_targets.targets().get("package3/0").is_none());
         assert!(trusted_targets.targets().get("package4/0").is_some());
+    }
+
+    #[fuchsia::test]
+    async fn test_trusted_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(tmp.path()).unwrap();
+
+        // Create a simple repository.
+        let repo = test_utils::make_pm_repository(root).await;
+
+        // Refresh all the metadata using 1.root.json.
+        let cmd = RepoPublishCommand {
+            signing_keys: None,
+            trusted_keys: None,
+            trusted_root: Some(root.join("repository").join("1.root.json")),
+            package_manifests: vec![],
+            package_list_manifests: vec![],
+            time_versioning: false,
+            clean: true,
+            depfile: None,
+            copy_mode: CopyMode::Copy,
+            repo_path: root.to_path_buf(),
+        };
+        assert_matches!(cmd_repo_publish(cmd).await, Ok(()));
+
+        // Make sure we can update a client with 1.root.json metadata.
+        let buf = async_fs::read(root.join("repository").join("1.root.json")).await.unwrap();
+        let trusted_root = RawSignedMetadata::new(buf);
+        let mut repo_client = RepoClient::from_trusted_root(&trusted_root, &repo).await.unwrap();
+
+        assert_matches!(repo_client.update().await, Ok(true));
+        assert_eq!(repo_client.database().trusted_root().version(), 1);
     }
 }

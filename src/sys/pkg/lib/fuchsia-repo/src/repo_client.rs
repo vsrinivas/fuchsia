@@ -33,8 +33,8 @@ use {
         client::{Client as TufClient, Config},
         crypto::KeyType,
         metadata::{
-            Metadata as _, MetadataPath, MetadataVersion, RawSignedMetadata, TargetDescription,
-            TargetPath, TargetsMetadata,
+            Metadata as _, MetadataPath, MetadataVersion, RawSignedMetadata, RootMetadata,
+            TargetDescription, TargetPath, TargetsMetadata,
         },
         pouf::Pouf1,
         repository::{
@@ -68,6 +68,17 @@ impl<R> RepoClient<R>
 where
     R: RepoProvider,
 {
+    /// Creates a [RepoClient] that establishes trust with an initial trusted root metadata.
+    pub async fn from_trusted_root(
+        trusted_root: &RawSignedMetadata<Pouf1, RootMetadata>,
+        remote: R,
+    ) -> Result<Self, Error> {
+        let local = EphemeralRepository::<Pouf1>::new();
+        let tuf_client =
+            TufClient::with_trusted_root(Config::default(), trusted_root, local, remote).await?;
+        Ok(Self::new(tuf_client))
+    }
+
     /// Creates a [RepoClient] that downloads the initial TUF root metadata from the remote
     /// [RepoProvider].
     pub async fn from_trusted_remote(backend: R) -> Result<Self, Error> {
@@ -549,18 +560,21 @@ mod tests {
     use {
         super::*,
         crate::{
+            repo_builder::RepoBuilder,
             repository::PmRepository,
             test_utils::{
                 make_pm_repository, make_readonly_empty_repository, repo_key, repo_private_key,
                 PKG1_BIN_HASH, PKG1_HASH, PKG1_LIB_HASH, PKG2_HASH,
             },
         },
+        assert_matches::assert_matches,
         camino::{Utf8Path, Utf8PathBuf},
         fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
         pretty_assertions::assert_eq,
         std::fs::create_dir_all,
         tuf::{
-            database::Database, repo_builder::RepoBuilder, repository::FileSystemRepositoryBuilder,
+            database::Database, repo_builder::RepoBuilder as TufRepoBuilder,
+            repository::FileSystemRepositoryBuilder,
         },
     };
 
@@ -572,6 +586,32 @@ mod tests {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs()
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_from_trusted_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        // Set up a simple repository.
+        let repo = make_pm_repository(dir).await;
+        let repo_keys = repo.repo_keys().unwrap();
+        let repo_client = RepoClient::from_trusted_remote(&repo).await.unwrap();
+
+        // Refresh all the metadata.
+        RepoBuilder::from_client(&repo_client, &repo_keys)
+            .refresh_metadata(true)
+            .commit()
+            .await
+            .unwrap();
+
+        // Make sure we can update a client with 2.root.json metadata.
+        let buf = async_fs::read(dir.join("repository").join("2.root.json")).await.unwrap();
+        let trusted_root = RawSignedMetadata::new(buf);
+
+        let mut repo_client = RepoClient::from_trusted_root(&trusted_root, repo).await.unwrap();
+        assert_matches!(repo_client.update().await, Ok(true));
+        assert_eq!(repo_client.database().trusted_root().version(), 2);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -731,7 +771,7 @@ mod tests {
             .build();
 
         let key = repo_private_key();
-        let metadata = RepoBuilder::create(&mut repo)
+        let metadata = TufRepoBuilder::create(&mut repo)
             .trusted_root_keys(&[&key])
             .trusted_targets_keys(&[&key])
             .trusted_snapshot_keys(&[&key])
@@ -742,7 +782,7 @@ mod tests {
 
         let database = Database::from_trusted_metadata(&metadata).unwrap();
 
-        RepoBuilder::from_database(&mut repo, &database)
+        TufRepoBuilder::from_database(&mut repo, &database)
             .trusted_root_keys(&[&key])
             .trusted_targets_keys(&[&key])
             .trusted_snapshot_keys(&[&key])

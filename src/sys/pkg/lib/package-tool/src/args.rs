@@ -80,6 +80,12 @@ pub struct RepoPublishCommand {
     )]
     pub trusted_keys: Option<Utf8PathBuf>,
 
+    #[argh(
+        option,
+        description = "path to the initial trusted root metadata (default is to use 1.root.json from the repository)"
+    )]
+    pub trusted_root: Option<Utf8PathBuf>,
+
     #[argh(option, long = "package", description = "path to a package manifest")]
     pub package_manifests: Vec<Utf8PathBuf>,
 
