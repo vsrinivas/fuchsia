@@ -50,6 +50,10 @@ type RunOptions struct {
 
 	// Env is the environment of the subprocess, appended to Runner.Env.
 	Env []string
+
+	// Dir is the directory in which the subprocess should be run. It inherits
+	// Runner.Dir if unset.
+	Dir string
 }
 
 // Run runs a command until completion or until a context is canceled, in
@@ -73,7 +77,10 @@ func (r *Runner) Run(ctx context.Context, command []string, options RunOptions) 
 		cmd.Stdin = options.Stdin
 	}
 
-	cmd.Dir = r.Dir
+	if options.Dir == "" {
+		options.Dir = r.Dir
+	}
+	cmd.Dir = options.Dir
 
 	// Inherit the parent process's environment. `exec.Command` inherits the
 	// parent's environment if `Env` is nil, so unconditionally inheriting the

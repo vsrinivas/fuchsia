@@ -42,6 +42,7 @@ group("tools") {
     "//tools/symbolizer($host_toolchain)",
     "//tools/test_list_tool:install($host_toolchain)",
     "//tools/testgen:host($host_toolchain)",
+    "//tools/testing/batchtester($host_toolchain)",
     "//tools/update_crates($host_toolchain)",
     "//tools/virtual_device:fvd($host_toolchain)",
     "//tools/zedmon/client:zedmon_client",
