@@ -7,6 +7,7 @@ group("device_tests") {
   deps = [
     ":virtio_balloon_test",
     ":virtio_block_test",
+    ":virtio_console_test",
   ]
 }
 
@@ -71,5 +72,19 @@ source_set("virtio_block_test") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/virtio",
+  ]
+}
+
+source_set("virtio_console_test") {
+  testonly = true
+
+  sources = [ "virtio_console_test.cc" ]
+
+  deps = [
+    ":test_with_device",
+    ":virtio_queue_fake",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
   ]
 }
