@@ -222,7 +222,7 @@ zx_status_t AcpiLid::UpdateLidStateLocked() {
 
 void AcpiLid::QueueHidReportLocked() {
   if (client_.is_valid()) {
-    zxlogf(DEBUG, "Queueing report: lid is %s",
+    zxlogf(INFO, "Queueing report: lid is %s",
            (lid_state_ == LidState::kOpen ? "open" : "closed"));
     uint8_t report = LidStateToHidReport(lid_state_);
     client_.IoQueue(&report, sizeof(report), zx_clock_get_monotonic());
