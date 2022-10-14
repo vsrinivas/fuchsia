@@ -6,6 +6,8 @@
 #
 # SHORTLINK REVIEWERS
 # ===================
+set noparent
+
 nickvander@google.com
 kyol@google.com
 kadolor@google.com
@@ -15,3 +17,5 @@ viviantran@google.com
 guinevere@google.com
 curtisgalloway@google.com
 mangini@google.com
+kayce@google.com
+smithdave@google.com
