@@ -155,6 +155,37 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
   fidl::WireClient<fuchsia_io::Directory> svc_client_;
 };
 
+TEST_F(OutgoingDirectoryTest, CanBeMovedSafely) {
+  auto outgoing_directory = component::OutgoingDirectory::Create(dispatcher());
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  EchoImpl impl(/*reversed=*/false);
+  ASSERT_EQ(outgoing_directory.AddProtocol<fuchsia_examples::Echo>(&impl).status_value(), ZX_OK);
+  ZX_ASSERT(outgoing_directory.Serve(std::move(endpoints->server)).is_ok());
+
+  component::OutgoingDirectory moved_in_constructor(std::move(outgoing_directory));
+  component::OutgoingDirectory moved_in_assignment =
+      component::OutgoingDirectory::Create(dispatcher());
+  moved_in_assignment = std::move(moved_in_constructor);
+
+  auto client_end =
+      component::ConnectAt<fuchsia_examples::Echo>(TakeSvcClientEnd(std::move(endpoints->client)));
+  ASSERT_EQ(client_end.status_value(), ZX_OK);
+  fidl::WireClient<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher());
+
+  std::string reply_received;
+  client->EchoString(kTestString)
+      .ThenExactlyOnce([&reply_received, quit_loop = QuitLoopClosure()](
+                           fidl::WireUnownedResult<fuchsia_examples::Echo::EchoString>& result) {
+        ASSERT_TRUE(result.ok()) << "EchoString failed: " << result.error();
+        auto* response = result.Unwrap();
+        reply_received = std::string(response->response.data(), response->response.size());
+        quit_loop();
+      });
+  RunLoop();
+
+  EXPECT_EQ(reply_received, kTestString);
+}
+
 TEST_F(OutgoingDirectoryTest, AddProtocolWireServer) {
   // Setup fuchsia.examples.Echo server.
   EchoImpl impl(/*reversed=*/false);

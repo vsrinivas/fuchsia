@@ -37,20 +37,34 @@ OutgoingDirectory OutgoingDirectory::Create(async_dispatcher_t* dispatcher) {
 }
 
 OutgoingDirectory::OutgoingDirectory(async_dispatcher_t* dispatcher, svc_dir_t* root)
-    : dispatcher_(dispatcher), root_(root) {}
+    : dispatcher_(dispatcher),
+      root_(root),
+      unbind_protocol_callbacks_(std::make_unique<UnbindCallbackMap>()) {}
 
 OutgoingDirectory::OutgoingDirectory(OutgoingDirectory&& other) noexcept
-    : dispatcher_(other.dispatcher_), root_(other.root_) {
+    : dispatcher_(other.dispatcher_),
+      root_(other.root_),
+      registered_handlers_(std::move(other.registered_handlers_)),
+      unbind_protocol_callbacks_(std::move(other.unbind_protocol_callbacks_)) {
   other.dispatcher_ = nullptr;
   other.root_ = nullptr;
+  other.unbind_protocol_callbacks_ = nullptr;
 }
 
 OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexcept {
+  // Delete `root_` object before taking pointer from `other`. Lest risk leaking memory.
+  if (root_) {
+    svc_dir_destroy(root_);
+  }
+
   dispatcher_ = other.dispatcher_;
   root_ = other.root_;
+  registered_handlers_ = std::move(other.registered_handlers_);
+  unbind_protocol_callbacks_ = std::move(other.unbind_protocol_callbacks_);
 
   other.dispatcher_ = nullptr;
   other.root_ = nullptr;
+  other.unbind_protocol_callbacks_ = nullptr;
 
   return *this;
 }
@@ -104,8 +118,8 @@ zx::status<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_
   // The context will first be stored in the heap for this path, then a pointer
   // to it will be passed to this function. The callback, in this case |OnConnect|,
   // will then cast the void* type to OnConnectContext*.
-  auto context = std::make_unique<OnConnectContext>(
-      OnConnectContext{.handler = std::move(handler), .self = this});
+  auto context =
+      std::make_unique<OnConnectContext>(OnConnectContext{.handler = std::move(handler)});
   zx_status_t status =
       svc_dir_add_service(root_, directory_entry.c_str(), name.data(), context.get(), OnConnect);
 
@@ -235,20 +249,21 @@ void OutgoingDirectory::OnConnect(void* raw_context, const char* service_name, z
   (context->handler)(zx::channel(handle));
 }
 
-void OutgoingDirectory::AppendUnbindConnectionCallback(const std::string& name,
+void OutgoingDirectory::AppendUnbindConnectionCallback(UnbindCallbackMap* unbind_protocol_callbacks,
+                                                       const std::string& name,
                                                        UnbindConnectionCallback callback) {
-  unbind_protocol_callbacks_[name].emplace_back(std::move(callback));
+  (*unbind_protocol_callbacks)[name].emplace_back(std::move(callback));
 }
 
 void OutgoingDirectory::UnbindAllConnections(cpp17::string_view name) {
   auto key = std::string(name);
-  auto iterator = unbind_protocol_callbacks_.find(key);
-  if (iterator != unbind_protocol_callbacks_.end()) {
+  auto iterator = unbind_protocol_callbacks_->find(key);
+  if (iterator != unbind_protocol_callbacks_->end()) {
     std::vector<UnbindConnectionCallback>& callbacks = iterator->second;
     for (auto& cb : callbacks) {
       cb();
     }
-    unbind_protocol_callbacks_.erase(iterator);
+    unbind_protocol_callbacks_->erase(iterator);
   }
 }
 

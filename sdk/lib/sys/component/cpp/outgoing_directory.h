@@ -157,10 +157,10 @@ class OutgoingDirectory final {
     }
 
     return AddProtocol<Protocol>(
-        [=](fidl::ServerEnd<Protocol> request) {
+        [dispatcher = dispatcher_, impl](fidl::ServerEnd<Protocol> request) {
           // This object is safe to drop. Server will still begin to operate
           // past its lifetime.
-          auto _server = fidl::BindServer(dispatcher_, std::move(request), impl);
+          auto _server = fidl::BindServer(dispatcher, std::move(request), impl);
         },
         name);
   }
@@ -223,14 +223,16 @@ class OutgoingDirectory final {
 
     return AddProtocolAt<Protocol>(
         path,
-        [=, name = std::string(name)](fidl::ServerEnd<Protocol> request) {
+        [dispatcher = dispatcher_, impl,
+         unbind_protocol_callbacks = unbind_protocol_callbacks_.get(),
+         name = std::string(name)](fidl::ServerEnd<Protocol> request) {
           fidl::ServerBindingRef<Protocol> server =
-              fidl::BindServer(dispatcher_, std::move(request), impl);
+              fidl::BindServer(dispatcher, std::move(request), impl);
 
           auto cb = [server = std::move(server)]() mutable { server.Unbind(); };
           // We don't have to check for entry existing because the |AddProtocol|
           // overload being invoked here will do that internally.
-          AppendUnbindConnectionCallback(name, std::move(cb));
+          AppendUnbindConnectionCallback(unbind_protocol_callbacks, name, std::move(cb));
         },
         name);
   }
@@ -387,7 +389,6 @@ class OutgoingDirectory final {
   // will be casted back to |OnConnectContext*|.
   struct OnConnectContext {
     AnyHandler handler;
-    OutgoingDirectory* self;
   };
 
   // Function pointer that matches type of |svc_dir_add_service| handler.
@@ -397,8 +398,11 @@ class OutgoingDirectory final {
   // Callback invoked during teardown of a FIDL protocol entry. This callback
   // will close all active connections on the associated channel.
   using UnbindConnectionCallback = fit::callback<void()>;
+  using UnbindCallbackMap = std::map<std::string, std::vector<UnbindConnectionCallback>>;
 
-  void AppendUnbindConnectionCallback(const std::string& name, UnbindConnectionCallback callback);
+  static void AppendUnbindConnectionCallback(UnbindCallbackMap* unbind_protocol_callbacks,
+                                             const std::string& name,
+                                             UnbindConnectionCallback callback);
 
   void UnbindAllConnections(cpp17::string_view name);
 
@@ -430,7 +434,10 @@ class OutgoingDirectory final {
   // store this in a callback as opposed to a map of fidl::ServerBindingRef<T>
   // because that object is template parameterized and therefore can't be
   // stored in a homogeneous container.
-  std::map<std::string, std::vector<UnbindConnectionCallback>> unbind_protocol_callbacks_ = {};
+  //
+  // Wrapped in unique_ptr so that we can capture in a lambda without risk of
+  // it becoming invalid.
+  std::unique_ptr<UnbindCallbackMap> unbind_protocol_callbacks_;
 };
 
 }  // namespace component
