@@ -7,6 +7,8 @@ import("//build/test.gni")
 
 source_set("expectations") {
   sources = [
+    "expects/common.cc",
+    "expects/common.h",
     "expects/expectations.cc",
     "expects/expectations.h",
   ]
@@ -89,12 +91,18 @@ static_library("gvisor_test_util") {
   public_configs = [ ":gvisor_test_util_config" ]
 }
 
+generic_test_label = "generic"
+loopback_test_label = "loopback"
+loopback_isolated_test_label = "loopback_isolated"
 raw_packet_test_label = "raw_packet"
 udp_test_label = "udp"
 udp_unbound_test_label = "udp_unbound"
-generic_test_label = "generic"
 tcp_test_label = "tcp"
+tcp_accept_backlog_test_label = "tcp_accept_backlog"
+tcp_backlog_test_label = "tcp_backlog"
 tcp_blocking_test_label = "tcp_blocking"
+tcp_fin_wait_test_label = "tcp_fin_wait"
+tcp_linger_timeout_test_label = "tcp_linger_timeout"
 
 source_set("${raw_packet_test_label}_socket_tests") {
   sources = [
@@ -232,8 +240,6 @@ source_set("${generic_test_label}_socket_tests") {
     "gvisor/test/syscalls/linux/socket.cc",
     "gvisor/test/syscalls/linux/socket_blocking.cc",
     "gvisor/test/syscalls/linux/socket_blocking.h",
-    "gvisor/test/syscalls/linux/socket_inet_loopback.cc",
-    "gvisor/test/syscalls/linux/socket_inet_loopback_isolated.cc",
     "gvisor/test/syscalls/linux/socket_ip_loopback_blocking.cc",
     "gvisor/test/syscalls/linux/socket_ip_tcp_udp_generic.cc",
     "gvisor/test/syscalls/linux/socket_ip_unbound.cc",
@@ -244,6 +250,32 @@ source_set("${generic_test_label}_socket_tests") {
     ":gvisor_test_util",
     "//third_party/abseil-cpp/absl/memory",
     "//third_party/abseil-cpp/absl/strings",
+    "//third_party/abseil-cpp/absl/strings:str_format",
+    "//third_party/abseil-cpp/absl/time",
+  ]
+
+  testonly = true
+}
+
+source_set("${loopback_test_label}_socket_tests") {
+  sources = [
+    "gvisor/test/syscalls/linux/ip_socket_test_util.cc",
+    "gvisor/test/syscalls/linux/ip_socket_test_util.h",
+    "gvisor/test/syscalls/linux/socket_inet_loopback.cc",
+  ]
+  deps = [
+    ":gvisor_test_util",
+    "//third_party/abseil-cpp/absl/memory",
+    "//third_party/abseil-cpp/absl/strings:str_format",
+  ]
+
+  testonly = true
+}
+
+source_set("${loopback_isolated_test_label}_socket_tests") {
+  sources = [ "gvisor/test/syscalls/linux/socket_inet_loopback_isolated.cc" ]
+  deps = [
+    ":gvisor_test_util",
     "//third_party/abseil-cpp/absl/strings:str_format",
     "//third_party/abseil-cpp/absl/time",
   ]
@@ -286,6 +318,12 @@ local_testing_suffix = "local_testing"
 #     in CQ.
 #     Type: bool
 #     Default: false
+#
+#   test_srcs_target (optional)
+#     The local target containing the test source files used to run the suite.
+#     Type: string
+#     Default: When unset, the test source target constructed as
+#              ":${target_name}_socket_tests"
 template("syscall_test_suite") {
   not_needed([ "invoker" ])
   suite_label = target_name
@@ -357,10 +395,14 @@ template("syscall_test_suite") {
     combined_label = "${stack.label}_${suite_label}"
 
     test_target_label = "${combined_label}_socket_tests"
+    test_srcs_target = ":${suite_label}_socket_tests"
+    if (defined(invoker.test_srcs_target)) {
+      test_srcs_target = invoker.test_srcs_target
+    }
     test(test_target_label) {
       deps = [
-        ":${suite_label}_socket_tests",
         ":gtest_main",
+        "${test_srcs_target}",
         stack.expectations,
       ]
 
@@ -399,6 +441,10 @@ template("syscall_test_suite") {
 
 syscall_test_suite(generic_test_label) {
 }
+syscall_test_suite(loopback_test_label) {
+}
+syscall_test_suite(loopback_isolated_test_label) {
+}
 syscall_test_suite(raw_packet_test_label) {
   run_in_cq_with_ns3 = true
 }
@@ -406,10 +452,26 @@ syscall_test_suite(udp_test_label) {
 }
 syscall_test_suite(udp_unbound_test_label) {
 }
-syscall_test_suite(tcp_test_label) {
+syscall_test_suite(tcp_accept_backlog_test_label) {
   run_with_fast_udp = false
+  test_srcs_target = ":${loopback_test_label}_socket_tests"
+}
+syscall_test_suite(tcp_backlog_test_label) {
+  run_with_fast_udp = false
+  test_srcs_target = ":${loopback_test_label}_socket_tests"
 }
 syscall_test_suite(tcp_blocking_test_label) {
+  run_with_fast_udp = false
+}
+syscall_test_suite(tcp_fin_wait_test_label) {
+  run_with_fast_udp = false
+  test_srcs_target = ":${loopback_isolated_test_label}_socket_tests"
+}
+syscall_test_suite(tcp_linger_timeout_test_label) {
+  run_with_fast_udp = false
+  test_srcs_target = ":${loopback_isolated_test_label}_socket_tests"
+}
+syscall_test_suite(tcp_test_label) {
   run_with_fast_udp = false
 }
 
@@ -433,8 +495,13 @@ group("local-testing") {
   testonly = true
   public_deps = [
     ":${generic_test_label}_${local_testing_suffix}",
+    ":${loopback_isolated_test_label}_${local_testing_suffix}",
+    ":${loopback_test_label}_${local_testing_suffix}",
     ":${raw_packet_test_label}_${local_testing_suffix}",
+    ":${tcp_backlog_test_label}_${local_testing_suffix}",
     ":${tcp_blocking_test_label}_${local_testing_suffix}",
+    ":${tcp_fin_wait_test_label}_${local_testing_suffix}",
+    ":${tcp_linger_timeout_test_label}_${local_testing_suffix}",
     ":${tcp_test_label}_${local_testing_suffix}",
     ":${udp_test_label}_${local_testing_suffix}",
     ":${udp_unbound_test_label}_${local_testing_suffix}",
