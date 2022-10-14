@@ -119,13 +119,8 @@ type Fruit = enum : uint8 {
 }
 
 TEST(EnumsTests, BadEnumTestFloatType) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Error = enum: float64 {
-    ONE_POINT_FIVE = 1.5;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0070.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEnumTypeMustBeIntegralPrimitive);
 }
 

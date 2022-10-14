@@ -166,7 +166,7 @@ constexpr UndocumentedErrorDef<68, std::string_view> ErrFlexibleEnumMemberWithMa
     "for more info.");
 constexpr UndocumentedErrorDef<69, const flat::Type *> ErrBitsTypeMustBeUnsignedIntegralPrimitive(
     "bits may only be of unsigned integral primitive type, found {}");
-constexpr UndocumentedErrorDef<70, const flat::Type *> ErrEnumTypeMustBeIntegralPrimitive(
+constexpr ErrorDef<70, const flat::Type *> ErrEnumTypeMustBeIntegralPrimitive(
     "enums may only be of integral primitive type, found {}");
 constexpr ErrorDef<71> ErrUnknownAttributeOnStrictEnumMember(
     "the @unknown attribute can be only be used on flexible enum members.");
