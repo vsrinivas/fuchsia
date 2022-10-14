@@ -10,6 +10,7 @@ group("device_tests") {
     ":virtio_console_test",
     ":virtio_gpu_test",
     ":virtio_input_test",
+    ":virtio_magma_test",
   ]
 }
 
@@ -126,5 +127,31 @@ source_set("virtio_input_test") {
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//zircon/system/ulib/virtio",
     "//zircon/system/ulib/zxc",
+  ]
+}
+
+source_set("virtio_magma_test") {
+  testonly = true
+
+  sources = [ "virtio_magma_test.cc" ]
+
+  deps = [
+    ":test_with_device",
+    ":virtio_queue_fake",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_hlcpp",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/graphics/drivers/msd-intel-gen/include:include",
+    "//src/graphics/lib/magma/include:magma",
+    "//src/graphics/lib/magma/include/virtio:headers",
+    "//src/lib/fsl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
