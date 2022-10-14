@@ -29,6 +29,8 @@ pub struct Psm(u16);
 impl Psm {
     /// PSMs commonly used in the codebase.
     pub const RFCOMM: Self = Self(fidl_bredr::PSM_RFCOMM);
+    pub const HID_CONTROL: Self = Self(fidl_bredr::PSM_HID_CONTROL);
+    pub const HID_INTERRUPT: Self = Self(fidl_bredr::PSM_HID_INTERRUPT);
     pub const AVDTP: Self = Self(fidl_bredr::PSM_AVDTP);
     pub const AVCTP: Self = Self(fidl_bredr::PSM_AVCTP);
     pub const AVCTP_BROWSE: Self = Self(fidl_bredr::PSM_AVCTP_BROWSE);
@@ -305,6 +307,47 @@ impl From<&DataElement> for fidl_bredr::DataElement {
         }
     }
 }
+
+#[derive(Debug, PartialEq)]
+pub struct DataElementConversionError {
+    pub data_element: DataElement,
+}
+
+// Macro for generating impls for converting between rust types and their DataElement wrappers.
+macro_rules! generate_data_element_conversion {
+    ($variant: ident, $type: ty) => {
+        impl TryFrom<DataElement> for $type {
+            type Error = DataElementConversionError;
+
+            fn try_from(data_element: DataElement) -> Result<$type, DataElementConversionError> {
+                match data_element {
+                    DataElement::$variant(x) => Ok(x),
+                    _ => Err(DataElementConversionError { data_element }),
+                }
+            }
+        }
+
+        impl From<$type> for DataElement {
+            fn from(x: $type) -> DataElement {
+                DataElement::$variant(x)
+            }
+        }
+    };
+}
+
+// Generate the impls for converting between rust types and their DataElement wrappers.
+generate_data_element_conversion!(Int8, i8);
+generate_data_element_conversion!(Int16, i16);
+generate_data_element_conversion!(Int32, i32);
+generate_data_element_conversion!(Int64, i64);
+generate_data_element_conversion!(Uint8, u8);
+generate_data_element_conversion!(Uint16, u16);
+generate_data_element_conversion!(Uint32, u32);
+generate_data_element_conversion!(Uint64, u64);
+generate_data_element_conversion!(Str, Vec<u8>);
+generate_data_element_conversion!(Uuid, fidl_bt::Uuid);
+generate_data_element_conversion!(Url, String);
+generate_data_element_conversion!(Bool, bool);
 
 /// Information about a communications protocol.
 /// Corresponds directly to the FIDL `ProtocolDescriptor` definition - with the extra
@@ -1276,5 +1319,154 @@ mod tests {
                 path: "Offload",
             }
         });
+    }
+
+    #[test]
+    fn data_element_primitve_conversions() {
+        type Result<T> = std::result::Result<T, DataElementConversionError>;
+
+        let rust_u8 = 8u8;
+        let data_element_uint8 = DataElement::Uint8(8u8);
+        let data_element_uint8_into: DataElement = rust_u8.into();
+        let rust_u8_ok: Result<u8> = data_element_uint8.clone().try_into();
+        let rust_u8_err: Result<u16> = data_element_uint8.clone().try_into();
+        assert_eq!(data_element_uint8_into, data_element_uint8);
+        assert_eq!(rust_u8_ok, Ok(rust_u8));
+        assert_eq!(
+            rust_u8_err,
+            Err(DataElementConversionError { data_element: data_element_uint8 })
+        );
+
+        let rust_i8 = 9i8;
+        let data_element_int8 = DataElement::Int8(9i8);
+        let data_element_int8_into: DataElement = rust_i8.into();
+        let rust_i8_ok: Result<i8> = data_element_int8.clone().try_into();
+        let rust_i8_err: Result<u16> = data_element_int8.clone().try_into();
+        assert_eq!(data_element_int8_into, data_element_int8);
+        assert_eq!(rust_i8_ok, Ok(rust_i8));
+        assert_eq!(
+            rust_i8_err,
+            Err(DataElementConversionError { data_element: data_element_int8 })
+        );
+
+        let rust_u16 = 16u16;
+        let data_element_uint16 = DataElement::Uint16(16u16);
+        let data_element_uint16_into: DataElement = rust_u16.into();
+        let rust_u16_ok: Result<u16> = data_element_uint16.clone().try_into();
+        let rust_u16_err: Result<i16> = data_element_uint16.clone().try_into();
+        assert_eq!(data_element_uint16_into, data_element_uint16);
+        assert_eq!(rust_u16_ok, Ok(rust_u16));
+        assert_eq!(
+            rust_u16_err,
+            Err(DataElementConversionError { data_element: data_element_uint16 })
+        );
+
+        let rust_i16 = 17i16;
+        let data_element_int16 = DataElement::Int16(17i16);
+        let data_element_int16_into: DataElement = rust_i16.into();
+        let rust_i16_ok: Result<i16> = data_element_int16.clone().try_into();
+        let rust_i16_err: Result<u16> = data_element_int16.clone().try_into();
+        assert_eq!(data_element_int16_into, data_element_int16);
+        assert_eq!(rust_i16_ok, Ok(rust_i16));
+        assert_eq!(
+            rust_i16_err,
+            Err(DataElementConversionError { data_element: data_element_int16 })
+        );
+
+        let rust_u32 = 32u32;
+        let data_element_uint32 = DataElement::Uint32(32u32);
+        let data_element_uint32_into: DataElement = rust_u32.into();
+        let rust_u32_ok: Result<u32> = data_element_uint32.clone().try_into();
+        let rust_u32_err: Result<u16> = data_element_uint32.clone().try_into();
+        assert_eq!(data_element_uint32_into, data_element_uint32);
+        assert_eq!(rust_u32_ok, Ok(rust_u32));
+        assert_eq!(
+            rust_u32_err,
+            Err(DataElementConversionError { data_element: data_element_uint32 })
+        );
+
+        let rust_i32 = 33i32;
+        let data_element_int32 = DataElement::Int32(33i32);
+        let data_element_int32_into: DataElement = rust_i32.into();
+        let rust_i32_ok: Result<i32> = data_element_int32.clone().try_into();
+        let rust_i32_err: Result<u16> = data_element_int32.clone().try_into();
+        assert_eq!(data_element_int32_into, data_element_int32);
+        assert_eq!(rust_i32_ok, Ok(rust_i32));
+        assert_eq!(
+            rust_i32_err,
+            Err(DataElementConversionError { data_element: data_element_int32 })
+        );
+
+        let rust_u64 = 64u64;
+        let data_element_uint64 = DataElement::Uint64(64u64);
+        let data_element_uint64_into: DataElement = rust_u64.into();
+        let rust_u64_ok: Result<u64> = data_element_uint64.clone().try_into();
+        let rust_u64_err: Result<u16> = data_element_uint64.clone().try_into();
+        assert_eq!(data_element_uint64_into, data_element_uint64);
+        assert_eq!(rust_u64_ok, Ok(rust_u64));
+        assert_eq!(
+            rust_u64_err,
+            Err(DataElementConversionError { data_element: data_element_uint64 })
+        );
+
+        let rust_i64 = 65i64;
+        let data_element_int64 = DataElement::Int64(65i64);
+        let data_element_int64_into: DataElement = rust_i64.into();
+        let rust_i64_ok: Result<i64> = data_element_int64.clone().try_into();
+        let rust_i64_err: Result<u16> = data_element_int64.clone().try_into();
+        assert_eq!(data_element_int64_into, data_element_int64);
+        assert_eq!(rust_i64_ok, Ok(rust_i64));
+        assert_eq!(
+            rust_i64_err,
+            Err(DataElementConversionError { data_element: data_element_int64 })
+        );
+
+        let rust_vec = "ABC".as_bytes().to_vec();
+        let data_element_str = DataElement::Str("ABC".as_bytes().to_vec());
+        let data_element_str_into: DataElement = rust_vec.clone().into();
+        let rust_vec_ok: Result<Vec<u8>> = data_element_str.clone().try_into();
+        let rust_vec_err: Result<u16> = data_element_str.clone().try_into();
+        assert_eq!(data_element_str_into, data_element_str);
+        assert_eq!(rust_vec_ok, Ok(rust_vec));
+        assert_eq!(
+            rust_vec_err,
+            Err(DataElementConversionError { data_element: data_element_str })
+        );
+
+        let rust_uuid: fidl_bt::Uuid = Uuid::new16(0x1101).into();
+        let data_element_uuid = DataElement::Uuid(Uuid::new16(0x1101).into());
+        let data_element_uuid_into: DataElement = rust_uuid.clone().into();
+        let rust_uuid_ok: Result<fidl_bt::Uuid> = data_element_uuid.clone().try_into();
+        let rust_uuid_err: Result<u16> = data_element_uuid.clone().try_into();
+        assert_eq!(data_element_uuid_into, data_element_uuid);
+        assert_eq!(rust_uuid_ok, Ok(rust_uuid));
+        assert_eq!(
+            rust_uuid_err,
+            Err(DataElementConversionError { data_element: data_element_uuid })
+        );
+
+        let rust_string = String::from("ABC");
+        let data_element_url = DataElement::Url(String::from("ABC"));
+        let data_element_url_into: DataElement = rust_string.clone().into();
+        let rust_string_ok: Result<String> = data_element_url.clone().try_into();
+        let rust_string_err: Result<u16> = data_element_url.clone().try_into();
+        assert_eq!(data_element_url_into, data_element_url);
+        assert_eq!(rust_string_ok, Ok(rust_string));
+        assert_eq!(
+            rust_string_err,
+            Err(DataElementConversionError { data_element: data_element_url })
+        );
+
+        let rust_bool = true;
+        let data_element_bool = DataElement::Bool(true);
+        let data_element_bool_into: DataElement = rust_bool.into();
+        let rust_bool_ok: Result<bool> = data_element_bool.clone().try_into();
+        let rust_bool_err: Result<u16> = data_element_bool.clone().try_into();
+        assert_eq!(data_element_bool_into, data_element_bool);
+        assert_eq!(rust_bool_ok, Ok(rust_bool));
+        assert_eq!(
+            rust_bool_err,
+            Err(DataElementConversionError { data_element: data_element_bool })
+        );
     }
 }

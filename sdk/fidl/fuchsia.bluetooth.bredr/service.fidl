@@ -124,7 +124,9 @@ type ServiceClassProfileIdentifier = strict enum : uint16 {
     /// Hands-Free Profile (HFP)
     HANDSFREE = 0x111E;
     HANDSFREE_AUDIO_GATEWAY = 0x111F;
-    // Human Interface Device and Hardcopy Cable Replacement Profile omitted (unsupported)
+    /// Human Interface Device Profile (HID)
+    HUMAN_INTERFACE_DEVICE = 0x1124;
+    // Hardcopy Cable Replacement Profile omitted (unsupported)
     /// Sim Access Profile (SAP)
     SIM_ACCESS = 0x112D;
     /// Phonebook Access Profile (PBAP)
