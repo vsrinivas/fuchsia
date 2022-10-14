@@ -174,7 +174,8 @@ protocol Job {
     ///   a new VMO pager.
     /// + **ZX_POL_AMBIENT_MARK_VMO_EXEC** a process under this job is attempting
     ///   to use [`zx_vmo_replace_as_executable()`] with a **ZX_HANDLE_INVALID**
-    ///   as the second argument rather than a valid **ZX_RSRC_KIND_VMEX**.
+    ///   as the second argument rather than a valid **ZX_RSRC_KIND_SYSTEM** resource with base
+    ///   **ZX_RSRC_SYSTEM_VMEX_BASE**.
     /// + **ZX_POL_NEW_ANY** is a special *condition* that stands for all of
     ///   the above **ZX_NEW** conditions such as **ZX_POL_NEW_VMO**,
     ///   **ZX_POL_NEW_CHANNEL**, **ZX_POL_NEW_EVENT**, **ZX_POL_NEW_EVENTPAIR**,

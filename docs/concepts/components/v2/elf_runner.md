@@ -128,7 +128,7 @@ exits with a non-zero code. This will force the system to trigger a hard reboot.
 The `ambient_mark_vmo_exec` field may be used to allow the component's first
 process to use [`zx_vmo_replace_as_executable`][vmo-replace] with a
 `ZX_HANDLE_INVALID` as the second argument rather than a valid
-`ZX_RSRC_KIND_VMEX`.
+`ZX_RSRC_KIND_SYSTEM` with base `ZX_RSRC_SYSTEM_VMEX_BASE`.
 
 #### Create Raw Processes
 
