@@ -13,12 +13,12 @@ class ZbiTestEntry {
  public:
   zx::status<> Init(int argc, char** argv);
 
-  const zx::resource& root_resource() { return *root_resource_; }
+  zx::unowned_resource mexec_resource() { return mexec_resource_.borrow(); }
   zx::vmo& kernel_zbi() { return kernel_zbi_; }
   zx::vmo& data_zbi() { return data_zbi_; }
 
  private:
-  zx::unowned_resource root_resource_;
+  zx::resource mexec_resource_;
   zx::vmo kernel_zbi_, data_zbi_;
 };
 

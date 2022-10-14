@@ -23,8 +23,8 @@ int main(int argc, char** argv) {
   // been brought up.
   zx::nanosleep(zx::deadline_after(zx::sec(3)));
 
-  zx_status_t status = mexec::BootZbi(zx::unowned_resource{test.root_resource()},
-                                      std::move(test.kernel_zbi()), std::move(test.data_zbi()));
+  zx_status_t status = mexec::BootZbi(test.mexec_resource(), std::move(test.kernel_zbi()),
+                                      std::move(test.data_zbi()));
   ZX_ASSERT(status != ZX_OK);  // If it succeeded, it never returned.
   printf("%s: mexec failed: %s\n", argv[0], zx_status_get_string(status));
   return status;

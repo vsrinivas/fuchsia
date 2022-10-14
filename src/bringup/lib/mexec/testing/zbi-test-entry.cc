@@ -10,9 +10,11 @@
 #include <lib/zbitl/items/bootfs.h>
 #include <lib/zbitl/view.h>
 #include <lib/zbitl/vmo.h>
+#include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/resource.h>
 
 #include <cstddef>
 #include <string_view>
@@ -111,13 +113,15 @@ zx::status<> ZbiTestEntry::Init(int argc, char** argv) {
     }
   }
 
-  root_resource_ = standalone::GetRootResource();
-  if (!root_resource_->is_valid()) {
-    printf("%s: unable to get ahold of the root resource\n", program_name);
+  zx_status_t status =
+      zx::resource::create(*standalone::GetSystemRootResource(), ZX_RSRC_KIND_SYSTEM,
+                           ZX_RSRC_SYSTEM_MEXEC_BASE, 1, nullptr, 0, &mexec_resource_);
+  if (status != ZX_OK || !mexec_resource_.is_valid()) {
+    printf("%s: unable to get ahold of the mexec resource\n", program_name);
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  zx_status_t status = mexec::PrepareDataZbi(root_resource_->borrow(), data_zbi_.borrow());
+  status = mexec::PrepareDataZbi(mexec_resource_.borrow(), data_zbi_.borrow());
   if (status != ZX_OK) {
     printf("%s: failed to prepare data ZBI: %s\n", program_name, zx_status_get_string(status));
     return zx::error(status);
