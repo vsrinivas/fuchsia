@@ -1,0 +1,333 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin.Mexec",
+        "ordinal": "2274853818497868998",
+        "type": "(zx/handle:VMO kernel_zbi,zx/handle:VMO data_zbi) -> (fuchsia.hardware.power.statecontrol/Admin_Mexec_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin.PowerFullyOn",
+        "ordinal": "806833526803558703",
+        "type": "() -> (fuchsia.hardware.power.statecontrol/Admin_PowerFullyOn_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin.Poweroff",
+        "ordinal": "2598608170939291464",
+        "type": "() -> (fuchsia.hardware.power.statecontrol/Admin_Poweroff_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin.Reboot",
+        "ordinal": "2446115116927251304",
+        "type": "(fuchsia.hardware.power.statecontrol/RebootReason reason) -> (fuchsia.hardware.power.statecontrol/Admin_Reboot_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin.RebootToBootloader",
+        "ordinal": "494519861703575210",
+        "type": "() -> (fuchsia.hardware.power.statecontrol/Admin_RebootToBootloader_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin.RebootToRecovery",
+        "ordinal": "1546359092142208261",
+        "type": "() -> (fuchsia.hardware.power.statecontrol/Admin_RebootToRecovery_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin.SuspendToRam",
+        "ordinal": "4255397416605803022",
+        "type": "() -> (fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.power.statecontrol/Admin"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Mexec_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Mexec_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Mexec_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.power.statecontrol/Admin_Mexec_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Mexec_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_PowerFullyOn_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_PowerFullyOn_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_PowerFullyOn_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.power.statecontrol/Admin_PowerFullyOn_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_PowerFullyOn_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Poweroff_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Poweroff_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Poweroff_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.power.statecontrol/Admin_Poweroff_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Poweroff_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_RebootToBootloader_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_RebootToBootloader_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_RebootToBootloader_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.power.statecontrol/Admin_RebootToBootloader_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_RebootToBootloader_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_RebootToRecovery_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_RebootToRecovery_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_RebootToRecovery_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.power.statecontrol/Admin_RebootToRecovery_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_RebootToRecovery_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Reboot_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Reboot_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Reboot_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.power.statecontrol/Admin_Reboot_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_Reboot_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.power.statecontrol/MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS",
+        "type": "uint32",
+        "value": "5"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.power.statecontrol/MAX_SYSTEM_POWER_STATES",
+        "type": "uint32",
+        "value": "8"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootMethodsWatcher.OnReboot",
+        "ordinal": "2475395614677539603",
+        "type": "(fuchsia.hardware.power.statecontrol/RebootReason reason) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.power.statecontrol/RebootMethodsWatcher"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootMethodsWatcherRegister.Register",
+        "ordinal": "2294465123362142519",
+        "type": "(client_end:fuchsia.hardware.power.statecontrol/RebootMethodsWatcher watcher)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.power.statecontrol/RebootMethodsWatcherRegister"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.CRITICAL_COMPONENT_FAILURE",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.FACTORY_DATA_RESET",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.HIGH_TEMPERATURE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.OUT_OF_MEMORY",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.RETRY_SYSTEM_UPDATE",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.SESSION_FAILURE",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.SYSMGR_FAILURE",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.SYSTEM_UPDATE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.USER_REQUEST",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason.ZBI_SWAP",
+        "value": "9"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.power.statecontrol/RebootReason",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/SystemPowerState.FULLY_ON",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/SystemPowerState.MEXEC",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/SystemPowerState.POWEROFF",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/SystemPowerState.REBOOT",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/SystemPowerState.REBOOT_BOOTLOADER",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/SystemPowerState.REBOOT_KERNEL_INITIATED",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/SystemPowerState.REBOOT_RECOVERY",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.power.statecontrol/SystemPowerState.SUSPEND_RAM",
+        "value": "7"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.power.statecontrol/SystemPowerState",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.hardware.power.statecontrol"
+    }
+]

@@ -1,0 +1,154 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/CastProvider.Get",
+        "ordinal": "7812404948986269583",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/CastProvider.Processed",
+        "ordinal": "6340469884714305713",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.migration/CastProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/DisplayProvider.Get",
+        "ordinal": "7812404948986269583",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/DisplayProvider.Processed",
+        "ordinal": "6340469884714305713",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.migration/DisplayProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/KronkProvider.Get",
+        "ordinal": "7812404948986269583",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/KronkProvider.Processed",
+        "ordinal": "6340469884714305713",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.migration/KronkProvider"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.migration/MigrationState.progress_percentage",
+        "ordinal": "2",
+        "type": "uint8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.migration/MigrationState.status",
+        "ordinal": "1",
+        "type": "fuchsia.migration/MigrationStatus"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.migration/MigrationState"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.migration/MigrationStatus.COMPLETE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.migration/MigrationStatus.ENCOUNTERED_ERROR",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.migration/MigrationStatus.IN_PROGRESS",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.migration/MigrationStatus.UNKNOWN",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.migration/MigrationStatus",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/ProductPolicyProvider.Get",
+        "ordinal": "7812404948986269583",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/ProductPolicyProvider.Processed",
+        "ordinal": "6340469884714305713",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.migration/ProductPolicyProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/Provider.Get",
+        "ordinal": "7812404948986269583",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/Provider.Processed",
+        "ordinal": "6340469884714305713",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.migration/Provider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/State.Watch",
+        "ordinal": "5201430326821994695",
+        "type": "() -> (fuchsia.migration/MigrationState state)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.migration/State"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/UltrasoundProvider.Get",
+        "ordinal": "7812404948986269583",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.migration/UltrasoundProvider.Processed",
+        "ordinal": "6340469884714305713",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.migration/UltrasoundProvider"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.migration"
+    }
+]

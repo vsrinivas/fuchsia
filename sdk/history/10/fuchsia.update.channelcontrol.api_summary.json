@@ -1,0 +1,34 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update.channelcontrol/ChannelControl.GetCurrent",
+        "ordinal": "1562473495519973398",
+        "type": "() -> (string:128 channel)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update.channelcontrol/ChannelControl.GetTarget",
+        "ordinal": "3891837121449420706",
+        "type": "() -> (string:128 channel)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update.channelcontrol/ChannelControl.GetTargetList",
+        "ordinal": "8249070220863920913",
+        "type": "() -> (vector<string:128>:100 channels)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update.channelcontrol/ChannelControl.SetTarget",
+        "ordinal": "5039709679901570350",
+        "type": "(string:128 channel) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.update.channelcontrol/ChannelControl"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.update.channelcontrol"
+    }
+]

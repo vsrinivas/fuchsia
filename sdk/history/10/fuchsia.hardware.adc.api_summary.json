@@ -1,0 +1,109 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.adc/Device.GetNormalizedSample",
+        "ordinal": "3817937091359369117",
+        "type": "() -> (fuchsia.hardware.adc/Device_GetNormalizedSample_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.adc/Device.GetResolution",
+        "ordinal": "4857182276525274995",
+        "type": "() -> (fuchsia.hardware.adc/Device_GetResolution_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.adc/Device.GetSample",
+        "ordinal": "6492119871273000169",
+        "type": "() -> (fuchsia.hardware.adc/Device_GetSample_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.adc/Device"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Response.value",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.adc/Device_GetNormalizedSample_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.adc/Device_GetResolution_Response.resolution",
+        "ordinal": "1",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.adc/Device_GetResolution_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.adc/Device_GetResolution_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.adc/Device_GetResolution_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.adc/Device_GetResolution_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.adc/Device_GetResolution_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.adc/Device_GetSample_Response.value",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.adc/Device_GetSample_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.adc/Device_GetSample_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.adc/Device_GetSample_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.adc/Device_GetSample_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.adc/Device_GetSample_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.hardware.adc"
+    }
+]

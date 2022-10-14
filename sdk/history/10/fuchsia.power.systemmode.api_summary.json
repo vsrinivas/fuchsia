@@ -1,0 +1,108 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.power.systemmode/ClientConfig.default_level",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.power.systemmode/ClientConfig.mode_matches",
+        "ordinal": "1",
+        "type": "vector<fuchsia.power.systemmode/ModeMatch>:0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.power.systemmode/ClientConfig"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.power.systemmode/ClientConfigurator.Get",
+        "ordinal": "2177307330967010683",
+        "type": "(fuchsia.power.clientlevel/ClientType client_type) -> (box<fuchsia.power.systemmode/ClientConfig> config)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.power.systemmode/ClientConfigurator.Set",
+        "ordinal": "2451360700391449653",
+        "type": "(fuchsia.power.clientlevel/ClientType client_type,fuchsia.power.systemmode/ClientConfig config) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.power.systemmode/ClientConfigurator"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.power.systemmode/MAX_MODE_MATCHES_PER_CLIENT",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.power.systemmode/ModeMatch.mode",
+        "ordinal": "1",
+        "type": "fuchsia.power.systemmode/SystemMode"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.power.systemmode/ModeMatch.power_level",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.power.systemmode/ModeMatch"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.power.systemmode/ModeRequestError.GENERIC",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.power.systemmode/ModeRequestError",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.power.systemmode/Requester.Request",
+        "ordinal": "6197990808338166821",
+        "type": "(fuchsia.power.systemmode/SystemMode mode,bool set) -> (fuchsia.power.systemmode/Requester_Request_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.power.systemmode/Requester"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.power.systemmode/Requester_Request_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.power.systemmode/Requester_Request_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.power.systemmode/ModeRequestError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.power.systemmode/Requester_Request_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.power.systemmode/Requester_Request_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.power.systemmode/Requester_Request_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.power.systemmode/SystemMode",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.power.systemmode"
+    }
+]

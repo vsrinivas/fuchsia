@@ -1,0 +1,177 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Address.addr",
+        "ordinal": "1",
+        "type": "fuchsia.net/Subnet"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Address.preferred_lifetime_info",
+        "ordinal": "3",
+        "type": "fuchsia.net.interfaces/PreferredLifetimeInfo"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Address.valid_until",
+        "ordinal": "2",
+        "type": "int64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.interfaces/Address"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/DeviceClass.device",
+        "ordinal": "2",
+        "type": "fuchsia.hardware.network/DeviceClass"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/DeviceClass.loopback",
+        "ordinal": "1",
+        "type": "fuchsia.net.interfaces/Empty"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.net.interfaces/DeviceClass",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net.interfaces/Empty"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/Event.added",
+        "ordinal": "2",
+        "type": "fuchsia.net.interfaces/Properties"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/Event.changed",
+        "ordinal": "4",
+        "type": "fuchsia.net.interfaces/Properties"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/Event.existing",
+        "ordinal": "1",
+        "type": "fuchsia.net.interfaces/Properties"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/Event.idle",
+        "ordinal": "5",
+        "type": "fuchsia.net.interfaces/Empty"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/Event.removed",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.net.interfaces/Event",
+        "strictness": "strict"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.net.interfaces/INTERFACE_NAME_LENGTH",
+        "type": "uint8",
+        "value": "15"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/PreferredLifetimeInfo.deprecated",
+        "ordinal": "2",
+        "type": "fuchsia.net.interfaces/Empty"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.interfaces/PreferredLifetimeInfo.preferred_until",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.net.interfaces/PreferredLifetimeInfo",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Properties.addresses",
+        "ordinal": "2",
+        "type": "vector<fuchsia.net.interfaces/Address>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Properties.device_class",
+        "ordinal": "4",
+        "type": "fuchsia.net.interfaces/DeviceClass"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Properties.has_default_ipv4_route",
+        "ordinal": "5",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Properties.has_default_ipv6_route",
+        "ordinal": "6",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Properties.id",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Properties.name",
+        "ordinal": "7",
+        "type": "string:15"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.interfaces/Properties.online",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.interfaces/Properties"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.net.interfaces/State.GetWatcher",
+        "ordinal": "5756202622262852323",
+        "type": "(fuchsia.net.interfaces/WatcherOptions options,server_end:fuchsia.net.interfaces/Watcher watcher)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.interfaces/State"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.net.interfaces/Watcher.Watch",
+        "ordinal": "6126979800581992179",
+        "type": "() -> (fuchsia.net.interfaces/Event event)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.interfaces/Watcher"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.interfaces/WatcherOptions"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.net.interfaces"
+    }
+]

@@ -1,0 +1,34 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ldsvc/Loader.Clone",
+        "ordinal": "6333824321947847721",
+        "type": "(server_end:fuchsia.ldsvc/Loader loader) -> (int32 rv)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ldsvc/Loader.Config",
+        "ordinal": "7676977189692319809",
+        "type": "(string:1024 config) -> (int32 rv)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ldsvc/Loader.Done",
+        "ordinal": "7186174313520107521",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ldsvc/Loader.LoadObject",
+        "ordinal": "5243774714012182611",
+        "type": "(string:1024 object_name) -> (int32 rv,zx/handle:<VMO,optional> object)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ldsvc/Loader"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ldsvc"
+    }
+]

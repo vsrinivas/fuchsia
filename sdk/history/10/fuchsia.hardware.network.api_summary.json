@@ -1,0 +1,985 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Device.Clone",
+        "ordinal": "6377917349697198836",
+        "type": "(server_end:fuchsia.hardware.network/Device device)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Device.GetInfo",
+        "ordinal": "4345987561275952982",
+        "type": "() -> (fuchsia.hardware.network/DeviceInfo info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Device.GetPort",
+        "ordinal": "3749956066270225062",
+        "type": "(fuchsia.hardware.network/PortId id,server_end:fuchsia.hardware.network/Port port)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Device.GetPortWatcher",
+        "ordinal": "1175232559270043404",
+        "type": "(server_end:fuchsia.hardware.network/PortWatcher watcher)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Device.OpenSession",
+        "ordinal": "2707801929272905575",
+        "type": "(string:64 session_name,fuchsia.hardware.network/SessionInfo session_info) -> (fuchsia.hardware.network/Device_OpenSession_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.network/Device"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/DeviceClass.BRIDGE",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/DeviceClass.ETHERNET",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/DeviceClass.PPP",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/DeviceClass.VIRTUAL",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/DeviceClass.WLAN",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/DeviceClass.WLAN_AP",
+        "value": "5"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.network/DeviceClass",
+        "strictness": "strict",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.buffer_alignment",
+        "ordinal": "5",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.descriptor_version",
+        "ordinal": "2",
+        "type": "uint8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.max_buffer_length",
+        "ordinal": "6",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.max_buffer_parts",
+        "ordinal": "11",
+        "type": "uint8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.min_descriptor_length",
+        "ordinal": "1",
+        "type": "uint8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.min_rx_buffer_length",
+        "ordinal": "7",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.min_tx_buffer_head",
+        "ordinal": "9",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.min_tx_buffer_length",
+        "ordinal": "8",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.min_tx_buffer_tail",
+        "ordinal": "10",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.rx_accel",
+        "ordinal": "12",
+        "type": "vector<fuchsia.hardware.network/RxAcceleration>:16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.rx_depth",
+        "ordinal": "3",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.tx_accel",
+        "ordinal": "13",
+        "type": "vector<fuchsia.hardware.network/TxAcceleration>:16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/DeviceInfo.tx_depth",
+        "ordinal": "4",
+        "type": "uint16"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.hardware.network/DeviceInfo"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/DeviceInstance.GetDevice",
+        "ordinal": "8598058163296915191",
+        "type": "(server_end:fuchsia.hardware.network/Device device)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.network/DeviceInstance"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/DevicePortEvent.added",
+        "ordinal": "2",
+        "type": "fuchsia.hardware.network/PortId"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/DevicePortEvent.existing",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.network/PortId"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/DevicePortEvent.idle",
+        "ordinal": "4",
+        "type": "fuchsia.hardware.network/Empty"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/DevicePortEvent.removed",
+        "ordinal": "3",
+        "type": "fuchsia.hardware.network/PortId"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.network/DevicePortEvent",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.network/Device_OpenSession_Response.fifos",
+        "ordinal": "2",
+        "type": "fuchsia.hardware.network/Fifos"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.network/Device_OpenSession_Response.session",
+        "ordinal": "1",
+        "type": "client_end:fuchsia.hardware.network/Session"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.network/Device_OpenSession_Response",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/Device_OpenSession_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/Device_OpenSession_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.network/Device_OpenSession_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.network/Device_OpenSession_Result",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.network/Empty"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/EthernetFeatures.ETHERNET_II",
+        "value": "2"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/EthernetFeatures.E_802_1_Q",
+        "value": "4"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/EthernetFeatures.E_802_1_Q_IN_Q",
+        "value": "8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/EthernetFeatures.E_802_3_LLC_SNAP",
+        "value": "16"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/EthernetFeatures.RAW",
+        "value": "1"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.hardware.network/EthernetFeatures",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.network/FRAME_FEATURES_RAW",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.network/Fifos.rx",
+        "ordinal": "1",
+        "type": "zx/handle:FIFO"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.network/Fifos.tx",
+        "ordinal": "2",
+        "type": "zx/handle:FIFO"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.network/Fifos",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/FrameType.ETHERNET",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/FrameType.IPV4",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/FrameType.IPV6",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.network/FrameType",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.network/FrameTypeSupport.features",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.network/FrameTypeSupport.supported_flags",
+        "ordinal": "3",
+        "type": "fuchsia.hardware.network/TxFlags"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.network/FrameTypeSupport.type",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.network/FrameType"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.network/FrameTypeSupport"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/InfoType.NO_INFO",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.network/InfoType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.network/MAX_ACCEL_FLAGS",
+        "type": "uint32",
+        "value": "16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.network/MAX_DESCRIPTOR_CHAIN",
+        "type": "uint8",
+        "value": "4"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.network/MAX_FRAME_TYPES",
+        "type": "uint32",
+        "value": "4"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.network/MAX_PORTS",
+        "type": "uint8",
+        "value": "32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.network/MAX_SESSION_NAME",
+        "type": "uint32",
+        "value": "64"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.network/MAX_STATUS_BUFFER",
+        "type": "uint32",
+        "value": "50"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/MacAddressing.AddMulticastAddress",
+        "ordinal": "1105132327221005349",
+        "type": "(fuchsia.net/MacAddress address) -> (int32 status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/MacAddressing.GetUnicastAddress",
+        "ordinal": "3197758227283422910",
+        "type": "() -> (fuchsia.net/MacAddress address)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/MacAddressing.RemoveMulticastAddress",
+        "ordinal": "6763831474300790112",
+        "type": "(fuchsia.net/MacAddress address) -> (int32 status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/MacAddressing.SetMode",
+        "ordinal": "444021886998005132",
+        "type": "(fuchsia.hardware.network/MacFilterMode mode) -> (int32 status)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.network/MacAddressing"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/MacFilterMode.MULTICAST_FILTER",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/MacFilterMode.MULTICAST_PROMISCUOUS",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/MacFilterMode.PROMISCUOUS",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.network/MacFilterMode",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Port.Clone",
+        "ordinal": "5640587099851277011",
+        "type": "(server_end:fuchsia.hardware.network/Port port)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Port.GetCounters",
+        "ordinal": "7647458529627650988",
+        "type": "() -> (fuchsia.hardware.network/PortGetCountersResponse payload)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Port.GetDevice",
+        "ordinal": "9071172445315870080",
+        "type": "(server_end:fuchsia.hardware.network/Device device)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Port.GetInfo",
+        "ordinal": "2840916356794502845",
+        "type": "() -> (fuchsia.hardware.network/PortInfo info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Port.GetMac",
+        "ordinal": "3201710345528787190",
+        "type": "(server_end:fuchsia.hardware.network/MacAddressing mac)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Port.GetStatus",
+        "ordinal": "4770830476791931058",
+        "type": "() -> (fuchsia.hardware.network/PortStatus status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Port.GetStatusWatcher",
+        "ordinal": "7300645848992176340",
+        "type": "(server_end:fuchsia.hardware.network/StatusWatcher watcher,uint32 buffer)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.network/Port"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse.rx_bytes",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse.rx_frames",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse.tx_bytes",
+        "ordinal": "4",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse.tx_frames",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.network/PortId.base",
+        "ordinal": "1",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.network/PortId.salt",
+        "ordinal": "2",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.network/PortId"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortInfo.class",
+        "ordinal": "2",
+        "type": "fuchsia.hardware.network/DeviceClass"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortInfo.id",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.network/PortId"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortInfo.rx_types",
+        "ordinal": "3",
+        "type": "vector<fuchsia.hardware.network/FrameType>:4"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortInfo.tx_types",
+        "ordinal": "4",
+        "type": "vector<fuchsia.hardware.network/FrameTypeSupport>:4"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.hardware.network/PortInfo"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortStatus.flags",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.network/StatusFlags"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortStatus.mtu",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.hardware.network/PortStatus"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/PortWatcher.Watch",
+        "ordinal": "4505609858711549278",
+        "type": "() -> (fuchsia.hardware.network/DevicePortEvent event)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.network/PortWatcher"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/RxAcceleration.VALIDATED_ETHERNET_FCS",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/RxAcceleration.VALIDATED_IPV4_CHECKSUM",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/RxAcceleration.VALIDATED_TCP_CHECKSUM",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/RxAcceleration.VALIDATED_UDP_CHECKSUM",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.network/RxAcceleration",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_0",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_1",
+        "value": "2"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_10",
+        "value": "1024"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_11",
+        "value": "2048"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_12",
+        "value": "4096"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_13",
+        "value": "8192"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_14",
+        "value": "16384"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_15",
+        "value": "32768"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_2",
+        "value": "4"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_3",
+        "value": "8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_4",
+        "value": "16"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_5",
+        "value": "32"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_6",
+        "value": "64"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_7",
+        "value": "128"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_8",
+        "value": "256"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ACCEL_9",
+        "value": "512"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_ECHOED_TX",
+        "value": "2147483648"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_OVERRUN",
+        "value": "536870912"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/RxFlags.RX_VALIDATION_ERROR",
+        "value": "1073741824"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.hardware.network/RxFlags",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Session.Attach",
+        "ordinal": "2200510900121637753",
+        "type": "(fuchsia.hardware.network/PortId port,vector<fuchsia.hardware.network/FrameType>:4 rx_frames) -> (fuchsia.hardware.network/Session_Attach_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Session.Close",
+        "ordinal": "4124541276668990198",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Session.Detach",
+        "ordinal": "7549173138887841895",
+        "type": "(fuchsia.hardware.network/PortId port) -> (fuchsia.hardware.network/Session_Detach_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.network/Session"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/SessionFlags.LISTEN_TX",
+        "value": "2"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/SessionFlags.PRIMARY",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/SessionFlags.REPORT_INVALID_RX",
+        "value": "4"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.hardware.network/SessionFlags",
+        "strictness": "strict",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/SessionInfo.data",
+        "ordinal": "2",
+        "type": "zx/handle:VMO"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/SessionInfo.descriptor_count",
+        "ordinal": "5",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/SessionInfo.descriptor_length",
+        "ordinal": "4",
+        "type": "uint8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/SessionInfo.descriptor_version",
+        "ordinal": "3",
+        "type": "uint8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/SessionInfo.descriptors",
+        "ordinal": "1",
+        "type": "zx/handle:VMO"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/SessionInfo.options",
+        "ordinal": "6",
+        "type": "fuchsia.hardware.network/SessionFlags"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.hardware.network/SessionInfo",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.network/Session_Attach_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/Session_Attach_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/Session_Attach_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.network/Session_Attach_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.network/Session_Attach_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.network/Session_Detach_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/Session_Detach_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.network/Session_Detach_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.network/Session_Detach_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.network/Session_Detach_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/StatusFlags.ONLINE",
+        "value": "1"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.hardware.network/StatusFlags",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/StatusWatcher.WatchStatus",
+        "ordinal": "1398833956082180793",
+        "type": "() -> (fuchsia.hardware.network/PortStatus port_status)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.network/StatusWatcher"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/TxAcceleration.COMPUTE_ETHERNET_FCS",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/TxAcceleration.COMPUTE_IPV4_CHECKSUM",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/TxAcceleration.COMPUTE_TCP_CHECKSUM",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.network/TxAcceleration.COMPUTE_UDP_CHECKSUM",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.network/TxAcceleration",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_0",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_1",
+        "value": "2"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_10",
+        "value": "1024"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_11",
+        "value": "2048"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_12",
+        "value": "4096"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_13",
+        "value": "8192"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_14",
+        "value": "16384"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_15",
+        "value": "32768"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_2",
+        "value": "4"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_3",
+        "value": "8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_4",
+        "value": "16"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_5",
+        "value": "32"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_6",
+        "value": "64"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_7",
+        "value": "128"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_8",
+        "value": "256"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxFlags.TX_ACCEL_9",
+        "value": "512"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.hardware.network/TxFlags",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxReturnFlags.TX_RET_ERROR",
+        "value": "2147483648"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxReturnFlags.TX_RET_NOT_AVAILABLE",
+        "value": "4"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxReturnFlags.TX_RET_NOT_SUPPORTED",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.hardware.network/TxReturnFlags.TX_RET_OUT_OF_RESOURCES",
+        "value": "2"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.hardware.network/TxReturnFlags",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.hardware.network"
+    }
+]

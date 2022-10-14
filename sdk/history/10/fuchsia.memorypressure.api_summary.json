@@ -1,0 +1,47 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.memorypressure/Level.CRITICAL",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.memorypressure/Level.NORMAL",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.memorypressure/Level.WARNING",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.memorypressure/Level",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.memorypressure/Provider.RegisterWatcher",
+        "ordinal": "657074398568309929",
+        "type": "(client_end:fuchsia.memorypressure/Watcher watcher)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.memorypressure/Provider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.memorypressure/Watcher.OnLevelChanged",
+        "ordinal": "6184947877153341145",
+        "type": "(fuchsia.memorypressure/Level level) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.memorypressure/Watcher"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.memorypressure"
+    }
+]

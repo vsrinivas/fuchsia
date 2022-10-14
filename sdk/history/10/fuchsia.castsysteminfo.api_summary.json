@@ -1,0 +1,75 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsysteminfo/ErrorCode.ERR_INTERNAL",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsysteminfo/ErrorCode.ERR_NO_SYSTEM_INFO",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.castsysteminfo/ErrorCode",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.castsysteminfo/Provider.GetSystemInfo",
+        "ordinal": "7926791442055649115",
+        "type": "() -> (fuchsia.castsysteminfo/Provider_GetSystemInfo_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.castsysteminfo/Provider"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Response.systemInfo",
+        "ordinal": "1",
+        "type": "fuchsia.castsysteminfo/SystemInfo"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.castsysteminfo/ErrorCode"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.castsysteminfo/SystemInfo.cloud_device_id",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.castsysteminfo/SystemInfo.local_device_id",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.castsysteminfo/SystemInfo"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.castsysteminfo"
+    }
+]

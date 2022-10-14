@@ -1,0 +1,16 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.sys.test/CacheControl.Clear",
+        "ordinal": "1950241258203988609",
+        "type": "() -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.sys.test/CacheControl"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.sys.test"
+    }
+]

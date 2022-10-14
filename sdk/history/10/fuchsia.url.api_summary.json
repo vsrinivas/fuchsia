@@ -1,0 +1,12 @@
+[
+    {
+        "kind": "const",
+        "name": "fuchsia.url/MAX_URL_LENGTH",
+        "type": "uint32",
+        "value": "4096"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.url"
+    }
+]

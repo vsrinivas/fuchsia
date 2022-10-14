@@ -1,0 +1,421 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.diagnostics/ArchiveAccessor.StreamDiagnostics",
+        "ordinal": "2361924900314496062",
+        "type": "(fuchsia.diagnostics/StreamParameters stream_parameters,server_end:fuchsia.diagnostics/BatchIterator result_stream)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.diagnostics/ArchiveAccessor"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.diagnostics/BatchIterator.GetNext",
+        "ordinal": "8654095804583269541",
+        "type": "() -> (fuchsia.diagnostics/BatchIterator_GetNext_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.diagnostics/BatchIterator"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Response.batch",
+        "ordinal": "1",
+        "type": "vector<fuchsia.diagnostics/FormattedContent>:64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Response",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.diagnostics/ReaderError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.diagnostics/BatchIterator_GetNext_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Result",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/ClientSelectorConfiguration.select_all",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/ClientSelectorConfiguration.selectors",
+        "ordinal": "1",
+        "type": "vector<fuchsia.diagnostics/SelectorArgument>"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.diagnostics/ClientSelectorConfiguration",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/ComponentSelector.moniker_segments",
+        "ordinal": "1",
+        "type": "vector<fuchsia.diagnostics/StringSelector>:25"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.diagnostics/ComponentSelector"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/DataType.INSPECT",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/DataType.LOGS",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.diagnostics/DataType",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/Format.JSON",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/Format.TEXT",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.diagnostics/Format",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/FormattedContent.json",
+        "ordinal": "1",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/FormattedContent.text",
+        "ordinal": "2",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.diagnostics/FormattedContent",
+        "resourceness": "resource",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/Interest.min_severity",
+        "ordinal": "1",
+        "type": "fuchsia.diagnostics/Severity"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.diagnostics/Interest"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.diagnostics/LogInterestSelector.interest",
+        "ordinal": "2",
+        "type": "fuchsia.diagnostics/Interest"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.diagnostics/LogInterestSelector.selector",
+        "ordinal": "1",
+        "type": "fuchsia.diagnostics/ComponentSelector"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.diagnostics/LogInterestSelector"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.diagnostics/LogSettings.RegisterInterest",
+        "ordinal": "332558376842655227",
+        "type": "(vector<fuchsia.diagnostics/LogInterestSelector>:64 selectors)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.diagnostics/LogSettings"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.diagnostics/MAXIMUM_ENTRIES_PER_BATCH",
+        "type": "uint16",
+        "value": "64"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.diagnostics/MAXIMUM_RAW_SELECTOR_LENGTH",
+        "type": "uint16",
+        "value": "1024"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.diagnostics/MAX_DATA_HIERARCHY_DEPTH",
+        "type": "uint16",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.diagnostics/MAX_LOG_SELECTORS",
+        "type": "uint8",
+        "value": "64"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.diagnostics/MAX_MONIKER_SEGMENTS",
+        "type": "uint16",
+        "value": "25"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.diagnostics/MAX_STRING_SELECTOR_LENGTH",
+        "type": "uint16",
+        "value": "100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/PerformanceConfiguration.batch_retrieval_timeout_seconds",
+        "ordinal": "2",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/PerformanceConfiguration.max_aggregate_content_size_bytes",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.diagnostics/PerformanceConfiguration"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.diagnostics/PropertySelector.node_path",
+        "ordinal": "1",
+        "type": "vector<fuchsia.diagnostics/StringSelector>:100"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.diagnostics/PropertySelector.target_properties",
+        "ordinal": "2",
+        "type": "fuchsia.diagnostics/StringSelector"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.diagnostics/PropertySelector"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/ReaderError.IO",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.diagnostics/ReaderError",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/Selector.component_selector",
+        "ordinal": "1",
+        "type": "fuchsia.diagnostics/ComponentSelector"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/Selector.tree_selector",
+        "ordinal": "2",
+        "type": "fuchsia.diagnostics/TreeSelector"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.diagnostics/Selector"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/SelectorArgument.raw_selector",
+        "ordinal": "2",
+        "type": "string:1024"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/SelectorArgument.structured_selector",
+        "ordinal": "1",
+        "type": "fuchsia.diagnostics/Selector"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.diagnostics/SelectorArgument",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/Severity.DEBUG",
+        "value": "32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/Severity.ERROR",
+        "value": "80"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/Severity.FATAL",
+        "value": "96"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/Severity.INFO",
+        "value": "48"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/Severity.TRACE",
+        "value": "16"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/Severity.WARN",
+        "value": "64"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.diagnostics/Severity",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/StreamMode.SNAPSHOT",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/StreamMode.SNAPSHOT_THEN_SUBSCRIBE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.diagnostics/StreamMode.SUBSCRIBE",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.diagnostics/StreamMode",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/StreamParameters.batch_retrieval_timeout_seconds",
+        "ordinal": "5",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/StreamParameters.client_selector_configuration",
+        "ordinal": "4",
+        "type": "fuchsia.diagnostics/ClientSelectorConfiguration"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/StreamParameters.data_type",
+        "ordinal": "1",
+        "type": "fuchsia.diagnostics/DataType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/StreamParameters.format",
+        "ordinal": "3",
+        "type": "fuchsia.diagnostics/Format"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/StreamParameters.performance_configuration",
+        "ordinal": "6",
+        "type": "fuchsia.diagnostics/PerformanceConfiguration"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.diagnostics/StreamParameters.stream_mode",
+        "ordinal": "2",
+        "type": "fuchsia.diagnostics/StreamMode"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.diagnostics/StreamParameters"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/StringSelector.exact_match",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/StringSelector.string_pattern",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.diagnostics/StringSelector",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.diagnostics/SubtreeSelector.node_path",
+        "ordinal": "1",
+        "type": "vector<fuchsia.diagnostics/StringSelector>:100"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.diagnostics/SubtreeSelector"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/TreeSelector.property_selector",
+        "ordinal": "2",
+        "type": "fuchsia.diagnostics/PropertySelector"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.diagnostics/TreeSelector.subtree_selector",
+        "ordinal": "1",
+        "type": "fuchsia.diagnostics/SubtreeSelector"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.diagnostics/TreeSelector",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.diagnostics"
+    }
+]

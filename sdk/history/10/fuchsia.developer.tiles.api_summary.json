@@ -1,0 +1,40 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.developer.tiles/Controller.AddTileFromURL",
+        "ordinal": "2145545050808391453",
+        "type": "(string url,bool allow_focus,vector<string>:optional args) -> (uint32 key)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.developer.tiles/Controller.AddTileFromViewProvider",
+        "ordinal": "1831386060940405014",
+        "type": "(string url,fuchsia.ui.app/ViewProvider provider) -> (uint32 key)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.developer.tiles/Controller.ListTiles",
+        "ordinal": "4379362434934205044",
+        "type": "() -> (vector<uint32> keys,vector<string> urls,vector<fuchsia.ui.gfx/vec3> sizes,vector<bool> focusabilities)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.developer.tiles/Controller.Quit",
+        "ordinal": "6231082936162566174",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.developer.tiles/Controller.RemoveTile",
+        "ordinal": "7217685822892653159",
+        "type": "(uint32 key)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.developer.tiles/Controller"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.developer.tiles"
+    }
+]

@@ -1,0 +1,130 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.session/LaunchConfiguration.session_url",
+        "ordinal": "1",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.session/LaunchConfiguration"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.session/LaunchError.CREATE_COMPONENT_FAILED",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.session/LaunchError.DESTROY_COMPONENT_FAILED",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.session/LaunchError.INVALID_ARGS",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.session/LaunchError.NOT_FOUND",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.session/LaunchError",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.session/Launcher.Launch",
+        "ordinal": "8535627687619344474",
+        "type": "(fuchsia.session/LaunchConfiguration configuration) -> (fuchsia.session/Launcher_Launch_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.session/Launcher"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.session/Launcher_Launch_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.session/Launcher_Launch_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.session/LaunchError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.session/Launcher_Launch_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.session/Launcher_Launch_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.session/Launcher_Launch_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.session/RestartError.CREATE_COMPONENT_FAILED",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.session/RestartError.DESTROY_COMPONENT_FAILED",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.session/RestartError.NOT_FOUND",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.session/RestartError.NOT_RUNNING",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.session/RestartError",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.session/Restarter.Restart",
+        "ordinal": "5822320773243200942",
+        "type": "() -> (fuchsia.session/Restarter_Restart_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.session/Restarter"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.session/Restarter_Restart_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.session/Restarter_Restart_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.session/RestartError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.session/Restarter_Restart_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.session/Restarter_Restart_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.session/Restarter_Restart_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.session"
+    }
+]

@@ -1,0 +1,114 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lightsensor/Calibrator.Calibrate",
+        "ordinal": "9068981567006939906",
+        "type": "(fuchsia.lightsensor/Rgbc data) -> (fuchsia.lightsensor/Calibrator_Calibrate_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lightsensor/Calibrator"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Response.data",
+        "ordinal": "1",
+        "type": "fuchsia.lightsensor/Rgbc"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.lightsensor/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.lightsensor/Calibrator_Calibrate_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lightsensor/Error.INVALID_INPUT",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.lightsensor/Error",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lightsensor/LightSensorData.calculated_lux",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lightsensor/LightSensorData.correlated_color_temperature",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lightsensor/LightSensorData.rgbc",
+        "ordinal": "1",
+        "type": "fuchsia.lightsensor/Rgbc"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lightsensor/LightSensorData"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Rgbc.blue_intensity",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Rgbc.clear_intensity",
+        "ordinal": "4",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Rgbc.green_intensity",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Rgbc.red_intensity",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.lightsensor/Rgbc"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lightsensor/Sensor.Watch",
+        "ordinal": "4249770422999721215",
+        "type": "() -> (fuchsia.lightsensor/LightSensorData data)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lightsensor/Sensor"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.lightsensor"
+    }
+]

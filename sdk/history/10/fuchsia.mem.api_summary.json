@@ -1,0 +1,64 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.mem/Buffer.size",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.mem/Buffer.vmo",
+        "ordinal": "1",
+        "type": "zx/handle:VMO"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.mem/Buffer",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.mem/Data.buffer",
+        "ordinal": "2",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.mem/Data.bytes",
+        "ordinal": "1",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.mem/Data",
+        "resourceness": "resource",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.mem/Range.offset",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.mem/Range.size",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.mem/Range.vmo",
+        "ordinal": "1",
+        "type": "zx/handle:VMO"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.mem/Range",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.mem"
+    }
+]

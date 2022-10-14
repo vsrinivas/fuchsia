@@ -1,0 +1,118 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.driver.test/DriverLog.log_level",
+        "ordinal": "2",
+        "type": "fuchsia.diagnostics/Severity"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.driver.test/DriverLog.name",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.driver.test/DriverLog"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.driver.test/Realm.Start",
+        "ordinal": "4451408685211490042",
+        "type": "(fuchsia.driver.test/RealmArgs args) -> (fuchsia.driver.test/Realm_Start_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.driver.test/Realm"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.board_name",
+        "ordinal": "10",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.boot",
+        "ordinal": "1",
+        "type": "fuchsia.io/Directory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.driver_bind_eager",
+        "ordinal": "9",
+        "type": "vector<string>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.driver_disable",
+        "ordinal": "8",
+        "type": "vector<string>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.driver_log_level",
+        "ordinal": "7",
+        "type": "vector<fuchsia.driver.test/DriverLog>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.driver_tests_disable",
+        "ordinal": "6",
+        "type": "vector<string>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.driver_tests_enable",
+        "ordinal": "5",
+        "type": "vector<string>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.driver_tests_enable_all",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.root_driver",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.driver.test/RealmArgs.use_driver_framework_v2",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.driver.test/RealmArgs",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.driver.test/Realm_Start_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.driver.test/Realm_Start_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.driver.test/Realm_Start_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.driver.test/Realm_Start_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.driver.test/Realm_Start_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.driver.test"
+    }
+]

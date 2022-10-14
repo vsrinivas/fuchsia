@@ -1,0 +1,99 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsetup/ApiMode.ACCEPTS_DATA",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsetup/ApiMode.ACCEPTS_NO_DATA",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.castsetup/ApiMode",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.castsetup/ApiRegistry.RegisterApi",
+        "ordinal": "594098083669996602",
+        "type": "(string:1024 path,fuchsia.castsetup/ApiMode api_mode,fuchsia.castsetup/SecurityState security_state,client_end:fuchsia.castsetup/ApiRequestHandler api_handler)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.castsetup/ApiRegistry"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.castsetup/ApiRequestHandler.HandleRequest",
+        "ordinal": "2114178950095188118",
+        "type": "(string:optional data) -> (uint32 response_code,string:optional data)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.castsetup/ApiRequestHandler"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsetup/SecurityState.SECURITY_STATE_ENCRYPTED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsetup/SecurityState.SECURITY_STATE_NONE",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsetup/SecurityState.SECURITY_STATE_TRUSTED",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.castsetup/SecurityState",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsetup/State.COMPLETE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsetup/State.IN_PROGRESS",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsetup/State.OFFLINE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castsetup/State.UNKNOWN",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.castsetup/State",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.castsetup/StateWatcher.Watch",
+        "ordinal": "5544701050307394664",
+        "type": "() -> (fuchsia.castsetup/State state)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.castsetup/StateWatcher"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.castsetup"
+    }
+]

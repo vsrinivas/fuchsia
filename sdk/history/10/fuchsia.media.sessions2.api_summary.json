@@ -1,0 +1,739 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/ActiveSession.WatchActiveSession",
+        "ordinal": "866698187428462584",
+        "type": "() -> (client_end:<fuchsia.media.sessions2/SessionControl,optional> session)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sessions2/ActiveSession"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/ContentType.AUDIO",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/ContentType.MOVIE",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/ContentType.MUSIC",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/ContentType.OTHER",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/ContentType.TV_SHOW",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/ContentType.VIDEO",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.sessions2/ContentType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Discovery.ConnectToSession",
+        "ordinal": "4024622540732484157",
+        "type": "(uint64 session_id,server_end:fuchsia.media.sessions2/SessionControl session_control_request)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Discovery.WatchSessions",
+        "ordinal": "4769790351342621438",
+        "type": "(fuchsia.media.sessions2/WatchOptions watch_options,client_end:fuchsia.media.sessions2/SessionsWatcher session_watcher)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sessions2/Discovery"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/Error.OTHER",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.sessions2/Error",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.sessions2/ImageSizeVariant.height",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.sessions2/ImageSizeVariant.url",
+        "ordinal": "1",
+        "type": "string:4096"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.sessions2/ImageSizeVariant.width",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.sessions2/ImageSizeVariant"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/InterruptionBehavior.NONE",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/InterruptionBehavior.PAUSE",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.sessions2/InterruptionBehavior",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/MediaImage.image_type",
+        "ordinal": "1",
+        "type": "fuchsia.media.sessions2/MediaImageType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/MediaImage.sizes",
+        "ordinal": "2",
+        "type": "vector<fuchsia.media.sessions2/ImageSizeVariant>:16"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.sessions2/MediaImage"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/MediaImageType.ARTWORK",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/MediaImageType.SOURCE_ICON",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.sessions2/MediaImageType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/ObserverDiscovery.ConnectToSession",
+        "ordinal": "3214331717966547066",
+        "type": "(uint64 session_id,server_end:fuchsia.media.sessions2/SessionObserver session_request)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/ObserverDiscovery.WatchSessions",
+        "ordinal": "4437710989452157438",
+        "type": "(fuchsia.media.sessions2/WatchOptions watch_options,client_end:fuchsia.media.sessions2/SessionsWatcher sessions_watcher)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sessions2/ObserverDiscovery"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.BindVolumeControl",
+        "ordinal": "1285248311195338940",
+        "type": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.NextItem",
+        "ordinal": "8300269571737121376",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.Pause",
+        "ordinal": "95539962421898465",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.Play",
+        "ordinal": "1603599044703317902",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.PrevItem",
+        "ordinal": "7495191478414973500",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.Seek",
+        "ordinal": "5652641859867124005",
+        "type": "(int64 position)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.SetPlaybackRate",
+        "ordinal": "4049220611973692623",
+        "type": "(float32 playback_rate)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.SetRepeatMode",
+        "ordinal": "2430168849782342082",
+        "type": "(fuchsia.media.sessions2/RepeatMode repeat_mode)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.SetShuffleMode",
+        "ordinal": "523853744947549244",
+        "type": "(bool shuffle_on)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.SkipForward",
+        "ordinal": "7989461016971684891",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.SkipReverse",
+        "ordinal": "742536916907538984",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.Stop",
+        "ordinal": "1821395971626721966",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Player.WatchInfoChange",
+        "ordinal": "7573205349505869618",
+        "type": "() -> (fuchsia.media.sessions2/PlayerInfoDelta player_info_delta)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sessions2/Player"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilities.flags",
+        "ordinal": "1",
+        "type": "fuchsia.media.sessions2/PlayerCapabilityFlags"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.sessions2/PlayerCapabilities"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.CHANGE_TO_NEXT_ITEM",
+        "value": "128"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.CHANGE_TO_PREV_ITEM",
+        "value": "256"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.HAS_GAIN_CONTROL",
+        "value": "512"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.PAUSE",
+        "value": "4"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.PLAY",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.REPEAT_GROUPS",
+        "value": "1024"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.REPEAT_SINGLE",
+        "value": "2048"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.SEEK",
+        "value": "8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.SET_PLAYBACK_RATE",
+        "value": "4096"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.SHUFFLE",
+        "value": "64"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.SKIP_FORWARD",
+        "value": "16"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags.SKIP_REVERSE",
+        "value": "32"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.media.sessions2/PlayerCapabilityFlags",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.BindVolumeControl",
+        "ordinal": "1285248311195338940",
+        "type": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.NextItem",
+        "ordinal": "8300269571737121376",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.Pause",
+        "ordinal": "95539962421898465",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.Play",
+        "ordinal": "1603599044703317902",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.PrevItem",
+        "ordinal": "7495191478414973500",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.Seek",
+        "ordinal": "5652641859867124005",
+        "type": "(int64 position)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.SetPlaybackRate",
+        "ordinal": "4049220611973692623",
+        "type": "(float32 playback_rate)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.SetRepeatMode",
+        "ordinal": "2430168849782342082",
+        "type": "(fuchsia.media.sessions2/RepeatMode repeat_mode)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.SetShuffleMode",
+        "ordinal": "523853744947549244",
+        "type": "(bool shuffle_on)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.SkipForward",
+        "ordinal": "7989461016971684891",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.SkipReverse",
+        "ordinal": "742536916907538984",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/PlayerControl.Stop",
+        "ordinal": "1821395971626721966",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sessions2/PlayerControl"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.interruption_behavior",
+        "ordinal": "6",
+        "type": "fuchsia.media.sessions2/InterruptionBehavior"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.local",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.media_images",
+        "ordinal": "4",
+        "type": "vector<fuchsia.media.sessions2/MediaImage>:16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.metadata",
+        "ordinal": "3",
+        "type": "fuchsia.media/Metadata"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.player_capabilities",
+        "ordinal": "5",
+        "type": "fuchsia.media.sessions2/PlayerCapabilities"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.player_status",
+        "ordinal": "2",
+        "type": "fuchsia.media.sessions2/PlayerStatus"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerRegistration.domain",
+        "ordinal": "1",
+        "type": "string:1000"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerRegistration.usage",
+        "ordinal": "2",
+        "type": "fuchsia.media/AudioRenderUsage"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.sessions2/PlayerRegistration"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/PlayerState.BUFFERING",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/PlayerState.ERROR",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/PlayerState.IDLE",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/PlayerState.PAUSED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/PlayerState.PLAYING",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.sessions2/PlayerState",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerStatus.content_type",
+        "ordinal": "6",
+        "type": "fuchsia.media.sessions2/ContentType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerStatus.duration",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerStatus.error",
+        "ordinal": "7",
+        "type": "fuchsia.media.sessions2/Error"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerStatus.is_live",
+        "ordinal": "8",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerStatus.player_state",
+        "ordinal": "2",
+        "type": "fuchsia.media.sessions2/PlayerState"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerStatus.repeat_mode",
+        "ordinal": "4",
+        "type": "fuchsia.media.sessions2/RepeatMode"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerStatus.shuffle_on",
+        "ordinal": "5",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/PlayerStatus.timeline_function",
+        "ordinal": "3",
+        "type": "fuchsia.media/TimelineFunction"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.sessions2/PlayerStatus"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/Publisher.Publish",
+        "ordinal": "3335566567530961619",
+        "type": "(client_end:fuchsia.media.sessions2/Player player,fuchsia.media.sessions2/PlayerRegistration registration) -> (uint64 session_id)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sessions2/Publisher"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/RepeatMode.GROUP",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/RepeatMode.OFF",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sessions2/RepeatMode.SINGLE",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.sessions2/RepeatMode",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.BindVolumeControl",
+        "ordinal": "2178626327163733776",
+        "type": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.NextItem",
+        "ordinal": "1426146745652437304",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.Pause",
+        "ordinal": "5633288215595569709",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.Play",
+        "ordinal": "4884466424665024838",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.PrevItem",
+        "ordinal": "9183210075725005516",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.Seek",
+        "ordinal": "4035929320428557268",
+        "type": "(int64 position)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.SetPlaybackRate",
+        "ordinal": "4483384193157763613",
+        "type": "(float32 playback_rate)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.SetRepeatMode",
+        "ordinal": "185634666445744613",
+        "type": "(fuchsia.media.sessions2/RepeatMode repeat_mode)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.SetShuffleMode",
+        "ordinal": "238001713132726430",
+        "type": "(bool shuffle_on)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.SkipForward",
+        "ordinal": "3923966788063273081",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.SkipReverse",
+        "ordinal": "6835470740136593532",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.Stop",
+        "ordinal": "6042254420068198423",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionControl.WatchStatus",
+        "ordinal": "5540960751875476340",
+        "type": "() -> (fuchsia.media.sessions2/SessionInfoDelta session_info_delta)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sessions2/SessionControl"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.domain",
+        "ordinal": "1",
+        "type": "string:1000"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.is_local",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.is_locally_active",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.media_images",
+        "ordinal": "6",
+        "type": "vector<fuchsia.media.sessions2/MediaImage>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.metadata",
+        "ordinal": "5",
+        "type": "fuchsia.media/Metadata"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.player_capabilities",
+        "ordinal": "7",
+        "type": "fuchsia.media.sessions2/PlayerCapabilities"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.player_status",
+        "ordinal": "4",
+        "type": "fuchsia.media.sessions2/PlayerStatus"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.sessions2/SessionInfoDelta"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionObserver.WatchStatus",
+        "ordinal": "2621529773886771021",
+        "type": "() -> (fuchsia.media.sessions2/SessionInfoDelta session_info_delta)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sessions2/SessionObserver"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionsWatcher.SessionRemoved",
+        "ordinal": "4644714165898985486",
+        "type": "(uint64 session_id) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sessions2/SessionsWatcher.SessionUpdated",
+        "ordinal": "5175303346354438873",
+        "type": "(uint64 session_id,fuchsia.media.sessions2/SessionInfoDelta session_info_delta) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sessions2/SessionsWatcher"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/WatchOptions.allowed_sessions",
+        "ordinal": "2",
+        "type": "vector<uint64>:1000"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.sessions2/WatchOptions.only_active",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.sessions2/WatchOptions"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.media.sessions2"
+    }
+]

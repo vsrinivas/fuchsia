@@ -1,0 +1,648 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.A",
+        "value": "458756"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.AC_BACK",
+        "value": "786980"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.AC_FULL_SCREEN_VIEW",
+        "value": "786992"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.AC_REFRESH",
+        "value": "786983"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.AC_SELECT_TASK_APPLICATION",
+        "value": "786850"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.APOSTROPHE",
+        "value": "458804"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.ASSISTANT",
+        "value": "4294901761"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.B",
+        "value": "458757"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.BACKSLASH",
+        "value": "458801"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.BACKSPACE",
+        "value": "458794"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.BRIGHTNESS_DOWN",
+        "value": "786543"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.BRIGHTNESS_UP",
+        "value": "786544"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.C",
+        "value": "458758"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.CAPS_LOCK",
+        "value": "458809"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.COMMA",
+        "value": "458806"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.D",
+        "value": "458759"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.DELETE",
+        "value": "458828"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.DOT",
+        "value": "458807"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.DOWN",
+        "value": "458833"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.E",
+        "value": "458760"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.END",
+        "value": "458829"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.ENTER",
+        "value": "458792"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.EQUALS",
+        "value": "458798"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.ESCAPE",
+        "value": "458793"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F",
+        "value": "458761"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F1",
+        "value": "458810"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F10",
+        "value": "458819"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F11",
+        "value": "458820"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F12",
+        "value": "458821"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F2",
+        "value": "458811"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F3",
+        "value": "458812"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F4",
+        "value": "458813"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F5",
+        "value": "458814"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F6",
+        "value": "458815"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F7",
+        "value": "458816"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F8",
+        "value": "458817"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.F9",
+        "value": "458818"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.G",
+        "value": "458762"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.GRAVE_ACCENT",
+        "value": "458805"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.H",
+        "value": "458763"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.HOME",
+        "value": "458826"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.I",
+        "value": "458764"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.INSERT",
+        "value": "458825"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.J",
+        "value": "458765"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.K",
+        "value": "458766"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_0",
+        "value": "458850"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_1",
+        "value": "458841"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_2",
+        "value": "458842"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_3",
+        "value": "458843"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_4",
+        "value": "458844"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_5",
+        "value": "458845"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_6",
+        "value": "458846"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_7",
+        "value": "458847"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_8",
+        "value": "458848"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_9",
+        "value": "458849"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_ASTERISK",
+        "value": "458837"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_DOT",
+        "value": "458851"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_ENTER",
+        "value": "458840"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_EQUALS",
+        "value": "458855"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_MINUS",
+        "value": "458838"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_PLUS",
+        "value": "458839"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEYPAD_SLASH",
+        "value": "458836"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_0",
+        "value": "458791"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_1",
+        "value": "458782"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_2",
+        "value": "458783"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_3",
+        "value": "458784"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_4",
+        "value": "458785"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_5",
+        "value": "458786"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_6",
+        "value": "458787"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_7",
+        "value": "458788"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_8",
+        "value": "458789"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.KEY_9",
+        "value": "458790"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.L",
+        "value": "458767"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.LEFT",
+        "value": "458832"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.LEFT_ALT",
+        "value": "458978"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.LEFT_BRACE",
+        "value": "458799"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.LEFT_CTRL",
+        "value": "458976"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.LEFT_META",
+        "value": "458979"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.LEFT_SHIFT",
+        "value": "458977"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.M",
+        "value": "458768"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.MEDIA_MUTE",
+        "value": "786658"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.MEDIA_VOLUME_DECREMENT",
+        "value": "786666"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.MEDIA_VOLUME_INCREMENT",
+        "value": "786665"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.MENU",
+        "value": "458870"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.MINUS",
+        "value": "458797"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.MUTE",
+        "value": "458879"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.N",
+        "value": "458769"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.NON_US_BACKSLASH",
+        "value": "458852"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.NON_US_HASH",
+        "value": "458802"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.NUM_LOCK",
+        "value": "458835"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.O",
+        "value": "458770"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.P",
+        "value": "458771"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.PAGE_DOWN",
+        "value": "458830"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.PAGE_UP",
+        "value": "458827"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.PAUSE",
+        "value": "458824"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.PLAY_PAUSE",
+        "value": "786637"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.POWER",
+        "value": "4294901762"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.PRINT_SCREEN",
+        "value": "458822"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.Q",
+        "value": "458772"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.R",
+        "value": "458773"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.RIGHT",
+        "value": "458831"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.RIGHT_ALT",
+        "value": "458982"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.RIGHT_BRACE",
+        "value": "458800"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.RIGHT_CTRL",
+        "value": "458980"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.RIGHT_META",
+        "value": "458983"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.RIGHT_SHIFT",
+        "value": "458981"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.S",
+        "value": "458774"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.SCROLL_LOCK",
+        "value": "458823"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.SEMICOLON",
+        "value": "458803"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.SLASH",
+        "value": "458808"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.SPACE",
+        "value": "458796"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.T",
+        "value": "458775"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.TAB",
+        "value": "458795"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.U",
+        "value": "458776"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.UNKNOWN",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.UP",
+        "value": "458834"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.V",
+        "value": "458777"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.VOLUME_DOWN",
+        "value": "458881"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.VOLUME_UP",
+        "value": "458880"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.W",
+        "value": "458778"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.X",
+        "value": "458779"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.Y",
+        "value": "458780"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/Key.Z",
+        "value": "458781"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.input/Key",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/KeymapId.FR_AZERTY",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/KeymapId.US_DVORAK",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.input/KeymapId.US_QWERTY",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.input/KeymapId",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.input"
+    }
+]

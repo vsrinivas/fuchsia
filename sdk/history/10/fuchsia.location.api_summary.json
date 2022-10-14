@@ -1,0 +1,17 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.location/Error.GENERAL_ERROR",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.location/Error",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.location"
+    }
+]

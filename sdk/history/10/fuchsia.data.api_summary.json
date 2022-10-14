@@ -1,0 +1,79 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.data/Dictionary.entries",
+        "ordinal": "1",
+        "type": "vector<fuchsia.data/DictionaryEntry>:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.data/Dictionary"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.data/DictionaryEntry.key",
+        "ordinal": "1",
+        "type": "string:1024"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.data/DictionaryEntry.value",
+        "ordinal": "2",
+        "type": "fuchsia.data/DictionaryValue:optional"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.data/DictionaryEntry"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.data/DictionaryValue.obj_vec",
+        "ordinal": "3",
+        "type": "vector<fuchsia.data/Dictionary>:1024"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.data/DictionaryValue.str",
+        "ordinal": "1",
+        "type": "string:1024"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.data/DictionaryValue.str_vec",
+        "ordinal": "2",
+        "type": "vector<string:1024>:1024"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.data/DictionaryValue",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.data/MAX_KEY_LENGTH",
+        "type": "uint32",
+        "value": "1024"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.data/MAX_NUM_ENTRIES",
+        "type": "uint32",
+        "value": "1024"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.data/MAX_NUM_VALUE_ITEMS",
+        "type": "uint32",
+        "value": "1024"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.data/MAX_VALUE_LENGTH",
+        "type": "uint32",
+        "value": "1024"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.data"
+    }
+]

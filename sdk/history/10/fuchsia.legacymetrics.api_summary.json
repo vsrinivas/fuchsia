@@ -1,0 +1,121 @@
+[
+    {
+        "kind": "union/member",
+        "name": "fuchsia.legacymetrics/Event.histogram",
+        "ordinal": "2",
+        "type": "fuchsia.legacymetrics/Histogram"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.legacymetrics/Event.impl_defined_event",
+        "ordinal": "3",
+        "type": "fuchsia.legacymetrics/ImplementationDefinedEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.legacymetrics/Event.user_action_event",
+        "ordinal": "1",
+        "type": "fuchsia.legacymetrics/UserActionEvent"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.legacymetrics/Event",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.legacymetrics/Histogram.buckets",
+        "ordinal": "2",
+        "type": "vector<fuchsia.legacymetrics/HistogramBucket>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.legacymetrics/Histogram.name",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.legacymetrics/Histogram.sum",
+        "ordinal": "3",
+        "type": "int64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.legacymetrics/Histogram"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.legacymetrics/HistogramBucket.count",
+        "ordinal": "3",
+        "type": "int64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.legacymetrics/HistogramBucket.max",
+        "ordinal": "2",
+        "type": "int64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.legacymetrics/HistogramBucket.min",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.legacymetrics/HistogramBucket"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.legacymetrics/ImplementationDefinedEvent.data",
+        "ordinal": "1",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.legacymetrics/ImplementationDefinedEvent.name",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.legacymetrics/ImplementationDefinedEvent"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.legacymetrics/MetricsRecorder.OnCloseSoon",
+        "ordinal": "2887687357176154771",
+        "type": " -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.legacymetrics/MetricsRecorder.Record",
+        "ordinal": "221414131739248768",
+        "type": "(vector<fuchsia.legacymetrics/Event> events) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.legacymetrics/MetricsRecorder"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.legacymetrics/UserActionEvent.name",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.legacymetrics/UserActionEvent.time",
+        "ordinal": "2",
+        "type": "int64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.legacymetrics/UserActionEvent"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.legacymetrics"
+    }
+]

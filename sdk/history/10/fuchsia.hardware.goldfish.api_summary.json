@@ -1,0 +1,441 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.AllocateBlock",
+        "ordinal": "301499758177132858",
+        "type": "(uint64 size) -> (int32 res,uint64 paddr,zx/handle:<VMO,optional> vmo)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.ClaimSharedBlock",
+        "ordinal": "2235092139023717038",
+        "type": "(uint64 offset,uint64 size) -> (int32 res,zx/handle:<VMO,optional> vmo)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.DeallocateBlock",
+        "ordinal": "6918882790336289567",
+        "type": "(uint64 paddr) -> (int32 res)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.Ping",
+        "ordinal": "2205648229029698861",
+        "type": "(fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage ping) -> (int32 res,fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage ping)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.UnclaimSharedBlock",
+        "ordinal": "353368689722338714",
+        "type": "(uint64 offset) -> (int32 res)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data0",
+        "ordinal": "4",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data1",
+        "ordinal": "5",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data2",
+        "ordinal": "6",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data3",
+        "ordinal": "7",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.metadata",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.offset",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.size",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverType.DEFAULT",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceDevice.OpenChildDriver",
+        "ordinal": "4584232884763155436",
+        "type": "(fuchsia.hardware.goldfish/AddressSpaceChildDriverType type,server_end:fuchsia.hardware.goldfish/AddressSpaceChildDriver req)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.goldfish/AddressSpaceDevice"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/BufferHandleInfo.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/BufferHandleInfo.memory_property",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/BufferHandleInfo.type",
+        "ordinal": "2",
+        "type": "fuchsia.hardware.goldfish/BufferHandleType"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.hardware.goldfish/BufferHandleInfo"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.goldfish/BufferHandleType.BUFFER",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.goldfish/BufferHandleType.COLOR_BUFFER",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.goldfish/BufferHandleType.INVALID",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.goldfish/BufferHandleType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.goldfish/ColorBufferFormatType.BGRA",
+        "value": "32993"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.goldfish/ColorBufferFormatType.LUMINANCE",
+        "value": "6409"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.goldfish/ColorBufferFormatType.RG",
+        "value": "33319"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.goldfish/ColorBufferFormatType.RGBA",
+        "value": "6408"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.goldfish/ColorBufferFormatType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice.CreateBuffer2",
+        "ordinal": "6862042922857840156",
+        "type": "(zx/handle:VMO vmo,fuchsia.hardware.goldfish/CreateBuffer2Params create_params) -> (fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice.CreateColorBuffer2",
+        "ordinal": "4169252035486446280",
+        "type": "(zx/handle:VMO vmo,fuchsia.hardware.goldfish/CreateColorBuffer2Params create_params) -> (int32 res,int32 hw_address_page_offset)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice.CreateSyncFence",
+        "ordinal": "5353068281592083148",
+        "type": "(zx/handle:EVENTPAIR event) -> (fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice.GetBufferHandle",
+        "ordinal": "8133795888306244835",
+        "type": "(zx/handle:VMO vmo) -> (int32 res,uint32 id,fuchsia.hardware.goldfish/BufferHandleType type)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice.GetBufferHandleInfo",
+        "ordinal": "2841505518246241803",
+        "type": "(zx/handle:VMO vmo) -> (fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.goldfish/ControlDevice"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response.hw_address_page_offset",
+        "ordinal": "1",
+        "type": "int32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response.info",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.goldfish/BufferHandleInfo"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params.memory_property",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params.physical_address",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params.size",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.format",
+        "ordinal": "3",
+        "type": "fuchsia.hardware.goldfish/ColorBufferFormatType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.height",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.memory_property",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.physical_address",
+        "ordinal": "5",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.width",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.goldfish/MEMORY_PROPERTY_DEVICE_LOCAL",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.goldfish/MEMORY_PROPERTY_HOST_VISIBLE",
+        "type": "uint32",
+        "value": "2"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/Pipe.DoCall",
+        "ordinal": "8021961532928656243",
+        "type": "(uint64 count,uint64 offset,uint64 read_count,uint64 read_offset) -> (int32 res,uint64 actual)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/Pipe.GetBuffer",
+        "ordinal": "8943638193069227685",
+        "type": "() -> (int32 res,zx/handle:<VMO,optional> vmo)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/Pipe.Read",
+        "ordinal": "6767111528361224213",
+        "type": "(uint64 count,uint64 offset) -> (int32 res,uint64 actual)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/Pipe.SetBufferSize",
+        "ordinal": "6514510148499791185",
+        "type": "(uint64 size) -> (int32 res)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/Pipe.SetEvent",
+        "ordinal": "2016609347509580970",
+        "type": "(zx/handle:EVENT event)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/Pipe.Write",
+        "ordinal": "4632827893631090119",
+        "type": "(uint64 count,uint64 offset) -> (int32 res,uint64 actual)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.goldfish/Pipe"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/PipeDevice.OpenPipe",
+        "ordinal": "7183899255635126983",
+        "type": "(server_end:fuchsia.hardware.goldfish/Pipe pipe_request)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.goldfish/PipeDevice"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.goldfish/SIGNAL_HANGUP",
+        "type": "uint32",
+        "value": "67108864"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.goldfish/SIGNAL_READABLE",
+        "type": "uint32",
+        "value": "16777216"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.goldfish/SIGNAL_WRITABLE",
+        "type": "uint32",
+        "value": "33554432"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/SyncDevice.CreateTimeline",
+        "ordinal": "8792208160798596832",
+        "type": "(server_end:fuchsia.hardware.goldfish/SyncTimeline timeline_req) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.goldfish/SyncDevice"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.goldfish/SyncTimeline.TriggerHostWait",
+        "ordinal": "7412837554896894211",
+        "type": "(uint64 host_glsync_handle,uint64 host_syncthread_handle,zx/handle:EVENTPAIR event)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.goldfish/SyncTimeline"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.hardware.goldfish"
+    }
+]

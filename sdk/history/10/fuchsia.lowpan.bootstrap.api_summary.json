@@ -1,0 +1,16 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.bootstrap/Thread.ImportSettings",
+        "ordinal": "6540944409786604477",
+        "type": "(fuchsia.mem/Buffer thread_settings_json) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.bootstrap/Thread"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.lowpan.bootstrap"
+    }
+]

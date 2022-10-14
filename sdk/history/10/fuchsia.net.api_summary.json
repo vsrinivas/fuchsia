@@ -1,0 +1,178 @@
+[
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net/IpAddress.ipv4",
+        "ordinal": "1",
+        "type": "fuchsia.net/Ipv4Address"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net/IpAddress.ipv6",
+        "ordinal": "2",
+        "type": "fuchsia.net/Ipv6Address"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.net/IpAddress",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.net/IpVersion.V4",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.net/IpVersion.V6",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.net/IpVersion",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv4Address.addr",
+        "ordinal": "1",
+        "type": "array<uint8,4>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net/Ipv4Address"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv4AddressWithPrefix.addr",
+        "ordinal": "1",
+        "type": "fuchsia.net/Ipv4Address"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv4AddressWithPrefix.prefix_len",
+        "ordinal": "2",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net/Ipv4AddressWithPrefix"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv4SocketAddress.address",
+        "ordinal": "1",
+        "type": "fuchsia.net/Ipv4Address"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv4SocketAddress.port",
+        "ordinal": "2",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net/Ipv4SocketAddress"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv6Address.addr",
+        "ordinal": "1",
+        "type": "array<uint8,16>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net/Ipv6Address"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv6AddressWithPrefix.addr",
+        "ordinal": "1",
+        "type": "fuchsia.net/Ipv6Address"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv6AddressWithPrefix.prefix_len",
+        "ordinal": "2",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net/Ipv6AddressWithPrefix"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv6SocketAddress.address",
+        "ordinal": "1",
+        "type": "fuchsia.net/Ipv6Address"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv6SocketAddress.port",
+        "ordinal": "2",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Ipv6SocketAddress.zone_index",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net/Ipv6SocketAddress"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.net/MAX_HOSTNAME_SIZE",
+        "type": "uint64",
+        "value": "255"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/MacAddress.octets",
+        "ordinal": "1",
+        "type": "array<uint8,6>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net/MacAddress"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net/SocketAddress.ipv4",
+        "ordinal": "1",
+        "type": "fuchsia.net/Ipv4SocketAddress"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net/SocketAddress.ipv6",
+        "ordinal": "2",
+        "type": "fuchsia.net/Ipv6SocketAddress"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.net/SocketAddress",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Subnet.addr",
+        "ordinal": "1",
+        "type": "fuchsia.net/IpAddress"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net/Subnet.prefix_len",
+        "ordinal": "2",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net/Subnet"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.net"
+    }
+]

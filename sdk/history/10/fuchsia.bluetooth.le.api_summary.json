@@ -1,0 +1,697 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/AdvertisedPeripheral.OnConnected",
+        "ordinal": "6952281387315409272",
+        "type": "(fuchsia.bluetooth.le/Peer peer,client_end:fuchsia.bluetooth.le/Connection connection) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.le/AdvertisedPeripheral"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingData.appearance",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth/Appearance"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingData.include_tx_power_level",
+        "ordinal": "8",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingData.manufacturer_data",
+        "ordinal": "6",
+        "type": "vector<fuchsia.bluetooth.le/ManufacturerData>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingData.name",
+        "ordinal": "1",
+        "type": "string:248"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingData.service_data",
+        "ordinal": "5",
+        "type": "vector<fuchsia.bluetooth.le/ServiceData>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingData.service_uuids",
+        "ordinal": "4",
+        "type": "vector<fuchsia.bluetooth/Uuid>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingData.tx_power_level",
+        "ordinal": "3",
+        "type": "int8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingData.uris",
+        "ordinal": "7",
+        "type": "vector<string:278>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.le/AdvertisingData"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingDataDeprecated.appearance",
+        "ordinal": "3",
+        "type": "fuchsia.bluetooth/UInt16:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingDataDeprecated.manufacturer_specific_data",
+        "ordinal": "6",
+        "type": "vector<fuchsia.bluetooth.le/ManufacturerSpecificDataEntry>:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingDataDeprecated.name",
+        "ordinal": "1",
+        "type": "string:<248,optional>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingDataDeprecated.service_data",
+        "ordinal": "5",
+        "type": "vector<fuchsia.bluetooth.le/ServiceDataEntry>:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingDataDeprecated.service_uuids",
+        "ordinal": "4",
+        "type": "vector<string:36>:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingDataDeprecated.solicited_service_uuids",
+        "ordinal": "7",
+        "type": "vector<string:36>:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingDataDeprecated.tx_power_level",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth/Int8:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingDataDeprecated.uris",
+        "ordinal": "8",
+        "type": "vector<string>:optional"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.le/AdvertisingDataDeprecated"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.le/AdvertisingHandle"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingModeHint.FAST",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingModeHint.SLOW",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingModeHint.VERY_FAST",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.le/AdvertisingModeHint",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingParameters.connectable",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingParameters.connection_options",
+        "ordinal": "5",
+        "type": "fuchsia.bluetooth.le/ConnectionOptions"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingParameters.data",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.le/AdvertisingData"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingParameters.mode_hint",
+        "ordinal": "3",
+        "type": "fuchsia.bluetooth.le/AdvertisingModeHint"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/AdvertisingParameters.scan_response",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.le/AdvertisingData"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.le/AdvertisingParameters"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.ConnectPeripheral",
+        "ordinal": "8164300664993142618",
+        "type": "(string:16 identifier,fuchsia.bluetooth.le/ConnectionOptions options,server_end:fuchsia.bluetooth.gatt/Client gatt_client) -> (fuchsia.bluetooth/Status status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.DisconnectPeripheral",
+        "ordinal": "762287950220452605",
+        "type": "(string:16 identifier) -> (fuchsia.bluetooth/Status status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.GetPeripheral",
+        "ordinal": "684364827058770906",
+        "type": "(string:16 identifier) -> (box<fuchsia.bluetooth.le/RemoteDevice> peripheral)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.GetPeripherals",
+        "ordinal": "4015653360434054056",
+        "type": "(vector<string:36>:optional service_uuids) -> (vector<fuchsia.bluetooth.le/RemoteDevice> peripherals)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.OnDeviceDiscovered",
+        "ordinal": "506895609942666678",
+        "type": " -> (fuchsia.bluetooth.le/RemoteDevice device)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.OnPeripheralDisconnected",
+        "ordinal": "5642002732075263711",
+        "type": " -> (string:16 identifier)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.OnScanStateChanged",
+        "ordinal": "6885682926580682047",
+        "type": " -> (bool scanning)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.Scan",
+        "ordinal": "4753287824271204703",
+        "type": "(fuchsia.bluetooth.le/ScanOptions options,server_end:fuchsia.bluetooth.le/ScanResultWatcher result_watcher) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.StartScan",
+        "ordinal": "1059699466289877803",
+        "type": "(box<fuchsia.bluetooth.le/ScanFilter> filter) -> (fuchsia.bluetooth/Status status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Central.StopScan",
+        "ordinal": "6879792045015185312",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.le/Central"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/CentralError.ABORTED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/CentralError.FAILED",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/CentralError.INVALID_PARAMETERS",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/CentralError.IN_PROGRESS",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.le/CentralError",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.le/Connection"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ConnectionOptions.bondable_mode",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ConnectionOptions.service_filter",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth/Uuid"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.le/ConnectionOptions"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Filter.connectable",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Filter.manufacturer_id",
+        "ordinal": "3",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Filter.max_path_loss",
+        "ordinal": "6",
+        "type": "int8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Filter.name",
+        "ordinal": "5",
+        "type": "string:248"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Filter.service_data_uuid",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth/Uuid"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Filter.service_uuid",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth/Uuid"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.le/Filter"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth.le/MAX_MANUFACTURER_DATA_LENGTH",
+        "type": "uint8",
+        "value": "252"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth.le/MAX_SERVICE_DATA_LENGTH",
+        "type": "uint8",
+        "value": "252"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth.le/MAX_URI_LENGTH",
+        "type": "uint16",
+        "value": "278"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ManufacturerData.company_id",
+        "ordinal": "1",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ManufacturerData.data",
+        "ordinal": "2",
+        "type": "vector<uint8>:252"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.le/ManufacturerData"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ManufacturerSpecificDataEntry.company_id",
+        "ordinal": "1",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ManufacturerSpecificDataEntry.data",
+        "ordinal": "2",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.le/ManufacturerSpecificDataEntry"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Peer.advertising_data",
+        "ordinal": "4",
+        "type": "fuchsia.bluetooth.le/AdvertisingData"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Peer.bonded",
+        "ordinal": "7",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Peer.connectable",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Peer.data",
+        "ordinal": "6",
+        "type": "fuchsia.bluetooth.le/ScanData"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Peer.id",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth/PeerId"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Peer.last_updated",
+        "ordinal": "8",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Peer.name",
+        "ordinal": "5",
+        "type": "string:248"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/Peer.rssi",
+        "ordinal": "3",
+        "type": "int8"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.le/Peer"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Peripheral.Advertise",
+        "ordinal": "3287285943277633919",
+        "type": "(fuchsia.bluetooth.le/AdvertisingParameters parameters,client_end:fuchsia.bluetooth.le/AdvertisedPeripheral advertised_peripheral) -> (fuchsia.bluetooth.le/Peripheral_Advertise_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Peripheral.OnPeerConnected",
+        "ordinal": "1590717649738392406",
+        "type": " -> (fuchsia.bluetooth.le/Peer peer,client_end:fuchsia.bluetooth.le/Connection connection)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/Peripheral.StartAdvertising",
+        "ordinal": "6374213901444190077",
+        "type": "(fuchsia.bluetooth.le/AdvertisingParameters parameters,server_end:fuchsia.bluetooth.le/AdvertisingHandle handle) -> (fuchsia.bluetooth.le/Peripheral_StartAdvertising_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.le/Peripheral"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/PeripheralError.ABORTED",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/PeripheralError.ADVERTISING_DATA_TOO_LONG",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/PeripheralError.FAILED",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/PeripheralError.INVALID_PARAMETERS",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/PeripheralError.NOT_SUPPORTED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.le/PeripheralError.SCAN_RESPONSE_DATA_TOO_LONG",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.le/PeripheralError",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.le/Peripheral_Advertise_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.le/Peripheral_Advertise_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.le/PeripheralError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.le/Peripheral_Advertise_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.le/Peripheral_Advertise_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.le/Peripheral_Advertise_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.le/Peripheral_StartAdvertising_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.le/Peripheral_StartAdvertising_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.le/PeripheralError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.le/Peripheral_StartAdvertising_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.le/Peripheral_StartAdvertising_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.le/Peripheral_StartAdvertising_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/RemoteDevice.advertising_data",
+        "ordinal": "4",
+        "type": "box<fuchsia.bluetooth.le/AdvertisingDataDeprecated>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/RemoteDevice.connectable",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/RemoteDevice.identifier",
+        "ordinal": "1",
+        "type": "string:16"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/RemoteDevice.rssi",
+        "ordinal": "3",
+        "type": "fuchsia.bluetooth/Int8:optional"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.le/RemoteDevice"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ScanData.appearance",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth/Appearance"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ScanData.manufacturer_data",
+        "ordinal": "5",
+        "type": "vector<fuchsia.bluetooth.le/ManufacturerData>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ScanData.service_data",
+        "ordinal": "4",
+        "type": "vector<fuchsia.bluetooth.le/ServiceData>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ScanData.service_uuids",
+        "ordinal": "3",
+        "type": "vector<fuchsia.bluetooth/Uuid>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ScanData.timestamp",
+        "ordinal": "7",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ScanData.tx_power",
+        "ordinal": "1",
+        "type": "int8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ScanData.uris",
+        "ordinal": "6",
+        "type": "vector<string:278>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.le/ScanData"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ScanFilter.connectable",
+        "ordinal": "4",
+        "type": "fuchsia.bluetooth/Bool:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ScanFilter.manufacturer_identifier",
+        "ordinal": "3",
+        "type": "fuchsia.bluetooth/UInt16:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ScanFilter.max_path_loss",
+        "ordinal": "6",
+        "type": "fuchsia.bluetooth/Int8:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ScanFilter.name_substring",
+        "ordinal": "5",
+        "type": "string:<248,optional>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ScanFilter.service_data_uuids",
+        "ordinal": "2",
+        "type": "vector<string:36>:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ScanFilter.service_uuids",
+        "ordinal": "1",
+        "type": "vector<string:36>:optional"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.le/ScanFilter"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.le/ScanOptions.filters",
+        "ordinal": "1",
+        "type": "vector<fuchsia.bluetooth.le/Filter>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.le/ScanOptions"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.le/ScanResultWatcher.Watch",
+        "ordinal": "8158853666206330906",
+        "type": "() -> (vector<fuchsia.bluetooth.le/Peer> updated)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.le/ScanResultWatcher"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ServiceData.data",
+        "ordinal": "2",
+        "type": "vector<uint8>:252"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ServiceData.uuid",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth/Uuid"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.le/ServiceData"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ServiceDataEntry.data",
+        "ordinal": "2",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.le/ServiceDataEntry.uuid",
+        "ordinal": "1",
+        "type": "string:36"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.le/ServiceDataEntry"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.bluetooth.le"
+    }
+]

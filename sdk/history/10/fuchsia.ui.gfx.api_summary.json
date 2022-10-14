@@ -1,0 +1,2968 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/AddChildCmd.child_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/AddChildCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/AddChildCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/AddLayerCmd.layer_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/AddLayerCmd.layer_stack_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/AddLayerCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/AddLightCmd.light_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/AddLightCmd.scene_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/AddLightCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/AddPartCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/AddPartCmd.part_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/AddPartCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/AmbientLightArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/AmbientLightArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.bounding_box",
+        "ordinal": "10",
+        "type": "fuchsia.ui.gfx/BoundingBox"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.index_buffer_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.index_count",
+        "ordinal": "5",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.index_format",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/MeshIndexFormat"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.index_offset",
+        "ordinal": "4",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.mesh_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.vertex_buffer_id",
+        "ordinal": "6",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.vertex_count",
+        "ordinal": "9",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.vertex_format",
+        "ordinal": "7",
+        "type": "fuchsia.ui.gfx/MeshVertexFormat"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd.vertex_offset",
+        "ordinal": "8",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/BindMeshBuffersCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BoundingBox.max",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BoundingBox.min",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/BoundingBox"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BufferArgs.memory_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BufferArgs.memory_offset",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/BufferArgs.num_bytes",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/BufferArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/CameraArgs.scene_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/CameraArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/CircleArgs.radius",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/CircleArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ClipNodeArgs.unused",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ClipNodeArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgb.blue",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgb.green",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgb.red",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ColorRgb"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgbValue.value",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/ColorRgb"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgbValue.variable_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ColorRgbValue"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgba.alpha",
+        "ordinal": "4",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgba.blue",
+        "ordinal": "3",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgba.green",
+        "ordinal": "2",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgba.red",
+        "ordinal": "1",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ColorRgba"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgbaValue.value",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/ColorRgba"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ColorRgbaValue.variable_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ColorRgbaValue"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.add_child",
+        "ordinal": "14",
+        "type": "fuchsia.ui.gfx/AddChildCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.add_layer",
+        "ordinal": "36",
+        "type": "fuchsia.ui.gfx/AddLayerCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.add_light",
+        "ordinal": "30",
+        "type": "fuchsia.ui.gfx/AddLightCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.add_part",
+        "ordinal": "15",
+        "type": "fuchsia.ui.gfx/AddPartCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.bind_mesh_buffers",
+        "ordinal": "35",
+        "type": "fuchsia.ui.gfx/BindMeshBuffersCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.create_resource",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/CreateResourceCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.detach",
+        "ordinal": "6",
+        "type": "fuchsia.ui.gfx/DetachCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.detach_children",
+        "ordinal": "16",
+        "type": "fuchsia.ui.gfx/DetachChildrenCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.detach_light",
+        "ordinal": "31",
+        "type": "fuchsia.ui.gfx/DetachLightCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.detach_lights",
+        "ordinal": "32",
+        "type": "fuchsia.ui.gfx/DetachLightsCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.export_resource",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/ExportResourceCmdDeprecated"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.import_resource",
+        "ordinal": "4",
+        "type": "fuchsia.ui.gfx/ImportResourceCmdDeprecated"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.release_resource",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ReleaseResourceCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.remove_all_layers",
+        "ordinal": "38",
+        "type": "fuchsia.ui.gfx/RemoveAllLayersCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.remove_layer",
+        "ordinal": "37",
+        "type": "fuchsia.ui.gfx/RemoveLayerCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.scene__add_ambient_light",
+        "ordinal": "49",
+        "type": "fuchsia.ui.gfx/SceneAddAmbientLightCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.scene__add_directional_light",
+        "ordinal": "50",
+        "type": "fuchsia.ui.gfx/SceneAddDirectionalLightCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.scene__add_point_light",
+        "ordinal": "51",
+        "type": "fuchsia.ui.gfx/SceneAddPointLightCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.send_size_change_hint_hack",
+        "ordinal": "13",
+        "type": "fuchsia.ui.gfx/SendSizeChangeHintCmdHACK"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_anchor",
+        "ordinal": "10",
+        "type": "fuchsia.ui.gfx/SetAnchorCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_camera",
+        "ordinal": "23",
+        "type": "fuchsia.ui.gfx/SetCameraCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_camera_clip_space_transform",
+        "ordinal": "56",
+        "type": "fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_camera_pose_buffer",
+        "ordinal": "27",
+        "type": "fuchsia.ui.gfx/SetCameraPoseBufferCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_camera_projection",
+        "ordinal": "25",
+        "type": "fuchsia.ui.gfx/SetCameraProjectionCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_camera_transform",
+        "ordinal": "24",
+        "type": "fuchsia.ui.gfx/SetCameraTransformCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_clip",
+        "ordinal": "19",
+        "type": "fuchsia.ui.gfx/SetClipCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_clip_planes",
+        "ordinal": "46",
+        "type": "fuchsia.ui.gfx/SetClipPlanesCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_color",
+        "ordinal": "34",
+        "type": "fuchsia.ui.gfx/SetColorCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_disable_clipping",
+        "ordinal": "44",
+        "type": "fuchsia.ui.gfx/SetDisableClippingCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_display_color_conversion",
+        "ordinal": "52",
+        "type": "fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_display_minimum_rgb",
+        "ordinal": "57",
+        "type": "fuchsia.ui.gfx/SetDisplayMinimumRgbCmdHACK"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_display_rotation",
+        "ordinal": "53",
+        "type": "fuchsia.ui.gfx/SetDisplayRotationCmdHACK"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_enable_view_debug_bounds",
+        "ordinal": "54",
+        "type": "fuchsia.ui.gfx/SetEnableDebugViewBoundsCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_event_mask",
+        "ordinal": "42",
+        "type": "fuchsia.ui.gfx/SetEventMaskCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_hit_test_behavior",
+        "ordinal": "20",
+        "type": "fuchsia.ui.gfx/SetHitTestBehaviorCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_import_focus",
+        "ordinal": "45",
+        "type": "fuchsia.ui.gfx/SetImportFocusCmdDEPRECATED"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_label",
+        "ordinal": "43",
+        "type": "fuchsia.ui.gfx/SetLabelCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_layer_stack",
+        "ordinal": "39",
+        "type": "fuchsia.ui.gfx/SetLayerStackCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_light_color",
+        "ordinal": "28",
+        "type": "fuchsia.ui.gfx/SetLightColorCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_light_direction",
+        "ordinal": "29",
+        "type": "fuchsia.ui.gfx/SetLightDirectionCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_material",
+        "ordinal": "18",
+        "type": "fuchsia.ui.gfx/SetMaterialCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_opacity",
+        "ordinal": "12",
+        "type": "fuchsia.ui.gfx/SetOpacityCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_point_light_falloff",
+        "ordinal": "48",
+        "type": "fuchsia.ui.gfx/SetPointLightFalloffCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_point_light_position",
+        "ordinal": "47",
+        "type": "fuchsia.ui.gfx/SetPointLightPositionCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_renderer",
+        "ordinal": "40",
+        "type": "fuchsia.ui.gfx/SetRendererCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_renderer_param",
+        "ordinal": "41",
+        "type": "fuchsia.ui.gfx/SetRendererParamCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_rotation",
+        "ordinal": "9",
+        "type": "fuchsia.ui.gfx/SetRotationCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_scale",
+        "ordinal": "8",
+        "type": "fuchsia.ui.gfx/SetScaleCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_semantic_visibility",
+        "ordinal": "58",
+        "type": "fuchsia.ui.gfx/SetSemanticVisibilityCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_shape",
+        "ordinal": "17",
+        "type": "fuchsia.ui.gfx/SetShapeCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_size",
+        "ordinal": "11",
+        "type": "fuchsia.ui.gfx/SetSizeCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_stereo_camera_projection",
+        "ordinal": "26",
+        "type": "fuchsia.ui.gfx/SetStereoCameraProjectionCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_tag",
+        "ordinal": "5",
+        "type": "fuchsia.ui.gfx/SetTagCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_texture",
+        "ordinal": "33",
+        "type": "fuchsia.ui.gfx/SetTextureCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_translation",
+        "ordinal": "7",
+        "type": "fuchsia.ui.gfx/SetTranslationCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_view_holder_bounds_color",
+        "ordinal": "55",
+        "type": "fuchsia.ui.gfx/SetViewHolderBoundsColorCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.set_view_properties",
+        "ordinal": "21",
+        "type": "fuchsia.ui.gfx/SetViewPropertiesCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Command.take_snapshot_cmd",
+        "ordinal": "22",
+        "type": "fuchsia.ui.gfx/TakeSnapshotCmdDEPRECATED"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.gfx/Command",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/CompositorArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/CompositorArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/CreateResourceCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/CreateResourceCmd.resource",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ResourceArgs"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/CreateResourceCmd",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/DetachChildrenCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/DetachChildrenCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/DetachCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/DetachCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/DetachLightCmd.light_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/DetachLightCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/DetachLightsCmd.scene_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/DetachLightsCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/DirectionalLightArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/DirectionalLightArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/DisplayCompositorArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/DisplayCompositorArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/DisplayInfo.height_in_px",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/DisplayInfo.width_in_px",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/DisplayInfo"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/EntityNodeArgs.unused",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/EntityNodeArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.import_unbound",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/ImportUnboundEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.metrics",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/MetricsEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.size_change_hint",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/SizeChangeHintEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.view_attached_to_scene",
+        "ordinal": "7",
+        "type": "fuchsia.ui.gfx/ViewAttachedToSceneEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.view_connected",
+        "ordinal": "4",
+        "type": "fuchsia.ui.gfx/ViewConnectedEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.view_detached_from_scene",
+        "ordinal": "8",
+        "type": "fuchsia.ui.gfx/ViewDetachedFromSceneEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.view_disconnected",
+        "ordinal": "5",
+        "type": "fuchsia.ui.gfx/ViewDisconnectedEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.view_holder_connected",
+        "ordinal": "11",
+        "type": "fuchsia.ui.gfx/ViewHolderConnectedEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.view_holder_disconnected",
+        "ordinal": "6",
+        "type": "fuchsia.ui.gfx/ViewHolderDisconnectedEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.view_properties_changed",
+        "ordinal": "9",
+        "type": "fuchsia.ui.gfx/ViewPropertiesChangedEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Event.view_state_changed",
+        "ordinal": "10",
+        "type": "fuchsia.ui.gfx/ViewStateChangedEvent"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.gfx/Event",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ExportResourceCmdDeprecated.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ExportResourceCmdDeprecated.token",
+        "ordinal": "2",
+        "type": "zx/handle:EVENTPAIR"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ExportResourceCmdDeprecated",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ExportToken.value",
+        "ordinal": "1",
+        "type": "zx/handle:EVENTPAIR"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ExportToken",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/FactoredTransform.anchor",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/FactoredTransform.rotation",
+        "ordinal": "4",
+        "type": "fuchsia.ui.gfx/Quaternion"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/FactoredTransform.scale",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/FactoredTransform.translation",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/FactoredTransform"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/FloatValue.value",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/FloatValue.variable_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/FloatValue"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/HitTestBehavior.kDefault",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/HitTestBehavior.kSuppress",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.gfx/HitTestBehavior",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs.info",
+        "ordinal": "1",
+        "type": "fuchsia.images/ImageInfo"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs.memory_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs.memory_offset",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ImageArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs2.buffer_collection_id",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs2.buffer_collection_index",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs2.height",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs2.width",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ImageArgs2"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs3.buffer_collection_index",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs3.height",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs3.import_token",
+        "ordinal": "3",
+        "type": "fuchsia.ui.composition/BufferCollectionImportToken"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImageArgs3.width",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ImageArgs3",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImagePipe2Args.image_pipe_request",
+        "ordinal": "1",
+        "type": "server_end:fuchsia.images/ImagePipe2"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ImagePipe2Args",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImportResourceCmdDeprecated.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImportResourceCmdDeprecated.spec",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/ImportSpec"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImportResourceCmdDeprecated.token",
+        "ordinal": "2",
+        "type": "zx/handle:EVENTPAIR"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ImportResourceCmdDeprecated",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ImportSpec.NODE",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.gfx/ImportSpec",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImportToken.value",
+        "ordinal": "1",
+        "type": "zx/handle:EVENTPAIR"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ImportToken",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ImportUnboundEvent.resource_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ImportUnboundEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/LayerArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/LayerArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/LayerStackArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/LayerStackArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/MaterialArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/MaterialArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Matrix4Value.value",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/mat4"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Matrix4Value.variable_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/Matrix4Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/MemoryArgs.allocation_size",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/MemoryArgs.memory_type",
+        "ordinal": "3",
+        "type": "fuchsia.images/MemoryType"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/MemoryArgs.vmo",
+        "ordinal": "1",
+        "type": "zx/handle:VMO"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/MemoryArgs",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/MeshArgs"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/MeshIndexFormat.kUint16",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/MeshIndexFormat.kUint32",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.gfx/MeshIndexFormat",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/MeshVertexFormat.normal_type",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ValueType"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/MeshVertexFormat.position_type",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/ValueType"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/MeshVertexFormat.tex_coord_type",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/ValueType"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/MeshVertexFormat"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Metrics.scale_x",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Metrics.scale_y",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Metrics.scale_z",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/Metrics"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/MetricsEvent.metrics",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Metrics"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/MetricsEvent.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/MetricsEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/OpacityNodeArgsHACK.unused",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/OpacityNodeArgsHACK"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Plane3.dir",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Plane3.dist",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/Plane3"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/PointLightArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/PointLightArgs"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.gfx/PoseBufferProvider.SetPoseBuffer",
+        "ordinal": "6092637130924467944",
+        "type": "(zx/handle:VMO buffer,uint32 num_entries,int64 base_time,uint64 time_interval)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.gfx/PoseBufferProvider"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Quaternion.w",
+        "ordinal": "4",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Quaternion.x",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Quaternion.y",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Quaternion.z",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/Quaternion"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/QuaternionValue.value",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/Quaternion"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/QuaternionValue.variable_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/QuaternionValue"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RectangleArgs.height",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RectangleArgs.width",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/RectangleArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ReleaseResourceCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ReleaseResourceCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RemoveAllLayersCmd.layer_stack_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/RemoveAllLayersCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RemoveLayerCmd.layer_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RemoveLayerCmd.layer_stack_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/RemoveLayerCmd"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/RenderFrequency.CONTINUOUSLY",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/RenderFrequency.WHEN_REQUESTED",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.gfx/RenderFrequency",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RendererArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/RendererArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/RendererParam.enable_debugging",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/RendererParam.reserved",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/RenderFrequency"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/RendererParam.shadow_technique",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/ShadowTechnique"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.gfx/RendererParam",
+        "strictness": "strict"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.ambient_light",
+        "ordinal": "25",
+        "type": "fuchsia.ui.gfx/AmbientLightArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.buffer",
+        "ordinal": "4",
+        "type": "fuchsia.ui.gfx/BufferArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.camera",
+        "ordinal": "22",
+        "type": "fuchsia.ui.gfx/CameraArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.circle",
+        "ordinal": "9",
+        "type": "fuchsia.ui.gfx/CircleArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.clip_node",
+        "ordinal": "12",
+        "type": "fuchsia.ui.gfx/ClipNodeArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.compositor",
+        "ordinal": "16",
+        "type": "fuchsia.ui.gfx/CompositorArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.directional_light",
+        "ordinal": "26",
+        "type": "fuchsia.ui.gfx/DirectionalLightArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.display_compositor",
+        "ordinal": "17",
+        "type": "fuchsia.ui.gfx/DisplayCompositorArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.entity_node",
+        "ordinal": "13",
+        "type": "fuchsia.ui.gfx/EntityNodeArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.image",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ImageArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.image2",
+        "ordinal": "33",
+        "type": "fuchsia.ui.gfx/ImageArgs2"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.image3",
+        "ordinal": "34",
+        "type": "fuchsia.ui.gfx/ImageArgs3"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.image_pipe2",
+        "ordinal": "32",
+        "type": "fuchsia.ui.gfx/ImagePipe2Args"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.layer",
+        "ordinal": "20",
+        "type": "fuchsia.ui.gfx/LayerArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.layer_stack",
+        "ordinal": "19",
+        "type": "fuchsia.ui.gfx/LayerStackArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.material",
+        "ordinal": "15",
+        "type": "fuchsia.ui.gfx/MaterialArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.memory",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/MemoryArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.mesh",
+        "ordinal": "10",
+        "type": "fuchsia.ui.gfx/MeshArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.opacity_node",
+        "ordinal": "14",
+        "type": "fuchsia.ui.gfx/OpacityNodeArgsHACK"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.point_light",
+        "ordinal": "28",
+        "type": "fuchsia.ui.gfx/PointLightArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.rectangle",
+        "ordinal": "7",
+        "type": "fuchsia.ui.gfx/RectangleArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.renderer",
+        "ordinal": "24",
+        "type": "fuchsia.ui.gfx/RendererArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.rounded_rectangle",
+        "ordinal": "8",
+        "type": "fuchsia.ui.gfx/RoundedRectangleArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.scene",
+        "ordinal": "21",
+        "type": "fuchsia.ui.gfx/SceneArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.shape_node",
+        "ordinal": "11",
+        "type": "fuchsia.ui.gfx/ShapeNodeArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.stereo_camera",
+        "ordinal": "23",
+        "type": "fuchsia.ui.gfx/StereoCameraArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.variable",
+        "ordinal": "27",
+        "type": "fuchsia.ui.gfx/VariableArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.view",
+        "ordinal": "5",
+        "type": "fuchsia.ui.gfx/ViewArgs"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.view3",
+        "ordinal": "31",
+        "type": "fuchsia.ui.gfx/ViewArgs3"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/ResourceArgs.view_holder",
+        "ordinal": "6",
+        "type": "fuchsia.ui.gfx/ViewHolderArgs"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.gfx/ResourceArgs",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RoundedRectangleArgs.bottom_left_radius",
+        "ordinal": "6",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RoundedRectangleArgs.bottom_right_radius",
+        "ordinal": "5",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RoundedRectangleArgs.height",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RoundedRectangleArgs.top_left_radius",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RoundedRectangleArgs.top_right_radius",
+        "ordinal": "4",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/RoundedRectangleArgs.width",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/RoundedRectangleArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SceneAddAmbientLightCmd.light_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SceneAddAmbientLightCmd.scene_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SceneAddAmbientLightCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SceneAddDirectionalLightCmd.light_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SceneAddDirectionalLightCmd.scene_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SceneAddDirectionalLightCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SceneAddPointLightCmd.light_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SceneAddPointLightCmd.scene_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SceneAddPointLightCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SceneArgs.dummy",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SceneArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SendSizeChangeHintCmdHACK.height_change_factor",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SendSizeChangeHintCmdHACK.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SendSizeChangeHintCmdHACK.width_change_factor",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SendSizeChangeHintCmdHACK"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetAnchorCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetAnchorCmd.value",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Vector3Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetAnchorCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd.camera_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd.scale",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd.translation",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/vec2"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetCameraClipSpaceTransformCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraCmd.camera_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraCmd.renderer_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetCameraCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraPoseBufferCmd.base_time",
+        "ordinal": "4",
+        "type": "int64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraPoseBufferCmd.buffer_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraPoseBufferCmd.camera_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraPoseBufferCmd.num_entries",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraPoseBufferCmd.time_interval",
+        "ordinal": "5",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetCameraPoseBufferCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraProjectionCmd.camera_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraProjectionCmd.fovy",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/FloatValue"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetCameraProjectionCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraTransformCmd.camera_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraTransformCmd.eye_look_at",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/Vector3Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraTransformCmd.eye_position",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Vector3Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetCameraTransformCmd.eye_up",
+        "ordinal": "4",
+        "type": "fuchsia.ui.gfx/Vector3Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetCameraTransformCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetClipCmd.clip_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetClipCmd.clip_to_self",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetClipCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetClipCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetClipPlanesCmd.clip_planes",
+        "ordinal": "2",
+        "type": "vector<fuchsia.ui.gfx/Plane3>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetClipPlanesCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetClipPlanesCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetColorCmd.color",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ColorRgbaValue"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetColorCmd.material_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetColorCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetDisableClippingCmd.disable_clipping",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetDisableClippingCmd.renderer_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetDisableClippingCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK.compositor_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK.matrix",
+        "ordinal": "3",
+        "type": "array<float32,9>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK.postoffsets",
+        "ordinal": "4",
+        "type": "array<float32,3>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK.preoffsets",
+        "ordinal": "2",
+        "type": "array<float32,3>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetDisplayColorConversionCmdHACK"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetDisplayMinimumRgbCmdHACK.min_value",
+        "ordinal": "1",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetDisplayMinimumRgbCmdHACK"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetDisplayRotationCmdHACK.compositor_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetDisplayRotationCmdHACK.rotation_degrees",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetDisplayRotationCmdHACK"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetEnableDebugViewBoundsCmd.enable",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetEnableDebugViewBoundsCmd.view_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetEnableDebugViewBoundsCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetEventMaskCmd.event_mask",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetEventMaskCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetEventMaskCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetHitTestBehaviorCmd.hit_test_behavior",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/HitTestBehavior"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetHitTestBehaviorCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetHitTestBehaviorCmd"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetImportFocusCmdDEPRECATED"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetLabelCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetLabelCmd.label",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetLabelCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetLayerStackCmd.compositor_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetLayerStackCmd.layer_stack_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetLayerStackCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetLightColorCmd.color",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ColorRgbValue"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetLightColorCmd.light_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetLightColorCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetLightDirectionCmd.direction",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Vector3Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetLightDirectionCmd.light_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetLightDirectionCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetMaterialCmd.material_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetMaterialCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetMaterialCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetOpacityCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetOpacityCmd.opacity",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetOpacityCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetPointLightFalloffCmd.falloff",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/FloatValue"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetPointLightFalloffCmd.light_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetPointLightFalloffCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetPointLightPositionCmd.light_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetPointLightPositionCmd.position",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Vector3Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetPointLightPositionCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetRendererCmd.layer_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetRendererCmd.renderer_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetRendererCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetRendererParamCmd.param",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/RendererParam"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetRendererParamCmd.renderer_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetRendererParamCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetRotationCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetRotationCmd.value",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/QuaternionValue"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetRotationCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetScaleCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetScaleCmd.value",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Vector3Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetScaleCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetSemanticVisibilityCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetSemanticVisibilityCmd.visible",
+        "ordinal": "2",
+        "type": "bool",
+        "value": "true"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetSemanticVisibilityCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetShapeCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetShapeCmd.shape_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetShapeCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetSizeCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetSizeCmd.value",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Vector2Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetSizeCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetStereoCameraProjectionCmd.camera_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetStereoCameraProjectionCmd.left_projection",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Matrix4Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetStereoCameraProjectionCmd.right_projection",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/Matrix4Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetStereoCameraProjectionCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetTagCmd.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetTagCmd.tag_value",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetTagCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetTextureCmd.material_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetTextureCmd.texture_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetTextureCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetTranslationCmd.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetTranslationCmd.value",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Vector3Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetTranslationCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetViewHolderBoundsColorCmd.color",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ColorRgbValue"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetViewHolderBoundsColorCmd.view_holder_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetViewHolderBoundsColorCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetViewPropertiesCmd.properties",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ViewProperties"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SetViewPropertiesCmd.view_holder_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SetViewPropertiesCmd"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ShadowTechnique.MOMENT_SHADOW_MAP",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ShadowTechnique.SCREEN_SPACE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ShadowTechnique.SHADOW_MAP",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ShadowTechnique.STENCIL_SHADOW_VOLUME",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ShadowTechnique.UNSHADOWED",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.gfx/ShadowTechnique",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ShapeNodeArgs.unused",
+        "ordinal": "1",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ShapeNodeArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SizeChangeHintEvent.height_change_factor",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SizeChangeHintEvent.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/SizeChangeHintEvent.width_change_factor",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/SizeChangeHintEvent"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.gfx/SnapshotCallbackDEPRECATED.OnData",
+        "ordinal": "1283993440746175903",
+        "type": "(fuchsia.mem/Buffer data)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.gfx/SnapshotCallbackDEPRECATED"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/StereoCameraArgs.scene_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/StereoCameraArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/TakeSnapshotCmdDEPRECATED.callback",
+        "ordinal": "2",
+        "type": "client_end:fuchsia.ui.gfx/SnapshotCallbackDEPRECATED"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/TakeSnapshotCmdDEPRECATED.node_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/TakeSnapshotCmdDEPRECATED",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.color_rgb",
+        "ordinal": "7",
+        "type": "fuchsia.ui.gfx/ColorRgb"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.color_rgba",
+        "ordinal": "6",
+        "type": "fuchsia.ui.gfx/ColorRgba"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.degrees",
+        "ordinal": "8",
+        "type": "float32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.matrix4x4",
+        "ordinal": "5",
+        "type": "fuchsia.ui.gfx/mat4"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.quaternion",
+        "ordinal": "9",
+        "type": "fuchsia.ui.gfx/Quaternion"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.transform",
+        "ordinal": "10",
+        "type": "fuchsia.ui.gfx/FactoredTransform"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.variable_id",
+        "ordinal": "11",
+        "type": "uint32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.vector1",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.vector2",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/vec2"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.vector3",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.gfx/Value.vector4",
+        "ordinal": "4",
+        "type": "fuchsia.ui.gfx/vec4"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.gfx/Value",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kColorRgb",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kColorRgba",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kFactoredTransform",
+        "value": "9"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kMatrix4",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kNone",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kQuaternion",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kVector1",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kVector2",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kVector3",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.gfx/ValueType.kVector4",
+        "value": "4"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.gfx/ValueType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/VariableArgs.initial_value",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/VariableArgs.type",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/ValueType"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/VariableArgs"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Vector2Value.value",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/vec2"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Vector2Value.variable_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/Vector2Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Vector3Value.value",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Vector3Value.variable_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/Vector3Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Vector4Value.value",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/vec4"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/Vector4Value.variable_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/Vector4Value"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewArgs.debug_name",
+        "ordinal": "2",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewArgs.token",
+        "ordinal": "1",
+        "type": "fuchsia.ui.views/ViewToken"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewArgs",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewArgs3.control_ref",
+        "ordinal": "2",
+        "type": "fuchsia.ui.views/ViewRefControl"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewArgs3.debug_name",
+        "ordinal": "4",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewArgs3.token",
+        "ordinal": "1",
+        "type": "fuchsia.ui.views/ViewToken"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewArgs3.view_ref",
+        "ordinal": "3",
+        "type": "fuchsia.ui.views/ViewRef"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewArgs3",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewAttachedToSceneEvent.properties",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ViewProperties"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewAttachedToSceneEvent.view_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewAttachedToSceneEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewConnectedEvent.view_holder_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewConnectedEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewDetachedFromSceneEvent.view_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewDetachedFromSceneEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewDisconnectedEvent.view_holder_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewDisconnectedEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewHolderArgs.debug_name",
+        "ordinal": "2",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewHolderArgs.token",
+        "ordinal": "1",
+        "type": "fuchsia.ui.views/ViewHolderToken"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewHolderArgs",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewHolderConnectedEvent.view_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewHolderConnectedEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewHolderDisconnectedEvent.view_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewHolderDisconnectedEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewProperties.bounding_box",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/BoundingBox"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewProperties.downward_input",
+        "ordinal": "5",
+        "type": "bool",
+        "value": "true"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewProperties.focus_change",
+        "ordinal": "4",
+        "type": "bool",
+        "value": "true"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewProperties.inset_from_max",
+        "ordinal": "3",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewProperties.inset_from_min",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewProperties"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewPropertiesChangedEvent.properties",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ViewProperties"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewPropertiesChangedEvent.view_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewPropertiesChangedEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewState.is_rendering",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewState"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewStateChangedEvent.state",
+        "ordinal": "2",
+        "type": "fuchsia.ui.gfx/ViewState"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/ViewStateChangedEvent.view_holder_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/ViewStateChangedEvent"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.gfx/kLabelMaxLength",
+        "type": "uint32",
+        "value": "32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.gfx/kMetricsEventMask",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.gfx/kSizeChangeHintEventMask",
+        "type": "uint32",
+        "value": "2"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/mat4.matrix",
+        "ordinal": "1",
+        "type": "array<float32,16>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/mat4"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/vec2.x",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/vec2.y",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/vec2"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/vec3.x",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/vec3.y",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/vec3.z",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/vec3"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/vec4.w",
+        "ordinal": "4",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/vec4.x",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/vec4.y",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.gfx/vec4.z",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.gfx/vec4"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.gfx"
+    }
+]

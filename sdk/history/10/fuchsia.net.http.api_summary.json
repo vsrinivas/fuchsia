@@ -1,0 +1,201 @@
+[
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.http/Body.buffer",
+        "ordinal": "1",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.net.http/Body.stream",
+        "ordinal": "2",
+        "type": "zx/handle:SOCKET"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.net.http/Body",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.net.http/Error.CHANNEL_CLOSED",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.net.http/Error.CONNECT",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.net.http/Error.DEADLINE_EXCEEDED",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.net.http/Error.INTERNAL",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.net.http/Error.UNABLE_TO_PARSE",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.net.http/Error",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net.http/Header.name",
+        "ordinal": "1",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.net.http/Header.value",
+        "ordinal": "2",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.net.http/Header"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.net.http/Loader.Fetch",
+        "ordinal": "7411081923589316649",
+        "type": "(fuchsia.net.http/Request request) -> (fuchsia.net.http/Response response)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.net.http/Loader.Start",
+        "ordinal": "8170993578248361102",
+        "type": "(fuchsia.net.http/Request request,client_end:fuchsia.net.http/LoaderClient client)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.http/Loader"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.net.http/LoaderClient.OnResponse",
+        "ordinal": "6438698410076716937",
+        "type": "(fuchsia.net.http/Response response) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.http/LoaderClient"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/RedirectTarget.method",
+        "ordinal": "1",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/RedirectTarget.referrer",
+        "ordinal": "3",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/RedirectTarget.url",
+        "ordinal": "2",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.http/RedirectTarget"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Request.body",
+        "ordinal": "4",
+        "type": "fuchsia.net.http/Body"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Request.deadline",
+        "ordinal": "5",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Request.headers",
+        "ordinal": "3",
+        "type": "vector<fuchsia.net.http/Header>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Request.method",
+        "ordinal": "1",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Request.url",
+        "ordinal": "2",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.http/Request",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Response.body",
+        "ordinal": "2",
+        "type": "zx/handle:SOCKET"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Response.error",
+        "ordinal": "1",
+        "type": "fuchsia.net.http/Error"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Response.final_url",
+        "ordinal": "3",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Response.headers",
+        "ordinal": "6",
+        "type": "vector<fuchsia.net.http/Header>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Response.redirect",
+        "ordinal": "7",
+        "type": "fuchsia.net.http/RedirectTarget"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Response.status_code",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.http/Response.status_line",
+        "ordinal": "5",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.http/Response",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.net.http"
+    }
+]

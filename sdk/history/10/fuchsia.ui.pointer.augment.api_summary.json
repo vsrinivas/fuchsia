@@ -1,0 +1,141 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer.augment/ErrorForGlobalMouse.error_reason",
+        "ordinal": "1",
+        "type": "fuchsia.ui.pointer.augment/ErrorReason"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer.augment/ErrorForGlobalMouse.original",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointer/MouseSource"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.pointer.augment/ErrorForGlobalMouse",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer.augment/ErrorForLocalHit.error_reason",
+        "ordinal": "1",
+        "type": "fuchsia.ui.pointer.augment/ErrorReason"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer.augment/ErrorForLocalHit.original",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointer/TouchSource"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.pointer.augment/ErrorForLocalHit",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer.augment/ErrorReason.DENIED",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.pointer.augment/ErrorReason",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointer.augment/GlobalMouse.Upgrade",
+        "ordinal": "4172716811436752743",
+        "type": "(fuchsia.ui.pointer/MouseSource original) -> (client_end:<fuchsia.ui.pointer.augment/MouseSourceWithGlobalMouse,optional> augmented,box<fuchsia.ui.pointer.augment/ErrorForGlobalMouse> error)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.pointer.augment/GlobalMouse"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointer.augment/LocalHit.Upgrade",
+        "ordinal": "2215992592888123020",
+        "type": "(fuchsia.ui.pointer/TouchSource original) -> (client_end:<fuchsia.ui.pointer.augment/TouchSourceWithLocalHit,optional> augmented,box<fuchsia.ui.pointer.augment/ErrorForLocalHit> error)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.pointer.augment/LocalHit"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse.global_position",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointer/MousePointerSample"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse.global_stream_info",
+        "ordinal": "3",
+        "type": "fuchsia.ui.pointer/MouseEventStreamInfo"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse.mouse_event",
+        "ordinal": "1",
+        "type": "fuchsia.ui.pointer/MouseEvent"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointer.augment/MouseSourceWithGlobalMouse.Watch",
+        "ordinal": "5946419198360073438",
+        "type": "() -> (vector<fuchsia.ui.pointer.augment/MouseEventWithGlobalMouse>:128 events)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.pointer.augment/MouseSourceWithGlobalMouse"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer.augment/TouchEventWithLocalHit.local_point",
+        "ordinal": "3",
+        "type": "array<float32,2>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer.augment/TouchEventWithLocalHit.local_viewref_koid",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer.augment/TouchEventWithLocalHit.touch_event",
+        "ordinal": "1",
+        "type": "fuchsia.ui.pointer/TouchEvent"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.pointer.augment/TouchEventWithLocalHit"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointer.augment/TouchSourceWithLocalHit.UpdateResponse",
+        "ordinal": "140453704620735905",
+        "type": "(fuchsia.ui.pointer/TouchInteractionId interaction,fuchsia.ui.pointer/TouchResponse response) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointer.augment/TouchSourceWithLocalHit.Watch",
+        "ordinal": "5671629247763817545",
+        "type": "(vector<fuchsia.ui.pointer/TouchResponse>:128 responses) -> (vector<fuchsia.ui.pointer.augment/TouchEventWithLocalHit>:128 events)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.pointer.augment/TouchSourceWithLocalHit"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.pointer.augment"
+    }
+]

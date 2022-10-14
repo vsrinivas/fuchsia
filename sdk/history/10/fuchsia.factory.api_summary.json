@@ -1,0 +1,76 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.factory/AlphaFactoryStoreProvider.GetFactoryStore",
+        "ordinal": "2448426078316863646",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.factory/AlphaFactoryStoreProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.factory/CastCredentialsFactoryStoreProvider.GetFactoryStore",
+        "ordinal": "2448426078316863646",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.factory/CastCredentialsFactoryStoreProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.factory/FactoryStoreProvider.GetFactoryStore",
+        "ordinal": "2448426078316863646",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.factory/FactoryStoreProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.factory/MiscFactoryStoreProvider.GetFactoryStore",
+        "ordinal": "2448426078316863646",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.factory/MiscFactoryStoreProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.factory/PlayReadyFactoryStoreProvider.GetFactoryStore",
+        "ordinal": "2448426078316863646",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.factory/PlayReadyFactoryStoreProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.factory/WeaveFactoryStoreProvider.GetFactoryStore",
+        "ordinal": "2448426078316863646",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.factory/WeaveFactoryStoreProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.factory/WidevineFactoryStoreProvider.GetFactoryStore",
+        "ordinal": "2448426078316863646",
+        "type": "(server_end:fuchsia.io/Directory dir)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.factory/WidevineFactoryStoreProvider"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.factory"
+    }
+]

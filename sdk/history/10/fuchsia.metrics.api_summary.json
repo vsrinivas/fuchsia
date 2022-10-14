@@ -1,0 +1,353 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.metrics/Error.BUFFER_FULL",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.metrics/Error.EVENT_TOO_BIG",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.metrics/Error.INTERNAL_ERROR",
+        "value": "-1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.metrics/Error.INVALID_ARGUMENTS",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.metrics/Error.SHUT_DOWN",
+        "value": "4"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.metrics/Error",
+        "strictness": "strict",
+        "type": "int32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.metrics/HistogramBucket.count",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.metrics/HistogramBucket.index",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.metrics/HistogramBucket"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.metrics/MAX_BATCHED_EVENTS",
+        "type": "uint32",
+        "value": "500"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.metrics/MAX_BYTES_PER_EVENT",
+        "type": "int64",
+        "value": "102400"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.metrics/MAX_EXPERIMENT_IDS",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.metrics/MAX_HISTOGRAM_BUCKETS",
+        "type": "uint32",
+        "value": "500"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.metrics/MAX_METRIC_DIMENSIONS",
+        "type": "uint32",
+        "value": "10"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.metrics/MAX_STRING_EVENT_SIZE",
+        "type": "uint32",
+        "value": "256"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.metrics/MetricEvent.event_codes",
+        "ordinal": "2",
+        "type": "vector<uint32>:10"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.metrics/MetricEvent.metric_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.metrics/MetricEvent.payload",
+        "ordinal": "3",
+        "type": "fuchsia.metrics/MetricEventPayload"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.metrics/MetricEvent"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.metrics/MetricEventLogger.LogInteger",
+        "ordinal": "6720834109725988178",
+        "type": "(uint32 metric_id,int64 value,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogInteger_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.metrics/MetricEventLogger.LogIntegerHistogram",
+        "ordinal": "8767534769977819584",
+        "type": "(uint32 metric_id,vector<fuchsia.metrics/HistogramBucket>:500 histogram,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.metrics/MetricEventLogger.LogMetricEvents",
+        "ordinal": "5587883824215362667",
+        "type": "(vector<fuchsia.metrics/MetricEvent>:500 events) -> (fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.metrics/MetricEventLogger.LogOccurrence",
+        "ordinal": "2751850579569128364",
+        "type": "(uint32 metric_id,uint64 count,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogOccurrence_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.metrics/MetricEventLogger.LogString",
+        "ordinal": "1590315742604854016",
+        "type": "(uint32 metric_id,string:256 string_value,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogString_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.metrics/MetricEventLogger"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory.CreateMetricEventLogger",
+        "ordinal": "967417524583938558",
+        "type": "(fuchsia.metrics/ProjectSpec project_spec,server_end:fuchsia.metrics/MetricEventLogger logger) -> (fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory.CreateMetricEventLoggerWithExperiments",
+        "ordinal": "9160168118327134458",
+        "type": "(fuchsia.metrics/ProjectSpec project_spec,vector<uint32>:100 experiment_ids,server_end:fuchsia.metrics/MetricEventLogger logger) -> (fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.metrics/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.metrics/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.metrics/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.metrics/MetricEventLogger_LogInteger_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogInteger_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.metrics/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogInteger_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.metrics/MetricEventLogger_LogInteger_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.metrics/MetricEventLogger_LogInteger_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.metrics/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.metrics/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.metrics/MetricEventLogger_LogString_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogString_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.metrics/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventLogger_LogString_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.metrics/MetricEventLogger_LogString_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.metrics/MetricEventLogger_LogString_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventPayload.count",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventPayload.histogram",
+        "ordinal": "3",
+        "type": "vector<fuchsia.metrics/HistogramBucket>:500"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventPayload.integer_value",
+        "ordinal": "2",
+        "type": "int64"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.metrics/MetricEventPayload.string_value",
+        "ordinal": "4",
+        "type": "string:256"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.metrics/MetricEventPayload",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.metrics/ProjectSpec.customer_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.metrics/ProjectSpec.project_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.metrics/ProjectSpec"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.metrics"
+    }
+]

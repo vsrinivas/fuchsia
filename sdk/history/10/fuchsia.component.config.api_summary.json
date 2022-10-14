@@ -1,0 +1,211 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.config/ResolvedConfig.checksum",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/ConfigChecksum"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.config/ResolvedConfig.fields",
+        "ordinal": "1",
+        "type": "vector<fuchsia.component.config/ResolvedConfigField>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.config/ResolvedConfig"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.config/ResolvedConfigField.key",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.config/ResolvedConfigField.value",
+        "ordinal": "2",
+        "type": "fuchsia.component.config/Value"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.config/ResolvedConfigField"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.bool",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.int16",
+        "ordinal": "7",
+        "type": "int16"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.int32",
+        "ordinal": "8",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.int64",
+        "ordinal": "9",
+        "type": "int64"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.int8",
+        "ordinal": "6",
+        "type": "int8"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.string",
+        "ordinal": "10",
+        "type": "string"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.uint16",
+        "ordinal": "3",
+        "type": "uint16"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.uint32",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.uint64",
+        "ordinal": "5",
+        "type": "uint64"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/SingleValue.uint8",
+        "ordinal": "2",
+        "type": "uint8"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.config/SingleValue",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/Value.single",
+        "ordinal": "1",
+        "type": "fuchsia.component.config/SingleValue"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/Value.vector",
+        "ordinal": "2",
+        "type": "fuchsia.component.config/VectorValue"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.config/Value",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.config/ValueSpec.value",
+        "ordinal": "1",
+        "type": "fuchsia.component.config/Value"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.config/ValueSpec"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.config/ValuesData.checksum",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/ConfigChecksum"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.config/ValuesData.values",
+        "ordinal": "1",
+        "type": "vector<fuchsia.component.config/ValueSpec>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.config/ValuesData"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.bool_vector",
+        "ordinal": "1",
+        "type": "vector<bool>"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.int16_vector",
+        "ordinal": "7",
+        "type": "vector<int16>"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.int32_vector",
+        "ordinal": "8",
+        "type": "vector<int32>"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.int64_vector",
+        "ordinal": "9",
+        "type": "vector<int64>"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.int8_vector",
+        "ordinal": "6",
+        "type": "vector<int8>"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.string_vector",
+        "ordinal": "10",
+        "type": "vector<string>"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.uint16_vector",
+        "ordinal": "3",
+        "type": "vector<uint16>"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.uint32_vector",
+        "ordinal": "4",
+        "type": "vector<uint32>"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.uint64_vector",
+        "ordinal": "5",
+        "type": "vector<uint64>"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.config/VectorValue.uint8_vector",
+        "ordinal": "2",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.config/VectorValue",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.component.config"
+    }
+]

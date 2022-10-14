@@ -1,0 +1,628 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/CacheMissPolicy.BLOCK_UNTIL_DOWNLOADED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/CacheMissPolicy.RETURN_EMPTY_RESPONSE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/CacheMissPolicy.RETURN_FALLBACK",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.fonts/CacheMissPolicy",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/DEFAULT_SLANT",
+        "type": "fuchsia.fonts/Slant",
+        "value": "1"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/DEFAULT_WEIGHT",
+        "type": "uint16",
+        "value": "400"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/DEFAULT_WIDTH",
+        "type": "fuchsia.fonts/Width",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/FallbackGroup.CURSIVE",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/FallbackGroup.FANTASY",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/FallbackGroup.MONOSPACE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/FallbackGroup.NONE",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/FallbackGroup.SANS_SERIF",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/FallbackGroup.SERIF",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.fonts/FallbackGroup",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/FamilyInfo.name",
+        "ordinal": "1",
+        "type": "string:128"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/FamilyInfo.styles",
+        "ordinal": "2",
+        "type": "vector<fuchsia.fonts/Style>:300"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.fonts/FamilyInfo"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/FamilyName.name",
+        "ordinal": "1",
+        "type": "string:128"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.fonts/FamilyName"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/FontFamilyInfo.name",
+        "ordinal": "1",
+        "type": "fuchsia.fonts/FamilyName"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/FontFamilyInfo.styles",
+        "ordinal": "2",
+        "type": "vector<fuchsia.fonts/Style2>:300"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.fonts/FontFamilyInfo"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.fonts/FontSetEventListener.OnFontSetUpdated",
+        "ordinal": "1084473405949379065",
+        "type": "(fuchsia.fonts/FontSetUpdatedEvent event) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.fonts/FontSetEventListener"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.fonts/FontSetUpdatedEvent"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/GenericFontFamily.CURSIVE",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/GenericFontFamily.EMOJI",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/GenericFontFamily.FANGSONG",
+        "value": "9"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/GenericFontFamily.FANTASY",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/GenericFontFamily.MATH",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/GenericFontFamily.MONOSPACE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/GenericFontFamily.SANS_SERIF",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/GenericFontFamily.SERIF",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/GenericFontFamily.SYSTEM_UI",
+        "value": "6"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.fonts/GenericFontFamily",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/MAX_FACE_QUERY_CODE_POINTS",
+        "type": "uint32",
+        "value": "128"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/MAX_FACE_QUERY_LANGUAGES",
+        "type": "uint32",
+        "value": "8"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/MAX_FAMILY_NAME_LENGTH",
+        "type": "uint32",
+        "value": "128"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/MAX_FAMILY_STYLES",
+        "type": "uint32",
+        "value": "300"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/MAX_POSTSCRIPT_TYPEFACE_NAME_LENGTH",
+        "type": "uint32",
+        "value": "63"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/MAX_TYPEFACE_NAME_LENGTH",
+        "type": "uint32",
+        "value": "128"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.fonts/Provider.GetFamilyInfo",
+        "ordinal": "2858555626765225395",
+        "type": "(string:128 family) -> (box<fuchsia.fonts/FamilyInfo> family_info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.fonts/Provider.GetFont",
+        "ordinal": "7903442241602193259",
+        "type": "(fuchsia.fonts/Request request) -> (box<fuchsia.fonts/Response> response)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.fonts/Provider.GetFontFamilyInfo",
+        "ordinal": "8440007951307360714",
+        "type": "(fuchsia.fonts/FamilyName family) -> (fuchsia.fonts/FontFamilyInfo family_info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.fonts/Provider.GetTypeface",
+        "ordinal": "6089379408366995057",
+        "type": "(fuchsia.fonts/TypefaceRequest request) -> (fuchsia.fonts/TypefaceResponse response)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.fonts/Provider.RegisterFontSetEventListener",
+        "ordinal": "1830881461319461196",
+        "type": "(client_end:fuchsia.fonts/FontSetEventListener listener) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.fonts/Provider"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/REQUEST_FLAG_EXACT_MATCH",
+        "type": "uint32",
+        "value": "2"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/REQUEST_FLAG_NO_FALLBACK",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Request.character",
+        "ordinal": "6",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Request.fallback_group",
+        "ordinal": "7",
+        "type": "fuchsia.fonts/FallbackGroup",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Request.family",
+        "ordinal": "1",
+        "type": "string:<128,optional>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Request.flags",
+        "ordinal": "8",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Request.language",
+        "ordinal": "5",
+        "type": "vector<string:35>:<8,optional>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Request.slant",
+        "ordinal": "4",
+        "type": "fuchsia.fonts/Slant",
+        "value": "1"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Request.weight",
+        "ordinal": "2",
+        "type": "uint32",
+        "value": "400"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Request.width",
+        "ordinal": "3",
+        "type": "uint32",
+        "value": "5"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.fonts/Request"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Response.buffer",
+        "ordinal": "1",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Response.buffer_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Response.font_index",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.fonts/Response",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Slant.ITALIC",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Slant.OBLIQUE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Slant.UPRIGHT",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.fonts/Slant",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Style.slant",
+        "ordinal": "3",
+        "type": "fuchsia.fonts/Slant"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Style.weight",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.fonts/Style.width",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.fonts/Style"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/Style2.slant",
+        "ordinal": "1",
+        "type": "fuchsia.fonts/Slant"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/Style2.weight",
+        "ordinal": "2",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/Style2.width",
+        "ordinal": "3",
+        "type": "fuchsia.fonts/Width"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.fonts/Style2"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceQuery.code_points",
+        "ordinal": "4",
+        "type": "vector<uint32>:128"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceQuery.fallback_family",
+        "ordinal": "5",
+        "type": "fuchsia.fonts/GenericFontFamily"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceQuery.family",
+        "ordinal": "1",
+        "type": "fuchsia.fonts/FamilyName"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceQuery.full_name",
+        "ordinal": "7",
+        "type": "string:128"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceQuery.languages",
+        "ordinal": "3",
+        "type": "vector<fuchsia.intl/LocaleId>:8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceQuery.postscript_name",
+        "ordinal": "6",
+        "type": "string:63"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceQuery.style",
+        "ordinal": "2",
+        "type": "fuchsia.fonts/Style2"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.fonts/TypefaceQuery"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceRequest.cache_miss_policy",
+        "ordinal": "3",
+        "type": "fuchsia.fonts/CacheMissPolicy"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceRequest.flags",
+        "ordinal": "2",
+        "type": "fuchsia.fonts/TypefaceRequestFlags"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceRequest.query",
+        "ordinal": "1",
+        "type": "fuchsia.fonts/TypefaceQuery"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.fonts/TypefaceRequest"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.fonts/TypefaceRequestFlags.EXACT_FAMILY",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.fonts/TypefaceRequestFlags.EXACT_STYLE",
+        "value": "2"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.fonts/TypefaceRequestFlags",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceResponse.buffer",
+        "ordinal": "1",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceResponse.buffer_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.fonts/TypefaceResponse.font_index",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.fonts/TypefaceResponse",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/WEIGHT_BLACK",
+        "type": "uint16",
+        "value": "900"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/WEIGHT_BOLD",
+        "type": "uint16",
+        "value": "700"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/WEIGHT_EXTRA_BOLD",
+        "type": "uint16",
+        "value": "800"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/WEIGHT_EXTRA_LIGHT",
+        "type": "uint16",
+        "value": "200"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/WEIGHT_LIGHT",
+        "type": "uint16",
+        "value": "300"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/WEIGHT_MEDIUM",
+        "type": "uint16",
+        "value": "500"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/WEIGHT_NORMAL",
+        "type": "uint16",
+        "value": "400"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/WEIGHT_SEMI_BOLD",
+        "type": "uint16",
+        "value": "600"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.fonts/WEIGHT_THIN",
+        "type": "uint16",
+        "value": "100"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Width.CONDENSED",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Width.EXPANDED",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Width.EXTRA_CONDENSED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Width.EXTRA_EXPANDED",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Width.NORMAL",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Width.SEMI_CONDENSED",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Width.SEMI_EXPANDED",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Width.ULTRA_CONDENSED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.fonts/Width.ULTRA_EXPANDED",
+        "value": "9"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.fonts/Width",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.fonts"
+    }
+]

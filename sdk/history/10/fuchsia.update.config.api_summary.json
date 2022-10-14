@@ -1,0 +1,74 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update.config/OptOut.Get",
+        "ordinal": "9047833021330898136",
+        "type": "() -> (fuchsia.update.config/OptOutPreference value)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.update.config/OptOut"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update.config/OptOutAdmin.Set",
+        "ordinal": "8978221073431527207",
+        "type": "(fuchsia.update.config/OptOutPreference value) -> (fuchsia.update.config/OptOutAdmin_Set_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.update.config/OptOutAdmin"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update.config/OptOutAdminError.INTERNAL",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.update.config/OptOutAdminError",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.update.config/OptOutAdmin_Set_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update.config/OptOutAdmin_Set_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.update.config/OptOutAdminError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update.config/OptOutAdmin_Set_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.update.config/OptOutAdmin_Set_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.update.config/OptOutAdmin_Set_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update.config/OptOutPreference.ALLOW_ALL_UPDATES",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update.config/OptOutPreference.ALLOW_ONLY_SECURITY_UPDATES",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.update.config/OptOutPreference",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.update.config"
+    }
+]

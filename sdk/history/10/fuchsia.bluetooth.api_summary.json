@@ -1,0 +1,577 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/Address.bytes",
+        "ordinal": "2",
+        "type": "array<uint8,6>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/Address.type",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth/AddressType"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/Address"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/AddressType.PUBLIC",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/AddressType.RANDOM",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth/AddressType",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.BARCODE_SCANNER",
+        "value": "704"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.BLOOD_PRESSURE",
+        "value": "896"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.BLOOD_PRESSURE_ARM",
+        "value": "897"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.BLOOD_PRESSURE_WRIST",
+        "value": "898"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.CLOCK",
+        "value": "256"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.COMPUTER",
+        "value": "128"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.CYCLING",
+        "value": "1152"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.CYCLING_CADENCE_SENSOR",
+        "value": "1155"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.CYCLING_COMPUTER",
+        "value": "1153"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.CYCLING_POWER_SENSOR",
+        "value": "1156"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.CYCLING_SPEED_AND_CADENCE_SENSOR",
+        "value": "1157"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.CYCLING_SPEED_SENSOR",
+        "value": "1154"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.DISPLAY",
+        "value": "320"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.EYE_GLASSES",
+        "value": "448"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.GLUCOSE_METER",
+        "value": "1024"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.GLUCOSE_MONITOR",
+        "value": "3328"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HEART_RATE_SENSOR",
+        "value": "832"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HEART_RATE_SENSOR_BELT",
+        "value": "833"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HID",
+        "value": "960"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HID_BARCODE_SCANNER",
+        "value": "968"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HID_CARD_READER",
+        "value": "966"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HID_DIGITAL_PEN",
+        "value": "967"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HID_DIGITIZER_TABLET",
+        "value": "965"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HID_GAMEPAD",
+        "value": "964"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HID_JOYSTICK",
+        "value": "963"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HID_KEYBOARD",
+        "value": "961"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.HID_MOUSE",
+        "value": "962"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.KEYRING",
+        "value": "576"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.MEDIA_PLAYER",
+        "value": "640"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.PERSONAL_MOBILITY",
+        "value": "3264"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.PERSONAL_MOBILITY_SCOOTER",
+        "value": "3266"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.PERSONAL_MOBILITY_WHEELCHAIR",
+        "value": "3265"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.PHONE",
+        "value": "64"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.PULSE_OXIMETER",
+        "value": "3136"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.PULSE_OXIMETER_FINGERTIP",
+        "value": "3137"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.PULSE_OXIMETER_WRIST",
+        "value": "3138"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.REMOTE_CONTROL",
+        "value": "384"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.RUNNING_WALKING_SENSOR",
+        "value": "1088"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.RUNNING_WALKING_SENSOR_IN_SHOE",
+        "value": "1089"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.RUNNING_WALKING_SENSOR_ON_HIP",
+        "value": "1091"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.RUNNING_WALKING_SENSOR_ON_SHOE",
+        "value": "1090"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY",
+        "value": "5184"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY_LOCATION_AND_NAV_DISPLAY",
+        "value": "5186"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY_LOCATION_AND_NAV_POD",
+        "value": "5188"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY_LOCATION_DISPLAY",
+        "value": "5185"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.SPORTS_ACTIVITY_LOCATION_POD",
+        "value": "5187"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.TAG",
+        "value": "512"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.THERMOMETER",
+        "value": "768"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.THERMOMETER_EAR",
+        "value": "769"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.UNKNOWN",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.WATCH",
+        "value": "192"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.WATCH_SPORTS",
+        "value": "193"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/Appearance.WEIGHT_SCALE",
+        "value": "3200"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth/Appearance",
+        "strictness": "flexible",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/Bool.value",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/Bool"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ConnectionRole.FOLLOWER",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ConnectionRole.LEADER",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth/ConnectionRole",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/DeviceClass.value",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/DeviceClass"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/Error.description",
+        "ordinal": "3",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/Error.error_code",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth/ErrorCode"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/Error.protocol_error_code",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/Error"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.ALREADY",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.BAD_STATE",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.BLUETOOTH_NOT_AVAILABLE",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.CANCELED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.FAILED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.INVALID_ARGUMENTS",
+        "value": "9"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.IN_PROGRESS",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.NOT_FOUND",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.NOT_SUPPORTED",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.PROTOCOL_ERROR",
+        "value": "11"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.TIMED_OUT",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth/ErrorCode.UNKNOWN",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth/ErrorCode",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/HostId.value",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/HostId"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/Int8.value",
+        "ordinal": "1",
+        "type": "int8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/Int8"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_AUDIO_VIDEO",
+        "type": "uint32",
+        "value": "1024"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_COMPUTER",
+        "type": "uint32",
+        "value": "256"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_HEALTH",
+        "type": "uint32",
+        "value": "2304"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_IMAGING",
+        "type": "uint32",
+        "value": "1536"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_LAN",
+        "type": "uint32",
+        "value": "768"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_MASK",
+        "type": "uint32",
+        "value": "7936"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_MISCELLANEOUS",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_PERIPHERAL",
+        "type": "uint32",
+        "value": "1280"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_PHONE",
+        "type": "uint32",
+        "value": "512"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_TOY",
+        "type": "uint32",
+        "value": "2048"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_UNCATEGORIZED",
+        "type": "uint32",
+        "value": "7936"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_WEARABLE",
+        "type": "uint32",
+        "value": "1792"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/MAX_DEVICE_NAME_LENGTH",
+        "type": "uint8",
+        "value": "248"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/PeerId.value",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/PeerId"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/Status.error",
+        "ordinal": "1",
+        "type": "box<fuchsia.bluetooth/Error>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/Status"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/UInt16.value",
+        "ordinal": "1",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/UInt16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth/UUID_STRING_REPRESENTATION_LENGTH",
+        "type": "uint8",
+        "value": "36"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth/Uuid.value",
+        "ordinal": "1",
+        "type": "array<uint8,16>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth/Uuid"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.bluetooth"
+    }
+]

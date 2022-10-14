@@ -1,0 +1,120 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.component.runner/ComponentController.Kill",
+        "ordinal": "4514346391631670964",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.component.runner/ComponentController.OnPublishDiagnostics",
+        "ordinal": "2240216199992207687",
+        "type": " -> (fuchsia.diagnostics.types/ComponentDiagnostics payload)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.component.runner/ComponentController.Stop",
+        "ordinal": "4804506821232171874",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.component.runner/ComponentController"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentNamespaceEntry.directory",
+        "ordinal": "2",
+        "type": "fuchsia.io/Directory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentNamespaceEntry.path",
+        "ordinal": "1",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.runner/ComponentNamespaceEntry",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.component.runner/ComponentRunner.Start",
+        "ordinal": "780715659970866697",
+        "type": "(fuchsia.component.runner/ComponentStartInfo start_info,server_end:fuchsia.component.runner/ComponentController controller)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.component.runner/ComponentRunner"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentStartInfo.break_on_start",
+        "ordinal": "8",
+        "type": "zx/handle:EVENTPAIR"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentStartInfo.encoded_config",
+        "ordinal": "7",
+        "type": "fuchsia.mem/Data"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentStartInfo.ns",
+        "ordinal": "3",
+        "type": "vector<fuchsia.component.runner/ComponentNamespaceEntry>:32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentStartInfo.numbered_handles",
+        "ordinal": "6",
+        "type": "vector<fuchsia.process/HandleInfo>:128"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentStartInfo.outgoing_dir",
+        "ordinal": "4",
+        "type": "server_end:fuchsia.io/Directory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentStartInfo.program",
+        "ordinal": "2",
+        "type": "fuchsia.data/Dictionary"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentStartInfo.resolved_url",
+        "ordinal": "1",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.runner/ComponentStartInfo.runtime_dir",
+        "ordinal": "5",
+        "type": "server_end:fuchsia.io/Directory"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.runner/ComponentStartInfo",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.runner/MAX_HANDLE_COUNT",
+        "type": "uint32",
+        "value": "128"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.runner/MAX_NAMESPACE_COUNT",
+        "type": "uint32",
+        "value": "32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.component.runner"
+    }
+]

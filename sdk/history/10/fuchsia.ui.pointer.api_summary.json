@@ -1,0 +1,465 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/EventPhase.ADD",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/EventPhase.CANCEL",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/EventPhase.CHANGE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/EventPhase.REMOVE",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.pointer/EventPhase",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.pointer/MOUSE_MAX_EVENT",
+        "type": "uint32",
+        "value": "128"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.buttons",
+        "ordinal": "4",
+        "type": "vector<uint8>:32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.relative_motion_range",
+        "ordinal": "5",
+        "type": "array<fuchsia.input.report/Axis,2>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.scroll_h_range",
+        "ordinal": "3",
+        "type": "fuchsia.input.report/Axis"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.scroll_v_range",
+        "ordinal": "2",
+        "type": "fuchsia.input.report/Axis"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseEvent.device_info",
+        "ordinal": "3",
+        "type": "fuchsia.ui.pointer/MouseDeviceInfo"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseEvent.pointer_sample",
+        "ordinal": "4",
+        "type": "fuchsia.ui.pointer/MousePointerSample"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseEvent.stream_info",
+        "ordinal": "5",
+        "type": "fuchsia.ui.pointer/MouseEventStreamInfo"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseEvent.timestamp",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseEvent.trace_flow_id",
+        "ordinal": "6",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MouseEvent.view_parameters",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointer/ViewParameters"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointer/MouseEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/MouseEventStreamInfo.device_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/MouseEventStreamInfo.status",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointer/MouseViewStatus"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.pointer/MouseEventStreamInfo"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MousePointerSample.device_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MousePointerSample.is_precision_scroll",
+        "ordinal": "9",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MousePointerSample.position_in_viewport",
+        "ordinal": "2",
+        "type": "array<float32,2>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MousePointerSample.pressed_buttons",
+        "ordinal": "5",
+        "type": "vector<uint8>:32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MousePointerSample.relative_motion",
+        "ordinal": "6",
+        "type": "array<float32,2>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_h",
+        "ordinal": "4",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_h_physical_pixel",
+        "ordinal": "8",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_v",
+        "ordinal": "3",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_v_physical_pixel",
+        "ordinal": "7",
+        "type": "float64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointer/MousePointerSample"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointer/MouseSource.Watch",
+        "ordinal": "6566088352838298548",
+        "type": "() -> (vector<fuchsia.ui.pointer/MouseEvent>:128 events)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.pointer/MouseSource"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/MouseViewStatus.ENTERED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/MouseViewStatus.EXITED",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.pointer/MouseViewStatus",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/Rectangle.max",
+        "ordinal": "2",
+        "type": "array<float32,2>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/Rectangle.min",
+        "ordinal": "1",
+        "type": "array<float32,2>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.pointer/Rectangle"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.pointer/TOUCH_MAX_EVENT",
+        "type": "uint32",
+        "value": "128"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchDeviceInfo.id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointer/TouchDeviceInfo"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchEvent.device_info",
+        "ordinal": "3",
+        "type": "fuchsia.ui.pointer/TouchDeviceInfo"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchEvent.interaction_result",
+        "ordinal": "5",
+        "type": "fuchsia.ui.pointer/TouchInteractionResult"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchEvent.pointer_sample",
+        "ordinal": "4",
+        "type": "fuchsia.ui.pointer/TouchPointerSample"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchEvent.timestamp",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchEvent.trace_flow_id",
+        "ordinal": "6",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchEvent.view_parameters",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointer/ViewParameters"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointer/TouchEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/TouchInteractionId.device_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/TouchInteractionId.interaction_id",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/TouchInteractionId.pointer_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.pointer/TouchInteractionId"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/TouchInteractionResult.interaction",
+        "ordinal": "1",
+        "type": "fuchsia.ui.pointer/TouchInteractionId"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/TouchInteractionResult.status",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointer/TouchInteractionStatus"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.pointer/TouchInteractionResult"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchInteractionStatus.DENIED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchInteractionStatus.GRANTED",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.pointer/TouchInteractionStatus",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchPointerSample.interaction",
+        "ordinal": "1",
+        "type": "fuchsia.ui.pointer/TouchInteractionId"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchPointerSample.phase",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointer/EventPhase"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchPointerSample.position_in_viewport",
+        "ordinal": "3",
+        "type": "array<float32,2>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointer/TouchPointerSample"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchResponse.response_type",
+        "ordinal": "1",
+        "type": "fuchsia.ui.pointer/TouchResponseType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointer/TouchResponse.trace_flow_id",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointer/TouchResponse"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchResponseType.HOLD",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchResponseType.HOLD_SUPPRESS",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchResponseType.MAYBE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchResponseType.MAYBE_PRIORITIZE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchResponseType.MAYBE_PRIORITIZE_SUPPRESS",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchResponseType.MAYBE_SUPPRESS",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchResponseType.NO",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchResponseType.YES",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointer/TouchResponseType.YES_PRIORITIZE",
+        "value": "9"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.pointer/TouchResponseType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointer/TouchSource.UpdateResponse",
+        "ordinal": "7814988013074221450",
+        "type": "(fuchsia.ui.pointer/TouchInteractionId interaction,fuchsia.ui.pointer/TouchResponse response) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointer/TouchSource.Watch",
+        "ordinal": "253418817924955261",
+        "type": "(vector<fuchsia.ui.pointer/TouchResponse>:128 responses) -> (vector<fuchsia.ui.pointer/TouchEvent>:128 events)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.pointer/TouchSource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/ViewParameters.view",
+        "ordinal": "1",
+        "type": "fuchsia.ui.pointer/Rectangle"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/ViewParameters.viewport",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointer/Rectangle"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.pointer/ViewParameters.viewport_to_view_transform",
+        "ordinal": "3",
+        "type": "array<float32,9>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.pointer/ViewParameters"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.pointer"
+    }
+]

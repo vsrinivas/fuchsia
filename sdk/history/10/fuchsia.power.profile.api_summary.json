@@ -1,0 +1,37 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.power.profile/Profile.BACKGROUND_ACTIVE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.power.profile/Profile.IDLE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.power.profile/Profile.USER_ACTIVE",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.power.profile/Profile",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.power.profile/Watcher.Watch",
+        "ordinal": "6857221174245763399",
+        "type": "() -> (fuchsia.power.profile/Profile profile)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.power.profile/Watcher"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.power.profile"
+    }
+]

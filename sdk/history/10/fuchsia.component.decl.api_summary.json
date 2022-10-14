@@ -1,0 +1,1834 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/AllowedOffers.STATIC_AND_DYNAMIC",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/AllowedOffers.STATIC_ONLY",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.decl/AllowedOffers",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/Availability.OPTIONAL",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/Availability.REQUIRED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/Availability.SAME_AS_TARGET",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/Availability.TRANSITIONAL",
+        "value": "4"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.decl/Availability",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.decl/CONFIG_KEY_MAX_SIZE",
+        "type": "uint32",
+        "value": "64"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Capability.directory",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Directory"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Capability.event",
+        "ordinal": "7",
+        "type": "fuchsia.component.decl/Event"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Capability.event_stream",
+        "ordinal": "8",
+        "type": "fuchsia.component.decl/EventStream"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Capability.protocol",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/Protocol"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Capability.resolver",
+        "ordinal": "6",
+        "type": "fuchsia.component.decl/Resolver"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Capability.runner",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/Runner"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Capability.service",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Service"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Capability.storage",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/Storage"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/Capability",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.decl/CapabilityRef.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/CapabilityRef"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Child.environment",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Child.name",
+        "ordinal": "1",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Child.on_terminate",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/OnTerminate"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Child.startup",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/StartupMode"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Child.url",
+        "ordinal": "2",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Child"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.decl/ChildRef.collection",
+        "ordinal": "2",
+        "type": "string:<100,optional>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.decl/ChildRef.name",
+        "ordinal": "1",
+        "type": "string:1024"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/ChildRef"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Collection.allow_long_names",
+        "ordinal": "5",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Collection.allowed_offers",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/AllowedOffers"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Collection.durability",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/Durability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Collection.environment",
+        "ordinal": "3",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Collection.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Collection.persistent_storage",
+        "ordinal": "6",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Collection"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.decl/CollectionRef.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/CollectionRef"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.capabilities",
+        "ordinal": "5",
+        "type": "vector<fuchsia.component.decl/Capability>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.children",
+        "ordinal": "6",
+        "type": "vector<fuchsia.component.decl/Child>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.collections",
+        "ordinal": "7",
+        "type": "vector<fuchsia.component.decl/Collection>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.config",
+        "ordinal": "10",
+        "type": "fuchsia.component.decl/ConfigSchema"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.environments",
+        "ordinal": "8",
+        "type": "vector<fuchsia.component.decl/Environment>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.exposes",
+        "ordinal": "3",
+        "type": "vector<fuchsia.component.decl/Expose>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.facets",
+        "ordinal": "9",
+        "type": "fuchsia.data/Dictionary"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.offers",
+        "ordinal": "4",
+        "type": "vector<fuchsia.component.decl/Offer>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.program",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Program"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Component.uses",
+        "ordinal": "2",
+        "type": "vector<fuchsia.component.decl/Use>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Component"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/ConfigChecksum.sha256",
+        "ordinal": "1",
+        "type": "array<uint8,32>"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/ConfigChecksum",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ConfigField.key",
+        "ordinal": "1",
+        "type": "string:64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ConfigField.type",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/ConfigType"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/ConfigField"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ConfigSchema.checksum",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/ConfigChecksum"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ConfigSchema.fields",
+        "ordinal": "1",
+        "type": "vector<fuchsia.component.decl/ConfigField>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ConfigSchema.value_source",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/ConfigValueSource"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/ConfigSchema"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.decl/ConfigType.constraints",
+        "ordinal": "3",
+        "type": "vector<fuchsia.component.decl/LayoutConstraint>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.decl/ConfigType.layout",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/ConfigTypeLayout"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.decl/ConfigType.parameters",
+        "ordinal": "2",
+        "type": "vector<fuchsia.component.decl/LayoutParameter>:optional"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/ConfigType"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.BOOL",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.INT16",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.INT32",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.INT64",
+        "value": "9"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.INT8",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.STRING",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.UINT16",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.UINT32",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.UINT64",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.UINT8",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/ConfigTypeLayout.VECTOR",
+        "value": "11"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.decl/ConfigTypeLayout",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/ConfigValueSource.package_path",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/ConfigValueSource",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/DebugProtocolRegistration.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/DebugProtocolRegistration.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/DebugProtocolRegistration.target_name",
+        "ordinal": "3",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/DebugProtocolRegistration"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/DebugRef"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/DebugRegistration.protocol",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/DebugProtocolRegistration"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/DebugRegistration",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/DependencyType.STRONG",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/DependencyType.WEAK",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/DependencyType.WEAK_FOR_MIGRATION",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.decl/DependencyType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Directory.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Directory.rights",
+        "ordinal": "3",
+        "type": "fuchsia.io/Operations"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Directory.source_path",
+        "ordinal": "2",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Directory"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/Durability.SINGLE_RUN",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/Durability.TRANSIENT",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.decl/Durability",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Environment.debug_capabilities",
+        "ordinal": "5",
+        "type": "vector<fuchsia.component.decl/DebugRegistration>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Environment.extends",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/EnvironmentExtends"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Environment.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Environment.resolvers",
+        "ordinal": "4",
+        "type": "vector<fuchsia.component.decl/ResolverRegistration>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Environment.runners",
+        "ordinal": "3",
+        "type": "vector<fuchsia.component.decl/RunnerRegistration>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Environment.stop_timeout_ms",
+        "ordinal": "6",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Environment"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/EnvironmentExtends.NONE",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/EnvironmentExtends.REALM",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.decl/EnvironmentExtends",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Event.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Event"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/EventStream.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/EventStream"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/EventSubscription.event_name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/EventSubscription"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Expose.directory",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/ExposeDirectory"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Expose.event_stream",
+        "ordinal": "6",
+        "type": "fuchsia.component.decl/ExposeEventStream"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Expose.protocol",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/ExposeProtocol"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Expose.resolver",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/ExposeResolver"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Expose.runner",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/ExposeRunner"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Expose.service",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/ExposeService"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/Expose",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeDirectory.rights",
+        "ordinal": "5",
+        "type": "fuchsia.io/Operations"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeDirectory.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeDirectory.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeDirectory.subdir",
+        "ordinal": "6",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeDirectory.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeDirectory.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/ExposeDirectory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeEventStream.scope",
+        "ordinal": "3",
+        "type": "vector<fuchsia.component.decl/Ref>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeEventStream.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeEventStream.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeEventStream.target",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeEventStream.target_name",
+        "ordinal": "5",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/ExposeEventStream"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeProtocol.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeProtocol.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeProtocol.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeProtocol.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/ExposeProtocol"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeResolver.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeResolver.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeResolver.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeResolver.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/ExposeResolver"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeRunner.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeRunner.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeRunner.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeRunner.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/ExposeRunner"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeService.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeService.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeService.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ExposeService.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/ExposeService"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/FrameworkRef"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/LayoutConstraint.max_size",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/LayoutConstraint",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/LayoutParameter.nested_type",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/ConfigType"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/LayoutParameter",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.decl/MAX_CHILD_NAME_LENGTH",
+        "type": "uint32",
+        "value": "1024"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.decl/MAX_MONIKER_LENGTH",
+        "type": "uint32",
+        "value": "4096"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.decl/MAX_NAME_LENGTH",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.decl/MAX_NUM_EVENT_STREAM_SUBSCRIPTIONS",
+        "type": "uint64",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.decl/MAX_PATH_LENGTH",
+        "type": "uint32",
+        "value": "1024"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.decl/MAX_URL_SCHEME_LENGTH",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.decl/NameMapping.source_name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.decl/NameMapping.target_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/NameMapping"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Offer.directory",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/OfferDirectory"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Offer.event",
+        "ordinal": "7",
+        "type": "fuchsia.component.decl/OfferEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Offer.event_stream",
+        "ordinal": "8",
+        "type": "fuchsia.component.decl/OfferEventStream"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Offer.protocol",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/OfferProtocol"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Offer.resolver",
+        "ordinal": "6",
+        "type": "fuchsia.component.decl/OfferResolver"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Offer.runner",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/OfferRunner"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Offer.service",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/OfferService"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Offer.storage",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/OfferStorage"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/Offer",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferDirectory.availability",
+        "ordinal": "8",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferDirectory.dependency_type",
+        "ordinal": "7",
+        "type": "fuchsia.component.decl/DependencyType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferDirectory.rights",
+        "ordinal": "5",
+        "type": "fuchsia.io/Operations"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferDirectory.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferDirectory.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferDirectory.subdir",
+        "ordinal": "6",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferDirectory.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferDirectory.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/OfferDirectory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEvent.availability",
+        "ordinal": "6",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEvent.filter",
+        "ordinal": "5",
+        "type": "fuchsia.data/Dictionary"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEvent.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEvent.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEvent.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEvent.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/OfferEvent"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEventStream.availability",
+        "ordinal": "7",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEventStream.filter",
+        "ordinal": "6",
+        "type": "fuchsia.data/Dictionary"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEventStream.scope",
+        "ordinal": "3",
+        "type": "vector<fuchsia.component.decl/Ref>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEventStream.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEventStream.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEventStream.target",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferEventStream.target_name",
+        "ordinal": "5",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/OfferEventStream"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferProtocol.availability",
+        "ordinal": "6",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferProtocol.dependency_type",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/DependencyType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferProtocol.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferProtocol.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferProtocol.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferProtocol.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/OfferProtocol"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferResolver.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferResolver.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferResolver.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferResolver.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/OfferResolver"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferRunner.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferRunner.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferRunner.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferRunner.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/OfferRunner"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferService.availability",
+        "ordinal": "7",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferService.renamed_instances",
+        "ordinal": "6",
+        "type": "vector<fuchsia.component.decl/NameMapping>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferService.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferService.source_instance_filter",
+        "ordinal": "5",
+        "type": "vector<string:100>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferService.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferService.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferService.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/OfferService"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferStorage.availability",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferStorage.source",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferStorage.source_name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferStorage.target",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/OfferStorage.target_name",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/OfferStorage"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/OnTerminate.NONE",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/OnTerminate.REBOOT",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.decl/OnTerminate",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/ParentRef"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Program.info",
+        "ordinal": "2",
+        "type": "fuchsia.data/Dictionary"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Program.runner",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Program"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Protocol.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Protocol.source_path",
+        "ordinal": "2",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Protocol"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Ref.capability",
+        "ordinal": "6",
+        "type": "fuchsia.component.decl/CapabilityRef"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Ref.child",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/ChildRef"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Ref.collection",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/CollectionRef"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Ref.debug",
+        "ordinal": "7",
+        "type": "fuchsia.component.decl/DebugRef"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Ref.framework",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/FrameworkRef"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Ref.parent",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/ParentRef"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Ref.self",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/SelfRef"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Ref.void_type",
+        "ordinal": "8",
+        "type": "fuchsia.component.decl/VoidRef"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/Ref",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Resolver.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Resolver.source_path",
+        "ordinal": "2",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Resolver"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ResolverRegistration.resolver",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ResolverRegistration.scheme",
+        "ordinal": "3",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/ResolverRegistration.source",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/ResolverRegistration"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Runner.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Runner.source_path",
+        "ordinal": "2",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Runner"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/RunnerRegistration.source",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/RunnerRegistration.source_name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/RunnerRegistration.target_name",
+        "ordinal": "3",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/RunnerRegistration"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/SelfRef"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Service.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Service.source_path",
+        "ordinal": "2",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Service"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/StartupMode.EAGER",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/StartupMode.LAZY",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.decl/StartupMode",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Storage.backing_dir",
+        "ordinal": "3",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Storage.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Storage.source",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Storage.storage_id",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/StorageId"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/Storage.subdir",
+        "ordinal": "4",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/Storage"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/StorageId.STATIC_INSTANCE_ID",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.decl/StorageId.STATIC_INSTANCE_ID_OR_MONIKER",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.decl/StorageId",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Use.directory",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/UseDirectory"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Use.event",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/UseEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Use.event_stream",
+        "ordinal": "7",
+        "type": "fuchsia.component.decl/UseEventStream"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Use.event_stream_deprecated",
+        "ordinal": "6",
+        "type": "fuchsia.component.decl/UseEventStreamDeprecated"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Use.protocol",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/UseProtocol"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Use.service",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/UseService"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.decl/Use.storage",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/UseStorage"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.decl/Use",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseDirectory.availability",
+        "ordinal": "7",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseDirectory.dependency_type",
+        "ordinal": "6",
+        "type": "fuchsia.component.decl/DependencyType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseDirectory.rights",
+        "ordinal": "4",
+        "type": "fuchsia.io/Operations"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseDirectory.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseDirectory.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseDirectory.subdir",
+        "ordinal": "5",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseDirectory.target_path",
+        "ordinal": "3",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/UseDirectory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEvent.availability",
+        "ordinal": "6",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEvent.dependency_type",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/DependencyType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEvent.filter",
+        "ordinal": "4",
+        "type": "fuchsia.data/Dictionary"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEvent.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEvent.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEvent.target_name",
+        "ordinal": "3",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/UseEvent"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStream.availability",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStream.filter",
+        "ordinal": "6",
+        "type": "fuchsia.data/Dictionary"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStream.scope",
+        "ordinal": "3",
+        "type": "vector<fuchsia.component.decl/Ref>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStream.source",
+        "ordinal": "2",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStream.source_name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStream.target_path",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/UseEventStream"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStreamDeprecated.availability",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStreamDeprecated.name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStreamDeprecated.subscriptions",
+        "ordinal": "2",
+        "type": "vector<fuchsia.component.decl/EventSubscription>:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/UseEventStreamDeprecated"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseProtocol.availability",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseProtocol.dependency_type",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/DependencyType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseProtocol.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseProtocol.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseProtocol.target_path",
+        "ordinal": "3",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/UseProtocol"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseService.availability",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseService.dependency_type",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/DependencyType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseService.source",
+        "ordinal": "1",
+        "type": "fuchsia.component.decl/Ref"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseService.source_name",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseService.target_path",
+        "ordinal": "3",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/UseService"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseStorage.availability",
+        "ordinal": "3",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseStorage.source_name",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseStorage.target_path",
+        "ordinal": "2",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.decl/UseStorage"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.decl/VoidRef"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.component.decl"
+    }
+]

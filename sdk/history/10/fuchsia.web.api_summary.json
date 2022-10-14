@@ -1,0 +1,1555 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/AllowInputState.ALLOW",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/AllowInputState.DENY",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/AllowInputState",
+        "strictness": "strict",
+        "type": "int32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/AutoplayPolicy.ALLOW",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/AutoplayPolicy.REQUIRE_USER_ACTIVATION",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/AutoplayPolicy",
+        "strictness": "strict",
+        "type": "int32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/ConsoleLogLevel.DEBUG",
+        "value": "-1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/ConsoleLogLevel.ERROR",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/ConsoleLogLevel.INFO",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/ConsoleLogLevel.NONE",
+        "value": "100"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/ConsoleLogLevel.WARN",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/ConsoleLogLevel",
+        "strictness": "strict",
+        "type": "int32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/ContentAreaSettings.autoplay_policy",
+        "ordinal": "2",
+        "type": "fuchsia.web/AutoplayPolicy"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/ContentAreaSettings.hide_scrollbars",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/ContentAreaSettings.page_scale",
+        "ordinal": "4",
+        "type": "float32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/ContentAreaSettings.theme",
+        "ordinal": "3",
+        "type": "fuchsia.settings/ThemeType"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/ContentAreaSettings"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/ContentDirectoryProvider.directory",
+        "ordinal": "2",
+        "type": "fuchsia.io/Directory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/ContentDirectoryProvider.name",
+        "ordinal": "1",
+        "type": "string:255"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/ContentDirectoryProvider",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Context.CreateFrame",
+        "ordinal": "6071032126764842383",
+        "type": "(server_end:fuchsia.web/Frame frame)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Context.CreateFrameWithParams",
+        "ordinal": "3212907335949729430",
+        "type": "(fuchsia.web/CreateFrameParams params,server_end:fuchsia.web/Frame frame)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Context.GetCookieManager",
+        "ordinal": "520566916948836298",
+        "type": "(server_end:fuchsia.web/CookieManager manager)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Context.GetRemoteDebuggingPort",
+        "ordinal": "336760787858566953",
+        "type": "() -> (fuchsia.web/Context_GetRemoteDebuggingPort_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/Context"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/ContextError.REMOTE_DEBUGGING_PORT_NOT_OPENED",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/ContextError",
+        "strictness": "strict",
+        "type": "int32"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.AUDIO",
+        "value": "2"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.HARDWARE_VIDEO_DECODER",
+        "value": "8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.HARDWARE_VIDEO_DECODER_ONLY",
+        "value": "16"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.HEADLESS",
+        "value": "64"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.KEYBOARD",
+        "value": "256"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.LEGACYMETRICS",
+        "value": "128"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.NETWORK",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.VIRTUAL_KEYBOARD",
+        "value": "512"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.VULKAN",
+        "value": "4"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/ContextFeatureFlags.WIDEVINE_CDM",
+        "value": "32"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.web/ContextFeatureFlags",
+        "strictness": "strict",
+        "type": "uint64"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/ContextProvider.Create",
+        "ordinal": "7991349696898447757",
+        "type": "(fuchsia.web/CreateContextParams params,server_end:fuchsia.web/Context context)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/ContextProvider"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.web/Context_GetRemoteDebuggingPort_Response.port",
+        "ordinal": "1",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.web/Context_GetRemoteDebuggingPort_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Context_GetRemoteDebuggingPort_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.web/ContextError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Context_GetRemoteDebuggingPort_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.web/Context_GetRemoteDebuggingPort_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/Context_GetRemoteDebuggingPort_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/Cookie.id",
+        "ordinal": "1",
+        "type": "fuchsia.web/CookieId"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/Cookie.value",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/Cookie",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CookieId.domain",
+        "ordinal": "2",
+        "type": "string:255"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CookieId.name",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CookieId.path",
+        "ordinal": "3",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/CookieId"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/CookieManager.GetCookieList",
+        "ordinal": "4115579728738710324",
+        "type": "(string:<65536,optional> url,string:optional name,server_end:fuchsia.web/CookiesIterator cookies)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/CookieManager.ObserveCookieChanges",
+        "ordinal": "332565268177914034",
+        "type": "(string:<65536,optional> url,string:optional name,server_end:fuchsia.web/CookiesIterator changes)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/CookieManager"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/CookiesIterator.GetNext",
+        "ordinal": "7040637768638940541",
+        "type": "() -> (vector<fuchsia.web/Cookie> changed_cookies)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/CookiesIterator"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.cdm_data_directory",
+        "ordinal": "11",
+        "type": "fuchsia.io/Directory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.cdm_data_quota_bytes",
+        "ordinal": "12",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.content_directories",
+        "ordinal": "6",
+        "type": "vector<fuchsia.web/ContentDirectoryProvider>:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.cors_exempt_headers",
+        "ordinal": "10",
+        "type": "vector<vector<uint8>>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.data_directory",
+        "ordinal": "2",
+        "type": "fuchsia.io/Directory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.data_quota_bytes",
+        "ordinal": "13",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.features",
+        "ordinal": "7",
+        "type": "fuchsia.web/ContextFeatureFlags"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.playready_key_system",
+        "ordinal": "8",
+        "type": "string:128"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.remote_debugging_port",
+        "ordinal": "5",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.service_directory",
+        "ordinal": "1",
+        "type": "fuchsia.io/Directory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.unsafely_treat_insecure_origins_as_secure",
+        "ordinal": "9",
+        "type": "vector<string:513>:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.user_agent_product",
+        "ordinal": "3",
+        "type": "string:128"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateContextParams.user_agent_version",
+        "ordinal": "4",
+        "type": "string:128"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/CreateContextParams",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateFrameParams.autoplay_policy",
+        "ordinal": "3",
+        "type": "fuchsia.web/AutoplayPolicy"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateFrameParams.debug_name",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateFrameParams.enable_remote_debugging",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateFrameParams.explicit_sites_filter_error_page",
+        "ordinal": "4",
+        "type": "fuchsia.mem/Data"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/CreateFrameParams",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/CreateView2Args.view_creation_token",
+        "ordinal": "1",
+        "type": "fuchsia.ui.views/ViewCreationToken"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/CreateView2Args",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Debug.EnableDevTools",
+        "ordinal": "4951111807290132708",
+        "type": "(client_end:fuchsia.web/DevToolsListener listener) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/Debug"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/DevToolsListener.OnContextDevToolsAvailable",
+        "ordinal": "5414909726047903367",
+        "type": "(server_end:fuchsia.web/DevToolsPerContextListener listener)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/DevToolsListener"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/DevToolsPerContextListener.OnHttpPortOpen",
+        "ordinal": "6787779206751540539",
+        "type": "(uint16 port)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/DevToolsPerContextListener"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/Favicon.data",
+        "ordinal": "1",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/Favicon.height",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/Favicon.width",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/Favicon",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.AddBeforeLoadJavaScript",
+        "ordinal": "378491543312237118",
+        "type": "(uint64 id,vector<string:65536> origins,fuchsia.mem/Buffer script) -> (fuchsia.web/Frame_AddBeforeLoadJavaScript_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.ConfigureInputTypes",
+        "ordinal": "4098433884881338102",
+        "type": "(fuchsia.web/InputTypes types,fuchsia.web/AllowInputState allow)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.CreateView",
+        "ordinal": "7649229363771290212",
+        "type": "(fuchsia.ui.views/ViewToken view_token)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.CreateView2",
+        "ordinal": "2010832293440187191",
+        "type": "(fuchsia.web/CreateView2Args args)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.CreateViewWithViewRef",
+        "ordinal": "2211683798081545900",
+        "type": "(fuchsia.ui.views/ViewToken view_token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.DisableHeadlessRendering",
+        "ordinal": "6675331067819283514",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.EnableHeadlessRendering",
+        "ordinal": "8261882837744487723",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.ExecuteJavaScript",
+        "ordinal": "8767344405326595394",
+        "type": "(vector<string:65536> origins,fuchsia.mem/Buffer script) -> (fuchsia.web/Frame_ExecuteJavaScript_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.ExecuteJavaScriptNoResult",
+        "ordinal": "1637138819642543459",
+        "type": "(vector<string:65536> origins,fuchsia.mem/Buffer script) -> (fuchsia.web/Frame_ExecuteJavaScriptNoResult_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.ForceContentDimensions",
+        "ordinal": "632476800010275073",
+        "type": "(fuchsia.ui.gfx/vec2:optional web_dips)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.GetMediaPlayer",
+        "ordinal": "770034421461655225",
+        "type": "(server_end:fuchsia.media.sessions2/Player player)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.GetNavigationController",
+        "ordinal": "4981491263860090504",
+        "type": "(server_end:fuchsia.web/NavigationController controller)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.GetPrivateMemorySize",
+        "ordinal": "7698011024338790832",
+        "type": "() -> (uint64 size_bytes)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.PostMessage",
+        "ordinal": "8439016101501379393",
+        "type": "(string:65536 target_origin,fuchsia.web/WebMessage message) -> (fuchsia.web/Frame_PostMessage_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.RemoveBeforeLoadJavaScript",
+        "ordinal": "1718452584582337082",
+        "type": "(uint64 id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.ResetContentAreaSettings",
+        "ordinal": "7496206735073930845",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetBlockMediaLoading",
+        "ordinal": "2382528746458042191",
+        "type": "(bool blocked)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetConsoleLogSink",
+        "ordinal": "1798567658671859835",
+        "type": "(fuchsia.logger/LogSink:optional sink)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetContentAreaSettings",
+        "ordinal": "599529461091910270",
+        "type": "(fuchsia.web/ContentAreaSettings settings)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetJavaScriptLogLevel",
+        "ordinal": "8395355194562202459",
+        "type": "(fuchsia.web/ConsoleLogLevel level)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetMediaSessionId",
+        "ordinal": "6362174322077420729",
+        "type": "(uint64 session_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetMediaSettings",
+        "ordinal": "9054620876951306563",
+        "type": "(fuchsia.web/FrameMediaSettings settings)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetNavigationEventListener",
+        "ordinal": "677151895295232598",
+        "type": "(client_end:<fuchsia.web/NavigationEventListener,optional> listener)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetNavigationEventListener2",
+        "ordinal": "6884667238559733647",
+        "type": "(client_end:<fuchsia.web/NavigationEventListener,optional> listener,fuchsia.web/NavigationEventListenerFlags flags)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetNavigationPolicyProvider",
+        "ordinal": "6930163866162062932",
+        "type": "(fuchsia.web/NavigationPolicyProviderParams params,client_end:fuchsia.web/NavigationPolicyProvider provider)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetPageScale",
+        "ordinal": "418962821528855579",
+        "type": "(float32 scale)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetPermissionState",
+        "ordinal": "1826014565696225103",
+        "type": "(fuchsia.web/PermissionDescriptor permission,string:65536 web_origin,fuchsia.web/PermissionState state)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetPopupFrameCreationListener",
+        "ordinal": "3809460682245661354",
+        "type": "(client_end:<fuchsia.web/PopupFrameCreationListener,optional> listener)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetPreferredTheme",
+        "ordinal": "8606177604664893896",
+        "type": "(fuchsia.settings/ThemeType theme)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/Frame.SetUrlRequestRewriteRules",
+        "ordinal": "3332515785459053185",
+        "type": "(vector<fuchsia.web/UrlRequestRewriteRule>:4096 rules) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/Frame"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/FrameError.BUFFER_NOT_UTF8",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/FrameError.INTERNAL_ERROR",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/FrameError.INVALID_ORIGIN",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/FrameError.NO_DATA_IN_MESSAGE",
+        "value": "4"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/FrameError",
+        "strictness": "strict",
+        "type": "int32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/FrameHost.CreateFrameWithParams",
+        "ordinal": "463897614729559848",
+        "type": "(fuchsia.web/CreateFrameParams params,server_end:fuchsia.web/Frame frame)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/FrameHost"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/FrameMediaSettings.audio_consumer_session_id",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/FrameMediaSettings.renderer_usage",
+        "ordinal": "1",
+        "type": "fuchsia.media/AudioRenderUsage"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/FrameMediaSettings"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.web/Frame_AddBeforeLoadJavaScript_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Frame_AddBeforeLoadJavaScript_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.web/FrameError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Frame_AddBeforeLoadJavaScript_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.web/Frame_AddBeforeLoadJavaScript_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/Frame_AddBeforeLoadJavaScript_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.web/Frame_ExecuteJavaScriptNoResult_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Frame_ExecuteJavaScriptNoResult_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.web/FrameError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Frame_ExecuteJavaScriptNoResult_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.web/Frame_ExecuteJavaScriptNoResult_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/Frame_ExecuteJavaScriptNoResult_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.web/Frame_ExecuteJavaScript_Response.result",
+        "ordinal": "1",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.web/Frame_ExecuteJavaScript_Response",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Frame_ExecuteJavaScript_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.web/FrameError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Frame_ExecuteJavaScript_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.web/Frame_ExecuteJavaScript_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/Frame_ExecuteJavaScript_Result",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.web/Frame_PostMessage_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Frame_PostMessage_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.web/FrameError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/Frame_PostMessage_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.web/Frame_PostMessage_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/Frame_PostMessage_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/IncomingTransferable.message_port",
+        "ordinal": "1",
+        "type": "client_end:fuchsia.web/MessagePort"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/IncomingTransferable",
+        "resourceness": "resource",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/InputTypes.ALL",
+        "value": "9223372036854775808"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/InputTypes.GESTURE_DRAG",
+        "value": "64"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/InputTypes.GESTURE_PINCH",
+        "value": "32"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/InputTypes.GESTURE_TAP",
+        "value": "16"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/InputTypes.KEY",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/InputTypes.MOUSE_CLICK",
+        "value": "2"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/InputTypes.MOUSE_MOVE",
+        "value": "8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/InputTypes.MOUSE_WHEEL",
+        "value": "4"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.web/InputTypes",
+        "strictness": "strict",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/LoadUrlParams.headers",
+        "ordinal": "4",
+        "type": "vector<fuchsia.net.http/Header>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/LoadUrlParams.referrer_url",
+        "ordinal": "2",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/LoadUrlParams.type",
+        "ordinal": "1",
+        "type": "fuchsia.web/LoadUrlReason"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/LoadUrlParams.was_user_activated",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/LoadUrlParams",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/LoadUrlReason.LINK",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/LoadUrlReason.TYPED",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/LoadUrlReason",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.web/MAX_HEADERS_COUNT",
+        "type": "int32",
+        "value": "4096"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.web/MAX_HOST_LENGTH",
+        "type": "int32",
+        "value": "255"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.web/MAX_RULE_COUNT",
+        "type": "int32",
+        "value": "4096"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.web/MAX_SCHEME_AND_HOST_LENGTH",
+        "type": "int32",
+        "value": "513"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.web/MAX_URL_LENGTH",
+        "type": "int32",
+        "value": "65536"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.web/MAX_URL_SCHEME_NAME_LENGTH",
+        "type": "int32",
+        "value": "255"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/MessagePort.PostMessage",
+        "ordinal": "3156753334913727775",
+        "type": "(fuchsia.web/WebMessage message) -> (fuchsia.web/MessagePort_PostMessage_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/MessagePort.ReceiveMessage",
+        "ordinal": "7821169605653292429",
+        "type": "() -> (fuchsia.web/WebMessage message)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/MessagePort"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.web/MessagePort_PostMessage_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/MessagePort_PostMessage_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.web/FrameError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/MessagePort_PostMessage_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.web/MessagePort_PostMessage_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/MessagePort_PostMessage_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/NavigationController.GetVisibleEntry",
+        "ordinal": "1829712777919809079",
+        "type": "() -> (fuchsia.web/NavigationState entry)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/NavigationController.GoBack",
+        "ordinal": "3084083444781194296",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/NavigationController.GoForward",
+        "ordinal": "4171648912326535041",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/NavigationController.LoadUrl",
+        "ordinal": "8715216289562165634",
+        "type": "(string:65536 url,fuchsia.web/LoadUrlParams params) -> (fuchsia.web/NavigationController_LoadUrl_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/NavigationController.Reload",
+        "ordinal": "234097982314475264",
+        "type": "(fuchsia.web/ReloadType type)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/NavigationController.Stop",
+        "ordinal": "159931083016531946",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/NavigationController"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/NavigationControllerError.INVALID_HEADER",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/NavigationControllerError.INVALID_URL",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/NavigationControllerError",
+        "strictness": "strict",
+        "type": "int32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.web/NavigationController_LoadUrl_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/NavigationController_LoadUrl_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.web/NavigationControllerError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/NavigationController_LoadUrl_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.web/NavigationController_LoadUrl_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/NavigationController_LoadUrl_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/NavigationDecision.abort",
+        "ordinal": "2",
+        "type": "fuchsia.web/NoArgumentsAction"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/NavigationDecision.proceed",
+        "ordinal": "1",
+        "type": "fuchsia.web/NoArgumentsAction"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/NavigationDecision",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/NavigationEventListener.OnNavigationStateChanged",
+        "ordinal": "4988518051185097654",
+        "type": "(fuchsia.web/NavigationState change) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/NavigationEventListener"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/NavigationEventListenerFlags.FAVICON",
+        "value": "1"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.web/NavigationEventListenerFlags",
+        "strictness": "strict",
+        "type": "uint64"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/NavigationPhase.FAIL",
+        "value": "8"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/NavigationPhase.PROCESS_RESPONSE",
+        "value": "4"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/NavigationPhase.REDIRECT",
+        "value": "2"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.web/NavigationPhase.START",
+        "value": "1"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.web/NavigationPhase",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/NavigationPolicyProvider.EvaluateRequestedNavigation",
+        "ordinal": "6072096192420188854",
+        "type": "(fuchsia.web/RequestedNavigation requested_navigation) -> (fuchsia.web/NavigationDecision decision)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/NavigationPolicyProvider"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/NavigationPolicyProviderParams.main_frame_phases",
+        "ordinal": "1",
+        "type": "fuchsia.web/NavigationPhase"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/NavigationPolicyProviderParams.subframe_phases",
+        "ordinal": "2",
+        "type": "fuchsia.web/NavigationPhase"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/NavigationPolicyProviderParams"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/NavigationState.can_go_back",
+        "ordinal": "5",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/NavigationState.can_go_forward",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/NavigationState.favicon",
+        "ordinal": "7",
+        "type": "fuchsia.web/Favicon"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/NavigationState.is_main_document_loaded",
+        "ordinal": "6",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/NavigationState.page_type",
+        "ordinal": "3",
+        "type": "fuchsia.web/PageType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/NavigationState.title",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/NavigationState.url",
+        "ordinal": "1",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/NavigationState",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.web/NoArgumentsAction"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/OutgoingTransferable.message_port",
+        "ordinal": "1",
+        "type": "server_end:fuchsia.web/MessagePort"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/OutgoingTransferable",
+        "resourceness": "resource",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/PageType.ERROR",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/PageType.NORMAL",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/PageType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/PermissionDescriptor.type",
+        "ordinal": "1",
+        "type": "fuchsia.web/PermissionType"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/PermissionDescriptor"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/PermissionState.DENIED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/PermissionState.GRANTED",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/PermissionState",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/PermissionType.CAMERA",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/PermissionType.MICROPHONE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/PermissionType.PERSISTENT_STORAGE",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/PermissionType.PROTECTED_MEDIA_IDENTIFIER",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/PermissionType",
+        "strictness": "strict",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/PopupFrameCreationInfo.initial_url",
+        "ordinal": "1",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/PopupFrameCreationInfo.initiated_by_user",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/PopupFrameCreationInfo",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.web/PopupFrameCreationListener.OnPopupFrameCreated",
+        "ordinal": "1851562631161453905",
+        "type": "(client_end:fuchsia.web/Frame frame,fuchsia.web/PopupFrameCreationInfo info) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.web/PopupFrameCreationListener"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/ReloadType.NO_CACHE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/ReloadType.PARTIAL_CACHE",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/ReloadType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/RequestedNavigation.has_gesture",
+        "ordinal": "7",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/RequestedNavigation.id",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/RequestedNavigation.is_http_post",
+        "ordinal": "5",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/RequestedNavigation.is_main_frame",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/RequestedNavigation.is_same_document",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/RequestedNavigation.phase",
+        "ordinal": "2",
+        "type": "fuchsia.web/NavigationPhase"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/RequestedNavigation.url",
+        "ordinal": "6",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/RequestedNavigation.was_server_redirect",
+        "ordinal": "8",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/RequestedNavigation"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/UrlRequestAction.ALLOW",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.web/UrlRequestAction.DENY",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.web/UrlRequestAction",
+        "strictness": "strict",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/UrlRequestRewrite.add_headers",
+        "ordinal": "1",
+        "type": "fuchsia.web/UrlRequestRewriteAddHeaders"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/UrlRequestRewrite.append_to_query",
+        "ordinal": "5",
+        "type": "fuchsia.web/UrlRequestRewriteAppendToQuery"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/UrlRequestRewrite.remove_header",
+        "ordinal": "2",
+        "type": "fuchsia.web/UrlRequestRewriteRemoveHeader"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/UrlRequestRewrite.replace_url",
+        "ordinal": "4",
+        "type": "fuchsia.web/UrlRequestRewriteReplaceUrl"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.web/UrlRequestRewrite.substitute_query_pattern",
+        "ordinal": "3",
+        "type": "fuchsia.web/UrlRequestRewriteSubstituteQueryPattern"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.web/UrlRequestRewrite",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteAddHeaders.headers",
+        "ordinal": "1",
+        "type": "vector<fuchsia.net.http/Header>:4096"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/UrlRequestRewriteAddHeaders"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteAppendToQuery.query",
+        "ordinal": "1",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/UrlRequestRewriteAppendToQuery"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteRemoveHeader.header_name",
+        "ordinal": "2",
+        "type": "vector<uint8>:4096"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteRemoveHeader.query_pattern",
+        "ordinal": "1",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/UrlRequestRewriteRemoveHeader"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteReplaceUrl.new_url",
+        "ordinal": "2",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteReplaceUrl.url_ends_with",
+        "ordinal": "1",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/UrlRequestRewriteReplaceUrl"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteRule.action",
+        "ordinal": "4",
+        "type": "fuchsia.web/UrlRequestAction"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteRule.hosts_filter",
+        "ordinal": "1",
+        "type": "vector<string:255>:4096"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteRule.rewrites",
+        "ordinal": "3",
+        "type": "vector<fuchsia.web/UrlRequestRewrite>:4096"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteRule.schemes_filter",
+        "ordinal": "2",
+        "type": "vector<string:255>:4096"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/UrlRequestRewriteRule"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteSubstituteQueryPattern.pattern",
+        "ordinal": "1",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/UrlRequestRewriteSubstituteQueryPattern.substitution",
+        "ordinal": "2",
+        "type": "string:65536"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/UrlRequestRewriteSubstituteQueryPattern"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/WebMessage.data",
+        "ordinal": "1",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/WebMessage.incoming_transfer",
+        "ordinal": "2",
+        "type": "vector<fuchsia.web/IncomingTransferable>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.web/WebMessage.outgoing_transfer",
+        "ordinal": "3",
+        "type": "vector<fuchsia.web/OutgoingTransferable>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.web/WebMessage",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.web"
+    }
+]

@@ -1,0 +1,257 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/AlphaFormat.NON_PREMULTIPLIED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/AlphaFormat.OPAQUE",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/AlphaFormat.PREMULTIPLIED",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.images/AlphaFormat",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/ColorSpace.SRGB",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.images/ColorSpace",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/EncodedImage.size",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/EncodedImage.vmo",
+        "ordinal": "1",
+        "type": "zx/handle:VMO"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.images/EncodedImage",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/ImageInfo.alpha_format",
+        "ordinal": "8",
+        "type": "fuchsia.images/AlphaFormat",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/ImageInfo.color_space",
+        "ordinal": "6",
+        "type": "fuchsia.images/ColorSpace",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/ImageInfo.height",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/ImageInfo.pixel_format",
+        "ordinal": "5",
+        "type": "fuchsia.images/PixelFormat",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/ImageInfo.stride",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/ImageInfo.tiling",
+        "ordinal": "7",
+        "type": "fuchsia.images/Tiling",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/ImageInfo.transform",
+        "ordinal": "1",
+        "type": "fuchsia.images/Transform",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/ImageInfo.width",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.images/ImageInfo"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.images/ImagePipe2.AddBufferCollection",
+        "ordinal": "7367545316235049989",
+        "type": "(uint32 buffer_collection_id,fuchsia.sysmem/BufferCollectionToken buffer_collection_token)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.images/ImagePipe2.AddImage",
+        "ordinal": "2546337025867051925",
+        "type": "(uint32 image_id,uint32 buffer_collection_id,uint32 buffer_collection_index,fuchsia.sysmem/ImageFormat_2 image_format)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.images/ImagePipe2.PresentImage",
+        "ordinal": "8345087712037704762",
+        "type": "(uint32 image_id,uint64 presentation_time,vector<zx/handle:EVENT>:16 acquire_fences,vector<zx/handle:EVENT>:16 release_fences) -> (fuchsia.images/PresentationInfo presentation_info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.images/ImagePipe2.RemoveBufferCollection",
+        "ordinal": "1638953428188340889",
+        "type": "(uint32 buffer_collection_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.images/ImagePipe2.RemoveImage",
+        "ordinal": "1650830745147871080",
+        "type": "(uint32 image_id)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.images/ImagePipe2"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.images/MAX_ACQUIRE_RELEASE_FENCE_COUNT",
+        "type": "int32",
+        "value": "16"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/MemoryType.HOST_MEMORY",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/MemoryType.VK_DEVICE_MEMORY",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.images/MemoryType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/PixelFormat.BGRA_8",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/PixelFormat.NV12",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/PixelFormat.R8G8B8A8",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/PixelFormat.YUY2",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/PixelFormat.YV12",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.images/PixelFormat",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/PresentationInfo.presentation_interval",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.images/PresentationInfo.presentation_time",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.images/PresentationInfo"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/Tiling.GPU_OPTIMAL",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/Tiling.LINEAR",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.images/Tiling",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/Transform.FLIP_HORIZONTAL",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/Transform.FLIP_VERTICAL",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/Transform.FLIP_VERTICAL_AND_HORIZONTAL",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.images/Transform.NORMAL",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.images/Transform",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.images"
+    }
+]

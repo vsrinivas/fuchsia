@@ -1,0 +1,33 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.scene/Controller.AttachClientView",
+        "ordinal": "2818516817430476641",
+        "type": "(fuchsia.ui.test.scene/ControllerAttachClientViewRequest payload) -> (uint64 view_ref_koid)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.scene/Controller.RegisterViewTreeWatcher",
+        "ordinal": "87542316747800676",
+        "type": "(server_end:fuchsia.ui.observation.geometry/ViewTreeWatcher watcher) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.scene/Controller"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.scene/ControllerAttachClientViewRequest.view_provider",
+        "ordinal": "1",
+        "type": "fuchsia.ui.app/ViewProvider"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.scene/ControllerAttachClientViewRequest",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.test.scene"
+    }
+]

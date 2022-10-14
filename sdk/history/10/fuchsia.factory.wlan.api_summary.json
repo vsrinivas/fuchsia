@@ -1,0 +1,76 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.factory.wlan/Iovar.Get",
+        "ordinal": "6404874362106450474",
+        "type": "(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Get_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.factory.wlan/Iovar.Set",
+        "ordinal": "6673168730434629670",
+        "type": "(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Set_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.factory.wlan/Iovar"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.factory.wlan/Iovar_Get_Response.result",
+        "ordinal": "1",
+        "type": "vector<uint8>:16384"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.factory.wlan/Iovar_Get_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.factory.wlan/Iovar_Get_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.factory.wlan/Iovar_Get_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.factory.wlan/Iovar_Get_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.factory.wlan/Iovar_Get_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.factory.wlan/Iovar_Set_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.factory.wlan/Iovar_Set_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.factory.wlan/Iovar_Set_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.factory.wlan/Iovar_Set_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.factory.wlan/Iovar_Set_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.factory.wlan/MAX_BUFFER_SIZE",
+        "type": "uint64",
+        "value": "16384"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.factory.wlan"
+    }
+]

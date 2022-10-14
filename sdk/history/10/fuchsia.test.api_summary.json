@@ -1,0 +1,160 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/Case.enabled",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/Case.name",
+        "ordinal": "1",
+        "type": "string:512"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.test/Case"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.test/CaseIterator.GetNext",
+        "ordinal": "2970661812318445742",
+        "type": "() -> (vector<fuchsia.test/Case> cases)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.test/CaseIterator"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.test/CaseListener.Finished",
+        "ordinal": "73135560722821772",
+        "type": "(fuchsia.test/Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.test/CaseListener"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/Invocation.name",
+        "ordinal": "1",
+        "type": "string:512"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/Invocation.tag",
+        "ordinal": "2",
+        "type": "string:512"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.test/Invocation"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/Result.status",
+        "ordinal": "1",
+        "type": "fuchsia.test/Status"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.test/Result"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.test/RunListener.OnFinished",
+        "ordinal": "6046797559487171221",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.test/RunListener.OnTestCaseStarted",
+        "ordinal": "1376495106439580486",
+        "type": "(fuchsia.test/Invocation invocation,fuchsia.test/StdHandles std_handles,server_end:fuchsia.test/CaseListener listener)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.test/RunListener"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/RunOptions.arguments",
+        "ordinal": "3",
+        "type": "vector<string>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/RunOptions.include_disabled_tests",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/RunOptions.parallel",
+        "ordinal": "2",
+        "type": "uint16"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.test/RunOptions"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.test/Status.FAILED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.test/Status.PASSED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.test/Status.SKIPPED",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.test/Status",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/StdHandles.err",
+        "ordinal": "2",
+        "type": "zx/handle:SOCKET"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.test/StdHandles.out",
+        "ordinal": "1",
+        "type": "zx/handle:SOCKET"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.test/StdHandles",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.test/Suite.GetTests",
+        "ordinal": "6630699493795909151",
+        "type": "(server_end:fuchsia.test/CaseIterator iterator)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.test/Suite.Run",
+        "ordinal": "3023654559917316091",
+        "type": "(vector<fuchsia.test/Invocation> tests,fuchsia.test/RunOptions options,client_end:fuchsia.test/RunListener listener)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.test/Suite"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.test"
+    }
+]

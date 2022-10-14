@@ -1,0 +1,16 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.buildinfo.test/BuildInfoTestController.SetBuildInfo",
+        "ordinal": "4413387124839775616",
+        "type": "(fuchsia.buildinfo/BuildInfo build_info) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.buildinfo.test/BuildInfoTestController"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.buildinfo.test"
+    }
+]

@@ -1,0 +1,271 @@
+[
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.scenic/Command.gfx",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/Command"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.scenic/Command.input",
+        "ordinal": "4",
+        "type": "fuchsia.ui.input/Command"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.scenic/Command.views",
+        "ordinal": "3",
+        "type": "fuchsia.ui.views/Command"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.scenic/Command",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.scenic/Event.gfx",
+        "ordinal": "1",
+        "type": "fuchsia.ui.gfx/Event"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.scenic/Event.input",
+        "ordinal": "2",
+        "type": "fuchsia.ui.input/InputEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.scenic/Event.unhandled",
+        "ordinal": "3",
+        "type": "fuchsia.ui.scenic/Command"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.scenic/Event",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/Present2Args.acquire_fences",
+        "ordinal": "2",
+        "type": "vector<zx/handle:EVENT>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/Present2Args.release_fences",
+        "ordinal": "3",
+        "type": "vector<zx/handle:EVENT>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/Present2Args.requested_prediction_span",
+        "ordinal": "4",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/Present2Args.requested_presentation_time",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.scenic/Present2Args",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Scenic.CreateSession",
+        "ordinal": "3096086150615865936",
+        "type": "(server_end:fuchsia.ui.scenic/Session session,client_end:<fuchsia.ui.scenic/SessionListener,optional> listener)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Scenic.CreateSession2",
+        "ordinal": "1295454458776526757",
+        "type": "(server_end:fuchsia.ui.scenic/Session session,client_end:<fuchsia.ui.scenic/SessionListener,optional> listener,server_end:<fuchsia.ui.views/Focuser,optional> view_focuser)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Scenic.CreateSessionT",
+        "ordinal": "3931749851415784783",
+        "type": "(fuchsia.ui.scenic/SessionEndpoints endpoints) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Scenic.GetDisplayInfo",
+        "ordinal": "4489207896198616983",
+        "type": "() -> (fuchsia.ui.gfx/DisplayInfo info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Scenic.GetDisplayOwnershipEvent",
+        "ordinal": "6107185415463838934",
+        "type": "() -> (zx/handle:EVENT ownership_event)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Scenic.TakeScreenshot",
+        "ordinal": "6049988396214418930",
+        "type": "() -> (fuchsia.ui.scenic/ScreenshotData img_data,bool success)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Scenic.UsesFlatland",
+        "ordinal": "6858522745177302790",
+        "type": "() -> (bool flatland_enabled)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.scenic/Scenic"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.scenic/ScreenshotData.data",
+        "ordinal": "2",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.scenic/ScreenshotData.info",
+        "ordinal": "1",
+        "type": "fuchsia.images/ImageInfo"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.scenic/ScreenshotData",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Session.DeregisterBufferCollection",
+        "ordinal": "3811951573432326942",
+        "type": "(uint32 buffer_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Session.Enqueue",
+        "ordinal": "7053174346053519442",
+        "type": "(vector<fuchsia.ui.scenic/Command> cmds)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Session.OnFramePresented",
+        "ordinal": "2802292099936674155",
+        "type": " -> (fuchsia.scenic.scheduling/FramePresentedInfo frame_presented_info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Session.Present",
+        "ordinal": "3933454894216954750",
+        "type": "(uint64 presentation_time,vector<zx/handle:EVENT> acquire_fences,vector<zx/handle:EVENT> release_fences) -> (fuchsia.images/PresentationInfo presentation_info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Session.Present2",
+        "ordinal": "6715004902538963557",
+        "type": "(fuchsia.ui.scenic/Present2Args args) -> (fuchsia.scenic.scheduling/FuturePresentationTimes request_presentation_times_info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Session.RegisterBufferCollection",
+        "ordinal": "1448766374200863992",
+        "type": "(uint32 buffer_id,fuchsia.sysmem/BufferCollectionToken token)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Session.RequestPresentationTimes",
+        "ordinal": "1486336970311874820",
+        "type": "(int64 requested_prediction_span) -> (fuchsia.scenic.scheduling/FuturePresentationTimes request_presentation_times_info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/Session.SetDebugName",
+        "ordinal": "986666273519008657",
+        "type": "(string debug_name)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.scenic/Session"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/SessionEndpoints.mouse_source",
+        "ordinal": "6",
+        "type": "server_end:fuchsia.ui.pointer/MouseSource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/SessionEndpoints.session",
+        "ordinal": "1",
+        "type": "server_end:fuchsia.ui.scenic/Session"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/SessionEndpoints.session_listener",
+        "ordinal": "2",
+        "type": "client_end:fuchsia.ui.scenic/SessionListener"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/SessionEndpoints.touch_source",
+        "ordinal": "5",
+        "type": "server_end:fuchsia.ui.pointer/TouchSource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/SessionEndpoints.view_focuser",
+        "ordinal": "3",
+        "type": "server_end:fuchsia.ui.views/Focuser"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.scenic/SessionEndpoints.view_ref_focused",
+        "ordinal": "4",
+        "type": "server_end:fuchsia.ui.views/ViewRefFocused"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.scenic/SessionEndpoints",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/SessionListener.OnScenicError",
+        "ordinal": "7496623702116419063",
+        "type": "(string error)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.scenic/SessionListener.OnScenicEvent",
+        "ordinal": "6874391627809928170",
+        "type": "(vector<fuchsia.ui.scenic/Event> events)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.scenic/SessionListener"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.scenic/Snapshot"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.scenic/displayNotOwnedSignal",
+        "type": "uint32",
+        "value": "16777216"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.scenic/displayOwnedSignal",
+        "type": "uint32",
+        "value": "33554432"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.scenic"
+    }
+]

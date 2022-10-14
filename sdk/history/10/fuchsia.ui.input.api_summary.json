@@ -1,0 +1,1409 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Axis.range",
+        "ordinal": "1",
+        "type": "fuchsia.ui.input/Range"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Axis.resolution",
+        "ordinal": "2",
+        "type": "int32",
+        "value": "1"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Axis.scale",
+        "ordinal": "3",
+        "type": "fuchsia.ui.input/AxisScale",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/Axis"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/AxisF.range",
+        "ordinal": "1",
+        "type": "fuchsia.ui.input/RangeF"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/AxisF.resolution",
+        "ordinal": "2",
+        "type": "float32",
+        "value": "1"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/AxisF.scale",
+        "ordinal": "3",
+        "type": "fuchsia.ui.input/AxisScale",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/AxisF"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/AxisScale.LINEAR",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/AxisScale.LOGARITHMIC",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.input/AxisScale",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.input/Command.send_keyboard_input",
+        "ordinal": "1",
+        "type": "fuchsia.ui.input/SendKeyboardInputCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.input/Command.send_pointer_input",
+        "ordinal": "2",
+        "type": "fuchsia.ui.input/SendPointerInputCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.input/Command.set_hard_keyboard_delivery",
+        "ordinal": "3",
+        "type": "fuchsia.ui.input/SetHardKeyboardDeliveryCmd"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.input/Command.set_parallel_dispatch",
+        "ordinal": "4",
+        "type": "fuchsia.ui.input/SetParallelDispatchCmd"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.input/Command",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceDescriptor.device_info",
+        "ordinal": "1",
+        "type": "box<fuchsia.ui.input/DeviceInfo>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceDescriptor.keyboard",
+        "ordinal": "2",
+        "type": "box<fuchsia.ui.input/KeyboardDescriptor>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceDescriptor.media_buttons",
+        "ordinal": "3",
+        "type": "box<fuchsia.ui.input/MediaButtonsDescriptor>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceDescriptor.mouse",
+        "ordinal": "4",
+        "type": "box<fuchsia.ui.input/MouseDescriptor>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceDescriptor.sensor",
+        "ordinal": "7",
+        "type": "box<fuchsia.ui.input/SensorDescriptor>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceDescriptor.stylus",
+        "ordinal": "5",
+        "type": "box<fuchsia.ui.input/StylusDescriptor>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceDescriptor.touchscreen",
+        "ordinal": "6",
+        "type": "box<fuchsia.ui.input/TouchscreenDescriptor>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/DeviceDescriptor"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceInfo.name",
+        "ordinal": "4",
+        "type": "string"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceInfo.product_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceInfo.vendor_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/DeviceInfo.version",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/DeviceInfo"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/FocusEvent.event_time",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/FocusEvent.focused",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/FocusEvent"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/ImeService.GetInputMethodEditor",
+        "ordinal": "1480890716194628092",
+        "type": "(fuchsia.ui.input/KeyboardType keyboard_type,fuchsia.ui.input/InputMethodAction action,fuchsia.ui.input/TextInputState initial_state,client_end:fuchsia.ui.input/InputMethodEditorClient client,server_end:fuchsia.ui.input/InputMethodEditor editor)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/ImeService.HideKeyboard",
+        "ordinal": "8532052555131062781",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/ImeService.ShowKeyboard",
+        "ordinal": "4101981143447698672",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.input/ImeService"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputDevice.DispatchReport",
+        "ordinal": "9143281205184959647",
+        "type": "(fuchsia.ui.input/InputReport report)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.input/InputDevice"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputDeviceRegistry.RegisterDevice",
+        "ordinal": "8020510846883885321",
+        "type": "(fuchsia.ui.input/DeviceDescriptor descriptor,server_end:fuchsia.ui.input/InputDevice input_device)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.input/InputDeviceRegistry"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.input/InputEvent.focus",
+        "ordinal": "3",
+        "type": "fuchsia.ui.input/FocusEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.input/InputEvent.keyboard",
+        "ordinal": "2",
+        "type": "fuchsia.ui.input/KeyboardEvent"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.input/InputEvent.pointer",
+        "ordinal": "1",
+        "type": "fuchsia.ui.input/PointerEvent"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.input/InputEvent",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.DONE",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.GO",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.NEWLINE",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.NEXT",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.NONE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.PREVIOUS",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.SEARCH",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.SEND",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/InputMethodAction.UNSPECIFIED",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.input/InputMethodAction",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputMethodEditor.DispatchKey3",
+        "ordinal": "3320110035252677036",
+        "type": "(fuchsia.ui.input3/KeyEvent event) -> (bool handled)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputMethodEditor.Hide",
+        "ordinal": "2899769328688524702",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputMethodEditor.InjectInput",
+        "ordinal": "237273810823608363",
+        "type": "(fuchsia.ui.input/InputEvent event)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputMethodEditor.SetKeyboardType",
+        "ordinal": "1512753079355167879",
+        "type": "(fuchsia.ui.input/KeyboardType keyboard_type)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputMethodEditor.SetState",
+        "ordinal": "1347833818391875397",
+        "type": "(fuchsia.ui.input/TextInputState state)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputMethodEditor.Show",
+        "ordinal": "1853794995948683310",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.input/InputMethodEditor"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputMethodEditorClient.DidUpdateState",
+        "ordinal": "2767491018424805277",
+        "type": "(fuchsia.ui.input/TextInputState state,fuchsia.ui.input/InputEvent:optional event)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.input/InputMethodEditorClient.OnAction",
+        "ordinal": "1856645167774651288",
+        "type": "(fuchsia.ui.input/InputMethodAction action)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.input/InputMethodEditorClient"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/InputReport.event_time",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/InputReport.keyboard",
+        "ordinal": "2",
+        "type": "box<fuchsia.ui.input/KeyboardReport>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/InputReport.media_buttons",
+        "ordinal": "3",
+        "type": "box<fuchsia.ui.input/MediaButtonsReport>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/InputReport.mouse",
+        "ordinal": "4",
+        "type": "box<fuchsia.ui.input/MouseReport>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/InputReport.sensor",
+        "ordinal": "7",
+        "type": "fuchsia.ui.input/SensorReport:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/InputReport.stylus",
+        "ordinal": "5",
+        "type": "box<fuchsia.ui.input/StylusReport>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/InputReport.touchscreen",
+        "ordinal": "6",
+        "type": "box<fuchsia.ui.input/TouchscreenReport>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/InputReport.trace_id",
+        "ordinal": "8",
+        "type": "uint64",
+        "value": "0"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/InputReport"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/KeyboardDescriptor.keys",
+        "ordinal": "1",
+        "type": "vector<uint32>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/KeyboardDescriptor"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/KeyboardEvent.code_point",
+        "ordinal": "5",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/KeyboardEvent.device_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/KeyboardEvent.event_time",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/KeyboardEvent.hid_usage",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/KeyboardEvent.modifiers",
+        "ordinal": "6",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/KeyboardEvent.phase",
+        "ordinal": "3",
+        "type": "fuchsia.ui.input/KeyboardEventPhase"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/KeyboardEvent"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardEventPhase.CANCELLED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardEventPhase.PRESSED",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardEventPhase.RELEASED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardEventPhase.REPEAT",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.input/KeyboardEventPhase",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/KeyboardReport.pressed_keys",
+        "ordinal": "1",
+        "type": "vector<uint32>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/KeyboardReport"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardType.DATETIME",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardType.MULTILINE",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardType.NUMBER",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardType.PHONE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/KeyboardType.TEXT",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.input/KeyboardType",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MediaButtonsDescriptor.buttons",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/MediaButtonsDescriptor"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.input/MediaButtonsEvent.camera_disable",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.input/MediaButtonsEvent.mic_mute",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.input/MediaButtonsEvent.pause",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.input/MediaButtonsEvent.volume",
+        "ordinal": "1",
+        "type": "int8"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.input/MediaButtonsEvent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MediaButtonsReport.camera_disable",
+        "ordinal": "6",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MediaButtonsReport.mic_mute",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MediaButtonsReport.pause",
+        "ordinal": "5",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MediaButtonsReport.reset",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MediaButtonsReport.volume_down",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MediaButtonsReport.volume_up",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/MediaButtonsReport"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseDescriptor.buttons",
+        "ordinal": "5",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseDescriptor.hscroll",
+        "ordinal": "4",
+        "type": "box<fuchsia.ui.input/Axis>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseDescriptor.rel_x",
+        "ordinal": "1",
+        "type": "fuchsia.ui.input/Axis"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseDescriptor.rel_y",
+        "ordinal": "2",
+        "type": "fuchsia.ui.input/Axis"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseDescriptor.vscroll",
+        "ordinal": "3",
+        "type": "box<fuchsia.ui.input/Axis>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/MouseDescriptor"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseReport.pressed_buttons",
+        "ordinal": "5",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseReport.rel_hscroll",
+        "ordinal": "3",
+        "type": "int32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseReport.rel_vscroll",
+        "ordinal": "4",
+        "type": "int32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseReport.rel_x",
+        "ordinal": "1",
+        "type": "int32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/MouseReport.rel_y",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/MouseReport"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.buttons",
+        "ordinal": "10",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.device_id",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.event_time",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.phase",
+        "ordinal": "5",
+        "type": "fuchsia.ui.input/PointerEventPhase"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.pointer_id",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.radius_major",
+        "ordinal": "8",
+        "type": "float32",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.radius_minor",
+        "ordinal": "9",
+        "type": "float32",
+        "value": "0"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.type",
+        "ordinal": "4",
+        "type": "fuchsia.ui.input/PointerEventType"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.x",
+        "ordinal": "6",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/PointerEvent.y",
+        "ordinal": "7",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/PointerEvent"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventPhase.ADD",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventPhase.CANCEL",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventPhase.DOWN",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventPhase.HOVER",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventPhase.MOVE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventPhase.REMOVE",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventPhase.UP",
+        "value": "4"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.input/PointerEventPhase",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventType.INVERTED_STYLUS",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventType.MOUSE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventType.STYLUS",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/PointerEventType.TOUCH",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.input/PointerEventType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Range.max",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Range.min",
+        "ordinal": "1",
+        "type": "int32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/Range"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/RangeF.max",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/RangeF.min",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/RangeF"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SendKeyboardInputCmd.compositor_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SendKeyboardInputCmd.keyboard_event",
+        "ordinal": "2",
+        "type": "fuchsia.ui.input/KeyboardEvent"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/SendKeyboardInputCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SendPointerInputCmd.compositor_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SendPointerInputCmd.pointer_event",
+        "ordinal": "2",
+        "type": "fuchsia.ui.input/PointerEvent"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/SendPointerInputCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SensorDescriptor.fifo_max_event_count",
+        "ordinal": "5",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SensorDescriptor.loc",
+        "ordinal": "2",
+        "type": "fuchsia.ui.input/SensorLocation"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SensorDescriptor.max_sampling_freq",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SensorDescriptor.min_sampling_freq",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SensorDescriptor.phys_max",
+        "ordinal": "7",
+        "type": "int32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SensorDescriptor.phys_min",
+        "ordinal": "6",
+        "type": "int32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SensorDescriptor.type",
+        "ordinal": "1",
+        "type": "fuchsia.ui.input/SensorType"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/SensorDescriptor"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/SensorLocation.BASE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/SensorLocation.LID",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/SensorLocation.UNKNOWN",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.input/SensorLocation",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.input/SensorReport.scalar",
+        "ordinal": "2",
+        "type": "uint16"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.input/SensorReport.vector",
+        "ordinal": "1",
+        "type": "array<int16,3>"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.input/SensorReport",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/SensorType.ACCELEROMETER",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/SensorType.GYROSCOPE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/SensorType.LIGHTMETER",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/SensorType.MAGNETOMETER",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.input/SensorType",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SetHardKeyboardDeliveryCmd.delivery_request",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/SetHardKeyboardDeliveryCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/SetParallelDispatchCmd.parallel_dispatch",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/SetParallelDispatchCmd"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusDescriptor.buttons",
+        "ordinal": "5",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusDescriptor.is_invertible",
+        "ordinal": "4",
+        "type": "bool",
+        "value": "false"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusDescriptor.pressure",
+        "ordinal": "3",
+        "type": "box<fuchsia.ui.input/Axis>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusDescriptor.x",
+        "ordinal": "1",
+        "type": "fuchsia.ui.input/Axis"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusDescriptor.y",
+        "ordinal": "2",
+        "type": "fuchsia.ui.input/Axis"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/StylusDescriptor"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusReport.in_range",
+        "ordinal": "5",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusReport.is_in_contact",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusReport.is_inverted",
+        "ordinal": "6",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusReport.pressed_buttons",
+        "ordinal": "7",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusReport.pressure",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusReport.x",
+        "ordinal": "1",
+        "type": "int32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/StylusReport.y",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/StylusReport"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/TextAffinity.DOWNSTREAM",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input/TextAffinity.UPSTREAM",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.input/TextAffinity",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TextInputState.composing",
+        "ordinal": "4",
+        "type": "fuchsia.ui.input/TextRange"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TextInputState.revision",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TextInputState.selection",
+        "ordinal": "3",
+        "type": "fuchsia.ui.input/TextSelection"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TextInputState.text",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/TextInputState"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TextRange.end",
+        "ordinal": "2",
+        "type": "int64",
+        "value": "-1"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TextRange.start",
+        "ordinal": "1",
+        "type": "int64",
+        "value": "-1"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/TextRange"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TextSelection.affinity",
+        "ordinal": "3",
+        "type": "fuchsia.ui.input/TextAffinity"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TextSelection.base",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TextSelection.extent",
+        "ordinal": "2",
+        "type": "int64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/TextSelection"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Touch.finger_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Touch.height",
+        "ordinal": "5",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Touch.width",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Touch.x",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/Touch.y",
+        "ordinal": "3",
+        "type": "int32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/Touch"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TouchscreenDescriptor.max_finger_id",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TouchscreenDescriptor.x",
+        "ordinal": "1",
+        "type": "fuchsia.ui.input/Axis"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TouchscreenDescriptor.y",
+        "ordinal": "2",
+        "type": "fuchsia.ui.input/Axis"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/TouchscreenDescriptor"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.input/TouchscreenReport.touches",
+        "ordinal": "1",
+        "type": "vector<fuchsia.ui.input/Touch>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.input/TouchscreenReport"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kCameraDisable",
+        "type": "uint32",
+        "value": "32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kMicMute",
+        "type": "uint32",
+        "value": "4"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierAlt",
+        "type": "uint32",
+        "value": "96"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierCapsLock",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierControl",
+        "type": "uint32",
+        "value": "24"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierLeftAlt",
+        "type": "uint32",
+        "value": "32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierLeftControl",
+        "type": "uint32",
+        "value": "8"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierLeftShift",
+        "type": "uint32",
+        "value": "2"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierLeftSuper",
+        "type": "uint32",
+        "value": "128"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierNone",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierRightAlt",
+        "type": "uint32",
+        "value": "64"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierRightControl",
+        "type": "uint32",
+        "value": "16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierRightShift",
+        "type": "uint32",
+        "value": "4"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierRightSuper",
+        "type": "uint32",
+        "value": "256"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierShift",
+        "type": "uint32",
+        "value": "6"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kModifierSuper",
+        "type": "uint32",
+        "value": "384"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kMouseButtonPrimary",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kMouseButtonSecondary",
+        "type": "uint32",
+        "value": "2"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kMouseButtonTertiary",
+        "type": "uint32",
+        "value": "4"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kMousePrimaryButton",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kMouseSecondaryButton",
+        "type": "uint32",
+        "value": "2"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kMouseTertiaryButton",
+        "type": "uint32",
+        "value": "4"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kPause",
+        "type": "uint32",
+        "value": "16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kReset",
+        "type": "uint32",
+        "value": "8"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kStylusBarrel",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kStylusPrimaryButton",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kStylusSecondaryButton",
+        "type": "uint32",
+        "value": "2"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kVolumeDown",
+        "type": "uint32",
+        "value": "2"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.input/kVolumeUp",
+        "type": "uint32",
+        "value": "1"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.input"
+    }
+]

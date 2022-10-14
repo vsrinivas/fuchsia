@@ -1,0 +1,50 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.buildinfo/BuildInfo.board_config",
+        "ordinal": "2",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.buildinfo/BuildInfo.latest_commit_date",
+        "ordinal": "4",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.buildinfo/BuildInfo.product_config",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.buildinfo/BuildInfo.version",
+        "ordinal": "3",
+        "type": "string:100"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.buildinfo/BuildInfo"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.buildinfo/MAX_STRING_LENGTH",
+        "type": "uint64",
+        "value": "100"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.buildinfo/Provider.GetBuildInfo",
+        "ordinal": "3239336539727600531",
+        "type": "() -> (fuchsia.buildinfo/BuildInfo build_info)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.buildinfo/Provider"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.buildinfo"
+    }
+]

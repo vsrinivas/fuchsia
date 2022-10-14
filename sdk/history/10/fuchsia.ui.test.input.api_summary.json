@@ -1,0 +1,423 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Keyboard.SimulateUsAsciiTextEntry",
+        "ordinal": "8147418876553280763",
+        "type": "(fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest payload) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/Keyboard"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/KeyboardInputListener.ReportReady",
+        "ordinal": "5440094144530781979",
+        "type": "() -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/KeyboardInputListener.ReportTextInput",
+        "ordinal": "5571992869676352977",
+        "type": "(fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest payload)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/KeyboardInputListener"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest.text",
+        "ordinal": "1",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest.text",
+        "ordinal": "1",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.test.input/MOUSE_MAX_NUM_BUTTONS",
+        "type": "uint32",
+        "value": "32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/MediaButtonsDevice.SimulateButtonPress",
+        "ordinal": "2696965173777188274",
+        "type": "(fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest payload) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/MediaButtonsDevice"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest.button",
+        "ordinal": "1",
+        "type": "fuchsia.input.report/ConsumerControlButton"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Mouse.SimulateMouseEvent",
+        "ordinal": "6180449199587882639",
+        "type": "(fuchsia.ui.test.input/MouseSimulateMouseEventRequest payload) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/Mouse"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseButton.FIRST",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseButton.SECOND",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseButton.THIRD",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.test.input/MouseButton",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.ADD",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.DOWN",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.HOVER",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.MOVE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.UP",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.WHEEL",
+        "value": "5"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.test.input/MouseEventPhase",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/MouseInputListener.ReportMouseInput",
+        "ordinal": "8653703177427418899",
+        "type": "(fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest payload)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/MouseInputListener"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.buttons",
+        "ordinal": "5",
+        "type": "vector<fuchsia.ui.test.input/MouseButton>:32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.component_name",
+        "ordinal": "4",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.device_pixel_ratio",
+        "ordinal": "7",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.local_x",
+        "ordinal": "1",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.local_y",
+        "ordinal": "2",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.phase",
+        "ordinal": "6",
+        "type": "fuchsia.ui.test.input/MouseEventPhase"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.time_received",
+        "ordinal": "3",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.wheel_x_physical_pixel",
+        "ordinal": "8",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.wheel_y_physical_pixel",
+        "ordinal": "9",
+        "type": "float64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.movement_x",
+        "ordinal": "2",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.movement_y",
+        "ordinal": "3",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.pressed_buttons",
+        "ordinal": "1",
+        "type": "vector<fuchsia.ui.test.input/MouseButton>:32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_h_detent",
+        "ordinal": "5",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_h_physical_pixel",
+        "ordinal": "7",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_v_detent",
+        "ordinal": "4",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_v_physical_pixel",
+        "ordinal": "6",
+        "type": "float64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Registry.RegisterKeyboard",
+        "ordinal": "2962358610450991928",
+        "type": "(fuchsia.ui.test.input/RegistryRegisterKeyboardRequest payload) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Registry.RegisterMediaButtonsDevice",
+        "ordinal": "4182475053739185705",
+        "type": "(fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest payload) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Registry.RegisterMouse",
+        "ordinal": "1095220685759453917",
+        "type": "(fuchsia.ui.test.input/RegistryRegisterMouseRequest payload) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Registry.RegisterTouchScreen",
+        "ordinal": "4643127998283697011",
+        "type": "(fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest payload) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/Registry"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/RegistryRegisterKeyboardRequest.device",
+        "ordinal": "1",
+        "type": "server_end:fuchsia.ui.test.input/Keyboard"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/RegistryRegisterKeyboardRequest",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest.device",
+        "ordinal": "1",
+        "type": "server_end:fuchsia.ui.test.input/MediaButtonsDevice"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/RegistryRegisterMouseRequest.device",
+        "ordinal": "1",
+        "type": "server_end:fuchsia.ui.test.input/Mouse"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/RegistryRegisterMouseRequest",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest.device",
+        "ordinal": "1",
+        "type": "server_end:fuchsia.ui.test.input/TouchScreen"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/TouchInputListener.ReportTouchInput",
+        "ordinal": "3971555865802588842",
+        "type": "(fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest payload)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/TouchInputListener"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.component_name",
+        "ordinal": "5",
+        "type": "string:1024"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.device_pixel_ratio",
+        "ordinal": "4",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.local_x",
+        "ordinal": "1",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.local_y",
+        "ordinal": "2",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.time_received",
+        "ordinal": "3",
+        "type": "int64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/TouchScreen.SimulateSwipe",
+        "ordinal": "931107570510498276",
+        "type": "(fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest payload) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/TouchScreen.SimulateTap",
+        "ordinal": "2522483344405768189",
+        "type": "(fuchsia.ui.test.input/TouchScreenSimulateTapRequest payload) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/TouchScreen"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.end_location",
+        "ordinal": "2",
+        "type": "fuchsia.math/Vec"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.move_event_count",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.start_location",
+        "ordinal": "1",
+        "type": "fuchsia.math/Vec"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateTapRequest.tap_location",
+        "ordinal": "1",
+        "type": "fuchsia.math/Vec"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateTapRequest"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.test.input"
+    }
+]

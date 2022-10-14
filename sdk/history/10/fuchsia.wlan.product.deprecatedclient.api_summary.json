@@ -1,0 +1,74 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.product.deprecatedclient/Ap.rssi_dbm",
+        "ordinal": "2",
+        "type": "int8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.product.deprecatedclient/Ap.ssid",
+        "ordinal": "1",
+        "type": "string:32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.product.deprecatedclient/Ap"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.wlan.product.deprecatedclient/DeprecatedClient.Status",
+        "ordinal": "8971550464597086191",
+        "type": "() -> (fuchsia.wlan.product.deprecatedclient/WlanStatus status)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.wlan.product.deprecatedclient/DeprecatedClient"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.product.deprecatedclient/State.ASSOCIATED",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.product.deprecatedclient/State.ASSOCIATING",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.product.deprecatedclient/State.DISASSOCIATED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.product.deprecatedclient/State.NO_CLIENT",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.product.deprecatedclient/State",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.product.deprecatedclient/WlanStatus.current_ap",
+        "ordinal": "2",
+        "type": "box<fuchsia.wlan.product.deprecatedclient/Ap>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.product.deprecatedclient/WlanStatus.state",
+        "ordinal": "1",
+        "type": "fuchsia.wlan.product.deprecatedclient/State"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.product.deprecatedclient/WlanStatus"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.wlan.product.deprecatedclient"
+    }
+]

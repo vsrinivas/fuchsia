@@ -1,0 +1,685 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ClearKey.AddDataStore",
+        "ordinal": "6087228616608478561",
+        "type": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ClearKey.CreateContentDecryptionModule2",
+        "ordinal": "5057784333943425289",
+        "type": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ClearKey.DestroyDataStoreAndConfirm",
+        "ordinal": "3965981122464080909",
+        "type": "(uint32 data_store_id) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ClearKey.GetProperties",
+        "ordinal": "4138093771636177876",
+        "type": "() -> (fuchsia.media.drm/KeySystemProperties properties)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.drm/ClearKey"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ContentDecryptionModule.CreateDecryptor",
+        "ordinal": "3417568738828170101",
+        "type": "(fuchsia.media.drm/DecryptorParams params,server_end:fuchsia.media/StreamProcessor decryptor)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ContentDecryptionModule.CreateLicenseSession",
+        "ordinal": "324553879325776590",
+        "type": "(fuchsia.media.drm/LicenseSessionType session_type,server_end:fuchsia.media.drm/LicenseSession license_session) -> (string:512 session_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ContentDecryptionModule.GetKeyStatusForHdcpVersion",
+        "ordinal": "7948260424339009767",
+        "type": "(string:16 hdcp_version) -> (fuchsia.media.drm/KeyStatus key_status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ContentDecryptionModule.GetSupportedEncryptionSchemes",
+        "ordinal": "6740639371501037332",
+        "type": "() -> (vector<string:100> encryption_schemes)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ContentDecryptionModule.LoadLicenseSession",
+        "ordinal": "5541227522996810016",
+        "type": "(string:512 session_id,server_end:fuchsia.media.drm/LicenseSession license_session)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ContentDecryptionModule.OnProvisioned",
+        "ordinal": "6956440513726170485",
+        "type": " -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ContentDecryptionModule.SetServerCertificate",
+        "ordinal": "5359396612433823717",
+        "type": "(vector<uint8> certificate) -> (fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.drm/ContentDecryptionModule"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.media.drm/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/DataStoreParams.data_directory",
+        "ordinal": "1",
+        "type": "fuchsia.io/Directory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/DataStoreParams.provision_server_certificate",
+        "ordinal": "2",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/DataStoreParams.provisioning_fetcher",
+        "ordinal": "3",
+        "type": "client_end:fuchsia.media.drm/ProvisioningFetcher"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.drm/DataStoreParams",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/DecryptorParams.input_details",
+        "ordinal": "2",
+        "type": "fuchsia.media/FormatDetails"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/DecryptorParams.require_secure_mode",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.drm/DecryptorParams"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/Error.INTERNAL",
+        "value": "100"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/Error.INVALID_STATE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/Error.NOT_PROVISIONED",
+        "value": "101"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/Error.NOT_SUPPORTED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/Error.QUOTA_EXCEEDED",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/Error.TYPE",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.drm/Error",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.drm/Features.HARDWARE_CRYPTO",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.media.drm/Features.SECURE_OUTPUT",
+        "value": "2"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.media.drm/Features",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/KeyState.key_id",
+        "ordinal": "1",
+        "type": "vector<uint8>:16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/KeyState.status",
+        "ordinal": "2",
+        "type": "fuchsia.media.drm/KeyStatus"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.drm/KeyState"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/KeyStatus.EXPIRED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/KeyStatus.INTERNAL_ERROR",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/KeyStatus.OUTPUT_DOWNSCALED",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/KeyStatus.OUTPUT_RESTRICTED",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/KeyStatus.RELEASED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/KeyStatus.STATUS_PENDING",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/KeyStatus.USABLE",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.drm/KeyStatus",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/KeySystem.AddDataStore",
+        "ordinal": "6087228616608478561",
+        "type": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/KeySystem.CreateContentDecryptionModule2",
+        "ordinal": "5057784333943425289",
+        "type": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/KeySystem.DestroyDataStoreAndConfirm",
+        "ordinal": "3965981122464080909",
+        "type": "(uint32 data_store_id) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/KeySystem.GetProperties",
+        "ordinal": "4138093771636177876",
+        "type": "() -> (fuchsia.media.drm/KeySystemProperties properties)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.drm/KeySystem"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/KeySystemProperties.data_store_requirement",
+        "ordinal": "2",
+        "type": "fuchsia.media.drm/Requirement"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/KeySystemProperties.encryption_schemes",
+        "ordinal": "5",
+        "type": "vector<string:100>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/KeySystemProperties.features",
+        "ordinal": "1",
+        "type": "fuchsia.media.drm/Features"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/KeySystemProperties.init_data_types",
+        "ordinal": "4",
+        "type": "vector<string:100>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.media.drm/KeySystemProperties.license_session_types",
+        "ordinal": "3",
+        "type": "vector<fuchsia.media.drm/LicenseSessionType>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.media.drm/KeySystemProperties"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/KeySystem_AddDataStore_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/KeySystem_AddDataStore_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.media.drm/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/KeySystem_AddDataStore_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.media.drm/KeySystem_AddDataStore_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.media.drm/KeySystem_AddDataStore_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_CENC",
+        "type": "string:100",
+        "value": "cenc"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_HLS",
+        "type": "string:100",
+        "value": "hls"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_KEYIDS",
+        "type": "string:100",
+        "value": "keyids"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_WEBM",
+        "type": "string:100",
+        "value": "webm"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.drm/LicenseInitData.data",
+        "ordinal": "2",
+        "type": "vector<uint8>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.drm/LicenseInitData.type",
+        "ordinal": "1",
+        "type": "string:100"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/LicenseInitData"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.drm/LicenseMessage.message",
+        "ordinal": "2",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.drm/LicenseMessage.type",
+        "ordinal": "1",
+        "type": "fuchsia.media.drm/LicenseMessageType"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/LicenseMessage",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/LicenseMessageType.RELEASE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/LicenseMessageType.RENEWAL",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/LicenseMessageType.REQUEST",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.drm/LicenseMessageType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.drm/LicenseServerMessage.message",
+        "ordinal": "1",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/LicenseServerMessage",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/LicenseSession.CreateDecryptor",
+        "ordinal": "3440581905094626591",
+        "type": "(fuchsia.media.drm/DecryptorParams params,server_end:fuchsia.media/StreamProcessor decryptor)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/LicenseSession.GenerateLicenseRelease",
+        "ordinal": "2784574673179849258",
+        "type": "() -> (fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/LicenseSession.GenerateLicenseRequest",
+        "ordinal": "2432694002735548594",
+        "type": "(fuchsia.media.drm/LicenseInitData init_data) -> (fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/LicenseSession.OnKeyStatesChanged",
+        "ordinal": "7140929650291463439",
+        "type": " -> (vector<fuchsia.media.drm/KeyState> key_states)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/LicenseSession.OnLicenseMessageGenerated",
+        "ordinal": "4556929035124576801",
+        "type": " -> (fuchsia.media.drm/LicenseMessage request)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/LicenseSession.OnReady",
+        "ordinal": "7785304218640532166",
+        "type": " -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/LicenseSession.ProcessLicenseResponse",
+        "ordinal": "1494261642230353748",
+        "type": "(fuchsia.media.drm/LicenseServerMessage response) -> (fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.drm/LicenseSession"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/LicenseSessionType.PERSISTENT_LICENSE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/LicenseSessionType.TEMPORARY",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.drm/LicenseSessionType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.media.drm/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.media.drm/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.media.drm/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.media.drm/MAX_HDCP_VERSION_SIZE",
+        "type": "uint32",
+        "value": "16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.media.drm/MAX_LICENSE_INIT_DATA_TYPE_SIZE",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.media.drm/MAX_SESSION_ID_SIZE",
+        "type": "uint32",
+        "value": "512"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.media.drm/NO_DATA_STORE",
+        "type": "uint32",
+        "value": "0"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/PlayReady.AddDataStore",
+        "ordinal": "6087228616608478561",
+        "type": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/PlayReady.CreateContentDecryptionModule2",
+        "ordinal": "5057784333943425289",
+        "type": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/PlayReady.DestroyDataStoreAndConfirm",
+        "ordinal": "3965981122464080909",
+        "type": "(uint32 data_store_id) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/PlayReady.GetProperties",
+        "ordinal": "4138093771636177876",
+        "type": "() -> (fuchsia.media.drm/KeySystemProperties properties)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.drm/PlayReady"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/ProvisioningFetcher.Fetch",
+        "ordinal": "4352031701208263007",
+        "type": "(fuchsia.media.drm/ProvisioningRequest request) -> (fuchsia.media.drm/ProvisioningResponse response)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.drm/ProvisioningFetcher"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.drm/ProvisioningRequest.default_provisioning_server_url",
+        "ordinal": "1",
+        "type": "string:<4096,optional>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.drm/ProvisioningRequest.message",
+        "ordinal": "2",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/ProvisioningRequest",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.drm/ProvisioningResponse.message",
+        "ordinal": "1",
+        "type": "fuchsia.mem/Buffer"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.drm/ProvisioningResponse",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/Requirement.NOT_SUPPORTED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/Requirement.OPTIONAL",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.drm/Requirement.REQUIRED",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.drm/Requirement",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/Widevine.AddDataStore",
+        "ordinal": "6087228616608478561",
+        "type": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/Widevine.CreateContentDecryptionModule2",
+        "ordinal": "5057784333943425289",
+        "type": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/Widevine.DestroyDataStoreAndConfirm",
+        "ordinal": "3965981122464080909",
+        "type": "(uint32 data_store_id) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.drm/Widevine.GetProperties",
+        "ordinal": "4138093771636177876",
+        "type": "() -> (fuchsia.media.drm/KeySystemProperties properties)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.drm/Widevine"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.media.drm"
+    }
+]

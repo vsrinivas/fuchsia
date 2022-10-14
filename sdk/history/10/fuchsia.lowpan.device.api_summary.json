@@ -1,0 +1,669 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/AllCounters.coex_rx",
+        "ordinal": "4",
+        "type": "fuchsia.lowpan.device/CoexCounters"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/AllCounters.coex_saturated",
+        "ordinal": "5",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/AllCounters.coex_tx",
+        "ordinal": "3",
+        "type": "fuchsia.lowpan.device/CoexCounters"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/AllCounters.ip_rx",
+        "ordinal": "7",
+        "type": "fuchsia.lowpan.device/IpCounters"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/AllCounters.ip_tx",
+        "ordinal": "6",
+        "type": "fuchsia.lowpan.device/IpCounters"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/AllCounters.mac_rx",
+        "ordinal": "2",
+        "type": "fuchsia.lowpan.device/MacCounters"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/AllCounters.mac_tx",
+        "ordinal": "1",
+        "type": "fuchsia.lowpan.device/MacCounters"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lowpan.device/AllCounters"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/CoexCounters.avg_delay_request_to_grant_usec",
+        "ordinal": "8",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/CoexCounters.delayed_grant",
+        "ordinal": "7",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/CoexCounters.grant_deactivated_during_request",
+        "ordinal": "6",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/CoexCounters.grant_immediate",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/CoexCounters.grant_none",
+        "ordinal": "9",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/CoexCounters.grant_wait",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/CoexCounters.grant_wait_activated",
+        "ordinal": "4",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/CoexCounters.grant_wait_timeout",
+        "ordinal": "5",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/CoexCounters.requests",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lowpan.device/CoexCounters"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/ConnectivityState.ATTACHED",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/ConnectivityState.ATTACHING",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/ConnectivityState.COMMISSIONING",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/ConnectivityState.INACTIVE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/ConnectivityState.ISOLATED",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/ConnectivityState.OFFLINE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/ConnectivityState.READY",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.lowpan.device/ConnectivityState",
+        "strictness": "flexible",
+        "type": "int32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/Counters.Get",
+        "ordinal": "766330213047163428",
+        "type": "() -> (fuchsia.lowpan.device/AllCounters counters)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/Counters.Reset",
+        "ordinal": "5546641446070450093",
+        "type": "() -> (fuchsia.lowpan.device/AllCounters counters)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.device/Counters"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/CountersConnector.Connect",
+        "ordinal": "7056160397832933768",
+        "type": "(string:32 name,server_end:fuchsia.lowpan.device/Counters server_end)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.device/CountersConnector"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.lowpan.device/Credential.network_key",
+        "ordinal": "1",
+        "type": "vector<uint8>:32"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.lowpan.device/Credential",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/Device.GetSupportedNetworkTypes",
+        "ordinal": "7894653628486606527",
+        "type": "() -> (vector<string:64>:16 network_types)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/Device.LeaveNetwork",
+        "ordinal": "7390862528170083646",
+        "type": "() -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/Device.ProvisionNetwork",
+        "ordinal": "3819338810301444214",
+        "type": "(fuchsia.lowpan.device/ProvisioningParams params) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/Device.SetActive",
+        "ordinal": "6171764923186230347",
+        "type": "(bool active) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/Device.WatchDeviceState",
+        "ordinal": "6429985472486888009",
+        "type": "() -> (fuchsia.lowpan.device/DeviceState device_combined_state)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.device/Device"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/DeviceConnector.Connect",
+        "ordinal": "7153700053869029258",
+        "type": "(string:32 name,server_end:fuchsia.lowpan.device/Device server_end)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.device/DeviceConnector"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/DeviceExtra.GetCredential",
+        "ordinal": "8644482637790727403",
+        "type": "() -> (fuchsia.lowpan.device/Credential:optional credential)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/DeviceExtra.GetCurrentMacAddress",
+        "ordinal": "8107421971628528861",
+        "type": "() -> (fuchsia.lowpan/MacAddress address)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/DeviceExtra.WatchIdentity",
+        "ordinal": "837490900382444486",
+        "type": "() -> (fuchsia.lowpan.device/Identity identity)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.device/DeviceExtra"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/DeviceExtraConnector.Connect",
+        "ordinal": "2979622116500015843",
+        "type": "(string:32 name,server_end:fuchsia.lowpan.device/DeviceExtra server_end)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.device/DeviceExtraConnector"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/DeviceState.connectivity_state",
+        "ordinal": "1",
+        "type": "fuchsia.lowpan.device/ConnectivityState"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/DeviceState.role",
+        "ordinal": "2",
+        "type": "fuchsia.lowpan.device/Role"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lowpan.device/DeviceState"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/EnergyScan.StartEnergyScan",
+        "ordinal": "5415904696099511046",
+        "type": "(fuchsia.lowpan.device/EnergyScanParameters params,server_end:fuchsia.lowpan.device/EnergyScanResultStream stream)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.device/EnergyScan"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/EnergyScanConnector.Connect",
+        "ordinal": "1186319672397181584",
+        "type": "(string:32 name,server_end:fuchsia.lowpan.device/EnergyScan server_end)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.device/EnergyScanConnector"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/EnergyScanParameters.channels",
+        "ordinal": "1",
+        "type": "vector<uint16>:200"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/EnergyScanParameters.dwell_time_ms",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lowpan.device/EnergyScanParameters"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/EnergyScanResult.channel_index",
+        "ordinal": "1",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/EnergyScanResult.max_rssi",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/EnergyScanResult.min_rssi",
+        "ordinal": "3",
+        "type": "int32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lowpan.device/EnergyScanResult"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/EnergyScanResultStream.Next",
+        "ordinal": "9151659672405371550",
+        "type": "() -> (vector<fuchsia.lowpan.device/EnergyScanResult>:32 results)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.device/EnergyScanResultStream"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/Identity.channel",
+        "ordinal": "4",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/Identity.mesh_local_prefix",
+        "ordinal": "6",
+        "type": "fuchsia.net/Ipv6AddressWithPrefix"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/Identity.net_type",
+        "ordinal": "3",
+        "type": "string:64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/Identity.panid",
+        "ordinal": "5",
+        "type": "uint16"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/Identity.raw_name",
+        "ordinal": "1",
+        "type": "vector<uint8>:63"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/Identity.xpanid",
+        "ordinal": "2",
+        "type": "vector<uint8>:8"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lowpan.device/Identity"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/IpCounters.failure",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/IpCounters.success",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lowpan.device/IpCounters"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.lowpan.device/MAX_CHANNELS",
+        "type": "uint16",
+        "value": "200"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.lowpan.device/MAX_NETWORK_TYPES",
+        "type": "uint16",
+        "value": "16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.lowpan.device/MAX_NET_TYPE_LEN",
+        "type": "uint16",
+        "value": "64"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.lowpan.device/MAX_STREAM_SET_SIZE",
+        "type": "uint16",
+        "value": "32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.ack_requested",
+        "ordinal": "4",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.acked",
+        "ordinal": "5",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.address_filtered",
+        "ordinal": "12",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.beacon",
+        "ordinal": "9",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.beacon_request",
+        "ordinal": "10",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.broadcast",
+        "ordinal": "3",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.data",
+        "ordinal": "7",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.data_poll",
+        "ordinal": "8",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.dest_addr_filtered",
+        "ordinal": "16",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.direct_max_retry_expiry",
+        "ordinal": "14",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.duplicated",
+        "ordinal": "17",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.err_abort",
+        "ordinal": "24",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.err_busy_channel",
+        "ordinal": "25",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.err_cca",
+        "ordinal": "23",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.err_fcs",
+        "ordinal": "22",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.err_invalid_src_addr",
+        "ordinal": "20",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.err_no_frame",
+        "ordinal": "18",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.err_other",
+        "ordinal": "26",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.err_sec",
+        "ordinal": "21",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.err_unknown_neighbor",
+        "ordinal": "19",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.indirect_max_retry_expiry",
+        "ordinal": "15",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.no_ack_requested",
+        "ordinal": "6",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.other",
+        "ordinal": "11",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.retries",
+        "ordinal": "13",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.total",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.lowpan.device/MacCounters.unicast",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lowpan.device/MacCounters"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.lowpan.device/NET_TYPE_RAW_6LOWPAN",
+        "type": "string",
+        "value": "fuchsia.lowpan.net_type.6lowpan"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.lowpan.device/NET_TYPE_THREAD_1_X",
+        "type": "string",
+        "value": "org.threadgroup.std.thread.1"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.lowpan.device/NET_TYPE_UNKNOWN_802_15_4_PID",
+        "type": "string",
+        "value": "fuchsia.lowpan.net_type.802.15.4.pid"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.lowpan.device/NET_TYPE_ZIGBEE_IP_1_X",
+        "type": "string",
+        "value": "org.zigbee.std.zigbee-ip.1"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.lowpan.device/ProvisioningParams.credential",
+        "ordinal": "2",
+        "type": "fuchsia.lowpan.device/Credential:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.lowpan.device/ProvisioningParams.identity",
+        "ordinal": "1",
+        "type": "fuchsia.lowpan.device/Identity"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.lowpan.device/ProvisioningParams"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/Role.COORDINATOR",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/Role.DETACHED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/Role.END_DEVICE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/Role.LEADER",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/Role.ROUTER",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/Role.SLEEPY_END_DEVICE",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lowpan.device/Role.SLEEPY_ROUTER",
+        "value": "5"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.lowpan.device/Role",
+        "strictness": "flexible",
+        "type": "int32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.lowpan.device"
+    }
+]

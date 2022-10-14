@@ -1,0 +1,37 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.power.clientlevel/ClientType.WLAN",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.power.clientlevel/ClientType",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.power.clientlevel/Connector.Connect",
+        "ordinal": "3019104991605411978",
+        "type": "(fuchsia.power.clientlevel/ClientType client_type,server_end:fuchsia.power.clientlevel/Watcher watcher)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.power.clientlevel/Connector"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.power.clientlevel/Watcher.Watch",
+        "ordinal": "2979462305734201370",
+        "type": "() -> (uint64 level)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.power.clientlevel/Watcher"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.power.clientlevel"
+    }
+]

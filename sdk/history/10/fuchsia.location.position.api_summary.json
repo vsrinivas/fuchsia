@@ -1,0 +1,81 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.location.position/EmergencyProvider.GetCurrent",
+        "ordinal": "7576248232984301873",
+        "type": "() -> (fuchsia.location.position/EmergencyProvider_GetCurrent_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.location.position/EmergencyProvider"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Response.position",
+        "ordinal": "1",
+        "type": "fuchsia.location.position/Position"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.location/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.location.position/EmergencyProvider_GetCurrent_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.location.position/Position.extras",
+        "ordinal": "3",
+        "type": "fuchsia.location.position/PositionExtras"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.location.position/Position.latitude",
+        "ordinal": "1",
+        "type": "float64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.location.position/Position.longitude",
+        "ordinal": "2",
+        "type": "float64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.location.position/Position"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.location.position/PositionExtras.accuracy_meters",
+        "ordinal": "1",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.location.position/PositionExtras.altitude_meters",
+        "ordinal": "2",
+        "type": "float64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.location.position/PositionExtras"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.location.position"
+    }
+]

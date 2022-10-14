@@ -1,0 +1,187 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.observation.geometry/AlignedExtent.max",
+        "ordinal": "2",
+        "type": "fuchsia.math/PointF"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.observation.geometry/AlignedExtent.min",
+        "ordinal": "1",
+        "type": "fuchsia.math/PointF"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.observation.geometry/AlignedExtent"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.observation.geometry/BUFFER_SIZE",
+        "type": "uint32",
+        "value": "200"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.ui.observation.geometry/Error.BUFFER_OVERFLOW",
+        "value": "2"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.ui.observation.geometry/Error.CHANNEL_OVERFLOW",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.ui.observation.geometry/Error.VIEWS_OVERFLOW",
+        "value": "4"
+    },
+    {
+        "kind": "bits",
+        "name": "fuchsia.ui.observation.geometry/Error",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.observation.geometry/Layout.extent",
+        "ordinal": "1",
+        "type": "fuchsia.ui.observation.geometry/AlignedExtent"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.observation.geometry/Layout.inset",
+        "ordinal": "3",
+        "type": "fuchsia.math/InsetF"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.observation.geometry/Layout.pixel_scale",
+        "ordinal": "2",
+        "type": "array<float32,2>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.observation.geometry/Layout"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.observation.geometry/MAX_VIEW_COUNT",
+        "type": "uint32",
+        "value": "300"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.observation.geometry/RotatableExtent.angle_degrees",
+        "ordinal": "4",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.observation.geometry/RotatableExtent.height",
+        "ordinal": "3",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.observation.geometry/RotatableExtent.origin",
+        "ordinal": "1",
+        "type": "fuchsia.math/PointF"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.observation.geometry/RotatableExtent.width",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.observation.geometry/RotatableExtent"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.children",
+        "ordinal": "5",
+        "type": "vector<uint32>:300"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.extent_in_context",
+        "ordinal": "3",
+        "type": "fuchsia.ui.observation.geometry/RotatableExtent"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.extent_in_parent",
+        "ordinal": "4",
+        "type": "fuchsia.ui.observation.geometry/RotatableExtent"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.layout",
+        "ordinal": "2",
+        "type": "fuchsia.ui.observation.geometry/Layout"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.view_ref_koid",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/ViewTreeSnapshot.time",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/ViewTreeSnapshot.views",
+        "ordinal": "2",
+        "type": "vector<fuchsia.ui.observation.geometry/ViewDescriptor>:300"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.observation.geometry/ViewTreeSnapshot"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.observation.geometry/ViewTreeWatcher.Watch",
+        "ordinal": "4356793488538879867",
+        "type": "() -> (fuchsia.ui.observation.geometry/WatchResponse payload)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.observation.geometry/ViewTreeWatcher"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/WatchResponse.epoch_end",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/WatchResponse.error",
+        "ordinal": "3",
+        "type": "fuchsia.ui.observation.geometry/Error"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.observation.geometry/WatchResponse.updates",
+        "ordinal": "2",
+        "type": "vector<fuchsia.ui.observation.geometry/ViewTreeSnapshot>:200"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.observation.geometry/WatchResponse"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.observation.geometry"
+    }
+]

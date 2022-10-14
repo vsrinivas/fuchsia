@@ -1,0 +1,210 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.resolution/Component.config_values",
+        "ordinal": "4",
+        "type": "fuchsia.mem/Data"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.resolution/Component.decl",
+        "ordinal": "2",
+        "type": "fuchsia.mem/Data"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.resolution/Component.package",
+        "ordinal": "3",
+        "type": "fuchsia.component.resolution/Package"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.resolution/Component.resolution_context",
+        "ordinal": "5",
+        "type": "fuchsia.component.resolution/Context"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.resolution/Component.url",
+        "ordinal": "1",
+        "type": "string:2083"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.resolution/Component",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.resolution/Context.bytes",
+        "ordinal": "1",
+        "type": "vector<uint8>:8192"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.resolution/Context"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.resolution/MAX_COMPONENT_URL_LENGTH",
+        "type": "uint32",
+        "value": "2083"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.resolution/MAX_RESOLUTION_CONTEXT_SIZE",
+        "type": "uint32",
+        "value": "8192"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.resolution/Package.directory",
+        "ordinal": "2",
+        "type": "fuchsia.io/Directory"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.resolution/Package.url",
+        "ordinal": "1",
+        "type": "string:2083"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.component.resolution/Package",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.component.resolution/Resolver.Resolve",
+        "ordinal": "6339326548187935461",
+        "type": "(string:2083 component_url) -> (fuchsia.component.resolution/Resolver_Resolve_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.component.resolution/Resolver.ResolveWithContext",
+        "ordinal": "5576776708309151933",
+        "type": "(string:2083 component_url,fuchsia.component.resolution/Context context) -> (fuchsia.component.resolution/Resolver_ResolveWithContext_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.component.resolution/Resolver"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.CONFIG_VALUES_NOT_FOUND",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.INTERNAL",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.INVALID_ARGS",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.INVALID_MANIFEST",
+        "value": "9"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.IO",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.MANIFEST_NOT_FOUND",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.NOT_SUPPORTED",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.NO_SPACE",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.PACKAGE_NOT_FOUND",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.resolution/ResolverError.RESOURCE_UNAVAILABLE",
+        "value": "8"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.component.resolution/ResolverError",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Response.component",
+        "ordinal": "1",
+        "type": "fuchsia.component.resolution/Component"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Response",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.component.resolution/ResolverError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.component.resolution/Resolver_ResolveWithContext_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Result",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.component.resolution/Resolver_Resolve_Response.component",
+        "ordinal": "1",
+        "type": "fuchsia.component.resolution/Component"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.resolution/Resolver_Resolve_Response",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.resolution/Resolver_Resolve_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.component.resolution/ResolverError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.component.resolution/Resolver_Resolve_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.component.resolution/Resolver_Resolve_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.resolution/Resolver_Resolve_Result",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.component.resolution"
+    }
+]

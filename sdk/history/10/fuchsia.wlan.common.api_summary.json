@@ -1,0 +1,576 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/ChannelBandwidth.CBW160",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/ChannelBandwidth.CBW20",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/ChannelBandwidth.CBW40",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/ChannelBandwidth.CBW40BELOW",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/ChannelBandwidth.CBW80",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/ChannelBandwidth.CBW80P80",
+        "value": "5"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/ChannelBandwidth",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/DataPlaneExtension.data_plane_type",
+        "ordinal": "1",
+        "type": "fuchsia.wlan.common/DataPlaneType"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/DataPlaneExtension"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/DataPlaneType.ETHERNET_DEVICE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/DataPlaneType.GENERIC_NETWORK_DEVICE",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/DataPlaneType",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/DeviceExtension.is_synthetic",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/DeviceExtension.mac_implementation_type",
+        "ordinal": "2",
+        "type": "fuchsia.wlan.common/MacImplementationType"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/DeviceExtension.tx_status_report_supported",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/DeviceExtension"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/DfsFeature.supported",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/DfsFeature"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/DiscoverySupport.probe_response_offload",
+        "ordinal": "2",
+        "type": "fuchsia.wlan.common/ProbeResponseOffloadExtension"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/DiscoverySupport.scan_offload",
+        "ordinal": "1",
+        "type": "fuchsia.wlan.common/ScanOffloadExtension"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/DiscoverySupport"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/GuardInterval.LONG_GI",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/GuardInterval.SHORT_GI",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/GuardInterval",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.common/MAX_BANDS",
+        "type": "uint8",
+        "value": "16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.common/MAX_SUPPORTED_MAC_ROLES",
+        "type": "uint8",
+        "value": "16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.common/MAX_SUPPORTED_PHY_TYPES",
+        "type": "uint8",
+        "value": "64"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/MacImplementationType.FULLMAC",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/MacImplementationType.SOFTMAC",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/MacImplementationType",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/MacSublayerSupport.data_plane",
+        "ordinal": "2",
+        "type": "fuchsia.wlan.common/DataPlaneExtension"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/MacSublayerSupport.device",
+        "ordinal": "3",
+        "type": "fuchsia.wlan.common/DeviceExtension"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/MacSublayerSupport.rate_selection_offload",
+        "ordinal": "1",
+        "type": "fuchsia.wlan.common/RateSelectionOffloadExtension"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/MacSublayerSupport"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/MfpFeature.supported",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/MfpFeature"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/PowerSaveType.PS_MODE_BALANCED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/PowerSaveType.PS_MODE_LOW_POWER",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/PowerSaveType.PS_MODE_PERFORMANCE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/PowerSaveType.PS_MODE_ULTRA_LOW_POWER",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/PowerSaveType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/ProbeResponseOffloadExtension.supported",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/ProbeResponseOffloadExtension"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/RateSelectionOffloadExtension.supported",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/RateSelectionOffloadExtension"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/RequestStatus.ACKNOWLEDGED",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/RequestStatus.REJECTED_ALREADY_IN_USE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/RequestStatus.REJECTED_DUPLICATE_REQUEST",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/RequestStatus.REJECTED_INCOMPATIBLE_MODE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/RequestStatus.REJECTED_NOT_SUPPORTED",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/RequestStatus",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/SaeFeature.driver_handler_supported",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/SaeFeature.sme_handler_supported",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/SaeFeature"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/ScanOffloadExtension.scan_cancel_supported",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/ScanOffloadExtension.supported",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/ScanOffloadExtension"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/ScanType.ACTIVE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/ScanType.PASSIVE",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/ScanType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/SecuritySupport.mfp",
+        "ordinal": "2",
+        "type": "fuchsia.wlan.common/MfpFeature"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/SecuritySupport.sae",
+        "ordinal": "1",
+        "type": "fuchsia.wlan.common/SaeFeature"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/SecuritySupport"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/SpectrumManagementSupport.dfs",
+        "ordinal": "1",
+        "type": "fuchsia.wlan.common/DfsFeature"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/SpectrumManagementSupport"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.common/WLAN_TX_STATUS_MAX_ENTRY",
+        "type": "uint32",
+        "value": "8"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.common/WLAN_TX_VECTOR_IDX_INVALID",
+        "type": "uint16",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanBand.FIVE_GHZ",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanBand.TWO_GHZ",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/WlanBand",
+        "strictness": "flexible",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/WlanChannel.cbw",
+        "ordinal": "2",
+        "type": "fuchsia.wlan.common/ChannelBandwidth"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/WlanChannel.primary",
+        "ordinal": "1",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/WlanChannel.secondary80",
+        "ordinal": "3",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/WlanChannel"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanMacRole.AP",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanMacRole.CLIENT",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanMacRole.MESH",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/WlanMacRole",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.CDMG",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.CMMG",
+        "value": "11"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.DMG",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.DSSS",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.ERP",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.HE",
+        "value": "12"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.HR",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.HT",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.OFDM",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.S1G",
+        "value": "9"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.TVHT",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanPhyType.VHT",
+        "value": "7"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/WlanPhyType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.QOS",
+        "value": "512"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.RADIO_MSMT",
+        "value": "4096"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.SHORT_PREAMBLE",
+        "value": "32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.SHORT_SLOT_TIME",
+        "value": "1024"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.SIMULTANEOUS_CLIENT_AP",
+        "value": "65536"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.SPECTRUM_MGMT",
+        "value": "256"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanTxResult.FAILED",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.common/WlanTxResult.SUCCESS",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.common/WlanTxResult",
+        "strictness": "strict",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/WlanTxStatus.peer_addr",
+        "ordinal": "2",
+        "type": "array<uint8,6>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/WlanTxStatus.result",
+        "ordinal": "3",
+        "type": "fuchsia.wlan.common/WlanTxResult"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/WlanTxStatus.tx_status_entry",
+        "ordinal": "1",
+        "type": "array<fuchsia.wlan.common/WlanTxStatusEntry,8>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/WlanTxStatus"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/WlanTxStatusEntry.attempts",
+        "ordinal": "2",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.common/WlanTxStatusEntry.tx_vector_idx",
+        "ordinal": "1",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.common/WlanTxStatusEntry"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.wlan.common"
+    }
+]

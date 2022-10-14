@@ -1,0 +1,1112 @@
+[
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/CCMP_128_MIC_LEN",
+        "type": "uint32",
+        "value": "8"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/CCMP_256_MIC_LEN",
+        "type": "uint32",
+        "value": "16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/CCMP_HDR_LEN",
+        "type": "uint32",
+        "value": "8"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/CCMP_PN_LEN",
+        "type": "uint32",
+        "value": "6"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/CSsid.data",
+        "ordinal": "2",
+        "type": "array<uint8,32>"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/CSsid.len",
+        "ordinal": "1",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.ieee80211/CSsid"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.BIP_CMAC_128",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.BIP_CMAC_256",
+        "value": "13"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.BIP_GMAC_128",
+        "value": "11"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.BIP_GMAC_256",
+        "value": "12"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.CCMP_128",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.CCMP_256",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.GCMP_128",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.GCMP_256",
+        "value": "9"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.GROUP_ADDRESSED_NOT_ALLOWED",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.RESERVED_14_TO_255",
+        "value": "14"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.RESERVED_3",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.TKIP",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.USE_GROUP",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.WEP_104",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType.WEP_40",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.ieee80211/CipherSuiteType",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/HT_CAP_LEN",
+        "type": "uint8",
+        "value": "26"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/HT_OP_LEN",
+        "type": "uint8",
+        "value": "22"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/HtCapabilities.bytes",
+        "ordinal": "1",
+        "type": "array<uint8,26>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.ieee80211/HtCapabilities"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/HtOperation.bytes",
+        "ordinal": "1",
+        "type": "array<uint8,22>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.ieee80211/HtOperation"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/MAC_ADDR_LEN",
+        "type": "uint8",
+        "value": "6"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/MAX_MESH_ID_BYTE_LEN",
+        "type": "uint8",
+        "value": "32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN",
+        "type": "uint8",
+        "value": "28"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/MAX_MMPDU_BYTE_LEN",
+        "type": "uint16",
+        "value": "2304"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/MAX_SSID_BYTE_LEN",
+        "type": "uint8",
+        "value": "32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/MAX_UNIQUE_CHANNEL_NUMBERS",
+        "type": "uint16",
+        "value": "256"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_0",
+        "type": "uint16",
+        "value": "3895"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_1",
+        "type": "uint16",
+        "value": "7991"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_2",
+        "type": "uint16",
+        "value": "11454"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.AP_INITIATED",
+        "value": "47"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.BAD_CIPHER_OR_AKM",
+        "value": "29"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.BSS_TRANSITION_DISASSOC",
+        "value": "12"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.END_TS_BA_DLS",
+        "value": "37"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.EXCEEDED_TXOP",
+        "value": "35"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.FOURWAY_HANDSHAKE_TIMEOUT",
+        "value": "15"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.FW_RX_STALLED",
+        "value": "129"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.GK_HANDSHAKE_TIMEOUT",
+        "value": "16"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.HANDSHAKE_ELEMENT_MISMATCH",
+        "value": "17"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.IEEE802_1_X_AUTH_FAILED",
+        "value": "23"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.INVALID_AUTHENTICATION",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.INVALID_CLASS2_FRAME",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.INVALID_CLASS3_FRAME",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.INVALID_RSNE_CAPABILITIES",
+        "value": "22"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.LEAVING_NETWORK_DEAUTH",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.LEAVING_NETWORK_DISASSOC",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS",
+        "value": "64"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS",
+        "value": "65"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_CHANNEL_SWITCH_UNSPECIFIED",
+        "value": "66"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_CLOSE_RCVD",
+        "value": "55"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_CONFIGURATION_POLICY_VIOLATION",
+        "value": "54"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_CONFIRM_TIMEOUT",
+        "value": "57"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_INCONSISTENT_PARAMETERS",
+        "value": "59"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_INVALID_GTK",
+        "value": "58"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_INVALID_SECURITY_CAPABILITY",
+        "value": "60"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_MAX_PEERS",
+        "value": "53"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_MAX_RETRIES",
+        "value": "56"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_PATH_ERROR_DESTINATION_UNREACHABLE",
+        "value": "63"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_PATH_ERROR_NO_FORWARDING_INFORMATION",
+        "value": "62"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_PATH_ERROR_NO_PROXY_INFORMATION",
+        "value": "61"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MESH_PEERING_CANCELED",
+        "value": "52"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MIC_FAILURE",
+        "value": "14"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MISSING_ACKS",
+        "value": "34"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.MLME_LINK_FAILED",
+        "value": "128"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.NOT_AUTHENTICATED",
+        "value": "9"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.NOT_AUTHORIZED_THIS_LOCATION",
+        "value": "30"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.NOT_ENOUGH_BANDWIDTH",
+        "value": "33"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.NO_MORE_STAS",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.NO_SSP_ROAMING_AGREEMENT",
+        "value": "28"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.PEERKEY_MISMATCH",
+        "value": "45"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.PEER_INITIATED",
+        "value": "46"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_CIPHER_OUT_OF_POLICY",
+        "value": "24"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_INACTIVITY",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_INVALID_AKMP",
+        "value": "20"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_INVALID_ELEMENT",
+        "value": "13"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_INVALID_FTE",
+        "value": "51"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_INVALID_FT_ACTION_FRAME_COUNT",
+        "value": "48"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_INVALID_GROUP_CIPHER",
+        "value": "18"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_INVALID_MDE",
+        "value": "50"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_INVALID_PAIRWISE_CIPHER",
+        "value": "19"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.REASON_INVALID_PMKID",
+        "value": "49"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.RESERVED_0",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.RESERVED_130_TO_65535",
+        "value": "130"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.RESERVED_67_TO_127",
+        "value": "67"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.SERVICE_CHANGE_PRECLUDES_TS",
+        "value": "31"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.SSP_REQUESTED_DISASSOC",
+        "value": "27"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.STA_LEAVING",
+        "value": "36"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.TDLS_PEER_UNREACHABLE",
+        "value": "25"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.TDLS_UNSPECIFIED_REASON",
+        "value": "26"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.TIMEOUT",
+        "value": "39"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.UNACCEPTABLE_POWER_CAPABILITY",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.UNACCEPTABLE_SUPPORTED_CHANNELS",
+        "value": "11"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.UNKNOWN_TS_BA",
+        "value": "38"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.UNSPECIFIED_QOS_REASON",
+        "value": "32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.UNSPECIFIED_REASON",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode.UNSUPPORTED_RSNE_VERSION",
+        "value": "21"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.ieee80211/ReasonCode",
+        "strictness": "strict",
+        "type": "uint16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/SSID_LIST_MAX",
+        "type": "uint8",
+        "value": "84"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.ANTI_CLOGGING_TOKEN_REQUIRED",
+        "value": "76"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.AUTHORIZATION_DEENABLED",
+        "value": "107"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.BAD_INTERVAL_WITH_U_APSD_COEX",
+        "value": "75"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.CANCELED",
+        "value": "258"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.CANNOT_FIND_ALTERNATIVE_TBTT",
+        "value": "78"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.CHALLENGE_FAILURE",
+        "value": "15"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_DUE_TO_SPECTRUM_MANAGEMENT",
+        "value": "103"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_INSUFFICIENT_BANDWIDTH",
+        "value": "33"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_LISTEN_INTERVAL_TOO_LARGE",
+        "value": "51"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_NO_ASSOCIATION_EXISTS",
+        "value": "11"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_NO_HT_SUPPORT",
+        "value": "27"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_NO_MORE_STAS",
+        "value": "17"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_NO_SHORT_PREAMBLE_SUPPORT",
+        "value": "19"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_NO_SHORT_SLOT_TIME_SUPPORT",
+        "value": "25"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_OTHER_REASON",
+        "value": "12"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_PCO_TIME_NOT_SUPPORTED",
+        "value": "29"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_POOR_CHANNEL_CONDITIONS",
+        "value": "34"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_QOS_NOT_SUPPORTED",
+        "value": "35"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_VHT_NOT_SUPPORTED",
+        "value": "104"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DENIED_WITH_SUGGESTED_BAND_AND_CHANNEL",
+        "value": "99"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.DLS_NOT_ALLOWED",
+        "value": "48"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.ENABLEMENT_DENIED",
+        "value": "105"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.ESTABLISH_RSNA_FAILURE",
+        "value": "259"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.GAS_ADVERTISEMENT_PROTOCOL_NOT_SUPPORTED",
+        "value": "59"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.GAS_QUERY_RESPONSE_TOO_LARGE",
+        "value": "63"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.GAS_QUERY_TIMEOUT",
+        "value": "62"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.GAS_RESPONSE_NOT_RECEIVED_FROM_SERVER",
+        "value": "61"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.INSUFFICIENT_TCLAS_PROCESSING_RESOURCES",
+        "value": "57"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.INVALID_PARAMETERS",
+        "value": "38"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.INVALID_RSNE",
+        "value": "72"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.INVALID_RSNE_CAPABILITIES",
+        "value": "45"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.JOIN_FAILURE",
+        "value": "256"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.MAF_LIMIT_EXCEEDED",
+        "value": "101"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.MCCAOP_RESERVATION_CONFLICT",
+        "value": "100"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.MCCA_TRACK_LIMIT_EXCEEDED",
+        "value": "102"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.NOT_IN_SAME_BSS",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.NOT_PRESENT",
+        "value": "49"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.NOT_QOS_STA",
+        "value": "50"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.NO_OUTSTANDING_GAS_REQUEST",
+        "value": "60"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.PENDING_ADMITTING_FST_SESSION",
+        "value": "86"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.PENDING_GAP_IN_BA_WINDOW",
+        "value": "88"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.PERFORMING_FST_NOW",
+        "value": "87"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.QUERY_RESPONSE_OUTSTANDING",
+        "value": "95"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.R0KH_UNREACHABLE",
+        "value": "28"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REFUSED_AP_OUT_OF_MEMORY",
+        "value": "93"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REFUSED_BASIC_RATES_MISMATCH",
+        "value": "18"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REFUSED_CAPABILITIES_MISMATCH",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REFUSED_EXTERNAL_REASON",
+        "value": "92"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REFUSED_REASON_UNSPECIFIED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REFUSED_TEMPORARILY",
+        "value": "30"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED",
+        "value": "68"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_BAD_POWER_CAPABILITY",
+        "value": "23"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_BAD_SUPPORTED_CHANNELS",
+        "value": "24"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED",
+        "value": "94"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_FOR_DELAY_PERIOD",
+        "value": "47"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_FOR_SSP_PERMISSIONS",
+        "value": "67"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_HOME_WITH_SUGGESTED_CHANGES",
+        "value": "64"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_SEQUENCE_TIMEOUT",
+        "value": "16"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_SPECTRUM_MANAGEMENT_REQUIRED",
+        "value": "22"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_WITH_SUGGESTED_BSS_TRANSITION",
+        "value": "82"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECTED_WITH_SUGGESTED_CHANGES",
+        "value": "39"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECT_DSE_BAND",
+        "value": "96"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECT_NO_WAKEUP_SPECIFIED",
+        "value": "84"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECT_U_PID_SETTING",
+        "value": "89"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REJECT_WITH_SCHEDULE",
+        "value": "83"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REQUESTED_TCLAS_NOT_SUPPORTED",
+        "value": "80"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REQUESTED_TCLAS_NOT_SUPPORTED_BY_AP",
+        "value": "56"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.REQUEST_DECLINED",
+        "value": "37"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.RESTRICTION_FROM_AUTHORIZED_GDB",
+        "value": "106"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.ROBUST_MANAGEMENT_POLICY_VIOLATION",
+        "value": "31"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.SECURITY_DISABLED",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.SERVER_UNREACHABLE",
+        "value": "65"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.SPURIOUS_DEAUTH_OR_DISASSOC",
+        "value": "257"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.STATUS_CIPHER_OUT_OF_POLICY",
+        "value": "46"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_AKMP",
+        "value": "43"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_ELEMENT",
+        "value": "40"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_FTE",
+        "value": "55"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_FT_ACTION_FRAME_COUNT",
+        "value": "52"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_GROUP_CIPHER",
+        "value": "41"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_MDE",
+        "value": "54"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_PAIRWISE_CIPHER",
+        "value": "42"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.STATUS_INVALID_PMKID",
+        "value": "53"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.SUCCESS",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.SUCCESS_POWER_SAVE_MODE",
+        "value": "85"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.TCLAS_PROCESSING_TERMINATED",
+        "value": "97"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.TCLAS_RESOURCES_EXHAUSTED",
+        "value": "81"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.TDLS_REJECTED",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.TDLS_REJECTED_ALTERNATIVE_PROVIDED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.TRANSACTION_SEQUENCE_ERROR",
+        "value": "14"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.TRANSMISSION_FAILURE",
+        "value": "79"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.TRY_ANOTHER_BSS",
+        "value": "58"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.TS_SCHEDULE_CONFLICT",
+        "value": "98"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.UNACCEPTABLE_LIFETIME",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.UNSPECIFIED_QOS_FAILURE",
+        "value": "32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.UNSUPPORTED_AUTH_ALGORITHM",
+        "value": "13"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.UNSUPPORTED_FINITE_CYCLIC_GROUP",
+        "value": "77"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.UNSUPPORTED_RSNE_VERSION",
+        "value": "44"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.U_APSD_COEXISTANCE_NOT_SUPPORTED",
+        "value": "73"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.wlan.ieee80211/StatusCode.U_APSD_COEX_MODE_NOT_SUPPORTED",
+        "value": "74"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.wlan.ieee80211/StatusCode",
+        "strictness": "strict",
+        "type": "uint16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/TIDS_MAX",
+        "type": "uint32",
+        "value": "16"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/VHT_CAP_LEN",
+        "type": "uint8",
+        "value": "12"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/VHT_OP_LEN",
+        "type": "uint8",
+        "value": "5"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/VhtCapabilities.bytes",
+        "ordinal": "1",
+        "type": "array<uint8,12>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.ieee80211/VhtCapabilities"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.wlan.ieee80211/VhtOperation.bytes",
+        "ordinal": "1",
+        "type": "array<uint8,5>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.wlan.ieee80211/VhtOperation"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/WLAN_IE_BODY_MAX_LEN",
+        "type": "uint32",
+        "value": "255"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/WLAN_IE_MAX_LEN",
+        "type": "uint32",
+        "value": "257"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.wlan.ieee80211/WLAN_MSDU_MAX_LEN",
+        "type": "uint32",
+        "value": "2304"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.wlan.ieee80211"
+    }
+]

@@ -1,0 +1,126 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/DeviceListenerRegistry.RegisterListener",
+        "ordinal": "3431319511893564027",
+        "type": "(client_end:fuchsia.ui.policy/MediaButtonsListener listener) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/DeviceListenerRegistry.RegisterMediaButtonsListener",
+        "ordinal": "4045975772836867696",
+        "type": "(client_end:fuchsia.ui.policy/MediaButtonsListener listener)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.policy/DeviceListenerRegistry"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/DisplayBacklight.SetMinimumRgb",
+        "ordinal": "2693226552535686307",
+        "type": "(uint8 minimum_rgb) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.policy/DisplayBacklight"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.policy/DisplayUsage.kClose",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.policy/DisplayUsage.kFar",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.policy/DisplayUsage.kHandheld",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.policy/DisplayUsage.kMidrange",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.policy/DisplayUsage.kNear",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.policy/DisplayUsage.kUnknown",
+        "value": "0"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.policy/DisplayUsage",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/MediaButtonsListener.OnEvent",
+        "ordinal": "1650308738712569724",
+        "type": "(fuchsia.ui.input/MediaButtonsEvent event) -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/MediaButtonsListener.OnMediaButtonsEvent",
+        "ordinal": "3179656525909478912",
+        "type": "(fuchsia.ui.input/MediaButtonsEvent event)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.policy/MediaButtonsListener"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/PointerCaptureListenerHACK.OnPointerEvent",
+        "ordinal": "2854157734929817839",
+        "type": "(fuchsia.ui.input/PointerEvent event)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.policy/PointerCaptureListenerHACK"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/Presentation.CapturePointerEventsHACK",
+        "ordinal": "7246966151937421359",
+        "type": "(client_end:fuchsia.ui.policy/PointerCaptureListenerHACK listener)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.policy/Presentation"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/Presenter.PresentOrReplaceView",
+        "ordinal": "3073099007217802299",
+        "type": "(fuchsia.ui.views/ViewHolderToken view_holder_token,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/Presenter.PresentOrReplaceView2",
+        "ordinal": "8222224138800966336",
+        "type": "(fuchsia.ui.views/ViewHolderToken view_holder_token,fuchsia.ui.views/ViewRef view_ref,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.policy/Presenter.PresentView",
+        "ordinal": "6107263760896956875",
+        "type": "(fuchsia.ui.views/ViewHolderToken view_holder_token,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.policy/Presenter"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.policy"
+    }
+]

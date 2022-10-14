@@ -1,0 +1,48 @@
+[
+    {
+        "kind": "const",
+        "name": "fuchsia.component.types/MAX_CHILD_NAME_LENGTH",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.types/MAX_COLLECTION_NAME_LENGTH",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.types/MAX_FACET_NAME_LENGTH",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.types/MAX_PATH_LENGTH",
+        "type": "uint32",
+        "value": "1024"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.types/MAX_RUNNER_NAME_LENGTH",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.types/MAX_STORAGE_NAME_LENGTH",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.component.types/MAX_URL_LENGTH",
+        "type": "uint32",
+        "value": "4096"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.component.types"
+    }
+]

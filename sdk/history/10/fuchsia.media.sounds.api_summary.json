@@ -1,0 +1,109 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sounds/PlaySoundError.NO_SUCH_SOUND",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sounds/PlaySoundError.RENDERER_FAILED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.media.sounds/PlaySoundError.STOPPED",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.media.sounds/PlaySoundError",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sounds/Player.AddSoundBuffer",
+        "ordinal": "5668444262064314978",
+        "type": "(uint32 id,fuchsia.mem/Buffer buffer,fuchsia.media/AudioStreamType stream_type)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sounds/Player.AddSoundFromFile",
+        "ordinal": "3445896723012337414",
+        "type": "(uint32 id,fuchsia.io/File file) -> (fuchsia.media.sounds/Player_AddSoundFromFile_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sounds/Player.PlaySound",
+        "ordinal": "8572556525327295937",
+        "type": "(uint32 id,fuchsia.media/AudioRenderUsage usage) -> (fuchsia.media.sounds/Player_PlaySound_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sounds/Player.RemoveSound",
+        "ordinal": "1875309027020173506",
+        "type": "(uint32 id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.media.sounds/Player.StopPlayingSound",
+        "ordinal": "1461557698316108114",
+        "type": "(uint32 id)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.media.sounds/Player"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.media.sounds/Player_AddSoundFromFile_Response.duration",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.sounds/Player_AddSoundFromFile_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.sounds/Player_AddSoundFromFile_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.sounds/Player_AddSoundFromFile_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.media.sounds/Player_AddSoundFromFile_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.media.sounds/Player_AddSoundFromFile_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.media.sounds/Player_PlaySound_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.sounds/Player_PlaySound_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.media.sounds/PlaySoundError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.media.sounds/Player_PlaySound_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.media.sounds/Player_PlaySound_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.media.sounds/Player_PlaySound_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.media.sounds"
+    }
+]

@@ -1,0 +1,253 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.radar/Burst.timestamp",
+        "ordinal": "2",
+        "type": "int64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.radar/Burst.vmo_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.radar/Burst"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader.GetBurstSize",
+        "ordinal": "158162301588276931",
+        "type": "() -> (uint32 burst_size)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader.OnBurst",
+        "ordinal": "2598512163372887117",
+        "type": " -> (fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader.RegisterVmos",
+        "ordinal": "2154263285602135949",
+        "type": "(vector<uint32>:300 vmo_ids,vector<zx/handle:VMO>:300 vmos) -> (fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader.StartBursts",
+        "ordinal": "4921981058540011209",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader.StopBursts",
+        "ordinal": "917404587708013557",
+        "type": "() -> ()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader.UnlockVmo",
+        "ordinal": "7034274722613278017",
+        "type": "(uint32 vmo_id)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader.UnregisterVmos",
+        "ordinal": "2206281028155036043",
+        "type": "(vector<uint32>:300 vmo_ids) -> (fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.radar/RadarBurstReader"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider.Connect",
+        "ordinal": "6660477513963563266",
+        "type": "(server_end:fuchsia.hardware.radar/RadarBurstReader server) -> (fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.hardware.radar/StatusCode"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response.burst",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.radar/Burst"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.hardware.radar/StatusCode"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.hardware.radar/StatusCode"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response.vmos",
+        "ordinal": "1",
+        "type": "vector<zx/handle:VMO>:300"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.hardware.radar/StatusCode"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.ALREADY_BOUND",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.BIND_ERROR",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.INVALID_ARGS",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.OUT_OF_VMOS",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.SENSOR_ERROR",
+        "value": "12"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.SENSOR_TIMEOUT",
+        "value": "11"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.SUCCESS",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.UNSPECIFIED",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.VMO_ACCESS_DENIED",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.VMO_ALREADY_REGISTERED",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.VMO_BAD_HANDLE",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.VMO_NOT_FOUND",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.hardware.radar/StatusCode.VMO_TOO_SMALL",
+        "value": "9"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.hardware.radar/StatusCode",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.hardware.radar/VMO_VECTOR_MAX_COUNT",
+        "type": "uint32",
+        "value": "300"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.hardware.radar"
+    }
+]

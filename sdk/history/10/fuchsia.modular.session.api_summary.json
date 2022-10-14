@@ -1,0 +1,226 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/AgentServiceIndexEntry.agent_url",
+        "ordinal": "2",
+        "type": "string:2083"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/AgentServiceIndexEntry.expose_from",
+        "ordinal": "3",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/AgentServiceIndexEntry.service_name",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/AgentServiceIndexEntry"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/AppConfig.args",
+        "ordinal": "2",
+        "type": "vector<string>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/AppConfig.url",
+        "ordinal": "1",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/AppConfig"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/BasemgrConfig.enable_cobalt",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/BasemgrConfig.session_launcher",
+        "ordinal": "8",
+        "type": "fuchsia.modular.session/AppConfig"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/BasemgrConfig.session_shell_map",
+        "ordinal": "5",
+        "type": "vector<fuchsia.modular.session/SessionShellMapEntry>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/BasemgrConfig.story_shell",
+        "ordinal": "6",
+        "type": "fuchsia.modular.session/StoryShellConfig"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/BasemgrConfig.use_session_shell_for_story_shell_factory",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/BasemgrConfig"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.modular.session/Launcher.LaunchSessionmgr",
+        "ordinal": "5736967971230229206",
+        "type": "(fuchsia.mem/Buffer config)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.modular.session/Launcher"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/ModularConfig.basemgr_config",
+        "ordinal": "1",
+        "type": "fuchsia.modular.session/BasemgrConfig"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/ModularConfig.sessionmgr_config",
+        "ordinal": "2",
+        "type": "fuchsia.modular.session/SessionmgrConfig"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/ModularConfig"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionShellConfig.app_config",
+        "ordinal": "1",
+        "type": "fuchsia.modular.session/AppConfig"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/SessionShellConfig"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionShellMapEntry.config",
+        "ordinal": "2",
+        "type": "fuchsia.modular.session/SessionShellConfig"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionShellMapEntry.name",
+        "ordinal": "1",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/SessionShellMapEntry"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.agent_service_index",
+        "ordinal": "10",
+        "type": "vector<fuchsia.modular.session/AgentServiceIndexEntry>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.component_args",
+        "ordinal": "8",
+        "type": "vector<fuchsia.modular.session/AppConfig>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.disable_agent_restart_on_crash",
+        "ordinal": "12",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.enable_cobalt",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.present_mods_as_stories",
+        "ordinal": "14",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.reserved",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.restart_session_on_agent_crash",
+        "ordinal": "11",
+        "type": "vector<string:4096>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.session_agents",
+        "ordinal": "6",
+        "type": "vector<string:4096>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.startup_agents",
+        "ordinal": "5",
+        "type": "vector<string:4096>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.story_shell_url",
+        "ordinal": "7",
+        "type": "string:4096"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.v2_modular_agents",
+        "ordinal": "13",
+        "type": "vector<fuchsia.modular.session/V2ModularAgentsEntry>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/SessionmgrConfig"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/StoryShellConfig.app_config",
+        "ordinal": "1",
+        "type": "fuchsia.modular.session/AppConfig"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/StoryShellConfig"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/V2ModularAgentsEntry.agent_url",
+        "ordinal": "2",
+        "type": "string:2083"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.modular.session/V2ModularAgentsEntry.service_name",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.modular.session/V2ModularAgentsEntry"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.modular.session"
+    }
+]

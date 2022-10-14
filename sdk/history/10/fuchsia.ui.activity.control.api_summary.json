@@ -1,0 +1,16 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.activity.control/Control.SetState",
+        "ordinal": "6806439233410185061",
+        "type": "(fuchsia.ui.activity/State state)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.activity.control/Control"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.activity.control"
+    }
+]

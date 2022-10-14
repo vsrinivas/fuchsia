@@ -1,0 +1,27 @@
+[
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.castwindow/Interaction.GO_BACK",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.castwindow/Interaction",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.castwindow/InteractionHandler.SendInteraction",
+        "ordinal": "1424733210738321602",
+        "type": "(string session_id,fuchsia.castwindow/Interaction interaction)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.castwindow/InteractionHandler"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.castwindow"
+    }
+]

@@ -1,0 +1,448 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/Counter.GetInspectVmo",
+        "ordinal": "7974101319142677377",
+        "type": "() -> (int32 status,fuchsia.mem/Buffer buffer)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/Counter.UpdateInspectVmo",
+        "ordinal": "2100343708672086943",
+        "type": "() -> (int32 status)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/Counter"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/CpuResource.Get",
+        "ordinal": "4747093326996575716",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/CpuResource"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.kernel/CpuStats.actual_num_cpus",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.kernel/CpuStats.per_cpu_stats",
+        "ordinal": "2",
+        "type": "vector<fuchsia.kernel/PerCpuStats>:<512,optional>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.kernel/CpuStats"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.kernel/DEBUG_COMMAND_MAX",
+        "type": "uint32",
+        "value": "1024"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/DebugBroker.SendDebugCommand",
+        "ordinal": "2225465377324625910",
+        "type": "(string:1024 command) -> (int32 status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/DebugBroker.SetTracingEnabled",
+        "ordinal": "1361046756353749774",
+        "type": "(bool enabled) -> (int32 status)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/DebugBroker"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/DebugResource.Get",
+        "ordinal": "2123965638151660660",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/DebugResource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/HypervisorResource.Get",
+        "ordinal": "2031441404809979042",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/HypervisorResource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/InfoResource.Get",
+        "ordinal": "2155233879084769383",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/InfoResource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/IoportResource.Get",
+        "ordinal": "5598546592714442027",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/IoportResource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/IrqResource.Get",
+        "ordinal": "5268056273734091241",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/IrqResource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStats.free_bytes",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStats.free_heap_bytes",
+        "ordinal": "5",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStats.ipc_bytes",
+        "ordinal": "8",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStats.mmu_overhead_bytes",
+        "ordinal": "7",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStats.other_bytes",
+        "ordinal": "9",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStats.total_bytes",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStats.total_heap_bytes",
+        "ordinal": "4",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStats.vmo_bytes",
+        "ordinal": "6",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStats.wired_bytes",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.kernel/MemoryStats"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.free_bytes",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.free_heap_bytes",
+        "ordinal": "5",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.ipc_bytes",
+        "ordinal": "13",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.mmu_overhead_bytes",
+        "ordinal": "12",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.other_bytes",
+        "ordinal": "14",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.total_bytes",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.total_heap_bytes",
+        "ordinal": "4",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_bytes",
+        "ordinal": "6",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_discardable_locked_bytes",
+        "ordinal": "10",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_discardable_unlocked_bytes",
+        "ordinal": "11",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_pager_newest_bytes",
+        "ordinal": "8",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_pager_oldest_bytes",
+        "ordinal": "9",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_pager_total_bytes",
+        "ordinal": "7",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/MemoryStatsExtended.wired_bytes",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.kernel/MemoryStatsExtended"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/MmioResource.Get",
+        "ordinal": "7382661600629358203",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/MmioResource"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.context_switches",
+        "ordinal": "5",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.cpu_number",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.exceptions",
+        "ordinal": "12",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.flags",
+        "ordinal": "2",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.generic_ipis",
+        "ordinal": "15",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.idle_time",
+        "ordinal": "3",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.ints",
+        "ordinal": "8",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.irq_preempts",
+        "ordinal": "6",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.page_faults",
+        "ordinal": "11",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.reschedule_ipis",
+        "ordinal": "14",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.reschedules",
+        "ordinal": "4",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.syscalls",
+        "ordinal": "13",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.timer_ints",
+        "ordinal": "9",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.timers",
+        "ordinal": "10",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.kernel/PerCpuStats.yields",
+        "ordinal": "7",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.kernel/PerCpuStats"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/PowerResource.Get",
+        "ordinal": "3138438062431922278",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/PowerResource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/RootJob.Get",
+        "ordinal": "8335237394535366316",
+        "type": "() -> (zx/handle:JOB job)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/RootJob"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/RootJobForInspect.Get",
+        "ordinal": "8335237394535366316",
+        "type": "() -> (zx/handle:JOB job)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/RootJobForInspect"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/SmcResource.Get",
+        "ordinal": "4119875881902861799",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/SmcResource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/Stats.GetCpuLoad",
+        "ordinal": "5516644586577151590",
+        "type": "(int64 duration) -> (vector<float32>:512 per_cpu_load)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/Stats.GetCpuStats",
+        "ordinal": "5120072178135245214",
+        "type": "() -> (fuchsia.kernel/CpuStats stats)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/Stats.GetMemoryStats",
+        "ordinal": "7522831701532479604",
+        "type": "() -> (fuchsia.kernel/MemoryStats stats)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/Stats.GetMemoryStatsExtended",
+        "ordinal": "6988074761686925983",
+        "type": "() -> (fuchsia.kernel/MemoryStatsExtended stats)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/Stats"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.kernel/VmexResource.Get",
+        "ordinal": "3736636248880907929",
+        "type": "() -> (zx/handle:RESOURCE resource)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.kernel/VmexResource"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.kernel"
+    }
+]

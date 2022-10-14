@@ -1,0 +1,58 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.accessibility.gesture/Listener.OnGesture",
+        "ordinal": "8106155993179482622",
+        "type": "(fuchsia.accessibility.gesture/Type gesture_type) -> (bool handled,string:<16384,optional> utterance)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.accessibility.gesture/Listener"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.accessibility.gesture/ListenerRegistry.Register",
+        "ordinal": "8478503066221886375",
+        "type": "(client_end:fuchsia.accessibility.gesture/Listener listener) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.accessibility.gesture/ListenerRegistry"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.accessibility.gesture/MAX_UTTERANCE_SIZE",
+        "type": "uint64",
+        "value": "16384"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.accessibility.gesture/Type.THREE_FINGER_SWIPE_DOWN",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.accessibility.gesture/Type.THREE_FINGER_SWIPE_LEFT",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.accessibility.gesture/Type.THREE_FINGER_SWIPE_RIGHT",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.accessibility.gesture/Type.THREE_FINGER_SWIPE_UP",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.accessibility.gesture/Type",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.accessibility.gesture"
+    }
+]

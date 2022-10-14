@@ -1,0 +1,931 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.Connect",
+        "ordinal": "1671989500307207783",
+        "type": "(fuchsia.bluetooth/PeerId id) -> (fuchsia.bluetooth.sys/Access_Connect_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.Disconnect",
+        "ordinal": "262581437258106277",
+        "type": "(fuchsia.bluetooth/PeerId id) -> (fuchsia.bluetooth.sys/Access_Disconnect_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.Forget",
+        "ordinal": "143427061840106688",
+        "type": "(fuchsia.bluetooth/PeerId id) -> (fuchsia.bluetooth.sys/Access_Forget_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.MakeDiscoverable",
+        "ordinal": "8393775077749518257",
+        "type": "(server_end:fuchsia.bluetooth.sys/ProcedureToken token) -> (fuchsia.bluetooth.sys/Access_MakeDiscoverable_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.Pair",
+        "ordinal": "2092179423686195065",
+        "type": "(fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.sys/PairingOptions options) -> (fuchsia.bluetooth.sys/Access_Pair_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.SetDeviceClass",
+        "ordinal": "6403431913264579421",
+        "type": "(fuchsia.bluetooth/DeviceClass device_class)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.SetLocalName",
+        "ordinal": "9012491399897155307",
+        "type": "(string:248 name)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.SetPairingDelegate",
+        "ordinal": "5400828474389541899",
+        "type": "(fuchsia.bluetooth.sys/InputCapability input,fuchsia.bluetooth.sys/OutputCapability output,client_end:fuchsia.bluetooth.sys/PairingDelegate delegate)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.StartDiscovery",
+        "ordinal": "473002209340658745",
+        "type": "(server_end:fuchsia.bluetooth.sys/ProcedureToken token) -> (fuchsia.bluetooth.sys/Access_StartDiscovery_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Access.WatchPeers",
+        "ordinal": "1811007933621136252",
+        "type": "() -> (vector<fuchsia.bluetooth.sys/Peer> updated,vector<fuchsia.bluetooth/PeerId> removed)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.sys/Access"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/Access_Connect_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_Connect_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_Connect_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/Access_Connect_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.sys/Access_Connect_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/Access_Disconnect_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_Disconnect_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_Disconnect_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/Access_Disconnect_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.sys/Access_Disconnect_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/Access_Forget_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_Forget_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_Forget_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/Access_Forget_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.sys/Access_Forget_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/Access_MakeDiscoverable_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_MakeDiscoverable_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_MakeDiscoverable_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/Access_MakeDiscoverable_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.sys/Access_MakeDiscoverable_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/Access_Pair_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_Pair_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_Pair_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/Access_Pair_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.sys/Access_Pair_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/Access_StartDiscovery_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_StartDiscovery_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/Error"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Access_StartDiscovery_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/Access_StartDiscovery_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.sys/Access_StartDiscovery_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/BondableMode.BONDABLE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/BondableMode.NON_BONDABLE",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/BondableMode",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/BondingData.address",
+        "ordinal": "6",
+        "type": "fuchsia.bluetooth/Address"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/BondingData.bredr_bond",
+        "ordinal": "8",
+        "type": "fuchsia.bluetooth.sys/BredrBondData"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/BondingData.identifier",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth/PeerId"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/BondingData.le_bond",
+        "ordinal": "7",
+        "type": "fuchsia.bluetooth.sys/LeBondData"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/BondingData.local_address",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth/Address"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/BondingData.name",
+        "ordinal": "3",
+        "type": "string:248"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.sys/BondingData"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Bootstrap.AddIdentities",
+        "ordinal": "661321629319732144",
+        "type": "(vector<fuchsia.bluetooth.sys/Identity> identities)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Bootstrap.Commit",
+        "ordinal": "5947003774424692407",
+        "type": "() -> (fuchsia.bluetooth.sys/Bootstrap_Commit_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.sys/Bootstrap"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/BootstrapError.INVALID_HOST_IDENTITY",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/BootstrapError.WRITE_FAILURE",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/BootstrapError",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/Bootstrap_Commit_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Bootstrap_Commit_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/BootstrapError"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/Bootstrap_Commit_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/Bootstrap_Commit_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.sys/Bootstrap_Commit_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/BredrBondData.link_key",
+        "ordinal": "3",
+        "type": "fuchsia.bluetooth.sys/PeerKey"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/BredrBondData.role_preference",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth/ConnectionRole"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/BredrBondData.services",
+        "ordinal": "2",
+        "type": "vector<fuchsia.bluetooth/Uuid>:65535"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.sys/BredrBondData"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/Configuration.Update",
+        "ordinal": "2876058222718643457",
+        "type": "(fuchsia.bluetooth.sys/Settings settings) -> (fuchsia.bluetooth.sys/Settings result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.sys/Configuration"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/Error.CANCELED",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/Error.FAILED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/Error.INVALID_ARGUMENTS",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/Error.IN_PROGRESS",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/Error.NOT_SUPPORTED",
+        "value": "6"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/Error.PEER_NOT_FOUND",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/Error.TIMED_OUT",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/Error",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/HostData.irk",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/Key"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.sys/HostData"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/HostInfo.active",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/HostInfo.address",
+        "ordinal": "3",
+        "type": "fuchsia.bluetooth/Address"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/HostInfo.discoverable",
+        "ordinal": "6",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/HostInfo.discovering",
+        "ordinal": "7",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/HostInfo.id",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth/HostId"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/HostInfo.local_name",
+        "ordinal": "5",
+        "type": "string:248"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/HostInfo.technology",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/TechnologyType"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.sys/HostInfo"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/HostWatcher.SetActive",
+        "ordinal": "594247684159757811",
+        "type": "(fuchsia.bluetooth/HostId id) -> (fuchsia.bluetooth.sys/HostWatcher_SetActive_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/HostWatcher.Watch",
+        "ordinal": "5632922806316527516",
+        "type": "() -> (vector<fuchsia.bluetooth.sys/HostInfo> hosts)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.sys/HostWatcher"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/HostWatcher_SetActive_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/HostWatcher_SetActive_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.bluetooth.sys/HostWatcher_SetActive_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/HostWatcher_SetActive_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.bluetooth.sys/HostWatcher_SetActive_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Identity.bonds",
+        "ordinal": "2",
+        "type": "vector<fuchsia.bluetooth.sys/BondingData>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Identity.host",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/HostData"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.sys/Identity"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/InputCapability.CONFIRMATION",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/InputCapability.KEYBOARD",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/InputCapability.NONE",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/InputCapability",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/Key.value",
+        "ordinal": "1",
+        "type": "array<uint8,16>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/Key"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/LeBondData.connection_parameters",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/LeConnectionParameters"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/LeBondData.csrk",
+        "ordinal": "4",
+        "type": "fuchsia.bluetooth.sys/PeerKey"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/LeBondData.irk",
+        "ordinal": "3",
+        "type": "fuchsia.bluetooth.sys/PeerKey"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/LeBondData.local_ltk",
+        "ordinal": "6",
+        "type": "fuchsia.bluetooth.sys/Ltk"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/LeBondData.peer_ltk",
+        "ordinal": "5",
+        "type": "fuchsia.bluetooth.sys/Ltk"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/LeBondData.services",
+        "ordinal": "2",
+        "type": "vector<fuchsia.bluetooth/Uuid>:65535"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.sys/LeBondData"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/LeConnectionParameters.connection_interval",
+        "ordinal": "1",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/LeConnectionParameters.connection_latency",
+        "ordinal": "2",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/LeConnectionParameters.supervision_timeout",
+        "ordinal": "3",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/LeConnectionParameters"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/LeSecurityMode.MODE_1",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/LeSecurityMode.SECURE_CONNECTIONS_ONLY",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/LeSecurityMode",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/Ltk.ediv",
+        "ordinal": "2",
+        "type": "uint16"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/Ltk.key",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/PeerKey"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/Ltk.rand",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/Ltk"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.bluetooth.sys/MAX_PEER_SERVICES",
+        "type": "uint16",
+        "value": "65535"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/OutputCapability.DISPLAY",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/OutputCapability.NONE",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/OutputCapability",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/PairingDelegate.OnLocalKeypress",
+        "ordinal": "1906795072981534857",
+        "type": " -> (fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.sys/PairingKeypress keypress)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/PairingDelegate.OnPairingComplete",
+        "ordinal": "6546259789841409879",
+        "type": "(fuchsia.bluetooth/PeerId id,bool success)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/PairingDelegate.OnPairingRequest",
+        "ordinal": "6649629238212306611",
+        "type": "(fuchsia.bluetooth.sys/Peer peer,fuchsia.bluetooth.sys/PairingMethod method,uint32 displayed_passkey) -> (bool accept,uint32 entered_passkey)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.bluetooth.sys/PairingDelegate.OnRemoteKeypress",
+        "ordinal": "5635162301591242532",
+        "type": "(fuchsia.bluetooth/PeerId id,fuchsia.bluetooth.sys/PairingKeypress keypress)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.sys/PairingDelegate"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingKeypress.DIGIT_ENTERED",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingKeypress.DIGIT_ERASED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingKeypress.PASSKEY_CLEARED",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingKeypress.PASSKEY_ENTERED",
+        "value": "4"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/PairingKeypress",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingMethod.CONSENT",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingMethod.PASSKEY_COMPARISON",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingMethod.PASSKEY_DISPLAY",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingMethod.PASSKEY_ENTRY",
+        "value": "4"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/PairingMethod",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/PairingOptions.bondable_mode",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/BondableMode"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/PairingOptions.le_security_level",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/PairingSecurityLevel"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/PairingOptions.transport",
+        "ordinal": "3",
+        "type": "fuchsia.bluetooth.sys/TechnologyType"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.sys/PairingOptions"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingSecurityLevel.AUTHENTICATED",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/PairingSecurityLevel.ENCRYPTED",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/PairingSecurityLevel",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.address",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth/Address"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.appearance",
+        "ordinal": "7",
+        "type": "fuchsia.bluetooth/Appearance"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.bonded",
+        "ordinal": "5",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.bredr_services",
+        "ordinal": "13",
+        "type": "vector<fuchsia.bluetooth/Uuid>:65535"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.connected",
+        "ordinal": "4",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.device_class",
+        "ordinal": "8",
+        "type": "fuchsia.bluetooth/DeviceClass"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.id",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth/PeerId"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.le_services",
+        "ordinal": "12",
+        "type": "vector<fuchsia.bluetooth/Uuid>:65535"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.name",
+        "ordinal": "6",
+        "type": "string:248"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.rssi",
+        "ordinal": "9",
+        "type": "int8"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.services",
+        "ordinal": "11",
+        "type": "vector<fuchsia.bluetooth/Uuid>:65535"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.technology",
+        "ordinal": "3",
+        "type": "fuchsia.bluetooth.sys/TechnologyType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Peer.tx_power",
+        "ordinal": "10",
+        "type": "int8"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.sys/Peer"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/PeerKey.data",
+        "ordinal": "2",
+        "type": "fuchsia.bluetooth.sys/Key"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/PeerKey.security",
+        "ordinal": "1",
+        "type": "fuchsia.bluetooth.sys/SecurityProperties"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/PeerKey"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.bluetooth.sys/ProcedureToken"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/SecurityProperties.authenticated",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/SecurityProperties.encryption_key_size",
+        "ordinal": "3",
+        "type": "uint8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.bluetooth.sys/SecurityProperties.secure_connections",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.bluetooth.sys/SecurityProperties"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Settings.bredr_connectable_mode",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Settings.le_background_scan",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Settings.le_privacy",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.bluetooth.sys/Settings.le_security_mode",
+        "ordinal": "4",
+        "type": "fuchsia.bluetooth.sys/LeSecurityMode"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.bluetooth.sys/Settings"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/TechnologyType.CLASSIC",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/TechnologyType.DUAL_MODE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.bluetooth.sys/TechnologyType.LOW_ENERGY",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.bluetooth.sys/TechnologyType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.bluetooth.sys"
+    }
+]

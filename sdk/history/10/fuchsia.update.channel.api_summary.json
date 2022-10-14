@@ -1,0 +1,16 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update.channel/Provider.GetCurrent",
+        "ordinal": "1562473495519973398",
+        "type": "() -> (string:128 channel)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.update.channel/Provider"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.update.channel"
+    }
+]

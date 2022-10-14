@@ -1,0 +1,32 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.location.namedplace/RegulatoryRegionConfigurator.SetRegion",
+        "ordinal": "7457422079389690128",
+        "type": "(string:2 region)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.location.namedplace/RegulatoryRegionConfigurator"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.location.namedplace/RegulatoryRegionWatcher.GetRegionUpdate",
+        "ordinal": "2937596022367715085",
+        "type": "() -> (string:<2,optional> new_region)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.location.namedplace/RegulatoryRegionWatcher.GetUpdate",
+        "ordinal": "790063706615780999",
+        "type": "() -> (string:2 new_region)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.location.namedplace/RegulatoryRegionWatcher"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.location.namedplace"
+    }
+]

@@ -1,0 +1,303 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.buttons",
+        "ordinal": "9",
+        "type": "vector<uint8>:32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.context",
+        "ordinal": "3",
+        "type": "fuchsia.ui.pointerinjector/Context"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.device_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.device_type",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointerinjector/DeviceType"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.dispatch_policy",
+        "ordinal": "6",
+        "type": "fuchsia.ui.pointerinjector/DispatchPolicy"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.relative_motion_range",
+        "ordinal": "10",
+        "type": "array<fuchsia.input.report/Axis,2>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.scroll_h_range",
+        "ordinal": "8",
+        "type": "fuchsia.input.report/Axis"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.scroll_v_range",
+        "ordinal": "7",
+        "type": "fuchsia.input.report/Axis"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.target",
+        "ordinal": "4",
+        "type": "fuchsia.ui.pointerinjector/Target"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Config.viewport",
+        "ordinal": "5",
+        "type": "fuchsia.ui.pointerinjector/Viewport"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointerinjector/Config",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.pointerinjector/Context.view",
+        "ordinal": "1",
+        "type": "fuchsia.ui.views/ViewRef"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.pointerinjector/Context",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.pointerinjector/Data.pointer_sample",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointerinjector/PointerSample"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.pointerinjector/Data.viewport",
+        "ordinal": "1",
+        "type": "fuchsia.ui.pointerinjector/Viewport"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.pointerinjector/Data",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointerinjector/Device.Inject",
+        "ordinal": "82058939547254592",
+        "type": "(vector<fuchsia.ui.pointerinjector/Event>:128 events) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.pointerinjector/Device"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointerinjector/DeviceType.MOUSE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointerinjector/DeviceType.TOUCH",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.pointerinjector/DeviceType",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointerinjector/DispatchPolicy.EXCLUSIVE_TARGET",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointerinjector/DispatchPolicy.MOUSE_HOVER_AND_LATCH_IN_TARGET",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointerinjector/DispatchPolicy.TOP_HIT_AND_ANCESTORS_IN_TARGET",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.pointerinjector/DispatchPolicy",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Event.data",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointerinjector/Data"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Event.timestamp",
+        "ordinal": "1",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Event.trace_flow_id",
+        "ordinal": "3",
+        "type": "uint64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointerinjector/Event"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointerinjector/EventPhase.ADD",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointerinjector/EventPhase.CANCEL",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointerinjector/EventPhase.CHANGE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.pointerinjector/EventPhase.REMOVE",
+        "value": "3"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.pointerinjector/EventPhase",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.ui.pointerinjector/MAX_INJECT",
+        "type": "uint32",
+        "value": "128"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.is_precision_scroll",
+        "ordinal": "10",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.phase",
+        "ordinal": "2",
+        "type": "fuchsia.ui.pointerinjector/EventPhase"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.pointer_id",
+        "ordinal": "1",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.position_in_viewport",
+        "ordinal": "3",
+        "type": "array<float32,2>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.pressed_buttons",
+        "ordinal": "6",
+        "type": "vector<uint8>:32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.relative_motion",
+        "ordinal": "7",
+        "type": "array<float32,2>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_h",
+        "ordinal": "5",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_h_physical_pixel",
+        "ordinal": "9",
+        "type": "float64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_v",
+        "ordinal": "4",
+        "type": "int64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_v_physical_pixel",
+        "ordinal": "8",
+        "type": "float64"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointerinjector/PointerSample"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.pointerinjector/Registry.Register",
+        "ordinal": "718395677124749824",
+        "type": "(fuchsia.ui.pointerinjector/Config config,server_end:fuchsia.ui.pointerinjector/Device injector) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.pointerinjector/Registry"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.pointerinjector/Target.view",
+        "ordinal": "1",
+        "type": "fuchsia.ui.views/ViewRef"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.pointerinjector/Target",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Viewport.extents",
+        "ordinal": "1",
+        "type": "array<array<float32,2>,2>"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.pointerinjector/Viewport.viewport_to_context_transform",
+        "ordinal": "2",
+        "type": "array<float32,9>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.pointerinjector/Viewport"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.pointerinjector"
+    }
+]

@@ -1,0 +1,267 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/AppConfig.auth_provider_type",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/AppConfig.client_id",
+        "ordinal": "2",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/AppConfig.client_secret",
+        "ordinal": "3",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/AppConfig.redirect_uri",
+        "ordinal": "4",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.auth/AppConfig"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/AttestationSigner.SignData",
+        "ordinal": "5156408031239525219",
+        "type": "(vector<uint8> plaintext) -> (fuchsia.auth/AttestationSignerStatus status,vector<uint8>:optional signature)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.auth/AttestationSigner"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/AttestationSignerStatus.INVALID_ARGUMENT",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/AttestationSignerStatus.OK",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/AttestationSignerStatus.SIGNING_ERROR",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.auth/AttestationSignerStatus",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/AuthProviderConfig.auth_provider_type",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/AuthProviderConfig.params",
+        "ordinal": "3",
+        "type": "vector<string>:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/AuthProviderConfig.url",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.auth/AuthProviderConfig"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/AuthenticationContextProvider.GetAuthenticationUIContext",
+        "ordinal": "8571693674495486342",
+        "type": "(server_end:fuchsia.auth/AuthenticationUIContext request)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.auth/AuthenticationContextProvider"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/AuthenticationUIContext.StartOverlay",
+        "ordinal": "1759195047809256369",
+        "type": "(fuchsia.ui.views/ViewHolderToken view_holder_token)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/AuthenticationUIContext.StopOverlay",
+        "ordinal": "2829565860557833903",
+        "type": "()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.auth/AuthenticationUIContext"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/ServiceProviderAccount.identity_provider_domain",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/ServiceProviderAccount.user_profile_id",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.auth/ServiceProviderAccount"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.AUTH_PROVIDER_SERVER_ERROR",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.AUTH_PROVIDER_SERVICE_UNAVAILABLE",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.INTERNAL_ERROR",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.INVALID_AUTH_CONTEXT",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.INVALID_REQUEST",
+        "value": "5"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.IO_ERROR",
+        "value": "7"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.NETWORK_ERROR",
+        "value": "11"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.OK",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.REAUTH_REQUIRED",
+        "value": "9"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.UNKNOWN_ERROR",
+        "value": "8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.USER_CANCELLED",
+        "value": "10"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.auth/Status.USER_NOT_FOUND",
+        "value": "6"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.auth/Status",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/TokenManager.Authorize",
+        "ordinal": "1179614906323446605",
+        "type": "(fuchsia.auth/AppConfig app_config,client_end:<fuchsia.auth/AuthenticationUIContext,optional> auth_ui_context,vector<string> app_scopes,string:optional user_profile_id,string:optional auth_code) -> (fuchsia.auth/Status status,box<fuchsia.auth/UserProfileInfo> user_profile_info)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/TokenManager.DeleteAllTokens",
+        "ordinal": "1262637489830242650",
+        "type": "(fuchsia.auth/AppConfig app_config,string user_profile_id,bool force) -> (fuchsia.auth/Status status)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/TokenManager.GetAccessToken",
+        "ordinal": "4236433476347133173",
+        "type": "(fuchsia.auth/AppConfig app_config,string user_profile_id,vector<string> app_scopes) -> (fuchsia.auth/Status status,string:optional access_token)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/TokenManager.GetIdToken",
+        "ordinal": "4613758540197579219",
+        "type": "(fuchsia.auth/AppConfig app_config,string user_profile_id,string:optional audience) -> (fuchsia.auth/Status status,string:optional id_token)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/TokenManager.ListProfileIds",
+        "ordinal": "5899561549799865623",
+        "type": "(fuchsia.auth/AppConfig app_config) -> (fuchsia.auth/Status status,vector<string> user_profile_ids)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.auth/TokenManager"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth/TokenManagerFactory.GetTokenManager",
+        "ordinal": "5135718418731443932",
+        "type": "(string user_id,string application_url,vector<fuchsia.auth/AuthProviderConfig> auth_provider_configs,client_end:fuchsia.auth/AuthenticationContextProvider auth_context_provider,server_end:fuchsia.auth/TokenManager token_manager)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.auth/TokenManagerFactory"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/UserProfileInfo.display_name",
+        "ordinal": "2",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/UserProfileInfo.id",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/UserProfileInfo.image_url",
+        "ordinal": "4",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.auth/UserProfileInfo.url",
+        "ordinal": "3",
+        "type": "string:optional"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.auth/UserProfileInfo"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.auth"
+    }
+]

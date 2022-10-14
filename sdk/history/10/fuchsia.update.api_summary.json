@@ -1,0 +1,303 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/AttemptOptions.initiator",
+        "ordinal": "1",
+        "type": "fuchsia.update/Initiator"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/AttemptOptions"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update/AttemptsMonitor.OnStart",
+        "ordinal": "8496722247515178772",
+        "type": "(fuchsia.update/AttemptOptions options,server_end:fuchsia.update/Monitor monitor) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.update/AttemptsMonitor"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update/CheckNotStartedReason.ALREADY_IN_PROGRESS",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update/CheckNotStartedReason.INTERNAL",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update/CheckNotStartedReason.INVALID_OPTIONS",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update/CheckNotStartedReason.THROTTLED",
+        "value": "4"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.update/CheckNotStartedReason",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/CheckOptions.allow_attaching_to_existing_update_check",
+        "ordinal": "2",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/CheckOptions.initiator",
+        "ordinal": "1",
+        "type": "fuchsia.update/Initiator"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/CheckOptions"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/CheckingForUpdatesData"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update/CommitStatusProvider.IsCurrentSystemCommitted",
+        "ordinal": "5569020245381897649",
+        "type": "() -> (zx/handle:EVENTPAIR event)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.update/CommitStatusProvider"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/ErrorCheckingForUpdateData"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update/Initiator.SERVICE",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update/Initiator.USER",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.update/Initiator",
+        "strictness": "strict",
+        "type": "uint32"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.update/InstallationDeferralReason.CURRENT_SYSTEM_NOT_COMMITTED",
+        "value": "1"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.update/InstallationDeferralReason",
+        "strictness": "flexible",
+        "type": "uint32"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/InstallationDeferredData.deferral_reason",
+        "ordinal": "2",
+        "type": "fuchsia.update/InstallationDeferralReason"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/InstallationDeferredData.update",
+        "ordinal": "1",
+        "type": "fuchsia.update/UpdateInfo"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/InstallationDeferredData"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/InstallationErrorData.installation_progress",
+        "ordinal": "2",
+        "type": "fuchsia.update/InstallationProgress"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/InstallationErrorData.update",
+        "ordinal": "1",
+        "type": "fuchsia.update/UpdateInfo"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/InstallationErrorData"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/InstallationProgress.fraction_completed",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/InstallationProgress"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/InstallingData.installation_progress",
+        "ordinal": "2",
+        "type": "fuchsia.update/InstallationProgress"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/InstallingData.update",
+        "ordinal": "1",
+        "type": "fuchsia.update/UpdateInfo"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/InstallingData"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.update/MAX_VERSION_STRING_SIZE",
+        "type": "uint32",
+        "value": "128"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update/Manager.CheckNow",
+        "ordinal": "5357633357480737704",
+        "type": "(fuchsia.update/CheckOptions options,client_end:<fuchsia.update/Monitor,optional> monitor) -> (fuchsia.update/Manager_CheckNow_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update/Manager.MonitorAllUpdateChecks",
+        "ordinal": "4858204286291744139",
+        "type": "(client_end:fuchsia.update/AttemptsMonitor attempts_monitor)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update/Manager.PerformPendingReboot",
+        "ordinal": "7617790142625908637",
+        "type": "() -> (bool rebooting)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.update/Manager"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.update/Manager_CheckNow_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update/Manager_CheckNow_Result.err",
+        "ordinal": "2",
+        "type": "fuchsia.update/CheckNotStartedReason"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update/Manager_CheckNow_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.update/Manager_CheckNow_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.update/Manager_CheckNow_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.update/Monitor.OnState",
+        "ordinal": "7871435404436838196",
+        "type": "(fuchsia.update/State state) -> ()"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.update/Monitor"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/NoUpdateAvailableData"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update/State.checking_for_updates",
+        "ordinal": "1",
+        "type": "fuchsia.update/CheckingForUpdatesData"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update/State.error_checking_for_update",
+        "ordinal": "2",
+        "type": "fuchsia.update/ErrorCheckingForUpdateData"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update/State.installation_deferred_by_policy",
+        "ordinal": "4",
+        "type": "fuchsia.update/InstallationDeferredData"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update/State.installation_error",
+        "ordinal": "7",
+        "type": "fuchsia.update/InstallationErrorData"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update/State.installing_update",
+        "ordinal": "5",
+        "type": "fuchsia.update/InstallingData"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update/State.no_update_available",
+        "ordinal": "3",
+        "type": "fuchsia.update/NoUpdateAvailableData"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.update/State.waiting_for_reboot",
+        "ordinal": "6",
+        "type": "fuchsia.update/InstallingData"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.update/State",
+        "strictness": "strict"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/UpdateInfo.download_size",
+        "ordinal": "2",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/UpdateInfo.urgent",
+        "ordinal": "3",
+        "type": "bool"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.update/UpdateInfo.version_available",
+        "ordinal": "1",
+        "type": "string:128"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.update/UpdateInfo"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.update"
+    }
+]

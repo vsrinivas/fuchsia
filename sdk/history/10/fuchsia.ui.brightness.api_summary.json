@@ -1,0 +1,137 @@
+[
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.brightness/BrightnessPoint.ambient_lux",
+        "ordinal": "1",
+        "type": "float32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.brightness/BrightnessPoint.display_nits",
+        "ordinal": "2",
+        "type": "float32"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.brightness/BrightnessPoint"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.brightness/BrightnessTable.points",
+        "ordinal": "1",
+        "type": "vector<fuchsia.ui.brightness/BrightnessPoint>:50"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.brightness/BrightnessTable"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/ColorAdjustmentHandler.SetColorAdjustment",
+        "ordinal": "7095308169090099773",
+        "type": "(fuchsia.ui.brightness/ColorAdjustmentTable color_adjustment)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.brightness/ColorAdjustmentHandler"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.brightness/ColorAdjustmentTable.matrix",
+        "ordinal": "1",
+        "type": "array<float32,9>"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.brightness/ColorAdjustmentTable"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/Control.GetMaxAbsoluteBrightness",
+        "ordinal": "8288130252562156280",
+        "type": "() -> (fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result result)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/Control.SetAutoBrightness",
+        "ordinal": "5095299232784951673",
+        "type": "()"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/Control.SetAutoBrightnessAdjustment",
+        "ordinal": "7462150585045211542",
+        "type": "(float32 adjustment)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/Control.SetBrightnessTable",
+        "ordinal": "1284679561495829742",
+        "type": "(fuchsia.ui.brightness/BrightnessTable table)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/Control.SetManualBrightness",
+        "ordinal": "2176147523539952107",
+        "type": "(float32 value)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/Control.SetManualBrightnessSmooth",
+        "ordinal": "8898311577953246476",
+        "type": "(float32 value,int64 duration)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/Control.WatchAutoBrightness",
+        "ordinal": "978805663970170987",
+        "type": "() -> (bool enabled)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/Control.WatchAutoBrightnessAdjustment",
+        "ordinal": "8950687311474295093",
+        "type": "() -> (float32 adjustment)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.brightness/Control.WatchCurrentBrightness",
+        "ordinal": "3225422987077801176",
+        "type": "() -> (float32 value)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.brightness/Control"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response.max_brightness",
+        "ordinal": "1",
+        "type": "float64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.brightness"
+    }
+]

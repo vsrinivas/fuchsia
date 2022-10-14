@@ -1,0 +1,65 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.ui.app/CreateView2Args.view_creation_token",
+        "ordinal": "1",
+        "type": "fuchsia.ui.views/ViewCreationToken"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.app/CreateView2Args",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.app/View.Attach",
+        "ordinal": "8955752207985670062",
+        "type": "(zx/handle:EVENTPAIR view_token)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.app/View.SetConfig",
+        "ordinal": "6175847024784405768",
+        "type": "(fuchsia.ui.app/ViewConfig config)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.app/View"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.ui.app/ViewConfig.intl_profile",
+        "ordinal": "1",
+        "type": "fuchsia.intl/Profile"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.app/ViewConfig"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.app/ViewProvider.CreateView",
+        "ordinal": "4602213985402103992",
+        "type": "(zx/handle:EVENTPAIR token,server_end:<fuchsia.sys/ServiceProvider,optional> incoming_services,fuchsia.sys/ServiceProvider:optional outgoing_services)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.app/ViewProvider.CreateView2",
+        "ordinal": "8697758317325517954",
+        "type": "(fuchsia.ui.app/CreateView2Args args)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.app/ViewProvider.CreateViewWithViewRef",
+        "ordinal": "6371788243217062534",
+        "type": "(zx/handle:EVENTPAIR token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.app/ViewProvider"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.app"
+    }
+]

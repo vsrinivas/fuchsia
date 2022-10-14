@@ -1,0 +1,32 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.thermal/ClientStateConnector.Connect",
+        "ordinal": "7326182016139766301",
+        "type": "(string:8 client_type,server_end:fuchsia.thermal/ClientStateWatcher watcher)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.thermal/ClientStateConnector"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.thermal/ClientStateWatcher.Watch",
+        "ordinal": "4936810604583464830",
+        "type": "() -> (uint64 state)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.thermal/ClientStateWatcher"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.thermal/MAX_THERMAL_LOAD",
+        "type": "uint32",
+        "value": "100"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.thermal"
+    }
+]

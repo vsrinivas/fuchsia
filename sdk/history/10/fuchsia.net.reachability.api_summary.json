@@ -1,0 +1,36 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.net.reachability/Monitor.SetOptions",
+        "ordinal": "3336717261845512787",
+        "type": "(fuchsia.net.reachability/MonitorOptions payload)"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.net.reachability/Monitor.Watch",
+        "ordinal": "4043849367163201151",
+        "type": "() -> (fuchsia.net.reachability/Snapshot payload)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.net.reachability/Monitor"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.reachability/MonitorOptions"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.net.reachability/Snapshot.internet_available",
+        "ordinal": "1",
+        "type": "bool"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.net.reachability/Snapshot"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.net.reachability"
+    }
+]

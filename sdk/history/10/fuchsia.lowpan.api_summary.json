@@ -1,0 +1,32 @@
+[
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan/DeviceWatcher.WatchDevices",
+        "ordinal": "7054186464268995000",
+        "type": "() -> (vector<string:32>:8 added,vector<string:32>:8 removed)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan/DeviceWatcher"
+    },
+    {
+        "kind": "const",
+        "name": "fuchsia.lowpan/MAX_LOWPAN_DEVICES",
+        "type": "uint32",
+        "value": "8"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.lowpan/MacAddress.octets",
+        "ordinal": "1",
+        "type": "array<uint8,8>"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.lowpan/MacAddress"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.lowpan"
+    }
+]

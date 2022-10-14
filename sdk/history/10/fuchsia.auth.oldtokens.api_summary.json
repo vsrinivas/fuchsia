@@ -1,0 +1,32 @@
+[
+    {
+        "kind": "table/member",
+        "name": "fuchsia.auth.oldtokens/Credential.access_token",
+        "ordinal": "2",
+        "type": "string"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.auth.oldtokens/Credential.user_id",
+        "ordinal": "1",
+        "type": "string"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.auth.oldtokens/Credential"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.auth.oldtokens/CredentialsProducer.GetUpdatedCredentials",
+        "ordinal": "140450894918238212",
+        "type": "() -> (vector<fuchsia.auth.oldtokens/Credential> credentials)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.auth.oldtokens/CredentialsProducer"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.auth.oldtokens"
+    }
+]
