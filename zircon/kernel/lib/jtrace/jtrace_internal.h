@@ -207,7 +207,9 @@ class JTrace {
     CleanCache(hdr()->entries + wr, sizeof(Entry));
   }
 
-  void Dump() {
+  // |timeout| controls how long this method will wait (spin) for other threads
+  // to complete in progress writes before continuing on and dumping the buffer.
+  void Dump(zx_duration_t timeout) {
     if (hdr() == nullptr) {
       hooks_.PrintWarning("No debug trace buffer was ever configured\n");
       return;
@@ -220,12 +222,13 @@ class JTrace {
     // is that we end up with a partially garbled trace record.
     SetTraceEnabled(false);
 
-    constexpr zx_duration_t timeout = ZX_MSEC(20);
     const affine::Ratio ticks_to_mono_ratio = platform_get_ticks_to_time_ratio();
-    const zx_ticks_t deadline = current_ticks() + ticks_to_mono_ratio.Inverse().Scale(timeout);
+    const zx_ticks_t deadline =
+        zx_ticks_add_ticks(current_ticks(), ticks_to_mono_ratio.Inverse().Scale(timeout));
     while ((trace_ops_in_flight_.load(ktl::memory_order_acquire) > 0) &&
            (current_ticks() < deadline)) {
       // just spin while we wait.
+      arch::Yield();
     }
 
     // Print a warning if we never saw the in flight op-count hit zero, then go

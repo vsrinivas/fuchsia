@@ -429,7 +429,7 @@ struct tests {
     // new trace entry should still not crash the system.
     JTRACE(state->trace, "Test tag", 1);
     state->hooks.Reset();
-    state->trace.Dump();
+    state->trace.Dump(ZX_TIME_INFINITE);
     ASSERT_TRUE(state->hooks.CheckDumpFailed());
 
     // Now actually set the location of the trace storage, and check that the set stuck.
@@ -452,7 +452,7 @@ struct tests {
       JTRACE(state->trace, "Test tag", i + 1);
     };
     state->hooks.Reset(1);
-    state->trace.Dump();
+    state->trace.Dump(ZX_TIME_INFINITE);
     ASSERT_TRUE(state->hooks.CheckDumpSucceeded(kExpectedEntryCount));
 
     END_TEST;
@@ -479,7 +479,7 @@ struct tests {
     // entry IDs in the trace should currently be on the range
     // [1, entry_cnt_]
     state->hooks.Reset(1);
-    state->trace.Dump();
+    state->trace.Dump(ZX_TIME_INFINITE);
     ASSERT_TRUE(state->hooks.CheckDumpSucceeded(TestState<Config>::kExpectedEntries));
 
     // Now wrap the trace, overwriting all but one of the original entries.
@@ -492,7 +492,7 @@ struct tests {
     // entry IDs in the trace should currently be on the range
     // [entry_cnt_, (2 * entry_cnt_) - 1]
     state->hooks.Reset(state->trace.entry_cnt_);
-    state->trace.Dump();
+    state->trace.Dump(ZX_TIME_INFINITE);
     ASSERT_TRUE(state->hooks.CheckDumpSucceeded(TestState<Config>::kExpectedEntries));
 
     END_TEST;
@@ -610,7 +610,7 @@ struct tests {
 
     // Set up our hooks to know which CPU should have created the per_cpu last entry;
     state->hooks.Reset(1, expected_cpu, id);
-    state->trace.Dump();
+    state->trace.Dump(ZX_TIME_INFINITE);
     ASSERT_TRUE(state->hooks.CheckDumpSucceeded(3u));
 
     END_TEST;
