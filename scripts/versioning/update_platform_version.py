@@ -9,6 +9,7 @@ Updates the Fuchsia platform version.
 import argparse
 import json
 import os
+import re
 import secrets
 import shutil
 import sys
@@ -17,6 +18,7 @@ from pathlib import Path
 
 PLATFORM_VERSION_PATH = "build/config/fuchsia/platform_version.json"
 VERSION_HISTORY_PATH = "sdk/version_history.json"
+FIDL_COMPATIBILITY_DOC_PATH = "docs/development/testing/ctf/fidl_api_compatibility_testing.md"
 
 
 def update_platform_version(fuchsia_api_level):
@@ -36,6 +38,28 @@ def update_platform_version(fuchsia_api_level):
             """error: Unable to open '{path}'.
 Did you run this script from the root of the source tree?""".format(
                 path=PLATFORM_VERSION_PATH),
+            file=sys.stderr)
+        return False
+
+
+def update_fidl_compatibility_doc(fuchsia_api_level):
+    """Updates fidl_api_compatibility_testing.md given the in-development API level."""
+    try:
+        with open(FIDL_COMPATIBILITY_DOC_PATH, "r+") as f:
+            old_content = f.read()
+            new_content = re.sub(
+                r"\{% set in_development_api_level = \d+ %\}",
+                f"{{% set in_development_api_level = {fuchsia_api_level} %}}",
+                old_content)
+            f.seek(0)
+            f.write(new_content)
+            f.truncate()
+        return True
+    except FileNotFoundError:
+        print(
+            """error: Unable to open '{path}'.
+Did you run this script from the root of the source tree?""".format(
+                path=FIDL_COMPATIBILITY_DOC_PATH),
             file=sys.stderr)
         return False
 
@@ -153,6 +177,9 @@ def main():
         return 1
 
     if not update_platform_version(args.fuchsia_api_level):
+        return 1
+
+    if not update_fidl_compatibility_doc(args.fuchsia_api_level):
         return 1
 
     if args.update_goldens:

@@ -449,6 +449,11 @@ version selection, fidlc produces a warning/error.[^3]
 
 ## Policy {#policy}
 
+> *Note (Oct 2022)*. This section sketched out an initial policy, and is no
+> longer up to date. In particular, most new changes should be added at the
+> current in-development API level, not at `HEAD`. See [FIDL API compatibility
+> testing][api-compat-testing] for details.
+
 FIDL Versioning makes it possible to evolve APIs without breaking applications,
 but it does not guarantee it. To that end, we adopt the following policies,
 specifically for the Fuchsia Platform:
@@ -841,3 +846,4 @@ i.e. without taking action to migrate.
 [value-vs-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [max-bound]: https://fuchsia-review.googlesource.com/c/fuchsia/+/325737
 [style]: /docs/development/languages/fidl/guides/style.md#files
+[api-compat-testing]: /docs/development/testing/ctf/fidl_api_compatibility_testing.md

@@ -75,16 +75,15 @@ target this API level.
 Usually compatibility issues can be fixed by adding `@available` annotations on FIDL
 declarations.
 
-{% set active = 8 %}
-Below are some good guidelines to follow when changing FIDL APIs. For shorthand,
-let's say the active API level is {{ active }}:
+{% set in_development_api_level = 10 %}
+Below are some good guidelines to follow when changing FIDL APIs.
 
 1. Annotate new, unstable APIs with `@available(added=HEAD)`.
-1. Annotate new, stable APIs with `@available(added={{ active }})`.
+1. Annotate new, stable APIs with `@available(added={{ in_development_api_level }})`.
 1. When removing an API, first make sure no parters are still using the API, then
-   annotate the old API with `@available(removed={{ active+1 }})`.
+   annotate the old API with `@available(removed={{ in_development_api_level+1 }})`.
 
-For more examples, see the [FIDL compatibility guide]
+For more examples, see the [FIDL compatibility guide].
 
 [FIDL versioning]: /docs/reference/fidl/language/versioning.md
 [Fuchsia API levels]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
