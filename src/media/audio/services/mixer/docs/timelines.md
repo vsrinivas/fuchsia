@@ -181,10 +181,9 @@ void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) {
   else if (this is a ProducerStage) {
     // `f` defines the translation from presentation time to downstream frame.
     this.presentation_time_to_frac_frame = f;
-    // See next section.
-    if (is child of Splitter) {
-      send `UpdatePresentationTimeToFracFrame(f)` message to the Splitter's ConsumerStage
-    }
+  }
+  else if (this is a Splitter) {
+    // see below
   }
 }
 ```
@@ -196,59 +195,19 @@ presentation time is defined by a two-step translation from internal frame, to
 media timestamp, to presentation timestamp. This internal translation is updated
 each time the Producer is started or stopped.
 
-### Propagating Start and Stop across Splitters
+At Splitters, there may be multiple destination streams. We split these streams
+into same-thread streams and other-thread streams. Splitters are
+[driven by same-thread destination streams](splitters.md), so we ignore frame
+timeline updates coming from other threads. For frame timeline updates coming
+from the same thread, the first update wins: once the splitter is "started", it
+keeps that TimelineFunction forever. (This could in theory be relaxed -- we
+could change the Splitter's TimelineFunction as destinations are added and
+removed -- but this introduces tricky synchronization problems when the
+Splitter's destinations run on different threads.)
 
-So far we have focused on PipelineStage trees. If the mix graph has Splitter
-nodes, then each SplitterNode is composed of a ConsumerStage, which represents
-the Splitter's source stream, and multiple ProducerStages, which represent the
-Splitter's destination streams. Within a SplitterNode, the ConsumerStage's frame
-timeline can be defined arbitrarily, while each ProducerStage's *internal* frame
-timeline should match the ConsumerStage's frame timeline. This ensures that
-ProducerStages will perform frame timeline translations on behalf of the
-SplitterNode. To minimize translations, the ConsumerStage's frame timeline
-should match at least one ProducerStage's *downstream* frame timeline. We use a
-heuristic as follows:
-
-When a ConsumerNode is started or stopped, we propagate this signal upwards
-through SplitterNodes. Suppose a SplitterNode has a source edge represented by
-ConsumerStage C and destination edges represented by ProducerStages P1 and P2,
-which feed into Consumers C1 and C2, respectively. When C1 is started or
-stopped, C1 will call `UpdatePresentationTimeToFracFrame(f)`, which eventually
-propagates upwards to P1. As shown above, P1 forwards `f` (over a thread-safe
-message queue) to C, which handles that message as follows:
-
-*   If the Splitter is stopped and `f != nullopt` (the Splitter is being
-    started), set `C.presentation_time_to_frac_frame = f`, then send P1 a
-    message telling P1 to set its internal frame timeline to `f`. This will use
-    the same frame timeline from C1 through P1 through C's source tree (modulo
-    frame rate and clock changes).
-
-*   If the Splitter is started and `f != nullopt`, the Splitter has two
-    destination streams that have started and may have different frame
-    timelines. For example, this happens when C2 starts after C1. In this case,
-    the Splitter sticks with its current frame timeline. C sends P2 a message
-    telling P2 to set its internal frame timeline to match
-    `C.presentation_time_to_frac_frame`. This ensures that P2 can appropriately
-    schedule packets received from C.
-
-*   If the Splitter is started and `f == nullopt`, C decrements its count of
-    started destination edges. Once this count reaches zero, C also stops.
-
-A special case happens when the Splitter goes through a transition from Started,
-to Stopped, back to Started, such as in the following sequence:
-
-*   P1 starts
-*   P2 starts
-*   P1 and P2 stop
-*   P2 starts
-
-When the Splitter starts the first time, it uses the same frame timeline as C1.
-When the Splitter starts the second time, it uses the same frame timeline as C2.
-Since there is no relationship between the frame timelines of C1 and C2, it's
-possible that C2's frame timeline is behind C1's, which makes the Splitter's
-frame time appear to go backwards. To account for this possibility, C's source
-tree must be [`Reset`](TODO<fxbug.dev/87651>: add link) to account for the fact
-that frame time may change in an arbitrary way.
+Within a Splitter, each destination stream is wrapped by a Producer that reads
+from an internal ring buffer. That Producer is responsible for translating
+between the downstream frame timeline and the Splitter's frame timeline.
 
 ### Example
 
@@ -256,7 +215,9 @@ The following example demonstrates how frame time can propagate through a mix
 graph. As we walk the graph upwards from a Consumer, note that frame timelines
 change in just in two cases: at MixerStages (when the source has a different
 frame rate or clock) and within ProducerStages (where the internal frame
-timeline may differ from the downstream frame timeline).
+timeline may differ from the downstream frame timeline). In this example,
+`Custom1` happened to send a frame timeline update to the Splitter before
+`Custom2.
 
 <!-- frame-time-example.png
 
