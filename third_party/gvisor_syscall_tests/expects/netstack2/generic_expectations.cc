@@ -22,6 +22,27 @@ void AddNonPassingTests(TestMap& tests) {
   // Fuchsia does not support Unix sockets.
   ExpectFailure(tests, "OpenModes/SocketOpenTest.Unix/*");
 
+  // https://fxbug.dev/35593
+  ExpectFailure(tests, "BadSocketPairArgs.ValidateErrForBadCallsToSocketPair");
+  // https://fxbug.dev/61714
+  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdownListen/*");
+  // https://fxbug.dev/35596
+  // Deadlock? Test makes no progress even when run in isolation.
+  SkipTest(tests, "All/SocketInetReusePortTest.TcpPortReuseMultiThread/*");
+  // https://fxbug.dev/35596
+  // Deadlock? Test makes no progress even when run in isolation.
+  SkipTest(tests, "All/SocketInetReusePortTest.UdpPortReuseMultiThreadShort/*");
+  // https://fxbug.dev/35596
+  // Deadlock? Test makes no progress even when run in isolation.
+  SkipTest(tests, "All/SocketInetReusePortTest.UdpPortReuseMultiThread/*");
+  // https://fxbug.dev/44151
+  for (const auto& parameter :
+       {"V4AnyBindConnectSendTo", "V4AnyBindSendToConnect", "V4AnyConnectBindSendTo",
+        "V4AnyConnectSendToBind", "V4AnySendToBindConnect", "V4AnySendToConnectBind",
+        "V4LoopbackBindConnectSendTo", "V4LoopbackBindSendToConnect"}) {
+    ExpectFailure(tests, TestSelector::ParameterizedTest("All", "DualStackSocketTest",
+                                                         "AddressOperations", parameter));
+  }
   // https://fxbug.dev/55205
   //
   // This test encodes some known incorrect behavior on gVisor. That incorrect
