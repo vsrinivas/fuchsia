@@ -135,10 +135,13 @@ where
                                 debug!("failed to close DNS server watcher {:?}", e)
                             });
                     }
-                    StackRequest::SetDhcpClientEnabled { responder, id: _, enable: _ } => {
+                    StackRequest::SetDhcpClientEnabled { responder, id: _, enable } => {
                         // TODO(https://fxbug.dev/81593): Remove this once
                         // DHCPv4 client is implemented out-of-stack.
-                        responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
+                        if enable {
+                            error!("TODO(https://fxbug.dev/111066): Support starting DHCP client");
+                        }
+                        responder_send!(responder, &mut Ok(()));
                     }
                 }
                 Ok(worker)
