@@ -351,8 +351,10 @@ impl<T: Sensor<T>> SensorLogger<T> {
                         (time_stamp - self.start_time).into_millis(),
                     );
 
-                    trace_args
-                        .push(fuchsia_trace::ArgValue::of(&sensor_names[index], value as f64));
+                    trace_args.push(fuchsia_trace::ArgValue::of(
+                        self.drivers[index].name(),
+                        value as f64,
+                    ));
 
                     match T::sensor_type() {
                         SensorType::Temperature => {

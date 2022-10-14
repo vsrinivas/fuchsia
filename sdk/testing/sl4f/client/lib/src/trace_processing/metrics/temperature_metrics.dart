@@ -26,7 +26,7 @@ List<TestCaseResults> temperatureMetricsProcessor(
   List<double> temperatureReadings = getArgValuesFromEvents<num>(
           filterEventsTyped<CounterEvent>(getAllEvents(model),
               category: 'metrics_logger', name: 'temperature'),
-          'soc_pll(/dev/aml-thermal-pll/thermal)')
+          'soc_pll')
       .map((t) => t.toDouble())
       .toList();
   if (temperatureReadings.isEmpty) {
