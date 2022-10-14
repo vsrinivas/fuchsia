@@ -15,6 +15,7 @@ mod state;
 use alloc::boxed::Box;
 use core::{
     fmt::{self, Debug, Display, Formatter},
+    hash::{Hash, Hasher},
     marker::PhantomData,
     num::NonZeroU32,
 };
@@ -56,7 +57,7 @@ use crate::{
         types::{AddableEntry, AddableEntryEither},
         DualStackDeviceIdContext, IpDeviceId, IpDeviceIdContext,
     },
-    sync::{ReferenceCounted, RwLock},
+    sync::{ReferenceCounted, RwLock, WeakReferenceCounted},
     BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
 };
 
@@ -124,6 +125,66 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
     }
 }
 
+fn with_ethernet_state<
+    NonSyncCtx: NonSyncContext,
+    O,
+    F: FnOnce(&IpLinkDeviceState<NonSyncCtx::Instant, EthernetDeviceState>) -> O,
+>(
+    sync_ctx: &SyncCtx<NonSyncCtx>,
+    EthernetDeviceId(id, ptr): &EthernetDeviceId<NonSyncCtx::Instant>,
+    cb: F,
+) -> O {
+    // We assume that the device ID is always valid and that it is a programmer
+    // error to provide an ID which is invalid (e.g. removed) so we `.unwrap()`
+    // here.
+    //
+    // TODO(https://fxbug.dev/100759): Allow device IDs to be invalid and return
+    // appropriate errors instead of panicking.
+    let ptr = ptr.upgrade().unwrap();
+
+    // Make sure that the pointer belongs to this `sync_ctx`.
+    //
+    // We only do this in debug builds so that we can avoid taking the devices
+    // map read lock in release builds.
+    debug_assert!({
+        let devices = sync_ctx.state.device.devices.read();
+        let in_map_ptr = devices.ethernet.get(*id).unwrap();
+        ReferenceCounted::ptr_eq(in_map_ptr, &ptr)
+    });
+
+    cb(&ptr)
+}
+
+fn with_loopback_state<
+    NonSyncCtx: NonSyncContext,
+    O,
+    F: FnOnce(&IpLinkDeviceState<NonSyncCtx::Instant, LoopbackDeviceState>) -> O,
+>(
+    sync_ctx: &SyncCtx<NonSyncCtx>,
+    LoopbackDeviceId(ptr): &LoopbackDeviceId<NonSyncCtx::Instant>,
+    cb: F,
+) -> O {
+    // We assume that the device ID is always valid and that it is a programmer
+    // error to provide an ID which is invalid (e.g. removed) so we `.unwrap()`
+    // here.
+    //
+    // TODO(https://fxbug.dev/100759): Allow device IDs to be invalid and return
+    // appropriate errors instead of panicking.
+    let ptr = ptr.upgrade().unwrap();
+
+    // Make sure that the pointer belongs to this `sync_ctx`.
+    //
+    // We only do this in debug builds so that we can avoid taking the devices
+    // map read lock in release builds.
+    debug_assert!({
+        let devices = sync_ctx.state.device.devices.read();
+        let in_map_ptr = devices.loopback.as_ref().unwrap();
+        ReferenceCounted::ptr_eq(in_map_ptr, &ptr)
+    });
+
+    cb(&ptr)
+}
+
 fn with_ip_device_state<
     NonSyncCtx: NonSyncContext,
     O,
@@ -134,22 +195,8 @@ fn with_ip_device_state<
     cb: F,
 ) -> O {
     match device.inner() {
-        DeviceIdInner::Ethernet(EthernetDeviceId(id, _)) => {
-            let eth = {
-                let devices = ctx.state.device.devices.read();
-                ReferenceCounted::clone(devices.ethernet.get(*id).unwrap())
-            };
-
-            cb(&eth.ip)
-        }
-        DeviceIdInner::Loopback(LoopbackDeviceId(_)) => {
-            let loopback = {
-                let devices = ctx.state.device.devices.read();
-                ReferenceCounted::clone(devices.loopback.as_ref().unwrap())
-            };
-
-            cb(&loopback.ip)
-        }
+        DeviceIdInner::Ethernet(id) => with_ethernet_state(ctx, id, |state| cb(&state.ip)),
+        DeviceIdInner::Loopback(id) => with_loopback_state(ctx, id, |state| cb(&state.ip)),
     }
 }
 
@@ -164,11 +211,12 @@ fn with_devices<
     let Devices { ethernet, loopback } = &*ctx.state.device.devices.read();
 
     cb(Box::new(
-        ethernet.iter().map(|(id, _state)| EthernetDeviceId(id, Default::default()).into()).chain(
-            loopback
-                .iter()
-                .map(|_state| DeviceIdInner::Loopback(LoopbackDeviceId(Default::default())).into()),
-        ),
+        ethernet
+            .iter()
+            .map(|(id, state)| EthernetDeviceId(id, ReferenceCounted::downgrade(state)).into())
+            .chain(loopback.iter().map(|state| {
+                DeviceIdInner::Loopback(LoopbackDeviceId(ReferenceCounted::downgrade(state))).into()
+            })),
     ))
 }
 
@@ -523,8 +571,27 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
 
 /// Device IDs identifying Ethernet devices.
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Eq(bound = ""), PartialEq(bound = ""), Hash(bound = ""))]
-pub(crate) struct EthernetDeviceId<I: Instant>(usize, core::marker::PhantomData<I>);
+#[derivative(Clone(bound = ""))]
+pub(crate) struct EthernetDeviceId<I: Instant>(
+    usize,
+    WeakReferenceCounted<IpLinkDeviceState<I, EthernetDeviceState>>,
+);
+
+impl<I: Instant> PartialEq for EthernetDeviceId<I> {
+    fn eq(&self, EthernetDeviceId(other_id, other_ptr): &EthernetDeviceId<I>) -> bool {
+        let EthernetDeviceId(me_id, me_ptr) = self;
+        other_id == me_id && me_ptr.ptr_eq(other_ptr)
+    }
+}
+
+impl<I: Instant> Eq for EthernetDeviceId<I> {}
+
+impl<I: Instant> Hash for EthernetDeviceId<I> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let EthernetDeviceId(_id, me) = self;
+        me.as_ptr().hash(state)
+    }
+}
 
 impl<I: Instant> Debug for EthernetDeviceId<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -537,12 +604,6 @@ impl<I: Instant> Display for EthernetDeviceId<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let device: DeviceId<I> = self.clone().into();
         write!(f, "{}", device)
-    }
-}
-
-impl<I: Instant> From<usize> for EthernetDeviceId<I> {
-    fn from(id: usize) -> EthernetDeviceId<I> {
-        EthernetDeviceId(id, Default::default())
     }
 }
 
@@ -650,7 +711,9 @@ impl<I: Instant> IpDeviceId for DeviceId<I> {
 impl<I: Instant> Display for DeviceId<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         match self.inner() {
-            DeviceIdInner::Ethernet(EthernetDeviceId(id, _)) => write!(f, "Ethernet({})", id),
+            DeviceIdInner::Ethernet(EthernetDeviceId(id, _ptr)) => {
+                write!(f, "Ethernet({})", id)
+            }
             DeviceIdInner::Loopback(LoopbackDeviceId(_)) => write!(f, "Loopback"),
         }
     }
@@ -738,10 +801,13 @@ impl<I: Instant> DeviceLayerState<I> {
     pub(crate) fn add_ethernet_device(&self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId<I> {
         let Devices { ethernet, loopback: _ } = &mut *self.devices.write();
 
-        let id = ethernet
-            .push(IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build()).into());
+        let ptr = ReferenceCounted::new(IpLinkDeviceState::new(
+            EthernetDeviceStateBuilder::new(mac, mtu).build(),
+        ));
+        let weak_ptr = ReferenceCounted::downgrade(&ptr);
+        let id = ethernet.push(ptr);
         debug!("adding Ethernet device with ID {} and MTU {}", id, mtu);
-        EthernetDeviceId(id, Default::default()).into()
+        EthernetDeviceId(id, weak_ptr).into()
     }
 
     /// Adds a new loopback device to the device layer.
@@ -752,11 +818,14 @@ impl<I: Instant> DeviceLayerState<I> {
             return Err(ExistsError);
         }
 
-        *loopback = Some(IpLinkDeviceState::new(LoopbackDeviceState::new(mtu)).into());
+        let ptr = ReferenceCounted::new(IpLinkDeviceState::new(LoopbackDeviceState::new(mtu)));
+        let id = ReferenceCounted::downgrade(&ptr);
+
+        *loopback = Some(ptr);
 
         debug!("added loopback device");
 
-        Ok(DeviceIdInner::Loopback(LoopbackDeviceId(Default::default())).into())
+        Ok(DeviceIdInner::Loopback(LoopbackDeviceId(id)).into())
     }
 }
 
@@ -830,17 +899,20 @@ pub fn remove_device<NonSyncCtx: NonSyncContext>(
     let mut devices = sync_ctx.state.device.devices.write();
 
     match device.inner() {
-        DeviceIdInner::Ethernet(id) => {
-            let EthernetDeviceId(id, _) = id;
-            let _: ReferenceCounted<IpLinkDeviceState<_, _>> = devices
+        DeviceIdInner::Ethernet(EthernetDeviceId(id, ptr)) => {
+            let removed = devices
                 .ethernet
                 .remove(*id)
                 .unwrap_or_else(|| panic!("no such Ethernet device: {}", id));
+            let ptr = ptr.upgrade().unwrap();
+            assert!(ReferenceCounted::ptr_eq(&ptr, &removed));
             debug!("removing Ethernet device with ID {}", id);
         }
-        DeviceIdInner::Loopback(LoopbackDeviceId(_)) => {
-            let _: ReferenceCounted<IpLinkDeviceState<_, _>> =
+        DeviceIdInner::Loopback(LoopbackDeviceId(ptr)) => {
+            let removed: ReferenceCounted<IpLinkDeviceState<_, _>> =
                 devices.loopback.take().expect("loopback device does not exist");
+            let ptr = ptr.upgrade().unwrap();
+            assert!(ReferenceCounted::ptr_eq(&ptr, &removed));
             debug!("removing Loopback device");
         }
     }
@@ -1009,10 +1081,9 @@ impl<NonSyncCtx: NonSyncContext, I: Ip> IpDeviceIdContext<I> for &'_ SyncCtx<Non
 
     fn loopback_id(&self) -> Option<DeviceId<NonSyncCtx::Instant>> {
         let devices = self.state.device.devices.read();
-        devices
-            .loopback
-            .as_ref()
-            .map(|_state| DeviceIdInner::Loopback(LoopbackDeviceId(Default::default())).into())
+        devices.loopback.as_ref().map(|state| {
+            DeviceIdInner::Loopback(LoopbackDeviceId(ReferenceCounted::downgrade(state))).into()
+        })
     }
 }
 

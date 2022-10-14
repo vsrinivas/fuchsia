@@ -39,14 +39,15 @@ use crate::{
             ArpContext, ArpFrameMetadata, ArpPacketHandler, ArpState, ArpTimerId, BufferArpContext,
         },
         link::LinkDevice,
-        Device, DeviceIdContext, EthernetDeviceId, FrameDestination, RecvIpFrameMeta,
+        with_ethernet_state, Device, DeviceIdContext, EthernetDeviceId, FrameDestination,
+        RecvIpFrameMeta,
     },
     error::ExistsError,
     ip::device::{
         nud::{BufferNudContext, BufferNudHandler, NudContext, NudState, NudTimerId},
         state::AddrConfig,
     },
-    sync::{Mutex, ReferenceCounted, RwLock},
+    sync::{Mutex, RwLock},
     BufferNonSyncContext, NonSyncContext, SyncCtx,
 };
 
@@ -145,14 +146,10 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
 {
     fn with_static_ethernet_device_state<O, F: FnOnce(&StaticEthernetDeviceState) -> O>(
         &self,
-        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
+        device_id: &EthernetDeviceId<NonSyncCtx::Instant>,
         cb: F,
     ) -> O {
-        let eth = {
-            let devices = self.state.device.devices.read();
-            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
-        };
-        cb(&eth.link.static_state)
+        with_ethernet_state(self, device_id, |state| cb(&state.link.static_state))
     }
 
     fn with_ethernet_device_state<
@@ -160,17 +157,14 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
         F: FnOnce(&StaticEthernetDeviceState, &DynamicEthernetDeviceState) -> O,
     >(
         &self,
-        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
+        device_id: &EthernetDeviceId<NonSyncCtx::Instant>,
         cb: F,
     ) -> O {
-        let eth = {
-            let devices = self.state.device.devices.read();
-            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
-        };
-
-        let state = &eth.link;
-        let dynamic_state = state.dynamic_state.read();
-        cb(&state.static_state, &dynamic_state)
+        with_ethernet_state(self, device_id, |state| {
+            let state = &state.link;
+            let dynamic_state = state.dynamic_state.read();
+            cb(&state.static_state, &dynamic_state)
+        })
     }
 
     fn with_ethernet_device_state_mut<
@@ -178,16 +172,14 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx>
         F: FnOnce(&StaticEthernetDeviceState, &mut DynamicEthernetDeviceState) -> O,
     >(
         &mut self,
-        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
+        device_id: &EthernetDeviceId<NonSyncCtx::Instant>,
         cb: F,
     ) -> O {
-        let eth = {
-            let devices = self.state.device.devices.read();
-            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
-        };
-        let state = &eth.link;
-        let mut dynamic_state = state.dynamic_state.write();
-        cb(&state.static_state, &mut dynamic_state)
+        with_ethernet_state(self, device_id, |state| {
+            let state = &state.link;
+            let mut dynamic_state = state.dynamic_state.write();
+            cb(&state.static_state, &mut dynamic_state)
+        })
     }
 
     fn add_ipv6_addr_subnet(
@@ -262,30 +254,22 @@ impl<
 impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx>
     for &'_ SyncCtx<NonSyncCtx>
 {
-    fn retrans_timer(
-        &self,
-        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
-    ) -> NonZeroDuration {
-        let eth = {
-            let devices = self.state.device.devices.read();
-            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
-        };
-
-        let ipv6 = eth.ip.ipv6.read();
-        ipv6.retrans_timer
+    fn retrans_timer(&self, device_id: &EthernetDeviceId<NonSyncCtx::Instant>) -> NonZeroDuration {
+        with_ethernet_state(self, device_id, |state| {
+            let ipv6 = state.ip.ipv6.read();
+            ipv6.retrans_timer
+        })
     }
 
     fn with_nud_state_mut<O, F: FnOnce(&mut NudState<Ipv6, Mac>) -> O>(
         &mut self,
-        &EthernetDeviceId(id, _): &EthernetDeviceId<NonSyncCtx::Instant>,
+        device_id: &EthernetDeviceId<NonSyncCtx::Instant>,
         cb: F,
     ) -> O {
-        let eth = {
-            let devices = self.state.device.devices.read();
-            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
-        };
-        let mut nud = eth.link.ipv6_nud.lock();
-        cb(&mut nud)
+        with_ethernet_state(self, device_id, |state| {
+            let mut nud = state.link.ipv6_nud.lock();
+            cb(&mut nud)
+        })
     }
 
     fn send_neighbor_solicitation(
@@ -837,15 +821,13 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for &'_ SyncCtx<C> {
     fn get_protocol_addr(
         &self,
         _ctx: &mut C,
-        &EthernetDeviceId(id, _): &EthernetDeviceId<C::Instant>,
+        device_id: &EthernetDeviceId<C::Instant>,
     ) -> Option<Ipv4Addr> {
-        let eth = {
-            let devices = self.state.device.devices.read();
-            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
-        };
-        let ipv4 = eth.ip.ipv4.read();
-        let ret = ipv4.ip_state.iter_addrs().next().cloned().map(|addr| addr.addr().get());
-        ret
+        with_ethernet_state(self, device_id, |state| {
+            let ipv4 = state.ip.ipv4.read();
+            let ret = ipv4.ip_state.iter_addrs().next().cloned().map(|addr| addr.addr().get());
+            ret
+        })
     }
 
     fn get_hardware_addr(
@@ -858,15 +840,13 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for &'_ SyncCtx<C> {
 
     fn with_arp_state_mut<O, F: FnOnce(&mut ArpState<EthernetLinkDevice>) -> O>(
         &mut self,
-        &EthernetDeviceId(id, _): &EthernetDeviceId<C::Instant>,
+        device_id: &EthernetDeviceId<C::Instant>,
         cb: F,
     ) -> O {
-        let eth = {
-            let devices = self.state.device.devices.read();
-            ReferenceCounted::clone(devices.ethernet.get(id).unwrap())
-        };
-        let mut arp = eth.link.ipv4_arp.lock();
-        cb(&mut arp)
+        with_ethernet_state(self, device_id, |state| {
+            let mut arp = state.link.ipv4_arp.lock();
+            cb(&mut arp)
+        })
     }
 }
 

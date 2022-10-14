@@ -15,4 +15,4 @@ pub use netstack3_sync_instrumented::{Mutex, RwLock};
 #[cfg(not(feature = "instrumented"))]
 pub use netstack3_sync_not_instrumented::{Mutex, RwLock};
 
-pub use alloc::sync::Arc as ReferenceCounted;
+pub use alloc::sync::{Arc as ReferenceCounted, Weak as WeakReferenceCounted};

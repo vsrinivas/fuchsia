@@ -8,6 +8,7 @@ use alloc::vec::Vec;
 use core::{
     convert::Infallible as Never,
     fmt::{self, Debug, Display, Formatter},
+    hash::{Hash, Hasher},
 };
 
 use derivative::Derivative;
@@ -24,15 +25,34 @@ use crate::{
             ReceiveQueueContext, ReceiveQueueFullError, ReceiveQueueNonSyncContext,
             ReceiveQueueState,
         },
-        Device, DeviceIdContext, DeviceLayerEventDispatcher, FrameDestination,
+        state::IpLinkDeviceState,
+        with_loopback_state, Device, DeviceIdContext, DeviceLayerEventDispatcher, FrameDestination,
     },
-    sync::ReferenceCounted,
+    sync::WeakReferenceCounted,
     DeviceId, Instant, NonSyncContext, SyncCtx,
 };
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Eq(bound = ""), PartialEq(bound = ""), Hash(bound = ""))]
-pub(crate) struct LoopbackDeviceId<I: Instant>(pub(super) core::marker::PhantomData<I>);
+#[derivative(Clone(bound = ""))]
+pub(crate) struct LoopbackDeviceId<I: Instant>(
+    pub(super) WeakReferenceCounted<IpLinkDeviceState<I, LoopbackDeviceState>>,
+);
+
+impl<I: Instant> PartialEq for LoopbackDeviceId<I> {
+    fn eq(&self, LoopbackDeviceId(other): &LoopbackDeviceId<I>) -> bool {
+        let LoopbackDeviceId(me) = self;
+        me.ptr_eq(other)
+    }
+}
+
+impl<I: Instant> Eq for LoopbackDeviceId<I> {}
+
+impl<I: Instant> Hash for LoopbackDeviceId<I> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let LoopbackDeviceId(me) = self;
+        me.as_ptr().hash(state)
+    }
+}
 
 impl<I: Instant> Debug for LoopbackDeviceId<I> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -114,14 +134,9 @@ pub(super) fn send_ip_frame<
 /// Gets the MTU associated with this device.
 pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(
     ctx: &SyncCtx<NonSyncCtx>,
-    &LoopbackDeviceId(_): &LoopbackDeviceId<NonSyncCtx::Instant>,
+    device_id: &LoopbackDeviceId<NonSyncCtx::Instant>,
 ) -> u32 {
-    let loopback = {
-        let devices = ctx.state.device.devices.read();
-        ReferenceCounted::clone(devices.loopback.as_ref().unwrap())
-    };
-
-    loopback.link.mtu
+    with_loopback_state(ctx, device_id, |state| state.link.mtu)
 }
 
 impl<C: NonSyncContext> ReceiveQueueNonSyncContext<LoopbackDevice, LoopbackDeviceId<C::Instant>>
@@ -141,16 +156,13 @@ impl<C: NonSyncContext> ReceiveQueueContext<LoopbackDevice, C> for &'_ SyncCtx<C
         F: FnOnce(&mut ReceiveQueueState<Self::Meta, Self::Buffer>) -> O,
     >(
         &mut self,
-        &LoopbackDeviceId(_): &LoopbackDeviceId<C::Instant>,
+        device_id: &LoopbackDeviceId<C::Instant>,
         cb: F,
     ) -> O {
-        let loopback = {
-            let devices = self.state.device.devices.read();
-            ReferenceCounted::clone(devices.loopback.as_ref().unwrap())
-        };
-
-        let x = cb(&mut loopback.link.rx_queue.queue.lock());
-        x
+        with_loopback_state(self, device_id, |state| {
+            let x = cb(&mut state.link.rx_queue.queue.lock());
+            x
+        })
     }
 
     fn handle_packet(
@@ -187,17 +199,13 @@ impl<C: NonSyncContext> ReceiveDequeContext<LoopbackDevice, C> for &'_ SyncCtx<C
         F: FnOnce(&mut ReceiveDequeueState<IpVersion, Buf<Vec<u8>>>, &mut Self::ReceiveQueueCtx) -> O,
     >(
         &mut self,
-        &LoopbackDeviceId(_): &LoopbackDeviceId<C::Instant>,
+        device_id: &LoopbackDeviceId<C::Instant>,
         cb: F,
     ) -> O {
-        let mut me = *self;
-        let loopback = {
-            let devices = me.state.device.devices.read();
-            ReferenceCounted::clone(devices.loopback.as_ref().unwrap())
-        };
-
-        let x = cb(&mut loopback.link.rx_queue.deque.lock(), &mut me);
-        x
+        with_loopback_state(self, device_id, |state| {
+            let x = cb(&mut state.link.rx_queue.deque.lock(), self);
+            x
+        })
     }
 }
 

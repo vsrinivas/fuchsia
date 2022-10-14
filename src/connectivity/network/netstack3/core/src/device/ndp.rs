@@ -428,7 +428,7 @@ mod tests {
         );
 
         net.with_context("remote", |Ctx { sync_ctx, non_sync_ctx }| {
-            add_ip_addr_subnet(sync_ctx, non_sync_ctx, &local_device_id, addr).unwrap();
+            add_ip_addr_subnet(sync_ctx, non_sync_ctx, &remote_device_id, addr).unwrap();
         });
         // Local & remote should be in the multicast group.
         assert!(is_in_ip_multicast(net.sync_ctx("local"), &local_device_id, multicast_addr));
@@ -1310,6 +1310,8 @@ mod tests {
             dummy_config.local_mac,
             Ipv6::MINIMUM_LINK_MTU.into(),
         );
+        let eth_device_id: EthernetDeviceId<_> =
+            device_id.clone().try_into().expect("expected ethernet ID");
         crate::device::update_ipv6_configuration(
             &mut sync_ctx,
             &mut non_sync_ctx,
