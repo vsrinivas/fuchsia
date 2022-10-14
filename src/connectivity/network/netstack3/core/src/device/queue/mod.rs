@@ -227,37 +227,37 @@ mod tests {
     use packet::Buf;
 
     use crate::{
-        context::testutil::{DummyCtx, DummyNonSyncCtx, DummySyncCtx},
-        device::link::testutil::{DummyLinkDevice, DummyLinkDeviceId},
+        context::testutil::{FakeCtx, FakeNonSyncCtx, FakeSyncCtx},
+        device::link::testutil::{FakeLinkDevice, FakeLinkDeviceId},
     };
 
     #[derive(Default)]
-    struct MockRxQueueState {
+    struct FakeRxQueueState {
         queue: ReceiveQueueState<(), Buf<Vec<u8>>>,
         handled_packets: Vec<Buf<Vec<u8>>>,
     }
 
     #[derive(Default)]
-    struct MockRxQueueNonSyncCtxState {
-        woken_rx_tasks: Vec<DummyLinkDeviceId>,
+    struct FakeRxQueueNonSyncCtxState {
+        woken_rx_tasks: Vec<FakeLinkDeviceId>,
     }
 
-    type MockSyncCtx = DummySyncCtx<MockRxQueueState, (), DummyLinkDeviceId>;
-    type MockNonSyncCtx = DummyNonSyncCtx<(), (), MockRxQueueNonSyncCtxState>;
+    type FakeSyncCtxImpl = FakeSyncCtx<FakeRxQueueState, (), FakeLinkDeviceId>;
+    type FakeNonSyncCtxImpl = FakeNonSyncCtx<(), (), FakeRxQueueNonSyncCtxState>;
 
-    impl ReceiveQueueNonSyncContext<DummyLinkDevice, DummyLinkDeviceId> for MockNonSyncCtx {
-        fn wake_rx_task(&mut self, device_id: DummyLinkDeviceId) {
+    impl ReceiveQueueNonSyncContext<FakeLinkDevice, FakeLinkDeviceId> for FakeNonSyncCtxImpl {
+        fn wake_rx_task(&mut self, device_id: FakeLinkDeviceId) {
             self.state_mut().woken_rx_tasks.push(device_id)
         }
     }
 
-    impl ReceiveQueueContext<DummyLinkDevice, MockNonSyncCtx> for MockSyncCtx {
+    impl ReceiveQueueContext<FakeLinkDevice, FakeNonSyncCtxImpl> for FakeSyncCtxImpl {
         type Meta = ();
         type Buffer = Buf<Vec<u8>>;
 
         fn with_receive_queue_mut<O, F: FnOnce(&mut ReceiveQueueState<(), Buf<Vec<u8>>>) -> O>(
             &mut self,
-            &DummyLinkDeviceId: &DummyLinkDeviceId,
+            &FakeLinkDeviceId: &FakeLinkDeviceId,
             cb: F,
         ) -> O {
             cb(&mut self.get_mut().queue)
@@ -265,8 +265,8 @@ mod tests {
 
         fn handle_packet(
             &mut self,
-            _ctx: &mut MockNonSyncCtx,
-            &DummyLinkDeviceId: &DummyLinkDeviceId,
+            _ctx: &mut FakeNonSyncCtxImpl,
+            &FakeLinkDeviceId: &FakeLinkDeviceId,
             (): (),
             buf: Buf<Vec<u8>>,
         ) {
@@ -274,7 +274,7 @@ mod tests {
         }
     }
 
-    impl ReceiveDequeContext<DummyLinkDevice, MockNonSyncCtx> for MockSyncCtx {
+    impl ReceiveDequeContext<FakeLinkDevice, FakeNonSyncCtxImpl> for FakeSyncCtxImpl {
         type ReceiveQueueCtx = Self;
 
         fn with_dequed_packets_and_rx_queue_ctx<
@@ -285,7 +285,7 @@ mod tests {
             ) -> O,
         >(
             &mut self,
-            &DummyLinkDeviceId: &DummyLinkDeviceId,
+            &FakeLinkDeviceId: &FakeLinkDeviceId,
             cb: F,
         ) -> O {
             cb(&mut ReceiveDequeueState::default(), self)
@@ -294,8 +294,8 @@ mod tests {
 
     #[test]
     fn queue_and_dequeue() {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockSyncCtx::default());
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeSyncCtxImpl::default());
 
         for _ in 0..2 {
             for i in 0..MAX_RX_QUEUED_PACKETS {
@@ -304,7 +304,7 @@ mod tests {
                     BufferReceiveQueueHandler::queue_rx_packet(
                         &mut sync_ctx,
                         &mut non_sync_ctx,
-                        &DummyLinkDeviceId,
+                        &FakeLinkDeviceId,
                         (),
                         body
                     ),
@@ -312,7 +312,7 @@ mod tests {
                 );
                 // We should only ever be woken up once when the first packet
                 // was enqueued.
-                assert_eq!(non_sync_ctx.state().woken_rx_tasks, [DummyLinkDeviceId]);
+                assert_eq!(non_sync_ctx.state().woken_rx_tasks, [FakeLinkDeviceId]);
             }
 
             let body = Buf::new(vec![131], ..);
@@ -320,7 +320,7 @@ mod tests {
                 BufferReceiveQueueHandler::queue_rx_packet(
                     &mut sync_ctx,
                     &mut non_sync_ctx,
-                    &DummyLinkDeviceId,
+                    &FakeLinkDeviceId,
                     (),
                     body.clone(),
                 ),
@@ -330,7 +330,7 @@ mod tests {
             // was enqueued.
             assert_eq!(
                 core::mem::take(&mut non_sync_ctx.state_mut().woken_rx_tasks),
-                [DummyLinkDeviceId]
+                [FakeLinkDeviceId]
             );
 
             assert!(MAX_RX_QUEUED_PACKETS > MAX_BATCH_SIZE);
@@ -338,7 +338,7 @@ mod tests {
                 ReceiveQueueHandler::handle_queued_rx_packets(
                     &mut sync_ctx,
                     &mut non_sync_ctx,
-                    &DummyLinkDeviceId,
+                    &FakeLinkDeviceId,
                 );
                 assert_eq!(
                     core::mem::take(&mut sync_ctx.get_mut().handled_packets),
@@ -351,14 +351,14 @@ mod tests {
                 // handling a batch of RX packets.
                 assert_eq!(
                     core::mem::take(&mut non_sync_ctx.state_mut().woken_rx_tasks),
-                    [DummyLinkDeviceId]
+                    [FakeLinkDeviceId]
                 );
             }
 
             ReceiveQueueHandler::handle_queued_rx_packets(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                &DummyLinkDeviceId,
+                &FakeLinkDeviceId,
             );
             assert_eq!(
                 core::mem::take(&mut sync_ctx.get_mut().handled_packets),

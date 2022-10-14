@@ -510,7 +510,7 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{handle_timer_helper_with_sc_ref_mut, DummyInstant, DummyTimerCtxExt},
+            testutil::{handle_timer_helper_with_sc_ref_mut, FakeInstant, FakeTimerCtxExt},
             InstantContext as _,
         },
         ip::{
@@ -518,26 +518,26 @@ mod tests {
                 GmpHandler as _, GroupJoinResult, GroupLeaveResult, MemberState, MulticastGroupSet,
                 QueryReceivedActions, ReportReceivedActions, ReportTimerExpiredActions,
             },
-            testutil::DummyDeviceId,
+            testutil::FakeDeviceId,
         },
         testutil::{
-            assert_empty, new_rng, run_with_many_seeds, DummyEventDispatcherConfig, TestIpExt as _,
+            assert_empty, new_rng, run_with_many_seeds, FakeEventDispatcherConfig, TestIpExt as _,
         },
         Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
 
-    /// A dummy [`IgmpContext`] that stores the [`MulticastGroupSet`] and an
+    /// A fake [`IgmpContext`] that stores the [`MulticastGroupSet`] and an
     /// optional IPv4 address and subnet that may be returned in calls to
     /// [`IgmpContext::get_ip_addr_subnet`].
-    struct DummyIgmpCtx {
-        groups: MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>,
+    struct FakeIgmpCtx {
+        groups: MulticastGroupSet<Ipv4Addr, IgmpGroupState<FakeInstant>>,
         igmp_enabled: bool,
         addr_subnet: Option<AddrSubnet<Ipv4Addr>>,
     }
 
-    impl Default for DummyIgmpCtx {
-        fn default() -> DummyIgmpCtx {
-            DummyIgmpCtx {
+    impl Default for FakeIgmpCtx {
+        fn default() -> FakeIgmpCtx {
+            FakeIgmpCtx {
                 groups: MulticastGroupSet::default(),
                 igmp_enabled: true,
                 addr_subnet: None,
@@ -545,38 +545,38 @@ mod tests {
         }
     }
 
-    type DummyCtx = crate::context::testutil::DummyCtx<
-        DummyIgmpCtx,
-        IgmpTimerId<DummyDeviceId>,
-        IgmpPacketMetadata<DummyDeviceId>,
+    type FakeCtx = crate::context::testutil::FakeCtx<
+        FakeIgmpCtx,
+        IgmpTimerId<FakeDeviceId>,
+        IgmpPacketMetadata<FakeDeviceId>,
         (),
-        DummyDeviceId,
+        FakeDeviceId,
         (),
     >;
 
-    type DummySyncCtx = crate::context::testutil::DummySyncCtx<
-        DummyIgmpCtx,
-        IgmpPacketMetadata<DummyDeviceId>,
-        DummyDeviceId,
+    type FakeSyncCtx = crate::context::testutil::FakeSyncCtx<
+        FakeIgmpCtx,
+        IgmpPacketMetadata<FakeDeviceId>,
+        FakeDeviceId,
     >;
 
-    type DummyNonSyncCtx =
-        crate::context::testutil::DummyNonSyncCtx<IgmpTimerId<DummyDeviceId>, (), ()>;
+    type FakeNonSyncCtx =
+        crate::context::testutil::FakeNonSyncCtx<IgmpTimerId<FakeDeviceId>, (), ()>;
 
-    impl IgmpContext<DummyNonSyncCtx> for DummySyncCtx {
-        fn get_ip_addr_subnet(&self, _device: &DummyDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
+    impl IgmpContext<FakeNonSyncCtx> for FakeSyncCtx {
+        fn get_ip_addr_subnet(&self, _device: &FakeDeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
             self.get_ref().addr_subnet
         }
 
         fn with_igmp_state_mut<
             O,
-            F: FnOnce(GmpState<'_, Ipv4Addr, IgmpGroupState<DummyInstant>>) -> O,
+            F: FnOnce(GmpState<'_, Ipv4Addr, IgmpGroupState<FakeInstant>>) -> O,
         >(
             &mut self,
-            &DummyDeviceId: &DummyDeviceId,
+            &FakeDeviceId: &FakeDeviceId,
             cb: F,
         ) -> O {
-            let DummyIgmpCtx { groups, igmp_enabled, addr_subnet: _ } = self.get_mut();
+            let FakeIgmpCtx { groups, igmp_enabled, addr_subnet: _ } = self.get_mut();
             cb(GmpState { enabled: *igmp_enabled, groups })
         }
     }
@@ -586,9 +586,9 @@ mod tests {
         run_with_many_seeds(|seed| {
             let mut rng = new_rng(seed);
             let (mut s, _actions) =
-                GmpStateMachine::join_group(&mut rng, DummyInstant::default(), false);
+                GmpStateMachine::join_group(&mut rng, FakeInstant::default(), false);
             assert_eq!(
-                s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default()),
+                s.query_received(&mut rng, Duration::from_secs(0), FakeInstant::default()),
                 QueryReceivedActions {
                     generic: None,
                     protocol_specific: Some(Igmpv2Actions::ScheduleV1RouterPresentTimer(
@@ -611,11 +611,11 @@ mod tests {
             let mut rng = new_rng(seed);
             let (mut s, _actions) = GmpStateMachine::<_, Igmpv2ProtocolSpecific>::join_group(
                 &mut rng,
-                DummyInstant::default(),
+                FakeInstant::default(),
                 false,
             );
             assert_eq!(
-                s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default()),
+                s.query_received(&mut rng, Duration::from_secs(0), FakeInstant::default()),
                 QueryReceivedActions {
                     generic: None,
                     protocol_specific: Some(Igmpv2Actions::ScheduleV1RouterPresentTimer(
@@ -637,7 +637,7 @@ mod tests {
                 _ => panic!("Wrong State!"),
             }
             assert_eq!(
-                s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default()),
+                s.query_received(&mut rng, Duration::from_secs(0), FakeInstant::default()),
                 QueryReceivedActions {
                     generic: None,
                     protocol_specific: Some(Igmpv2Actions::ScheduleV1RouterPresentTimer(
@@ -663,19 +663,19 @@ mod tests {
     const GROUP_ADDR: MulticastAddr<Ipv4Addr> = Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS;
     const GROUP_ADDR_2: MulticastAddr<Ipv4Addr> =
         unsafe { MulticastAddr::new_unchecked(Ipv4Addr::new([224, 0, 0, 4])) };
-    const REPORT_DELAY_TIMER_ID: IgmpTimerId<DummyDeviceId> =
-        IgmpTimerId::Gmp(GmpDelayedReportTimerId { device: DummyDeviceId, group_addr: GROUP_ADDR });
-    const REPORT_DELAY_TIMER_ID_2: IgmpTimerId<DummyDeviceId> =
+    const REPORT_DELAY_TIMER_ID: IgmpTimerId<FakeDeviceId> =
+        IgmpTimerId::Gmp(GmpDelayedReportTimerId { device: FakeDeviceId, group_addr: GROUP_ADDR });
+    const REPORT_DELAY_TIMER_ID_2: IgmpTimerId<FakeDeviceId> =
         IgmpTimerId::Gmp(GmpDelayedReportTimerId {
-            device: DummyDeviceId,
+            device: FakeDeviceId,
             group_addr: GROUP_ADDR_2,
         });
-    const V1_ROUTER_PRESENT_TIMER_ID: IgmpTimerId<DummyDeviceId> =
-        IgmpTimerId::V1RouterPresent { device: DummyDeviceId };
+    const V1_ROUTER_PRESENT_TIMER_ID: IgmpTimerId<FakeDeviceId> =
+        IgmpTimerId::V1RouterPresent { device: FakeDeviceId };
 
     fn receive_igmp_query(
-        sync_ctx: &mut DummySyncCtx,
-        ctx: &mut DummyNonSyncCtx,
+        sync_ctx: &mut FakeSyncCtx,
+        ctx: &mut FakeNonSyncCtx,
         resp_time: Duration,
     ) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
@@ -683,12 +683,12 @@ mod tests {
             resp_time.try_into().unwrap(),
         );
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        sync_ctx.receive_igmp_packet(ctx, &DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
+        sync_ctx.receive_igmp_packet(ctx, &FakeDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
     fn receive_igmp_general_query(
-        sync_ctx: &mut DummySyncCtx,
-        ctx: &mut DummyNonSyncCtx,
+        sync_ctx: &mut FakeSyncCtx,
+        ctx: &mut FakeNonSyncCtx,
         resp_time: Duration,
     ) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipQueryV2>::new_with_resp_time(
@@ -696,33 +696,33 @@ mod tests {
             resp_time.try_into().unwrap(),
         );
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        sync_ctx.receive_igmp_packet(ctx, &DummyDeviceId, ROUTER_ADDR, MY_ADDR, buff);
+        sync_ctx.receive_igmp_packet(ctx, &FakeDeviceId, ROUTER_ADDR, MY_ADDR, buff);
     }
 
-    fn receive_igmp_report(sync_ctx: &mut DummySyncCtx, ctx: &mut DummyNonSyncCtx) {
+    fn receive_igmp_report(sync_ctx: &mut FakeSyncCtx, ctx: &mut FakeNonSyncCtx) {
         let ser = IgmpPacketBuilder::<Buf<Vec<u8>>, IgmpMembershipReportV2>::new(GROUP_ADDR.get());
         let buff = ser.into_serializer().serialize_vec_outer().unwrap();
-        sync_ctx.receive_igmp_packet(ctx, &DummyDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
+        sync_ctx.receive_igmp_packet(ctx, &FakeDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 
     fn setup_simple_test_environment_with_addr_subnet(
         seed: u128,
         a: Option<AddrSubnet<Ipv4Addr>>,
-    ) -> DummyCtx {
-        let mut ctx = DummyCtx::with_sync_ctx(DummySyncCtx::default());
+    ) -> FakeCtx {
+        let mut ctx = FakeCtx::with_sync_ctx(FakeSyncCtx::default());
         ctx.non_sync_ctx.seed_rng(seed);
         ctx.sync_ctx.get_mut().addr_subnet = a;
         ctx
     }
 
-    fn setup_simple_test_environment(seed: u128) -> DummyCtx {
+    fn setup_simple_test_environment(seed: u128) -> FakeCtx {
         setup_simple_test_environment_with_addr_subnet(
             seed,
             Some(AddrSubnet::new(MY_ADDR.get(), 24).unwrap()),
         )
     }
 
-    fn ensure_ttl_ihl_rtr(sync_ctx: &DummySyncCtx) {
+    fn ensure_ttl_ihl_rtr(sync_ctx: &FakeSyncCtx) {
         for (_, frame) in sync_ctx.frames() {
             assert_eq!(frame[8], 1); // TTL,
             assert_eq!(&frame[20..24], &[148, 4, 0, 0]); // RTR
@@ -733,12 +733,12 @@ mod tests {
     #[test_case(Some(MY_ADDR); "specified_src")]
     #[test_case(None; "unspecified_src")]
     fn test_igmp_simple_integration(src_ip: Option<SpecifiedAddr<Ipv4Addr>>) {
-        let check_report = |sync_ctx: &mut DummySyncCtx| {
+        let check_report = |sync_ctx: &mut FakeSyncCtx| {
             let expected_src_ip = src_ip.map_or(Ipv4::UNSPECIFIED_ADDRESS, |a| a.get());
 
             assert_matches::assert_matches!(
                 &sync_ctx.take_frames()[..],
-                [(IgmpPacketMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                [(IgmpPacketMetadata { device: FakeDeviceId, dst_ip }, frame)] => {
                     assert_eq!(dst_ip, &GROUP_ADDR);
                     let (body, src_ip, dst_ip, proto, ttl) =
                         parse_ip_packet::<Ipv4>(frame).unwrap();
@@ -759,12 +759,12 @@ mod tests {
 
         let addr_subnet = src_ip.map(|a| AddrSubnet::new(a.get(), 16).unwrap());
         run_with_many_seeds(|seed| {
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
                 setup_simple_test_environment_with_addr_subnet(seed, addr_subnet);
 
             // Joining a group should send a report.
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             check_report(&mut sync_ctx);
@@ -782,9 +782,9 @@ mod tests {
     #[test]
     fn test_igmp_integration_fallback_from_idle() {
         run_with_many_seeds(|seed| {
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_eq!(sync_ctx.frames().len(), 1);
@@ -817,10 +817,10 @@ mod tests {
     #[test]
     fn test_igmp_integration_igmpv1_router_present() {
         run_with_many_seeds(|seed| {
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -894,9 +894,9 @@ mod tests {
     #[test]
     fn test_igmp_integration_delay_reset_timer() {
         // This seed value was chosen to later produce a timer duration > 100ms.
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(123456);
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(123456);
         assert_eq!(
-            sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+            sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
             GroupJoinResult::Joined(())
         );
         let now = non_sync_ctx.now();
@@ -931,9 +931,9 @@ mod tests {
     #[test]
     fn test_igmp_integration_last_send_leave() {
         run_with_many_seeds(|seed| {
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -950,7 +950,7 @@ mod tests {
             // The report after the delay.
             assert_eq!(sync_ctx.frames().len(), 2);
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             // Our leave message.
@@ -972,9 +972,9 @@ mod tests {
     #[test]
     fn test_igmp_integration_not_last_does_not_send_leave() {
         run_with_many_seeds(|seed| {
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -989,7 +989,7 @@ mod tests {
             // someone else.
             assert_eq!(sync_ctx.frames().len(), 1);
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             // A leave message is not sent.
@@ -1001,13 +1001,13 @@ mod tests {
     #[test]
     fn test_receive_general_query() {
         run_with_many_seeds(|seed| {
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR_2),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR_2),
                 GroupJoinResult::Joined(())
             );
             let now = non_sync_ctx.now();
@@ -1047,19 +1047,19 @@ mod tests {
         run_with_many_seeds(|seed| {
             // Test that we do not perform IGMP when IGMP is disabled.
 
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-                DummyCtx::with_sync_ctx(DummySyncCtx::default());
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+                FakeCtx::with_sync_ctx(FakeSyncCtx::default());
             non_sync_ctx.seed_rng(seed);
             sync_ctx.get_mut().igmp_enabled = false;
 
             // Assert that no observable effects have taken place.
-            let assert_no_effect = |sync_ctx: &DummySyncCtx, non_sync_ctx: &DummyNonSyncCtx| {
+            let assert_no_effect = |sync_ctx: &FakeSyncCtx, non_sync_ctx: &FakeNonSyncCtx| {
                 non_sync_ctx.timer_ctx().assert_no_timers_installed();
                 assert_empty(sync_ctx.frames());
             };
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             // We should join the group but left in the GMP's non-member
@@ -1078,7 +1078,7 @@ mod tests {
             assert_no_effect(&sync_ctx, &non_sync_ctx);
 
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             // We should have left the group but not executed any `Actions`.
@@ -1093,10 +1093,10 @@ mod tests {
             // Simple IGMP integration test to check that when we call top-level
             // multicast join and leave functions, IGMP is performed.
 
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1109,7 +1109,7 @@ mod tests {
             ensure_ttl_ihl_rtr(&sync_ctx);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::AlreadyMember
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1119,7 +1119,7 @@ mod tests {
                 .assert_timers_installed([(REPORT_DELAY_TIMER_ID, range.clone())]);
 
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupLeaveResult::StillMember
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
@@ -1127,7 +1127,7 @@ mod tests {
             non_sync_ctx.timer_ctx().assert_timers_installed([(REPORT_DELAY_TIMER_ID, range)]);
 
             assert_eq!(
-                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_leave_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupLeaveResult::Left(())
             );
             assert_eq!(sync_ctx.frames().len(), 2);
@@ -1139,17 +1139,17 @@ mod tests {
     #[test]
     fn test_igmp_enable_disable() {
         run_with_many_seeds(|seed| {
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = setup_simple_test_environment(seed);
             assert_eq!(sync_ctx.take_frames(), []);
 
             assert_eq!(
-                sync_ctx.gmp_join_group(&mut non_sync_ctx, &DummyDeviceId, GROUP_ADDR),
+                sync_ctx.gmp_join_group(&mut non_sync_ctx, &FakeDeviceId, GROUP_ADDR),
                 GroupJoinResult::Joined(())
             );
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_matches::assert_matches!(
                 &sync_ctx.take_frames()[..],
-                [(IgmpPacketMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                [(IgmpPacketMetadata { device: FakeDeviceId, dst_ip }, frame)] => {
                     assert_eq!(dst_ip, &GROUP_ADDR);
                     let (body, src_ip, dst_ip, proto, ttl) =
                         parse_ip_packet::<Ipv4>(frame).unwrap();
@@ -1168,16 +1168,16 @@ mod tests {
             );
 
             // Should do nothing.
-            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, &DummyDeviceId);
+            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, &FakeDeviceId);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_eq!(sync_ctx.take_frames(), []);
 
             // Should send done message.
-            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, &DummyDeviceId);
+            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, &FakeDeviceId);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
             assert_matches::assert_matches!(
                 &sync_ctx.take_frames()[..],
-                [(IgmpPacketMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                [(IgmpPacketMetadata { device: FakeDeviceId, dst_ip }, frame)] => {
                     assert_eq!(dst_ip, &Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS);
                     let (body, src_ip, dst_ip, proto, ttl) =
                         parse_ip_packet::<Ipv4>(frame).unwrap();
@@ -1196,16 +1196,16 @@ mod tests {
             );
 
             // Should do nothing.
-            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, &DummyDeviceId);
+            sync_ctx.gmp_handle_disabled(&mut non_sync_ctx, &FakeDeviceId);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, NonMember);
             assert_eq!(sync_ctx.take_frames(), []);
 
             // Should send report message.
-            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, &DummyDeviceId);
+            sync_ctx.gmp_handle_maybe_enabled(&mut non_sync_ctx, &FakeDeviceId);
             assert_gmp_state!(sync_ctx, &GROUP_ADDR, Delaying);
             assert_matches::assert_matches!(
                 &sync_ctx.take_frames()[..],
-                [(IgmpPacketMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                [(IgmpPacketMetadata { device: FakeDeviceId, dst_ip }, frame)] => {
                     assert_eq!(dst_ip, &GROUP_ADDR);
                     let (body, src_ip, dst_ip, proto, ttl) =
                         parse_ip_packet::<Ipv4>(frame).unwrap();
@@ -1227,15 +1227,15 @@ mod tests {
 
     #[test]
     fn test_igmp_enable_disable_integration() {
-        let DummyEventDispatcherConfig {
+        let FakeEventDispatcherConfig {
             local_mac,
             remote_mac: _,
             local_ip: _,
             remote_ip: _,
             subnet: _,
-        } = Ipv4::DUMMY_CONFIG;
+        } = Ipv4::FAKE_CONFIG;
 
-        let crate::testutil::DummyCtx { sync_ctx, mut non_sync_ctx } =
+        let crate::testutil::FakeCtx { sync_ctx, mut non_sync_ctx } =
             Ctx::new_with_builder(StackStateBuilder::default());
         let mut sync_ctx = &sync_ctx;
         let device_id =
@@ -1263,8 +1263,8 @@ mod tests {
             gmp_enabled: bool,
         }
 
-        let set_config = |sync_ctx: &mut &crate::testutil::DummySyncCtx,
-                          non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
+        let set_config = |sync_ctx: &mut &crate::testutil::FakeSyncCtx,
+                          non_sync_ctx: &mut crate::testutil::FakeNonSyncCtx,
                           TestConfig { ip_enabled, gmp_enabled }| {
             crate::ip::device::update_ipv4_configuration(
                 sync_ctx,
@@ -1276,7 +1276,7 @@ mod tests {
                 },
             );
         };
-        let check_sent_report = |non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx| {
+        let check_sent_report = |non_sync_ctx: &mut crate::testutil::FakeNonSyncCtx| {
             assert_matches::assert_matches!(
                 &non_sync_ctx.take_frames()[..],
                 [(egress_device, frame)] => {
@@ -1299,7 +1299,7 @@ mod tests {
                 }
             );
         };
-        let check_sent_leave = |non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx| {
+        let check_sent_leave = |non_sync_ctx: &mut crate::testutil::FakeNonSyncCtx| {
             assert_matches::assert_matches!(
                 &non_sync_ctx.take_frames()[..],
                 [(egress_device, frame)] => {

@@ -466,14 +466,14 @@ impl<Instant> Ipv6AddressEntry<Instant> {
 mod tests {
     use super::*;
 
-    use crate::{context::testutil::DummyInstant, error::ExistsError};
+    use crate::{context::testutil::FakeInstant, error::ExistsError};
 
     #[test]
     fn test_add_addr_ipv4() {
         const ADDRESS: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
         const PREFIX_LEN: u8 = 8;
 
-        let mut ipv4 = IpDeviceState::<DummyInstant, Ipv4>::default();
+        let mut ipv4 = IpDeviceState::<FakeInstant, Ipv4>::default();
 
         assert_eq!(ipv4.add_addr(AddrSubnet::new(ADDRESS, PREFIX_LEN).unwrap()), Ok(()));
         // Adding the same address with different prefix should fail.
@@ -489,7 +489,7 @@ mod tests {
             Ipv6Addr::from_bytes([1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6]);
         const PREFIX_LEN: u8 = 8;
 
-        let mut ipv6 = IpDeviceState::<DummyInstant, Ipv6>::default();
+        let mut ipv6 = IpDeviceState::<FakeInstant, Ipv6>::default();
 
         assert_eq!(
             ipv6.add_addr(Ipv6AddressEntry::new(

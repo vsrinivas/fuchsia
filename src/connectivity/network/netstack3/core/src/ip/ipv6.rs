@@ -213,7 +213,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V6},
+        testutil::{FakeEventDispatcherBuilder, FAKE_CONFIG_V6},
         Ctx,
     };
 
@@ -222,11 +222,11 @@ mod tests {
         // Test that if we have no extension headers, we continue
 
         let (Ctx { sync_ctx, non_sync_ctx: _ }, device_ids) =
-            DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V6).build();
+            FakeEventDispatcherBuilder::from_config(FAKE_CONFIG_V6).build();
         let mut sync_ctx = &sync_ctx;
         let builder = Ipv6PacketBuilder::new(
-            DUMMY_CONFIG_V6.remote_ip,
-            DUMMY_CONFIG_V6.local_ip,
+            FAKE_CONFIG_V6.remote_ip,
+            FAKE_CONFIG_V6.local_ip,
             10,
             IpProto::Tcp.into(),
         );

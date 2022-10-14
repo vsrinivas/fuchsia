@@ -27,7 +27,7 @@ use packet_formats::{
 };
 
 use crate::{
-    context::testutil::{handle_timer_helper_with_sc_ref, DummyInstant, DummyTimerCtxExt},
+    context::testutil::{handle_timer_helper_with_sc_ref, FakeInstant, FakeTimerCtxExt},
     Ctx, DeviceId, TimerId,
 };
 
@@ -312,8 +312,8 @@ fn arbitrary_packet<B: NestedPacketBuilder + core::fmt::Debug>(
 }
 
 fn dispatch(
-    Ctx { sync_ctx, non_sync_ctx }: &mut crate::testutil::DummyCtx,
-    device_id: &DeviceId<DummyInstant>,
+    Ctx { sync_ctx, non_sync_ctx }: &mut crate::testutil::FakeCtx,
+    device_id: &DeviceId<FakeInstant>,
     action: FuzzAction,
 ) {
     use FuzzAction::*;
@@ -335,7 +335,7 @@ fn dispatch(
 pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
     print_on_panic::initialize_logging();
 
-    let mut ctx = crate::testutil::DummyCtx::default();
+    let mut ctx = crate::testutil::FakeCtx::default();
     let FuzzInput { actions } = input;
 
     let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;

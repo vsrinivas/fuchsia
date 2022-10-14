@@ -178,7 +178,7 @@ impl<I: crate::Instant> TokenBucket<I> {
 pub(crate) mod tests {
     use super::*;
     use crate::{
-        context::testutil::{DummyInstant, DummyInstantCtx},
+        context::testutil::{FakeInstant, FakeInstantCtx},
         testutil::benchmarks::{black_box, Bencher},
     };
 
@@ -193,10 +193,10 @@ pub(crate) mod tests {
 
     #[test]
     fn test_token_bucket() {
-        /// Construct a `DummyInstantCtx` and a `TokenBucket` with a rate of 64
+        /// Construct a `FakeInstantCtx` and a `TokenBucket` with a rate of 64
         /// tokens per second, and pass them to `f`.
-        fn test<F: FnOnce(DummyInstantCtx, TokenBucket<DummyInstant>)>(f: F) {
-            f(DummyInstantCtx::default(), TokenBucket::new(64));
+        fn test<F: FnOnce(FakeInstantCtx, TokenBucket<FakeInstant>)>(f: F) {
+            f(FakeInstantCtx::default(), TokenBucket::new(64));
         }
 
         // Test that, if we consume all of the tokens in the bucket, but do not
@@ -229,7 +229,7 @@ pub(crate) mod tests {
             // refilled.
             ctx.sleep(SECOND);
             bucket.assert_take_n(&ctx, 64);
-            assert_eq!(bucket.last_refilled.unwrap(), DummyInstant::from(SECOND));
+            assert_eq!(bucket.last_refilled.unwrap(), FakeInstant::from(SECOND));
             // 1 token was consumed by the last call to `try_take`.
             assert_eq!(bucket.token_fractions, 63 * TOKEN_MULTIPLIER);
         });
@@ -244,7 +244,7 @@ pub(crate) mod tests {
 
             ctx.sleep(SECOND * 2);
             bucket.assert_take_n(&ctx, 64);
-            assert_eq!(bucket.last_refilled.unwrap(), DummyInstant::from(SECOND * 2));
+            assert_eq!(bucket.last_refilled.unwrap(), FakeInstant::from(SECOND * 2));
             // 1 token was consumed by the last call to `try_take`.
             assert_eq!(bucket.token_fractions, 63 * TOKEN_MULTIPLIER);
         });
@@ -259,7 +259,7 @@ pub(crate) mod tests {
 
             ctx.sleep(SECOND / 2);
             bucket.assert_take_n(&ctx, 64);
-            assert_eq!(bucket.last_refilled.unwrap(), DummyInstant::from(SECOND / 2));
+            assert_eq!(bucket.last_refilled.unwrap(), FakeInstant::from(SECOND / 2));
             // Since only half a second had elapsed since the previous refill,
             // only half of the tokens were refilled. 1 was consumed by the last
             // call to `try_take`.
@@ -337,7 +337,7 @@ pub(crate) mod tests {
 
     fn bench_try_take<B: Bencher>(b: &mut B, enforced_rate: u64, try_rate: u32) {
         let sleep = SECOND / try_rate;
-        let mut ctx = DummyInstantCtx::default();
+        let mut ctx = FakeInstantCtx::default();
         let mut bucket = TokenBucket::new(enforced_rate);
         b.iter(|| {
             ctx.sleep(sleep);

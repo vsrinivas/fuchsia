@@ -1225,17 +1225,17 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::DummyInstant,
-        testutil::{DummyEventDispatcherConfig, DummySyncCtx, DUMMY_CONFIG_V4},
+        context::testutil::FakeInstant,
+        testutil::{FakeEventDispatcherConfig, FakeSyncCtx, FAKE_CONFIG_V4},
         Ctx,
     };
 
     #[test]
     fn test_iter_devices() {
-        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::FakeCtx::default();
         let mut sync_ctx = &sync_ctx;
 
-        fn check(sync_ctx: &&DummySyncCtx, expected: &[DeviceId<DummyInstant>]) {
+        fn check(sync_ctx: &&FakeSyncCtx, expected: &[DeviceId<FakeInstant>]) {
             assert_eq!(
                 IpDeviceContext::<Ipv4, _>::with_devices(sync_ctx, |devices| devices
                     .collect::<Vec<_>>()),
@@ -1254,13 +1254,13 @@ mod tests {
                 .expect("error adding loopback device");
         check(&sync_ctx, &[loopback_device.clone()][..]);
 
-        let DummyEventDispatcherConfig {
+        let FakeEventDispatcherConfig {
             subnet: _,
             local_ip: _,
             local_mac,
             remote_ip: _,
             remote_mac: _,
-        } = DUMMY_CONFIG_V4;
+        } = FAKE_CONFIG_V4;
         let ethernet_device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1287,7 +1287,7 @@ mod tests {
 
     #[test]
     fn test_add_loopback_device_routes() {
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::FakeCtx::default();
 
         let loopback_device =
             crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, 55 /* mtu */)
@@ -1305,7 +1305,7 @@ mod tests {
 
     #[test]
     fn test_add_ethernet_device_routes() {
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::FakeCtx::default();
 
         let ethernet_device = crate::device::add_ethernet_device(
             &mut sync_ctx,

@@ -19,7 +19,7 @@
 
 /// Assert that the GMP state machine for `$group` is in the given state.
 ///
-/// `$ctx` is a `context::testutil::DummyCtx` whose state contains a `groups:
+/// `$ctx` is a `context::testutil::FakeCtx` whose state contains a `groups:
 /// MulticastGroupSet` field.
 #[cfg(test)]
 macro_rules! assert_gmp_state {
@@ -1204,15 +1204,15 @@ mod test {
     use assert_matches::assert_matches;
 
     use super::*;
-    use crate::{context::testutil::DummyInstant, testutil::new_rng};
+    use crate::{context::testutil::FakeInstant, testutil::new_rng};
 
     const DEFAULT_UNSOLICITED_REPORT_INTERVAL: Duration = Duration::from_secs(10);
 
-    /// Dummy `ProtocolSpecific` for test purposes.
+    /// Fake `ProtocolSpecific` for test purposes.
     #[derive(PartialEq, Eq, Copy, Clone, Debug, Default)]
-    struct DummyProtocolSpecific;
+    struct FakeProtocolSpecific;
 
-    impl ProtocolSpecific for DummyProtocolSpecific {
+    impl ProtocolSpecific for FakeProtocolSpecific {
         /// Tests for generic state machine should not know anything about
         /// protocol specific actions.
         type Actions = Never;
@@ -1241,7 +1241,7 @@ mod test {
         }
     }
 
-    impl<P: ProtocolSpecific> GmpStateMachine<DummyInstant, P> {
+    impl<P: ProtocolSpecific> GmpStateMachine<FakeInstant, P> {
         pub(crate) fn get_config_mut(&mut self) -> &mut P::Config {
             match self.inner.as_mut().unwrap() {
                 MemberState::NonMember(s) => &mut s.cfg,
@@ -1251,12 +1251,12 @@ mod test {
         }
     }
 
-    type DummyGmpStateMachine = GmpStateMachine<DummyInstant, DummyProtocolSpecific>;
+    type FakeGmpStateMachine = GmpStateMachine<FakeInstant, FakeProtocolSpecific>;
 
     #[test]
     fn test_gmp_state_non_member_to_delay_should_set_flag() {
         let (s, _actions) =
-            DummyGmpStateMachine::join_group(&mut new_rng(0), DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut new_rng(0), FakeInstant::default(), false);
         match s.get_inner() {
             MemberState::Delaying(s) => assert!(s.get_state().last_reporter),
             _ => panic!("Wrong State!"),
@@ -1266,10 +1266,10 @@ mod test {
     #[test]
     fn test_gmp_state_non_member_to_delay_actions() {
         let (_state, actions) =
-            DummyGmpStateMachine::join_group(&mut new_rng(0), DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut new_rng(0), FakeInstant::default(), false);
         assert_matches!(
             actions,
-            JoinGroupActions { send_report_and_schedule_timer: Some((DummyProtocolSpecific, d)) } if d <= DEFAULT_UNSOLICITED_REPORT_INTERVAL
+            JoinGroupActions { send_report_and_schedule_timer: Some((FakeProtocolSpecific, d)) } if d <= DEFAULT_UNSOLICITED_REPORT_INTERVAL
         );
     }
 
@@ -1277,12 +1277,12 @@ mod test {
     fn test_gmp_state_delay_no_reset_timer() {
         let mut rng = new_rng(0);
         let (mut s, _actions) =
-            DummyGmpStateMachine::join_group(&mut rng, DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut rng, FakeInstant::default(), false);
         assert_eq!(
             s.query_received(
                 &mut rng,
                 DEFAULT_UNSOLICITED_REPORT_INTERVAL + Duration::from_secs(1),
-                DummyInstant::default(),
+                FakeInstant::default(),
             ),
             QueryReceivedActions { generic: None, protocol_specific: None }
         );
@@ -1292,9 +1292,9 @@ mod test {
     fn test_gmp_state_delay_reset_timer() {
         let mut rng = new_rng(0);
         let (mut s, _actions) =
-            DummyGmpStateMachine::join_group(&mut rng, DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut rng, FakeInstant::default(), false);
         assert_eq!(
-            s.query_received(&mut rng, Duration::from_millis(1), DummyInstant::default()),
+            s.query_received(&mut rng, Duration::from_millis(1), FakeInstant::default()),
             QueryReceivedActions {
                 generic: Some(QueryReceivedGenericAction::ScheduleTimer(Duration::from_micros(1))),
                 protocol_specific: None
@@ -1305,7 +1305,7 @@ mod test {
     #[test]
     fn test_gmp_state_delay_to_idle_with_report_no_flag() {
         let (mut s, _actions) =
-            DummyGmpStateMachine::join_group(&mut new_rng(0), DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut new_rng(0), FakeInstant::default(), false);
         assert_eq!(s.report_received(), ReportReceivedActions { stop_timer: true });
         match s.get_inner() {
             MemberState::Idle(s) => {
@@ -1318,10 +1318,10 @@ mod test {
     #[test]
     fn test_gmp_state_delay_to_idle_without_report_set_flag() {
         let (mut s, _actions) =
-            DummyGmpStateMachine::join_group(&mut new_rng(0), DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut new_rng(0), FakeInstant::default(), false);
         assert_eq!(
             s.report_timer_expired(),
-            ReportTimerExpiredActions { send_report: DummyProtocolSpecific }
+            ReportTimerExpiredActions { send_report: FakeProtocolSpecific }
         );
         match s.get_inner() {
             MemberState::Idle(s) => {
@@ -1335,13 +1335,13 @@ mod test {
     fn test_gmp_state_leave_should_send_leave() {
         let mut rng = new_rng(0);
         let (s, _actions) =
-            DummyGmpStateMachine::join_group(&mut rng, DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut rng, FakeInstant::default(), false);
         assert_eq!(s.leave_group(), LeaveGroupActions { send_leave: true, stop_timer: true },);
         let (mut s, _actions) =
-            DummyGmpStateMachine::join_group(&mut rng, DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut rng, FakeInstant::default(), false);
         assert_eq!(
             s.report_timer_expired(),
-            ReportTimerExpiredActions { send_report: DummyProtocolSpecific }
+            ReportTimerExpiredActions { send_report: FakeProtocolSpecific }
         );
         assert_eq!(s.leave_group(), LeaveGroupActions { send_leave: true, stop_timer: false });
     }
@@ -1350,10 +1350,10 @@ mod test {
     fn test_gmp_state_delay_to_other_states_should_stop_timer() {
         let mut rng = new_rng(0);
         let (s, _actions) =
-            DummyGmpStateMachine::join_group(&mut rng, DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut rng, FakeInstant::default(), false);
         assert_eq!(s.leave_group(), LeaveGroupActions { send_leave: true, stop_timer: true },);
         let (mut s, _actions) =
-            DummyGmpStateMachine::join_group(&mut rng, DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut rng, FakeInstant::default(), false);
         assert_eq!(s.report_received(), ReportReceivedActions { stop_timer: true });
     }
 
@@ -1361,14 +1361,14 @@ mod test {
     fn test_gmp_state_other_states_to_delay_should_schedule_timer() {
         let mut rng = new_rng(0);
         let (mut s, actions) =
-            DummyGmpStateMachine::join_group(&mut rng, DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut rng, FakeInstant::default(), false);
         assert_matches!(
             actions,
-            JoinGroupActions { send_report_and_schedule_timer: Some((DummyProtocolSpecific, d)) } if d <= DEFAULT_UNSOLICITED_REPORT_INTERVAL
+            JoinGroupActions { send_report_and_schedule_timer: Some((FakeProtocolSpecific, d)) } if d <= DEFAULT_UNSOLICITED_REPORT_INTERVAL
         );
         assert_eq!(s.report_received(), ReportReceivedActions { stop_timer: true });
         assert_eq!(
-            s.query_received(&mut rng, Duration::from_secs(1), DummyInstant::default()),
+            s.query_received(&mut rng, Duration::from_secs(1), FakeInstant::default()),
             QueryReceivedActions {
                 generic: Some(QueryReceivedGenericAction::ScheduleTimer(Duration::from_micros(1))),
                 protocol_specific: None
@@ -1379,7 +1379,7 @@ mod test {
     #[test]
     fn test_gmp_state_leave_send_anyway_do_send() {
         let (mut s, _actions) =
-            DummyGmpStateMachine::join_group(&mut new_rng(0), DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut new_rng(0), FakeInstant::default(), false);
         *s.get_config_mut() = true;
         assert_eq!(s.report_received(), ReportReceivedActions { stop_timer: true });
         match s.get_inner() {
@@ -1392,7 +1392,7 @@ mod test {
     #[test]
     fn test_gmp_state_leave_not_the_last_do_nothing() {
         let (mut s, _actions) =
-            DummyGmpStateMachine::join_group(&mut new_rng(0), DummyInstant::default(), false);
+            FakeGmpStateMachine::join_group(&mut new_rng(0), FakeInstant::default(), false);
         assert_eq!(s.report_received(), ReportReceivedActions { stop_timer: true });
         assert_eq!(s.leave_group(), LeaveGroupActions { send_leave: false, stop_timer: false })
     }

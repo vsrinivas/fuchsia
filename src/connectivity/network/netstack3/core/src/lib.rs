@@ -544,8 +544,8 @@ mod tests {
     use crate::testutil::TestIpExt;
 
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
-        let config = I::DUMMY_CONFIG;
-        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let config = I::FAKE_CONFIG;
+        let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::FakeCtx::default();
         let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,

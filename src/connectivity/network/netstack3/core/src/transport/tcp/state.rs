@@ -1569,7 +1569,7 @@ mod test {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyInstant, DummyInstantCtx},
+            testutil::{FakeInstant, FakeInstantCtx},
             InstantContext as _,
         },
         transport::tcp::buffer::{Buffer, RingBuffer},
@@ -1664,7 +1664,7 @@ mod test {
         }
     }
 
-    impl<S: SendBuffer + Debug> State<DummyInstant, RingBuffer, S, ()> {
+    impl<S: SendBuffer + Debug> State<FakeInstant, RingBuffer, S, ()> {
         fn read_with(&mut self, f: impl for<'b> FnOnce(&'b [&'_ [u8]]) -> usize) -> usize {
             match self {
                 State::Closed(_)
@@ -1725,8 +1725,8 @@ mod test {
         SynRcvd {
             iss: ISS_1,
             irs: ISS_2,
-            timestamp: Some(DummyInstant::from(RTT)),
-            retrans_timer: RetransTimer::new(DummyInstant::from(RTT), Estimator::RTO_INIT),
+            timestamp: Some(FakeInstant::from(RTT)),
+            retrans_timer: RetransTimer::new(FakeInstant::from(RTT), Estimator::RTO_INIT),
             simultaneous_open: Some(()),
         }
     ); "SYN only")]
@@ -1741,14 +1741,14 @@ mod test {
     => SynSentOnSegmentDisposition::Ignore; "acceptable ACK(ISS) without RST")]
     fn segment_arrives_when_syn_sent(
         incoming: Segment<()>,
-    ) -> SynSentOnSegmentDisposition<DummyInstant, NullBuffer, NullBuffer, ()> {
+    ) -> SynSentOnSegmentDisposition<FakeInstant, NullBuffer, NullBuffer, ()> {
         let mut syn_sent = SynSent {
             iss: ISS_1,
-            timestamp: Some(DummyInstant::default()),
-            retrans_timer: RetransTimer::new(DummyInstant::default(), Estimator::RTO_INIT),
+            timestamp: Some(FakeInstant::default()),
+            retrans_timer: RetransTimer::new(FakeInstant::default(), Estimator::RTO_INIT),
             active_open: (),
         };
-        syn_sent.on_segment::<_, _, ClientlessBufferProvider>(incoming, DummyInstant::from(RTT))
+        syn_sent.on_segment::<_, _, ClientlessBufferProvider>(incoming, FakeInstant::from(RTT))
     }
 
     #[test_case(Segment::rst(ISS_2) => ListenOnSegmentDisposition::Ignore; "ignore RST")]
@@ -1760,15 +1760,15 @@ mod test {
             SynRcvd {
                 iss: ISS_1,
                 irs: ISS_2,
-                timestamp: Some(DummyInstant::default()),
-                retrans_timer: RetransTimer::new(DummyInstant::default(), Estimator::RTO_INIT),
+                timestamp: Some(FakeInstant::default()),
+                retrans_timer: RetransTimer::new(FakeInstant::default(), Estimator::RTO_INIT),
                 simultaneous_open: None,
             }); "accept syn")]
     fn segment_arrives_when_listen(
         incoming: Segment<()>,
-    ) -> ListenOnSegmentDisposition<DummyInstant> {
+    ) -> ListenOnSegmentDisposition<FakeInstant> {
         let listen = Closed::<Initial>::listen(ISS_1);
-        listen.on_segment(incoming, DummyInstant::default())
+        listen.on_segment(incoming, FakeInstant::default())
     }
 
     #[test_case(
@@ -1862,9 +1862,9 @@ mod test {
     ); "fin")]
     fn segment_arrives_when_syn_rcvd(
         incoming: Segment<()>,
-        expected: Option<State<DummyInstant, NullBuffer, NullBuffer, ()>>,
+        expected: Option<State<FakeInstant, NullBuffer, NullBuffer, ()>>,
     ) -> Option<Segment<()>> {
-        let mut clock = DummyInstantCtx::default();
+        let mut clock = FakeInstantCtx::default();
         let mut state = State::SynRcvd(SynRcvd {
             iss: ISS_2,
             irs: ISS_1,
@@ -1954,7 +1954,7 @@ mod test {
     ); "fin with 2 bytes")]
     fn segment_arrives_when_established(
         incoming: Segment<impl Payload>,
-        expected: Option<State<DummyInstant, RingBuffer, NullBuffer, ()>>,
+        expected: Option<State<FakeInstant, RingBuffer, NullBuffer, ()>>,
     ) -> Option<Segment<()>> {
         let mut state = State::Established(Established {
             snd: Send {
@@ -1972,7 +1972,7 @@ mod test {
             rcv: Recv { buffer: RingBuffer::new(2), assembler: Assembler::new(ISS_2 + 1) },
         });
         let (seg, passive_open) =
-            state.on_segment::<_, ClientlessBufferProvider>(incoming, DummyInstant::default());
+            state.on_segment::<_, ClientlessBufferProvider>(incoming, FakeInstant::default());
         assert_eq!(passive_open, None);
         match expected {
             Some(new_state) => assert_eq!(new_state, state),
@@ -2009,7 +2009,7 @@ mod test {
             assert_eq!(
                 state.on_segment::<_, ClientlessBufferProvider>(
                     Segment::data(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT, TEST_BYTES),
-                    DummyInstant::default(),
+                    FakeInstant::default(),
                 ),
                 (
                     Some(Segment::ack(ISS_1 + 1, ISS_2 + 1 + TEST_BYTES.len(), WindowSize::ZERO)),
@@ -2063,7 +2063,7 @@ mod test {
             }),
         ] {
             assert_eq!(
-                state.poll_send(u32::try_from(TEST_BYTES.len()).unwrap(), DummyInstant::default()),
+                state.poll_send(u32::try_from(TEST_BYTES.len()).unwrap(), FakeInstant::default()),
                 Some(Segment::data(
                     ISS_1 + 1,
                     ISS_2 + 1,
@@ -2074,7 +2074,7 @@ mod test {
             assert_eq!(
                 state.on_segment::<_, ClientlessBufferProvider>(
                     Segment::ack(ISS_2 + 1, ISS_1 + 1 + TEST_BYTES.len(), WindowSize::DEFAULT),
-                    DummyInstant::default(),
+                    FakeInstant::default(),
                 ),
                 (None, None),
             );
@@ -2121,7 +2121,7 @@ mod test {
     => None; "ignore data")]
     fn segment_arrives_when_close_wait(
         incoming: Segment<impl Payload>,
-        expected: Option<State<DummyInstant, RingBuffer, NullBuffer, ()>>,
+        expected: Option<State<FakeInstant, RingBuffer, NullBuffer, ()>>,
     ) -> Option<Segment<()>> {
         let mut state = State::CloseWait(CloseWait {
             snd: Send {
@@ -2140,7 +2140,7 @@ mod test {
             last_wnd: WindowSize::DEFAULT,
         });
         let (seg, _passive_open) =
-            state.on_segment::<_, ClientlessBufferProvider>(incoming, DummyInstant::default());
+            state.on_segment::<_, ClientlessBufferProvider>(incoming, FakeInstant::default());
         match expected {
             Some(new_state) => assert_eq!(new_state, state),
             None => assert_matches!(state, State::CloseWait(_)),
@@ -2150,7 +2150,7 @@ mod test {
 
     #[test]
     fn active_passive_open() {
-        let mut clock = DummyInstantCtx::default();
+        let mut clock = FakeInstantCtx::default();
         let (syn_sent, syn_seg) = Closed::<Initial>::connect(ISS_1, clock.now(), ());
         assert_eq!(syn_seg, Segment::syn(ISS_1, WindowSize::DEFAULT));
         assert_eq!(
@@ -2228,7 +2228,7 @@ mod test {
 
     #[test]
     fn simultaneous_open() {
-        let mut clock = DummyInstantCtx::default();
+        let mut clock = FakeInstantCtx::default();
         let (syn_sent1, syn1) = Closed::<Initial>::connect(ISS_1, clock.now(), ());
         let (syn_sent2, syn2) = Closed::<Initial>::connect(ISS_2, clock.now(), ());
 
@@ -2326,7 +2326,7 @@ mod test {
 
     #[test]
     fn established_receive() {
-        let clock = DummyInstantCtx::default();
+        let clock = FakeInstantCtx::default();
         let mut established = State::Established(Established {
             snd: Send {
                 nxt: ISS_1 + 1,
@@ -2428,7 +2428,7 @@ mod test {
 
     #[test]
     fn established_send() {
-        let clock = DummyInstantCtx::default();
+        let clock = FakeInstantCtx::default();
         let mut send_buffer = RingBuffer::new(BUFFER_SIZE);
         assert_eq!(send_buffer.enqueue_data(TEST_BYTES), 5);
         let mut established = State::Established(Established {
@@ -2451,10 +2451,10 @@ mod test {
         });
         // Data queued but the window is not opened, nothing to send.
         assert_eq!(established.poll_send(u32::MAX, clock.now()), None);
-        let open_window = |established: &mut State<DummyInstant, RingBuffer, RingBuffer, ()>,
+        let open_window = |established: &mut State<FakeInstant, RingBuffer, RingBuffer, ()>,
                            ack: SeqNum,
                            win: usize,
-                           now: DummyInstant| {
+                           now: FakeInstant| {
             assert_eq!(
                 established.on_segment::<_, ClientlessBufferProvider>(
                     Segment::ack(ISS_2 + 1, ack, WindowSize::new(win).unwrap()),
@@ -2503,11 +2503,11 @@ mod test {
 
     #[test]
     fn self_connect_retransmission() {
-        let mut clock = DummyInstantCtx::default();
+        let mut clock = FakeInstantCtx::default();
         let (syn_sent, syn) = Closed::<Initial>::connect(ISS_1, clock.now(), ());
         let mut state = State::<_, RingBuffer, RingBuffer, ()>::SynSent(syn_sent);
         // Retransmission timer should be installed.
-        assert_eq!(state.poll_send_at(), Some(DummyInstant::from(Estimator::RTO_INIT)));
+        assert_eq!(state.poll_send_at(), Some(FakeInstant::from(Estimator::RTO_INIT)));
         clock.sleep(Estimator::RTO_INIT);
         // The SYN segment should be retransmitted.
         assert_eq!(state.poll_send(u32::MAX, clock.now()), Some(syn.into()));
@@ -2619,7 +2619,7 @@ mod test {
 
     #[test]
     fn passive_close() {
-        let mut clock = DummyInstantCtx::default();
+        let mut clock = FakeInstantCtx::default();
         let mut send_buffer = RingBuffer::new(BUFFER_SIZE);
         assert_eq!(send_buffer.enqueue_data(TEST_BYTES), 5);
         // Set up the state machine to start with Established.
@@ -2729,20 +2729,20 @@ mod test {
             iss: ISS_1,
             irs: ISS_2,
             timestamp: None,
-            retrans_timer: RetransTimer { at: DummyInstant::default(), rto: Duration::new(0, 0) },
+            retrans_timer: RetransTimer { at: FakeInstant::default(), rto: Duration::new(0, 0) },
             simultaneous_open: Some(()),
         });
         assert_eq!(state.close(), Ok(()));
         assert_matches!(state, State::FinWait1(_));
         assert_eq!(
-            state.poll_send(u32::MAX, DummyInstant::default()),
+            state.poll_send(u32::MAX, FakeInstant::default()),
             Some(Segment::fin(ISS_1 + 1, ISS_2 + 1, WindowSize::DEFAULT).into())
         );
     }
 
     #[test]
     fn established_active_close() {
-        let mut clock = DummyInstantCtx::default();
+        let mut clock = FakeInstantCtx::default();
         let mut send_buffer = RingBuffer::new(BUFFER_SIZE);
         assert_eq!(send_buffer.enqueue_data(TEST_BYTES), 5);
         // Set up the state machine to start with Established.
@@ -2933,7 +2933,7 @@ mod test {
         assert_eq!(
             state.on_segment::<_, ClientlessBufferProvider>(
                 Segment::fin(ISS_2 + 1, ISS_1 + 2, WindowSize::DEFAULT),
-                DummyInstant::default(),
+                FakeInstant::default(),
             ),
             (
                 Some(Segment::ack(ISS_1 + 2, ISS_2 + 2, WindowSize::new(BUFFER_SIZE - 1).unwrap())),
@@ -2945,7 +2945,7 @@ mod test {
 
     #[test]
     fn simultaneous_close() {
-        let mut clock = DummyInstantCtx::default();
+        let mut clock = FakeInstantCtx::default();
         let mut send_buffer = RingBuffer::new(BUFFER_SIZE);
         assert_eq!(send_buffer.enqueue_data(TEST_BYTES), 5);
         // Set up the state machine to start with Established.
@@ -3034,7 +3034,7 @@ mod test {
 
     #[test]
     fn time_wait_restarts_timer() {
-        let mut clock = DummyInstantCtx::default();
+        let mut clock = FakeInstantCtx::default();
         let mut time_wait = State::<_, NullBuffer, NullBuffer, ()>::TimeWait(TimeWait {
             last_seq: ISS_1 + 2,
             last_ack: ISS_2 + 2,
@@ -3078,7 +3078,7 @@ mod test {
             iss: ISS_1,
             irs: ISS_2,
             timestamp: None,
-            retrans_timer: RetransTimer { at: DummyInstant::default(), rto: Duration::new(0, 0) },
+            retrans_timer: RetransTimer { at: FakeInstant::default(), rto: Duration::new(0, 0) },
             simultaneous_open: None,
         }),
         Segment::syn_ack(ISS_2, ISS_1 + 1, WindowSize::DEFAULT).into() =>
@@ -3086,11 +3086,11 @@ mod test {
     )]
     // Regression test for https://fxbug.dev/107597
     fn ack_to_retransmitted_segment(
-        mut state: State<DummyInstant, RingBuffer, NullBuffer, ()>,
+        mut state: State<FakeInstant, RingBuffer, NullBuffer, ()>,
         seg: Segment<&[u8]>,
     ) -> Option<Segment<()>> {
         let (reply, _): (_, Option<()>) =
-            state.on_segment::<_, ClientlessBufferProvider>(seg, DummyInstant::default());
+            state.on_segment::<_, ClientlessBufferProvider>(seg, FakeInstant::default());
         reply
     }
 }

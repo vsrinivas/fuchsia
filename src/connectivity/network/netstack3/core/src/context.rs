@@ -18,7 +18,7 @@
 //! [`TimerContext`] parameter, which it could use to install new timers.
 //!
 //! Structuring code this way allows us to write code which is agnostic to
-//! execution context - a test mock or any number of possible "real-world"
+//! execution context - a test fake or any number of possible "real-world"
 //! implementations of these traits all appear as indistinguishable, opaque
 //! trait implementations to our code.
 //!
@@ -26,7 +26,7 @@
 //! subdivided into smaller units that view each other as "contexts". For
 //! example, the ARP implementation in the [`crate::device::arp`] module defines
 //! the [`ArpContext`] trait, which is an execution context for ARP operations.
-//! It is implemented both by the test mocks in that module, and also by the
+//! It is implemented both by the test fakes in that module, and also by the
 //! Ethernet device implementation in the [`crate::device::ethernet`] module.
 //!
 //! This subdivision of code into small units in turn enables modularity. If,
@@ -67,7 +67,7 @@
 //!
 //! This style is easy to implement when state is shared and mutated via
 //! interior mutability (e.g., using mutexes), and is also easy to implement
-//! when state is accessed exclusively (e.g., when writing a test mock). It also
+//! when state is accessed exclusively (e.g., when writing a test fake). It also
 //! makes it clear that a critical section is starting and ending, and thus
 //! makes it clear to the programmer that they're performing a potentially
 //! expensive operation, and hopefully encourages them to minimize the duration
@@ -87,12 +87,12 @@ use rand::{CryptoRng, RngCore};
 
 use crate::{Instant, NonSyncContext, SyncCtx};
 
-/// A marker trait indicating that the implementor is not the [`DummySyncCtx`]
+/// A marker trait indicating that the implementor is not the [`FakeSyncCtx`]
 /// type found in test environments.
 ///
 /// See [this issue] for details on why this is needed.
 ///
-/// [`DummySyncCtx`]: testutil::DummySyncCtx
+/// [`FakeSyncCtx`]: testutil::FakeSyncCtx
 /// [this issue]: https://github.com/rust-lang/rust/issues/97811
 pub(crate) trait NonTestCtxMarker {}
 
@@ -104,7 +104,7 @@ pub trait InstantContext {
     ///
     /// All time is measured using `Instant`s, including scheduling timers
     /// through [`TimerContext`]. This type may represent some sort of
-    /// real-world time (e.g., [`std::time::Instant`]), or may be mocked in
+    /// real-world time (e.g., [`std::time::Instant`]), or may be faked in
     /// testing using a fake clock.
     type Instant: Instant + 'static;
 
@@ -274,11 +274,11 @@ pub trait EventContext<T> {
     fn on_event(&mut self, event: T);
 }
 
-/// Mock implementations of context traits.
+/// Fake implementations of context traits.
 ///
-/// Each trait `Xxx` has a mock called `DummyXxx`. `DummyXxx` implements `Xxx`,
-/// and `impl<T> DummyXxx for T` where either `T: AsRef<DummyXxx>` or `T:
-/// AsMut<DummyXxx>` or both (depending on the trait). This allows dummy
+/// Each trait `Xxx` has a fake called `FakeXxx`. `FakeXxx` implements `Xxx`,
+/// and `impl<T> FakeXxx for T` where either `T: AsRef<FakeXxx>` or `T:
+/// AsMut<FakeXxx>` or both (depending on the trait). This allows fake
 /// implementations to be composed easily - any container type need only provide
 /// the appropriate `AsRef` and/or `AsMut` implementations, and the blanket impl
 /// will take care of the rest.
@@ -312,108 +312,108 @@ pub(crate) mod testutil {
         Instant,
     };
 
-    /// A dummy implementation of `Instant` for use in testing.
+    /// A fake implementation of `Instant` for use in testing.
     #[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-    pub struct DummyInstant {
-        // A DummyInstant is just an offset from some arbitrary epoch.
+    pub struct FakeInstant {
+        // A FakeInstant is just an offset from some arbitrary epoch.
         offset: Duration,
     }
 
-    impl DummyInstant {
-        pub(crate) const LATEST: DummyInstant = DummyInstant { offset: Duration::MAX };
+    impl FakeInstant {
+        pub(crate) const LATEST: FakeInstant = FakeInstant { offset: Duration::MAX };
 
-        fn saturating_add(self, dur: Duration) -> DummyInstant {
-            DummyInstant { offset: self.offset.saturating_add(dur) }
+        fn saturating_add(self, dur: Duration) -> FakeInstant {
+            FakeInstant { offset: self.offset.saturating_add(dur) }
         }
     }
 
-    impl From<Duration> for DummyInstant {
-        fn from(offset: Duration) -> DummyInstant {
-            DummyInstant { offset }
+    impl From<Duration> for FakeInstant {
+        fn from(offset: Duration) -> FakeInstant {
+            FakeInstant { offset }
         }
     }
 
-    impl Instant for DummyInstant {
-        fn duration_since(&self, earlier: DummyInstant) -> Duration {
+    impl Instant for FakeInstant {
+        fn duration_since(&self, earlier: FakeInstant) -> Duration {
             self.offset.checked_sub(earlier.offset).unwrap()
         }
 
-        fn checked_add(&self, duration: Duration) -> Option<DummyInstant> {
-            self.offset.checked_add(duration).map(|offset| DummyInstant { offset })
+        fn checked_add(&self, duration: Duration) -> Option<FakeInstant> {
+            self.offset.checked_add(duration).map(|offset| FakeInstant { offset })
         }
 
-        fn checked_sub(&self, duration: Duration) -> Option<DummyInstant> {
-            self.offset.checked_sub(duration).map(|offset| DummyInstant { offset })
-        }
-    }
-
-    impl ops::Add<Duration> for DummyInstant {
-        type Output = DummyInstant;
-
-        fn add(self, dur: Duration) -> DummyInstant {
-            DummyInstant { offset: self.offset + dur }
+        fn checked_sub(&self, duration: Duration) -> Option<FakeInstant> {
+            self.offset.checked_sub(duration).map(|offset| FakeInstant { offset })
         }
     }
 
-    impl ops::Sub<DummyInstant> for DummyInstant {
+    impl ops::Add<Duration> for FakeInstant {
+        type Output = FakeInstant;
+
+        fn add(self, dur: Duration) -> FakeInstant {
+            FakeInstant { offset: self.offset + dur }
+        }
+    }
+
+    impl ops::Sub<FakeInstant> for FakeInstant {
         type Output = Duration;
 
-        fn sub(self, other: DummyInstant) -> Duration {
+        fn sub(self, other: FakeInstant) -> Duration {
             self.offset - other.offset
         }
     }
 
-    impl ops::Sub<Duration> for DummyInstant {
-        type Output = DummyInstant;
+    impl ops::Sub<Duration> for FakeInstant {
+        type Output = FakeInstant;
 
-        fn sub(self, dur: Duration) -> DummyInstant {
-            DummyInstant { offset: self.offset - dur }
+        fn sub(self, dur: Duration) -> FakeInstant {
+            FakeInstant { offset: self.offset - dur }
         }
     }
 
-    impl Debug for DummyInstant {
+    impl Debug for FakeInstant {
         fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             write!(f, "{:?}", self.offset)
         }
     }
 
-    /// A dummy [`InstantContext`] which stores the current time as a
-    /// [`DummyInstant`].
+    /// A fake [`InstantContext`] which stores the current time as a
+    /// [`FakeInstant`].
     #[derive(Default)]
-    pub struct DummyInstantCtx {
-        time: DummyInstant,
+    pub struct FakeInstantCtx {
+        time: FakeInstant,
     }
 
-    impl DummyInstantCtx {
+    impl FakeInstantCtx {
         /// Advance the current time by the given duration.
         pub(crate) fn sleep(&mut self, dur: Duration) {
             self.time.offset += dur;
         }
     }
 
-    impl InstantContext for DummyInstantCtx {
-        type Instant = DummyInstant;
-        fn now(&self) -> DummyInstant {
+    impl InstantContext for FakeInstantCtx {
+        type Instant = FakeInstant;
+        fn now(&self) -> FakeInstant {
             self.time
         }
     }
 
-    impl<T: AsRef<DummyInstantCtx>> InstantContext for T {
-        type Instant = DummyInstant;
-        fn now(&self) -> DummyInstant {
+    impl<T: AsRef<FakeInstantCtx>> InstantContext for T {
+        type Instant = FakeInstant;
+        fn now(&self) -> FakeInstant {
             self.as_ref().now()
         }
     }
 
-    /// Arbitrary data of type `D` attached to a `DummyInstant`.
+    /// Arbitrary data of type `D` attached to a `FakeInstant`.
     ///
     /// `InstantAndData` implements `Ord` and `Eq` to be used in a `BinaryHeap`
-    /// and ordered by `DummyInstant`.
+    /// and ordered by `FakeInstant`.
     #[derive(Clone, Debug)]
-    pub(crate) struct InstantAndData<D>(pub(crate) DummyInstant, pub(crate) D);
+    pub(crate) struct InstantAndData<D>(pub(crate) FakeInstant, pub(crate) D);
 
     impl<D> InstantAndData<D> {
-        pub(crate) fn new(time: DummyInstant, data: D) -> Self {
+        pub(crate) fn new(time: FakeInstant, data: D) -> Self {
             Self(time, data)
         }
     }
@@ -438,27 +438,27 @@ pub(crate) mod testutil {
         }
     }
 
-    /// A dummy [`TimerContext`] which stores time as a [`DummyInstantCtx`].
-    pub(crate) struct DummyTimerCtx<Id> {
-        instant: DummyInstantCtx,
+    /// A fake [`TimerContext`] which stores time as a [`FakeInstantCtx`].
+    pub(crate) struct FakeTimerCtx<Id> {
+        instant: FakeInstantCtx,
         timers: BinaryHeap<InstantAndData<Id>>,
     }
 
-    impl<Id> Default for DummyTimerCtx<Id> {
-        fn default() -> DummyTimerCtx<Id> {
-            DummyTimerCtx { instant: DummyInstantCtx::default(), timers: BinaryHeap::default() }
+    impl<Id> Default for FakeTimerCtx<Id> {
+        fn default() -> FakeTimerCtx<Id> {
+            FakeTimerCtx { instant: FakeInstantCtx::default(), timers: BinaryHeap::default() }
         }
     }
 
-    impl<Id> AsMut<DummyTimerCtx<Id>> for DummyTimerCtx<Id> {
-        fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
+    impl<Id> AsMut<FakeTimerCtx<Id>> for FakeTimerCtx<Id> {
+        fn as_mut(&mut self) -> &mut FakeTimerCtx<Id> {
             self
         }
     }
 
-    impl<Id: Clone> DummyTimerCtx<Id> {
+    impl<Id: Clone> FakeTimerCtx<Id> {
         /// Get an ordered list of all currently-scheduled timers.
-        pub(crate) fn timers(&self) -> Vec<(DummyInstant, Id)> {
+        pub(crate) fn timers(&self) -> Vec<(FakeInstant, Id)> {
             self.timers
                 .clone()
                 .into_sorted_vec()
@@ -468,16 +468,16 @@ pub(crate) mod testutil {
         }
     }
 
-    pub(crate) trait DummyInstantRange: Debug {
-        fn contains(&self, i: DummyInstant) -> bool;
+    pub(crate) trait FakeInstantRange: Debug {
+        fn contains(&self, i: FakeInstant) -> bool;
 
         /// Converts `&self` to a type-erased trait object reference.
         ///
         /// This makes it more ergonomic to construct a `&dyn
-        /// DummyInstantRange`, which is necessary in order to use different
+        /// FakeInstantRange`, which is necessary in order to use different
         /// range types in a context in which a single concrete type is
         /// expected.
-        fn as_dyn(&self) -> &dyn DummyInstantRange
+        fn as_dyn(&self) -> &dyn FakeInstantRange
         where
             Self: Sized,
         {
@@ -485,42 +485,42 @@ pub(crate) mod testutil {
         }
     }
 
-    impl DummyInstantRange for DummyInstant {
-        fn contains(&self, i: DummyInstant) -> bool {
+    impl FakeInstantRange for FakeInstant {
+        fn contains(&self, i: FakeInstant) -> bool {
             self == &i
         }
     }
 
-    impl<B: RangeBounds<DummyInstant> + Debug> DummyInstantRange for B {
-        fn contains(&self, i: DummyInstant) -> bool {
+    impl<B: RangeBounds<FakeInstant> + Debug> FakeInstantRange for B {
+        fn contains(&self, i: FakeInstant) -> bool {
             RangeBounds::contains(self, &i)
         }
     }
 
     // This impl is necessary in order to allow passing different range types
     // to `assert_timers_installed` and friends in a single call.
-    impl<'a> DummyInstantRange for &'a dyn DummyInstantRange {
-        fn contains(&self, i: DummyInstant) -> bool {
-            <dyn DummyInstantRange as DummyInstantRange>::contains(*self, i)
+    impl<'a> FakeInstantRange for &'a dyn FakeInstantRange {
+        fn contains(&self, i: FakeInstant) -> bool {
+            <dyn FakeInstantRange as FakeInstantRange>::contains(*self, i)
         }
     }
 
-    impl<Id: Debug + Clone + Hash + Eq> DummyTimerCtx<Id> {
+    impl<Id: Debug + Clone + Hash + Eq> FakeTimerCtx<Id> {
         /// Asserts that `self` contains exactly the timers in `timers`.
         ///
         /// Each timer must be present, and its deadline must fall into the
         /// specified range. Ranges may be specified either as a specific
-        /// [`DummyInstant`] or as any [`RangeBounds<DummyInstant>`].
+        /// [`FakeInstant`] or as any [`RangeBounds<FakeInstant>`].
         ///
         /// # Panics
         ///
         /// Panics if `timers` contains the same ID more than once or if `self`
         /// does not contain exactly the timers in `timers`.
         ///
-        /// [`RangeBounds<DummyInstant>`]: core::ops::RangeBounds
+        /// [`RangeBounds<FakeInstant>`]: core::ops::RangeBounds
         #[track_caller]
         pub(crate) fn assert_timers_installed<
-            R: DummyInstantRange,
+            R: FakeInstantRange,
             I: IntoIterator<Item = (Id, R)>,
         >(
             &self,
@@ -536,7 +536,7 @@ pub(crate) mod testutil {
         /// addition to those in `timers`.
         #[track_caller]
         pub(crate) fn assert_some_timers_installed<
-            R: DummyInstantRange,
+            R: FakeInstantRange,
             I: IntoIterator<Item = (Id, R)>,
         >(
             &self,
@@ -552,11 +552,11 @@ pub(crate) mod testutil {
         /// Panics if any timers are installed.
         #[track_caller]
         pub(crate) fn assert_no_timers_installed(&self) {
-            self.assert_timers_installed::<DummyInstant, _>([]);
+            self.assert_timers_installed::<FakeInstant, _>([]);
         }
 
         #[track_caller]
-        fn assert_timers_installed_inner<R: DummyInstantRange, I: IntoIterator<Item = (Id, R)>>(
+        fn assert_timers_installed_inner<R: FakeInstantRange, I: IntoIterator<Item = (Id, R)>>(
             &self,
             timers: I,
             exact: bool,
@@ -566,10 +566,10 @@ pub(crate) mod testutil {
                 timers
             });
 
-            enum Error<Id, R: DummyInstantRange> {
+            enum Error<Id, R: FakeInstantRange> {
                 ExpectedButMissing { id: Id, range: R },
-                UnexpectedButPresent { id: Id, instant: DummyInstant },
-                UnexpectedInstant { id: Id, range: R, instant: DummyInstant },
+                UnexpectedButPresent { id: Id, instant: FakeInstant },
+                UnexpectedInstant { id: Id, range: R, instant: FakeInstant },
             }
 
             let mut errors = Vec::new();
@@ -617,19 +617,19 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<Id> AsRef<DummyInstantCtx> for DummyTimerCtx<Id> {
-        fn as_ref(&self) -> &DummyInstantCtx {
+    impl<Id> AsRef<FakeInstantCtx> for FakeTimerCtx<Id> {
+        fn as_ref(&self) -> &FakeInstantCtx {
             &self.instant
         }
     }
 
-    impl<Id: PartialEq> DummyTimerCtx<Id> {
+    impl<Id: PartialEq> FakeTimerCtx<Id> {
         // Just like `TimerContext::cancel_timer`, but takes a reference to `Id`
         // rather than a value. This allows us to implement
         // `schedule_timer_instant`, which needs to retain ownership of the
         // `Id`.
-        fn cancel_timer_inner(&mut self, id: &Id) -> Option<DummyInstant> {
-            let mut r: Option<DummyInstant> = None;
+        fn cancel_timer_inner(&mut self, id: &Id) -> Option<FakeInstant> {
+            let mut r: Option<FakeInstant> = None;
             // NOTE(brunodalbo): Cancelling timers can be made a faster than
             // this if we keep two data structures and require that `Id: Hash`.
             self.timers = self
@@ -649,14 +649,14 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<Id: PartialEq> TimerContext<Id> for DummyTimerCtx<Id> {
-        fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
+    impl<Id: PartialEq> TimerContext<Id> for FakeTimerCtx<Id> {
+        fn schedule_timer_instant(&mut self, time: FakeInstant, id: Id) -> Option<FakeInstant> {
             let ret = self.cancel_timer_inner(&id);
             self.timers.push(InstantAndData::new(time, id));
             ret
         }
 
-        fn cancel_timer(&mut self, id: Id) -> Option<DummyInstant> {
+        fn cancel_timer(&mut self, id: Id) -> Option<FakeInstant> {
             self.cancel_timer_inner(&id)
         }
 
@@ -664,12 +664,12 @@ pub(crate) mod testutil {
             self.timers = self.timers.drain().filter(|t| !f(&t.1)).collect::<Vec<_>>().into();
         }
 
-        fn scheduled_instant(&self, id: Id) -> Option<DummyInstant> {
+        fn scheduled_instant(&self, id: Id) -> Option<FakeInstant> {
             self.timers.iter().find_map(|x| if x.1 == id { Some(x.0) } else { None })
         }
     }
 
-    pub(crate) trait DummyTimerCtxExt<Id: Clone>: AsMut<DummyTimerCtx<Id>> + Sized {
+    pub(crate) trait FakeTimerCtxExt<Id: Clone>: AsMut<FakeTimerCtx<Id>> + Sized {
         /// Triggers the next timer, if any, by calling `f` on it.
         ///
         /// `trigger_next_timer` triggers the next timer, if any, advances the
@@ -696,7 +696,7 @@ pub(crate) mod testutil {
         /// Panics if `instant` is in the past.
         fn trigger_timers_until_instant<F: FnMut(&mut Self, Id)>(
             &mut self,
-            instant: DummyInstant,
+            instant: FakeInstant,
             mut f: F,
         ) -> Vec<Id> {
             assert!(instant >= self.as_mut().now());
@@ -787,7 +787,7 @@ pub(crate) mod testutil {
             F: FnMut(&mut Self, Id),
         >(
             &mut self,
-            instant: DummyInstant,
+            instant: FakeInstant,
             timers: I,
             f: F,
         ) where
@@ -851,15 +851,15 @@ pub(crate) mod testutil {
         move |non_sync_ctx, id| f(sync_ctx, non_sync_ctx, id)
     }
 
-    impl<Id: Clone, T: AsMut<DummyTimerCtx<Id>>> DummyTimerCtxExt<Id> for T {}
+    impl<Id: Clone, T: AsMut<FakeTimerCtx<Id>>> FakeTimerCtxExt<Id> for T {}
 
-    /// A dummy [`FrameContext`].
-    pub struct DummyFrameCtx<Meta> {
+    /// A fake [`FrameContext`].
+    pub struct FakeFrameCtx<Meta> {
         frames: Vec<(Meta, Vec<u8>)>,
         should_error_for_frame: Option<Box<dyn Fn(&Meta) -> bool>>,
     }
 
-    impl<Meta> DummyFrameCtx<Meta> {
+    impl<Meta> FakeFrameCtx<Meta> {
         /// Closure which can decide to cause an error to be thrown when
         /// handling a frame, based on the metadata.
         pub fn set_should_error_for_frame<F: Fn(&Meta) -> bool + 'static>(&mut self, f: F) {
@@ -867,13 +867,13 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<Meta> Default for DummyFrameCtx<Meta> {
-        fn default() -> DummyFrameCtx<Meta> {
-            DummyFrameCtx { frames: Vec::new(), should_error_for_frame: None }
+    impl<Meta> Default for FakeFrameCtx<Meta> {
+        fn default() -> FakeFrameCtx<Meta> {
+            FakeFrameCtx { frames: Vec::new(), should_error_for_frame: None }
         }
     }
 
-    impl<Meta> DummyFrameCtx<Meta> {
+    impl<Meta> FakeFrameCtx<Meta> {
         /// Take all frames sent so far.
         pub(crate) fn take_frames(&mut self) -> Vec<(Meta, Vec<u8>)> {
             core::mem::take(&mut self.frames)
@@ -885,7 +885,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<C, B: BufferMut, Meta> FrameContext<C, B, Meta> for DummyFrameCtx<Meta> {
+    impl<C, B: BufferMut, Meta> FrameContext<C, B, Meta> for FakeFrameCtx<Meta> {
         fn send_frame<S: Serializer<Buffer = B>>(
             &mut self,
             _ctx: &mut C,
@@ -904,19 +904,19 @@ pub(crate) mod testutil {
         }
     }
 
-    /// A dummy [`EventContext`].
-    pub struct DummyEventCtx<E: Debug> {
+    /// A fake [`EventContext`].
+    pub struct FakeEventCtx<E: Debug> {
         events: Vec<E>,
         must_watch_all_events: bool,
     }
 
-    impl<E: Debug> EventContext<E> for DummyEventCtx<E> {
+    impl<E: Debug> EventContext<E> for FakeEventCtx<E> {
         fn on_event(&mut self, event: E) {
             self.events.push(event)
         }
     }
 
-    impl<E: Debug> Drop for DummyEventCtx<E> {
+    impl<E: Debug> Drop for FakeEventCtx<E> {
         fn drop(&mut self) {
             if self.must_watch_all_events {
                 assert!(
@@ -928,13 +928,13 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<E: Debug> Default for DummyEventCtx<E> {
+    impl<E: Debug> Default for FakeEventCtx<E> {
         fn default() -> Self {
             Self { events: Default::default(), must_watch_all_events: false }
         }
     }
 
-    impl<E: Debug> DummyEventCtx<E> {
+    impl<E: Debug> FakeEventCtx<E> {
         pub fn take(&mut self) -> Vec<E> {
             // Any client that calls `take()` is opting into watching events
             // and must watch them all.
@@ -943,26 +943,26 @@ pub(crate) mod testutil {
         }
     }
 
-    /// A dummy [`CounterContext`].
+    /// A fake [`CounterContext`].
     #[derive(Default)]
-    pub struct DummyCounterCtx {
+    pub struct FakeCounterCtx {
         counters: HashMap<&'static str, usize>,
     }
 
-    impl DummyCounterCtx {
+    impl FakeCounterCtx {
         pub(crate) fn get_counter_val(&self, key: &str) -> usize {
             *self.counters.get(key).unwrap_or(&0)
         }
     }
 
-    impl CounterContext for DummyCounterCtx {
+    impl CounterContext for FakeCounterCtx {
         fn increment_counter(&mut self, key: &'static str) {
             let val = self.counters.entry(key).or_insert(0);
             *val += 1;
         }
     }
 
-    impl<T: AsMut<DummyCounterCtx>> CounterContext for T {
+    impl<T: AsMut<FakeCounterCtx>> CounterContext for T {
         fn increment_counter(&mut self, key: &'static str) {
             self.as_mut().increment_counter(key);
         }
@@ -970,29 +970,29 @@ pub(crate) mod testutil {
 
     /// A test helper used to provide an implementation of a non-synchronized
     /// context.
-    pub(crate) struct DummyNonSyncCtx<TimerId, Event: Debug, State> {
+    pub(crate) struct FakeNonSyncCtx<TimerId, Event: Debug, State> {
         rng: FakeCryptoRng<XorShiftRng>,
-        timers: DummyTimerCtx<TimerId>,
-        events: DummyEventCtx<Event>,
-        frames: DummyFrameCtx<DeviceId<DummyInstant>>,
-        counters: DummyCounterCtx,
+        timers: FakeTimerCtx<TimerId>,
+        events: FakeEventCtx<Event>,
+        frames: FakeFrameCtx<DeviceId<FakeInstant>>,
+        counters: FakeCounterCtx,
         state: State,
     }
 
-    impl<TimerId, Event: Debug, State: Default> Default for DummyNonSyncCtx<TimerId, Event, State> {
+    impl<TimerId, Event: Debug, State: Default> Default for FakeNonSyncCtx<TimerId, Event, State> {
         fn default() -> Self {
             Self {
                 rng: FakeCryptoRng::new_xorshift(0),
-                timers: DummyTimerCtx::default(),
-                events: DummyEventCtx::default(),
-                frames: DummyFrameCtx::default(),
-                counters: DummyCounterCtx::default(),
+                timers: FakeTimerCtx::default(),
+                events: FakeEventCtx::default(),
+                frames: FakeFrameCtx::default(),
+                counters: FakeCounterCtx::default(),
                 state: Default::default(),
             }
         }
     }
 
-    impl<TimerId, Event: Debug, State> DummyNonSyncCtx<TimerId, Event, State> {
+    impl<TimerId, Event: Debug, State> FakeNonSyncCtx<TimerId, Event, State> {
         /// Seed the testing RNG with a specific value.
         pub(crate) fn seed_rng(&mut self, seed: u128) {
             self.rng = FakeCryptoRng::new_xorshift(seed);
@@ -1002,12 +1002,12 @@ pub(crate) mod testutil {
         /// timers.
         ///
         /// If any timers are scheduled to fire in the given duration, future
-        /// use of this `DummySyncCtx` may have surprising or buggy behavior.
+        /// use of this `FakeSyncCtx` may have surprising or buggy behavior.
         pub(crate) fn sleep_skip_timers(&mut self, duration: Duration) {
             self.timers.instant.sleep(duration);
         }
 
-        pub(crate) fn timer_ctx(&self) -> &DummyTimerCtx<TimerId> {
+        pub(crate) fn timer_ctx(&self) -> &FakeTimerCtx<TimerId> {
             &self.timers
         }
 
@@ -1015,11 +1015,11 @@ pub(crate) mod testutil {
             self.events.take()
         }
 
-        pub(crate) fn frame_ctx(&self) -> &DummyFrameCtx<DeviceId<DummyInstant>> {
+        pub(crate) fn frame_ctx(&self) -> &FakeFrameCtx<DeviceId<FakeInstant>> {
             &self.frames
         }
 
-        pub(crate) fn frame_ctx_mut(&mut self) -> &mut DummyFrameCtx<DeviceId<DummyInstant>> {
+        pub(crate) fn frame_ctx_mut(&mut self) -> &mut FakeFrameCtx<DeviceId<FakeInstant>> {
             &mut self.frames
         }
 
@@ -1031,12 +1031,12 @@ pub(crate) mod testutil {
             &mut self.state
         }
 
-        pub(crate) fn counter_ctx(&self) -> &DummyCounterCtx {
+        pub(crate) fn counter_ctx(&self) -> &FakeCounterCtx {
             &self.counters
         }
     }
 
-    impl<TimerId, Event: Debug, State> RngContext for DummyNonSyncCtx<TimerId, Event, State> {
+    impl<TimerId, Event: Debug, State> RngContext for FakeNonSyncCtx<TimerId, Event, State> {
         type Rng = FakeCryptoRng<XorShiftRng>;
 
         fn rng(&self) -> &Self::Rng {
@@ -1048,38 +1048,38 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<Id, Event: Debug, State> AsRef<DummyInstantCtx> for DummyNonSyncCtx<Id, Event, State> {
-        fn as_ref(&self) -> &DummyInstantCtx {
+    impl<Id, Event: Debug, State> AsRef<FakeInstantCtx> for FakeNonSyncCtx<Id, Event, State> {
+        fn as_ref(&self) -> &FakeInstantCtx {
             self.timers.as_ref()
         }
     }
 
-    impl<Id, Event: Debug, State> AsMut<DummyCounterCtx> for DummyNonSyncCtx<Id, Event, State> {
-        fn as_mut(&mut self) -> &mut DummyCounterCtx {
+    impl<Id, Event: Debug, State> AsMut<FakeCounterCtx> for FakeNonSyncCtx<Id, Event, State> {
+        fn as_mut(&mut self) -> &mut FakeCounterCtx {
             &mut self.counters
         }
     }
 
-    impl<Id, Event: Debug, State> AsRef<DummyTimerCtx<Id>> for DummyNonSyncCtx<Id, Event, State> {
-        fn as_ref(&self) -> &DummyTimerCtx<Id> {
+    impl<Id, Event: Debug, State> AsRef<FakeTimerCtx<Id>> for FakeNonSyncCtx<Id, Event, State> {
+        fn as_ref(&self) -> &FakeTimerCtx<Id> {
             &self.timers
         }
     }
 
-    impl<Id, Event: Debug, State> AsMut<DummyTimerCtx<Id>> for DummyNonSyncCtx<Id, Event, State> {
-        fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
+    impl<Id, Event: Debug, State> AsMut<FakeTimerCtx<Id>> for FakeNonSyncCtx<Id, Event, State> {
+        fn as_mut(&mut self) -> &mut FakeTimerCtx<Id> {
             &mut self.timers
         }
     }
 
     impl<Id: Debug + PartialEq, Event: Debug, State> TimerContext<Id>
-        for DummyNonSyncCtx<Id, Event, State>
+        for FakeNonSyncCtx<Id, Event, State>
     {
-        fn schedule_timer_instant(&mut self, time: DummyInstant, id: Id) -> Option<DummyInstant> {
+        fn schedule_timer_instant(&mut self, time: FakeInstant, id: Id) -> Option<FakeInstant> {
             self.timers.schedule_timer_instant(time, id)
         }
 
-        fn cancel_timer(&mut self, id: Id) -> Option<DummyInstant> {
+        fn cancel_timer(&mut self, id: Id) -> Option<FakeInstant> {
             self.timers.cancel_timer(id)
         }
 
@@ -1087,156 +1087,156 @@ pub(crate) mod testutil {
             self.timers.cancel_timers_with(f);
         }
 
-        fn scheduled_instant(&self, id: Id) -> Option<DummyInstant> {
+        fn scheduled_instant(&self, id: Id) -> Option<FakeInstant> {
             self.timers.scheduled_instant(id)
         }
     }
 
-    impl<Id, Event: Debug, State> EventContext<Event> for DummyNonSyncCtx<Id, Event, State> {
+    impl<Id, Event: Debug, State> EventContext<Event> for FakeNonSyncCtx<Id, Event, State> {
         fn on_event(&mut self, event: Event) {
             self.events.on_event(event)
         }
     }
 
     #[derive(Default)]
-    pub(crate) struct DummyCtxWithSyncCtx<SC, TimerId, Event: Debug, NonSyncCtxState> {
+    pub(crate) struct FakeCtxWithSyncCtx<SC, TimerId, Event: Debug, NonSyncCtxState> {
         pub(crate) sync_ctx: SC,
-        pub(crate) non_sync_ctx: DummyNonSyncCtx<TimerId, Event, NonSyncCtxState>,
+        pub(crate) non_sync_ctx: FakeNonSyncCtx<TimerId, Event, NonSyncCtxState>,
     }
 
-    pub(crate) type DummyCtx<S, TimerId, Meta, Event, DeviceId, NonSyncCtxState> =
-        DummyCtxWithSyncCtx<DummySyncCtx<S, Meta, DeviceId>, TimerId, Event, NonSyncCtxState>;
+    pub(crate) type FakeCtx<S, TimerId, Meta, Event, DeviceId, NonSyncCtxState> =
+        FakeCtxWithSyncCtx<FakeSyncCtx<S, Meta, DeviceId>, TimerId, Event, NonSyncCtxState>;
 
-    impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState> DummyNetworkContext
-        for DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
+    impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState> FakeNetworkContext
+        for FakeCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
     {
         type TimerId = Id;
         type SendMeta = Meta;
     }
 
-    impl<SC, Id, Event: Debug, NonSyncCtxState> AsRef<DummyInstantCtx>
-        for DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
+    impl<SC, Id, Event: Debug, NonSyncCtxState> AsRef<FakeInstantCtx>
+        for FakeCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
     {
-        fn as_ref(&self) -> &DummyInstantCtx {
+        fn as_ref(&self) -> &FakeInstantCtx {
             self.non_sync_ctx.timers.as_ref()
         }
     }
 
-    impl<SC, Id, Event: Debug, NonSyncCtxState> AsRef<DummyTimerCtx<Id>>
-        for DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
+    impl<SC, Id, Event: Debug, NonSyncCtxState> AsRef<FakeTimerCtx<Id>>
+        for FakeCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
     {
-        fn as_ref(&self) -> &DummyTimerCtx<Id> {
+        fn as_ref(&self) -> &FakeTimerCtx<Id> {
             &self.non_sync_ctx.timers
         }
     }
 
-    impl<SC, Id, Event: Debug, NonSyncCtxState> AsMut<DummyTimerCtx<Id>>
-        for DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
+    impl<SC, Id, Event: Debug, NonSyncCtxState> AsMut<FakeTimerCtx<Id>>
+        for FakeCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
     {
-        fn as_mut(&mut self) -> &mut DummyTimerCtx<Id> {
+        fn as_mut(&mut self) -> &mut FakeTimerCtx<Id> {
             &mut self.non_sync_ctx.timers
         }
     }
 
-    impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState> AsMut<DummyFrameCtx<Meta>>
-        for DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
+    impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState> AsMut<FakeFrameCtx<Meta>>
+        for FakeCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
     {
-        fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
+        fn as_mut(&mut self) -> &mut FakeFrameCtx<Meta> {
             &mut self.sync_ctx.frames
         }
     }
 
     impl<S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState: Default>
-        DummyCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
+        FakeCtx<S, Id, Meta, Event, DeviceId, NonSyncCtxState>
     {
-        /// Constructs a `DummyCtx` with the given state and default
-        /// `DummyTimerCtx`, and `DummyFrameCtx`.
+        /// Constructs a `FakeCtx` with the given state and default
+        /// `FakeTimerCtx`, and `FakeFrameCtx`.
         pub(crate) fn with_state(state: S) -> Self {
-            DummyCtx {
-                sync_ctx: DummySyncCtx {
+            FakeCtx {
+                sync_ctx: FakeSyncCtx {
                     state,
-                    frames: DummyFrameCtx::default(),
+                    frames: FakeFrameCtx::default(),
                     _devices_marker: PhantomData,
                 },
-                non_sync_ctx: DummyNonSyncCtx::default(),
+                non_sync_ctx: FakeNonSyncCtx::default(),
             }
         }
     }
 
     impl<SC, Id, Event: Debug, NonSyncCtxState: Default>
-        DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
+        FakeCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>
     {
         pub(crate) fn with_sync_ctx(sync_ctx: SC) -> Self {
-            DummyCtxWithSyncCtx { sync_ctx, non_sync_ctx: DummyNonSyncCtx::default() }
+            FakeCtxWithSyncCtx { sync_ctx, non_sync_ctx: FakeNonSyncCtx::default() }
         }
     }
 
     #[derive(Default)]
-    pub(crate) struct WrappedDummySyncCtx<Outer, S, Meta, DeviceId> {
-        pub(crate) inner: DummySyncCtx<S, Meta, DeviceId>,
+    pub(crate) struct WrappedFakeSyncCtx<Outer, S, Meta, DeviceId> {
+        pub(crate) inner: FakeSyncCtx<S, Meta, DeviceId>,
         pub(crate) outer: Outer,
     }
 
-    impl<Outer, S, Meta, DeviceId> WrappedDummySyncCtx<Outer, S, Meta, DeviceId> {
+    impl<Outer, S, Meta, DeviceId> WrappedFakeSyncCtx<Outer, S, Meta, DeviceId> {
         pub(crate) fn with_inner_and_outer_state(inner: S, outer: Outer) -> Self {
-            Self { inner: DummySyncCtx::with_state(inner), outer }
+            Self { inner: FakeSyncCtx::with_state(inner), outer }
         }
     }
 
-    impl<Outer, S, Meta, DeviceId> AsRef<DummySyncCtx<S, Meta, DeviceId>>
-        for WrappedDummySyncCtx<Outer, S, Meta, DeviceId>
+    impl<Outer, S, Meta, DeviceId> AsRef<FakeSyncCtx<S, Meta, DeviceId>>
+        for WrappedFakeSyncCtx<Outer, S, Meta, DeviceId>
     {
-        fn as_ref(&self) -> &DummySyncCtx<S, Meta, DeviceId> {
+        fn as_ref(&self) -> &FakeSyncCtx<S, Meta, DeviceId> {
             &self.inner
         }
     }
 
-    impl<Outer, S, Meta, DeviceId> AsMut<DummySyncCtx<S, Meta, DeviceId>>
-        for WrappedDummySyncCtx<Outer, S, Meta, DeviceId>
+    impl<Outer, S, Meta, DeviceId> AsMut<FakeSyncCtx<S, Meta, DeviceId>>
+        for WrappedFakeSyncCtx<Outer, S, Meta, DeviceId>
     {
-        fn as_mut(&mut self) -> &mut DummySyncCtx<S, Meta, DeviceId> {
+        fn as_mut(&mut self) -> &mut FakeSyncCtx<S, Meta, DeviceId> {
             &mut self.inner
         }
     }
 
     /// A test helper used to provide an implementation of a synchronized
     /// context.
-    pub(crate) struct DummySyncCtx<S, Meta, DeviceId> {
+    pub(crate) struct FakeSyncCtx<S, Meta, DeviceId> {
         state: S,
-        frames: DummyFrameCtx<Meta>,
+        frames: FakeFrameCtx<Meta>,
         _devices_marker: PhantomData<DeviceId>,
     }
 
-    impl<S, Meta, DeviceId> AsRef<DummySyncCtx<S, Meta, DeviceId>> for DummySyncCtx<S, Meta, DeviceId> {
-        fn as_ref(&self) -> &DummySyncCtx<S, Meta, DeviceId> {
+    impl<S, Meta, DeviceId> AsRef<FakeSyncCtx<S, Meta, DeviceId>> for FakeSyncCtx<S, Meta, DeviceId> {
+        fn as_ref(&self) -> &FakeSyncCtx<S, Meta, DeviceId> {
             self
         }
     }
 
-    impl<S, Meta, DeviceId> AsMut<DummySyncCtx<S, Meta, DeviceId>> for DummySyncCtx<S, Meta, DeviceId> {
-        fn as_mut(&mut self) -> &mut DummySyncCtx<S, Meta, DeviceId> {
+    impl<S, Meta, DeviceId> AsMut<FakeSyncCtx<S, Meta, DeviceId>> for FakeSyncCtx<S, Meta, DeviceId> {
+        fn as_mut(&mut self) -> &mut FakeSyncCtx<S, Meta, DeviceId> {
             self
         }
     }
 
-    impl<S: Default, Meta, DeviceId> Default for DummySyncCtx<S, Meta, DeviceId> {
-        fn default() -> DummySyncCtx<S, Meta, DeviceId> {
-            DummySyncCtx::with_state(S::default())
+    impl<S: Default, Meta, DeviceId> Default for FakeSyncCtx<S, Meta, DeviceId> {
+        fn default() -> FakeSyncCtx<S, Meta, DeviceId> {
+            FakeSyncCtx::with_state(S::default())
         }
     }
 
-    impl<S, Meta, DeviceId> DummySyncCtx<S, Meta, DeviceId> {
-        /// Constructs a `DummySyncCtx` with the given state and default
-        /// `DummyTimerCtx`, and `DummyFrameCtx`.
+    impl<S, Meta, DeviceId> FakeSyncCtx<S, Meta, DeviceId> {
+        /// Constructs a `FakeSyncCtx` with the given state and default
+        /// `FakeTimerCtx`, and `FakeFrameCtx`.
         pub(crate) fn with_state(state: S) -> Self {
-            DummySyncCtx { state, frames: DummyFrameCtx::default(), _devices_marker: PhantomData }
+            FakeSyncCtx { state, frames: FakeFrameCtx::default(), _devices_marker: PhantomData }
         }
 
         /// Get an immutable reference to the inner state.
         ///
         /// This method is provided instead of an [`AsRef`] impl to avoid
         /// conflicting with user-provided implementations of `AsRef<T> for
-        /// DummyCtx<S, Id, Meta, Event>` for other types, `T`. It is named
+        /// FakeCtx<S, Id, Meta, Event>` for other types, `T`. It is named
         /// `get_ref` instead of `as_ref` so that programmer doesn't need to
         /// specify which `as_ref` method is intended.
         pub(crate) fn get_ref(&self) -> &S {
@@ -1261,27 +1261,27 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<S, Meta, DeviceId> AsMut<DummyFrameCtx<Meta>> for DummySyncCtx<S, Meta, DeviceId> {
-        fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
+    impl<S, Meta, DeviceId> AsMut<FakeFrameCtx<Meta>> for FakeSyncCtx<S, Meta, DeviceId> {
+        fn as_mut(&mut self) -> &mut FakeFrameCtx<Meta> {
             &mut self.frames
         }
     }
 
-    impl<Outer, S, Meta, DeviceId> AsMut<DummyFrameCtx<Meta>>
-        for WrappedDummySyncCtx<Outer, S, Meta, DeviceId>
+    impl<Outer, S, Meta, DeviceId> AsMut<FakeFrameCtx<Meta>>
+        for WrappedFakeSyncCtx<Outer, S, Meta, DeviceId>
     {
-        fn as_mut(&mut self) -> &mut DummyFrameCtx<Meta> {
+        fn as_mut(&mut self) -> &mut FakeFrameCtx<Meta> {
             &mut self.inner.frames
         }
     }
 
     impl<B: BufferMut, S, Id, Meta, Event: Debug, DeviceId, NonSyncCtxState>
-        FrameContext<DummyNonSyncCtx<Id, Event, NonSyncCtxState>, B, Meta>
-        for DummySyncCtx<S, Meta, DeviceId>
+        FrameContext<FakeNonSyncCtx<Id, Event, NonSyncCtxState>, B, Meta>
+        for FakeSyncCtx<S, Meta, DeviceId>
     {
         fn send_frame<SS: Serializer<Buffer = B>>(
             &mut self,
-            ctx: &mut DummyNonSyncCtx<Id, Event, NonSyncCtxState>,
+            ctx: &mut FakeNonSyncCtx<Id, Event, NonSyncCtxState>,
             metadata: Meta,
             frame: SS,
         ) -> Result<(), SS> {
@@ -1298,36 +1298,36 @@ pub(crate) mod testutil {
 
     pub(crate) type PendingFrame<CtxId, Meta> = InstantAndData<PendingFrameData<CtxId, Meta>>;
 
-    /// A dummy network, composed of many `DummySyncCtx`s.
+    /// A fake network, composed of many `FakeSyncCtx`s.
     ///
     /// Provides a utility to have many contexts keyed by `CtxId` that can
     /// exchange frames.
-    pub(crate) struct DummyNetwork<CtxId, RecvMeta, Ctx: DummyNetworkContext, Links>
+    pub(crate) struct FakeNetwork<CtxId, RecvMeta, Ctx: FakeNetworkContext, Links>
     where
-        Links: DummyNetworkLinks<Ctx::SendMeta, RecvMeta, CtxId>,
+        Links: FakeNetworkLinks<Ctx::SendMeta, RecvMeta, CtxId>,
     {
         contexts: HashMap<CtxId, Ctx>,
-        current_time: DummyInstant,
+        current_time: FakeInstant,
         pending_frames: BinaryHeap<PendingFrame<CtxId, RecvMeta>>,
         links: Links,
     }
 
-    /// A context which can be used with a [`DummyNetwork`].
-    pub(crate) trait DummyNetworkContext {
+    /// A context which can be used with a [`FakeNetwork`].
+    pub(crate) trait FakeNetworkContext {
         /// The type of timer IDs installed by this context.
         type TimerId;
         /// The type of metadata associated with frames sent by this context.
         type SendMeta;
     }
 
-    /// A set of links in a `DummyNetwork`.
+    /// A set of links in a `FakeNetwork`.
     ///
-    /// A `DummyNetworkLinks` represents the set of links in a `DummyNetwork`.
+    /// A `FakeNetworkLinks` represents the set of links in a `FakeNetwork`.
     /// It exposes the link information by providing the ability to map from a
     /// frame's sending metadata - including its context, local state, and
     /// `SendMeta` - to the set of appropriate receivers, each represented by
     /// a context ID, receive metadata, and latency.
-    pub(crate) trait DummyNetworkLinks<SendMeta, RecvMeta, CtxId> {
+    pub(crate) trait FakeNetworkLinks<SendMeta, RecvMeta, CtxId> {
         fn map_link(&self, ctx: CtxId, meta: SendMeta) -> Vec<(CtxId, RecvMeta, Option<Duration>)>;
     }
 
@@ -1336,14 +1336,14 @@ pub(crate) mod testutil {
             RecvMeta,
             CtxId,
             F: Fn(CtxId, SendMeta) -> Vec<(CtxId, RecvMeta, Option<Duration>)>,
-        > DummyNetworkLinks<SendMeta, RecvMeta, CtxId> for F
+        > FakeNetworkLinks<SendMeta, RecvMeta, CtxId> for F
     {
         fn map_link(&self, ctx: CtxId, meta: SendMeta) -> Vec<(CtxId, RecvMeta, Option<Duration>)> {
             (self)(ctx, meta)
         }
     }
 
-    /// The result of a single step in a `DummyNetwork`
+    /// The result of a single step in a `FakeNetwork`
     #[derive(Debug)]
     pub(crate) struct StepResult {
         pub(crate) timers_fired: usize,
@@ -1370,26 +1370,26 @@ pub(crate) mod testutil {
     #[derive(Debug)]
     pub(crate) struct LoopLimitReachedError;
 
-    impl<CtxId, RecvMeta, Ctx, Links> DummyNetwork<CtxId, RecvMeta, Ctx, Links>
+    impl<CtxId, RecvMeta, Ctx, Links> FakeNetwork<CtxId, RecvMeta, Ctx, Links>
     where
         CtxId: Eq + Hash + Copy + Debug,
-        Ctx: DummyNetworkContext
-            + AsRef<DummyTimerCtx<Ctx::TimerId>>
-            + AsMut<DummyTimerCtx<Ctx::TimerId>>
-            + AsMut<DummyFrameCtx<Ctx::SendMeta>>,
+        Ctx: FakeNetworkContext
+            + AsRef<FakeTimerCtx<Ctx::TimerId>>
+            + AsMut<FakeTimerCtx<Ctx::TimerId>>
+            + AsMut<FakeFrameCtx<Ctx::SendMeta>>,
         Ctx::TimerId: Clone,
-        Links: DummyNetworkLinks<Ctx::SendMeta, RecvMeta, CtxId>,
+        Links: FakeNetworkLinks<Ctx::SendMeta, RecvMeta, CtxId>,
     {
-        /// Creates a new `DummyNetwork`.
+        /// Creates a new `FakeNetwork`.
         ///
-        /// Creates a new `DummyNetwork` with the collection of `DummySyncCtx`s in
+        /// Creates a new `FakeNetwork` with the collection of `FakeSyncCtx`s in
         /// `contexts`. `Ctx`s are named by type parameter `CtxId`.
         ///
         /// # Panics
         ///
-        /// Calls to `new` will panic if given a `DummySyncCtx` with timer events.
-        /// `DummySyncCtx`s given to `DummyNetwork` **must not** have any timer
-        /// events already attached to them, because `DummyNetwork` maintains
+        /// Calls to `new` will panic if given a `FakeSyncCtx` with timer events.
+        /// `FakeSyncCtx`s given to `FakeNetwork` **must not** have any timer
+        /// events already attached to them, because `FakeNetwork` maintains
         /// all the internal timers in dispatchers in sync to enable synchronous
         /// simulation steps.
         pub(crate) fn new<I: IntoIterator<Item = (CtxId, Ctx)>>(contexts: I, links: Links) -> Self {
@@ -1410,7 +1410,7 @@ pub(crate) mod testutil {
                 // If `max` returns `None`, it means that we were called with no
                 // contexts. That's kind of silly, but whatever - arbitrarily
                 // choose the current time as the epoch.
-                .unwrap_or(DummyInstant::default());
+                .unwrap_or(FakeInstant::default());
 
             assert!(
                 !contexts.iter().any(|(_, ctx)| { !ctx.as_ref().timers.is_empty() }),
@@ -1420,13 +1420,13 @@ pub(crate) mod testutil {
             // Synchronize all contexts' current time to the latest time of any
             // of the contexts. See comment above for more details.
             for (_, ctx) in contexts.iter_mut() {
-                AsMut::<DummyTimerCtx<_>>::as_mut(ctx).instant.time = latest_time;
+                AsMut::<FakeTimerCtx<_>>::as_mut(ctx).instant.time = latest_time;
             }
 
             Self { contexts, current_time: latest_time, pending_frames: BinaryHeap::new(), links }
         }
 
-        /// Retrieves a `DummySyncCtx` named `context`.
+        /// Retrieves a `FakeSyncCtx` named `context`.
         pub(crate) fn context<K: Into<CtxId>>(&mut self, context: K) -> &mut Ctx {
             self.contexts.get_mut(&context.into()).unwrap()
         }
@@ -1446,10 +1446,10 @@ pub(crate) mod testutil {
         /// Performs a single step in network simulation.
         ///
         /// `step` performs a single logical step in the collection of `Ctx`s
-        /// held by this `DummyNetwork`. A single step consists of the following
+        /// held by this `FakeNetwork`. A single step consists of the following
         /// operations:
         ///
-        /// - All pending frames, kept in each `DummySyncCtx`, are mapped to their
+        /// - All pending frames, kept in each `FakeSyncCtx`, are mapped to their
         ///   destination context/device pairs and moved to an internal
         ///   collection of pending frames.
         /// - The collection of pending timers and scheduled frames is inspected
@@ -1472,7 +1472,7 @@ pub(crate) mod testutil {
         ///
         /// # Panics
         ///
-        /// If `DummyNetwork` was set up with a bad `links`, calls to `step` may
+        /// If `FakeNetwork` was set up with a bad `links`, calls to `step` may
         /// panic when trying to route frames to their context/device
         /// destinations.
         pub(crate) fn step<
@@ -1501,7 +1501,7 @@ pub(crate) mod testutil {
             // Move time forward:
             self.current_time = next_step;
             for (_, ctx) in self.contexts.iter_mut() {
-                AsMut::<DummyTimerCtx<_>>::as_mut(ctx).instant.time = next_step;
+                AsMut::<FakeTimerCtx<_>>::as_mut(ctx).instant.time = next_step;
             }
 
             // Dispatch all pending frames:
@@ -1525,7 +1525,7 @@ pub(crate) mod testutil {
             for (_, ctx) in self.contexts.iter_mut() {
                 // We have to collect the timers before dispatching them, to
                 // avoid an infinite loop in case handle_timer schedules another
-                // timer for the same or older DummyInstant.
+                // timer for the same or older FakeInstant.
                 let mut timers = Vec::<Ctx::TimerId>::new();
                 while let Some(InstantAndData(t, id)) = ctx.as_ref().timers.peek() {
                     // TODO(https://github.com/rust-lang/rust/issues/53667):
@@ -1534,7 +1534,7 @@ pub(crate) mod testutil {
                         break;
                     }
                     timers.push(id.clone());
-                    assert_ne!(AsMut::<DummyTimerCtx<_>>::as_mut(ctx).timers.pop(), None);
+                    assert_ne!(AsMut::<FakeTimerCtx<_>>::as_mut(ctx).timers.pop(), None);
                 }
 
                 for t in timers {
@@ -1567,14 +1567,14 @@ pub(crate) mod testutil {
                     return;
                 }
             }
-            panic!("DummyNetwork seems to have gotten stuck in a loop.");
+            panic!("FakeNetwork seems to have gotten stuck in a loop.");
         }
 
         /// Collects all queued frames.
         ///
         /// Collects all pending frames and schedules them for delivery to the
         /// destination context/device based on the result of `links`. The
-        /// collected frames are queued for dispatching in the `DummyNetwork`,
+        /// collected frames are queued for dispatching in the `FakeNetwork`,
         /// ordered by their scheduled delivery time given by the latency result
         /// provided by `links`.
         pub(crate) fn collect_frames(&mut self) {
@@ -1582,7 +1582,7 @@ pub(crate) mod testutil {
                 .contexts
                 .iter_mut()
                 .filter_map(|(n, ctx)| {
-                    let ctx: &mut DummyFrameCtx<_> = ctx.as_mut();
+                    let ctx: &mut FakeFrameCtx<_> = ctx.as_mut();
                     if ctx.frames.is_empty() {
                         None
                     } else {
@@ -1605,12 +1605,12 @@ pub(crate) mod testutil {
             }
         }
 
-        /// Calculates the next `DummyInstant` when events are available.
+        /// Calculates the next `FakeInstant` when events are available.
         ///
-        /// Returns the smallest `DummyInstant` greater than or equal to the
+        /// Returns the smallest `FakeInstant` greater than or equal to the
         /// current time for which an event is available. If no events are
         /// available, returns `None`.
-        fn next_step(&self) -> Option<DummyInstant> {
+        fn next_step(&self) -> Option<FakeInstant> {
             // Get earliest timer in all contexts.
             let next_timer = self
                 .contexts
@@ -1634,15 +1634,15 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<CtxId, Links> DummyNetwork<CtxId, DeviceId<DummyInstant>, crate::testutil::DummyCtx, Links>
+    impl<CtxId, Links> FakeNetwork<CtxId, DeviceId<FakeInstant>, crate::testutil::FakeCtx, Links>
     where
         CtxId: Eq + Hash + Copy + Debug,
-        Links: DummyNetworkLinks<DeviceId<DummyInstant>, DeviceId<DummyInstant>, CtxId>,
+        Links: FakeNetworkLinks<DeviceId<FakeInstant>, DeviceId<FakeInstant>, CtxId>,
     {
         pub(crate) fn with_context<
             K: Into<CtxId>,
             O,
-            F: FnOnce(&mut crate::testutil::DummyCtx) -> O,
+            F: FnOnce(&mut crate::testutil::FakeCtx) -> O,
         >(
             &mut self,
             context: K,
@@ -1651,43 +1651,43 @@ pub(crate) mod testutil {
             f(self.context(context))
         }
 
-        /// Retrieves a `DummySyncCtx` named `context`.
+        /// Retrieves a `FakeSyncCtx` named `context`.
         pub(crate) fn sync_ctx<K: Into<CtxId>>(
             &mut self,
             context: K,
-        ) -> &mut crate::testutil::DummySyncCtx {
-            let crate::testutil::DummyCtx { sync_ctx, non_sync_ctx: _ } = self.context(context);
+        ) -> &mut crate::testutil::FakeSyncCtx {
+            let crate::testutil::FakeCtx { sync_ctx, non_sync_ctx: _ } = self.context(context);
             sync_ctx
         }
 
-        /// Retrieves a `DummyNonSyncCtx` named `context`.
+        /// Retrieves a `FakeNonSyncCtx` named `context`.
         pub(crate) fn non_sync_ctx<K: Into<CtxId>>(
             &mut self,
             context: K,
-        ) -> &mut crate::testutil::DummyNonSyncCtx {
-            let crate::testutil::DummyCtx { sync_ctx: _, non_sync_ctx } = self.context(context);
+        ) -> &mut crate::testutil::FakeNonSyncCtx {
+            let crate::testutil::FakeCtx { sync_ctx: _, non_sync_ctx } = self.context(context);
             non_sync_ctx
         }
     }
 
     impl<RecvMeta, SC, Id, Event, CtxId, Links, NonSyncCtxState>
-        DummyNetwork<
+        FakeNetwork<
             CtxId,
             RecvMeta,
-            DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>,
+            FakeCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>,
             Links,
         >
     where
         Id: Copy,
         Event: Debug,
         CtxId: Eq + Hash + Copy + Debug,
-        Links: DummyNetworkLinks<<DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState> as DummyNetworkContext>::SendMeta, RecvMeta, CtxId>,
-        DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>: DummyNetworkContext<TimerId=Id> + AsMut<DummyFrameCtx<<DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState> as DummyNetworkContext>::SendMeta>>
+        Links: FakeNetworkLinks<<FakeCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState> as FakeNetworkContext>::SendMeta, RecvMeta, CtxId>,
+        FakeCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>: FakeNetworkContext<TimerId=Id> + AsMut<FakeFrameCtx<<FakeCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState> as FakeNetworkContext>::SendMeta>>
     {
         pub(crate) fn with_context<
             K: Into<CtxId>,
             O,
-            F: FnOnce(&mut DummyCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>) -> O,
+            F: FnOnce(&mut FakeCtxWithSyncCtx<SC, Id, Event, NonSyncCtxState>) -> O,
         >(
             &mut self,
             context: K,
@@ -1696,36 +1696,36 @@ pub(crate) mod testutil {
             f(self.context(context))
         }
 
-        /// Retrieves a `DummySyncCtx` named `context`.
+        /// Retrieves a `FakeSyncCtx` named `context`.
         pub(crate) fn sync_ctx<K: Into<CtxId>>(
             &mut self,
             context: K,
         ) -> &mut SC {
-            let DummyCtxWithSyncCtx { sync_ctx, non_sync_ctx: _ } = self.context(context);
+            let FakeCtxWithSyncCtx { sync_ctx, non_sync_ctx: _ } = self.context(context);
             sync_ctx
         }
     }
 
-    /// Creates a new [`DummyNetwork`] of legacy [`Ctx`] contexts in a simple
+    /// Creates a new [`FakeNetwork`] of legacy [`Ctx`] contexts in a simple
     /// two-host configuration.
     ///
     /// Two hosts are created with the given names. Packets emitted by one
     /// arrive at the other and vice-versa.
-    pub(crate) fn new_legacy_simple_dummy_network<CtxId: Copy + Debug + Hash + Eq>(
+    pub(crate) fn new_legacy_simple_fake_network<CtxId: Copy + Debug + Hash + Eq>(
         a_id: CtxId,
-        a: crate::testutil::DummyCtx,
-        a_device_id: DeviceId<DummyInstant>,
+        a: crate::testutil::FakeCtx,
+        a_device_id: DeviceId<FakeInstant>,
         b_id: CtxId,
-        b: crate::testutil::DummyCtx,
-        b_device_id: DeviceId<DummyInstant>,
-    ) -> DummyNetwork<
+        b: crate::testutil::FakeCtx,
+        b_device_id: DeviceId<FakeInstant>,
+    ) -> FakeNetwork<
         CtxId,
-        DeviceId<DummyInstant>,
-        crate::testutil::DummyCtx,
-        impl DummyNetworkLinks<DeviceId<DummyInstant>, DeviceId<DummyInstant>, CtxId>,
+        DeviceId<FakeInstant>,
+        crate::testutil::FakeCtx,
+        impl FakeNetworkLinks<DeviceId<FakeInstant>, DeviceId<FakeInstant>, CtxId>,
     > {
         let contexts = vec![(a_id, a), (b_id, b)].into_iter();
-        DummyNetwork::new(contexts, move |net, _device_id: DeviceId<DummyInstant>| {
+        FakeNetwork::new(contexts, move |net, _device_id: DeviceId<FakeInstant>| {
             if net == a_id {
                 vec![(b_id, b_device_id.clone(), None)]
             } else {
@@ -1735,21 +1735,21 @@ pub(crate) mod testutil {
     }
 
     mod tests {
-        use crate::ip::testutil::DummyDeviceId;
+        use crate::ip::testutil::FakeDeviceId;
 
         use super::*;
 
         const ONE_SEC: Duration = Duration::from_secs(1);
-        const ONE_SEC_INSTANT: DummyInstant = DummyInstant { offset: ONE_SEC };
+        const ONE_SEC_INSTANT: FakeInstant = FakeInstant { offset: ONE_SEC };
 
         #[test]
         fn test_instant_and_data() {
             // Verify implementation of InstantAndData to be used as a complex
             // type in a BinaryHeap.
             let mut heap = BinaryHeap::<InstantAndData<usize>>::new();
-            let now = DummyInstant::default();
+            let now = FakeInstant::default();
 
-            fn new_data(time: DummyInstant, id: usize) -> InstantAndData<usize> {
+            fn new_data(time: FakeInstant, id: usize) -> InstantAndData<usize> {
                 InstantAndData::new(time, id)
             }
 
@@ -1771,23 +1771,22 @@ pub(crate) mod testutil {
         }
 
         #[test]
-        fn test_dummy_timer_context() {
+        fn test_fake_timer_context() {
             // An implementation of `TimerContext` that uses `usize` timer IDs
             // and stores every timer in a `Vec`.
-            impl<M, E: Debug, D, S> TimerHandler<DummyNonSyncCtx<usize, E, S>, usize>
-                for DummySyncCtx<Vec<(usize, DummyInstant)>, M, D>
+            impl<M, E: Debug, D, S> TimerHandler<FakeNonSyncCtx<usize, E, S>, usize>
+                for FakeSyncCtx<Vec<(usize, FakeInstant)>, M, D>
             {
-                fn handle_timer(&mut self, ctx: &mut DummyNonSyncCtx<usize, E, S>, id: usize) {
+                fn handle_timer(&mut self, ctx: &mut FakeNonSyncCtx<usize, E, S>, id: usize) {
                     let now = ctx.now();
                     self.get_mut().push((id, now));
                 }
             }
 
-            let new_ctx = || {
-                DummyCtx::<Vec<(usize, DummyInstant)>, usize, (), (), DummyDeviceId, ()>::default()
-            };
+            let new_ctx =
+                || FakeCtx::<Vec<(usize, FakeInstant)>, usize, (), (), FakeDeviceId, ()>::default();
 
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
 
             // When no timers are installed, `trigger_next_timer` should return
             // `false`.
@@ -1798,7 +1797,7 @@ pub(crate) mod testutil {
             assert_eq!(sync_ctx.get_ref().as_slice(), []);
 
             // When one timer is installed, it should be triggered.
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
 
             // No timer with id `0` exists yet.
             assert_eq!(non_sync_ctx.scheduled_instant(0), None);
@@ -1823,7 +1822,7 @@ pub(crate) mod testutil {
 
             // Once it's been triggered, it should be canceled and not
             // triggerable again.
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
             assert_eq!(
                 non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
                 None
@@ -1831,7 +1830,7 @@ pub(crate) mod testutil {
             assert_eq!(sync_ctx.get_ref().as_slice(), []);
 
             // If we schedule a timer but then cancel it, it shouldn't fire.
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
 
             assert_eq!(non_sync_ctx.schedule_timer(ONE_SEC, 0), None);
             assert_eq!(non_sync_ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
@@ -1843,7 +1842,7 @@ pub(crate) mod testutil {
 
             // If we schedule a timer but then schedule the same ID again, the
             // second timer should overwrite the first one.
-            let DummyCtx { sync_ctx: _, mut non_sync_ctx } = new_ctx();
+            let FakeCtx { sync_ctx: _, mut non_sync_ctx } = new_ctx();
             assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(0), 0), None);
             assert_eq!(
                 non_sync_ctx.schedule_timer(ONE_SEC, 0),
@@ -1853,7 +1852,7 @@ pub(crate) mod testutil {
 
             // If we schedule three timers and then run `trigger_timers_until`
             // with the appropriate value, only two of them should fire.
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } = new_ctx();
             assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(0), 0), None,);
             assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(1), 1), None,);
             assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(2), 2), None,);
@@ -1868,7 +1867,7 @@ pub(crate) mod testutil {
             // The first two timers should have fired.
             assert_eq!(
                 sync_ctx.get_ref().as_slice(),
-                [(0, DummyInstant::from(Duration::from_secs(0))), (1, ONE_SEC_INSTANT)]
+                [(0, FakeInstant::from(Duration::from_secs(0))), (1, ONE_SEC_INSTANT)]
             );
 
             // They should be canceled now.
@@ -1881,7 +1880,7 @@ pub(crate) mod testutil {
             // The last timer should not have fired.
             assert_eq!(
                 non_sync_ctx.cancel_timer(2),
-                Some(DummyInstant::from(Duration::from_secs(2)))
+                Some(FakeInstant::from(Duration::from_secs(2)))
             );
         }
 
@@ -1889,8 +1888,8 @@ pub(crate) mod testutil {
         fn test_trigger_timers_until_and_expect_unordered() {
             // If the requested instant does not coincide with a timer trigger
             // point, the time should still be advanced.
-            let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-                DummyCtx::<Vec<(usize, DummyInstant)>, usize, (), (), DummyDeviceId, ()>::default();
+            let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+                FakeCtx::<Vec<(usize, FakeInstant)>, usize, (), (), FakeDeviceId, ()>::default();
             assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(0), 0), None);
             assert_eq!(non_sync_ctx.schedule_timer(Duration::from_secs(2), 1), None);
             non_sync_ctx.trigger_timers_until_and_expect_unordered(

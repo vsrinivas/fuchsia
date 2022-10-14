@@ -1339,18 +1339,18 @@ mod tests {
     use crate::{
         ip::gmp::GmpDelayedReportTimerId,
         testutil::{
-            assert_empty, DispatchedEvent, DummyCtx, DummyNonSyncCtx, DummySyncCtx, TestIpExt as _,
+            assert_empty, DispatchedEvent, FakeCtx, FakeNonSyncCtx, FakeSyncCtx, TestIpExt as _,
         },
         Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
 
     #[test]
     fn enable_disable_ipv4() {
-        let DummyCtx { sync_ctx, mut non_sync_ctx } =
+        let FakeCtx { sync_ctx, mut non_sync_ctx } =
             Ctx::new_with_builder(StackStateBuilder::default());
         let mut sync_ctx = &sync_ctx;
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        let local_mac = Ipv4::DUMMY_CONFIG.local_mac;
+        let local_mac = Ipv4::FAKE_CONFIG.local_mac;
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv4::MINIMUM_LINK_MTU.into());
 
@@ -1444,11 +1444,11 @@ mod tests {
 
     #[test]
     fn enable_disable_ipv6() {
-        let DummyCtx { sync_ctx, mut non_sync_ctx } =
+        let FakeCtx { sync_ctx, mut non_sync_ctx } =
             Ctx::new_with_builder(StackStateBuilder::default());
         let mut sync_ctx = &sync_ctx;
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        let local_mac = Ipv6::DUMMY_CONFIG.local_mac;
+        let local_mac = Ipv6::FAKE_CONFIG.local_mac;
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         update_ipv6_configuration(&mut sync_ctx, &mut non_sync_ctx, &device_id, |config| {
@@ -1467,8 +1467,8 @@ mod tests {
         // Enable the device and observe an auto-generated link-local address,
         // router solicitation and DAD for the auto-generated address.
         let test_enable_device =
-            |sync_ctx: &mut &DummySyncCtx,
-             non_sync_ctx: &mut DummyNonSyncCtx,
+            |sync_ctx: &mut &FakeSyncCtx,
+             non_sync_ctx: &mut FakeNonSyncCtx,
              extra_group: Option<MulticastAddr<Ipv6Addr>>| {
                 update_ipv6_configuration(sync_ctx, non_sync_ctx, &device_id, |config| {
                     config.ip_config.ip_enabled = true;
@@ -1556,7 +1556,7 @@ mod tests {
         );
 
         let test_disable_device =
-            |sync_ctx: &mut &DummySyncCtx, non_sync_ctx: &mut DummyNonSyncCtx| {
+            |sync_ctx: &mut &FakeSyncCtx, non_sync_ctx: &mut FakeNonSyncCtx| {
                 update_ipv6_configuration(sync_ctx, non_sync_ctx, &device_id, |config| {
                     config.ip_config.ip_enabled = false;
                 });

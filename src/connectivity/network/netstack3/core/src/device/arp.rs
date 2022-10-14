@@ -435,16 +435,16 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyNetwork, DummyNonSyncCtx, DummySyncCtx},
+            testutil::{FakeCtx, FakeNetwork, FakeNonSyncCtx, FakeSyncCtx},
             TimerHandler,
         },
-        device::{ethernet::EthernetLinkDevice, link::testutil::DummyLinkDeviceId},
+        device::{ethernet::EthernetLinkDevice, link::testutil::FakeLinkDeviceId},
         ip::{
             device::nud::{
                 testutil::{assert_dynamic_neighbor_with_addr, assert_neighbor_unknown},
                 BufferNudHandler,
             },
-            testutil::DummyDeviceId,
+            testutil::FakeDeviceId,
         },
         testutil::assert_empty,
     };
@@ -456,17 +456,17 @@ mod tests {
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
     const TEST_INVALID_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
 
-    /// A dummy `ArpContext` that stores frames, address resolution events, and
+    /// A fake `ArpContext` that stores frames, address resolution events, and
     /// address resolution failure events.
-    struct DummyArpCtx {
+    struct FakeArpCtx {
         proto_addr: Option<Ipv4Addr>,
         hw_addr: UnicastAddr<Mac>,
         arp_state: ArpState<EthernetLinkDevice>,
     }
 
-    impl Default for DummyArpCtx {
-        fn default() -> DummyArpCtx {
-            DummyArpCtx {
+    impl Default for FakeArpCtx {
+        fn default() -> FakeArpCtx {
+            FakeArpCtx {
                 proto_addr: Some(TEST_LOCAL_IPV4),
                 hw_addr: UnicastAddr::new(TEST_LOCAL_MAC).unwrap(),
                 arp_state: ArpState::default(),
@@ -474,50 +474,50 @@ mod tests {
         }
     }
 
-    type MockNonSyncCtx =
-        DummyNonSyncCtx<ArpTimerId<EthernetLinkDevice, DummyLinkDeviceId>, (), ()>;
+    type FakeNonSyncCtxImpl =
+        FakeNonSyncCtx<ArpTimerId<EthernetLinkDevice, FakeLinkDeviceId>, (), ()>;
 
-    type MockCtx = DummySyncCtx<
-        DummyArpCtx,
-        ArpFrameMetadata<EthernetLinkDevice, DummyLinkDeviceId>,
-        DummyDeviceId,
+    type FakeCtxImpl = FakeSyncCtx<
+        FakeArpCtx,
+        ArpFrameMetadata<EthernetLinkDevice, FakeLinkDeviceId>,
+        FakeDeviceId,
     >;
 
-    impl DeviceIdContext<EthernetLinkDevice> for MockCtx {
-        type DeviceId = DummyLinkDeviceId;
+    impl DeviceIdContext<EthernetLinkDevice> for FakeCtxImpl {
+        type DeviceId = FakeLinkDeviceId;
     }
 
-    impl ArpContext<EthernetLinkDevice, MockNonSyncCtx> for MockCtx {
+    impl ArpContext<EthernetLinkDevice, FakeNonSyncCtxImpl> for FakeCtxImpl {
         fn get_protocol_addr(
             &self,
-            _ctx: &mut MockNonSyncCtx,
-            _device_id: &DummyLinkDeviceId,
+            _ctx: &mut FakeNonSyncCtxImpl,
+            _device_id: &FakeLinkDeviceId,
         ) -> Option<Ipv4Addr> {
             self.get_ref().proto_addr
         }
 
         fn get_hardware_addr(
             &self,
-            _ctx: &mut MockNonSyncCtx,
-            _device_id: &DummyLinkDeviceId,
+            _ctx: &mut FakeNonSyncCtxImpl,
+            _device_id: &FakeLinkDeviceId,
         ) -> UnicastAddr<Mac> {
             self.get_ref().hw_addr
         }
 
         fn with_arp_state_mut<O, F: FnOnce(&mut ArpState<EthernetLinkDevice>) -> O>(
             &mut self,
-            DummyLinkDeviceId: &DummyLinkDeviceId,
+            FakeLinkDeviceId: &FakeLinkDeviceId,
             cb: F,
         ) -> O {
             cb(&mut self.get_mut().arp_state)
         }
     }
 
-    impl<B: BufferMut> BufferArpContext<EthernetLinkDevice, MockNonSyncCtx, B> for MockCtx {
+    impl<B: BufferMut> BufferArpContext<EthernetLinkDevice, FakeNonSyncCtxImpl, B> for FakeCtxImpl {
         fn send_ip_packet_to_neighbor_link_addr<S: Serializer<Buffer = B>>(
             &mut self,
-            _ctx: &mut MockNonSyncCtx,
-            _device_id: &DummyLinkDeviceId,
+            _ctx: &mut FakeNonSyncCtxImpl,
+            _device_id: &FakeLinkDeviceId,
             _dst_link_address: Mac,
             _body: S,
         ) -> Result<(), S> {
@@ -526,8 +526,8 @@ mod tests {
     }
 
     fn send_arp_packet(
-        sync_ctx: &mut MockCtx,
-        ctx: &mut MockNonSyncCtx,
+        sync_ctx: &mut FakeCtxImpl,
+        ctx: &mut FakeNonSyncCtxImpl,
         op: ArpOp,
         sender_ipv4: Ipv4Addr,
         target_ipv4: Ipv4Addr,
@@ -542,7 +542,7 @@ mod tests {
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, ArpNetworkType::Ipv4);
 
-        handle_packet::<_, _, _, _>(sync_ctx, ctx, DummyLinkDeviceId, buf);
+        handle_packet::<_, _, _, _>(sync_ctx, ctx, FakeLinkDeviceId, buf);
     }
 
     // Validate that buf is an ARP packet with the specific op, local_ipv4,
@@ -566,7 +566,7 @@ mod tests {
     // Validate that we've sent `total_frames` frames in total, and that the
     // most recent one was sent to `dst` with the given ARP packet contents.
     fn validate_last_arp_packet(
-        sync_ctx: &MockCtx,
+        sync_ctx: &FakeCtxImpl,
         total_frames: usize,
         dst: Mac,
         op: ArpOp,
@@ -586,8 +586,8 @@ mod tests {
         // Test that, when we receive a gratuitous ARP request, we cache the
         // sender's address information, and we do not send a response.
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::default());
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::default());
         send_arp_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -601,7 +601,7 @@ mod tests {
         // We should have cached the sender's address information.
         assert_dynamic_neighbor_with_addr(
             &mut sync_ctx,
-            DummyLinkDeviceId,
+            FakeLinkDeviceId,
             SpecifiedAddr::new(TEST_REMOTE_IPV4).unwrap(),
             TEST_REMOTE_MAC,
         );
@@ -614,8 +614,8 @@ mod tests {
         // Test that, when we receive a gratuitous ARP response, we cache the
         // sender's address information, and we do not send a response.
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::default());
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::default());
         send_arp_packet(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -629,7 +629,7 @@ mod tests {
         // We should have cached the sender's address information.
         assert_dynamic_neighbor_with_addr(
             &mut sync_ctx,
-            DummyLinkDeviceId,
+            FakeLinkDeviceId,
             SpecifiedAddr::new(TEST_REMOTE_IPV4).unwrap(),
             TEST_REMOTE_MAC,
         );
@@ -643,20 +643,20 @@ mod tests {
         // a gratuitous ARP for the same host, we cancel the timer and notify
         // the device layer.
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::default());
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::default());
 
         // Trigger link resolution.
         assert_neighbor_unknown(
             &mut sync_ctx,
-            DummyLinkDeviceId,
+            FakeLinkDeviceId,
             SpecifiedAddr::new(TEST_REMOTE_IPV4).unwrap(),
         );
         assert_eq!(
             BufferNudHandler::send_ip_packet_to_neighbor(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
-                &DummyLinkDeviceId,
+                &FakeLinkDeviceId,
                 SpecifiedAddr::new(TEST_REMOTE_IPV4).unwrap(),
                 Buf::new([1], ..),
             ),
@@ -676,7 +676,7 @@ mod tests {
         // The response should now be in our cache.
         assert_dynamic_neighbor_with_addr(
             &mut sync_ctx,
-            DummyLinkDeviceId,
+            FakeLinkDeviceId,
             SpecifiedAddr::new(TEST_REMOTE_IPV4).unwrap(),
             TEST_REMOTE_MAC,
         );
@@ -691,8 +691,8 @@ mod tests {
         // Test that, when we receive an ARP request, we cache the sender's
         // address information and send an ARP response.
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::default());
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::default());
 
         send_arp_packet(
             &mut sync_ctx,
@@ -707,7 +707,7 @@ mod tests {
         // Make sure we cached the sender's address information.
         assert_dynamic_neighbor_with_addr(
             &mut sync_ctx,
-            DummyLinkDeviceId,
+            FakeLinkDeviceId,
             SpecifiedAddr::new(TEST_REMOTE_IPV4).unwrap(),
             TEST_REMOTE_MAC,
         );
@@ -773,12 +773,12 @@ mod tests {
             .chain(iter::once(&requested_remote_cfg))
             .chain(iter::once(&LOCAL_HOST_CFG));
 
-        let mut network = DummyNetwork::new(
+        let mut network = FakeNetwork::new(
             {
                 host_iter.clone().map(|cfg| {
                     let ArpHostConfig { name, proto_addr, hw_addr } = cfg;
-                    let mut ctx = DummyCtx::with_sync_ctx(MockCtx::default());
-                    let DummyCtx { sync_ctx, non_sync_ctx: _ } = &mut ctx;
+                    let mut ctx = FakeCtx::with_sync_ctx(FakeCtxImpl::default());
+                    let FakeCtx { sync_ctx, non_sync_ctx: _ } = &mut ctx;
                     sync_ctx.get_mut().hw_addr = UnicastAddr::new(*hw_addr).unwrap();
                     sync_ctx.get_mut().proto_addr = Some(*proto_addr);
                     (*name, ctx)
@@ -790,7 +790,7 @@ mod tests {
                     .filter_map(|cfg| {
                         let ArpHostConfig { name, proto_addr: _, hw_addr: _ } = cfg;
                         if !ctx.eq(*name) {
-                            Some((*name, DummyLinkDeviceId, None))
+                            Some((*name, FakeLinkDeviceId, None))
                         } else {
                             None
                         }
@@ -812,17 +812,17 @@ mod tests {
         } = requested_remote_cfg;
 
         // Trigger link resolution.
-        network.with_context(local_name, |DummyCtx { sync_ctx, non_sync_ctx }| {
+        network.with_context(local_name, |FakeCtx { sync_ctx, non_sync_ctx }| {
             assert_neighbor_unknown(
                 sync_ctx,
-                DummyLinkDeviceId,
+                FakeLinkDeviceId,
                 SpecifiedAddr::new(requested_remote_proto_addr).unwrap(),
             );
             assert_eq!(
                 BufferNudHandler::send_ip_packet_to_neighbor(
                     sync_ctx,
                     non_sync_ctx,
-                    &DummyLinkDeviceId,
+                    &FakeLinkDeviceId,
                     SpecifiedAddr::new(requested_remote_proto_addr).unwrap(),
                     Buf::new([1], ..),
                 ),
@@ -843,10 +843,10 @@ mod tests {
         });
         // Step once to deliver the ARP request to the remotes.
         let res = network.step(
-            |DummyCtx { sync_ctx, non_sync_ctx }, device_id, buf| {
+            |FakeCtx { sync_ctx, non_sync_ctx }, device_id, buf| {
                 handle_packet(sync_ctx, non_sync_ctx, device_id, buf)
             },
-            |DummyCtx { sync_ctx, non_sync_ctx }, _ctx, id| {
+            |FakeCtx { sync_ctx, non_sync_ctx }, _ctx, id| {
                 TimerHandler::handle_timer(sync_ctx, non_sync_ctx, id)
             },
         );
@@ -861,10 +861,10 @@ mod tests {
 
         // The requested remote should have populated its ARP cache with the local's
         // information.
-        network.with_context(requested_remote_name, |DummyCtx { sync_ctx, non_sync_ctx: _ }| {
+        network.with_context(requested_remote_name, |FakeCtx { sync_ctx, non_sync_ctx: _ }| {
             assert_dynamic_neighbor_with_addr(
                 sync_ctx,
-                DummyLinkDeviceId,
+                FakeLinkDeviceId,
                 SpecifiedAddr::new(local_proto_addr).unwrap(),
                 LOCAL_HOST_CFG.hw_addr,
             );
@@ -884,10 +884,10 @@ mod tests {
 
         // Step once to deliver the ARP response to the local.
         let res = network.step(
-            |DummyCtx { sync_ctx, non_sync_ctx }, device_id, buf| {
+            |FakeCtx { sync_ctx, non_sync_ctx }, device_id, buf| {
                 handle_packet(sync_ctx, non_sync_ctx, device_id, buf)
             },
-            |DummyCtx { sync_ctx, non_sync_ctx }, _ctx, id| {
+            |FakeCtx { sync_ctx, non_sync_ctx }, _ctx, id| {
                 TimerHandler::handle_timer(sync_ctx, non_sync_ctx, id)
             },
         );
@@ -896,10 +896,10 @@ mod tests {
 
         // The local should have populated its cache with the remote's
         // information.
-        network.with_context(local_name, |DummyCtx { sync_ctx, non_sync_ctx: _ }| {
+        network.with_context(local_name, |FakeCtx { sync_ctx, non_sync_ctx: _ }| {
             assert_dynamic_neighbor_with_addr(
                 sync_ctx,
-                DummyLinkDeviceId,
+                FakeLinkDeviceId,
                 SpecifiedAddr::new(requested_remote_proto_addr).unwrap(),
                 requested_remote_hw_addr,
             );
@@ -910,13 +910,13 @@ mod tests {
                 // The non-requested_remote should not have populated its ARP cache.
                 network.with_context(
                     *unrequested_remote_name,
-                    |DummyCtx { sync_ctx, non_sync_ctx: _ }| {
+                    |FakeCtx { sync_ctx, non_sync_ctx: _ }| {
                         // The non-requested_remote should not have sent an ARP response.
                         assert_empty(sync_ctx.frames().iter());
 
                         assert_neighbor_unknown(
                             sync_ctx,
-                            DummyLinkDeviceId,
+                            FakeLinkDeviceId,
                             SpecifiedAddr::new(local_proto_addr).unwrap(),
                         );
                     },

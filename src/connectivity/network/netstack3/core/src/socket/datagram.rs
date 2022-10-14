@@ -1383,11 +1383,11 @@ mod test {
     use crate::{
         data_structures::socketmap::SocketMap,
         ip::{
-            device::state::IpDeviceStateIpExt, socket::testutil::DummyIpSocketCtx,
-            testutil::DummyDeviceId, DEFAULT_HOP_LIMITS,
+            device::state::IpDeviceStateIpExt, socket::testutil::FakeIpSocketCtx,
+            testutil::FakeDeviceId, DEFAULT_HOP_LIMITS,
         },
         socket::{IncompatibleError, InsertError, RemoveResult},
-        testutil::DummyNonSyncCtx,
+        testutil::FakeNonSyncCtx,
     };
 
     use super::*;
@@ -1397,9 +1397,9 @@ mod test {
     impl DatagramIpExt for Ipv4 {}
     impl DatagramIpExt for Ipv6 {}
 
-    struct DummyAddrSpec<I, D>(Never, PhantomData<(I, D)>);
+    struct FakeAddrSpec<I, D>(Never, PhantomData<(I, D)>);
 
-    impl<I: IpExt, D: IpDeviceId> SocketMapAddrSpec for DummyAddrSpec<I, D> {
+    impl<I: IpExt, D: IpDeviceId> SocketMapAddrSpec for FakeAddrSpec<I, D> {
         type DeviceId = D;
         type IpAddr = I::Addr;
         type IpVersion = I;
@@ -1407,7 +1407,7 @@ mod test {
         type RemoteIdentifier = char;
     }
 
-    struct DummyStateSpec<I, D>(Never, PhantomData<(I, D)>);
+    struct FakeStateSpec<I, D>(Never, PhantomData<(I, D)>);
 
     #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     struct Tag;
@@ -1437,7 +1437,7 @@ mod test {
         }
     }
 
-    impl<I: DatagramIpExt, D: IpDeviceId> SocketMapStateSpec for DummyStateSpec<I, D> {
+    impl<I: DatagramIpExt, D: IpDeviceId> SocketMapStateSpec for FakeStateSpec<I, D> {
         type AddrVecTag = Tag;
         type ConnAddrState = Id<Conn>;
         type ConnId = Id<Conn>;
@@ -1456,39 +1456,39 @@ mod test {
         }
     }
 
-    impl<I: DatagramIpExt, D: IpDeviceId> From<Id<Conn>> for DatagramSocketId<DummyStateSpec<I, D>> {
+    impl<I: DatagramIpExt, D: IpDeviceId> From<Id<Conn>> for DatagramSocketId<FakeStateSpec<I, D>> {
         fn from(u: Id<Conn>) -> Self {
             DatagramSocketId::Bound(DatagramBoundId::Connected(u))
         }
     }
 
-    impl<I: DatagramIpExt, D: IpDeviceId> From<Id<Listen>> for DatagramSocketId<DummyStateSpec<I, D>> {
+    impl<I: DatagramIpExt, D: IpDeviceId> From<Id<Listen>> for DatagramSocketId<FakeStateSpec<I, D>> {
         fn from(u: Id<Listen>) -> Self {
             DatagramSocketId::Bound(DatagramBoundId::Listener(u))
         }
     }
 
-    impl<I: DatagramIpExt, D: IpDeviceId> From<Id<Unbound>> for DatagramSocketId<DummyStateSpec<I, D>> {
+    impl<I: DatagramIpExt, D: IpDeviceId> From<Id<Unbound>> for DatagramSocketId<FakeStateSpec<I, D>> {
         fn from(u: Id<Unbound>) -> Self {
             DatagramSocketId::Unbound(u)
         }
     }
 
-    impl<I: DatagramIpExt, D: IpDeviceId> DatagramSocketStateSpec for DummyStateSpec<I, D> {
+    impl<I: DatagramIpExt, D: IpDeviceId> DatagramSocketStateSpec for FakeStateSpec<I, D> {
         type UnboundId = Id<Unbound>;
         type UnboundSharingState = Sharing;
     }
 
-    impl<A, I: DatagramIpExt, D: IpDeviceId>
-        SocketMapConflictPolicy<A, Sharing, DummyAddrSpec<I, D>> for DummyStateSpec<I, D>
+    impl<A, I: DatagramIpExt, D: IpDeviceId> SocketMapConflictPolicy<A, Sharing, FakeAddrSpec<I, D>>
+        for FakeStateSpec<I, D>
     {
         fn check_for_conflicts(
             _new_sharing_state: &Sharing,
             _addr: &A,
-            _socketmap: &SocketMap<AddrVec<DummyAddrSpec<I, D>>, Bound<Self>>,
+            _socketmap: &SocketMap<AddrVec<FakeAddrSpec<I, D>>, Bound<Self>>,
         ) -> Result<(), InsertError>
         where
-            Bound<Self>: Tagged<AddrVec<DummyAddrSpec<I, D>>>,
+            Bound<Self>: Tagged<AddrVec<FakeAddrSpec<I, D>>>,
         {
             // Addresses are completely independent and shadowing doesn't cause
             // conflicts.
@@ -1515,32 +1515,32 @@ mod test {
 
     #[derive(Derivative)]
     #[derivative(Default(bound = ""))]
-    struct DummyDatagramState<I: DatagramIpExt, D: IpDeviceId> {
-        sockets: DatagramSockets<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>,
-        state: DummyIpSocketCtx<I, D>,
+    struct FakeDatagramState<I: DatagramIpExt, D: IpDeviceId> {
+        sockets: DatagramSockets<FakeAddrSpec<I, D>, FakeStateSpec<I, D>>,
+        state: FakeIpSocketCtx<I, D>,
     }
 
     impl<I: DatagramIpExt, D: IpDeviceId + 'static>
-        DatagramStateContext<DummyAddrSpec<I, D>, DummyNonSyncCtx, DummyStateSpec<I, D>>
-        for DummyDatagramState<I, D>
+        DatagramStateContext<FakeAddrSpec<I, D>, FakeNonSyncCtx, FakeStateSpec<I, D>>
+        for FakeDatagramState<I, D>
     {
-        type IpSocketsCtx = DummyIpSocketCtx<I, D>;
+        type IpSocketsCtx = FakeIpSocketCtx<I, D>;
         type LocalIdAllocator = ();
 
         fn join_multicast_group(
             &mut self,
-            _ctx: &mut DummyNonSyncCtx,
-            _device: &<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
-            _addr: MulticastAddr<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
+            _ctx: &mut FakeNonSyncCtx,
+            _device: &<FakeAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
+            _addr: MulticastAddr<<FakeAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
         ) {
             unimplemented!("not required for any existing tests")
         }
 
         fn leave_multicast_group(
             &mut self,
-            _ctx: &mut DummyNonSyncCtx,
-            _device: &<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
-            _addr: MulticastAddr<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
+            _ctx: &mut FakeNonSyncCtx,
+            _device: &<FakeAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
+            _addr: MulticastAddr<<FakeAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
         ) {
             unimplemented!("not required for any existing tests")
         }
@@ -1549,7 +1549,7 @@ mod test {
             O,
             F: FnOnce(
                 &Self::IpSocketsCtx,
-                &DatagramSockets<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>,
+                &DatagramSockets<FakeAddrSpec<I, D>, FakeStateSpec<I, D>>,
             ) -> O,
         >(
             &self,
@@ -1563,7 +1563,7 @@ mod test {
             O,
             F: FnOnce(
                 &mut Self::IpSocketsCtx,
-                &mut DatagramSockets<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>,
+                &mut DatagramSockets<FakeAddrSpec<I, D>, FakeStateSpec<I, D>>,
                 &mut Self::LocalIdAllocator,
             ) -> O,
         >(
@@ -1575,29 +1575,27 @@ mod test {
         }
     }
 
-    impl<I: IpExt> DatagramStateNonSyncContext<DummyAddrSpec<I, DummyDeviceId>> for DummyNonSyncCtx {
+    impl<I: IpExt> DatagramStateNonSyncContext<FakeAddrSpec<I, FakeDeviceId>> for FakeNonSyncCtx {
         fn try_alloc_listen_identifier(
             &mut self,
             _is_available: impl Fn(u8) -> Result<(), InUseError>,
-        ) -> Option<<DummyAddrSpec<I, DummyDeviceId> as SocketMapAddrSpec>::LocalIdentifier>
-        {
+        ) -> Option<<FakeAddrSpec<I, FakeDeviceId> as SocketMapAddrSpec>::LocalIdentifier> {
             unimplemented!("not required for any existing tests")
         }
     }
 
     impl<I: DatagramIpExt, D: IpDeviceId + 'static>
-        LocalIdentifierAllocator<DummyAddrSpec<I, D>, DummyNonSyncCtx, DummyStateSpec<I, D>>
-        for ()
+        LocalIdentifierAllocator<FakeAddrSpec<I, D>, FakeNonSyncCtx, FakeStateSpec<I, D>> for ()
     {
         fn try_alloc_local_id(
             &mut self,
-            bound: &BoundSocketMap<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>,
-            _ctx: &mut DummyNonSyncCtx,
+            bound: &BoundSocketMap<FakeAddrSpec<I, D>, FakeStateSpec<I, D>>,
+            _ctx: &mut FakeNonSyncCtx,
             _flow: DatagramFlowId<
-                <DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr,
-                <DummyAddrSpec<I, D> as SocketMapAddrSpec>::RemoteIdentifier,
+                <FakeAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr,
+                <FakeAddrSpec<I, D> as SocketMapAddrSpec>::RemoteIdentifier,
             >,
-        ) -> Option<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::LocalIdentifier> {
+        ) -> Option<<FakeAddrSpec<I, D> as SocketMapAddrSpec>::LocalIdentifier> {
             (0..u8::MAX).find_map(|identifier| {
                 bound
                     .listeners()
@@ -1616,8 +1614,8 @@ mod test {
 
     #[ip_test]
     fn set_get_hop_limits<I: Ip + DatagramIpExt>() {
-        let mut sync_ctx = DummyDatagramState::<I, DummyDeviceId>::default();
-        let mut non_sync_ctx = DummyNonSyncCtx::default();
+        let mut sync_ctx = FakeDatagramState::<I, FakeDeviceId>::default();
+        let mut non_sync_ctx = FakeNonSyncCtx::default();
 
         let unbound = create_unbound(&mut sync_ctx);
         const EXPECTED_HOP_LIMITS: HopLimits =
@@ -1635,8 +1633,8 @@ mod test {
 
     #[ip_test]
     fn default_hop_limits<I: Ip + DatagramIpExt>() {
-        let mut sync_ctx = DummyDatagramState::<I, DummyDeviceId>::default();
-        let mut non_sync_ctx = DummyNonSyncCtx::default();
+        let mut sync_ctx = FakeDatagramState::<I, FakeDeviceId>::default();
+        let mut non_sync_ctx = FakeNonSyncCtx::default();
 
         let unbound = create_unbound(&mut sync_ctx);
         assert_eq!(get_ip_hop_limits(&sync_ctx, &non_sync_ctx, unbound), DEFAULT_HOP_LIMITS);
@@ -1660,13 +1658,13 @@ mod test {
 
     #[ip_test]
     fn bind_device_unbound<I: Ip + DatagramIpExt>() {
-        let mut sync_ctx = DummyDatagramState::<I, DummyDeviceId>::default();
-        let mut non_sync_ctx = DummyNonSyncCtx::default();
+        let mut sync_ctx = FakeDatagramState::<I, FakeDeviceId>::default();
+        let mut non_sync_ctx = FakeNonSyncCtx::default();
 
         let unbound = create_unbound(&mut sync_ctx);
 
-        set_unbound_device(&mut sync_ctx, &mut non_sync_ctx, unbound, Some(&DummyDeviceId));
-        assert_eq!(get_bound_device(&sync_ctx, &non_sync_ctx, unbound), Some(DummyDeviceId));
+        set_unbound_device(&mut sync_ctx, &mut non_sync_ctx, unbound, Some(&FakeDeviceId));
+        assert_eq!(get_bound_device(&sync_ctx, &non_sync_ctx, unbound), Some(FakeDeviceId));
 
         set_unbound_device(&mut sync_ctx, &mut non_sync_ctx, unbound, None);
         assert_eq!(get_bound_device(&sync_ctx, &non_sync_ctx, unbound), None);

@@ -862,7 +862,7 @@ mod tests {
     use test_case::test_case;
 
     use crate::{
-        ip::testutil::DummyDeviceId,
+        ip::testutil::FakeDeviceId,
         socket::address::{ConnIpAddr, ListenerIpAddr},
         testutil::set_logger_for_test,
     };
@@ -952,7 +952,7 @@ mod tests {
     impl SocketMapAddrSpec for FakeAddrSpec {
         type IpVersion = Ipv4;
         type IpAddr = Ipv4Addr;
-        type DeviceId = DummyDeviceId;
+        type DeviceId = FakeDeviceId;
         type LocalIdentifier = u16;
         type RemoteIdentifier = ();
     }
@@ -1030,7 +1030,7 @@ mod tests {
         }
     }
 
-    const LISTENER_ADDR: ListenerAddr<Ipv4Addr, DummyDeviceId, u16> = ListenerAddr {
+    const LISTENER_ADDR: ListenerAddr<Ipv4Addr, FakeDeviceId, u16> = ListenerAddr {
         ip: ListenerIpAddr {
             addr: Some(unsafe { SpecifiedAddr::new_unchecked(net_ip_v4!("1.2.3.4")) }),
             identifier: 0,
@@ -1038,7 +1038,7 @@ mod tests {
         device: None,
     };
 
-    const CONN_ADDR: ConnAddr<Ipv4Addr, DummyDeviceId, u16, ()> = ConnAddr {
+    const CONN_ADDR: ConnAddr<Ipv4Addr, FakeDeviceId, u16, ()> = ConnAddr {
         ip: unsafe {
             ConnIpAddr {
                 local: (SpecifiedAddr::new_unchecked(net_ip_v4!("5.6.7.8")), 0),
@@ -1152,7 +1152,7 @@ mod tests {
         let addr = LISTENER_ADDR;
         let shadows_addr = {
             assert_eq!(addr.device, None);
-            ListenerAddr { device: Some(DummyDeviceId), ..addr }
+            ListenerAddr { device: Some(FakeDeviceId), ..addr }
         };
 
         let _: Listener = bound.listeners_mut().try_insert(addr, 0, 'a').unwrap().id();

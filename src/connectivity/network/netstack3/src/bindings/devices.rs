@@ -298,12 +298,12 @@ mod tests {
 
     use super::*;
 
-    type TestDevices = Devices<MockDeviceId, u64>;
+    type TestDevices = Devices<FakeDeviceId, u64>;
 
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-    struct MockDeviceId(usize);
+    struct FakeDeviceId(usize);
 
-    impl IdMapCollectionKey for MockDeviceId {
+    impl IdMapCollectionKey for FakeDeviceId {
         const VARIANT_COUNT: usize = 1;
 
         fn get_variant(&self) -> usize {
@@ -318,8 +318,8 @@ mod tests {
     #[test]
     fn test_add_remove_device() {
         let mut d = TestDevices::default();
-        let core_a = MockDeviceId(1);
-        let core_b = MockDeviceId(2);
+        let core_a = FakeDeviceId(1);
+        let core_b = FakeDeviceId(2);
         let a = d.add_device(core_a, |id| id + 10).expect("can add device");
         let b = d.add_device(core_b, |id| id + 20).expect("can add device");
         assert_ne!(a, b, "allocated same id");
@@ -361,11 +361,11 @@ mod tests {
     #[test]
     fn test_iter() {
         let mut d = TestDevices::default();
-        let core_a = MockDeviceId(1);
+        let core_a = FakeDeviceId(1);
         let a = d.add_device(core_a, |id| id + 10).unwrap();
         assert_eq!(d.iter_devices().map(|d| d.id).collect::<HashSet<_>>(), HashSet::from([a]));
 
-        let core_b = MockDeviceId(2);
+        let core_b = FakeDeviceId(2);
         let b = d.add_device(core_b, |id| id + 20).unwrap();
         assert_eq!(d.iter_devices().map(|d| d.id).collect::<HashSet<_>>(), HashSet::from([a, b]));
     }

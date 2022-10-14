@@ -844,25 +844,25 @@ mod tests {
     use crate::{
         context::{
             testutil::{
-                handle_timer_helper_with_sc_ref_mut, DummyCtx, DummyInstant, DummySyncCtx,
-                DummyTimerCtxExt,
+                handle_timer_helper_with_sc_ref_mut, FakeCtx, FakeInstant, FakeSyncCtx,
+                FakeTimerCtxExt,
             },
             InstantContext as _,
         },
-        testutil::{assert_empty, DummyEventDispatcherConfig, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
+        testutil::{assert_empty, FakeEventDispatcherConfig, FAKE_CONFIG_V4, FAKE_CONFIG_V6},
     };
 
     #[derive(Default)]
-    struct DummyFragmentContext<I: Ip> {
-        cache: IpPacketFragmentCache<I, DummyInstant>,
+    struct FakeFragmentContext<I: Ip> {
+        cache: IpPacketFragmentCache<I, FakeInstant>,
     }
 
-    type MockCtx<I> =
-        DummyCtx<DummyFragmentContext<I>, FragmentCacheKey<<I as Ip>::Addr>, (), (), (), ()>;
-    type MockSyncCtx<I> = DummySyncCtx<DummyFragmentContext<I>, (), ()>;
+    type FakeCtxImpl<I> =
+        FakeCtx<FakeFragmentContext<I>, FragmentCacheKey<<I as Ip>::Addr>, (), (), (), ()>;
+    type FakeSyncCtxImpl<I> = FakeSyncCtx<FakeFragmentContext<I>, (), ()>;
 
-    impl<I: Ip> FragmentStateContext<I, DummyInstant> for MockSyncCtx<I> {
-        fn with_state_mut<O, F: FnOnce(&mut IpPacketFragmentCache<I, DummyInstant>) -> O>(
+    impl<I: Ip> FragmentStateContext<I, FakeInstant> for FakeSyncCtxImpl<I> {
+        fn with_state_mut<O, F: FnOnce(&mut IpPacketFragmentCache<I, FakeInstant>) -> O>(
             &mut self,
             cb: F,
         ) -> O {
@@ -910,8 +910,8 @@ mod tests {
     /// Get an IPv4 packet builder.
     fn get_ipv4_builder() -> Ipv4PacketBuilder {
         Ipv4PacketBuilder::new(
-            DUMMY_CONFIG_V4.remote_ip,
-            DUMMY_CONFIG_V4.local_ip,
+            FAKE_CONFIG_V4.remote_ip,
+            FAKE_CONFIG_V4.local_ip,
             10,
             IpProto::Tcp.into(),
         )
@@ -920,15 +920,15 @@ mod tests {
     /// Get an IPv6 packet builder.
     fn get_ipv6_builder() -> Ipv6PacketBuilder {
         Ipv6PacketBuilder::new(
-            DUMMY_CONFIG_V6.remote_ip,
-            DUMMY_CONFIG_V6.local_ip,
+            FAKE_CONFIG_V6.remote_ip,
+            FAKE_CONFIG_V6.local_ip,
             10,
             IpProto::Tcp.into(),
         )
     }
 
     /// Validate that IpPacketFragmentCache has correct size.
-    fn validate_size<I: Ip>(cache: &IpPacketFragmentCache<I, DummyInstant>) {
+    fn validate_size<I: Ip>(cache: &IpPacketFragmentCache<I, FakeInstant>) {
         let mut sz: usize = 0;
 
         for v in cache.cache.values() {
@@ -983,8 +983,8 @@ mod tests {
             ExpectedResult::Ready { total_body_len } => {
                 let _: (FragmentCacheKey<_>, usize) = assert_frag_proc_state_ready!(
                     FragmentHandler::process_fragment::<&[u8]>(sync_ctx, ctx, packet),
-                    DUMMY_CONFIG_V4.remote_ip.get(),
-                    DUMMY_CONFIG_V4.local_ip.get(),
+                    FAKE_CONFIG_V4.remote_ip.get(),
+                    FAKE_CONFIG_V4.local_ip.get(),
                     fragment_id,
                     total_body_len + Ipv4::HEADER_LENGTH
                 );
@@ -1025,8 +1025,8 @@ mod tests {
         bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
         bytes[6] = Ipv6ExtHdrType::Fragment.into(); // Next Header
         bytes[7] = 64;
-        bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
-        bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
+        bytes[8..24].copy_from_slice(FAKE_CONFIG_V6.remote_ip.bytes());
+        bytes[24..40].copy_from_slice(FAKE_CONFIG_V6.local_ip.bytes());
         bytes[40] = IpProto::Tcp.into();
         bytes[42] = (fragment_offset >> 5) as u8;
         bytes[43] = ((fragment_offset & 0x1F) << 3) as u8 | if m_flag { 1 } else { 0 };
@@ -1044,8 +1044,8 @@ mod tests {
             ExpectedResult::Ready { total_body_len } => {
                 let _: (FragmentCacheKey<_>, usize) = assert_frag_proc_state_ready!(
                     FragmentHandler::process_fragment::<&[u8]>(sync_ctx, ctx, packet),
-                    DUMMY_CONFIG_V6.remote_ip.get(),
-                    DUMMY_CONFIG_V6.local_ip.get(),
+                    FAKE_CONFIG_V6.remote_ip.get(),
+                    FAKE_CONFIG_V6.local_ip.get(),
                     fragment_id,
                     total_body_len + Ipv6::HEADER_LENGTH
                 );
@@ -1141,8 +1141,8 @@ mod tests {
         let mut buffer: Vec<u8> = vec![0; total_body_len + I::HEADER_LENGTH];
         let mut buffer = &mut buffer[..];
         let key = FragmentCacheKey::new(
-            I::DUMMY_CONFIG.remote_ip.get(),
-            I::DUMMY_CONFIG.local_ip.get(),
+            I::FAKE_CONFIG.remote_ip.get(),
+            I::FAKE_CONFIG.local_ip.get(),
             fragment_id.into(),
         );
         let packet = FragmentHandler::reassemble_packet(sync_ctx, ctx, &key, &mut buffer).unwrap();
@@ -1167,13 +1167,13 @@ mod tests {
     /// Gets a `FragmentCacheKey` with the remote and local IP addresses hard
     /// coded to their test values.
     fn test_key<I: TestIpExt>(id: u32) -> FragmentCacheKey<I::Addr> {
-        FragmentCacheKey::new(I::DUMMY_CONFIG.remote_ip.get(), I::DUMMY_CONFIG.local_ip.get(), id)
+        FragmentCacheKey::new(I::FAKE_CONFIG.remote_ip.get(), I::FAKE_CONFIG.local_ip.get(), id)
     }
 
     #[test]
     fn test_ipv4_reassembly_not_needed() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<Ipv4>::with_sync_ctx(MockSyncCtx::<Ipv4>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<Ipv4>::with_sync_ctx(FakeSyncCtxImpl::<Ipv4>::default());
 
         // Test that we don't attempt reassembly if the packet is not
         // fragmented.
@@ -1194,8 +1194,8 @@ mod tests {
         expected = "internal error: entered unreachable code: Should never call this function if the packet does not have a fragment header"
     )]
     fn test_ipv6_reassembly_not_needed() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<Ipv6>::with_sync_ctx(MockSyncCtx::<Ipv6>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<Ipv6>::with_sync_ctx(FakeSyncCtxImpl::<Ipv6>::default());
 
         // Test that we panic if we call `fragment_data` on a packet that has no
         // fragment data.
@@ -1212,8 +1212,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly<I: Ip + TestIpExt>() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<I>::with_sync_ctx(FakeSyncCtxImpl::<I>::default());
         let fragment_id = 5;
 
         // Test that we properly reassemble fragmented packets.
@@ -1253,9 +1253,9 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassemble_with_missing_blocks<I: Ip + TestIpExt>() {
-        let dummy_config = I::DUMMY_CONFIG;
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
+        let fake_config = I::FAKE_CONFIG;
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<I>::with_sync_ctx(FakeSyncCtxImpl::<I>::default());
         let fragment_id = 5;
 
         // Test the error we get when we attempt to reassemble with missing
@@ -1284,8 +1284,8 @@ mod tests {
         let mut buffer: Vec<u8> = vec![0; 1];
         let mut buffer = &mut buffer[..];
         let key = FragmentCacheKey::new(
-            dummy_config.remote_ip.get(),
-            dummy_config.local_ip.get(),
+            fake_config.remote_ip.get(),
+            fake_config.local_ip.get(),
             fragment_id as u32,
         );
         assert_eq!(
@@ -1297,9 +1297,9 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassemble_after_timer<I: Ip + TestIpExt>() {
-        let dummy_config = I::DUMMY_CONFIG;
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
+        let fake_config = I::FAKE_CONFIG;
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<I>::with_sync_ctx(FakeSyncCtxImpl::<I>::default());
         let fragment_id = 5;
         let key = test_key::<I>(fragment_id.into());
 
@@ -1321,7 +1321,7 @@ mod tests {
         // Make sure a timer got added.
         non_sync_ctx
             .timer_ctx()
-            .assert_timers_installed([(key, DummyInstant::from(REASSEMBLY_TIMEOUT))]);
+            .assert_timers_installed([(key, FakeInstant::from(REASSEMBLY_TIMEOUT))]);
         validate_size(&sync_ctx.get_ref().cache);
 
         // Process fragment #1
@@ -1336,7 +1336,7 @@ mod tests {
         // Make sure no new timers got added or fired.
         non_sync_ctx
             .timer_ctx()
-            .assert_timers_installed([(key, DummyInstant::from(REASSEMBLY_TIMEOUT))]);
+            .assert_timers_installed([(key, FakeInstant::from(REASSEMBLY_TIMEOUT))]);
         validate_size(&sync_ctx.get_ref().cache);
 
         // Process fragment #2
@@ -1351,7 +1351,7 @@ mod tests {
         // Make sure no new timers got added or fired.
         non_sync_ctx
             .timer_ctx()
-            .assert_timers_installed([(key, DummyInstant::from(REASSEMBLY_TIMEOUT))]);
+            .assert_timers_installed([(key, FakeInstant::from(REASSEMBLY_TIMEOUT))]);
         validate_size(&sync_ctx.get_ref().cache);
 
         // Trigger the timer (simulate a timer for the fragmented packet)
@@ -1367,8 +1367,8 @@ mod tests {
         // Attempt to reassemble the packet but get an error since the fragment
         // data would have been reset/cleared.
         let key = FragmentCacheKey::new(
-            dummy_config.local_ip.get(),
-            dummy_config.remote_ip.get(),
+            fake_config.local_ip.get(),
+            fake_config.remote_ip.get(),
             fragment_id as u32,
         );
         let packet_len = 44;
@@ -1383,8 +1383,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_fragment_cache_oom<I: Ip + TestIpExt>() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<I>::with_sync_ctx(FakeSyncCtxImpl::<I>::default());
         let mut fragment_id = 0;
         const THRESHOLD: usize = 8196usize;
 
@@ -1442,8 +1442,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_overlapping_single_fragment<I: Ip + TestIpExt>() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<I>::with_sync_ctx(FakeSyncCtxImpl::<I>::default());
         let fragment_id = 5;
 
         // Test that we error on overlapping/duplicate fragments.
@@ -1471,8 +1471,8 @@ mod tests {
 
     #[test]
     fn test_ipv4_fragment_not_multiple_of_offset_unit() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<Ipv4>::with_sync_ctx(MockSyncCtx::<Ipv4>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<Ipv4>::with_sync_ctx(FakeSyncCtxImpl::<Ipv4>::default());
         let fragment_id = 0;
 
         assert_eq!(sync_ctx.get_ref().cache.size, 0);
@@ -1521,8 +1521,8 @@ mod tests {
         let packet = buffer.parse::<Ipv4Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
             FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut non_sync_ctx, packet),
-            DUMMY_CONFIG_V4.remote_ip.get(),
-            DUMMY_CONFIG_V4.local_ip.get(),
+            FAKE_CONFIG_V4.remote_ip.get(),
+            FAKE_CONFIG_V4.local_ip.get(),
             fragment_id,
             35
         );
@@ -1540,8 +1540,8 @@ mod tests {
 
     #[test]
     fn test_ipv6_fragment_not_multiple_of_offset_unit() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<Ipv6>::with_sync_ctx(MockSyncCtx::<Ipv6>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<Ipv6>::with_sync_ctx(FakeSyncCtxImpl::<Ipv6>::default());
         let fragment_id = 0;
 
         assert_eq!(sync_ctx.get_ref().cache.size, 0);
@@ -1564,8 +1564,8 @@ mod tests {
         bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
         bytes[6] = Ipv6ExtHdrType::Fragment.into(); // Next Header
         bytes[7] = 64;
-        bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
-        bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
+        bytes[8..24].copy_from_slice(FAKE_CONFIG_V6.remote_ip.bytes());
+        bytes[24..40].copy_from_slice(FAKE_CONFIG_V6.local_ip.bytes());
         bytes[40] = IpProto::Tcp.into();
         bytes[42] = 0;
         bytes[43] = (1 << 3) | 1;
@@ -1587,8 +1587,8 @@ mod tests {
         bytes[..4].copy_from_slice(&[0x60, 0x20, 0x00, 0x77][..]);
         bytes[6] = Ipv6ExtHdrType::Fragment.into(); // Next Header
         bytes[7] = 64;
-        bytes[8..24].copy_from_slice(DUMMY_CONFIG_V6.remote_ip.bytes());
-        bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
+        bytes[8..24].copy_from_slice(FAKE_CONFIG_V6.remote_ip.bytes());
+        bytes[24..40].copy_from_slice(FAKE_CONFIG_V6.local_ip.bytes());
         bytes[40] = IpProto::Tcp.into();
         bytes[42] = 0;
         bytes[43] = 1 << 3;
@@ -1600,8 +1600,8 @@ mod tests {
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
         let (key, packet_len) = assert_frag_proc_state_ready!(
             FragmentHandler::process_fragment::<&[u8]>(&mut sync_ctx, &mut non_sync_ctx, packet),
-            DUMMY_CONFIG_V6.remote_ip.get(),
-            DUMMY_CONFIG_V6.local_ip.get(),
+            FAKE_CONFIG_V6.remote_ip.get(),
+            FAKE_CONFIG_V6.local_ip.get(),
             fragment_id,
             55
         );
@@ -1619,8 +1619,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly_with_multiple_intertwined_packets<I: Ip + TestIpExt>() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<I>::with_sync_ctx(FakeSyncCtxImpl::<I>::default());
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
 
@@ -1694,8 +1694,8 @@ mod tests {
 
     #[ip_test]
     fn test_ip_reassembly_timer_with_multiple_intertwined_packets<I: Ip + TestIpExt>() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<I>::with_sync_ctx(FakeSyncCtxImpl::<I>::default());
         let fragment_id_0 = 5;
         let fragment_id_1 = 10;
         let fragment_id_2 = 15;
@@ -1852,8 +1852,8 @@ mod tests {
 
     #[test]
     fn test_no_more_fragments_in_middle_of_block() {
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<Ipv4>::with_sync_ctx(MockSyncCtx::<Ipv4>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<Ipv4>::with_sync_ctx(FakeSyncCtxImpl::<Ipv4>::default());
         process_ipv4_fragment(
             &mut sync_ctx,
             &mut non_sync_ctx,
@@ -1879,16 +1879,16 @@ mod tests {
         const FRAGMENT_OFFSET: u16 = 0;
         const M_FLAG: bool = true;
 
-        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
-            MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
+        let FakeCtxImpl { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtxImpl::<I>::with_sync_ctx(FakeSyncCtxImpl::<I>::default());
 
-        let DummyEventDispatcherConfig {
+        let FakeEventDispatcherConfig {
             subnet: _,
             local_ip,
             local_mac: _,
             remote_ip,
             remote_mac: _,
-        } = I::DUMMY_CONFIG;
+        } = I::FAKE_CONFIG;
         let key = FragmentCacheKey::new(remote_ip.get(), local_ip.get(), FRAGMENT_ID.into());
 
         // Do this a couple times to make sure that new packets matching the

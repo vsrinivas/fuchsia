@@ -232,13 +232,13 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyNonSyncCtx, DummySyncCtx, DummyTimerCtxExt as _},
+            testutil::{FakeCtx, FakeNonSyncCtx, FakeSyncCtx, FakeTimerCtxExt as _},
             FrameContext as _, InstantContext as _,
         },
-        ip::testutil::DummyDeviceId,
+        ip::testutil::FakeDeviceId,
     };
 
-    struct MockRsContext {
+    struct FakeRsContext {
         max_router_solicitations: Option<NonZeroU8>,
         router_soliciations_remaining: Option<NonZeroU8>,
         source_address: Option<UnicastAddr<Ipv6Addr>>,
@@ -250,10 +250,10 @@ mod tests {
         message: RouterSolicitation,
     }
 
-    type MockCtx = DummySyncCtx<MockRsContext, RsMessageMeta, DummyDeviceId>;
-    type MockNonSyncCtx = DummyNonSyncCtx<RsTimerId<DummyDeviceId>, (), ()>;
+    type FakeCtxImpl = FakeSyncCtx<FakeRsContext, RsMessageMeta, FakeDeviceId>;
+    type FakeNonSyncCtxImpl = FakeNonSyncCtx<RsTimerId<FakeDeviceId>, (), ()>;
 
-    impl Ipv6DeviceRsContext<MockNonSyncCtx> for MockCtx {
+    impl Ipv6DeviceRsContext<FakeNonSyncCtxImpl> for FakeCtxImpl {
         type LinkLayerAddr = Vec<u8>;
 
         fn with_rs_remaining_mut_and_max<
@@ -261,10 +261,10 @@ mod tests {
             F: FnOnce(&mut Option<NonZeroU8>, Option<NonZeroU8>) -> O,
         >(
             &mut self,
-            &DummyDeviceId: &DummyDeviceId,
+            &FakeDeviceId: &FakeDeviceId,
             cb: F,
         ) -> O {
-            let MockRsContext {
+            let FakeRsContext {
                 max_router_solicitations,
                 router_soliciations_remaining,
                 source_address: _,
@@ -273,8 +273,8 @@ mod tests {
             cb(router_soliciations_remaining, *max_router_solicitations)
         }
 
-        fn get_link_layer_addr_bytes(&self, &DummyDeviceId: &DummyDeviceId) -> Option<Vec<u8>> {
-            let MockRsContext {
+        fn get_link_layer_addr_bytes(&self, &FakeDeviceId: &FakeDeviceId) -> Option<Vec<u8>> {
+            let FakeRsContext {
                 max_router_solicitations: _,
                 router_soliciations_remaining: _,
                 source_address: _,
@@ -284,18 +284,18 @@ mod tests {
         }
     }
 
-    impl Ipv6LayerRsContext<MockNonSyncCtx> for MockCtx {
+    impl Ipv6LayerRsContext<FakeNonSyncCtxImpl> for FakeCtxImpl {
         fn send_rs_packet<
             S: Serializer<Buffer = EmptyBuf>,
             F: FnOnce(Option<UnicastAddr<Ipv6Addr>>) -> S,
         >(
             &mut self,
-            ctx: &mut MockNonSyncCtx,
-            &DummyDeviceId: &DummyDeviceId,
+            ctx: &mut FakeNonSyncCtxImpl,
+            &FakeDeviceId: &FakeDeviceId,
             message: RouterSolicitation,
             body: F,
         ) -> Result<(), S> {
-            let MockRsContext {
+            let FakeRsContext {
                 max_router_solicitations: _,
                 router_soliciations_remaining: _,
                 source_address,
@@ -305,25 +305,25 @@ mod tests {
         }
     }
 
-    const RS_TIMER_ID: RsTimerId<DummyDeviceId> = RsTimerId { device_id: DummyDeviceId };
+    const RS_TIMER_ID: RsTimerId<FakeDeviceId> = RsTimerId { device_id: FakeDeviceId };
 
     #[test]
     fn stop_router_solicitation() {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeRsContext {
                 max_router_solicitations: NonZeroU8::new(1),
                 router_soliciations_remaining: None,
                 source_address: None,
                 link_layer_bytes: None,
             }));
-        RsHandler::start_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, &DummyDeviceId);
+        RsHandler::start_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, &FakeDeviceId);
 
         let now = non_sync_ctx.now();
         non_sync_ctx
             .timer_ctx()
             .assert_timers_installed([(RS_TIMER_ID, now..=now + MAX_RTR_SOLICITATION_DELAY)]);
 
-        RsHandler::stop_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, &DummyDeviceId);
+        RsHandler::stop_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, &FakeDeviceId);
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
 
         assert_eq!(sync_ctx.frames(), &[][..]);
@@ -368,14 +368,14 @@ mod tests {
         link_layer_bytes: Option<Vec<u8>>,
         expected_sll_bytes: Option<&[u8]>,
     ) {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockRsContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeRsContext {
                 max_router_solicitations: NonZeroU8::new(max_router_solicitations),
                 router_soliciations_remaining: None,
                 source_address,
                 link_layer_bytes,
             }));
-        RsHandler::start_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, &DummyDeviceId);
+        RsHandler::start_router_solicitation(&mut sync_ctx, &mut non_sync_ctx, &FakeDeviceId);
 
         assert_eq!(sync_ctx.frames(), &[][..]);
 

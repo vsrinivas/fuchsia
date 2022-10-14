@@ -19,9 +19,7 @@ use rand_xorshift::XorShiftRng;
 
 use crate::{
     context::{
-        testutil::{
-            DummyFrameCtx, DummyInstant, DummyNetworkContext, DummyTimerCtx, InstantAndData,
-        },
+        testutil::{FakeFrameCtx, FakeInstant, FakeNetworkContext, FakeTimerCtx, InstantAndData},
         EventContext, FrameContext as _, InstantContext, TimerContext,
     },
     device::{BufferDeviceLayerEventDispatcher, DeviceId, DeviceLayerEventDispatcher},
@@ -57,12 +55,12 @@ where
 ///
 /// Our benchmarks rely on the unstable `test` feature, which is disallowed in
 /// Fuchsia's build system. In order to ensure that our benchmarks are always
-/// compiled and tested, this module provides mocks that allow us to run our
+/// compiled and tested, this module provides fakes that allow us to run our
 /// benchmarks as normal tests when the `benchmark` feature is disabled.
 ///
 /// See the `bench!` macro for details on how this module is used.
 pub(crate) mod benchmarks {
-    /// A trait to allow mocking of the `test::Bencher` type.
+    /// A trait to allow faking of the `test::Bencher` type.
     pub(crate) trait Bencher {
         fn iter<T, F: FnMut() -> T>(&mut self, inner: F);
     }
@@ -100,28 +98,28 @@ pub(crate) mod benchmarks {
 }
 
 #[derive(Default)]
-pub(crate) struct DummyNonSyncCtxState {
+pub(crate) struct FakeNonSyncCtxState {
     icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
     icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
-    rx_available: Vec<DeviceId<DummyInstant>>,
+    rx_available: Vec<DeviceId<FakeInstant>>,
 }
 
-// Use the `Never` type for the `crate::context::testutil::DummyCtx`'s frame
+// Use the `Never` type for the `crate::context::testutil::FakeCtx`'s frame
 // metadata type. This ensures that we don't accidentally send frames to its
-// `DummyFrameCtx`, which isn't actually used (instead, we use the
-// `DummyFrameCtx` stored in `DummyEventDispatcher`). Note that this doesn't
+// `FakeFrameCtx`, which isn't actually used (instead, we use the
+// `FakeFrameCtx` stored in `FakeEventDispatcher`). Note that this doesn't
 // prevent code from attempting to read from this context (code which only
 // accesses the frame contents rather than the frame metadata will still
 // compile).
-pub(crate) type DummyCtx = Ctx<DummyNonSyncCtx>;
-pub(crate) type DummySyncCtx = SyncCtx<DummyNonSyncCtx>;
-pub(crate) type DummyNonSyncCtx = crate::context::testutil::DummyNonSyncCtx<
-    TimerId<DummyInstant>,
+pub(crate) type FakeCtx = Ctx<FakeNonSyncCtx>;
+pub(crate) type FakeSyncCtx = SyncCtx<FakeNonSyncCtx>;
+pub(crate) type FakeNonSyncCtx = crate::context::testutil::FakeNonSyncCtx<
+    TimerId<FakeInstant>,
     DispatchedEvent,
-    DummyNonSyncCtxState,
+    FakeNonSyncCtxState,
 >;
 
-impl TcpNonSyncContext for DummyNonSyncCtx {
+impl TcpNonSyncContext for FakeNonSyncCtx {
     type ReceiveBuffer = RingBuffer;
 
     type SendBuffer = RingBuffer;
@@ -138,12 +136,12 @@ impl TcpNonSyncContext for DummyNonSyncCtx {
     }
 }
 
-impl DummyNonSyncCtx {
-    pub(crate) fn take_frames(&mut self) -> Vec<(DeviceId<DummyInstant>, Vec<u8>)> {
+impl FakeNonSyncCtx {
+    pub(crate) fn take_frames(&mut self) -> Vec<(DeviceId<FakeInstant>, Vec<u8>)> {
         self.frame_ctx_mut().take_frames()
     }
 
-    pub(crate) fn frames_sent(&self) -> &[(DeviceId<DummyInstant>, Vec<u8>)] {
+    pub(crate) fn frames_sent(&self) -> &[(DeviceId<FakeInstant>, Vec<u8>)] {
         self.frame_ctx().frames()
     }
 }
@@ -275,21 +273,21 @@ pub(crate) fn set_logger_for_test() {
 }
 
 /// Get the counter value for a `key`.
-pub(crate) fn get_counter_val(ctx: &DummyNonSyncCtx, key: &str) -> usize {
+pub(crate) fn get_counter_val(ctx: &FakeNonSyncCtx, key: &str) -> usize {
     ctx.counter_ctx().get_counter_val(key)
 }
 
 /// An extension trait for `Ip` providing test-related functionality.
 pub(crate) trait TestIpExt: crate::ip::IpExt {
-    /// Either [`DUMMY_CONFIG_V4`] or [`DUMMY_CONFIG_V6`].
-    const DUMMY_CONFIG: DummyEventDispatcherConfig<Self::Addr>;
+    /// Either [`FAKE_CONFIG_V4`] or [`FAKE_CONFIG_V6`].
+    const FAKE_CONFIG: FakeEventDispatcherConfig<Self::Addr>;
 
-    /// Get an IP address in the same subnet as `Self::DUMMY_CONFIG`.
+    /// Get an IP address in the same subnet as `Self::FAKE_CONFIG`.
     ///
     /// `last` is the value to be put in the last octet of the IP address.
     fn get_other_ip_address(last: u8) -> SpecifiedAddr<Self::Addr>;
 
-    /// Get an IP address in a different subnet from `Self::DUMMY_CONFIG`.
+    /// Get an IP address in a different subnet from `Self::FAKE_CONFIG`.
     ///
     /// `last` is the value to be put in the last octet of the IP address.
     fn get_other_remote_ip_address(last: u8) -> SpecifiedAddr<Self::Addr>;
@@ -301,16 +299,16 @@ pub(crate) trait TestIpExt: crate::ip::IpExt {
 }
 
 impl TestIpExt for Ipv4 {
-    const DUMMY_CONFIG: DummyEventDispatcherConfig<Ipv4Addr> = DUMMY_CONFIG_V4;
+    const FAKE_CONFIG: FakeEventDispatcherConfig<Ipv4Addr> = FAKE_CONFIG_V4;
 
     fn get_other_ip_address(last: u8) -> SpecifiedAddr<Ipv4Addr> {
-        let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv4_bytes();
+        let mut bytes = Self::FAKE_CONFIG.local_ip.get().ipv4_bytes();
         bytes[bytes.len() - 1] = last;
         SpecifiedAddr::new(Ipv4Addr::new(bytes)).unwrap()
     }
 
     fn get_other_remote_ip_address(last: u8) -> SpecifiedAddr<Self::Addr> {
-        let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv4_bytes();
+        let mut bytes = Self::FAKE_CONFIG.local_ip.get().ipv4_bytes();
         bytes[bytes.len() - 3] += 1;
         bytes[bytes.len() - 1] = last;
         SpecifiedAddr::new(Ipv4Addr::new(bytes)).unwrap()
@@ -325,16 +323,16 @@ impl TestIpExt for Ipv4 {
 }
 
 impl TestIpExt for Ipv6 {
-    const DUMMY_CONFIG: DummyEventDispatcherConfig<Ipv6Addr> = DUMMY_CONFIG_V6;
+    const FAKE_CONFIG: FakeEventDispatcherConfig<Ipv6Addr> = FAKE_CONFIG_V6;
 
     fn get_other_ip_address(last: u8) -> SpecifiedAddr<Ipv6Addr> {
-        let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv6_bytes();
+        let mut bytes = Self::FAKE_CONFIG.local_ip.get().ipv6_bytes();
         bytes[bytes.len() - 1] = last;
         SpecifiedAddr::new(Ipv6Addr::from(bytes)).unwrap()
     }
 
     fn get_other_remote_ip_address(last: u8) -> SpecifiedAddr<Self::Addr> {
-        let mut bytes = Self::DUMMY_CONFIG.local_ip.get().ipv6_bytes();
+        let mut bytes = Self::FAKE_CONFIG.local_ip.get().ipv6_bytes();
         bytes[bytes.len() - 3] += 1;
         bytes[bytes.len() - 1] = last;
         SpecifiedAddr::new(Ipv6Addr::from(bytes)).unwrap()
@@ -350,10 +348,10 @@ impl TestIpExt for Ipv6 {
 
 /// A configuration for a simple network.
 ///
-/// `DummyEventDispatcherConfig` describes a simple network with two IP hosts
+/// `FakeEventDispatcherConfig` describes a simple network with two IP hosts
 /// - one remote and one local - both on the same Ethernet network.
 #[derive(Clone)]
-pub(crate) struct DummyEventDispatcherConfig<A: IpAddress> {
+pub(crate) struct FakeEventDispatcherConfig<A: IpAddress> {
     /// The subnet of the local Ethernet network.
     pub(crate) subnet: Subnet<A>,
     /// The IP address of our interface to the local network (must be in
@@ -367,9 +365,9 @@ pub(crate) struct DummyEventDispatcherConfig<A: IpAddress> {
     pub(crate) remote_mac: UnicastAddr<Mac>,
 }
 
-/// A `DummyEventDispatcherConfig` with reasonable values for an IPv4 network.
-pub(crate) const DUMMY_CONFIG_V4: DummyEventDispatcherConfig<Ipv4Addr> = unsafe {
-    DummyEventDispatcherConfig {
+/// A `FakeEventDispatcherConfig` with reasonable values for an IPv4 network.
+pub(crate) const FAKE_CONFIG_V4: FakeEventDispatcherConfig<Ipv4Addr> = unsafe {
+    FakeEventDispatcherConfig {
         subnet: Subnet::new_unchecked(Ipv4Addr::new([192, 168, 0, 0]), 16),
         local_ip: SpecifiedAddr::new_unchecked(Ipv4Addr::new([192, 168, 0, 1])),
         local_mac: UnicastAddr::new_unchecked(Mac::new([0, 1, 2, 3, 4, 5])),
@@ -378,9 +376,9 @@ pub(crate) const DUMMY_CONFIG_V4: DummyEventDispatcherConfig<Ipv4Addr> = unsafe 
     }
 };
 
-/// A `DummyEventDispatcherConfig` with reasonable values for an IPv6 network.
-pub(crate) const DUMMY_CONFIG_V6: DummyEventDispatcherConfig<Ipv6Addr> = unsafe {
-    DummyEventDispatcherConfig {
+/// A `FakeEventDispatcherConfig` with reasonable values for an IPv6 network.
+pub(crate) const FAKE_CONFIG_V6: FakeEventDispatcherConfig<Ipv6Addr> = unsafe {
+    FakeEventDispatcherConfig {
         subnet: Subnet::new_unchecked(
             Ipv6Addr::from_bytes([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
             112,
@@ -396,7 +394,7 @@ pub(crate) const DUMMY_CONFIG_V6: DummyEventDispatcherConfig<Ipv6Addr> = unsafe 
     }
 };
 
-impl<A: IpAddress> DummyEventDispatcherConfig<A> {
+impl<A: IpAddress> FakeEventDispatcherConfig<A> {
     /// Creates a copy of `self` with all the remote and local fields reversed.
     pub(crate) fn swap(&self) -> Self {
         Self {
@@ -408,39 +406,39 @@ impl<A: IpAddress> DummyEventDispatcherConfig<A> {
         }
     }
 
-    /// Shorthand for `DummyEventDispatcherBuilder::from_config(self)`.
-    pub(crate) fn into_builder(self) -> DummyEventDispatcherBuilder {
-        DummyEventDispatcherBuilder::from_config(self)
+    /// Shorthand for `FakeEventDispatcherBuilder::from_config(self)`.
+    pub(crate) fn into_builder(self) -> FakeEventDispatcherBuilder {
+        FakeEventDispatcherBuilder::from_config(self)
     }
 }
 
-/// A builder for `DummyEventDispatcher`s.
+/// A builder for `FakeEventDispatcher`s.
 ///
-/// A `DummyEventDispatcherBuilder` is capable of storing the configuration of a
+/// A `FakeEventDispatcherBuilder` is capable of storing the configuration of a
 /// network stack including forwarding table entries, devices and their assigned
 /// IP addresses, ARP table entries, etc. It can be built using `build`,
-/// producing a `Context<DummyEventDispatcher>` with all of the appropriate
+/// producing a `Context<FakeEventDispatcher>` with all of the appropriate
 /// state configured.
 #[derive(Clone, Default)]
-pub(crate) struct DummyEventDispatcherBuilder {
+pub(crate) struct FakeEventDispatcherBuilder {
     devices: Vec<(UnicastAddr<Mac>, Option<(IpAddr, SubnetEither)>)>,
     arp_table_entries: Vec<(usize, Ipv4Addr, UnicastAddr<Mac>)>,
     ndp_table_entries: Vec<(usize, UnicastAddr<Ipv6Addr>, UnicastAddr<Mac>)>,
     // usize refers to index into devices Vec.
     device_routes: Vec<(SubnetEither, usize)>,
-    routes: Vec<AddableEntryEither<DeviceId<DummyInstant>>>,
+    routes: Vec<AddableEntryEither<DeviceId<FakeInstant>>>,
 }
 
-impl DummyEventDispatcherBuilder {
-    /// Construct a `DummyEventDispatcherBuilder` from a
-    /// `DummyEventDispatcherConfig`.
+impl FakeEventDispatcherBuilder {
+    /// Construct a `FakeEventDispatcherBuilder` from a
+    /// `FakeEventDispatcherConfig`.
     pub(crate) fn from_config<A: IpAddress>(
-        cfg: DummyEventDispatcherConfig<A>,
-    ) -> DummyEventDispatcherBuilder {
+        cfg: FakeEventDispatcherConfig<A>,
+    ) -> FakeEventDispatcherBuilder {
         assert!(cfg.subnet.contains(&cfg.local_ip));
         assert!(cfg.subnet.contains(&cfg.remote_ip));
 
-        let mut builder = DummyEventDispatcherBuilder::default();
+        let mut builder = FakeEventDispatcherBuilder::default();
         builder.devices.push((cfg.local_mac, Some((cfg.local_ip.get().into(), cfg.subnet.into()))));
 
         match cfg.remote_ip.get().into() {
@@ -509,7 +507,7 @@ impl DummyEventDispatcherBuilder {
     }
 
     /// Builds a `Ctx` from the present configuration with a default dispatcher.
-    pub(crate) fn build(self) -> (DummyCtx, Vec<DeviceId<DummyInstant>>) {
+    pub(crate) fn build(self) -> (FakeCtx, Vec<DeviceId<FakeInstant>>) {
         self.build_with_modifications(|_| {})
     }
 
@@ -519,7 +517,7 @@ impl DummyEventDispatcherBuilder {
     pub(crate) fn build_with_modifications<F: FnOnce(&mut StackStateBuilder)>(
         self,
         f: F,
-    ) -> (DummyCtx, Vec<DeviceId<DummyInstant>>) {
+    ) -> (FakeCtx, Vec<DeviceId<FakeInstant>>) {
         let mut stack_builder = StackStateBuilder::default();
         f(&mut stack_builder);
         self.build_with(stack_builder)
@@ -530,11 +528,11 @@ impl DummyEventDispatcherBuilder {
     pub(crate) fn build_with(
         self,
         state_builder: StackStateBuilder,
-    ) -> (DummyCtx, Vec<DeviceId<DummyInstant>>) {
+    ) -> (FakeCtx, Vec<DeviceId<FakeInstant>>) {
         let mut ctx = Ctx::new_with_builder(state_builder);
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
-        let DummyEventDispatcherBuilder {
+        let FakeEventDispatcherBuilder {
             devices,
             arp_table_entries,
             ndp_table_entries,
@@ -596,9 +594,9 @@ impl DummyEventDispatcherBuilder {
 }
 
 /// Add either an NDP entry (if IPv6) or ARP entry (if IPv4) to a
-/// `DummyEventDispatcherBuilder`.
+/// `FakeEventDispatcherBuilder`.
 pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
-    builder: &mut DummyEventDispatcherBuilder,
+    builder: &mut FakeEventDispatcherBuilder,
     device: usize,
     ip: A,
     mac: UnicastAddr<Mac>,
@@ -609,38 +607,38 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     }
 }
 
-impl AsMut<DummyFrameCtx<DeviceId<DummyInstant>>> for DummyCtx {
-    fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId<DummyInstant>> {
+impl AsMut<FakeFrameCtx<DeviceId<FakeInstant>>> for FakeCtx {
+    fn as_mut(&mut self) -> &mut FakeFrameCtx<DeviceId<FakeInstant>> {
         self.non_sync_ctx.frame_ctx_mut()
     }
 }
 
-impl AsRef<DummyTimerCtx<TimerId<DummyInstant>>> for DummyCtx {
-    fn as_ref(&self) -> &DummyTimerCtx<TimerId<DummyInstant>> {
+impl AsRef<FakeTimerCtx<TimerId<FakeInstant>>> for FakeCtx {
+    fn as_ref(&self) -> &FakeTimerCtx<TimerId<FakeInstant>> {
         self.non_sync_ctx.as_ref()
     }
 }
 
-impl AsMut<DummyTimerCtx<TimerId<DummyInstant>>> for DummyCtx {
-    fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId<DummyInstant>> {
+impl AsMut<FakeTimerCtx<TimerId<FakeInstant>>> for FakeCtx {
+    fn as_mut(&mut self) -> &mut FakeTimerCtx<TimerId<FakeInstant>> {
         self.non_sync_ctx.as_mut()
     }
 }
 
-impl DummyNetworkContext for DummyCtx {
-    type TimerId = TimerId<DummyInstant>;
-    type SendMeta = DeviceId<DummyInstant>;
+impl FakeNetworkContext for FakeCtx {
+    type TimerId = TimerId<FakeInstant>;
+    type SendMeta = DeviceId<FakeInstant>;
 }
 
 pub(crate) trait TestutilIpExt: Ip {
     fn icmp_replies(
-        evt: &mut DummyNonSyncCtx,
+        evt: &mut FakeNonSyncCtx,
     ) -> &mut HashMap<IcmpConnId<Self>, Vec<(u16, Vec<u8>)>>;
 }
 
 impl TestutilIpExt for Ipv4 {
     fn icmp_replies(
-        evt: &mut DummyNonSyncCtx,
+        evt: &mut FakeNonSyncCtx,
     ) -> &mut HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>> {
         &mut evt.state_mut().icmpv4_replies
     }
@@ -648,13 +646,13 @@ impl TestutilIpExt for Ipv4 {
 
 impl TestutilIpExt for Ipv6 {
     fn icmp_replies(
-        evt: &mut DummyNonSyncCtx,
+        evt: &mut FakeNonSyncCtx,
     ) -> &mut HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>> {
         &mut evt.state_mut().icmpv6_replies
     }
 }
 
-impl DummyNonSyncCtx {
+impl FakeNonSyncCtx {
     /// Takes all the received ICMP replies for a given `conn`.
     pub(crate) fn take_icmp_replies<I: TestutilIpExt>(
         &mut self,
@@ -664,17 +662,17 @@ impl DummyNonSyncCtx {
     }
 }
 
-impl<I: IcmpIpExt> UdpContext<I> for DummyNonSyncCtx {}
+impl<I: IcmpIpExt> UdpContext<I> for FakeNonSyncCtx {}
 
-impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for DummyNonSyncCtx {}
+impl<I: crate::ip::IpExt, B: BufferMut> BufferUdpContext<I, B> for FakeNonSyncCtx {}
 
-impl<I: IcmpIpExt> IcmpContext<I> for DummyNonSyncCtx {
+impl<I: IcmpIpExt> IcmpContext<I> for FakeNonSyncCtx {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
         unimplemented!()
     }
 }
 
-impl<B: BufferMut> BufferIcmpContext<Ipv4, B> for DummyNonSyncCtx {
+impl<B: BufferMut> BufferIcmpContext<Ipv4, B> for FakeNonSyncCtx {
     fn receive_icmp_echo_reply(
         &mut self,
         conn: IcmpConnId<Ipv4>,
@@ -689,7 +687,7 @@ impl<B: BufferMut> BufferIcmpContext<Ipv4, B> for DummyNonSyncCtx {
     }
 }
 
-impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyNonSyncCtx {
+impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for FakeNonSyncCtx {
     fn receive_icmp_echo_reply(
         &mut self,
         conn: IcmpConnId<Ipv6>,
@@ -704,23 +702,23 @@ impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyNonSyncCtx {
     }
 }
 
-impl DeviceLayerEventDispatcher for DummyNonSyncCtx {
-    fn wake_rx_task(&mut self, device: &DeviceId<DummyInstant>) {
+impl DeviceLayerEventDispatcher for FakeNonSyncCtx {
+    fn wake_rx_task(&mut self, device: &DeviceId<FakeInstant>) {
         self.state_mut().rx_available.push(device.clone());
     }
 }
 
-impl<B: BufferMut> BufferDeviceLayerEventDispatcher<B> for DummyNonSyncCtx {
+impl<B: BufferMut> BufferDeviceLayerEventDispatcher<B> for FakeNonSyncCtx {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        device: &DeviceId<DummyInstant>,
+        device: &DeviceId<FakeInstant>,
         frame: S,
     ) -> Result<(), S> {
         self.frame_ctx_mut().send_frame(&mut (), device.clone(), frame)
     }
 }
 
-pub(crate) fn handle_queued_rx_packets(sync_ctx: &DummySyncCtx, ctx: &mut DummyNonSyncCtx) {
+pub(crate) fn handle_queued_rx_packets(sync_ctx: &FakeSyncCtx, ctx: &mut FakeNonSyncCtx) {
     loop {
         let rx_available = core::mem::take(&mut ctx.state_mut().rx_available);
         if rx_available.len() == 0 {
@@ -736,90 +734,90 @@ pub(crate) fn handle_queued_rx_packets(sync_ctx: &DummySyncCtx, ctx: &mut DummyN
 /// Wraps all events emitted by Core into a single enum type.
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub(crate) enum DispatchedEvent {
-    Dad(DadEvent<DeviceId<DummyInstant>>),
-    IpDeviceIpv4(IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>),
-    IpDeviceIpv6(IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>),
-    IpLayerIpv4(IpLayerEvent<DeviceId<DummyInstant>, Ipv4>),
-    IpLayerIpv6(IpLayerEvent<DeviceId<DummyInstant>, Ipv6>),
-    Ipv6RouteDiscovery(Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>),
+    Dad(DadEvent<DeviceId<FakeInstant>>),
+    IpDeviceIpv4(IpDeviceEvent<DeviceId<FakeInstant>, Ipv4>),
+    IpDeviceIpv6(IpDeviceEvent<DeviceId<FakeInstant>, Ipv6>),
+    IpLayerIpv4(IpLayerEvent<DeviceId<FakeInstant>, Ipv4>),
+    IpLayerIpv6(IpLayerEvent<DeviceId<FakeInstant>, Ipv6>),
+    Ipv6RouteDiscovery(Ipv6RouteDiscoveryEvent<DeviceId<FakeInstant>>),
 }
 
-impl From<DadEvent<DeviceId<DummyInstant>>> for DispatchedEvent {
-    fn from(e: DadEvent<DeviceId<DummyInstant>>) -> DispatchedEvent {
+impl From<DadEvent<DeviceId<FakeInstant>>> for DispatchedEvent {
+    fn from(e: DadEvent<DeviceId<FakeInstant>>) -> DispatchedEvent {
         DispatchedEvent::Dad(e)
     }
 }
 
-impl From<IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>> for DispatchedEvent {
-    fn from(e: IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>) -> DispatchedEvent {
+impl From<IpDeviceEvent<DeviceId<FakeInstant>, Ipv4>> for DispatchedEvent {
+    fn from(e: IpDeviceEvent<DeviceId<FakeInstant>, Ipv4>) -> DispatchedEvent {
         DispatchedEvent::IpDeviceIpv4(e)
     }
 }
 
-impl From<IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>> for DispatchedEvent {
-    fn from(e: IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>) -> DispatchedEvent {
+impl From<IpDeviceEvent<DeviceId<FakeInstant>, Ipv6>> for DispatchedEvent {
+    fn from(e: IpDeviceEvent<DeviceId<FakeInstant>, Ipv6>) -> DispatchedEvent {
         DispatchedEvent::IpDeviceIpv6(e)
     }
 }
 
-impl From<IpLayerEvent<DeviceId<DummyInstant>, Ipv4>> for DispatchedEvent {
-    fn from(e: IpLayerEvent<DeviceId<DummyInstant>, Ipv4>) -> DispatchedEvent {
+impl From<IpLayerEvent<DeviceId<FakeInstant>, Ipv4>> for DispatchedEvent {
+    fn from(e: IpLayerEvent<DeviceId<FakeInstant>, Ipv4>) -> DispatchedEvent {
         DispatchedEvent::IpLayerIpv4(e)
     }
 }
 
-impl From<IpLayerEvent<DeviceId<DummyInstant>, Ipv6>> for DispatchedEvent {
-    fn from(e: IpLayerEvent<DeviceId<DummyInstant>, Ipv6>) -> DispatchedEvent {
+impl From<IpLayerEvent<DeviceId<FakeInstant>, Ipv6>> for DispatchedEvent {
+    fn from(e: IpLayerEvent<DeviceId<FakeInstant>, Ipv6>) -> DispatchedEvent {
         DispatchedEvent::IpLayerIpv6(e)
     }
 }
 
-impl From<Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>> for DispatchedEvent {
-    fn from(e: Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>) -> DispatchedEvent {
+impl From<Ipv6RouteDiscoveryEvent<DeviceId<FakeInstant>>> for DispatchedEvent {
+    fn from(e: Ipv6RouteDiscoveryEvent<DeviceId<FakeInstant>>) -> DispatchedEvent {
         DispatchedEvent::Ipv6RouteDiscovery(e)
     }
 }
 
-impl EventContext<IpLayerEvent<DeviceId<DummyInstant>, Ipv4>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: IpLayerEvent<DeviceId<DummyInstant>, Ipv4>) {
+impl EventContext<IpLayerEvent<DeviceId<FakeInstant>, Ipv4>> for FakeNonSyncCtx {
+    fn on_event(&mut self, event: IpLayerEvent<DeviceId<FakeInstant>, Ipv4>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<IpLayerEvent<DeviceId<DummyInstant>, Ipv6>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: IpLayerEvent<DeviceId<DummyInstant>, Ipv6>) {
+impl EventContext<IpLayerEvent<DeviceId<FakeInstant>, Ipv6>> for FakeNonSyncCtx {
+    fn on_event(&mut self, event: IpLayerEvent<DeviceId<FakeInstant>, Ipv6>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: IpDeviceEvent<DeviceId<DummyInstant>, Ipv4>) {
+impl EventContext<IpDeviceEvent<DeviceId<FakeInstant>, Ipv4>> for FakeNonSyncCtx {
+    fn on_event(&mut self, event: IpDeviceEvent<DeviceId<FakeInstant>, Ipv4>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: IpDeviceEvent<DeviceId<DummyInstant>, Ipv6>) {
+impl EventContext<IpDeviceEvent<DeviceId<FakeInstant>, Ipv6>> for FakeNonSyncCtx {
+    fn on_event(&mut self, event: IpDeviceEvent<DeviceId<FakeInstant>, Ipv6>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<DadEvent<DeviceId<DummyInstant>>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: DadEvent<DeviceId<DummyInstant>>) {
+impl EventContext<DadEvent<DeviceId<FakeInstant>>> for FakeNonSyncCtx {
+    fn on_event(&mut self, event: DadEvent<DeviceId<FakeInstant>>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
-impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>> for DummyNonSyncCtx {
-    fn on_event(&mut self, event: Ipv6RouteDiscoveryEvent<DeviceId<DummyInstant>>) {
+impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId<FakeInstant>>> for FakeNonSyncCtx {
+    fn on_event(&mut self, event: Ipv6RouteDiscoveryEvent<DeviceId<FakeInstant>>) {
         self.on_event(DispatchedEvent::from(event))
     }
 }
 
 pub(crate) fn handle_timer(
-    DummyCtx { sync_ctx, non_sync_ctx }: &mut DummyCtx,
+    FakeCtx { sync_ctx, non_sync_ctx }: &mut FakeCtx,
     _ctx: &mut (),
-    id: TimerId<DummyInstant>,
+    id: TimerId<FakeInstant>,
 ) {
     crate::handle_timer(sync_ctx, non_sync_ctx, id)
 }
@@ -835,7 +833,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::{DummyNetwork, DummyNetworkLinks},
+        context::testutil::{FakeNetwork, FakeNetworkLinks},
         device::testutil::receive_frame_or_panic,
         ip::{
             socket::{BufferIpSocketHandler, DefaultSendOptions},
@@ -845,11 +843,11 @@ mod tests {
     };
 
     #[test]
-    fn test_dummy_network_transmits_packets() {
+    fn test_fake_network_transmits_packets() {
         set_logger_for_test();
-        let (alice_ctx, alice_device_ids) = DUMMY_CONFIG_V4.into_builder().build();
-        let (bob_ctx, bob_device_ids) = DUMMY_CONFIG_V4.swap().into_builder().build();
-        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
+        let (alice_ctx, alice_device_ids) = FAKE_CONFIG_V4.into_builder().build();
+        let (bob_ctx, bob_device_ids) = FAKE_CONFIG_V4.swap().into_builder().build();
+        let mut net = crate::context::testutil::new_legacy_simple_fake_network(
             "alice",
             alice_ctx,
             alice_device_ids[0].clone(),
@@ -866,7 +864,7 @@ mod tests {
                 non_sync_ctx,
                 None, // device
                 None, // local_ip
-                DUMMY_CONFIG_V4.remote_ip,
+                FAKE_CONFIG_V4.remote_ip,
                 Ipv4Proto::Icmp,
                 DefaultSendOptions,
                 |_| {
@@ -874,8 +872,8 @@ mod tests {
                     let req_body = &[1, 2, 3, 4];
                     Buf::new(req_body.to_vec(), ..).encapsulate(
                         IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                            DUMMY_CONFIG_V4.local_ip,
-                            DUMMY_CONFIG_V4.remote_ip,
+                            FAKE_CONFIG_V4.local_ip,
+                            FAKE_CONFIG_V4.remote_ip,
                             IcmpUnusedCode,
                             req,
                         ),
@@ -895,11 +893,11 @@ mod tests {
     }
 
     #[test]
-    fn test_dummy_network_timers() {
+    fn test_fake_network_timers() {
         set_logger_for_test();
-        let (ctx_1, device_ids_1) = DUMMY_CONFIG_V4.into_builder().build();
-        let (ctx_2, device_ids_2) = DUMMY_CONFIG_V4.swap().into_builder().build();
-        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
+        let (ctx_1, device_ids_1) = FAKE_CONFIG_V4.into_builder().build();
+        let (ctx_2, device_ids_2) = FAKE_CONFIG_V4.swap().into_builder().build();
+        let mut net = crate::context::testutil::new_legacy_simple_fake_network(
             1,
             ctx_1,
             device_ids_1[0].clone(),
@@ -970,11 +968,11 @@ mod tests {
     }
 
     #[test]
-    fn test_dummy_network_until_idle() {
+    fn test_fake_network_until_idle() {
         set_logger_for_test();
-        let (ctx_1, device_ids_1) = DUMMY_CONFIG_V4.into_builder().build();
-        let (ctx_2, device_ids_2) = DUMMY_CONFIG_V4.swap().into_builder().build();
-        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
+        let (ctx_1, device_ids_1) = FAKE_CONFIG_V4.into_builder().build();
+        let (ctx_2, device_ids_2) = FAKE_CONFIG_V4.swap().into_builder().build();
+        let mut net = crate::context::testutil::new_legacy_simple_fake_network(
             1,
             ctx_1,
             device_ids_1[0].clone(),
@@ -1013,11 +1011,11 @@ mod tests {
         set_logger_for_test();
         // Create a network that takes 5ms to get any packet to go through.
         let latency = Duration::from_millis(5);
-        let (alice_ctx, alice_device_ids) = DUMMY_CONFIG_V4.into_builder().build();
-        let (bob_ctx, bob_device_ids) = DUMMY_CONFIG_V4.swap().into_builder().build();
-        let mut net = DummyNetwork::new(
+        let (alice_ctx, alice_device_ids) = FAKE_CONFIG_V4.into_builder().build();
+        let (bob_ctx, bob_device_ids) = FAKE_CONFIG_V4.swap().into_builder().build();
+        let mut net = FakeNetwork::new(
             [("alice", alice_ctx), ("bob", bob_ctx)],
-            |net: &'static str, _device_id: DeviceId<DummyInstant>| {
+            |net: &'static str, _device_id: DeviceId<FakeInstant>| {
                 if net == "alice" {
                     vec![("bob", bob_device_ids[0].clone(), Some(latency))]
                 } else {
@@ -1033,7 +1031,7 @@ mod tests {
                 non_sync_ctx,
                 None, // device
                 None, // local_ip
-                DUMMY_CONFIG_V4.remote_ip,
+                FAKE_CONFIG_V4.remote_ip,
                 Ipv4Proto::Icmp,
                 DefaultSendOptions,
                 |_| {
@@ -1041,8 +1039,8 @@ mod tests {
                     let req_body = &[1, 2, 3, 4];
                     Buf::new(req_body.to_vec(), ..).encapsulate(
                         IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                            DUMMY_CONFIG_V4.local_ip,
-                            DUMMY_CONFIG_V4.remote_ip,
+                            FAKE_CONFIG_V4.local_ip,
+                            FAKE_CONFIG_V4.remote_ip,
                             IcmpUnusedCode,
                             req,
                         ),
@@ -1081,9 +1079,9 @@ mod tests {
 
         fn assert_full_state<
             'a,
-            L: DummyNetworkLinks<DeviceId<DummyInstant>, DeviceId<DummyInstant>, &'a str>,
+            L: FakeNetworkLinks<DeviceId<FakeInstant>, DeviceId<FakeInstant>, &'a str>,
         >(
-            net: &mut DummyNetwork<&'a str, DeviceId<DummyInstant>, DummyCtx, L>,
+            net: &mut FakeNetwork<&'a str, DeviceId<FakeInstant>, FakeCtx, L>,
             alice_nop: usize,
             bob_nop: usize,
             bob_echo_request: usize,
@@ -1118,18 +1116,18 @@ mod tests {
     }
 
     fn send_packet<'a, A: IpAddress>(
-        mut sync_ctx: &'a DummySyncCtx,
-        ctx: &mut DummyNonSyncCtx,
+        mut sync_ctx: &'a FakeSyncCtx,
+        ctx: &mut FakeNonSyncCtx,
         src_ip: SpecifiedAddr<A>,
         dst_ip: SpecifiedAddr<A>,
-        device: &DeviceId<DummyInstant>,
+        device: &DeviceId<FakeInstant>,
     ) where
         A::Version: TestIpExt,
-        &'a DummySyncCtx: BufferIpLayerHandler<
+        &'a FakeSyncCtx: BufferIpLayerHandler<
             A::Version,
-            DummyNonSyncCtx,
+            FakeNonSyncCtx,
             Buf<Vec<u8>>,
-            DeviceId = DeviceId<DummyInstant>,
+            DeviceId = DeviceId<FakeInstant>,
         >,
     {
         let meta = SendIpPacketMeta {
@@ -1153,12 +1151,8 @@ mod tests {
     #[ip_test]
     fn test_send_to_many<I: Ip + TestIpExt>()
     where
-        for<'a> &'a DummySyncCtx: BufferIpLayerHandler<
-            I,
-            DummyNonSyncCtx,
-            Buf<Vec<u8>>,
-            DeviceId = DeviceId<DummyInstant>,
-        >,
+        for<'a> &'a FakeSyncCtx:
+            BufferIpLayerHandler<I, FakeNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId<FakeInstant>>,
     {
         let mac_a = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap();
         let mac_b = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 8])).unwrap();
@@ -1167,11 +1161,11 @@ mod tests {
         let ip_b = I::get_other_ip_address(2);
         let ip_c = I::get_other_ip_address(3);
         let subnet = Subnet::new(I::get_other_ip_address(0).get(), I::Addr::BYTES * 8 - 8).unwrap();
-        let mut alice = DummyEventDispatcherBuilder::default();
+        let mut alice = FakeEventDispatcherBuilder::default();
         let alice_device_idx = alice.add_device_with_ip(mac_a, ip_a.get(), subnet);
-        let mut bob = DummyEventDispatcherBuilder::default();
+        let mut bob = FakeEventDispatcherBuilder::default();
         let bob_device_idx = bob.add_device_with_ip(mac_b, ip_b.get(), subnet);
-        let mut calvin = DummyEventDispatcherBuilder::default();
+        let mut calvin = FakeEventDispatcherBuilder::default();
         let calvin_device_idx = calvin.add_device_with_ip(mac_c, ip_c.get(), subnet);
         add_arp_or_ndp_table_entry(&mut alice, alice_device_idx, ip_b.get(), mac_b);
         add_arp_or_ndp_table_entry(&mut alice, alice_device_idx, ip_c.get(), mac_c);
@@ -1182,9 +1176,9 @@ mod tests {
         let (alice_ctx, alice_device_ids) = alice.build();
         let (bob_ctx, bob_device_ids) = bob.build();
         let (calvin_ctx, calvin_device_ids) = calvin.build();
-        let mut net = DummyNetwork::new(
+        let mut net = FakeNetwork::new(
             [("alice", alice_ctx), ("bob", bob_ctx), ("calvin", calvin_ctx)],
-            |net: &'static str, _device_id: DeviceId<DummyInstant>| match net {
+            |net: &'static str, _device_id: DeviceId<FakeInstant>| match net {
                 "alice" => vec![
                     ("bob", bob_device_ids[bob_device_idx].clone(), None),
                     ("calvin", calvin_device_ids[calvin_device_idx].clone(), None),

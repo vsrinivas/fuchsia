@@ -366,32 +366,32 @@ mod tests {
     use crate::testutil::assert_empty;
 
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-    enum MockVariants {
+    enum FakeVariants {
         A,
         B,
         C,
     }
 
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-    struct MockKey {
+    struct FakeKey {
         id: usize,
-        var: MockVariants,
+        var: FakeVariants,
     }
 
-    impl MockKey {
-        const fn new(id: usize, var: MockVariants) -> Self {
+    impl FakeKey {
+        const fn new(id: usize, var: FakeVariants) -> Self {
             Self { id, var }
         }
     }
 
-    impl IdMapCollectionKey for MockKey {
+    impl IdMapCollectionKey for FakeKey {
         const VARIANT_COUNT: usize = 3;
 
         fn get_variant(&self) -> usize {
             match self.var {
-                MockVariants::A => 0,
-                MockVariants::B => 1,
-                MockVariants::C => 2,
+                FakeVariants::A => 0,
+                FakeVariants::B => 1,
+                FakeVariants::C => 2,
             }
         }
 
@@ -400,11 +400,11 @@ mod tests {
         }
     }
 
-    type TestCollection = IdMapCollection<MockKey, i32>;
+    type TestCollection = IdMapCollection<FakeKey, i32>;
 
-    const KEY_A: MockKey = MockKey::new(0, MockVariants::A);
-    const KEY_B: MockKey = MockKey::new(2, MockVariants::B);
-    const KEY_C: MockKey = MockKey::new(4, MockVariants::C);
+    const KEY_A: FakeKey = FakeKey::new(0, FakeVariants::A);
+    const KEY_B: FakeKey = FakeKey::new(2, FakeVariants::B);
+    const KEY_C: FakeKey = FakeKey::new(4, FakeVariants::C);
 
     #[test]
     fn test_insert_and_get() {

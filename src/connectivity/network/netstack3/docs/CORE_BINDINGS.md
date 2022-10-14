@@ -37,10 +37,10 @@ properties with that design, so the comparison still makes sense.*
 
 This architecture provides us with a number of benefits:
 - High-level testing of the core is easy. Since, to the core, the outside world
-  simply looks like a trait implementation, mocking out the entire world is
+  simply looks like a trait implementation, faking out the entire world is
   simply a matter of implementing that trait (in particular, the
-  `EventDispatcher` trait). The core's `testutil::DummyEventDispatcher` serves
-  this purpose, and allows many of our tests to create an entire mocked
+  `EventDispatcher` trait). The core's `testutil::FakeEventDispatcher` serves
+  this purpose, and allows many of our tests to create an entire faked
   execution environment, execute a sequence of actions, and test to see that the
   right events were emitted in response, and in only a few lines of code.
 - The core can be largely infallible. It can provide types and methods whose

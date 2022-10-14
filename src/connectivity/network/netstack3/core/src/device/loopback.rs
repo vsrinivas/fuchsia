@@ -222,14 +222,14 @@ mod tests {
         device::DeviceId,
         error::NotFoundError,
         ip::device::state::{AssignedAddress, IpDeviceStateIpExt},
-        testutil::{DummyEventDispatcherConfig, TestIpExt},
+        testutil::{FakeEventDispatcherConfig, TestIpExt},
         Ctx, NonSyncContext, SyncCtx,
     };
 
     #[test]
     fn test_loopback_methods() {
         const MTU: u32 = 66;
-        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::FakeCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device = crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, MTU)
             .expect("error adding loopback device");
@@ -249,13 +249,13 @@ mod tests {
         ) {
             assert_eq!(get_addrs(sync_ctx, device), []);
 
-            let DummyEventDispatcherConfig {
+            let FakeEventDispatcherConfig {
                 subnet,
                 local_ip,
                 local_mac: _,
                 remote_ip: _,
                 remote_mac: _,
-            } = I::DUMMY_CONFIG;
+            } = I::FAKE_CONFIG;
             let addr = AddrSubnet::from_witness(local_ip, subnet.prefix())
                 .expect("error creating AddrSubnet");
             assert_eq!(crate::device::add_ip_addr_subnet(sync_ctx, ctx, device, addr), Ok(()));

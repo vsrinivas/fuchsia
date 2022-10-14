@@ -39,7 +39,7 @@ One of the pain points with testing in Netstack2 is that tests need to spin up a
 whole netstack to test relatively small features.
 
 By using traits to define all of an implementation's dependencies on the rest of
-the stack, a test can easily use mock implementations of context traits. This
+the stack, a test can easily use fake implementations of context traits. This
 reduces the minimum testable unit which produces more targeted tests.
 
 ### How

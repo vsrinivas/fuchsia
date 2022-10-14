@@ -243,7 +243,7 @@ mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 
     use super::*;
-    use crate::testutil::DummyEventDispatcherConfig;
+    use crate::testutil::FakeEventDispatcherConfig;
 
     impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
         /// Print the table.
@@ -313,14 +313,14 @@ mod tests {
 
     fn simple_setup<I: Ip + TestIpExt>() -> (
         ForwardingTable<I, u8>,
-        DummyEventDispatcherConfig<I::Addr>,
+        FakeEventDispatcherConfig<I::Addr>,
         SpecifiedAddr<I::Addr>,
         Subnet<I::Addr>,
         u8,
     ) {
         let mut table = ForwardingTable::<I, u8>::default();
 
-        let config = I::DUMMY_CONFIG;
+        let config = I::FAKE_CONFIG;
         let subnet = config.subnet;
         let device = 0;
         let (next_hop, next_hop_subnet) = I::next_hop_addr_sub(1, 1);

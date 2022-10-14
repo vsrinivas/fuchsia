@@ -313,7 +313,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        ip::{testutil::DummyDeviceId, IpExt},
+        ip::{testutil::FakeDeviceId, IpExt},
         socket::{BoundSocketMap, InsertError, SocketTypeStateEntry as _, SocketTypeStateMut as _},
     };
 
@@ -360,7 +360,7 @@ mod tests {
         type IpAddr = I::Addr;
         type RemoteIdentifier = NonZeroU16;
         type LocalIdentifier = NonZeroU16;
-        type DeviceId = DummyDeviceId;
+        type DeviceId = FakeDeviceId;
     }
 
     impl<I: Ip> PosixSocketStateSpec for TransportSocketPosixSpec<I> {
@@ -397,7 +397,7 @@ mod tests {
     fn listen_device<I: Ip + IpExt>(
         ip: I::Addr,
         port: u16,
-        device: DummyDeviceId,
+        device: FakeDeviceId,
     ) -> AddrVec<TransportSocketPosixSpec<I>> {
         let addr = SpecifiedAddr::new(ip);
         let port = NonZeroU16::new(port).expect("port must be nonzero");
@@ -464,20 +464,20 @@ mod tests {
         (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive)],
             Err(InsertError::ShadowAddrExists); "conn_shadows_listener_reuse_port_exclusive")]
     #[test_case([
-        (listen_device(ip_v4!("1.1.1.1"), 1, DummyDeviceId), PosixSharingOptions::Exclusive),
+        (listen_device(ip_v4!("1.1.1.1"), 1, FakeDeviceId), PosixSharingOptions::Exclusive),
         (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive)],
             Err(InsertError::IndirectConflict); "conn_indirect_conflict_specific_listener")]
     #[test_case([
-        (listen_device(ip_v4!("0.0.0.0"), 1, DummyDeviceId), PosixSharingOptions::Exclusive),
+        (listen_device(ip_v4!("0.0.0.0"), 1, FakeDeviceId), PosixSharingOptions::Exclusive),
         (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive)],
             Err(InsertError::IndirectConflict); "conn_indirect_conflict_any_listener")]
     #[test_case([
         (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive),
-        (listen_device(ip_v4!("1.1.1.1"), 1, DummyDeviceId), PosixSharingOptions::Exclusive)],
+        (listen_device(ip_v4!("1.1.1.1"), 1, FakeDeviceId), PosixSharingOptions::Exclusive)],
             Err(InsertError::IndirectConflict); "specific_listener_indirect_conflict_conn")]
     #[test_case([
         (conn(ip_v4!("1.1.1.1"), 1, ip_v4!("2.2.2.2"), 2), PosixSharingOptions::Exclusive),
-        (listen_device(ip_v4!("0.0.0.0"), 1, DummyDeviceId), PosixSharingOptions::Exclusive)],
+        (listen_device(ip_v4!("0.0.0.0"), 1, FakeDeviceId), PosixSharingOptions::Exclusive)],
             Err(InsertError::IndirectConflict); "any_listener_indirect_conflict_conn")]
     fn bind_sequence<
         C: IntoIterator<Item = (AddrVec<TransportSocketPosixSpec<Ipv4>>, PosixSharingOptions)>,

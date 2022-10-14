@@ -220,13 +220,13 @@ mod tests {
     use super::*;
     use crate::{
         context::{
-            testutil::{DummyCtx, DummyNonSyncCtx, DummySyncCtx, DummyTimerCtxExt as _},
+            testutil::{FakeCtx, FakeNonSyncCtx, FakeSyncCtx, FakeTimerCtxExt as _},
             FrameContext as _, InstantContext as _,
         },
-        ip::testutil::DummyDeviceId,
+        ip::testutil::FakeDeviceId,
     };
 
-    struct MockDadContext {
+    struct FakeDadContext {
         addr: UnicastAddr<Ipv6Addr>,
         state: AddressState,
         retrans_timer: Duration,
@@ -238,30 +238,30 @@ mod tests {
         message: NeighborSolicitation,
     }
 
-    type MockNonSyncCtx = DummyNonSyncCtx<DadTimerId<DummyDeviceId>, DadEvent<DummyDeviceId>, ()>;
+    type FakeNonSyncCtxImpl = FakeNonSyncCtx<DadTimerId<FakeDeviceId>, DadEvent<FakeDeviceId>, ()>;
 
-    type MockCtx = DummySyncCtx<MockDadContext, DadMessageMeta, DummyDeviceId>;
+    type FakeCtxImpl = FakeSyncCtx<FakeDadContext, DadMessageMeta, FakeDeviceId>;
 
-    impl Ipv6DeviceDadContext<MockNonSyncCtx> for MockCtx {
+    impl Ipv6DeviceDadContext<FakeNonSyncCtxImpl> for FakeCtxImpl {
         fn with_address_state_and_retrans_timer<
             O,
             F: FnOnce(Option<(&mut AddressState, Duration)>) -> O,
         >(
             &mut self,
-            &DummyDeviceId: &DummyDeviceId,
+            &FakeDeviceId: &FakeDeviceId,
             request_addr: UnicastAddr<Ipv6Addr>,
             cb: F,
         ) -> O {
-            let MockDadContext { addr, state, retrans_timer } = self.get_mut();
+            let FakeDadContext { addr, state, retrans_timer } = self.get_mut();
             cb((*addr == request_addr).then(|| (state, *retrans_timer)))
         }
     }
 
-    impl Ipv6LayerDadContext<MockNonSyncCtx> for MockCtx {
+    impl Ipv6LayerDadContext<FakeNonSyncCtxImpl> for FakeCtxImpl {
         fn send_dad_packet(
             &mut self,
-            ctx: &mut MockNonSyncCtx,
-            &DummyDeviceId: &DummyDeviceId,
+            ctx: &mut FakeNonSyncCtxImpl,
+            &FakeDeviceId: &FakeDeviceId,
             dst_ip: MulticastAddr<Ipv6Addr>,
             message: NeighborSolicitation,
         ) -> Result<(), ()> {
@@ -278,8 +278,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected address to exist")]
     fn panic_unknown_address() {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative { dad_transmits_remaining: None },
                 retrans_timer: Duration::default(),
@@ -287,7 +287,7 @@ mod tests {
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             OTHER_ADDRESS,
         );
     }
@@ -295,8 +295,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected address to be tentative")]
     fn panic_non_tentative_address() {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Assigned,
                 retrans_timer: Duration::default(),
@@ -304,15 +304,15 @@ mod tests {
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             DAD_ADDRESS,
         );
     }
 
     #[test]
     fn dad_disabled() {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative { dad_transmits_remaining: None },
                 retrans_timer: Duration::default(),
@@ -320,28 +320,28 @@ mod tests {
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             DAD_ADDRESS,
         );
-        let MockDadContext { addr: _, state, retrans_timer: _ } = sync_ctx.get_ref();
+        let FakeDadContext { addr: _, state, retrans_timer: _ } = sync_ctx.get_ref();
         assert_eq!(*state, AddressState::Assigned);
         assert_eq!(
             non_sync_ctx.take_events(),
-            &[DadEvent::AddressAssigned { device: DummyDeviceId, addr: DAD_ADDRESS }][..]
+            &[DadEvent::AddressAssigned { device: FakeDeviceId, addr: DAD_ADDRESS }][..]
         );
     }
 
-    const DAD_TIMER_ID: DadTimerId<DummyDeviceId> =
-        DadTimerId { addr: DAD_ADDRESS, device_id: DummyDeviceId };
+    const DAD_TIMER_ID: DadTimerId<FakeDeviceId> =
+        DadTimerId { addr: DAD_ADDRESS, device_id: FakeDeviceId };
 
     fn check_dad(
-        sync_ctx: &MockCtx,
-        non_sync_ctx: &MockNonSyncCtx,
+        sync_ctx: &FakeCtxImpl,
+        non_sync_ctx: &FakeNonSyncCtxImpl,
         frames_len: usize,
         dad_transmits_remaining: Option<NonZeroU8>,
         retrans_timer: Duration,
     ) {
-        let MockDadContext { addr: _, state, retrans_timer: _ } = sync_ctx.get_ref();
+        let FakeDadContext { addr: _, state, retrans_timer: _ } = sync_ctx.get_ref();
         assert_eq!(*state, AddressState::Tentative { dad_transmits_remaining });
         let frames = sync_ctx.frames();
         assert_eq!(frames.len(), frames_len, "frames = {:?}", frames);
@@ -363,8 +363,8 @@ mod tests {
         const DAD_TRANSMITS_REQUIRED: u8 = 2;
         const RETRANS_TIMER: Duration = Duration::from_secs(1);
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative {
                     dad_transmits_remaining: NonZeroU8::new(DAD_TRANSMITS_REQUIRED),
@@ -374,7 +374,7 @@ mod tests {
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             DAD_ADDRESS,
         );
 
@@ -391,11 +391,11 @@ mod tests {
                 Some(DAD_TIMER_ID)
             );
         }
-        let MockDadContext { addr: _, state, retrans_timer: _ } = sync_ctx.get_ref();
+        let FakeDadContext { addr: _, state, retrans_timer: _ } = sync_ctx.get_ref();
         assert_eq!(*state, AddressState::Assigned);
         assert_eq!(
             non_sync_ctx.take_events(),
-            &[DadEvent::AddressAssigned { device: DummyDeviceId, addr: DAD_ADDRESS }][..]
+            &[DadEvent::AddressAssigned { device: FakeDeviceId, addr: DAD_ADDRESS }][..]
         );
     }
 
@@ -404,8 +404,8 @@ mod tests {
         const DAD_TRANSMITS_REQUIRED: u8 = 2;
         const RETRANS_TIMER: Duration = Duration::from_secs(2);
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockDadContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeDadContext {
                 addr: DAD_ADDRESS,
                 state: AddressState::Tentative {
                     dad_transmits_remaining: NonZeroU8::new(DAD_TRANSMITS_REQUIRED),
@@ -415,7 +415,7 @@ mod tests {
         DadHandler::do_duplicate_address_detection(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             DAD_ADDRESS,
         );
         check_dad(
@@ -429,7 +429,7 @@ mod tests {
         DadHandler::stop_duplicate_address_detection(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             DAD_ADDRESS,
         );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();

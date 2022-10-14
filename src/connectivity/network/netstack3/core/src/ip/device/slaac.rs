@@ -1546,44 +1546,44 @@ mod tests {
     use super::*;
     use crate::{
         context::testutil::{
-            DummyCtx, DummyInstant, DummyInstantRange as _v, DummyNonSyncCtx, DummySyncCtx,
-            DummyTimerCtxExt as _,
+            FakeCtx, FakeInstant, FakeInstantRange as _v, FakeNonSyncCtx, FakeSyncCtx,
+            FakeTimerCtxExt as _,
         },
         device::FrameDestination,
         ip::{
             device::testutil::with_assigned_ipv6_addr_subnets,
-            icmp::REQUIRED_NDP_IP_PACKET_HOP_LIMIT, receive_ipv6_packet, testutil::DummyDeviceId,
+            icmp::REQUIRED_NDP_IP_PACKET_HOP_LIMIT, receive_ipv6_packet, testutil::FakeDeviceId,
         },
-        testutil::{assert_empty, DummyEventDispatcherConfig, FakeCryptoRng, TestIpExt as _},
+        testutil::{assert_empty, FakeCryptoRng, FakeEventDispatcherConfig, TestIpExt as _},
         Ctx,
     };
 
-    struct MockSlaacContext {
+    struct FakeSlaacContext {
         config: SlaacConfiguration,
         dad_transmits: Option<NonZeroU8>,
         retrans_timer: Duration,
         iid: [u8; 8],
-        slaac_addrs: MockSlaacAddrs,
+        slaac_addrs: FakeSlaacAddrs,
     }
 
-    type MockCtx = DummySyncCtx<MockSlaacContext, (), DummyDeviceId>;
-    type MockNonSyncCtx = DummyNonSyncCtx<SlaacTimerId<DummyDeviceId>, (), ()>;
+    type FakeCtxImpl = FakeSyncCtx<FakeSlaacContext, (), FakeDeviceId>;
+    type FakeNonSyncCtxImpl = FakeNonSyncCtx<SlaacTimerId<FakeDeviceId>, (), ()>;
 
     #[derive(Default)]
-    struct MockSlaacAddrs {
-        slaac_addrs: Vec<SlaacAddressEntry<DummyInstant>>,
+    struct FakeSlaacAddrs {
+        slaac_addrs: Vec<SlaacAddressEntry<FakeInstant>>,
         non_slaac_addr: Option<UnicastAddr<Ipv6Addr>>,
     }
 
-    impl<'a> SlaacAddresses<MockNonSyncCtx> for &'a mut MockSlaacAddrs {
+    impl<'a> SlaacAddresses<FakeNonSyncCtxImpl> for &'a mut FakeSlaacAddrs {
         fn with_addrs_mut<
             O,
-            F: FnOnce(Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, DummyInstant>> + '_>) -> O,
+            F: FnOnce(Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, FakeInstant>> + '_>) -> O,
         >(
             &mut self,
             cb: F,
         ) -> O {
-            let MockSlaacAddrs { slaac_addrs, non_slaac_addr: _ } = self;
+            let FakeSlaacAddrs { slaac_addrs, non_slaac_addr: _ } = self;
             cb(Box::new(slaac_addrs.iter_mut().map(
                 |SlaacAddressEntry { addr_sub, config, deprecated }| SlaacAddressEntryMut {
                     addr_sub: *addr_sub,
@@ -1595,26 +1595,26 @@ mod tests {
 
         fn with_addrs<
             O,
-            F: FnOnce(Box<dyn Iterator<Item = SlaacAddressEntry<DummyInstant>> + '_>) -> O,
+            F: FnOnce(Box<dyn Iterator<Item = SlaacAddressEntry<FakeInstant>> + '_>) -> O,
         >(
             &self,
             cb: F,
         ) -> O {
-            let MockSlaacAddrs { slaac_addrs, non_slaac_addr: _ } = self;
+            let FakeSlaacAddrs { slaac_addrs, non_slaac_addr: _ } = self;
             cb(Box::new(slaac_addrs.iter().cloned()))
         }
 
         fn add_addr_sub_and_then<
             O,
-            F: FnOnce(SlaacAddressEntryMut<'_, DummyInstant>, &mut MockNonSyncCtx) -> O,
+            F: FnOnce(SlaacAddressEntryMut<'_, FakeInstant>, &mut FakeNonSyncCtxImpl) -> O,
         >(
             &mut self,
-            ctx: &mut MockNonSyncCtx,
+            ctx: &mut FakeNonSyncCtxImpl,
             add_addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-            config: SlaacConfig<DummyInstant>,
+            config: SlaacConfig<FakeInstant>,
             and_then: F,
         ) -> Result<O, ExistsError> {
-            let MockSlaacAddrs { slaac_addrs, non_slaac_addr } = self;
+            let FakeSlaacAddrs { slaac_addrs, non_slaac_addr } = self;
 
             if non_slaac_addr.map_or(false, |a| a == add_addr_sub.addr()) {
                 return Err(ExistsError);
@@ -1637,13 +1637,13 @@ mod tests {
 
         fn remove_addr(
             &mut self,
-            _ctx: &mut MockNonSyncCtx,
+            _ctx: &mut FakeNonSyncCtxImpl,
             addr: &UnicastAddr<Ipv6Addr>,
         ) -> Result<
-            (AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>, SlaacConfig<DummyInstant>),
+            (AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>, SlaacConfig<FakeInstant>),
             NotFoundError,
         > {
-            let MockSlaacAddrs { slaac_addrs, non_slaac_addr: _ } = self;
+            let FakeSlaacAddrs { slaac_addrs, non_slaac_addr: _ } = self;
 
             slaac_addrs
                 .iter()
@@ -1658,18 +1658,18 @@ mod tests {
         }
     }
 
-    impl SlaacStateContext<MockNonSyncCtx> for MockCtx {
-        type SlaacAddrs<'a> = &'a mut MockSlaacAddrs where MockCtx: 'a;
+    impl SlaacStateContext<FakeNonSyncCtxImpl> for FakeCtxImpl {
+        type SlaacAddrs<'a> = &'a mut FakeSlaacAddrs where FakeCtxImpl: 'a;
 
         fn with_slaac_addrs_mut_and_configs<
             O,
-            F: FnOnce(SlaacAddrsMutAndConfig<'_, MockNonSyncCtx, &'_ mut MockSlaacAddrs>) -> O,
+            F: FnOnce(SlaacAddrsMutAndConfig<'_, FakeNonSyncCtxImpl, &'_ mut FakeSlaacAddrs>) -> O,
         >(
             &mut self,
-            &DummyDeviceId: &DummyDeviceId,
+            &FakeDeviceId: &FakeDeviceId,
             cb: F,
         ) -> O {
-            let MockSlaacContext { config, dad_transmits, retrans_timer, iid, slaac_addrs } =
+            let FakeSlaacContext { config, dad_transmits, retrans_timer, iid, slaac_addrs } =
                 self.get_mut();
             let mut slaac_addrs = slaac_addrs;
             cb(SlaacAddrsMutAndConfig {
@@ -1683,8 +1683,8 @@ mod tests {
         }
     }
 
-    impl MockSlaacContext {
-        fn iter_slaac_addrs(&self) -> impl Iterator<Item = SlaacAddressEntry<DummyInstant>> + '_ {
+    impl FakeSlaacContext {
+        fn iter_slaac_addrs(&self) -> impl Iterator<Item = SlaacAddressEntry<FakeInstant>> + '_ {
             self.slaac_addrs.slaac_addrs.iter().cloned()
         }
     }
@@ -1714,8 +1714,8 @@ mod tests {
         valid_lifetime_secs: u32,
         enable_stable_addresses: bool,
     ) {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeSlaacContext {
                 config: SlaacConfiguration { enable_stable_addresses, ..Default::default() },
                 dad_transmits: None,
                 retrans_timer: DEFAULT_RETRANS_TIMER,
@@ -1726,7 +1726,7 @@ mod tests {
         SlaacHandler::apply_slaac_update(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(preferred_lifetime_secs),
             NonZeroNdpLifetime::from_u32_with_infinite(valid_lifetime_secs),
@@ -1747,8 +1747,8 @@ mod tests {
     #[test_case(0; "deprecated")]
     #[test_case(1; "preferred")]
     fn generate_stable_address(preferred_lifetime_secs: u32) {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeSlaacContext {
                 config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
                 dad_transmits: None,
                 retrans_timer: DEFAULT_RETRANS_TIMER,
@@ -1763,7 +1763,7 @@ mod tests {
         SlaacHandler::apply_slaac_update(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(preferred_lifetime_secs),
             NonZeroNdpLifetime::from_u32_with_infinite(valid_lifetime_secs),
@@ -1778,9 +1778,9 @@ mod tests {
         };
         assert_eq!(sync_ctx.get_ref().iter_slaac_addrs().collect::<Vec<_>>(), [entry],);
         let deprecate_timer_id =
-            SlaacTimerId::new_deprecate_slaac_address(DummyDeviceId, addr_sub.addr());
+            SlaacTimerId::new_deprecate_slaac_address(FakeDeviceId, addr_sub.addr());
         let invalidate_timer_id =
-            SlaacTimerId::new_invalidate_slaac_address(DummyDeviceId, addr_sub.addr());
+            SlaacTimerId::new_invalidate_slaac_address(FakeDeviceId, addr_sub.addr());
         if address_created_deprecated {
             non_sync_ctx.timer_ctx().assert_timers_installed([(invalidate_timer_id, valid_until)]);
         } else {
@@ -1812,13 +1812,13 @@ mod tests {
     fn stable_address_conflict() {
         let addr_sub = calculate_addr_sub(SUBNET, IID);
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeSlaacContext {
                 config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
                 dad_transmits: None,
                 retrans_timer: DEFAULT_RETRANS_TIMER,
                 iid: IID,
-                slaac_addrs: MockSlaacAddrs {
+                slaac_addrs: FakeSlaacAddrs {
                     slaac_addrs: Default::default(),
                     // Consider the address we will generate as already assigned without
                     // SLAAC.
@@ -1832,7 +1832,7 @@ mod tests {
         SlaacHandler::apply_slaac_update(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
             NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
@@ -1846,8 +1846,8 @@ mod tests {
     fn remove_stable_address(reason: DelIpv6AddrReason) {
         let addr_sub = calculate_addr_sub(SUBNET, IID);
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeSlaacContext {
                 config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
                 dad_transmits: None,
                 retrans_timer: DEFAULT_RETRANS_TIMER,
@@ -1861,7 +1861,7 @@ mod tests {
         SlaacHandler::apply_slaac_update(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
             NonZeroNdpLifetime::from_u32_with_infinite(LIFETIME_SECS),
@@ -1875,9 +1875,9 @@ mod tests {
         };
         assert_eq!(sync_ctx.get_ref().iter_slaac_addrs().collect::<Vec<_>>(), [entry],);
         let deprecate_timer_id =
-            SlaacTimerId::new_deprecate_slaac_address(DummyDeviceId, addr_sub.addr());
+            SlaacTimerId::new_deprecate_slaac_address(FakeDeviceId, addr_sub.addr());
         let invalidate_timer_id =
-            SlaacTimerId::new_invalidate_slaac_address(DummyDeviceId, addr_sub.addr());
+            SlaacTimerId::new_invalidate_slaac_address(FakeDeviceId, addr_sub.addr());
         non_sync_ctx.timer_ctx().assert_timers_installed([
             (deprecate_timer_id, now + Duration::from_secs(LIFETIME_SECS.into())),
             (invalidate_timer_id, valid_until),
@@ -1894,7 +1894,7 @@ mod tests {
         SlaacHandler::on_address_removed(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             addr_sub,
             config,
             reason,
@@ -2016,8 +2016,8 @@ mod tests {
             effective_new_vl_secs,
         }: RefreshStableAddressTimersTest,
     ) {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeSlaacContext {
                 config: SlaacConfiguration { enable_stable_addresses: true, ..Default::default() },
                 dad_transmits: None,
                 retrans_timer: DEFAULT_RETRANS_TIMER,
@@ -2027,9 +2027,9 @@ mod tests {
 
         let addr_sub = calculate_addr_sub(SUBNET, IID);
         let deprecate_timer_id =
-            SlaacTimerId::new_deprecate_slaac_address(DummyDeviceId, addr_sub.addr());
+            SlaacTimerId::new_deprecate_slaac_address(FakeDeviceId, addr_sub.addr());
         let invalidate_timer_id =
-            SlaacTimerId::new_invalidate_slaac_address(DummyDeviceId, addr_sub.addr());
+            SlaacTimerId::new_invalidate_slaac_address(FakeDeviceId, addr_sub.addr());
 
         // Generate a new SLAAC address.
         let ndp_pl = NonZeroNdpLifetime::from_u32_with_infinite(orig_pl_secs);
@@ -2037,7 +2037,7 @@ mod tests {
         SlaacHandler::apply_slaac_update(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             SUBNET,
             ndp_pl,
             ndp_vl,
@@ -2072,7 +2072,7 @@ mod tests {
         SlaacHandler::apply_slaac_update(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             SUBNET,
             ndp_pl,
             NonZeroNdpLifetime::from_u32_with_infinite(new_vl_secs),
@@ -2221,8 +2221,8 @@ mod tests {
             enable,
         }: DontGenerateTemporaryAddressTest,
     ) {
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeSlaacContext {
                 config: SlaacConfiguration {
                     temporary_address_configuration: enable.then(|| {
                         TemporarySlaacAddressConfiguration {
@@ -2246,7 +2246,7 @@ mod tests {
         SlaacHandler::apply_slaac_update(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(preferred_lifetime_secs),
             NonZeroNdpLifetime::from_u32_with_infinite(valid_lifetime_secs),
@@ -2359,8 +2359,8 @@ mod tests {
         let pl_config = Duration::from_secs(pl_config.into());
         let regen_advance = regen_advance(temp_idgen_retries, retrans_timer, dad_transmits);
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::with_state(MockSlaacContext {
+        let FakeCtx { mut sync_ctx, mut non_sync_ctx } =
+            FakeCtx::with_sync_ctx(FakeCtxImpl::with_state(FakeSlaacContext {
                 config: SlaacConfiguration {
                     temporary_address_configuration: Some(TemporarySlaacAddressConfiguration {
                         temp_valid_lifetime: NonZeroDuration::new(Duration::from_secs(
@@ -2383,12 +2383,12 @@ mod tests {
 
         struct AddrProps {
             desync_factor: Duration,
-            valid_until: DummyInstant,
-            preferred_until: DummyInstant,
-            entry: SlaacAddressEntry<DummyInstant>,
-            deprecate_timer_id: SlaacTimerId<DummyDeviceId>,
-            invalidate_timer_id: SlaacTimerId<DummyDeviceId>,
-            regenerate_timer_id: SlaacTimerId<DummyDeviceId>,
+            valid_until: FakeInstant,
+            preferred_until: FakeInstant,
+            entry: SlaacAddressEntry<FakeInstant>,
+            deprecate_timer_id: SlaacTimerId<FakeDeviceId>,
+            invalidate_timer_id: SlaacTimerId<FakeDeviceId>,
+            regenerate_timer_id: SlaacTimerId<FakeDeviceId>,
         }
 
         let addr_props = |rng: &mut FakeCryptoRng<_>,
@@ -2423,15 +2423,15 @@ mod tests {
                     deprecated: false,
                 },
                 deprecate_timer_id: SlaacTimerId::new_deprecate_slaac_address(
-                    DummyDeviceId,
+                    FakeDeviceId,
                     addr_sub.addr(),
                 ),
                 invalidate_timer_id: SlaacTimerId::new_invalidate_slaac_address(
-                    DummyDeviceId,
+                    FakeDeviceId,
                     addr_sub.addr(),
                 ),
                 regenerate_timer_id: SlaacTimerId::new_regenerate_temporary_slaac_address(
-                    DummyDeviceId,
+                    FakeDeviceId,
                     addr_sub,
                 ),
             }
@@ -2441,7 +2441,7 @@ mod tests {
         SlaacHandler::apply_slaac_update(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            &DummyDeviceId,
+            &FakeDeviceId,
             SUBNET,
             NonZeroNdpLifetime::from_u32_with_infinite(pl_ra),
             NonZeroNdpLifetime::from_u32_with_infinite(vl_ra),
@@ -2594,13 +2594,13 @@ mod tests {
 
     #[test]
     fn integration_remove_all_addresses_on_ipv6_disable() {
-        let DummyEventDispatcherConfig {
+        let FakeEventDispatcherConfig {
             local_mac,
             remote_mac,
             local_ip: _,
             remote_ip: _,
             subnet: _,
-        } = Ipv6::DUMMY_CONFIG;
+        } = Ipv6::FAKE_CONFIG;
 
         const ONE_HOUR: NonZeroDuration = NonZeroDuration::from_nonzero_secs(
             const_unwrap::const_unwrap_option(NonZeroU64::new(ONE_HOUR_AS_SECS as u64)),
@@ -2609,7 +2609,7 @@ mod tests {
             const_unwrap::const_unwrap_option(NonZeroU64::new(TWO_HOURS_AS_SECS as u64)),
         );
 
-        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
+        let Ctx { sync_ctx, mut non_sync_ctx } = crate::testutil::FakeCtx::default();
         let mut sync_ctx = &sync_ctx;
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -2630,8 +2630,8 @@ mod tests {
             },
         );
 
-        let set_ip_enabled = |sync_ctx: &mut &crate::testutil::DummySyncCtx,
-                              non_sync_ctx: &mut crate::testutil::DummyNonSyncCtx,
+        let set_ip_enabled = |sync_ctx: &mut &crate::testutil::FakeSyncCtx,
+                              non_sync_ctx: &mut crate::testutil::FakeNonSyncCtx,
                               enabled| {
             crate::ip::device::update_ipv6_configuration(
                 sync_ctx,

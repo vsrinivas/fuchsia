@@ -74,56 +74,56 @@ pub(crate) mod testutil {
     use super::*;
     use crate::device::DeviceIdContext;
 
-    /// A dummy [`LinkDevice`].
+    /// A fake [`LinkDevice`].
     #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-    pub(crate) enum DummyLinkDevice {}
+    pub(crate) enum FakeLinkDevice {}
 
-    const DUMMY_LINK_ADDRESS_LEN: usize = 1;
+    const FAKE_LINK_ADDRESS_LEN: usize = 1;
 
-    /// A dummy [`LinkAddress`].
+    /// A fake [`LinkAddress`].
     ///
     /// The value 0xFF is the broadcast address.
     #[derive(FromBytes, AsBytes, Unaligned, Copy, Clone, Debug, Hash, PartialEq, Eq)]
     #[repr(transparent)]
-    pub(crate) struct DummyLinkAddress(pub(crate) [u8; DUMMY_LINK_ADDRESS_LEN]);
+    pub(crate) struct FakeLinkAddress(pub(crate) [u8; FAKE_LINK_ADDRESS_LEN]);
 
-    impl UnicastAddress for DummyLinkAddress {
+    impl UnicastAddress for FakeLinkAddress {
         fn is_unicast(&self) -> bool {
             let Self(bytes) = self;
             bytes != &[0xff]
         }
     }
 
-    impl LinkAddress for DummyLinkAddress {
-        const BYTES_LENGTH: usize = DUMMY_LINK_ADDRESS_LEN;
+    impl LinkAddress for FakeLinkAddress {
+        const BYTES_LENGTH: usize = FAKE_LINK_ADDRESS_LEN;
 
         fn bytes(&self) -> &[u8] {
             &self.0[..]
         }
 
-        fn from_bytes(bytes: &[u8]) -> DummyLinkAddress {
-            DummyLinkAddress(bytes.try_into().unwrap())
+        fn from_bytes(bytes: &[u8]) -> FakeLinkAddress {
+            FakeLinkAddress(bytes.try_into().unwrap())
         }
     }
 
-    impl Device for DummyLinkDevice {}
+    impl Device for FakeLinkDevice {}
 
-    impl LinkDevice for DummyLinkDevice {
-        type Address = DummyLinkAddress;
+    impl LinkDevice for FakeLinkDevice {
+        type Address = FakeLinkAddress;
         type State = ();
     }
 
-    /// A dummy ID identifying a [`DummyLinkDevice`].
+    /// A fake ID identifying a [`FakeLinkDevice`].
     #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-    pub(crate) struct DummyLinkDeviceId;
+    pub(crate) struct FakeLinkDeviceId;
 
-    impl Display for DummyLinkDeviceId {
+    impl Display for FakeLinkDeviceId {
         fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             write!(f, "{:?}", self)
         }
     }
 
-    impl<C> DeviceIdContext<DummyLinkDevice> for C {
-        type DeviceId = DummyLinkDeviceId;
+    impl<C> DeviceIdContext<FakeLinkDevice> for C {
+        type DeviceId = FakeLinkDeviceId;
     }
 }
