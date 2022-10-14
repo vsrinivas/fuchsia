@@ -69,12 +69,13 @@ pub(crate) use self::routes::ForwardingTable;
 pub struct RouterOptions {
     node_id: Option<NodeId>,
     diagnostics: Option<Implementation>,
+    circuit_router_interval: Option<Duration>,
 }
 
 impl RouterOptions {
     /// Create with defaults.
     pub fn new() -> Self {
-        RouterOptions { diagnostics: None, node_id: None }
+        RouterOptions { diagnostics: None, node_id: None, circuit_router_interval: None }
     }
 
     /// Request a specific node id (if unset, one will be generated).
@@ -86,6 +87,13 @@ impl RouterOptions {
     /// Enable diagnostics with a selected `implementation`.
     pub fn export_diagnostics(mut self, implementation: Implementation) -> Self {
         self.diagnostics = Some(implementation);
+        self
+    }
+
+    /// Set the maximum frequency of router updates sent to the circuit network by this node. Leave
+    /// unset to create a node that does not forward routing updates.
+    pub fn set_router_interval(mut self, interval: Duration) -> Self {
+        self.circuit_router_interval = Some(interval);
         self
     }
 }
@@ -112,9 +120,10 @@ pub(crate) enum OpenedTransfer {
 
 #[derive(Debug)]
 struct PeerMaps {
-    clients: BTreeMap<NodeId, Arc<Peer>>,
+    link_clients: BTreeMap<NodeId, Arc<Peer>>,
+    circuit_clients: BTreeMap<NodeId, Arc<Peer>>,
     servers: BTreeMap<NodeId, Vec<Arc<Peer>>>,
-    connections: HashMap<ConnectionId, Arc<Peer>>,
+    connections_for_links: HashMap<ConnectionId, Arc<Peer>>,
 }
 
 impl PeerMaps {
@@ -126,8 +135,9 @@ impl PeerMaps {
     ) -> Result<Arc<Peer>, Error> {
         if peer_node_id == router.node_id {
             bail!("Trying to create loopback client peer");
-        }
-        if let Some(p) = self.clients.get(&peer_node_id) {
+        } else if let Some(p) = self.circuit_clients.get(&peer_node_id) {
+            Ok(p.clone())
+        } else if let Some(p) = self.link_clients.get(&peer_node_id) {
             if p.node_id() != peer_node_id {
                 bail!(
                     "Existing client peer gets a packet from a new peer node id {:?} (vs {:?})",
@@ -137,11 +147,11 @@ impl PeerMaps {
             }
             Ok(p.clone())
         } else {
-            self.new_client(local_node_id, peer_node_id, router).await
+            self.new_link_client(local_node_id, peer_node_id, router).await
         }
     }
 
-    async fn lookup(
+    async fn lookup_for_link(
         &mut self,
         conn_id: &[u8],
         ty: quiche::Type,
@@ -152,7 +162,7 @@ impl PeerMaps {
         if peer_node_id == router.node_id {
             bail!("Trying to create loopback peer");
         }
-        match (ty, conn_id.try_into().map(|conn_id| self.connections.get(&conn_id))) {
+        match (ty, conn_id.try_into().map(|conn_id| self.connections_for_links.get(&conn_id))) {
             (_, Ok(Some(p))) => {
                 if p.node_id() != peer_node_id {
                     bail!(
@@ -164,13 +174,13 @@ impl PeerMaps {
                 Ok(p.clone())
             }
             (quiche::Type::Initial, _) => {
-                self.new_server(local_node_id, peer_node_id, router).await
+                self.new_link_server(local_node_id, peer_node_id, router).await
             }
             (_, _) => bail!("Packet received for unknown connection"),
         }
     }
 
-    async fn new_client(
+    async fn new_link_client(
         &mut self,
         local_node_id: NodeId,
         peer_node_id: NodeId,
@@ -187,12 +197,12 @@ impl PeerMaps {
             router.service_map.new_local_service_observer(),
             router,
         )?;
-        self.clients.insert(peer_node_id, peer.clone());
-        self.connections.insert(conn_id, peer.clone());
+        self.link_clients.insert(peer_node_id, peer.clone());
+        self.connections_for_links.insert(conn_id, peer.clone());
         Ok(peer)
     }
 
-    async fn new_server(
+    async fn new_link_server(
         &mut self,
         local_node_id: NodeId,
         peer_node_id: NodeId,
@@ -203,7 +213,7 @@ impl PeerMaps {
         let conn_id = ConnectionId::new();
         let peer = Peer::new_server(peer_node_id, local_node_id, conn_id, &mut config, router)?;
         self.servers.entry(peer_node_id).or_insert(Vec::new()).push(peer.clone());
-        self.connections.insert(conn_id, peer.clone());
+        self.connections_for_links.insert(conn_id, peer.clone());
         Ok(peer)
     }
 }
@@ -281,6 +291,8 @@ pub struct Router {
     implementation: AtomicU32,
     /// Hack to prevent the n^2 scaling of a fully-connected graph of ffxs
     ascendd_client_routing: AtomicBool,
+    #[cfg(feature = "circuit")]
+    circuit_node: circuit::ConnectionNode,
 }
 
 struct ProxiedHandle {
@@ -305,6 +317,11 @@ impl std::fmt::Debug for Router {
     }
 }
 
+/// This is sent when initiating connections between circuit nodes and must be identical between all
+/// such nodes.
+#[cfg(feature = "circuit")]
+const OVERNET_CIRCUIT_PROTOCOL: &'static str = "Overnet:0";
+
 impl Router {
     /// New with some set of options
     pub fn new(
@@ -323,6 +340,26 @@ impl Router {
         let node_id = options.node_id.unwrap_or_else(generate_node_id);
         let service_map = ServiceMap::new(node_id);
         let (link_state_publisher, link_state_receiver) = futures::channel::mpsc::channel(1);
+        #[cfg(feature = "circuit")]
+        let (new_peer_sender, new_peer_receiver) = futures::channel::mpsc::unbounded();
+        #[cfg(feature = "circuit")]
+        let (circuit_node, circuit_connections) =
+            if let Some(interval) = options.circuit_router_interval {
+                let (a, b) = circuit::ConnectionNode::new_with_router(
+                    &node_id.circuit_string(),
+                    OVERNET_CIRCUIT_PROTOCOL,
+                    interval,
+                    new_peer_sender,
+                )?;
+                (a, b.boxed())
+            } else {
+                let (a, b) = circuit::ConnectionNode::new(
+                    &node_id.circuit_string(),
+                    OVERNET_CIRCUIT_PROTOCOL,
+                    new_peer_sender,
+                )?;
+                (a, b.boxed())
+            };
         let routes = Arc::new(Routes::new());
         let router = Arc::new(Router {
             node_id,
@@ -331,9 +368,10 @@ impl Router {
             service_map,
             links: Mutex::new(HashMap::new()),
             peers: Mutex::new(PeerMaps {
-                clients: BTreeMap::new(),
+                circuit_clients: BTreeMap::new(),
+                link_clients: BTreeMap::new(),
                 servers: BTreeMap::new(),
-                connections: HashMap::new(),
+                connections_for_links: HashMap::new(),
             }),
             proxied_streams: Mutex::new(HashMap::new()),
             pending_transfers: Mutex::new(PendingTransferMap::new()),
@@ -346,6 +384,8 @@ impl Router {
             ),
             // Default is to route all clients to each other. Ffx daemon disabled client routing.
             ascendd_client_routing: AtomicBool::new(true),
+            #[cfg(feature = "circuit")]
+            circuit_node,
         });
 
         let link_state_observable = Observable::new(BTreeMap::new());
@@ -353,7 +393,21 @@ impl Router {
         *router.task.lock().now_or_never().unwrap() = Some(Task::spawn(log_errors(
             async move {
                 let router = &weak_router;
-                futures::future::try_join4(
+                #[cfg(feature = "circuit")]
+                let ret = futures::future::try_join5(
+                    summon_clients(router.clone(), routes.new_forwarding_table_observer()),
+                    routes.run_planner(node_id, link_state_observable.new_observer()),
+                    run_link_status_updater(link_state_observable, link_state_receiver),
+                    run_circuits(router.clone(), circuit_connections, new_peer_receiver),
+                    async move {
+                        run_diagostic_service_request_handler(router).await?;
+                        Ok(())
+                    },
+                )
+                .await
+                .map(drop);
+                #[cfg(not(feature = "circuit"))]
+                let ret = futures::future::try_join4(
                     summon_clients(router.clone(), routes.new_forwarding_table_observer()),
                     routes.run_planner(node_id, link_state_observable.new_observer()),
                     run_link_status_updater(link_state_observable, link_state_receiver),
@@ -363,12 +417,20 @@ impl Router {
                     },
                 )
                 .await
-                .map(drop)
+                .map(drop);
+                ret
             },
             format!("router {:?} support loop failed", node_id),
         )));
 
         Ok(router)
+    }
+
+    /// Get the circuit protocol node for this router. This will let us create new connections to
+    /// other nodes.
+    #[cfg(feature = "circuit")]
+    pub fn circuit_node(&self) -> &circuit::Node {
+        self.circuit_node.node()
     }
 
     /// Create a new link to some node, returning a `LinkId` describing it.
@@ -546,7 +608,7 @@ impl Router {
 
     /// Diagnostic information for peer connections
     pub(crate) async fn peer_diagnostics(&self) -> Vec<PeerConnectionDiagnosticInfo> {
-        futures::stream::iter(self.peers.lock().await.connections.iter())
+        futures::stream::iter(self.peers.lock().await.connections_for_links.iter())
             .then(|(_, peer)| peer.diagnostics(self.node_id))
             .collect()
             .await
@@ -577,10 +639,12 @@ impl Router {
         let mut removed_client_peer_node_id = None;
         {
             let mut peers = self.peers.lock().await;
-            if let Some(peer) = peers.connections.remove(&conn_id) {
+            if let Some(peer) = peers.connections_for_links.remove(&conn_id) {
                 match peer.endpoint() {
                     Endpoint::Client => {
-                        if let btree_map::Entry::Occupied(o) = peers.clients.entry(peer.node_id()) {
+                        if let btree_map::Entry::Occupied(o) =
+                            peers.link_clients.entry(peer.node_id())
+                        {
                             if Arc::ptr_eq(o.get(), &peer) {
                                 removed_client_peer_node_id = Some(peer.node_id());
                                 o.remove_entry();
@@ -651,13 +715,13 @@ impl Router {
         self.peers.lock().await.get_client(self.node_id, peer_node_id, self).await
     }
 
-    pub(crate) async fn lookup_peer(
+    pub(crate) async fn lookup_peer_for_link(
         self: &Arc<Self>,
         conn_id: &[u8],
         ty: quiche::Type,
         peer_node_id: NodeId,
     ) -> Result<Arc<Peer>, Error> {
-        self.peers.lock().await.lookup(conn_id, ty, self.node_id, peer_node_id, self).await
+        self.peers.lock().await.lookup_for_link(conn_id, ty, self.node_id, peer_node_id, self).await
     }
 
     fn add_proxied(
@@ -1030,6 +1094,99 @@ async fn summon_clients(
             let _ = peers.get_client(router.node_id, destination, &router).await?;
         }
     }
+    Ok(())
+}
+
+/// Runs our `ConnectionNode` to set up circuit-based peers.
+#[cfg(feature = "circuit")]
+async fn run_circuits(
+    router: Weak<Router>,
+    connections: impl futures::Stream<Item = circuit::Connection> + Send,
+    peers: impl futures::Stream<Item = String> + Send,
+) -> Result<(), Error> {
+    // Notes whenever a new peer announces itself on the network.
+    let new_peer_fut = {
+        let router = router.clone();
+        async move {
+            futures::pin_mut!(peers);
+            while let Some(peer_node_id) = peers.next().await {
+                let router = match router.upgrade() {
+                    Some(x) => x,
+                    None => {
+                        tracing::warn!("Router disappeared from under circuit runner");
+                        break;
+                    }
+                };
+
+                let res = async {
+                    let peer_node_id_num = NodeId::from_circuit_string(&peer_node_id)
+                        .map_err(|_| format_err!("Invalid node id: {:?}", peer_node_id))?;
+                    let mut peers = router.peers.lock().await;
+
+                    if peers.circuit_clients.get(&peer_node_id_num).is_some() {
+                        tracing::warn!(peer = ?peer_node_id, "Re-establishing connection");
+                    }
+
+                    let (reader, writer_remote) = circuit::stream::stream();
+                    let (reader_remote, writer) = circuit::stream::stream();
+                    let conn = router
+                        .circuit_node
+                        .connect_to_peer(&peer_node_id, reader_remote, writer_remote)
+                        .await?;
+                    let peer = Peer::new_circuit_client(
+                        conn,
+                        writer,
+                        reader,
+                        router.service_map.new_local_service_observer(),
+                        &router,
+                    )?;
+
+                    peers.circuit_clients.insert(peer_node_id_num, peer.clone());
+                    Result::<_, Error>::Ok(())
+                }
+                .await;
+
+                if let Err(e) = res {
+                    tracing::warn!(peer = ?peer_node_id, "Attempt to connect to peer failed: {:?}", e);
+                }
+            }
+        }
+    };
+
+    // Loops over incoming connections, wraps them in a server-side Peer object and stuffs them in
+    // the PeerMaps table.
+    let new_conn_fut = async move {
+        futures::pin_mut!(connections);
+        while let Some(conn) = connections.next().await {
+            let peer_name = conn.from().to_owned();
+            let res = async {
+                let router = router.upgrade().ok_or_else(|| format_err!("router gone"))?;
+                let peer_node_id = NodeId::from_circuit_string(conn.from())
+                    .map_err(|_| format_err!("Invalid node id"))?;
+                let peer = Peer::new_circuit_server(conn, &router).await?;
+                router
+                    .peers
+                    .lock()
+                    .await
+                    .servers
+                    .entry(peer_node_id)
+                    .or_insert_with(Vec::new)
+                    .push(peer.clone());
+                Result::<_, Error>::Ok(())
+            }
+            .await;
+
+            if let Err(e) = res {
+                tracing::warn!(
+                    peer = ?peer_name,
+                    "Attempt to receive connection from peer failed: {:?}",
+                    e
+                );
+            }
+        }
+    };
+
+    futures::future::join(new_peer_fut, new_conn_fut).await;
     Ok(())
 }
 

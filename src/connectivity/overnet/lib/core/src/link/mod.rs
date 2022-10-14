@@ -1068,7 +1068,7 @@ impl LinkReceiver {
                 format!("Decoding quic header; link={:?}; src={:?}", self.debug_id(), src)
             })?;
         let peer =
-            self.router.lookup_peer(&hdr.dcid, hdr.ty, src).await.with_context(|| {
+            self.router.lookup_peer_for_link(&hdr.dcid, hdr.ty, src).await.with_context(|| {
                 format!("link={:?}; src={:?}; hdr={:?}", self.debug_id(), src, hdr)
             })?;
         peer.receive_frame(frame).await.with_context(|| {

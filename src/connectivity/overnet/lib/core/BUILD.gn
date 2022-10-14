@@ -8,6 +8,10 @@ import("//build/rust/rustc_test.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/host_test_data.gni")
 
+declare_args() {
+  enable_circuit = true
+}
+
 CORE_DEPS = [
   "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
   "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_rust",
@@ -75,6 +79,10 @@ rustc_library("core") {
   edition = "2021"
   deps = CORE_DEPS
   sources = CORE_SOURCES
+
+  if (enable_circuit) {
+    features = [ "circuit" ]
+  }
 }
 
 rustc_test("core_test") {
