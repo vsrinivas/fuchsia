@@ -71,17 +71,19 @@ foreach(idk, _idks) {
     deps = [ "//sdk:${idk}_archive" ]
   }
 
-  verify_compatibility_target = "verify_${idk}_sdk_compatibility"
-  verify_sdk_compatibility(verify_compatibility_target) {
-    testonly = true
-    sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
-    golden_file = "//sdk/manifests/layouts/${target_cpu}/sdk_directory_${idk}.golden_layout"
-    deps = [ "//sdk:${idk}_archive" ]
-  }
+  # TODO(fxb/112091): Re-enable when bug is fixed.
+  #verify_compatibility_target = "verify_${idk}_sdk_compatibility"
+  #
+  # verify_sdk_compatibility(verify_compatibility_target) {
+  #   testonly = true
+  #   sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
+  #   golden_file = "//sdk/manifests/layouts/${target_cpu}/sdk_directory_${idk}.golden_layout"
+  #   deps = [ "//sdk:${idk}_archive" ]
+  # }
 
   _verify_idk_deps += [
     ":$golden_file_target",
-    ":$verify_compatibility_target",
+    # ":$verify_compatibility_target",
   ]
 }
 
