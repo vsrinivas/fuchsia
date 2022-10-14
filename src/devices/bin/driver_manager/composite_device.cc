@@ -234,8 +234,10 @@ zx_status_t CompositeDevice::TryAssemble() {
   // Find the driver_host to put everything in, nullptr means "a new driver_host".
   fbl::RefPtr<DriverHost> driver_host;
   if (spawn_colocated_) {
-    if (const CompositeDeviceFragment* fragment = primary_fragment(); fragment != nullptr) {
-      driver_host = fragment->bound_device()->host();
+    for (auto& fragment : bound_fragments_) {
+      if (fragment.index() == primary_fragment_index_) {
+        driver_host = fragment.bound_device()->host();
+      }
     }
   }
 

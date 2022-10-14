@@ -161,23 +161,6 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
   FragmentList& bound_fragments() { return bound_fragments_; }
   const FragmentList& bound_fragments() const { return bound_fragments_; }
 
-  CompositeDeviceFragment* primary_fragment() {
-    for (auto& fragment : bound_fragments_) {
-      if (fragment.index() == primary_fragment_index_) {
-        return &fragment;
-      }
-    }
-    return nullptr;
-  }
-  const CompositeDeviceFragment* primary_fragment() const {
-    for (auto& fragment : bound_fragments_) {
-      if (fragment.index() == primary_fragment_index_) {
-        return &fragment;
-      }
-    }
-    return nullptr;
-  }
-
  private:
   // Returns true if a fragment matches |dev|. Sets |*index_out| will be set to the
   // matching fragment.

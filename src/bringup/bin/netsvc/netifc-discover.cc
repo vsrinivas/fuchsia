@@ -15,7 +15,6 @@
 
 #include <fbl/unique_fd.h>
 
-#include "lib/stdcompat/string_view.h"
 #include "src/lib/fsl/io/device_watcher.h"
 
 namespace {
@@ -272,8 +271,7 @@ std::optional<typename D::Info> netifc_evaluate(cpp17::string_view topological_p
     }
 
     cpp17::string_view topo_path = SkipInstanceSigil(resp.value()->path.get());
-    // Look for a suffix to avoid coupling too tightly.
-    if (!cpp20::ends_with(topo_path, topological_path)) {
+    if (topo_path != topological_path) {
       return std::nullopt;
     }
   }

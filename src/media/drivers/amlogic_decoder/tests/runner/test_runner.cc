@@ -2,22 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.mediacodec/cpp/wire.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/watcher.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <zircon/errors.h>
 
 #include <iostream>
 
-#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
-
-#include "lib/stdcompat/string_view.h"
 
 namespace amlogic_decoder {
 namespace test {
@@ -32,53 +26,6 @@ class TestDeviceBase {
       return client_end.take_error();
     }
     return zx::ok(TestDeviceBase(std::move(client_end.value())));
-  }
-
-  static zx::status<TestDeviceBase> CreateFromTopologicalPathSuffix(const fbl::unique_fd& fd,
-                                                                    std::string_view suffix) {
-    std::optional<TestDeviceBase> out;
-    std::pair<std::reference_wrapper<decltype(out)>, std::string_view> pair{out, suffix};
-    zx_status_t status = fdio_watch_directory(
-        fd.get(),
-        [](int dirfd, int event, const char* fn, void* cookie) {
-          if (std::string_view{fn} == ".") {
-            return ZX_OK;
-          }
-
-          auto& [out, suffix] = *static_cast<std::add_pointer<decltype(pair)>::type>(cookie);
-
-          fdio_cpp::UnownedFdioCaller caller(dirfd);
-          zx::status client_end =
-              component::ConnectAt<fuchsia_device::Controller>(caller.directory(), fn);
-          if (client_end.is_error()) {
-            return client_end.error_value();
-          }
-          const fidl::WireResult result = fidl::WireCall(client_end.value())->GetTopologicalPath();
-          if (!result.ok()) {
-            return result.status();
-          }
-          const fit::result response = result.value();
-          if (response.is_error()) {
-            return response.error_value();
-          }
-          std::string_view path = (*response.value()).path.get();
-          if (cpp20::ends_with(path, suffix)) {
-            out.get() = TestDeviceBase(std::move(client_end.value()));
-            return ZX_ERR_STOP;
-          }
-          return ZX_OK;
-        },
-        zx::time::infinite().get(), &pair);
-    if (status == ZX_OK) {
-      return zx::error(ZX_ERR_INTERNAL);
-    }
-    if (status != ZX_ERR_STOP) {
-      return zx::error(status);
-    }
-    if (!out.has_value()) {
-      return zx::error(ZX_ERR_BAD_STATE);
-    }
-    return zx::ok(std::move(out.value()));
   }
 
   // Get a channel to the parent device, so we can rebind the driver to it. This
@@ -169,17 +116,11 @@ class TestDeviceBase {
   fidl::ClientEnd<fuchsia_device::Controller> client_end_;
 };
 
-constexpr char kMediaCodecPath[] = "/dev/class/media-codec";
-constexpr std::string_view kTopologicalPathSuffix = "/aml-video/amlogic_video";
-constexpr std::string_view kTestTopologicalPathSuffix = "/aml-video/test_amlogic_video";
+constexpr std::string_view kTopologicalPath = "/dev/aml-video/amlogic_video";
 
 // Requires the driver to be in the system image, so disabled by default.
 TEST(TestRunner, DISABLED_RunTests) {
-  fbl::unique_fd media_codec(open(kMediaCodecPath, O_RDONLY));
-  ASSERT_TRUE(media_codec.is_valid(), "%s", strerror(errno));
-
-  zx::status test_device1 =
-      TestDeviceBase::CreateFromTopologicalPathSuffix(media_codec, kTopologicalPathSuffix);
+  zx::status test_device1 = TestDeviceBase::CreateFromFileName(kTopologicalPath);
   ASSERT_OK(test_device1.status_value());
 
   zx::status parent_device = test_device1.value().GetParentDevice();
@@ -190,8 +131,7 @@ TEST(TestRunner, DISABLED_RunTests) {
                 .BindDriver("/system/driver/amlogic_video_decoder_test.so")
                 .status_value());
 
-  zx::status test_device2 =
-      TestDeviceBase::CreateFromTopologicalPathSuffix(media_codec, kTestTopologicalPathSuffix);
+  zx::status test_device2 = TestDeviceBase::CreateFromFileName("/dev/aml-video/test_amlogic_video");
   ASSERT_OK(test_device2.status_value());
 
   zx::channel client, server;
@@ -216,11 +156,7 @@ TEST(TestRunner, DISABLED_RunTests) {
 
 // Test that unbinding and rebinding the driver works.
 TEST(TestRunner, Rebind) {
-  fbl::unique_fd media_codec(open(kMediaCodecPath, O_RDONLY));
-  ASSERT_TRUE(media_codec.is_valid(), "%s", strerror(errno));
-
-  zx::status test_device1 =
-      TestDeviceBase::CreateFromTopologicalPathSuffix(media_codec, kTopologicalPathSuffix);
+  zx::status test_device1 = TestDeviceBase::CreateFromFileName(kTopologicalPath);
   ASSERT_OK(test_device1.status_value());
 
   zx::status parent_device = test_device1.value().GetParentDevice();

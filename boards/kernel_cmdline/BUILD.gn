@@ -163,7 +163,7 @@ kernel_cmdline("vim3") {
   deps = [ ":pmm-checker-from-board" ]
   args = [
     # Prefer using the built-in NIC to the CDC-ether interface.
-    "netsvc.interface=/dwmac/dwmac/Designware-MAC/ethernet",
+    "netsvc.interface=/dev/dwmac/dwmac/Designware-MAC/ethernet",
   ]
 }
 
@@ -180,6 +180,6 @@ kernel_cmdline("av400") {
   deps = [ ":pmm-checker-from-board" ]
   args = [
     # Prefer using the built-in NIC to the CDC-ether interface.
-    "netsvc.interface=/dwmac/dwmac/Designware-MAC/ethernet",
+    "netsvc.interface=/dev/dwmac/dwmac/Designware-MAC/ethernet",
   ]
 }

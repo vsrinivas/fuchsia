@@ -14,6 +14,5 @@ TEST(SimpleDriverTestRealmTest, DriversExist) {
   ASSERT_EQ(ZX_OK,
             device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_b", &out));
   ASSERT_EQ(ZX_OK,
-            device_watcher::RecursiveWaitForFile(
-                "/dev/sys/test/device_group_fragment_a/device_group_driver/device_group", &out));
+            device_watcher::RecursiveWaitForFile("/dev/device_group_driver/device_group", &out));
 }
