@@ -23,10 +23,13 @@
 #include <fbl/algorithm.h>
 #include <kernel/mutex.h>
 #include <ktl/iterator.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 
 #include <ktl/enforce.h>
+
+#define LOCAL_TRACE 0
 
 static paddr_t bootstrap_phys_addr = UINT64_MAX;
 static Mutex bootstrap_lock;
@@ -46,7 +49,7 @@ extern uint8_t _temp_gdt_end;
 void x86_bootstrap16_init(paddr_t bootstrap_base) {
   DEBUG_ASSERT(!IS_PAGE_ALIGNED(bootstrap_phys_addr));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(bootstrap_base));
-  DEBUG_ASSERT(bootstrap_base <= (1024 * 1024) - 2 * PAGE_SIZE);
+  DEBUG_ASSERT(bootstrap_base <= (MB)-k_x86_bootstrap16_buffer_size);
   bootstrap_phys_addr = bootstrap_base;
 }
 
@@ -56,6 +59,11 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
   if (!IS_PAGE_ALIGNED(bootstrap_phys_addr)) {
     return ZX_ERR_BAD_STATE;
   }
+
+  // This routine assumes that the bootstrap buffer is 3 pages long.
+  static_assert(k_x86_bootstrap16_buffer_size == 3UL * PAGE_SIZE);
+
+  LTRACEF("bootstrap_phys_addr %#lx\n", bootstrap_phys_addr);
 
   // Make sure the entrypoint code is in the bootstrap code that will be
   // loaded
@@ -88,13 +96,14 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
     if (!bootstrap_aspace) {
       return ZX_ERR_NO_MEMORY;
     }
+
     // Bootstrap aspace needs 5 regions mapped:
     struct map_range page_mappings[] = {
         // 1) The bootstrap code page (identity mapped)
         // 2) The bootstrap data page (identity mapped)
         {.start_vaddr = bootstrap_phys_addr,
          .start_paddr = bootstrap_phys_addr,
-         .size = 2 * PAGE_SIZE},
+         .size = k_x86_bootstrap16_buffer_size},
         // 3) The page containing the GDT (identity mapped)
         {.start_vaddr = (vaddr_t)gdt_phys_page,
          .start_paddr = gdt_phys_page,
@@ -119,8 +128,7 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
   // Map the AP bootstrap page and a low mem data page to configure
   // the AP processors with
   zx_status_t status = kernel_aspace->AllocPhysical(
-      "bootstrap16_aperture",
-      PAGE_SIZE * 2,                                        // size
+      "bootstrap16_aperture", k_x86_bootstrap16_buffer_size,
       &bootstrap_virt_addr,                                 // requested virtual address
       PAGE_SIZE_SHIFT,                                      // alignment log2
       bootstrap_phys_addr,                                  // physical address
@@ -136,21 +144,30 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
   // Copy the bootstrap code in
   memcpy(bootstrap_virt_addr, (const void*)x86_bootstrap16_start, bootstrap_code_len);
 
-  // Configuration data shared with the APs to get them to 64-bit mode
+  // Configuration data shared with the APs to get them to 64-bit mode stored in the 2nd page
+  // of the bootstrap buffer.
   struct x86_bootstrap16_data* bootstrap_data =
-      (struct x86_bootstrap16_data*)((uintptr_t)bootstrap_virt_addr + 0x1000);
+      (struct x86_bootstrap16_data*)((uintptr_t)bootstrap_virt_addr + PAGE_SIZE);
 
   uintptr_t long_mode_entry = bootstrap_phys_addr + (entry64 - (uintptr_t)x86_bootstrap16_start);
   ASSERT(long_mode_entry <= UINT32_MAX);
 
-  uint64_t phys_bootstrap_pml4 = bootstrap_aspace->arch_aspace().pt_phys();
+  // Carve out the 3rd page of the bootstrap physical buffer to hold a copy of the top level
+  // page table for the bootstrapping code to use temporarily. Copy the contents of the bootstrap
+  // aspace's top level PML4 to this page to make sure it's located in low (<4GB) memory. This
+  // is needed when bootstrapping from 32bit to 64bit since the CR3 register is only 32bits wide
+  // at the time you have to load it.
+  uint64_t phys_bootstrap_pml4 = bootstrap_phys_addr + 2UL * PAGE_SIZE;
+  uint64_t bootstrap_aspace_pml4 = bootstrap_aspace->arch_aspace().pt_phys();
+  void* phys_bootstrap_pml4_virt = paddr_to_physmap(phys_bootstrap_pml4);
+  const void* bootstrap_aspace_pml4_virt = paddr_to_physmap(bootstrap_aspace_pml4);
+  LTRACEF("phys_bootstrap_pml4 %p (%#lx), bootstrap_aspace_pml4 %p (%#lx)\n",
+          phys_bootstrap_pml4_virt, phys_bootstrap_pml4, bootstrap_aspace_pml4_virt,
+          bootstrap_aspace_pml4);
+  DEBUG_ASSERT(phys_bootstrap_pml4_virt && bootstrap_aspace_pml4_virt);
+  memcpy(phys_bootstrap_pml4_virt, bootstrap_aspace_pml4_virt, PAGE_SIZE);
+
   uint64_t phys_kernel_pml4 = VmAspace::kernel_aspace()->arch_aspace().pt_phys();
-  if (phys_bootstrap_pml4 > UINT32_MAX) {
-    // TODO(fxbug.dev/30925): Once the pmm supports it, we should request that this
-    // VmAspace is backed by a low mem PML4, so we can avoid this issue.
-    TRACEF("bootstrap PML4 was not allocated out of low mem\n");
-    return ZX_ERR_NO_MEMORY;
-  }
   ASSERT(phys_kernel_pml4 <= UINT32_MAX);
 
   bootstrap_data->phys_bootstrap_pml4 = static_cast<uint32_t>(phys_bootstrap_pml4);
@@ -162,7 +179,7 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
   bootstrap_data->phys_long_mode_entry = static_cast<uint32_t>(long_mode_entry);
   bootstrap_data->long_mode_cs = CODE_64_SELECTOR;
 
-  *bootstrap_aperture = (void*)((uintptr_t)bootstrap_virt_addr + 0x1000);
+  *bootstrap_aperture = (void*)((uintptr_t)bootstrap_virt_addr + PAGE_SIZE);
   *instr_ptr = bootstrap_phys_addr;
 
   // Cancel the deferred cleanup, since we're returning the new aspace and
@@ -179,7 +196,7 @@ void x86_bootstrap16_release(void* bootstrap_aperture) TA_NO_THREAD_SAFETY_ANALY
   DEBUG_ASSERT(bootstrap_aperture);
   DEBUG_ASSERT(bootstrap_lock.IsHeld());
   VmAspace* kernel_aspace = VmAspace::kernel_aspace();
-  uintptr_t addr = reinterpret_cast<uintptr_t>(bootstrap_aperture) - 0x1000;
+  uintptr_t addr = reinterpret_cast<uintptr_t>(bootstrap_aperture) - PAGE_SIZE;
   kernel_aspace->FreeRegion(addr);
 
   bootstrap_lock.Release();

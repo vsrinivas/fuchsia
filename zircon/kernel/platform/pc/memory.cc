@@ -73,7 +73,7 @@ void mark_pio_region_to_reserve(uint64_t base, size_t len) {
   reserved_pio_count++;
 }
 
-#define DEFAULT_MEMEND (16 * 1024 * 1024)
+#define DEFAULT_MEMEND (16UL * 1024 * 1024)
 
 // Populate global memory arenas from the given memory ranges.
 static zx_status_t mem_arena_init(ktl::span<const zbi_mem_range_t> ranges) {
@@ -170,8 +170,8 @@ void pc_mem_init(ktl::span<const zbi_mem_range_t> ranges) {
 
   // Find an area that we can use for 16 bit bootstrapping of other SMP cores.
   bool initialized_bootstrap16 = false;
-  constexpr uint64_t kAllocSize = 2 * PAGE_SIZE;
-  constexpr uint64_t kMinBase = 2 * PAGE_SIZE;
+  constexpr uint64_t kAllocSize = k_x86_bootstrap16_buffer_size;
+  constexpr uint64_t kMinBase = 2UL * PAGE_SIZE;
   for (const auto& range : ranges) {
     // Ignore ranges that are not normal RAM.
     if (range.type != ZBI_MEM_RANGE_RAM) {
