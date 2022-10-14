@@ -34,28 +34,28 @@ constexpr std::string_view kZstdSuffix = ".zst"sv;
 // is passed around to the methods affected by policy choices.
 struct Flags {
   std::string OutputFile(zx_koid_t pid, bool outer = true, std::string_view suffix = {}) const {
-    std::string filename{outer ? output_prefix_ : kOutputPrefix};
+    std::string filename{outer ? output_prefix : kOutputPrefix};
     filename += std::to_string(pid);
     filename += suffix;
-    if (outer && zstd_) {
+    if (outer && zstd) {
       filename += kZstdSuffix;
     }
     return filename;
   }
 
-  time_t Date() const { return record_date_ ? time(nullptr) : 0; }
+  time_t Date() const { return record_date ? time(nullptr) : 0; }
 
-  std::string_view output_prefix_ = kOutputPrefix;
-  size_t limit_ = zxdump::DefaultLimit();
-  bool dump_memory_ = true;
-  bool collect_system_ = false;
-  bool repeat_system_ = false;
-  bool collect_threads_ = true;
-  bool collect_job_children_ = true;
-  bool collect_job_processes_ = true;
-  bool flatten_jobs_ = false;
-  bool record_date_ = true;
-  bool zstd_ = false;
+  std::string_view output_prefix = kOutputPrefix;
+  size_t limit = zxdump::DefaultLimit();
+  bool dump_memory = true;
+  bool collect_system = false;
+  bool repeat_system = false;
+  bool collect_threads = true;
+  bool collect_job_children = true;
+  bool collect_job_processes = true;
+  bool flatten_jobs = false;
+  bool record_date = true;
+  bool zstd = false;
 };
 
 // This handles writing a single output file, and removing that output file if
@@ -204,12 +204,12 @@ class ProcessDumper : public DumperBase {
   // Phase 1: Collect underpants!
   std::optional<size_t> Collect(const Flags& flags, bool top) {
     zxdump::SegmentCallback prune = PruneAll;
-    if (flags.dump_memory_) {
+    if (flags.dump_memory) {
       // TODO(mcgrathr): more filtering switches
       prune = PruneDefault;
     }
 
-    if (flags.collect_threads_) {
+    if (flags.collect_threads) {
       auto result = dumper_.SuspendAndCollectThreads();
       if (result.is_error()) {
         Error(result.error_value());
@@ -217,7 +217,7 @@ class ProcessDumper : public DumperBase {
       }
     }
 
-    if (flags.collect_system_ && (top || flags.repeat_system_)) {
+    if (flags.collect_system && (top || flags.repeat_system)) {
       auto result = dumper_.CollectSystem();
       if (result.is_error()) {
         Error(result.error_value());
@@ -225,7 +225,7 @@ class ProcessDumper : public DumperBase {
       }
     }
 
-    auto result = dumper_.CollectProcess(std::move(prune), flags.limit_);
+    auto result = dumper_.CollectProcess(std::move(prune), flags.limit);
     if (result.is_error()) {
       Error(result.error_value());
       return std::nullopt;
@@ -242,7 +242,7 @@ class ProcessDumper : public DumperBase {
     // Now gather the accumulated header data first: not including the memory.
     // These iovecs will point into storage in the ProcessDump object itself.
     size_t total;
-    if (auto result = dumper_.DumpHeaders(writer.AccumulateFragmentsCallback(), flags.limit_);
+    if (auto result = dumper_.DumpHeaders(writer.AccumulateFragmentsCallback(), flags.limit);
         result.is_error()) {
       Error(result.error_value());
       return false;
@@ -250,7 +250,7 @@ class ProcessDumper : public DumperBase {
       total = result.value();
     }
 
-    if (total > flags.limit_) {
+    if (total > flags.limit) {
       errno = EFBIG;
       writer.Error("not written");
       return false;
@@ -264,7 +264,7 @@ class ProcessDumper : public DumperBase {
 
     // Stream the memory out via a temporary buffer that's reused repeatedly
     // for each callback.
-    if (auto memory = dumper_.DumpMemory(writer.WriteCallback(), flags.limit_); memory.is_error()) {
+    if (auto memory = dumper_.DumpMemory(writer.WriteCallback(), flags.limit); memory.is_error()) {
       Error(memory.error_value());
       return false;
     }
@@ -295,7 +295,7 @@ class JobDumper : public DumperBase {
   // Collect the job-wide data and reify the lists of children and processes.
   std::optional<size_t> Collect(const Flags& flags, bool top) {
     date_ = flags.Date();
-    if (flags.collect_system_ && (top || flags.repeat_system_)) {
+    if (flags.collect_system && (top || flags.repeat_system)) {
       auto result = dumper_.CollectSystem();
       if (result.is_error()) {
         Error(result.error_value());
@@ -309,7 +309,7 @@ class JobDumper : public DumperBase {
     } else {
       size = result.value();
     }
-    if (flags.collect_job_children_) {
+    if (flags.collect_job_children) {
       if (auto result = dumper_.CollectChildren(); result.is_error()) {
         Error(result.error_value());
         return std::nullopt;
@@ -317,7 +317,7 @@ class JobDumper : public DumperBase {
         children_ = std::move(result.value());
       }
     }
-    if (flags.collect_job_processes_) {
+    if (flags.collect_job_processes) {
       if (auto result = dumper_.CollectProcesses(); result.is_error()) {
         Error(result.error_value());
         return std::nullopt;
@@ -517,7 +517,7 @@ bool JobDumper::Dump(Writer& writer, const Flags& flags) {
   }
 
   for (auto& [job, koid] : children_) {
-    if (flags.flatten_jobs_) {
+    if (flags.flatten_jobs) {
       // Collect just this job first.
       JobDumper child{std::move(job), koid};
       auto collected_job_size = child.Collect(flags, false);
@@ -558,7 +558,7 @@ bool WriteDump(Dumper dumper, const Flags& flags) {
   if (!fd) {
     return false;
   }
-  Writer writer{std::move(fd), std::move(outfile), flags.zstd_};
+  Writer writer{std::move(fd), std::move(outfile), flags.zstd};
   dumper.ClockIn(flags);
   return writer.Ok(dumper.Collect(flags, true) && dumper.Dump(writer, flags));
 }
@@ -568,7 +568,7 @@ bool WriteDump(Dumper dumper, const Flags& flags) {
 bool WriteManyCoreFiles(JobDumper dumper, const Flags& flags) {
   bool ok = true;
 
-  if (flags.collect_job_processes_) {
+  if (flags.collect_job_processes) {
     if (auto result = dumper->CollectProcesses(); result.is_error()) {
       dumper.Error(result.error_value());
       ok = false;
@@ -579,7 +579,7 @@ bool WriteManyCoreFiles(JobDumper dumper, const Flags& flags) {
     }
   }
 
-  if (flags.collect_job_children_) {
+  if (flags.collect_job_children) {
     if (auto result = dumper->CollectChildren(); result.is_error()) {
       dumper.Error(result.error_value());
       ok = false;
@@ -692,20 +692,20 @@ essential services.  PID arguments are not allowed with --root-job unless
         break;
 
       case 'D':
-        flags.record_date_ = false;
+        flags.record_date = false;
         continue;
 
       case 'U':
-        flags.record_date_ = true;
+        flags.record_date = true;
         continue;
 
       case 'o':
-        flags.output_prefix_ = optarg;
+        flags.output_prefix = optarg;
         continue;
 
       case 'l': {
         char* p;
-        flags.limit_ = strtoul(optarg, &p, 0);
+        flags.limit = strtoul(optarg, &p, 0);
         if (*p != '\0') {
           return usage();
         }
@@ -713,15 +713,15 @@ essential services.  PID arguments are not allowed with --root-job unless
       }
 
       case 'm':
-        flags.dump_memory_ = false;
+        flags.dump_memory = false;
         continue;
 
       case 't':
-        flags.collect_threads_ = false;
+        flags.collect_threads = false;
         continue;
 
       case 'f':
-        flags.flatten_jobs_ = true;
+        flags.flatten_jobs = true;
         [[fallthrough]];
 
       case 'j':
@@ -733,19 +733,19 @@ essential services.  PID arguments are not allowed with --root-job unless
         continue;
 
       case 'c':
-        flags.collect_job_children_ = false;
+        flags.collect_job_children = false;
         continue;
 
       case 'p':
-        flags.collect_job_processes_ = false;
+        flags.collect_job_processes = false;
         continue;
 
       case 'S':
-        flags.repeat_system_ = true;
+        flags.repeat_system = true;
         [[fallthrough]];
 
       case 's':
-        flags.collect_system_ = true;
+        flags.collect_system = true;
         continue;
 
       case 'a':
@@ -753,7 +753,7 @@ essential services.  PID arguments are not allowed with --root-job unless
         continue;
 
       case 'z':
-        flags.zstd_ = true;
+        flags.zstd = true;
         continue;
 
       default:
@@ -766,7 +766,7 @@ essential services.  PID arguments are not allowed with --root-job unless
     return usage();
   }
 
-  if (optind != argc && dump_root_job && flags.collect_job_children_) {
+  if (optind != argc && dump_root_job && flags.collect_job_children) {
     std::cerr << "PID arguments are redundant with root job" << std::endl;
   }
 
