@@ -173,21 +173,15 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(GlobalTaskQueue& global
   auto stages_to_move =
       MoveNodeToThread(*source, /*new_thread=*/dest->thread(), /*expected_thread=*/detached_thread);
 
-  // Update downstream consumer counts. Do this after moving to `dest->thread()` so updates to
-  // `source` get batched into the `dest->thread()` async task.
-  auto stages_to_update_downstream_consumers = RecomputeMaxDownstreamConsumers(*source);
-
   // Update the PipelineStages asynchronously.
   // Fist apply updates that must happen on dest's thread, which includes connecting source -> dest.
   global_queue.Push(dest->thread()->id(),
-                    [dest_stage = dest->pipeline_stage(),         //
-                     source_stage = source->pipeline_stage(),     //
-                     stages_to_move = std::move(stages_to_move),  //
-                     stages_to_update_downstream_consumers =
-                         std::move(stages_to_update_downstream_consumers[dest->thread()->id()]),  //
-                     new_thread = dest->thread()->pipeline_thread(),                              //
-                     old_thread = detached_thread->pipeline_thread(),                             //
-                     is_dest_mixer,                                                               //
+                    [dest_stage = dest->pipeline_stage(),              //
+                     source_stage = source->pipeline_stage(),          //
+                     stages_to_move = std::move(stages_to_move),       //
+                     new_thread = dest->thread()->pipeline_thread(),   //
+                     old_thread = detached_thread->pipeline_thread(),  //
+                     is_dest_mixer,                                    //
                      // We exclude the source mixer when both source and destination are mixers in
                      // order to avoid adding the passed in gain controls to this edge twice.
                      is_source_mixer = !is_dest_mixer && (source->type() == Node::Type::kMixer),  //
@@ -202,12 +196,6 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(GlobalTaskQueue& global
                         FX_CHECK(stage->thread() == old_thread)
                             << stage->thread()->name() << " != " << old_thread->name();
                         stage->set_thread(new_thread);
-                      }
-
-                      // Update downstream consumer counts.
-                      for (auto& [stage, count] : stages_to_update_downstream_consumers) {
-                        ScopedThreadChecker checker(stage->thread()->checker());
-                        stage->set_max_downstream_consumers(count);
                       }
 
                       ScopedThreadChecker checker(dest_stage->thread()->checker());
@@ -226,20 +214,6 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(GlobalTaskQueue& global
                       }
                       dest_stage->AddSource(source_stage, std::move(add_source_options));
                     });
-
-  // Apply updates that must happen on other threads.
-  for (auto& [thread_id, changes] : stages_to_update_downstream_consumers) {
-    if (thread_id == dest->thread()->id()) {
-      continue;
-    }
-    global_queue.Push(thread_id,
-                      [updates = std::move(stages_to_update_downstream_consumers[thread_id])]() {
-                        for (auto& [stage, count] : updates) {
-                          ScopedThreadChecker checker(stage->thread()->checker());
-                          stage->set_max_downstream_consumers(count);
-                        }
-                      });
-  }
 
   return fpromise::ok();
 }
@@ -306,10 +280,6 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     dest_parent->RemoveChildSource(dest);
   }
 
-  // Update downstream consumer counts. Do this before moving to `detached_thread` so updates to
-  // `source` get batched into the `dest->thread()` async task.
-  auto stages_to_update_downstream_consumers = RecomputeMaxDownstreamConsumers(*source);
-
   // Since the source was previously connected to dest, it must be owned by the same thread as dest.
   // Since the source is now disconnected, it moves to the detached thread.
   auto stages_to_move =
@@ -318,15 +288,13 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
   // The PipelineStages are updated asynchronously.
   global_queue.Push(
       dest->thread()->id(),
-      [dest_stage = dest->pipeline_stage(),         //
-       source_stage = source->pipeline_stage(),     //
-       stages_to_move = std::move(stages_to_move),  //
-       stages_to_update_downstream_consumers =
-           std::move(stages_to_update_downstream_consumers[dest->thread()->id()]),  //
-       new_thread = detached_thread->pipeline_thread(),                             //
-       old_thread = dest->thread()->pipeline_thread(),                              //
-       is_dest_mixer = (dest->type() == Node::Type::kMixer),                        //
-       is_source_mixer = (source->type() == Node::Type::kMixer),                    //
+      [dest_stage = dest->pipeline_stage(),                       //
+       source_stage = source->pipeline_stage(),                   //
+       stages_to_move = std::move(stages_to_move),                //
+       new_thread = detached_thread->pipeline_thread(),           //
+       old_thread = dest->thread()->pipeline_thread(),            //
+       is_dest_mixer = (dest->type() == Node::Type::kMixer),      //
+       is_source_mixer = (source->type() == Node::Type::kMixer),  //
        newly_removed_gain_controls = std::move(options.newly_removed_gain_controls)]() {
         // Before we acquire a checker, verify the dest_stage has the expected thread.
         FX_CHECK(dest_stage->thread() == old_thread)
@@ -351,27 +319,7 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
               << stage->thread()->name() << " != " << old_thread->name();
           stage->set_thread(new_thread);
         }
-
-        // Update downstream consumer counts.
-        for (auto& [stage, count] : stages_to_update_downstream_consumers) {
-          ScopedThreadChecker checker(stage->thread()->checker());
-          stage->set_max_downstream_consumers(count);
-        }
       });
-
-  // Apply updates that must happen on other threads.
-  for (auto& [thread_id, changes] : stages_to_update_downstream_consumers) {
-    if (thread_id == dest->thread()->id()) {
-      continue;
-    }
-    global_queue.Push(thread_id,
-                      [updates = std::move(stages_to_update_downstream_consumers[thread_id])]() {
-                        for (auto& [stage, count] : updates) {
-                          ScopedThreadChecker checker(stage->thread()->checker());
-                          stage->set_max_downstream_consumers(count);
-                        }
-                      });
-  }
 
   return fpromise::ok();
 }
@@ -484,16 +432,6 @@ std::shared_ptr<GraphThread> Node::thread() const {
 void Node::set_thread(std::shared_ptr<GraphThread> t) {
   FX_CHECK(type_ != Type::kMeta);
   thread_ = t;
-}
-
-int64_t Node::max_downstream_consumers() const {
-  FX_CHECK(type_ != Type::kMeta);
-  return max_downstream_consumers_;
-}
-
-void Node::set_max_downstream_consumers(int64_t max) {
-  FX_CHECK(type_ != Type::kMeta);
-  max_downstream_consumers_ = max;
 }
 
 void Node::SetBuiltInChildren(std::vector<NodePtr> child_sources,

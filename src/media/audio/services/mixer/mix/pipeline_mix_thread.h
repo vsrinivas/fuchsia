@@ -100,11 +100,6 @@ class PipelineMixThread : public PipelineThread {
   // consumer may have been previously started.
   void NotifyConsumerStarting(ConsumerStagePtr consumer) TA_REQ(checker());
 
-  // Re-sorts the consumers. This should be called after the topological order changes, i.e. any
-  // time any consumer's `downstream_consumers()` count is changed, which can happen when edges are
-  // added or removed from SplitterNodes.
-  void ReSortConsumers() TA_REQ(checker());
-
   // Adds/removes a clock. A clock should be added when it is used by any mix job controlled by this
   // thread, and removed when it's no longer needed by any mix jobs.
   void AddClock(std::shared_ptr<const Clock> clock) TA_REQ(checker()) {
@@ -136,10 +131,6 @@ class PipelineMixThread : public PipelineThread {
   // idle).
   zx::time RunMixJobs(zx::time mono_start_time, zx::time mono_now) TA_REQ(checker());
 
-  struct ConsumerInfo;
-  std::vector<ConsumerInfo>::iterator FindConsumer(const ConsumerStagePtr& consumer)
-      TA_REQ(checker());
-
   const ThreadId id_;
   const std::string name_;
   const zx::profile deadline_profile_;
@@ -156,16 +147,12 @@ class PipelineMixThread : public PipelineThread {
   // Set of clocks used by this thread.
   TA_GUARDED(checker()) ClockSnapshots clocks_;
 
-  // This is logically a mapping from ConsumerStagePtr -> info, but stored as a vector instead of a
-  // map so it can be sorted with a custom comparison operator. AddConsumer and RemoveConsumer are
-  // both O(n) on the size of this list, but that's OK because RunMixJobs is fundamentally O(n),
-  // meaning we should be OK with O(n) operations on this list.
+  // All consumers attached to this thread.
   struct ConsumerInfo {
-    ConsumerStagePtr consumer;
     bool maybe_started;                               // true if the consumer might be running
     std::optional<zx::time> next_mix_job_start_time;  // if stopped, the next start time
   };
-  TA_GUARDED(checker()) std::vector<ConsumerInfo> consumers_;
+  TA_GUARDED(checker()) std::unordered_map<ConsumerStagePtr, ConsumerInfo> consumers_;
 
   // Current loop state.
   enum State {

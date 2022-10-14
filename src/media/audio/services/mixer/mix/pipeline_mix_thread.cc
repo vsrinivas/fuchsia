@@ -79,15 +79,12 @@ PipelineMixThread::PipelineMixThread(Args args)
 }
 
 void PipelineMixThread::AddConsumer(ConsumerStagePtr consumer) {
-  FX_CHECK(FindConsumer(consumer) == consumers_.end())
-      << "cannot add Consumer twice: " << consumer->name();
-
-  consumers_.push_back({.consumer = std::move(consumer), .maybe_started = false});
-  ReSortConsumers();
+  FX_CHECK(consumers_.count(consumer) == 0) << "cannot add Consumer twice: " << consumer->name();
+  consumers_[consumer] = {.maybe_started = false};
 }
 
 void PipelineMixThread::RemoveConsumer(ConsumerStagePtr consumer) {
-  auto it = FindConsumer(consumer);
+  auto it = consumers_.find(consumer);
   FX_CHECK(it != consumers_.end()) << "cannot find Consumer to remove: " << consumer->name();
   consumers_.erase(it);
 }
@@ -100,20 +97,14 @@ void PipelineMixThread::Shutdown() {
 }
 
 void PipelineMixThread::NotifyConsumerStarting(ConsumerStagePtr consumer) {
-  auto it = FindConsumer(consumer);
+  auto it = consumers_.find(consumer);
   FX_CHECK(it != consumers_.end()) << "cannot find Consumer to start: " << consumer->name();
 
-  it->maybe_started = true;
+  it->second.maybe_started = true;
   if (state_ == State::Idle) {
     state_ = State::WakeFromIdle;
     timer_->SetEventBit();  // wake the loop
   }
-}
-
-void PipelineMixThread::ReSortConsumers() {
-  std::sort(consumers_.begin(), consumers_.end(), [](const ConsumerInfo& a, const ConsumerInfo& b) {
-    return a.consumer->topological_order() < b.consumer->topological_order();
-  });
 }
 
 // static
@@ -237,8 +228,8 @@ zx::time PipelineMixThread::RunMixJobs(const zx::time mono_start_time, const zx:
   zx::time next_job_mono_start_time = zx::time::infinite();
 
   // Run each consumer that might be started.
-  for (auto& c : consumers_) {
-    auto clock = clocks_.SnapshotFor(c.consumer->reference_clock());
+  for (auto& [consumer, c] : consumers_) {
+    auto clock = clocks_.SnapshotFor(consumer->reference_clock());
     const auto& mono_to_ref = clock.to_clock_mono().Inverse();
 
     // Mix periods are defined relative to the system monotonic clock. Translate this mix period to
@@ -249,7 +240,7 @@ zx::time PipelineMixThread::RunMixJobs(const zx::time mono_start_time, const zx:
 
     if (c.maybe_started ||
         (c.next_mix_job_start_time && *c.next_mix_job_start_time < ref_deadline)) {
-      auto status = c.consumer->RunMixJob(ctx, ref_start_time, ref_period);
+      auto status = consumer->RunMixJob(ctx, ref_start_time, ref_period);
       if (std::holds_alternative<ConsumerStage::StartedStatus>(status)) {
         // We have another job one period from now.
         next_job_mono_start_time = mono_start_time + mix_period_;
@@ -290,12 +281,6 @@ zx::time PipelineMixThread::RunMixJobs(const zx::time mono_start_time, const zx:
   }
 
   return next_job_mono_start_time;
-}
-
-std::vector<PipelineMixThread::ConsumerInfo>::iterator PipelineMixThread::FindConsumer(
-    const ConsumerStagePtr& consumer) {
-  return std::find_if(consumers_.begin(), consumers_.end(),
-                      [&consumer](const auto& info) { return info.consumer == consumer; });
 }
 
 }  // namespace media_audio

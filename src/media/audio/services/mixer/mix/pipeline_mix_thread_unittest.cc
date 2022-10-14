@@ -291,15 +291,6 @@ TEST_F(PipelineMixThreadRunMixJobsTest, MultipleConsumers) {
       .start_position = Fixed(0),
   });
 
-  std::vector<int> write_order;
-  c0.writer->SetOnWriteSilence([&write_order](auto, auto) { write_order.push_back(0); });
-  c1.writer->SetOnWriteSilence([&write_order](auto, auto) { write_order.push_back(1); });
-  c2.writer->SetOnWriteSilence([&write_order](auto, auto) { write_order.push_back(2); });
-
-  c0.consumer->set_max_downstream_consumers(2);
-  c1.consumer->set_max_downstream_consumers(1);
-  c2.consumer->set_max_downstream_consumers(0);
-
   // Push in unsorted order to verify sorting.
   thread().AddConsumer(c1.consumer);
   thread().AddConsumer(c0.consumer);
@@ -309,11 +300,10 @@ TEST_F(PipelineMixThreadRunMixJobsTest, MultipleConsumers) {
   thread().NotifyConsumerStarting(c2.consumer);
   thread().AddClock(mono_clock());
 
-  // First mix job should write one packet of silence to each consumer, in order {c0,c1,c2}.
+  // First mix job should write one packet of silence to each consumer.
   realm().AdvanceTo(zx::time(0));
   EXPECT_EQ(RunMixJobs(realm().now(), realm().now()), zx::time(0) + kPeriod);
 
-  EXPECT_THAT(write_order, ElementsAre(0, 1, 2));
   EXPECT_THAT(c0.writer->packets(),
               ElementsAre(FieldsAre(/*is_silent=*/true, 0, kPeriodFrames, nullptr)));
   EXPECT_THAT(c1.writer->packets(),

@@ -96,18 +96,6 @@ bool ExistsPath(const Node& source, const Node& dest);
 std::vector<PipelineStagePtr> MoveNodeToThread(Node& node, std::shared_ptr<GraphThread> new_thread,
                                                std::shared_ptr<GraphThread> expected_thread);
 
-// Recomputes the maximum number of downstream consumers at `node`. This is recomputed
-// incrementally, assuming the count is already correct for all of the node's outgoing edges. If the
-// count has changed at `node`, we recompute the count for all nodes on all paths incoming to
-// `node`.
-//
-// The return value is the set of PipelineStages whose count has changed. PipelineStages are grouped
-// by thread ID to simplify how this result is used in node.cc.
-//
-// REQUIRED: node.type() != Node::Type::kMeta
-std::unordered_map<ThreadId, std::unordered_map<PipelineStagePtr, int64_t>>
-RecomputeMaxDownstreamConsumers(Node& node);
-
 }  // namespace media_audio
 
 #endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REACHABILITY_H_
