@@ -342,13 +342,14 @@ impl Journal {
         true
     }
 
+    // Assumes that `mutation` has been validated.
     fn update_checksum_list(
         &self,
         journal_offset: u64,
         owner_object_id: u64,
         mutation: &Mutation,
         checksum_list: &mut ChecksumList,
-    ) -> Result<(), Error> {
+    ) {
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation {
                 item:
@@ -375,7 +376,7 @@ impl Journal {
                 checksum_list.push(
                     journal_offset,
                     owner_object_id,
-                    *device_offset..*device_offset + range.length()?,
+                    *device_offset..*device_offset + range.length().unwrap(),
                     checksums,
                 );
             }
@@ -385,7 +386,6 @@ impl Journal {
             }
             _ => {}
         }
-        Ok(())
     }
 
     /// Reads the latest super-block, and then replays journaled records.
@@ -479,7 +479,10 @@ impl Journal {
                                 handle.get_size()
                             )));
                         }
-                        handle.push_extent(*device_offset..*device_offset + range.length()?);
+                        handle.push_extent(
+                            *device_offset
+                                ..*device_offset + range.length().context("Invalid extent")?,
+                        );
                         true
                     }
                     _ => false,
@@ -593,7 +596,11 @@ impl Journal {
                                                 ));
                                             }
                                             handle.push_extent(
-                                                *device_offset..*device_offset + range.length()?,
+                                                *device_offset
+                                                    ..*device_offset
+                                                        + range
+                                                            .length()
+                                                            .context("Invalid extent")?,
                                             );
                                         }
                                     }
@@ -660,7 +667,7 @@ impl Journal {
                     *object_id,
                     &mutation,
                     &mut checksum_list,
-                )?;
+                );
             }
         }
 
@@ -699,7 +706,7 @@ impl Journal {
             .on_replay_complete()
             .await
             .context("Failed to complete replay for root store")?;
-        allocator.open().await?;
+        allocator.open().await.context("Failed to open allocator")?;
 
         // Configure the journal writer so that we can continue.
         {
@@ -718,7 +725,7 @@ impl Journal {
             )
             .await
             .context(format!(
-                "Failed to open journal file (object id: {}",
+                "Failed to open journal file (object id: {})",
                 super_block.journal_object_id
             ))?;
             let _ = self.handle.set(handle);
