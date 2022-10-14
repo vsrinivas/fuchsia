@@ -3023,8 +3023,8 @@ done:
 }
 
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus) {
-  if (!bus->dpc_triggered.load()) {
-    bus->dpc_triggered.store(true);
+  bool expected = false;
+  if (bus->dpc_triggered.compare_exchange_strong(expected, true)) {
     bus->brcmf_wq->Schedule(&bus->datawork);
   }
 }
@@ -3137,26 +3137,21 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 }
 
 void brcmf_sdio_event_handler(struct brcmf_sdio* bus) {
-  bus->dpc_running = true;
-  std::atomic_thread_fence(std::memory_order_seq_cst);
-  while (bus->dpc_triggered.load()) {
-    bus->dpc_triggered.store(false);
+  bool expected = true;
+  while (bus->dpc_triggered.compare_exchange_strong(expected, false)) {
+    // Lock here so that everything inside brcmf_sdio_dpc is protected. This is to ensure that the
+    // event handler is only called from either the workqueue or the interrupt thread. This is a
+    // little heavy-handed so there is probably room for improvement here. Running without this lock
+    // will eventually result in the driver failing though.
+    sdio_claim_host(bus->sdiodev->func1);
     brcmf_sdio_dpc(bus);
-    bus->idlecount = 0;
+    sdio_release_host(bus->sdiodev->func1);
   }
-  bus->dpc_running = false;
 }
 
 static void brcmf_sdio_dataworker(WorkItem* work) {
   struct brcmf_sdio* bus = containerof(work, struct brcmf_sdio, datawork);
-  // Lock here so that everything inside brcmf_sdio_event_handlers is protected.
-  // This is to ensure that the event handler is only called from either the
-  // workqueue or the interrupt thread. This is a little heavy-handed so there
-  // is probably room for improvement here. Running without this lock will
-  // eventually result in the driver failing though.
-  sdio_claim_host(bus->sdiodev->func1);
   brcmf_sdio_event_handler(bus);
-  sdio_release_host(bus->sdiodev->func1);
 }
 
 zx_status_t brcmf_sdio_load_files(brcmf_pub* drvr, bool reload) TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -3300,10 +3295,11 @@ int brcmf_sdio_oob_irqhandler(void* cookie) {
     if (brcmf_sdio_intr_rstatus(sdiodev->bus)) {
       BRCMF_ERR("failed backplane access");
     }
+    sdio_release_host(sdiodev->func1);
+
     intstatus = sdiodev->bus->intstatus.load();
     sdiodev->bus->dpc_triggered.store(true);
     brcmf_sdio_event_handler(sdiodev->bus);
-    sdio_release_host(sdiodev->func1);
     if (intstatus == 0) {
       BRCMF_DBG_THROTTLE(TEMP, "Zero intstatus; pausing 5 msec");
       zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
