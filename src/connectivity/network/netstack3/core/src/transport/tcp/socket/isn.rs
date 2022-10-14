@@ -4,10 +4,7 @@
 
 //! Generate initial sequence numbers securely.
 
-use core::{
-    hash::{Hash, Hasher},
-    time::Duration,
-};
+use core::hash::{Hash, Hasher};
 
 use net_types::ip::IpAddress;
 use rand::RngCore;

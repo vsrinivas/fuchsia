@@ -228,11 +228,6 @@ impl Segment<()> {
     pub(super) fn rst_ack(seq: SeqNum, ack: SeqNum) -> Self {
         Segment::new(seq, Some(ack), Some(Control::RST), WindowSize::ZERO)
     }
-
-    /// Creates a FIN segment.
-    pub(super) fn fin(seq: SeqNum, ack: SeqNum, wnd: WindowSize) -> Self {
-        Segment::new(seq, Some(ack), Some(Control::FIN), wnd)
-    }
 }
 
 /// A TCP payload that operates around `u32` instead of `usize`.

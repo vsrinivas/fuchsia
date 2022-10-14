@@ -27,7 +27,7 @@ use core::{
     fmt::Debug,
     marker::PhantomData,
     num::{NonZeroU16, NonZeroUsize},
-    ops::{DerefMut as _, RangeInclusive},
+    ops::RangeInclusive,
 };
 use nonzero_ext::nonzero;
 
@@ -47,7 +47,7 @@ use rand::RngCore;
 
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl},
-    context::{EventContext, TimerContext},
+    context::TimerContext,
     data_structures::{
         id_map::IdMap,
         socketmap::{IterShadows as _, SocketMap, Tagged},
@@ -548,20 +548,20 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
 }
 
 impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<I, C> for SC {
-    fn create_socket(&mut self, ctx: &mut C) -> UnboundId {
+    fn create_socket(&mut self, _ctx: &mut C) -> UnboundId {
         UnboundId(self.with_tcp_sockets_mut(|sockets| sockets.inactive.push(Unbound::default())))
     }
 
     fn bind(
         &mut self,
-        ctx: &mut C,
+        _ctx: &mut C,
         id: UnboundId,
         local_ip: I::Addr,
         port: Option<NonZeroU16>,
     ) -> Result<BoundId, BindError> {
         // TODO(https://fxbug.dev/104300): Check if local_ip is a unicast address.
         self.with_ip_transport_ctx_and_tcp_sockets_mut(
-            |mut ip_transport_ctx, TcpSockets { port_alloc, inactive, socketmap }| {
+            |ip_transport_ctx, TcpSockets { port_alloc, inactive, socketmap }| {
                 let port = match port {
                     None => match port_alloc.try_alloc(&local_ip, &socketmap) {
                         Some(port) => {
@@ -838,7 +838,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
 
     fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr, SC::DeviceId> {
         self.with_tcp_sockets(|sockets| {
-            let (conn, (), addr) = id.get_from_socketmap(&sockets.socketmap);
+            let (_conn, (), addr) = id.get_from_socketmap(&sockets.socketmap);
             addr.clone()
         })
         .into()
@@ -1254,8 +1254,8 @@ pub fn get_listener_info<I: Ip, C: NonSyncContext>(
 ) -> BoundInfo<I::Addr, DeviceId<C::Instant>> {
     I::map_ip(
         IpInv((&mut sync_ctx, id)),
-        |IpInv((mut sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_listener_info(sync_ctx, id),
-        |IpInv((mut sync_ctx, id))| TcpSocketHandler::<Ipv6, _>::get_listener_info(sync_ctx, id),
+        |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv4, _>::get_listener_info(sync_ctx, id),
+        |IpInv((sync_ctx, id))| TcpSocketHandler::<Ipv6, _>::get_listener_info(sync_ctx, id),
     )
 }
 
@@ -1363,34 +1363,29 @@ mod tests {
     use fakealloc::rc::Rc;
     use ip_test_macro::ip_test;
     use net_types::ip::{AddrSubnet, Ip, Ipv4, Ipv6, Ipv6SourceAddr};
-    use packet::{ContiguousBuffer, ParseBuffer as _, Serializer};
-    use packet_formats::tcp::{TcpParseArgs, TcpSegment, TcpSegmentBuilder};
+    use packet::ParseBuffer as _;
+    use packet_formats::tcp::{TcpParseArgs, TcpSegment};
     use rand::Rng as _;
     use test_case::test_case;
 
     use crate::{
         context::testutil::{
-            DummyCtx, DummyCtxWithSyncCtx, DummyFrameCtx, DummyInstant, DummyNetwork,
-            DummyNetworkContext, DummyNetworkLinks, DummyNonSyncCtx, DummySyncCtx, InstantAndData,
-            PendingFrameData, StepResult, WrappedDummySyncCtx,
+            DummyCtxWithSyncCtx, DummyFrameCtx, DummyInstant, DummyNetwork, DummyNetworkContext,
+            DummyNonSyncCtx, DummySyncCtx, InstantAndData, PendingFrameData, StepResult,
+            WrappedDummySyncCtx,
         },
         ip::{
             device::state::{
                 AddrConfig, AddressState, IpDeviceState, IpDeviceStateIpExt, Ipv6AddressEntry,
             },
-            socket::{
-                testutil::{DummyBufferIpSocketCtx, DummyIpSocketCtx},
-                BufferIpSocketHandler,
-            },
+            socket::testutil::{DummyBufferIpSocketCtx, DummyIpSocketCtx},
             testutil::DummyDeviceId,
-            BufferIpTransportContext as _, HopLimits, SendIpPacketMeta, TransportIpContext,
-            DEFAULT_HOP_LIMITS,
+            BufferIpTransportContext as _, SendIpPacketMeta,
         },
-        socket::SocketTypeStateMut,
         testutil::{new_rng, run_with_many_seeds, set_logger_for_test, FakeCryptoRng, TestIpExt},
         transport::tcp::{
             buffer::{Buffer, RingBuffer, SendPayload},
-            segment::{self, Payload, Segment},
+            segment::Payload,
             UserError,
         },
     };
@@ -1502,7 +1497,7 @@ mod tests {
         type ReturnedBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
         type ProvidedBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
 
-        fn on_new_connection(&mut self, listener: ListenerId) {}
+        fn on_new_connection(&mut self, _listener: ListenerId) {}
         fn new_passive_open_buffers(
         ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers) {
             let rb = Rc::new(RefCell::new(RingBuffer::default()));
@@ -2083,7 +2078,7 @@ mod tests {
             TcpSocketHandler::close_conn(sync_ctx, non_sync_ctx, remote);
         });
         net.run_until_idle(handle_frame, handle_timer);
-        net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+        net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx: _ }| {
             sync_ctx.with_tcp_sockets(|sockets| {
                 let (conn, (), _addr) =
                     sockets.socketmap.conns().get_by_id(&remote.into()).expect("invalid conn ID");
@@ -2096,7 +2091,7 @@ mod tests {
         net.run_until_idle(handle_frame, handle_timer);
 
         for (name, id) in [(LOCAL, local), (REMOTE, remote)] {
-            net.with_context(name, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            net.with_context(name, |TcpCtx { sync_ctx, non_sync_ctx: _ }| {
                 sync_ctx.with_tcp_sockets(|sockets| {
                     assert_matches!(sockets.socketmap.conns().get_by_id(&id.into()), None);
                 })
@@ -2272,7 +2267,6 @@ mod tests {
 
         let new_remote_connection =
             net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
-                let unbound = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
                 let unbound = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
                 TcpSocketHandler::connect_unbound(
                     sync_ctx,

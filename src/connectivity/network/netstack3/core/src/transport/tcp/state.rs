@@ -19,7 +19,7 @@ use explicit::ResultExt as _;
 
 use crate::{
     transport::tcp::{
-        buffer::{Assembler, Buffer as _, IntoBuffers, ReceiveBuffer, SendBuffer, SendPayload},
+        buffer::{Assembler, IntoBuffers, ReceiveBuffer, SendBuffer, SendPayload},
         rtt::Estimator,
         segment::{Payload, Segment},
         seqnum::{SeqNum, WindowSize},
@@ -50,6 +50,8 @@ const MSL: Duration = Duration::from_secs(2 * 60);
 #[cfg_attr(test, derive(PartialEq, Eq))]
 pub(crate) struct Closed<Error> {
     /// Describes a reason why the connection was closed.
+    // TODO(https://fxbug.dev/103982): Read from the field.
+    #[allow(dead_code)]
     pub(crate) reason: Error,
 }
 
@@ -136,14 +138,14 @@ pub(crate) struct Listen {
 
 /// Dispositions of [`Listen::on_segment`].
 #[cfg_attr(test, derive(Debug, PartialEq, Eq))]
-pub(crate) enum ListenOnSegmentDisposition<I: Instant> {
+enum ListenOnSegmentDisposition<I: Instant> {
     SendSynAckAndEnterSynRcvd(Segment<()>, SynRcvd<I, Infallible>),
     SendRst(Segment<()>),
     Ignore,
 }
 
 impl Listen {
-    pub(crate) fn on_segment<I: Instant>(
+    fn on_segment<I: Instant>(
         &self,
         Segment { seq, ack, wnd: _, contents }: Segment<impl Payload>,
         now: I,
@@ -1605,6 +1607,12 @@ mod test {
                 Segment::with_data(seq, Some(ack), Some(Control::FIN), wnd, data);
             assert_eq!(truncated, 0);
             seg
+        }
+    }
+
+    impl Segment<()> {
+        fn fin(seq: SeqNum, ack: SeqNum, wnd: WindowSize) -> Self {
+            Segment::new(seq, Some(ack), Some(Control::FIN), wnd)
         }
     }
 

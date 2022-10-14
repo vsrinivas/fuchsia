@@ -7,7 +7,7 @@
 //! used by TCP.
 
 use alloc::{vec, vec::Vec};
-use core::{cmp, convert::TryFrom, fmt::Debug, mem, num::TryFromIntError, ops::Range};
+use core::{cmp, convert::TryFrom, fmt::Debug, num::TryFromIntError, ops::Range};
 use either::Either;
 
 use crate::transport::tcp::{
@@ -207,15 +207,6 @@ impl RingBuffer {
         *len -= nread;
         *head = (*head + nread) % storage.len();
         nread
-    }
-
-    /// Enqueues as much of `data` as possible to the end of the buffer.
-    ///
-    /// Returns the number of bytes actually queued.
-    pub(crate) fn enqueue_data(&mut self, data: &[u8]) -> usize {
-        let nwritten = self.write_at(0, &data);
-        self.make_readable(nwritten);
-        nwritten
     }
 
     /// Returns the writable regions of the [`RingBuffer`].
@@ -467,6 +458,17 @@ mod test {
     use crate::transport::tcp::seqnum::WindowSize;
 
     const TEST_BYTES: &'static [u8] = "Hello World!".as_bytes();
+
+    impl RingBuffer {
+        /// Enqueues as much of `data` as possible to the end of the buffer.
+        ///
+        /// Returns the number of bytes actually queued.
+        pub(crate) fn enqueue_data(&mut self, data: &[u8]) -> usize {
+            let nwritten = self.write_at(0, &data);
+            self.make_readable(nwritten);
+            nwritten
+        }
+    }
 
     proptest! {
         #![proptest_config(Config {

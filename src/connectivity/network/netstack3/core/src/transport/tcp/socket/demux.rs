@@ -20,7 +20,7 @@ use thiserror::Error;
 
 use crate::{
     ip::{
-        socket::{BufferIpSocketHandler as _, DefaultSendOptions, IpSock, IpSocketHandler as _},
+        socket::{BufferIpSocketHandler as _, DefaultSendOptions, IpSocketHandler as _},
         BufferIpTransportContext, IpExt, TransportReceiveError,
     },
     socket::{
@@ -33,13 +33,12 @@ use crate::{
         seqnum::WindowSize,
         socket::{
             do_send_inner, Acceptor, Connection, ConnectionId, ListenerId, MaybeClosedConnectionid,
-            MaybeListener, SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSocketHandler,
-            TcpSockets, TcpSyncContext, TimerId,
+            MaybeListener, SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSyncContext,
+            TimerId,
         },
-        state::{BufferProvider, Closed, Initial, ListenOnSegmentDisposition, State},
+        state::{BufferProvider, Closed, Initial, State},
         Control, UserError,
     },
-    Instant as _,
 };
 
 impl<C: TcpNonSyncContext> BufferProvider<C::ReceiveBuffer, C::SendBuffer> for C {
@@ -116,7 +115,6 @@ where
                     // Connections are always searched before listeners because they
                     // are more specific.
                     AddrVec::Conn(conn_addr) => {
-                        let conn_id = sockets.socketmap.conns().get_by_addr(&conn_addr).cloned();
                         let conn_id = if let Some(conn_id) = sockets.socketmap.conns().get_by_addr(&conn_addr).cloned() {
                             conn_id
                         } else {
@@ -245,71 +243,65 @@ where
                             SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
                         );
 
-                        let reply = match Closed::<Initial>::listen(isn).on_segment(incoming, now) {
-                            ListenOnSegmentDisposition::SendSynAckAndEnterSynRcvd(
-                                syn_ack,
-                                syn_rcvd,
-                            ) => {
-                                // TODO(https://fxbug.dev/102135): Inherit the socket
-                                // options from the listener.
-                                let state = State::from(syn_rcvd);
-                                let poll_send_at =
-                                    state.poll_send_at().expect("no retrans timer");
-                                let conn_id = sockets.socketmap
-                                    .conns_mut()
-                                    .try_insert(
-                                        ConnAddr {
-                                            ip: ConnIpAddr {
-                                                local: (local_ip, local_port),
-                                                remote: (remote_ip, remote_port),
-                                            },
-                                            device: None,
+                        let mut state = State::Listen(Closed::<Initial>::listen(isn));
+                        let reply = assert_matches!(
+                            state.on_segment::<_, C>(incoming, now),
+                            (reply, None) => reply
+                        );
+                        if matches!(state, State::SynRcvd(_)) {
+                            let poll_send_at =
+                                state.poll_send_at().expect("no retrans timer");
+                            let conn_id = sockets.socketmap
+                                .conns_mut()
+                                .try_insert(
+                                    ConnAddr {
+                                        ip: ConnIpAddr {
+                                            local: (local_ip, local_port),
+                                            remote: (remote_ip, remote_port),
                                         },
-                                        Connection {
-                                            acceptor: Some(Acceptor::Pending(ListenerId(
-                                                listener_id.into(),
-                                            ))),
-                                            state,
-                                            ip_sock: ip_sock.clone(),
-                                            defunct: false,
-                                        },
-                                        // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
-                                        (),
-                                    )
-                                    .expect("failed to create a new connection")
-                                    .id();
-                                assert_eq!(
-                                    ctx.schedule_timer_instant(
-                                        poll_send_at,
-                                        TimerId(conn_id, I::VERSION),
-                                    ),
-                                    None
-                                );
-                                let (maybe_listener, _, _): (_, &(), &ListenerAddr<_, _, _>) =
-                                    sockets.socketmap
-                                    .listeners_mut()
-                                    .get_by_id_mut(&listener_id)
-                                    .expect("the listener must still be active");
+                                        device: None,
+                                    },
+                                    Connection {
+                                        acceptor: Some(Acceptor::Pending(ListenerId(
+                                            listener_id.into(),
+                                        ))),
+                                        state,
+                                        ip_sock: ip_sock.clone(),
+                                        defunct: false,
+                                    },
+                                    // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
+                                    (),
+                                )
+                                .expect("failed to create a new connection")
+                                .id();
+                            assert_eq!(
+                                ctx.schedule_timer_instant(
+                                    poll_send_at,
+                                    TimerId(conn_id, I::VERSION),
+                                ),
+                                None
+                            );
+                            let (maybe_listener, _, _): (_, &(), &ListenerAddr<_, _, _>) =
+                                sockets.socketmap
+                                .listeners_mut()
+                                .get_by_id_mut(&listener_id)
+                                .expect("the listener must still be active");
 
-                                match maybe_listener {
-                                    MaybeListener::Bound => {
-                                        unreachable!(
-                                            "the listener must be active because we got here"
-                                        );
-                                    }
-                                    MaybeListener::Listener(listener) => {
-                                        // This conversion is fine because
-                                        // `conn_id` is newly created; No one
-                                        // should have called close on it.
-                                        let MaybeClosedConnectionid(id) = conn_id;
-                                        listener.pending.push(ConnectionId(id));
-                                    }
+                            match maybe_listener {
+                                MaybeListener::Bound => {
+                                    unreachable!(
+                                        "the listener must be active because we got here"
+                                    );
                                 }
-                                Some(syn_ack)
+                                MaybeListener::Listener(listener) => {
+                                    // This conversion is fine because
+                                    // `conn_id` is newly created; No one
+                                    // should have called close on it.
+                                    let MaybeClosedConnectionid(id) = conn_id;
+                                    listener.pending.push(ConnectionId(id));
+                                }
                             }
-                            ListenOnSegmentDisposition::SendRst(rst) => Some(rst),
-                            ListenOnSegmentDisposition::Ignore => None,
-                        };
+                        }
 
                         if let Some(seg) = reply {
                             let body = tcp_serialize_segment(seg, conn_addr);
