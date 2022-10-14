@@ -36,8 +36,19 @@ template("ffx") {
     # compilation allows other tasks to be started more quickly, lowering
     # overall drag on the graph.
 
-    # These options cause it to fail in RBE
+    # These options cause it to fail in RBE, due to OOM
     disable_rbe = true
+
+    # Since RBE is disabled, this runs locally and is known to require
+    # massive memory.  Until RBE is re-enabled for this target,
+    # we must limit its concurrency with other memory-intensive jobs.
+    # See https://fxbug.dev/111094 for context.
+    if (disable_rbe) {
+      if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] !=
+          toolchain_variant.tags) {
+        pool = "//build/config:highmem"
+      }
+    }
 
     # Use up to 16 threads for codegen
     configs += [ "//build/config/rust:codegen_units_16" ]

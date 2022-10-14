@@ -18,12 +18,12 @@ if (use_lto) {
   if (use_thinlto) {
     _args += [
       "--memory-per-job",
-      "local=2GB",
+      "local=16GB",
     ]
   } else {
     _args += [
       "--memory-per-job",
-      "local=4GB",
+      "local=32GB",
     ]
   }
 } else {
@@ -48,5 +48,10 @@ concurrent_jobs = {
   # Configuration for tools that must run locally
   local = {
     pool = "//build/config:local($default_toolchain)"
+  }
+
+  # Configuration for exceptionally memory-intensive jobs.
+  highmem = {
+    pool = "//build/config:highmem($default_toolchain)"
   }
 }

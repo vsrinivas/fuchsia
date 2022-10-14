@@ -1131,3 +1131,10 @@ config("no-finite-loops") {
 pool("local") {
   depth = default_concurrent_jobs.local
 }
+
+# For actions that consume exceptionally large amounts of memory.
+# The largest LTO link actions may fall into this category.
+# See https://fxbug.dev/111094 for context.
+pool("highmem") {
+  depth = 1
+}
