@@ -40,7 +40,7 @@ constexpr UndocumentedErrorDef<16> ErrMissingOrdinalBeforeMember("missing ordina
 constexpr UndocumentedErrorDef<17> ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef<18> ErrOrdinalsMustStartAtOne("ordinals must start at 1");
 constexpr ErrorDef<19> ErrMustHaveOneMember("must have at least one member");
-constexpr UndocumentedErrorDef<20> ErrInvalidProtocolMember("invalid protocol member");
+constexpr ErrorDef<20> ErrInvalidProtocolMember("invalid protocol member");
 constexpr RetiredDef<21> ErrExpectedProtocolMember(
     "merged ErrUnrecognizedProtocolMember (fi-0020) and ErrExpectedProtocolMember (fi-0021) into "
     "fi-0020 as ErrInvalidProtocolMember");

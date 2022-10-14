@@ -1,0 +1,5 @@
+library test.good.fi0020;
+
+protocol Example {
+    AMethod();
+};

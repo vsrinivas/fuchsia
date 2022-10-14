@@ -39,6 +39,12 @@ TEST(ErrcatTests, Good0012) {
   ASSERT_COMPILED(library);
 }
 
+TEST(ErrcatTests, Good0020) {
+  TestLibrary library;
+  library.AddFile("good/fi-0020.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(ErrcatTests, Good0025) {
   SharedAmongstLibraries shared;
   TestLibrary dependency(&shared, "dependent.fidl", R"FIDL(library dependent;
@@ -48,7 +54,6 @@ type Something = struct {};
   ASSERT_COMPILED(dependency);
   TestLibrary library(&shared);
   library.AddFile("good/fi-0025.test.fidl");
-  ASSERT_COMPILED(library);
 }
 
 TEST(ErrcatTests, Good0028a) {

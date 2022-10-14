@@ -1,0 +1,5 @@
+library test.bad.fi0020;
+
+protocol Example {
+    NotAMethodOrCompose;
+};

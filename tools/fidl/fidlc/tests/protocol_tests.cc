@@ -583,14 +583,8 @@ protocol NoMoreOrdinals {
 }
 
 TEST(ProtocolTests, BadEmptyNamedItem) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol NoMoreOrdinals {
-    NotActuallyAMethod;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0020.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidProtocolMember);
 }
 

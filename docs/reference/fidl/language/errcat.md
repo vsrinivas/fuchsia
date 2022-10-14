@@ -34,6 +34,8 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<error-catalog/_fi-0019.md>>
 
+<<error-catalog/_fi-0020.md>>
+
 <<error-catalog/_fi-0024.md>>
 
 <<error-catalog/_fi-0025.md>>
