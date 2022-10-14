@@ -19,6 +19,7 @@ if (is_host) {
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:async-fs",
       "//third_party/rust_crates:camino",
+      "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tempfile",
@@ -33,7 +34,6 @@ if (is_host) {
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-merkle",
       "//third_party/rust_crates:assert_matches",
-      "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:pretty_assertions",
     ]
 

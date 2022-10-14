@@ -2,10 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, camino::Utf8PathBuf, fuchsia_repo::repository::CopyMode, std::path::PathBuf};
+use {
+    argh::FromArgs,
+    camino::Utf8PathBuf,
+    chrono::{DateTime, Utc},
+    fuchsia_repo::repository::CopyMode,
+    std::path::PathBuf,
+};
 
 /// Builds a package.
-#[derive(FromArgs, PartialEq, Debug, Default)]
+#[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "build")]
 pub struct PackageBuildCommand {
     #[argh(
@@ -48,7 +54,7 @@ pub struct PackageBuildCommand {
 }
 
 /// Create a repository.
-#[derive(FromArgs, PartialEq, Debug, Default)]
+#[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "create")]
 pub struct RepoCreateCommand {
     #[argh(
@@ -65,7 +71,7 @@ pub struct RepoCreateCommand {
 }
 
 /// Publish packages.
-#[derive(FromArgs, PartialEq, Debug, Default)]
+#[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "publish")]
 pub struct RepoPublishCommand {
     #[argh(
@@ -98,6 +104,14 @@ pub struct RepoPublishCommand {
     )]
     pub time_versioning: bool,
 
+    #[argh(
+        option,
+        default = "Utc::now()",
+        from_str_fn(parse_datetime),
+        description = "the RFC 3339 time used to see if metadata has expired, and when new metadata should expire (default uses the current time)"
+    )]
+    pub metadata_current_time: DateTime<Utc>,
+
     #[argh(switch, description = "clean the repository so only new publications remain")]
     pub clean: bool,
 
@@ -122,4 +136,10 @@ fn parse_copy_mode(value: &str) -> Result<CopyMode, String> {
         "hard-link" => Ok(CopyMode::HardLink),
         _ => Err(format!("unknown copy mode {}", value)),
     }
+}
+
+fn parse_datetime(value: &str) -> Result<DateTime<Utc>, String> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|ts| ts.with_timezone(&Utc))
+        .map_err(|err| err.to_string())
 }

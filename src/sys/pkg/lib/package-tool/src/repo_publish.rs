@@ -117,8 +117,9 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     }
 
     repo_builder = repo_builder
-        .refresh_non_root_metadata(true)
+        .current_time(cmd.metadata_current_time)
         .time_versioning(cmd.time_versioning)
+        .refresh_non_root_metadata(true)
         .inherit_from_trusted_targets(!cmd.clean);
 
     // Publish all the packages.
@@ -155,7 +156,7 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         camino::Utf8Path,
-        chrono::Utc,
+        chrono::{TimeZone, Utc},
         fuchsia_repo::{repository::CopyMode, test_utils},
         tuf::metadata::Metadata as _,
     };
@@ -171,6 +172,7 @@ mod tests {
             trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: false,
             depfile: None,
@@ -197,6 +199,7 @@ mod tests {
             trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: false,
             depfile: None,
@@ -245,6 +248,7 @@ mod tests {
             trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: false,
             depfile: None,
@@ -287,6 +291,7 @@ mod tests {
             trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: false,
             depfile: None,
@@ -324,6 +329,7 @@ mod tests {
             trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: false,
             depfile: None,
@@ -340,6 +346,7 @@ mod tests {
             trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: false,
             depfile: None,
@@ -355,9 +362,11 @@ mod tests {
         let tempdir = tempfile::tempdir().unwrap();
         let repo_path = Utf8Path::from_path(tempdir.path()).unwrap();
 
-        // Time versioning uses the current unix timestamp relative to UTC. Look up that number,
-        // and we'll assert that the metadata version is >= to this number.
-        let now = Utc::now().timestamp().try_into().unwrap();
+        // Time versioning uses the unix timestamp of the current time. Note that the TUF spec does
+        // not allow `0` for a version, so tuf::RepoBuilder will fall back to normal versioning if
+        // we have a unix timestamp of 0, so we'll use a non-zero time.
+        let time_version = 100u32;
+        let now = Utc.timestamp(time_version as i64, 0);
 
         test_utils::make_empty_pm_repo_dir(repo_path);
 
@@ -367,6 +376,7 @@ mod tests {
             trusted_root: None,
             package_manifests: vec![],
             package_list_manifests: vec![],
+            metadata_current_time: now,
             time_versioning: true,
             clean: false,
             depfile: None,
@@ -380,11 +390,20 @@ mod tests {
         let repo = PmRepository::new(repo_path.to_path_buf());
         let mut repo_client = RepoClient::from_trusted_remote(repo).await.unwrap();
 
-        assert_matches!(repo_client.update().await, Ok(true));
+        assert_matches!(repo_client.update_with_start_time(&now).await, Ok(true));
         assert_eq!(repo_client.database().trusted_root().version(), 1);
-        assert!(repo_client.database().trusted_targets().map(|m| m.version()).unwrap() >= now);
-        assert!(repo_client.database().trusted_snapshot().map(|m| m.version()).unwrap() >= now);
-        assert!(repo_client.database().trusted_timestamp().map(|m| m.version()).unwrap() >= now);
+        assert_eq!(
+            repo_client.database().trusted_targets().map(|m| m.version()).unwrap(),
+            time_version,
+        );
+        assert_eq!(
+            repo_client.database().trusted_snapshot().map(|m| m.version()).unwrap(),
+            time_version,
+        );
+        assert_eq!(
+            repo_client.database().trusted_timestamp().map(|m| m.version()).unwrap(),
+            time_version,
+        );
     }
 
     #[fuchsia::test]
@@ -435,6 +454,7 @@ mod tests {
                 pkg_list1_manifest_path.clone(),
                 pkg_list2_manifest_path.clone(),
             ],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: false,
             depfile: Some(depfile_path.clone()),
@@ -500,6 +520,7 @@ mod tests {
             trusted_root: None,
             package_manifests: vec![pkg3_manifest_path],
             package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: false,
             depfile: None,
@@ -529,6 +550,7 @@ mod tests {
             trusted_root: None,
             package_manifests: vec![pkg4_manifest_path],
             package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: true,
             depfile: None,
@@ -563,6 +585,7 @@ mod tests {
             trusted_root: Some(root.join("repository").join("1.root.json")),
             package_manifests: vec![],
             package_list_manifests: vec![],
+            metadata_current_time: Utc::now(),
             time_versioning: false,
             clean: true,
             depfile: None,
