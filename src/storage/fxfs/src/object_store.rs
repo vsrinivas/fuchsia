@@ -1114,7 +1114,10 @@ impl ObjectStore {
         } else {
             let object_layers = self.open_layers(object_tree_layer_object_ids, None).await?;
             let size: u64 = object_layers.iter().map(|h| h.get_size()).sum();
-            self.tree.append_layers(object_layers.into()).await?;
+            self.tree
+                .append_layers(object_layers.into())
+                .await
+                .context("Failed to read object store layers")?;
             *self.lock_state.lock().unwrap() = LockState::Unencrypted;
             size
         };
@@ -1234,11 +1237,16 @@ impl ObjectStore {
                         .await
                         .context(FxfsError::Inconsistent)?,
                 );
-                let mut mutations = EncryptedMutations::deserialize_with_version(&mut cursor)?.0;
+                let mut mutations = EncryptedMutations::deserialize_with_version(&mut cursor)
+                    .context("Failed to deserialize EncryptedMutations")?
+                    .0;
                 let len = cursor.get_ref().len() as u64;
                 while cursor.position() < len {
-                    mutations
-                        .extend(&EncryptedMutations::deserialize_with_version(&mut cursor)?.0)?;
+                    mutations.extend(
+                        &EncryptedMutations::deserialize_with_version(&mut cursor)
+                            .context("Failed to deserialize EncryptedMutations")?
+                            .0,
+                    )?;
                 }
                 mutations
             }

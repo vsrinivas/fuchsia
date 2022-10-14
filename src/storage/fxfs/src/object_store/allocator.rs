@@ -35,7 +35,7 @@ use {
         },
         trace_duration,
     },
-    anyhow::{anyhow, bail, ensure, Error},
+    anyhow::{anyhow, bail, ensure, Context, Error},
     async_trait::async_trait,
     either::Either::{Left, Right},
     merge::{filter_marked_for_deletion, filter_tombstones, merge},
@@ -659,12 +659,17 @@ impl SimpleAllocator {
 
         let handle =
             ObjectStore::open_object(&root_store, self.object_id, HandleOptions::default(), None)
-                .await?;
+                .await
+                .context("Failed to open allocator object")?;
 
         if handle.get_size() > 0 {
-            let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
+            let serialized_info = handle
+                .contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE)
+                .await
+                .context("Failed to read AllocatorInfo")?;
             let mut cursor = std::io::Cursor::new(&serialized_info[..]);
-            let (mut info, _version) = AllocatorInfo::deserialize_with_version(&mut cursor)?;
+            let (mut info, _version) = AllocatorInfo::deserialize_with_version(&mut cursor)
+                .context("Failed to deserialize AllocatorInfo")?;
             let mut handles = Vec::new();
             let mut total_size = 0;
             for object_id in &info.layers {
@@ -675,7 +680,8 @@ impl SimpleAllocator {
                         HandleOptions::default(),
                         None,
                     )
-                    .await?,
+                    .await
+                    .context("Failed to open allocator layer file")?,
                 );
                 total_size += handle.get_size();
                 handles.push(handle);
@@ -712,7 +718,10 @@ impl SimpleAllocator {
                 }
                 inner.info = info;
             }
-            self.tree.append_layers(handles.into_boxed_slice()).await?;
+            self.tree
+                .append_layers(handles.into_boxed_slice())
+                .await
+                .context("Failed to append allocator layers")?;
             self.filesystem.upgrade().unwrap().object_manager().update_reservation(
                 self.object_id,
                 tree::reservation_amount_from_layer_size(total_size),

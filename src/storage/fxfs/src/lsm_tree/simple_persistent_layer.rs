@@ -166,7 +166,8 @@ impl SimplePersistentLayer {
             let mut buffer = object_handle.allocate_buffer(physical_block_size as usize);
             object_handle.read(0, buffer.as_mut()).await?;
             let mut cursor = std::io::Cursor::new(buffer.as_slice());
-            LayerInfo::deserialize_with_version(&mut cursor)?
+            LayerInfo::deserialize_with_version(&mut cursor)
+                .context("Failed to deserialize LayerInfo")?
         };
 
         // We expect the layer block size to be a multiple of the physical block size.
