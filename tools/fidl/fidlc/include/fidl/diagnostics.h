@@ -26,7 +26,7 @@ constexpr UndocumentedErrorDef<9, Token::KindAndSubkind, Token::KindAndSubkind>
     ErrUnexpectedIdentifier("unexpected identifier {}, was expecting {}");
 constexpr UndocumentedErrorDef<10, std::string_view> ErrInvalidIdentifier(
     "invalid identifier '{}'");
-constexpr UndocumentedErrorDef<11, std::string_view> ErrInvalidLibraryNameComponent(
+constexpr ErrorDef<11, std::string_view> ErrInvalidLibraryNameComponent(
     "Invalid library name component {}");
 constexpr ErrorDef<12> ErrInvalidLayoutClass(
     "layouts must be of the class: bits, enum, struct, table, or union.");

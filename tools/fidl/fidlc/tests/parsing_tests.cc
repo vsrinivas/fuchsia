@@ -28,12 +28,10 @@ library 0fidl.test.badcompoundidentifier;
 
 // Test that library name formatting checks are done in the parser
 TEST(ParsingTests, BadLibraryNameTest) {
-  TestLibrary library(R"FIDL(
-library a_b;
-)FIDL");
-
+  TestLibrary library;
+  library.AddFile("bad/fi-0011.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLibraryNameComponent);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "a_b");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "name_with_underscores");
 }
 
 // Test that otherwise reserved words can be appropriately parsed when context
