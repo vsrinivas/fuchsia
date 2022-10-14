@@ -23,8 +23,6 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	ctx := context.Background()
-
 	t.Run("should execute a command", func(t *testing.T) {
 		r := Runner{
 			Env: []string{"FOO=bar"}, // Cover env var handling.
@@ -34,7 +32,7 @@ func TestRun(t *testing.T) {
 
 		stdout := new(bytes.Buffer)
 		stderr := new(bytes.Buffer)
-		if err := r.Run(ctx, command, RunOptions{Stdout: stdout, Stderr: stderr, Env: []string{"BAR=baz"}}); err != nil {
+		if err := r.Run(context.Background(), command, RunOptions{Stdout: stdout, Stderr: stderr, Env: []string{"BAR=baz"}}); err != nil {
 			t.Fatal(err)
 		}
 
@@ -50,7 +48,7 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("should error if the context completes before the command", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
 		r := Runner{}
@@ -66,7 +64,7 @@ func TestRun(t *testing.T) {
 	t.Run("should return an error if the command fails", func(t *testing.T) {
 		r := Runner{}
 		command := []string{"not_a_command_12345"}
-		err := r.Run(ctx, command, RunOptions{})
+		err := r.Run(context.Background(), command, RunOptions{})
 		if err == nil {
 			t.Fatalf("Expected invalid command to fail but it succeeded: %s", err)
 		} else if !errors.Is(err, exec.ErrNotFound) {
@@ -74,100 +72,30 @@ func TestRun(t *testing.T) {
 		}
 	})
 
-	t.Run("should respect dir in options", func(t *testing.T) {
-		script := writeScript(
-			t,
-			`#!/bin/bash
-			pwd`,
-		)
-		r := Runner{Dir: t.TempDir()}
-		dir := t.TempDir()
-		var stdout bytes.Buffer
-		if err := r.Run(ctx, []string{script}, RunOptions{Stdout: &stdout, Dir: dir}); err != nil {
-			t.Fatal(err)
-		}
-		pwd := strings.TrimSpace(stdout.String())
-		if pwd != dir {
-			t.Errorf("Wrong dir: %s != %s", pwd, dir)
-		}
-	})
-
-	t.Run("should set environment variables", func(t *testing.T) {
-		for _, v := range []string{"PARENT_VAR", "OVERRIDDEN_PARENT_VAR"} {
-			os.Setenv(v, "0")
-			defer os.Unsetenv(v)
-		}
-
-		r := Runner{
-			Env: []string{
-				"OVERRIDDEN_PARENT_VAR=1",
-				"RUNNER_VAR=1",
-				"OVERRIDDEN_RUNNER_VAR=1",
-			},
-		}
-		script := writeScript(
-			t,
-			`#!/bin/bash
-			# Use null byte as a separator instead of newline since env var
-			# values might contain newlines.
-			env -0`,
-		)
-		var stdout bytes.Buffer
-		if err := r.Run(ctx, []string{script}, RunOptions{
-			Stdout: &stdout,
-			Env: []string{
-				"OVERRIDDEN_RUNNER_VAR=2",
-				"RUN_VAR=2",
-			},
-		}); err != nil {
-			t.Fatal(err)
-		}
-		nullByte := string([]byte{0})
-		lines := strings.Split(strings.Trim(stdout.String(), nullByte), nullByte)
-		vars := make(map[string]string)
-		for _, line := range lines {
-			k, v, ok := strings.Cut(line, "=")
-			if !ok {
-				t.Fatalf("Invalid line from script: %q", line)
-			}
-			vars[k] = v
-		}
-		expected := map[string]string{
-			"PARENT_VAR":            "0",
-			"OVERRIDDEN_PARENT_VAR": "1",
-			"RUNNER_VAR":            "1",
-			"OVERRIDDEN_RUNNER_VAR": "2",
-			"RUN_VAR":               "2",
-		}
-		for k, v := range expected {
-			if vars[k] != v {
-				t.Errorf("Wrong value for env var %s: got %q, wanted %q", k, vars[k], v)
-			}
-		}
-	})
-
 	t.Run("should wait for command to finish after sending SIGTERM", func(t *testing.T) {
+		script := filepath.Join(t.TempDir(), "script")
 		// The script below will print `start` to signify that it's ready to handle
 		// SIGTERMs and SIGINTs and then run cleanup() when it receives the signal.
 		// By checking that `start` is printed before canceling the context and checking
 		// that `finished` is printed after, we can assert that the cleanup() function
 		// was run before the script exited.
-		script := writeScript(
-			t,
+		if err := os.WriteFile(script, []byte(
 			`#!/bin/bash
-			cleanup() {
-				echo "finished"; exit 1
-			}
-			trap cleanup TERM INT
-			echo "start"
-			while true;do :; done`,
-		)
+				cleanup() {
+					echo "finished"; exit 1
+				}
+				trap cleanup TERM INT
+				echo "start"
+				while true;do :; done`,
+		), os.ModePerm); err != nil {
+			t.Fatalf("Failed to write script: %s", err)
+		}
 		r := Runner{}
 		command := []string{script}
 		stdoutReader, stdout := io.Pipe()
 		defer stdoutReader.Close()
 		defer stdout.Close()
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
 			buf := make([]byte, 20)
@@ -207,6 +135,7 @@ func TestRun(t *testing.T) {
 		rand.Seed(time.Now().UTC().UnixNano())
 		sleepDuration := rand.Intn(10000) + 10000
 
+		script := filepath.Join(t.TempDir(), "script")
 		// The script below will print `start` to signify that it's ready to handle
 		// SIGTERMs and SIGINTs and then run cleanup() when it receives the signal.
 		// However, since it starts a `sleep` process, it actually waits for the process
@@ -214,20 +143,22 @@ func TestRun(t *testing.T) {
 		// gets killed if it can't clean up and exit in time. In this test, `finished`
 		// should not be in the output because the process would have been killed before
 		// it could run cleanup().
-		script := writeScript(t, fmt.Sprintf(
+		if err := os.WriteFile(script, []byte(fmt.Sprintf(
 			`#!/bin/bash
-			cleanup() {
-				echo "finished"; exit 1
-			}
-			trap cleanup TERM INT
-			sleep %d`, sleepDuration),
-		)
+				cleanup() {
+					echo "finished"; exit 1
+				}
+				trap cleanup TERM INT
+				sleep %d`, sleepDuration),
+		), os.ModePerm); err != nil {
+			t.Fatalf("Failed to write script: %s", err)
+		}
 
 		stdoutReader, stdout := io.Pipe()
 		defer stdoutReader.Close()
 		defer stdout.Close()
 		fakeClock := clock.NewFakeClock()
-		ctx := clock.NewContext(ctx, fakeClock)
+		ctx := clock.NewContext(context.Background(), fakeClock)
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		go func() {
@@ -270,13 +201,4 @@ func TestRun(t *testing.T) {
 			}
 		}
 	})
-}
-
-func writeScript(t *testing.T, contents string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "script.sh")
-	if err := os.WriteFile(path, []byte(contents), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	return path
 }
