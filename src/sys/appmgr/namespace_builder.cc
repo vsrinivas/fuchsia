@@ -135,35 +135,17 @@ zx_status_t NamespaceBuilder::AddSandbox(
     if (feature == "root-ssl-certificates") {
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
     } else if (feature == "deprecated-global-data") {
-      FuchsiaPkgUrl pkg_url;
-      if (pkg_url.Parse(ns_id) &&
-          pkg_url.ToString().compare("fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx") == 0) {
-        PushDirectoryFromPath("/data");
-      } else {
-        FX_LOGS(WARNING) << "Component " << ns_id
-                         << " is not allowlisted to use deprecated-global-data."
-                         << " See: https://fxbug.dev/36227#c43";
-      }
+      FX_LOGS(WARNING) << "Component " << ns_id
+                       << " is not allowlisted to use deprecated-global-data."
+                       << " See: https://fxbug.dev/36227#c43";
     } else if (feature == "deprecated-global-tmp") {
-      FuchsiaPkgUrl pkg_url;
-      if (pkg_url.Parse(ns_id) &&
-          pkg_url.ToString().compare("fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx") == 0) {
-        PushDirectoryFromPath("/tmp");
-      } else {
-        FX_LOGS(WARNING) << "Component " << ns_id
-                         << " is not allowlisted to use deprecated-global-tmp."
-                         << " See: https://fxbug.dev/36227#c43";
-      }
+      FX_LOGS(WARNING) << "Component " << ns_id
+                       << " is not allowlisted to use deprecated-global-tmp."
+                       << " See: https://fxbug.dev/36227#c43";
     } else if (feature == "deprecated-global-hub") {
-      FuchsiaPkgUrl pkg_url;
-      if (pkg_url.Parse(ns_id) &&
-          pkg_url.ToString().compare("fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx") == 0) {
-        PushDirectoryFromPath("/hub-v2");
-      } else {
-        FX_LOGS(WARNING) << "Component " << ns_id
-                         << " is not allowlisted to use deprecated-global-hub."
-                         << " See: https://fxbug.dev/36227#c43";
-      }
+      FX_LOGS(WARNING) << "Component " << ns_id
+                       << " is not allowlisted to use deprecated-global-hub."
+                       << " See: https://fxbug.dev/36227#c43";
     } else if (feature == "shell-commands") {
       PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
     } else if (feature == "vulkan") {
