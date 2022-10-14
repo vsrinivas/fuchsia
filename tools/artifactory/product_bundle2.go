@@ -9,13 +9,25 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
-type ProductBundleUploadManifest struct {
-	Version string   `json:"version"`
-	Entries []Upload `json:"entries"`
+type TransferManifest struct {
+	Version string                  `json:"version"`
+	Entries []TransferManifestEntry `json:"entries"`
+}
+
+type TransferManifestEntry struct {
+	Type    string          `json:"type"`
+	Local   string          `json:"local"`
+	Remote  string          `json:"remote"`
+	Entries []ArtifactEntry `json:"entries"`
+}
+
+type ArtifactEntry struct {
+	Name string `json:"name"`
 }
 
 type productBundlesModules interface {
@@ -26,44 +38,77 @@ type productBundlesModules interface {
 // ProductBundle2Uploads parses the product bundle upload manifests, creates
 // absolute paths for each artifact by appending the |buildDir|, and sets
 // a destination path in GCS inside |outDir|.
-func ProductBundle2Uploads(mods *build.Modules, namespace string) ([]Upload, error) {
-	return productBundle2Uploads(mods, namespace)
+func ProductBundle2Uploads(mods *build.Modules, blobsRemote string, productBundleRemote string) ([]Upload, error) {
+	return productBundle2Uploads(mods, blobsRemote, productBundleRemote)
 }
 
-func productBundle2Uploads(mods productBundlesModules, namespace string) ([]Upload, error) {
+func productBundle2Uploads(mods productBundlesModules, blobsRemote string, productBundleRemote string) ([]Upload, error) {
 	// There should be either 0 or 1 ProductBundles.
 	if len(mods.ProductBundles()) == 0 {
 		return []Upload{}, nil
 	} else if len(mods.ProductBundles()) == 1 {
-		return uploadProductBundle(mods, mods.ProductBundles()[0].UploadManifestPath, namespace)
+		return uploadProductBundle(mods, mods.ProductBundles()[0].TransferManifestPath, blobsRemote, productBundleRemote)
 	} else {
 		return nil, fmt.Errorf("expected 0 or 1 ProductBundles, found %d", len(mods.ProductBundles()))
 	}
 }
 
 // Return a list of Uploads that must happen for a specific product bundle
-// upload manifest.
-func uploadProductBundle(mods productBundlesModules, uploadManifestPath string, namespace string) ([]Upload, error) {
-	data, err := os.ReadFile(path.Join(mods.BuildDir(), uploadManifestPath))
+// transfer manifest.
+func uploadProductBundle(mods productBundlesModules, transferManifestPath string, blobsRemote string, productBundleRemote string) ([]Upload, error) {
+	transferManifestParentPath := filepath.Dir(transferManifestPath)
+
+	data, err := os.ReadFile(path.Join(mods.BuildDir(), transferManifestPath))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read product bundle upload manifest: %w", err)
+		return nil, fmt.Errorf("failed to read product bundle transfer manifest: %w", err)
 	}
 
-	var uploadManifest ProductBundleUploadManifest
-	err = json.Unmarshal(data, &uploadManifest)
+	var transferManifest TransferManifest
+	err = json.Unmarshal(data, &transferManifest)
 	if err != nil {
-		return nil, fmt.Errorf("unable to unmarshal product bundle upload manifest: %w", err)
+		return nil, fmt.Errorf("unable to unmarshal product bundle transfer manifest: %w", err)
 	}
-	if uploadManifest.Version != "1" {
-		return nil, fmt.Errorf("product bundle upload manifest must be version 1")
+	if transferManifest.Version != "1" {
+		return nil, fmt.Errorf("product bundle transfer manifest must be version 1")
 	}
 
 	var uploads []Upload
-	for _, entry := range uploadManifest.Entries {
-		uploads = append(uploads, Upload{
-			Source:      path.Join(mods.BuildDir(), entry.Source),
-			Destination: path.Join(namespace, entry.Destination),
-		})
+	var newTransferEntries []TransferManifestEntry
+	for _, entry := range transferManifest.Entries {
+		remote := ""
+		if entry.Type == "product_bundle" {
+			remote = productBundleRemote
+		} else if entry.Type == "blobs" {
+			remote = blobsRemote
+		} else {
+			return nil, fmt.Errorf("unrecognized transfer entry type: %s", entry.Type)
+		}
+
+		for _, artifact := range entry.Entries {
+			uploads = append(uploads, Upload{
+				Source:      path.Join(mods.BuildDir(), transferManifestParentPath, entry.Local, artifact.Name),
+				Destination: path.Join(remote, entry.Remote, artifact.Name),
+			})
+		}
+
+		// Modify the remote inside the entry, so that we can upload this transfer
+		// manifest and use it to download the artifacts.
+		entry.Remote = path.Join(remote, entry.Remote)
+		newTransferEntries = append(newTransferEntries, entry)
 	}
+
+	// Upload the transfer manifest itself so that it can be used for downloading
+	// the artifacts.
+	transferManifest.Entries = newTransferEntries
+	updatedTransferManifest, err := json.MarshalIndent(&transferManifest, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	uploads = append(uploads, Upload{
+		Compress:    true,
+		Contents:    updatedTransferManifest,
+		Destination: path.Join(productBundleRemote, filepath.Base(transferManifestPath)),
+	})
+
 	return uploads, nil
 }

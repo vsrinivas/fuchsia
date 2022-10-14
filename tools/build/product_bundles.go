@@ -12,7 +12,7 @@ type ProductBundle struct {
 	// Label is the GN label for the product bundle.
 	Label string `json:"label"`
 
-	// UploadManifestPath is the path to the upload manifest for the product
+	// TransferManifestPath is the path to the transfer manifest for the product
 	// bundle.
-	UploadManifestPath string `json:"upload_manifest_path"`
+	TransferManifestPath string `json:"transfer_manifest_path"`
 }

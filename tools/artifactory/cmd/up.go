@@ -41,7 +41,6 @@ const (
 	packageDirName                  = "packages"
 	sdkArchivesDirName              = "sdk"
 	toolDirName                     = "tools"
-	productBundleName               = "product_bundle"
 
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
@@ -100,6 +99,7 @@ Emits a GCS upload manifest for a build with the following structure:
 │   │   │   ├── publickey.pem
 │   │   │   ├── images
 │   │   │   │   └── <images>
+│   │   │   │   └── transfer.json
 │   │   │   │   └── product_bundle
 │   │   │   ├── packages
 │   │   │   │   ├── all_blobs.json
@@ -169,7 +169,6 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	targetDir := path.Join(metadataDir, targetDirName)
 	packageNamespaceDir := path.Join(cmd.namespace, packageDirName)
 	imageNamespaceDir := path.Join(cmd.namespace, imageDirName)
-	productBundleDir := path.Join(imageNamespaceDir, productBundleName)
 
 	uploads := []artifactory.Upload{
 		{
@@ -234,7 +233,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	}
 
 	// Upload the product bundles.
-	pbUploads, err := artifactory.ProductBundle2Uploads(m, productBundleDir)
+	pbUploads, err := artifactory.ProductBundle2Uploads(m, blobDirName, imageNamespaceDir)
 	if err != nil {
 		return err
 	}
