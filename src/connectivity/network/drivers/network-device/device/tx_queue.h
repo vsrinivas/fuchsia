@@ -100,6 +100,14 @@ class TxQueue {
     uint16_t descriptor_index;
   };
 
+  // Wrapper struct to keep track of ongoing sessions with associated
+  // information on whether we have an async wait installed on |port_| for tx
+  // FIFOs.
+  struct SessionWaiter {
+    Session* session;
+    bool wait_installed;
+  };
+
   // Adds the provided session:descriptor tuple to the queue and returns the buffer id.
   uint32_t Enqueue(Session* session, uint16_t descriptor) __TA_REQUIRES(parent_->tx_lock());
   // Returns all outstanding completed buffers to their respective sessions.
@@ -115,7 +123,7 @@ class TxQueue {
 
   std::unique_ptr<RingQueue<uint32_t>> return_queue_ __TA_GUARDED(parent_->tx_lock());
   std::unique_ptr<IndexedSlab<InFlightBuffer>> in_flight_ __TA_GUARDED(parent_->tx_lock());
-  vmo_store::GrowableSlab<Session*, SessionKey> sessions_ __TA_GUARDED(parent_->tx_lock());
+  vmo_store::GrowableSlab<SessionWaiter, SessionKey> sessions_ __TA_GUARDED(parent_->tx_lock());
 
   zx::port port_;
   std::optional<thrd_t> thread_{};

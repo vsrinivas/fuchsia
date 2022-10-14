@@ -3097,5 +3097,63 @@ TEST_F(NetworkDeviceTest, LogDebugInfoToSyslog) {
   EXPECT_TRUE(bt_requested);
 }
 
+// Subclass for stress tests with diminished logging to decrease noise.
+class NetworkDeviceStressTest : public NetworkDeviceTest {
+  void SetUp() override {
+    fx_logger_config_t log_cfg = {
+        .min_severity = FX_LOG_INFO,
+        .tags = nullptr,
+        .num_tags = 0,
+    };
+    fx_log_reconfigure(&log_cfg);
+  }
+};
+
+// Guards against regression where tx queue would improperly install too many
+// async waits, causing the process to be killed with TOO_MANY_OBSERVERS
+// policy violation.
+TEST_F(NetworkDeviceStressTest, ManyTxFullWaits) {
+  impl_.set_immediate_return_tx(true);
+  ASSERT_OK(CreateDeviceWithPort13());
+
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(AttachSessionPort(session, port13_));
+
+  std::array<TestSession, MAX_VMOS - 1> idle_sessions;
+
+  for (TestSession& s : idle_sessions) {
+    ASSERT_OK(OpenSession(&s));
+    ASSERT_OK(AttachSessionPort(s, port13_));
+  }
+
+  const netdev::wire::PortId port13_id = GetSaltedPortId(kPort13);
+
+  std::array<uint16_t, kTxDepth> descriptors;
+  for (uint16_t i = 0; i < kTxDepth; i++) {
+    buffer_descriptor_t& buffer = session.ResetDescriptor(i);
+    buffer.port_id = {
+        .base = port13_id.base,
+        .salt = port13_id.salt,
+    };
+    descriptors[i] = i;
+  }
+  // Run for enough iterations to cause installations to explode. Policy
+  // violation happens at a default 50000 observers. We have a number of idle
+  // sessions to accelerate the observer install rate. The factor of 2 is for
+  // extra protection around the default observer count which exists at a
+  // distance.
+  const size_t iterations = 2 * (50000 / idle_sessions.size() + 1);
+  for (size_t i = 0; i < iterations; i++) {
+    SCOPED_TRACE(i);
+    size_t actual;
+    ASSERT_OK(session.SendTx(descriptors.data(), descriptors.size(), &actual));
+    ASSERT_EQ(actual, descriptors.size());
+    ASSERT_OK(session.tx_fifo().wait_one(ZX_FIFO_READABLE, TEST_DEADLINE, nullptr));
+    ASSERT_OK(session.FetchTx(descriptors.data(), descriptors.size(), &actual));
+    ASSERT_EQ(actual, descriptors.size());
+  }
+}
+
 }  // namespace testing
 }  // namespace network

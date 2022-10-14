@@ -221,7 +221,7 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list
   cpp20::span buffers(buf_list, buf_count);
   if (immediate_return_tx_ || !device_started_) {
     const zx_status_t return_status = device_started_ ? ZX_OK : ZX_ERR_UNAVAILABLE;
-    ASSERT_TRUE(buf_count < kTxDepth);
+    ASSERT_LE(buf_count, kTxDepth);
     std::array<tx_result_t, kTxDepth> results;
     auto results_iter = results.begin();
     for (const tx_buffer_t& buff : buffers) {

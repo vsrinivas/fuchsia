@@ -190,13 +190,17 @@ void TxQueue::Thread(cpp20::span<tx_buffer_t> buffers) {
 zx_status_t TxQueue::UpdateFifoWatches() {
   fbl::AutoLock lock(&parent_->tx_lock());
   for (auto it = sessions_.begin(); it != sessions_.end(); it++) {
-    const Session& session = **it;
-    const zx::fifo& fifo = session.tx_fifo();
+    SessionWaiter& waiter = *it;
+    Session& session = *waiter.session;
+
     if (session.IsPaused()) {
-      zx_status_t status = port_.cancel(fifo, it.key());
+      if (!waiter.wait_installed) {
+        continue;
+      }
+      zx_status_t status = port_.cancel(session.tx_fifo(), it.key());
       switch (status) {
-        case ZX_ERR_NOT_FOUND:
         case ZX_OK:
+          waiter.wait_installed = false;
           continue;
         default:
           LOGF_ERROR("failed to cancel FIFO wait for session %s: %s", session.name(),
@@ -204,13 +208,20 @@ zx_status_t TxQueue::UpdateFifoWatches() {
           return status;
       }
     }
-    if (zx_status_t status =
-            fifo.wait_async(port_, it.key(), ZX_FIFO_PEER_CLOSED | ZX_FIFO_READABLE, 0);
+
+    if (waiter.wait_installed) {
+      continue;
+    }
+
+    if (zx_status_t status = session.tx_fifo().wait_async(
+            port_, it.key(), ZX_FIFO_PEER_CLOSED | ZX_FIFO_READABLE, 0);
         status != ZX_OK) {
       LOGF_ERROR("failed to start FIFO wait for session %s: %s", session.name(),
                  zx_status_get_string(status));
       return status;
     }
+
+    waiter.wait_installed = true;
   }
 
   return ZX_OK;
@@ -219,13 +230,15 @@ zx_status_t TxQueue::UpdateFifoWatches() {
 zx_status_t TxQueue::HandleFifoSignal(cpp20::span<tx_buffer_t> buffers, SessionKey key,
                                       zx_signals_t signals) {
   fbl::AutoLock lock(&parent_->tx_lock());
-  Session** find_session = sessions_.Get(key);
+  SessionWaiter* find_session = sessions_.Get(key);
   // Session already removed from Tx queue, packet was lingering in the port.
   if (find_session == nullptr) {
     return ZX_OK;
   }
 
-  Session& session = **find_session;
+  SessionWaiter& waiter = *find_session;
+  waiter.wait_installed = false;
+  Session& session = *waiter.session;
   const zx::fifo& fifo = session.tx_fifo();
   SessionTransaction transaction(buffers, this, &session);
 
@@ -269,6 +282,8 @@ zx_status_t TxQueue::HandleFifoSignal(cpp20::span<tx_buffer_t> buffers, SessionK
                zx_status_get_string(status));
     return status;
   }
+
+  waiter.wait_installed = true;
 
   return ZX_OK;
 }
@@ -336,9 +351,10 @@ void TxQueue::CompleteTxList(const tx_result_t* tx, size_t count) {
 
 TxQueue::SessionKey TxQueue::AddSession(Session* session) {
   sessions_.Grow();
-  // NB: Move session below because API wants a moved object even if it's
-  // trivially copyable.
-  std::optional new_key = sessions_.Push(std::move(session));
+  std::optional new_key = sessions_.Push(SessionWaiter{
+      .session = session,
+      .wait_installed = false,
+  });
   // We grew the slab before pushing, we must have space.
   ZX_ASSERT(new_key.has_value());
 
