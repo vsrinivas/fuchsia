@@ -35,7 +35,7 @@ fi
 # For legacy code.
 export FUCHSIA_IPV4_ADDR="${FUCHSIA_DEVICE_ADDR}"
 
-port="$(get-device-ssh-port)"
+port="$(get-fuchsia-device-port)"
 if [[ -n "${port}" ]]; then
   export FUCHSIA_SSH_PORT="${port}"
 fi

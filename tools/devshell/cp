@@ -62,7 +62,7 @@ if [[ "${recurse}" = "true" ]]; then
   sftp_command_args+=( "-r" )
 fi
 
-port="$(get-device-ssh-port)"
+port="$(get-fuchsia-device-port)"
 if [[ -n "${port}" ]]; then
   sftp_args+=( "-P" "${port}" )
 fi

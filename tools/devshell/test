@@ -60,7 +60,7 @@ else
     export SL4F_HTTP_PORT=9080
   fi
 
-  port="$(get-device-ssh-port)"
+  port="$(get-fuchsia-device-port)"
   if [[ -n "${port}" ]]; then
     export FUCHSIA_SSH_PORT="${port}"
   fi

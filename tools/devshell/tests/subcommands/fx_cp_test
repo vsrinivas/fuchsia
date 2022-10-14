@@ -23,6 +23,7 @@ declare fx sftp
 BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
+  btf::make_installed_hosttools_mock "ffx" > /dev/null
   sftp="${BT_TEMP_DIR}/tools/devshell/sftp"
 }
 
