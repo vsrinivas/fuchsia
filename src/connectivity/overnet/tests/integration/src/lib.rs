@@ -137,7 +137,8 @@ async fn run_overnet_command(
         }
         OvernetCommand::AttachSocketLink(socket) => {
             let (mut rx, mut tx) = fidl::AsyncSocket::from_socket(socket)?.split();
-            run_stream_link(node, &mut rx, &mut tx, Default::default(), Box::new(|| None)).await
+            run_stream_link(node, None, &mut rx, &mut tx, Default::default(), Box::new(|| None))
+                .await
         }
         OvernetCommand::NewLink(runner) => {
             let (tx, rx) = node.new_link(Default::default(), Box::new(|| None));

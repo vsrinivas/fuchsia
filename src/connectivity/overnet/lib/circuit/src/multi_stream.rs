@@ -9,6 +9,7 @@ use crate::{Node, Quality};
 use futures::channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::future::Either;
+use futures::prelude::*;
 use futures::StreamExt;
 use std::collections::HashMap;
 use std::future::Future;
@@ -368,6 +369,64 @@ pub fn multi_stream_node_connection(
             Either::Right((res, node_fut)) => res.and(node_fut.await),
         }
     }
+}
+
+/// Same as `multi_stream_node_connection` but reads and writes to and from implementors of the
+/// standard `AsyncRead` and `AsyncWrite` traits rather than circuit streams.
+pub async fn multi_stream_node_connection_to_async(
+    node: &Node,
+    rx: &mut (dyn AsyncRead + Unpin + Send),
+    tx: &mut (dyn AsyncWrite + Unpin + Send),
+    is_server: bool,
+    quality: Quality,
+) -> Result<()> {
+    let (reader, remote_writer) = stream::stream();
+    let (remote_reader, writer) = stream::stream();
+    let conn_fut =
+        multi_stream_node_connection(node, remote_reader, remote_writer, is_server, quality);
+
+    let read_fut = async move {
+        let mut buf = [0u8; 4096];
+        loop {
+            let n = rx.read(&mut buf).await?;
+            if n == 0 {
+                break Ok(());
+            }
+            match writer.write(n, |write_buf| {
+                write_buf[..n].copy_from_slice(&buf[..n]);
+                Ok(n)
+            }) {
+                Err(Error::ConnectionClosed) => break Ok(()),
+                other => other?,
+            }
+        }
+    };
+
+    let write_fut = async move {
+        loop {
+            let mut buf = [0u8; 4096];
+            match reader
+                .read(1, |read_buf| {
+                    let read_buf = &read_buf[..std::cmp::min(buf.len(), read_buf.len())];
+                    buf[..read_buf.len()].copy_from_slice(read_buf);
+                    Ok((read_buf.len(), read_buf.len()))
+                })
+                .await
+            {
+                Err(Error::ConnectionClosed) => break Ok(()),
+                other => {
+                    let len = other?;
+                    tx.write_all(&buf[..len]).await?;
+                    tx.flush().await?;
+                }
+            };
+        }
+    };
+
+    futures::future::try_join3(read_fut, write_fut, conn_fut)
+        .await
+        .map(|((), (), ())| ())
+        .map_err(Into::into)
 }
 
 #[cfg(test)]

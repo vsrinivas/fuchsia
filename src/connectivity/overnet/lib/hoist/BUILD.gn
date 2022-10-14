@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/connectivity/overnet/enable_circuit.gni")
 
 rustc_library("hoist") {
   with_unit_tests = true
@@ -48,6 +49,13 @@ rustc_library("hoist") {
       "//third_party/rust_crates:tracing",
     ]
     test_deps += [ "//third_party/rust_crates:scopeguard" ]
+    if (enable_circuit) {
+      deps += [ "//src/connectivity/overnet/lib/circuit" ]
+    }
+  }
+
+  if (enable_circuit) {
+    features = [ "circuit" ]
   }
 }
 

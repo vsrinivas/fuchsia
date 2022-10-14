@@ -14,6 +14,8 @@ use fidl_fuchsia_overnet::{
 };
 use fuchsia_async::TimeoutExt;
 use fuchsia_async::{Task, Timer};
+#[cfg(feature = "circuit")]
+use futures::future::Either;
 use futures::prelude::*;
 use overnet_core::{log_errors, ListPeersContext, Router, RouterOptions, SecurityContext};
 use std::io::ErrorKind::{self, TimedOut};
@@ -25,6 +27,8 @@ use std::{
     time::Duration,
 };
 use stream_link::run_stream_link;
+
+pub static CIRCUIT_ID: [u8; 8] = *b"CIRCUIT\0";
 
 pub fn default_ascendd_path() -> PathBuf {
     let mut path = std::env::temp_dir();
@@ -78,22 +82,28 @@ pub struct Hoist {
 }
 
 impl Hoist {
-    pub fn with_cache_dir(cache_path: &Path) -> Result<Self, Error> {
+    pub fn with_cache_dir_maybe_router(
+        cache_path: &Path,
+        router_update_interval: Option<std::time::Duration>,
+    ) -> Result<Self, Error> {
         let node_id = overnet_core::generate_node_id();
         tracing::trace!(hoist_node_id = node_id.0);
-        let node = Router::new(
-            RouterOptions::new()
-                .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate)
-                .set_node_id(node_id),
-            Box::new(hard_coded_security_context(cache_path)),
-        )?;
+        let router_options = RouterOptions::new()
+            .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate)
+            .set_node_id(node_id);
+        let router_options = if let Some(router_update_interval) = router_update_interval {
+            router_options.set_router_interval(router_update_interval)
+        } else {
+            router_options
+        };
+        let node = Router::new(router_options, Box::new(hard_coded_security_context(cache_path)))?;
         let host_overnet = Arc::new(HostOvernet::new(node.clone())?);
 
         Ok(Self { host_overnet, node })
     }
 
     pub fn new() -> Result<Self, Error> {
-        Self::with_cache_dir(&std::env::temp_dir())
+        Self::with_cache_dir_maybe_router(&std::env::temp_dir(), None)
     }
 
     pub fn node(&self) -> Arc<Router> {
@@ -141,9 +151,12 @@ impl Hoist {
         tracing::trace!(ascendd_path = %sockpath.display());
         tracing::trace!(overnet_connection_label = ?label);
         let now = SystemTime::now();
-        let uds = loop {
+
+        // Establish a connection to the UNIX socket. With Circuit-switched enabled we establish two
+        // connections (one for legacy, one for CSO), so make this a closure so we can do it twice.
+        let connect = || async {
             let safe_socket_path = short_socket_path(&sockpath)?;
-            match async_net::unix::UnixStream::connect(&safe_socket_path)
+            async_net::unix::UnixStream::connect(&safe_socket_path)
                 .on_timeout(Duration::from_millis(100), || {
                     Err(std::io::Error::new(
                         TimedOut,
@@ -151,8 +164,17 @@ impl Hoist {
                     ))
                 })
                 .await
-            {
-                Ok(uds) => break uds,
+        };
+
+        let uds_a = loop {
+            #[cfg(feature = "circuit")]
+            let fut = futures::future::try_join(connect(), connect());
+            #[cfg(not(feature = "circuit"))]
+            let fut = connect();
+            match fut.await {
+                // We got our connections.
+                Ok(conns) => break conns,
+                // There was an error connecting that's likely due to the daemon not being ready yet.
                 Err(e)
                     if matches!(e.kind(), ErrorKind::NotFound | ErrorKind::ConnectionRefused) =>
                 {
@@ -163,6 +185,7 @@ impl Hoist {
                         );
                     }
                 }
+                // There was an unknown error connecting.
                 Err(e) => {
                     bail!(
                         "unexpected error while trying to connect to ascendd socket at {}: {e}",
@@ -171,12 +194,21 @@ impl Hoist {
                 }
             }
         };
-        let (mut rx, mut tx) = uds.split();
+        #[cfg(feature = "circuit")]
+        let (uds_a, uds_b) = uds_a;
+
+        let (mut rx_a, mut tx_a) = uds_a.split();
+        #[cfg(feature = "circuit")]
+        let (mut rx_b, mut tx_b) = uds_b.split();
 
         run_ascendd_connection(
             &self,
-            &mut rx,
-            &mut tx,
+            &mut rx_a,
+            &mut tx_a,
+            #[cfg(feature = "circuit")]
+            &mut rx_b,
+            #[cfg(feature = "circuit")]
+            &mut tx_b,
             Some(label),
             sockpath.to_str().context("Non-unicode in ascendd path")?.to_owned(),
         )
@@ -198,13 +230,30 @@ impl super::OvernetInstance for Hoist {
     }
 }
 
-fn run_ascendd_connection<'a>(
+#[cfg(feature = "circuit")]
+async fn run_ascendd_connection<'a>(
     hoist: &Hoist,
+    rx_link: &'a mut (dyn AsyncRead + Unpin + Send),
+    tx_link: &'a mut (dyn AsyncWrite + Unpin + Send),
     rx: &'a mut (dyn AsyncRead + Unpin + Send),
     tx: &'a mut (dyn AsyncWrite + Unpin + Send),
     label: Option<String>,
     sockpath: String,
-) -> impl Future<Output = Result<(), Error>> + 'a {
+) -> Result<(), Error> {
+    let node = hoist.node.clone();
+    let conn_fut = async move {
+        tx.write_all(&CIRCUIT_ID).await?;
+        circuit::multi_stream::multi_stream_node_connection_to_async(
+            node.circuit_node(),
+            rx,
+            tx,
+            false,
+            circuit::Quality::LOCAL_SOCKET,
+        )
+        .await
+        .map_err(Error::from)
+    };
+
     let config = Box::new(move || {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
@@ -215,7 +264,40 @@ fn run_ascendd_connection<'a>(
         ))
     });
 
-    run_stream_link(hoist.node.clone(), rx, tx, Default::default(), config)
+    let link_fut =
+        run_stream_link(hoist.node.clone(), None, rx_link, tx_link, Default::default(), config);
+
+    futures::pin_mut!(conn_fut);
+    futures::pin_mut!(link_fut);
+
+    match futures::future::select(conn_fut, link_fut).await {
+        Either::Left((res, link_fut)) => {
+            tracing::warn!("Circuit connection terminated: {:?}", res);
+            link_fut.await
+        }
+        Either::Right((res, _)) => res,
+    }
+}
+
+#[cfg(not(feature = "circuit"))]
+async fn run_ascendd_connection<'a>(
+    hoist: &Hoist,
+    rx_link: &'a mut (dyn AsyncRead + Unpin + Send),
+    tx_link: &'a mut (dyn AsyncWrite + Unpin + Send),
+    label: Option<String>,
+    sockpath: String,
+) -> Result<(), Error> {
+    let config = Box::new(move || {
+        Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
+            fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
+                path: Some(sockpath.clone()),
+                connection_label: label.clone(),
+                ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
+            },
+        ))
+    });
+
+    run_stream_link(hoist.node.clone(), None, rx_link, tx_link, Default::default(), config).await
 }
 
 /// Retry a future until it succeeds or retries run out.
@@ -284,7 +366,8 @@ async fn handle_controller_request(
             fidl_fuchsia_overnet_protocol::Empty {},
         ))
     });
-    if let Err(e) = run_stream_link(node, &mut rx, &mut tx, Default::default(), config).await {
+    if let Err(e) = run_stream_link(node, None, &mut rx, &mut tx, Default::default(), config).await
+    {
         tracing::warn!("Socket link failed: {:#?}", e);
     }
     Ok(())

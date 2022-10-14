@@ -381,6 +381,7 @@ mod tests {
             });
             stream_link::run_stream_link(
                 h1_hoist.node(),
+                None,
                 &mut rx1,
                 &mut tx2,
                 Default::default(),
@@ -397,6 +398,7 @@ mod tests {
             });
             stream_link::run_stream_link(
                 hoist2_node,
+                None,
                 &mut rx2,
                 &mut tx1,
                 Default::default(),

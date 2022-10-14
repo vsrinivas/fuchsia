@@ -33,6 +33,9 @@ const ASCENDD_MAX_CONCURRENT_TASKS: usize = 5;
 #[cfg(not(target_os = "fuchsia"))]
 pub use hoist::default_ascendd_path;
 
+#[cfg(not(target_os = "fuchsia"))]
+use hoist::CIRCUIT_ID;
+
 #[derive(FromArgs, Default)]
 /// daemon to lift a non-Fuchsia device into Overnet.
 pub struct Opt {
@@ -90,24 +93,43 @@ impl Future for Ascendd {
 
 /// Run an ascendd server on the given stream IOs identified by the given labels
 /// and paths, to completion.
-pub fn run_stream<'a>(
+pub async fn run_stream<'a>(
     node: Arc<overnet_core::Router>,
     rx: &'a mut (dyn AsyncRead + Unpin + Send),
     tx: &'a mut (dyn AsyncWrite + Unpin + Send),
     label: Option<String>,
     path: Option<String>,
-) -> impl Future<Output = Result<(), Error>> + 'a {
-    let config = Box::new(move || {
-        Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddServer(
-            fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
-                path: path.clone(),
-                connection_label: label.clone(),
-                ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
-            },
-        ))
-    });
+) -> Result<(), Error> {
+    let mut id = [0; 8];
+    rx.read_exact(&mut id).await?;
 
-    run_stream_link(node, rx, tx, Default::default(), config)
+    if id == CIRCUIT_ID {
+        #[cfg(not(feature = "circuit"))]
+        let ret = Err(format_err!("Circuit-switched interconnect disabled"));
+        #[cfg(feature = "circuit")]
+        let ret = circuit::multi_stream::multi_stream_node_connection_to_async(
+            node.circuit_node(),
+            rx,
+            tx,
+            true,
+            circuit::Quality::LOCAL_SOCKET,
+        )
+        .await
+        .map_err(Error::from);
+        ret
+    } else {
+        let config = Box::new(move || {
+            Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddServer(
+                fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
+                    path: path.clone(),
+                    connection_label: label.clone(),
+                    ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
+                },
+            ))
+        });
+
+        run_stream_link(node, Some(id), rx, tx, Default::default(), config).await
+    }
 }
 
 async fn bind_listener(

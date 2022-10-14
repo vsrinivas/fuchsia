@@ -150,6 +150,16 @@ pub fn forces_stdout_log(subcommand: &Option<SubCommand>) -> bool {
     false
 }
 
+/// Whether the given subcommand starts the daemon
+pub fn is_daemon(subcommand: &Option<SubCommand>) -> bool {
+    matches!(
+        subcommand,
+        Some(SubCommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
+            subcommand: ffx_daemon_plugin_sub_command::SubCommand::FfxDaemonStart(_),
+        }))
+    )
+}
+
 /// Whether the given subcommand is actually the schema command, which we need to override
 pub fn is_schema(subcommand: &Option<SubCommand>) -> bool {
     matches!(subcommand, Some(SubCommand::FfxSchema(_)))

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
+import("//src/connectivity/overnet/enable_circuit.gni")
 
 if (is_host) {
   import("//build/rust/rustc_binary.gni")
@@ -36,5 +37,10 @@ if (is_host) {
       "src/lib.rs",
       "src/serial.rs",
     ]
+
+    if (enable_circuit) {
+      deps += [ "//src/connectivity/overnet/lib/circuit" ]
+      features = [ "circuit" ]
+    }
   }
 }

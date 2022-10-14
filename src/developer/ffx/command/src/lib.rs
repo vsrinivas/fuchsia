@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use errors::{ffx_error, ResultExt};
 use ffx_core::Injector;
 use ffx_daemon_proxy::Injection;
-use ffx_lib_args::{forces_stdout_log, from_env, is_schema, redact_arg_values, Ffx};
+use ffx_lib_args::{forces_stdout_log, from_env, is_daemon, is_schema, redact_arg_values, Ffx};
 use ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc};
 use fuchsia_async::TimeoutExt;
 use hoist::Hoist;
@@ -48,6 +48,8 @@ pub async fn report_user_error(err: &anyhow::Error) -> anyhow::Result<()> {
     Ok(())
 }
 
+const CIRCUIT_REFRESH_RATE: std::time::Duration = std::time::Duration::from_millis(500);
+
 pub async fn run() -> Result<()> {
     let app: Ffx = from_env();
 
@@ -64,6 +66,9 @@ pub async fn run() -> Result<()> {
         }
     };
 
+    let router_interval =
+        if is_daemon(&app.subcommand) { Some(CIRCUIT_REFRESH_RATE) } else { None };
+
     // todo(fxb/108692) we should get this in the environment context instead and leave the global
     // hoist() unset for ffx but I'm leaving the last couple uses of it in place for the sake of
     // avoiding complicated merge conflicts with isolation. Once we're ready for that, this should be
@@ -71,8 +76,11 @@ pub async fn run() -> Result<()> {
     let cache_path = context.get_cache_path()?;
     std::fs::create_dir_all(&cache_path)?;
     let hoist_cache_dir = tempfile::tempdir_in(&cache_path)?;
-    let hoist = hoist::init_hoist_with(Hoist::with_cache_dir(hoist_cache_dir.path())?)
-        .context("initializing hoist")?;
+    let hoist = hoist::init_hoist_with(Hoist::with_cache_dir_maybe_router(
+        hoist_cache_dir.path(),
+        router_interval,
+    )?)
+    .context("initializing hoist")?;
 
     let log_to_stdio = forces_stdout_log(&app.subcommand);
     ffx_config::logging::init(log_to_stdio || app.verbose, !log_to_stdio).await?;

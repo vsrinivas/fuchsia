@@ -15,6 +15,7 @@ use {
 
 pub fn run_stream_link<'a>(
     node: Arc<Router>,
+    pre_received: Option<[u8; 8]>,
     rx_bytes: &'a mut (dyn AsyncRead + Unpin + Send),
     tx_bytes: &'a mut (dyn AsyncWrite + Unpin + Send),
     introduction_facts: LinkIntroductionFacts,
@@ -35,6 +36,10 @@ pub fn run_stream_link<'a>(
             }
         },
         async move {
+            if let Some(pre_received) = pre_received {
+                deframer_write.write(&pre_received).await?;
+            }
+
             let mut buf = [0u8; 4096];
             loop {
                 let n = rx_bytes.read(&mut buf).await?;
@@ -156,6 +161,7 @@ mod test {
                 async move {
                     let run_client = run_stream_link(
                         rtr_client_fut,
+                        None,
                         &mut c2s_rx,
                         &mut s2c_tx,
                         LinkIntroductionFacts { you_are: None },
@@ -167,6 +173,7 @@ mod test {
                 async move {
                     let run_server = run_stream_link(
                         rtr_server_fut,
+                        None,
                         &mut s2c_rx,
                         &mut c2s_tx,
                         LinkIntroductionFacts { you_are: None },
