@@ -11,6 +11,7 @@ group("device_tests") {
     ":virtio_gpu_test",
     ":virtio_input_test",
     ":virtio_magma_test",
+    ":virtio_net_test",
   ]
 }
 
@@ -153,5 +154,29 @@ source_set("virtio_magma_test") {
     "//src/lib/fsl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
+  ]
+}
+
+source_set("virtio_net_test") {
+  testonly = true
+
+  sources = [ "virtio_net_test.cc" ]
+
+  deps = [
+    ":test_with_device",
+    ":virtio_queue_fake",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_hlcpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/connectivity/lib/network-device/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/virtio",
   ]
 }

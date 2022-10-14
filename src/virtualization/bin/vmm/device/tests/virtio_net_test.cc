@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/network/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <fuchsia/net/virtualization/cpp/fidl_test_base.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
@@ -10,14 +11,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fpromise/bridge.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/trace-provider/provider.h>
 #include <zircon/device/ethernet.h>
 
 #include <virtio/net.h>
 
-#include "fuchsia/logger/cpp/fidl.h"
-#include "lib/fpromise/single_threaded_executor.h"
 #include "src/connectivity/lib/network-device/cpp/network_device_client.h"
 #include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
