@@ -13,7 +13,7 @@ use {
     ::gcs::client::{DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, Throttle},
     anyhow::{anyhow, bail, Context, Result},
     camino::Utf8Path,
-    chrono::{TimeZone, Utc},
+    chrono::{DateTime, TimeZone, Utc},
     fuchsia_hyper::new_https_client,
     fuchsia_repo::{
         repo_builder::RepoBuilder,
@@ -187,12 +187,14 @@ where
                 repo_blobs_uri.clone(),
             )?) as Box<dyn RepoProvider>;
 
+            let metadata_current_time = Utc::now();
             if let Ok(()) = fetch_package_repository_from_backend(
                 local_dir,
                 repo_keys_uri.clone(),
                 repo_metadata_uri.clone(),
                 repo_blobs_uri.clone(),
                 backend,
+                metadata_current_time,
                 progress,
                 ui,
             )
@@ -217,6 +219,7 @@ where
                 repo_metadata_uri.clone(),
                 repo_blobs_uri.clone(),
                 backend,
+                metadata_current_time,
                 progress,
                 ui,
             )
@@ -237,6 +240,7 @@ where
                 repo_metadata_uri,
                 repo_blobs_uri,
                 backend,
+                Utc::now(),
                 progress,
                 ui,
             )
@@ -259,6 +263,7 @@ async fn fetch_package_repository_from_backend<'a, F, I>(
     repo_metadata_uri: Url,
     repo_blobs_uri: Url,
     backend: Box<dyn RepoProvider>,
+    metadata_current_time: DateTime<Utc>,
     progress: &'a F,
     ui: &'a I,
 ) -> Result<()>
@@ -372,7 +377,10 @@ where
     // generate the correct metadata version.
     repo_client.update_with_start_time(&start_time).await?;
 
+    // Refresh the metadata and generate all metadata expirations relative to the
+    // `metadata_current_time`.
     RepoBuilder::from_client(&repo_client, &repo_keys)
+        .current_time(metadata_current_time)
         .time_versioning(true)
         .refresh_metadata(true)
         .commit()
@@ -523,6 +531,11 @@ mod tests {
             blobs_url.clone(),
         );
 
+        // Use a fixed metadata current time so we can validate we correctly generated the timestamp
+        // version.
+        let metadata_timestamp_version = 100;
+        let metadata_current_time = Utc.timestamp(metadata_timestamp_version as i64, 0);
+
         // Download the repository metadata.
         let ui = structured_ui::MockUi::new();
         fetch_package_repository_from_backend(
@@ -531,6 +544,7 @@ mod tests {
             metadata_url,
             blobs_url,
             Box::new(remote_repo),
+            metadata_current_time,
             &|_, _| Ok(ProgressResponse::Continue),
             &ui,
         )
@@ -540,14 +554,22 @@ mod tests {
         // Make sure we can resolve the metadata.
         let local_repo = PmRepository::new(local_repo_dir);
         let mut repo_client = RepoClient::from_trusted_remote(&local_repo).await.unwrap();
-        repo_client.update().await.unwrap();
+        repo_client.update_with_start_time(&metadata_current_time).await.unwrap();
 
         // The metadata should have been refreshed.
-        let timestamp = Utc::now().timestamp().try_into().unwrap();
         assert_eq!(repo_client.database().trusted_root().version(), 1);
-        assert!(repo_client.database().trusted_targets().unwrap().version() >= timestamp);
-        assert!(repo_client.database().trusted_snapshot().unwrap().version() >= timestamp);
-        assert!(repo_client.database().trusted_timestamp().unwrap().version() >= timestamp);
+        assert_eq!(
+            repo_client.database().trusted_targets().unwrap().version(),
+            metadata_timestamp_version
+        );
+        assert_eq!(
+            repo_client.database().trusted_snapshot().unwrap().version(),
+            metadata_timestamp_version
+        );
+        assert_eq!(
+            repo_client.database().trusted_timestamp().unwrap().version(),
+            metadata_timestamp_version
+        );
 
         // Make sure we downloaded all the blobs.
         for blob in [
