@@ -3412,7 +3412,7 @@ void brcmf_if_connect_req(net_device* ndev, const wlan_fullmac_connect_req_t* re
     return;
   }
 
-  wlan_fullmac_connect_confirm_t result;
+  wlan_fullmac_connect_confirm_t result = {};
   zx_status_t status;
   memcpy(result.peer_sta_address, req->selected_bss.bssid, sizeof(req->selected_bss.bssid));
 
