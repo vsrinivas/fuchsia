@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <drm_fourcc.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl_test_base.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl_test_base.h>
@@ -17,7 +18,6 @@
 #include <fbl/algorithm.h>
 #include <virtio/wl.h>
 
-#include "fuchsia/logger/cpp/fidl.h"
 #include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
 
