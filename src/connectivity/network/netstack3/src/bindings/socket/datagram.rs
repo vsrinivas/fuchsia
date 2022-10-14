@@ -1988,7 +1988,8 @@ where
                 value: _,
                 responder,
             } => {
-                responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                error!("TODO(https://fxbug.dev/107644): implement IPV6_MULTICAST_IF socket option");
+                responder_send!(responder, &mut Ok(()));
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetIpv6MulticastInterface {
                 responder,
