@@ -7,6 +7,11 @@
         runner: "elf",
         binary: "bin/bouncing_box",
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+        },
+    ],
     use: [
         {
             protocol: [
@@ -14,6 +19,13 @@
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
             ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.ui.app.ViewProvider",
+            from: "self",
+            to: "parent",
         },
     ],
 }
