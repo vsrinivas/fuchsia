@@ -14,7 +14,7 @@ namespace modular {
 
 AnnotationControllerImpl::AnnotationControllerImpl(std::string story_id,
                                                    SessionStorage* const session_storage)
-    : story_id_(std::move(story_id)), session_storage_(session_storage) {
+    : story_id_(std::move(story_id)), session_storage_(session_storage), weak_factory_(this) {
   FX_DCHECK(session_storage_ != nullptr);
 }
 
@@ -129,28 +129,46 @@ void AnnotationControllerImpl::GetAnnotations(GetAnnotationsCallback callback) {
 }
 
 void AnnotationControllerImpl::WatchAnnotations(WatchAnnotationsCallback callback) {
-  if (!watch_annotations_called_) {
-    watch_annotations_called_ = true;
-    GetAnnotations(std::move(reinterpret_cast<GetAnnotationsCallback&>(callback)));
+  if (!have_pending_update_) {
+    // Wait for a new update.
+    session_storage_->SubscribeAnnotationsUpdated(
+        [story_id = story_id_, callback = std::move(callback)](
+            std::string updated_story_id,
+            const std::vector<fuchsia::modular::Annotation>& annotations,
+            const std::set<std::string>& /*annotation_keys_added*/,
+            const std::set<std::string>& /*annotation_keys_deleted*/) {
+          if (updated_story_id != story_id) {
+            return WatchInterest::kContinue;
+          }
+          fuchsia::element::AnnotationController_WatchAnnotations_Response response{
+              modular::annotations::ToElementAnnotations(annotations)};
+          fuchsia::element::AnnotationController_WatchAnnotations_Result result{};
+          result.set_response(std::move(response));
+          callback(std::move(result));
+          return WatchInterest::kStop;
+        });
     return;
   }
 
+  // Return results to the caller immediately.
+  have_pending_update_ = false;
+  GetAnnotations(std::move(reinterpret_cast<GetAnnotationsCallback&>(callback)));
+
+  // Listen for new updates and set the dirty bit appropriately.
   session_storage_->SubscribeAnnotationsUpdated(
-      [story_id = story_id_, callback = std::move(callback)](
+      [weak_this = weak_factory_.GetWeakPtr()](
           std::string updated_story_id,
           const std::vector<fuchsia::modular::Annotation>& annotations,
           const std::set<std::string>& /*annotation_keys_added*/,
           const std::set<std::string>& /*annotation_keys_deleted*/) {
-        if (updated_story_id != story_id) {
+        if (!weak_this)
+          return WatchInterest::kStop;
+        if (updated_story_id != weak_this->story_id_) {
           return WatchInterest::kContinue;
         }
-
-        fuchsia::element::AnnotationController_WatchAnnotations_Response response{
-            modular::annotations::ToElementAnnotations(annotations)};
-        fuchsia::element::AnnotationController_WatchAnnotations_Result result{};
-        result.set_response(std::move(response));
-        callback(std::move(result));
+        weak_this->have_pending_update_ = true;
         return WatchInterest::kStop;
       });
 }
+
 }  // namespace modular

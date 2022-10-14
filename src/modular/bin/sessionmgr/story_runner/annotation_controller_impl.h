@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 
 namespace modular {
@@ -32,10 +33,10 @@ class AnnotationControllerImpl : public fuchsia::element::AnnotationController {
   void WatchAnnotations(WatchAnnotationsCallback callback) override;
 
  private:
-  // When false, |WatchAnnotations| returns immediately with the current annotations.
-  // Set to true after the initial call to |WatchAnnotations|, indicating that subsequent
-  // calls will return only when the annotations are updated.
-  bool watch_annotations_called_{false};
+  // When true, |WatchAnnotations| returns immediately with the current annotations.
+  // It is set to false after |WatchAnnotations| returns, and set to true when
+  // annotations are updated.
+  bool have_pending_update_{true};
 
   // The ID of the story containing the element associated with this annotation controller.
   std::string story_id_;
@@ -44,6 +45,7 @@ class AnnotationControllerImpl : public fuchsia::element::AnnotationController {
 
   fidl::BindingSet<fuchsia::element::AnnotationController> bindings_;
 
+  fxl::WeakPtrFactory<AnnotationControllerImpl> weak_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AnnotationControllerImpl);
 };
 

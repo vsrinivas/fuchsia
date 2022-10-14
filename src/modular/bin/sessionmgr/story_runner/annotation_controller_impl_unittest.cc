@@ -236,6 +236,7 @@ TEST_F(AnnotationControllerImplTest, WatchAnnotationsUpdates) {
   static constexpr auto kTestAnnotationValue_1 = "test_annotation_value_1";
   static constexpr auto kTestAnnotationKey_2 = "test_annotation_key_2";
   static constexpr auto kTestAnnotationValue_2 = "test_annotation_value_2";
+  static constexpr auto kTestAnnotationValue_3 = "test_annotation_value_3";
 
   std::vector<fuchsia::modular::Annotation> modular_annotations;
   auto initial_annotation = fuchsia::modular::Annotation{
@@ -266,46 +267,87 @@ TEST_F(AnnotationControllerImplTest, WatchAnnotationsUpdates) {
   EXPECT_THAT(first_watch_annotations,
               ElementsAre(element::annotations::AnnotationEq(ByRef(first_annotation))));
 
-  // Start watching for annotations.
-  bool second_watch_called{false};
-  std::vector<fuchsia::element::Annotation> second_watch_annotations;
-  annotation_controller->WatchAnnotations(
-      [&](fuchsia::element::AnnotationController_WatchAnnotations_Result result) {
-        // Ensure this callback is only called once.
-        ASSERT_FALSE(second_watch_called);
-        second_watch_called = true;
-        ASSERT_TRUE(result.is_response());
-        second_watch_annotations = std::move(result.response().annotations);
-      });
+  {  // Start watching for annotations.
+    bool second_watch_called{false};
+    std::vector<fuchsia::element::Annotation> second_watch_annotations;
+    annotation_controller->WatchAnnotations(
+        [&](fuchsia::element::AnnotationController_WatchAnnotations_Result result) {
+          // Ensure this callback is only called once.
+          ASSERT_FALSE(second_watch_called);
+          second_watch_called = true;
+          ASSERT_TRUE(result.is_response());
+          second_watch_annotations = std::move(result.response().annotations);
+        });
 
-  // Add another annotation.
-  std::vector<fuchsia::modular::Annotation> new_annotations;
-  auto new_annotation = fuchsia::modular::Annotation{
-      .key = kTestAnnotationKey_2,
-      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
-          fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue_2))};
-  new_annotations.push_back(fidl::Clone(new_annotation));
+    // Add another annotation.
+    std::vector<fuchsia::modular::Annotation> new_annotations;
+    auto new_annotation = fuchsia::modular::Annotation{
+        .key = kTestAnnotationKey_2,
+        .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+            fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue_2))};
+    new_annotations.push_back(fidl::Clone(new_annotation));
 
-  // Annotate the story.
-  bool done{false};
-  auto annotations_to_add = modular::annotations::ToElementAnnotations(new_annotations);
-  annotation_controller->UpdateAnnotations(
-      std::move(annotations_to_add),
-      /*annotations_to_delete=*/{},
-      [&](fuchsia::element::AnnotationController_UpdateAnnotations_Result result) {
-        EXPECT_FALSE(result.is_err());
-        done = true;
-      });
+    bool done{false};
+    auto annotations_to_add = modular::annotations::ToElementAnnotations(new_annotations);
+    annotation_controller->UpdateAnnotations(
+        std::move(annotations_to_add),
+        /*annotations_to_delete=*/{},
+        [&](fuchsia::element::AnnotationController_UpdateAnnotations_Result result) {
+          EXPECT_FALSE(result.is_err());
+          done = true;
+        });
 
-  RunLoopUntil([&] { return done; });
-  // WatchAnnotations should have received the new annotations.
-  RunLoopUntil([&] { return second_watch_called; });
+    RunLoopUntil([&] { return done; });
+    // WatchAnnotations should have received the new annotations.
+    RunLoopUntil([&] { return second_watch_called; });
 
-  const fuchsia::element::Annotation second_annotation =
-      modular::annotations::ToElementAnnotation(new_annotation);
-  EXPECT_THAT(second_watch_annotations,
-              UnorderedElementsAre(element::annotations::AnnotationEq(ByRef(first_annotation)),
-                                   element::annotations::AnnotationEq(ByRef(second_annotation))));
+    const fuchsia::element::Annotation second_annotation =
+        modular::annotations::ToElementAnnotation(new_annotation);
+    EXPECT_THAT(second_watch_annotations,
+                UnorderedElementsAre(element::annotations::AnnotationEq(ByRef(first_annotation)),
+                                     element::annotations::AnnotationEq(ByRef(second_annotation))));
+  }
+
+  {  // Change the annotations one more time, but do so before calling WatchAnnotations().
+    // The call should still return with the change update.
+    std::vector<fuchsia::modular::Annotation> new_annotations;
+    auto new_annotation = fuchsia::modular::Annotation{
+        .key = kTestAnnotationKey_2,
+        .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+            fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue_3))};
+    new_annotations.push_back(fidl::Clone(new_annotation));
+
+    bool done{false};
+    auto annotations_to_add = modular::annotations::ToElementAnnotations(new_annotations);
+    annotation_controller->UpdateAnnotations(
+        std::move(annotations_to_add),
+        /*annotations_to_delete=*/{},
+        [&](fuchsia::element::AnnotationController_UpdateAnnotations_Result result) {
+          EXPECT_FALSE(result.is_err());
+          done = true;
+        });
+    RunLoopUntil([&] { return done; });
+
+    bool third_watch_called{false};
+    std::vector<fuchsia::element::Annotation> third_watch_annotations;
+    annotation_controller->WatchAnnotations(
+        [&](fuchsia::element::AnnotationController_WatchAnnotations_Result result) {
+          // Ensure this callback is only called once.
+          ASSERT_FALSE(third_watch_called);
+          third_watch_called = true;
+          ASSERT_TRUE(result.is_response());
+          third_watch_annotations = std::move(result.response().annotations);
+        });
+
+    // WatchAnnotations should have received the new annotations.
+    RunLoopUntil([&] { return third_watch_called; });
+
+    const fuchsia::element::Annotation third_annotation =
+        modular::annotations::ToElementAnnotation(new_annotation);
+    EXPECT_THAT(third_watch_annotations,
+                UnorderedElementsAre(element::annotations::AnnotationEq(ByRef(first_annotation)),
+                                     element::annotations::AnnotationEq(ByRef(third_annotation))));
+  }
 }
 }  // namespace
 }  // namespace modular
