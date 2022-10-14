@@ -391,7 +391,7 @@ int main(int argv, char** argc) {
         return session.status_value();
       }
       workers.emplace_back([&, stdio = session.value().TakeChannel()]() mutable {
-        RunSerialConsole(launcher, vfs, root, std::move(stdio), args.term, {});
+        RunSerialConsole(launcher, vfs, root, std::move(stdio), "TERM=xterm-256color", {});
       });
       return ZX_OK;
     }();
