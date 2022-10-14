@@ -24,6 +24,7 @@ use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Peered as _};
 use futures::StreamExt as _;
+use log::error;
 use net_types::{
     ip::{IpAddress, IpVersionMarker, Ipv4, Ipv6},
     SpecifiedAddr, ZonedAddr,
@@ -764,7 +765,8 @@ where
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
             }
             fposix_socket::StreamSocketRequest::SetKeepAlive { value: _, responder } => {
-                responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                error!("TODO(https://fxbug.dev/110483): implement the SO_KEEPALIVE socket option");
+                responder_send!(responder, &mut Ok(()));
             }
             fposix_socket::StreamSocketRequest::GetKeepAlive { responder } => {
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
@@ -988,7 +990,8 @@ where
                 value_secs: _,
                 responder,
             } => {
-                responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                error!("TODO(https://fxbug.dev/110483): implement the TCP_KEEPIDLE socket option");
+                responder_send!(responder, &mut Ok(()));
             }
             fposix_socket::StreamSocketRequest::GetTcpKeepAliveIdle { responder } => {
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
@@ -997,13 +1000,15 @@ where
                 value_secs: _,
                 responder,
             } => {
-                responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                error!("TODO(https://fxbug.dev/110483): implement the TCP_KEEPINTVL socket option");
+                responder_send!(responder, &mut Ok(()));
             }
             fposix_socket::StreamSocketRequest::GetTcpKeepAliveInterval { responder } => {
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
             }
             fposix_socket::StreamSocketRequest::SetTcpKeepAliveCount { value: _, responder } => {
-                responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                error!("TODO(https://fxbug.dev/110483): implement the TCP_KEEPCNT socket option");
+                responder_send!(responder, &mut Ok(()));
             }
             fposix_socket::StreamSocketRequest::GetTcpKeepAliveCount { responder } => {
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
