@@ -83,7 +83,7 @@ const DEFAULT_MAXIMUM_SEGMENT_SIZE: u32 = 536;
 
 /// Timer ID for TCP connections.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct TimerId(MaybeClosedConnectionid, IpVersion);
+pub struct TimerId(MaybeClosedConnectionId, IpVersion);
 
 /// Non-sync context for TCP.
 ///
@@ -210,7 +210,7 @@ struct TcpSocketSpec<Ip, Device, NonSyncContext>(PhantomData<(Ip, Device, NonSyn
 
 impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> SocketMapStateSpec for TcpSocketSpec<I, D, C> {
     type ListenerId = MaybeListenerId;
-    type ConnId = MaybeClosedConnectionid;
+    type ConnId = MaybeClosedConnectionId;
 
     type ListenerState = MaybeListener<C::ReturnedBuffers>;
     type ConnState =
@@ -221,7 +221,7 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> SocketMapStateSpec for TcpSo
     type AddrVecTag = SocketAddrTypeTag<()>;
 
     type ListenerAddrState = MaybeListenerId;
-    type ConnAddrState = MaybeClosedConnectionid;
+    type ConnAddrState = MaybeClosedConnectionId;
 }
 
 impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext>
@@ -272,7 +272,7 @@ impl<A: IpAddress, D, LI> Tagged<ListenerAddr<A, D, LI>> for MaybeListenerId {
     }
 }
 
-impl<A: IpAddress, D, LI, RI> Tagged<ConnAddr<A, D, LI, RI>> for MaybeClosedConnectionid {
+impl<A: IpAddress, D, LI, RI> Tagged<ConnAddr<A, D, LI, RI>> for MaybeClosedConnectionId {
     type Tag = SocketAddrTypeTag<()>;
     fn tag(&self, address: &ConnAddr<A, D, LI, RI>) -> Self::Tag {
         (address, ()).into()
@@ -414,7 +414,7 @@ pub struct BoundId(usize);
 pub struct ListenerId(usize);
 /// The ID to a connection socket that might have been defunct.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct MaybeClosedConnectionid(usize);
+pub struct MaybeClosedConnectionId(usize);
 /// The ID to a connection socket that has never been closed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ConnectionId(usize);
@@ -475,15 +475,15 @@ impl SocketMapAddrStateSpec for MaybeListenerId {
     }
 }
 
-impl SocketMapAddrStateSpec for MaybeClosedConnectionid {
-    type Id = MaybeClosedConnectionid;
+impl SocketMapAddrStateSpec for MaybeClosedConnectionId {
+    type Id = MaybeClosedConnectionId;
     type SharingState = ();
 
-    fn new((): &(), id: MaybeClosedConnectionid) -> Self {
+    fn new((): &(), id: MaybeClosedConnectionId) -> Self {
         id
     }
 
-    fn remove_by_id(&mut self, id: MaybeClosedConnectionid) -> RemoveResult {
+    fn remove_by_id(&mut self, id: MaybeClosedConnectionId) -> RemoveResult {
         assert_eq!(self, &id);
         RemoveResult::IsLast
     }
@@ -491,7 +491,7 @@ impl SocketMapAddrStateSpec for MaybeClosedConnectionid {
     fn try_get_dest<'a, 'b>(
         &'b mut self,
         (): &'a (),
-    ) -> Result<&'b mut Vec<MaybeClosedConnectionid>, IncompatibleError> {
+    ) -> Result<&'b mut Vec<MaybeClosedConnectionId>, IncompatibleError> {
         Err(IncompatibleError)
     }
 }
@@ -543,8 +543,8 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
     fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr, Self::DeviceId>;
     fn get_listener_info(&self, id: ListenerId) -> BoundInfo<I::Addr, Self::DeviceId>;
     fn get_connection_info(&self, id: ConnectionId) -> ConnectionInfo<I::Addr, Self::DeviceId>;
-    fn do_send(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionid);
-    fn handle_timer(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionid);
+    fn do_send(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionId);
+    fn handle_timer(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionId);
 }
 
 impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<I, C> for SC {
@@ -844,7 +844,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
         .into()
     }
 
-    fn do_send(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionid) {
+    fn do_send(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionId) {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
             if let Some((conn, (), addr)) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id) {
                 do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx);
@@ -852,7 +852,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
         })
     }
 
-    fn handle_timer(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionid) {
+    fn handle_timer(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionId) {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
             if let Some((conn, (), addr)) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id) {
                 do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx);
@@ -866,7 +866,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
 }
 
 fn do_send_inner<I, SC, C>(
-    conn_id: MaybeClosedConnectionid,
+    conn_id: MaybeClosedConnectionId,
     conn: &mut Connection<
         I,
         SC::DeviceId,
@@ -1111,7 +1111,7 @@ where
     assert_eq!(ctx.schedule_timer_instant(poll_send_at, TimerId(conn_id, I::VERSION)), None);
     // This conversion Ok because `conn_id` is newly created; No one should
     // have called close on it.
-    let MaybeClosedConnectionid(id) = conn_id;
+    let MaybeClosedConnectionId(id) = conn_id;
     Ok(ConnectionId(id))
 }
 
@@ -1276,7 +1276,7 @@ pub fn get_connection_info<I: Ip, C: NonSyncContext>(
 /// - A retransmission timer fires.
 /// - An ack received from peer so that our send window is enlarged.
 /// - The user puts data into the buffer and we are notified.
-pub fn do_send<I, C>(mut sync_ctx: &SyncCtx<C>, ctx: &mut C, conn_id: MaybeClosedConnectionid)
+pub fn do_send<I, C>(mut sync_ctx: &SyncCtx<C>, ctx: &mut C, conn_id: MaybeClosedConnectionId)
 where
     I: IpExt,
     C: NonSyncContext,
@@ -1323,7 +1323,7 @@ impl Into<usize> for MaybeListenerId {
     }
 }
 
-impl From<usize> for MaybeClosedConnectionid {
+impl From<usize> for MaybeClosedConnectionId {
     fn from(x: usize) -> Self {
         Self(x)
     }
@@ -1336,14 +1336,14 @@ impl Into<usize> for ListenerId {
     }
 }
 
-impl Into<usize> for MaybeClosedConnectionid {
+impl Into<usize> for MaybeClosedConnectionId {
     fn into(self) -> usize {
         let Self(x) = self;
         x
     }
 }
 
-impl From<ConnectionId> for MaybeClosedConnectionid {
+impl From<ConnectionId> for MaybeClosedConnectionId {
     fn from(ConnectionId(id): ConnectionId) -> Self {
         Self(id)
     }
