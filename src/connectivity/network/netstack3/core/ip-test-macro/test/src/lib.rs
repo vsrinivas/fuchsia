@@ -135,7 +135,7 @@ mod test {
         assert_eq!(0, simple_specialized_for_ip::<I>());
     }
 
-    mod test_case {
+    mod real_test_case {
         use ::test_case::test_case;
 
         use super::*;
@@ -172,6 +172,23 @@ mod test {
         #[test_case(produce_default_addr::<I>)]
         fn test_with_i_in_other_type_trait_bounds<I: Ip, F: FnOnce() -> I::Addr>(f: F) {
             let _addr = f();
+        }
+    }
+
+    mod fake_test_case {
+        use ::fake_test_case::test_case;
+
+        use super::*;
+
+        /// The #[ip_test] macro can't distinguish between the real #[test_case]
+        /// macro and the fake one used here. Use the fake one, which inserts
+        /// the test name in the argument list, to verify that the test name
+        /// is being passed along with the arguments by the #[ip_test] macro.
+        #[ip_test]
+        #[test_case(123, 456; "name_from_macro")]
+        fn case_with_name<I: Ip>(a: u8, b: u16, name: &str) {
+            assert_eq!((a, b), (123, 456));
+            assert_eq!(name, "name_from_macro");
         }
     }
 }

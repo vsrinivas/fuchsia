@@ -4,17 +4,34 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_macro.gni")
 
 rustc_test("ip-test-macro_test") {
+  name = "ip-test-macro-integration-test"
   version = "0.1.0"
   edition = "2021"
 
   deps = [
+    ":fake-test-case",
     "//src/connectivity/network/netstack3/core/ip-test-macro",
     "//third_party/rust_crates:test-case",
   ]
 
   sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+rustc_macro("fake-test-case") {
+  version = "0.1.0"
+  edition = "2021"
+  deps = [
+    "//third_party/rust_crates:quote",
+    "//third_party/rust_crates:syn",
+  ]
+
+  sources = [ "fake_test_case/lib.rs" ]
+  source_root = "fake_test_case/lib.rs"
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

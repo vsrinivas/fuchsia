@@ -126,10 +126,9 @@ fn ip_test_inner(
             .iter()
             .cloned()
             .map(|mut attr| {
-                let parser = parse_with_ignoring_trailing(
-                    Punctuated::<Expr, Token![,]>::parse_separated_nonempty,
-                );
-                if let Ok(mut punctuated) = attr.parse_args_with(parser) {
+                let parser =
+                    parse_prefix_suffix(Punctuated::<Expr, Token![,]>::parse_separated_nonempty);
+                if let Ok((mut punctuated, tail)) = attr.parse_args_with(parser) {
                     let mut visit = TraitToConcreteVisit {
                         concrete: ip_type_ident.clone().into(),
                         trait_path: trait_path.clone(),
@@ -139,7 +138,7 @@ fn ip_test_inner(
                     for expr in punctuated.iter_mut() {
                         visit.visit_expr_mut(expr);
                     }
-                    attr.tokens = quote!((#punctuated));
+                    attr.tokens = quote!((#punctuated #tail));
                 }
                 attr
             })
@@ -352,34 +351,45 @@ impl<'a> VisitMut for ReturnImplTraitVisit<'a> {
     }
 }
 
-/// Constructs a parser that parses with the provided function, consuming the
-/// rest of the input on success.
+/// Constructs a parser that eagerly parses with the provided function.
 ///
-/// This is useful for "successfully" parsing a stream of tokens with a known
-/// prefix. Consuming the rest of the input makes this useful for adapting `P`
-/// for [`syn::parse`], which returns an error if any tokens are left
-/// unconsumed.
-fn parse_with_ignoring_trailing<P>(
+/// The parser returns two things: the prefix of the input that was
+/// successfully parsed by the provided function, and the rest of the input.
+/// This is useful for adapting `P` for [`syn::parse`], which returns an error
+/// if any tokens are left unconsumed.
+fn parse_prefix_suffix<P>(
     parser: for<'a> fn(ParseStream<'a>) -> syn::Result<P>,
-) -> impl Parser<Output = P> {
-    fn consume_input<'a>(input: ParseStream<'a>) {
-        while !input.is_empty() {
-            input
-                .step(|cursor| {
-                    let mut rest = *cursor;
-                    while let Some((_, next)) = rest.token_tree() {
-                        rest = next
-                    }
-                    Ok(((), rest))
-                })
-                .expect("step fn can't fail");
-        }
+) -> impl Parser<Output = (P, TokenStream2)> {
+    fn consume_input<'a>(input: ParseStream<'a>) -> TokenStream2 {
+        input.parse::<TokenStream2>().unwrap()
     }
 
-    move |input: ParseStream<'_>| {
-        parser(input).map(|p| {
-            consume_input(input);
-            p
-        })
+    move |input: ParseStream<'_>| parser(input).map(|p| (p, consume_input(input)))
+}
+
+#[cfg(test)]
+mod tests {
+    use assert_matches::assert_matches;
+
+    use super::*;
+
+    #[test]
+    fn parse_prefix_suffix_test_case() {
+        let test_case = quote!(arg1, arg2; "name");
+
+        let parser = parse_prefix_suffix(Punctuated::<Expr, Token![,]>::parse_separated_nonempty);
+
+        let (arguments, tail) = parser.parse2(test_case).expect("parse succeeds");
+
+        let arguments = arguments
+            .iter()
+            .map(|e| assert_matches!(e, Expr::Path(p) => &p.path))
+            .collect::<Vec<_>>();
+        let (arg1, arg2) = assert_matches!(arguments.as_slice(), &[arg1, arg2] => (arg1, arg2));
+        assert!(arg1.is_ident("arg1"));
+        assert!(arg2.is_ident("arg2"));
+
+        let tail = tail.into_iter().map(|t| t.to_string()).collect::<Vec<_>>();
+        assert_eq!(tail.as_slice(), &[";", "\"name\""]);
     }
 }
