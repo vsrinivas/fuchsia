@@ -28,17 +28,16 @@ use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
 /// Android's binder kernel driver implementation.
-pub struct BinderDev {
-    driver: Arc<BinderDriver>,
+pub struct BinderDriver {
+    /// The "name server" process that is addressed via the special handle 0 and is responsible
+    /// for implementing the binder protocol `IServiceManager`.
+    context_manager: RwLock<Option<Arc<BinderObject>>>,
+
+    /// Manages the internal state of each process interacting with the binder driver.
+    procs: RwLock<BTreeMap<pid_t, Weak<BinderProcess>>>,
 }
 
-impl BinderDev {
-    pub fn new() -> Self {
-        Self { driver: Arc::new(BinderDriver::new()) }
-    }
-}
-
-impl DeviceOps for BinderDev {
+impl DeviceOps for Arc<BinderDriver> {
     fn open(
         &self,
         current_task: &CurrentTask,
@@ -47,7 +46,7 @@ impl DeviceOps for BinderDev {
         _flags: OpenFlags,
     ) -> Result<Box<dyn FileOps>, Errno> {
         let binder_proc = Arc::new(BinderProcess::new(current_task.get_pid()));
-        match self.driver.procs.write().entry(binder_proc.pid) {
+        match self.procs.write().entry(binder_proc.pid) {
             BTreeMapEntry::Vacant(entry) => {
                 // The process has not previously opened the binder device.
                 entry.insert(Arc::downgrade(&binder_proc));
@@ -61,19 +60,19 @@ impl DeviceOps for BinderDev {
                 return error!(EINVAL);
             }
         }
-        Ok(Box::new(BinderDevInstance { proc: binder_proc, driver: self.driver.clone() }))
+        Ok(Box::new(BinderConnection { proc: binder_proc, driver: self.clone() }))
     }
 }
 
 /// An instance of the binder driver, associated with the process that opened the binder device.
-struct BinderDevInstance {
+struct BinderConnection {
     /// The process that opened the binder device.
     proc: Arc<BinderProcess>,
     /// The implementation of the binder driver.
     driver: Arc<BinderDriver>,
 }
 
-impl FileOps for BinderDevInstance {
+impl FileOps for BinderConnection {
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
         FdEvents::POLLIN | FdEvents::POLLOUT
     }
@@ -1327,18 +1326,9 @@ const BINDER_IOCTL_SET_CONTEXT_MGR_EXT: u32 =
 const BINDER_IOCTL_ENABLE_ONEWAY_SPAM_DETECTION: u32 =
     encode_ioctl_write::<u32>(BINDER_IOCTL_CHAR, 16);
 
-struct BinderDriver {
-    /// The "name server" process that is addressed via the special handle 0 and is responsible
-    /// for implementing the binder protocol `IServiceManager`.
-    context_manager: RwLock<Option<Arc<BinderObject>>>,
-
-    /// Manages the internal state of each process interacting with the binder driver.
-    procs: RwLock<BTreeMap<pid_t, Weak<BinderProcess>>>,
-}
-
 impl BinderDriver {
-    fn new() -> Self {
-        Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) }
+    fn new() -> Arc<Self> {
+        Arc::new(Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) })
     }
 
     #[cfg(test)]
@@ -2626,7 +2616,7 @@ const BINDERS: &[&FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
 
 fn make_binder_nodes(kernel: &Kernel, dir: &DirEntryHandle) -> Result<(), Errno> {
     for name in BINDERS {
-        let dev = kernel.device_registry.write().register_misc_chrdev(BinderDev::new())?;
+        let dev = kernel.device_registry.write().register_misc_chrdev(BinderDriver::new())?;
         dir.add_node_ops_dev(name, mode!(IFCHR, 0o600), dev, SpecialNode)?;
     }
     Ok(())
@@ -3402,7 +3392,7 @@ mod tests {
 
     struct TranslateHandlesTestFixture {
         _kernel: Arc<Kernel>,
-        driver: BinderDriver,
+        driver: Arc<BinderDriver>,
 
         sender_task: CurrentTask,
         sender_proc: Arc<BinderProcess>,
@@ -4301,26 +4291,23 @@ mod tests {
     #[fuchsia::test]
     fn process_state_cleaned_up_after_binder_fd_closed() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let binder_dev = BinderDev::new();
+        let binder_driver = BinderDriver::new();
         let node = FsNode::new_root(PanickingFsNode);
 
         // Open the binder device, which creates an instance of the binder device associated with
         // the process.
-        let binder_instance = binder_dev
+        let binder_instance = binder_driver
             .open(&current_task, DeviceType::NONE, &node, OpenFlags::RDWR)
             .expect("binder dev open failed");
 
         // Ensure that the binder driver has created process state.
-        binder_dev.driver.find_process(current_task.get_pid()).expect("failed to find process");
+        binder_driver.find_process(current_task.get_pid()).expect("failed to find process");
 
         // Simulate closing the FD by dropping the binder instance.
         drop(binder_instance);
 
         // Verify that the process state no longer exists.
-        binder_dev
-            .driver
-            .find_process(current_task.get_pid())
-            .expect_err("process was not cleaned up");
+        binder_driver.find_process(current_task.get_pid()).expect_err("process was not cleaned up");
     }
 
     #[fuchsia::test]
