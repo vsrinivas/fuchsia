@@ -59,3 +59,6 @@ per-file rustfmt.toml = file:/build/rust/OWNERS
 
 # Python-language support files
 per-file pyrightconfig.json = file:/build/python/OWNERS
+
+# Add owners to .gitmodules for submodule update tool
+per-file .gitmodules = file:/third_party/OWNERS

@@ -97,6 +97,7 @@ tables_generator_tests_*.txt
 /third_party/rust_crates/mirrors
 !/third_party/modinv/
 !/third_party/modp_b64
+!/third_party/OWNERS
 !/third_party/scudo/
 /third_party/scudo/src
 /third_party/scudo/gwp_asan
