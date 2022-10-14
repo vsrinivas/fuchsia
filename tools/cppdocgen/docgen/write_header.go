@@ -30,6 +30,19 @@ type Header struct {
 	DefineGroups   []*DefineGroup
 }
 
+// Interface for sorting a headers by the Name.
+type headerByName []*Header
+
+func (f headerByName) Len() int {
+	return len(f)
+}
+func (f headerByName) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+func (f headerByName) Less(i, j int) bool {
+	return f[i].Name < f[j].Name
+}
+
 // Returns the file name relative to the generated docs root directory containing the reference for
 // the header with the given path.
 func HeaderReferenceFile(h string) string {
@@ -70,7 +83,7 @@ func WriteHeaderReference(settings WriteSettings, index *Index, h *Header, f io.
 
 	fmt.Fprintf(f, "[Header source code](%s)\n\n", settings.fileSourceLink(h.Name))
 
-	writeComment(headerComment, markdownHeading0, f)
+	writeComment(index, headerComment, markdownHeading0, f)
 
 	// Defines.
 	for _, d := range h.DefineGroups {
@@ -92,6 +105,6 @@ func WriteHeaderReference(settings WriteSettings, index *Index, h *Header, f io.
 
 	// Functions.
 	for _, g := range h.FunctionGroups {
-		writeFunctionGroupSection(g, f)
+		writeFunctionGroupSection(index, g, f)
 	}
 }

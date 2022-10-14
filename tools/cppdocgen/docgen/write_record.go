@@ -48,7 +48,7 @@ func writeBaseClassFunctions(index *Index, r *clangdoc.RecordInfo, headingLevel 
 	// record but not the Base one.
 	//
 	// This can be null if we're not documenting the base class.
-	fullRecord := index.Records[r.USR]
+	fullRecord := index.RecordUsrs[r.USR]
 
 	url := recordLink(index, r)
 	if len(url) == 0 {
@@ -124,7 +124,7 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 	}
 
 	writeRecordDeclarationBlock(index, r, dataMembers, f)
-	writeComment(r.Description, markdownHeading2, f)
+	writeComment(index, r.Description, markdownHeading2, f)
 
 	// Data member documentation first.
 	for _, d := range dataMembers {
@@ -134,14 +134,14 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 		if len(d.Description) > 0 {
 			// TODO needs anchor ref.
 			fmt.Fprintf(f, "### %s\n\n", d.Name)
-			writeComment(d.Description, markdownHeading3, f)
+			writeComment(index, d.Description, markdownHeading3, f)
 		}
 	}
 
 	if len(groupedCtors) > 0 {
 		fmt.Fprintf(f, "### Constructor{:#%s}\n\n", functionHtmlId(ctors[0]))
 		for _, g := range groupedCtors {
-			writeFunctionGroupBody(g, namePrefix, false, f)
+			writeFunctionGroupBody(index, g, namePrefix, false, f)
 		}
 	}
 
@@ -184,7 +184,7 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 				fmt.Fprintf(f, "### %s::%s%s {:#%s}\n\n", r.Name, g.Funcs[0].Name, functionGroupEllipsesParens(g), functionGroupHtmlId(g))
 			}
 
-			writeFunctionGroupBody(g, namePrefix, true, f)
+			writeFunctionGroupBody(index, g, namePrefix, true, f)
 		}
 	}
 }
@@ -196,7 +196,7 @@ func recordFullName(r *clangdoc.RecordInfo) string {
 // Returns the empty string if the record does not have emitted documentation.
 func recordHtmlId(index *Index, r *clangdoc.RecordInfo) string {
 	// Use the fully-qualified type name as the ID (may need disambiguating in the future).
-	fullRecord := index.Records[r.USR]
+	fullRecord := index.RecordUsrs[r.USR]
 	if fullRecord == nil {
 		return ""
 	}
@@ -205,7 +205,7 @@ func recordHtmlId(index *Index, r *clangdoc.RecordInfo) string {
 
 // Returns the empty string if the record does not have emitted documentation.
 func recordLink(index *Index, r *clangdoc.RecordInfo) string {
-	fullRecord := index.Records[r.USR]
+	fullRecord := index.RecordUsrs[r.USR]
 	if fullRecord == nil {
 		return ""
 	}
@@ -214,7 +214,7 @@ func recordLink(index *Index, r *clangdoc.RecordInfo) string {
 
 // Returns the empty string if the record isn't documented.
 func memberFunctionLink(index *Index, r *clangdoc.RecordInfo, f *clangdoc.FunctionInfo) string {
-	fullRecord := index.Records[r.USR]
+	fullRecord := index.RecordUsrs[r.USR]
 	if fullRecord == nil {
 		return ""
 	}

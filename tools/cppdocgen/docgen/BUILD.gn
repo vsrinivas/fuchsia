@@ -14,6 +14,8 @@ go_library("docgen") {
     "read_header.go",
     "read_header_test.go",
     "write.go",
+    "write_comment.go",
+    "write_comment_test.go",
     "write_define.go",
     "write_define_test.go",
     "write_enum.go",

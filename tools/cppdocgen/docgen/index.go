@@ -33,11 +33,20 @@ func (s IndexSettings) HeaderPath(h string) string {
 
 // Flattened version of everything stored in this library.
 type Index struct {
-	// All nonmember functions/records in all non-anonymous namespaces, indexed by the USR.
-	Functions map[string]*clangdoc.FunctionInfo
+	// All nonmember functions/records in all non-anonymous namespaces, indexed by the USR/Name.
+	// Since functions overloads may have name collisions, FunctionNames may not include
+	// everything (it currently stores the last one of that name encountered). FunctionUsrs
+	// will include everything since Clang will generate a unique USR for each function.
+	//
+	// This could be enhanced in the future if needed to map a name to a list of functions. But
+	// currently we only use the name index to generate links where there can only be one
+	// destination anyway.
+	FunctionUsrs  map[string]*clangdoc.FunctionInfo
+	FunctionNames map[string]*clangdoc.FunctionInfo
 
-	// Records (classes, structs, and unions), indexed by the USR.
-	Records map[string]*clangdoc.RecordInfo
+	// Records (classes, structs, and unions), indexed by the Name/USR.
+	RecordNames map[string]*clangdoc.RecordInfo
+	RecordUsrs  map[string]*clangdoc.RecordInfo
 
 	// All unique header files in this library indexed by their file name.
 	Headers map[string]*Header
@@ -45,14 +54,14 @@ type Index struct {
 	// All unique preprocessor defines in this library indexed by their name.
 	Defines map[string]*Define
 
-	// All enums.
+	// All enums indexed by their name.
 	Enums map[string]*clangdoc.EnumInfo
 }
 
 // Returns a sorted list of all functions.
 func (index Index) AllFunctions() []*clangdoc.FunctionInfo {
-	result := make([]*clangdoc.FunctionInfo, 0, len(index.Functions))
-	for _, fn := range index.Functions {
+	result := make([]*clangdoc.FunctionInfo, 0, len(index.FunctionUsrs))
+	for _, fn := range index.FunctionUsrs {
 		result = append(result, fn)
 	}
 	sort.Sort(functionByName(result))
@@ -61,8 +70,8 @@ func (index Index) AllFunctions() []*clangdoc.FunctionInfo {
 
 // Returns a sorted list of all records.
 func (index Index) AllRecords() []*clangdoc.RecordInfo {
-	result := make([]*clangdoc.RecordInfo, 0, len(index.Records))
-	for _, r := range index.Records {
+	result := make([]*clangdoc.RecordInfo, 0, len(index.RecordUsrs))
+	for _, r := range index.RecordUsrs {
 		result = append(result, r)
 	}
 	sort.Sort(recordByName(result))
@@ -160,7 +169,8 @@ func indexFunction(settings IndexSettings, index *Index, f *clangdoc.FunctionInf
 	} else if settings.ShouldIndexInHeader(f.Location[0].Filename) {
 		// TODO(brettw) there can be multiple locations! I think this might be for every
 		// forward declaration. In this case we will want to pick the "best" one.
-		index.Functions[f.USR] = f
+		index.FunctionUsrs[f.USR] = f
+		index.FunctionNames[f.Name] = f
 
 		decl := f.Location[0].Filename
 
@@ -172,7 +182,8 @@ func indexFunction(settings IndexSettings, index *Index, f *clangdoc.FunctionInf
 
 func indexRecord(settings IndexSettings, index *Index, r *clangdoc.RecordInfo) {
 	if settings.ShouldIndexInHeader(r.DefLocation.Filename) {
-		index.Records[r.USR] = r
+		index.RecordUsrs[r.USR] = r
+		index.RecordNames[r.Name] = r
 
 		header := index.HeaderForFileName(r.DefLocation.Filename)
 		header.Records = append(header.Records, r)
@@ -314,8 +325,10 @@ func (h *Header) groupDefines(allDefines []*Define) []*DefineGroup {
 
 func makeEmptyIndex() Index {
 	index := Index{}
-	index.Functions = make(map[string]*clangdoc.FunctionInfo)
-	index.Records = make(map[string]*clangdoc.RecordInfo)
+	index.FunctionUsrs = make(map[string]*clangdoc.FunctionInfo)
+	index.FunctionNames = make(map[string]*clangdoc.FunctionInfo)
+	index.RecordNames = make(map[string]*clangdoc.RecordInfo)
+	index.RecordUsrs = make(map[string]*clangdoc.RecordInfo)
 	index.Headers = make(map[string]*Header)
 	index.Defines = make(map[string]*Define)
 	index.Enums = make(map[string]*clangdoc.EnumInfo)

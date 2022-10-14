@@ -7,6 +7,7 @@ package docgen
 import (
 	"fmt"
 	"io"
+	"sort"
 )
 
 func WriteToc(settings WriteSettings, index *Index, f io.Writer) {
@@ -17,7 +18,14 @@ func WriteToc(settings WriteSettings, index *Index, f io.Writer) {
 	fmt.Fprintf(f, "  path: %s%s\n", settings.TocPath, "index.md")
 	fmt.Fprintf(f, "- heading: \"%s headers\"\n", settings.LibName)
 
+	// Sort the headers by name for the output (the map ordering is not stable).
+	Headers := make([]*Header, 0, len(index.Headers))
 	for _, h := range index.Headers {
+		Headers = append(Headers, h)
+	}
+	sort.Sort(headerByName(Headers))
+
+	for _, h := range Headers {
 		title := h.CustomTitle()
 		if title == "" {
 			fmt.Fprintf(f, "- title: \"%s\"\n", settings.GetUserIncludePath(h.Name))

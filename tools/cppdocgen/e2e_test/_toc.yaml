@@ -3,13 +3,13 @@ toc:
 - title: "Overview"
   path: /docs/e2e_test/index.md
 - heading: "e2e headers"
-- title: "e2e_test/grouping.h"
-  path: /docs/e2e_test/grouping.h.md
-- title: "Namespace testing"
-  path: /docs/e2e_test/namespace.h.md
 - title: "Custom file header"
   path: /docs/e2e_test/basics.h.md
 - title: "e2e_test/classes.h"
   path: /docs/e2e_test/classes.h.md
 - title: "e2e_test/functions.h"
   path: /docs/e2e_test/functions.h.md
+- title: "e2e_test/grouping.h"
+  path: /docs/e2e_test/grouping.h.md
+- title: "Namespace testing"
+  path: /docs/e2e_test/namespace.h.md

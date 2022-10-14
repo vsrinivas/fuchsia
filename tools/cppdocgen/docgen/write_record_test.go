@@ -28,7 +28,7 @@ func TestWriteRecordDeclarationBlock(t *testing.T) {
 	}
 
 	index := makeEmptyIndex()
-	index.Records[r.USR] = r
+	index.RecordUsrs[r.USR] = r
 
 	out := bytes.Buffer{}
 	writeRecordDeclarationBlock(&index, r, []clangdoc.MemberTypeInfo{}, &out)

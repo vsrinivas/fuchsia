@@ -16,6 +16,9 @@ void UndocumentedFunction();
 double CustomTitleFunction(int a, int b);
 
 /// This documentation uses three slashes and the function has default params with templates.
+///
+/// This also has a link to the [CustomTitleFunction()] which should get rewritten, and
+/// the [FIDL wire format](/docs/reference/fidl/language/wire-format) which should not.
 std::string GetStringFromVectors(const std::vector<int>& vector1 = std::vector<int>(),
                                  std::vector<double, std::allocator<double>>* v2 = {},
                                  int max_count = -1);

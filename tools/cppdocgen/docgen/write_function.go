@@ -79,7 +79,7 @@ func writeFunctionDeclaration(fn *clangdoc.FunctionInfo, namePrefix string, incl
 // The |namePrefix| is prepended to the definition for defining class or namespace information.
 // This could be extracted from the function but this lets the caller decide which information to
 // include.
-func writeFunctionGroupBody(g *FunctionGroup, namePrefix string, includeReturnType bool, f io.Writer) {
+func writeFunctionGroupBody(index *Index, g *FunctionGroup, namePrefix string, includeReturnType bool, f io.Writer) {
 	writePreHeader(f)
 	for _, fn := range g.Funcs {
 		writeFunctionDeclaration(fn, namePrefix, includeReturnType, "", f)
@@ -89,7 +89,7 @@ func writeFunctionGroupBody(g *FunctionGroup, namePrefix string, includeReturnTy
 	// Any comment is on the first function in the group. If it has a heading, it will have
 	// been extracted and used as the title so we need to strip that to avoid duplicating.
 	_, commentWithNoH1 := extractCommentHeading1(g.Funcs[0].Description)
-	writeComment(commentWithNoH1, markdownHeading2, f)
+	writeComment(index, commentWithNoH1, markdownHeading2, f)
 
 	fmt.Fprintf(f, "\n")
 }
@@ -101,7 +101,7 @@ func functionGroupHtmlId(g *FunctionGroup) string {
 }
 
 // Writes the reference section for a standalone function.
-func writeFunctionGroupSection(g *FunctionGroup, f io.Writer) {
+func writeFunctionGroupSection(index *Index, g *FunctionGroup, f io.Writer) {
 	if g.ExplicitTitle != "" {
 		fmt.Fprintf(f, "## %s {:#%s}\n\n", g.ExplicitTitle, functionGroupHtmlId(g))
 	} else {
@@ -110,7 +110,7 @@ func writeFunctionGroupSection(g *FunctionGroup, f io.Writer) {
 	}
 
 	// Include the qualified namespaces as a prefix.
-	writeFunctionGroupBody(g, getScopeQualifier(g.Funcs[0].Namespace, true), true, f)
+	writeFunctionGroupBody(index, g, getScopeQualifier(g.Funcs[0].Namespace, true), true, f)
 }
 
 // Interface for sorting a function list by function name.

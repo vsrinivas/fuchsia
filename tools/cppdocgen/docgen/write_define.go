@@ -43,7 +43,7 @@ func writeDefineGroupSection(settings WriteSettings, index *Index, g *DefineGrou
 	// If the comment has a heading, it will have been extracted and used as the title so we
 	// need to strip that to avoid duplicating.
 	_, commentWithNoH1 := extractCommentHeading1(g.Defines[0].Description)
-	writeComment(commentWithNoH1, markdownHeading2, f)
+	writeComment(index, commentWithNoH1, markdownHeading2, f)
 	fmt.Fprintf(f, "\n")
 }
 

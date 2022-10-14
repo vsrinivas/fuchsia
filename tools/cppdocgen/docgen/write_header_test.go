@@ -24,9 +24,12 @@ func TestWriteHeaderReference(t *testing.T) {
 	headerPath := "../../src/lib/test/myheader.h"
 
 	// Define a function.
-	fn := &clangdoc.FunctionInfo{Name: "MyFunction",
+	fn := &clangdoc.FunctionInfo{
+		Name:       "MyFunction",
+		USR:        "SomeUSR",
 		ReturnType: clangdoc.ReturnType{Type: clangdoc.Type{Name: "void"}}}
-	index.Functions["USR_FOR_FUNCTION"] = fn
+	index.FunctionUsrs[fn.USR] = fn
+	index.FunctionNames[fn.Name] = fn
 
 	// Define a class.
 	rec := &clangdoc.RecordInfo{
@@ -34,7 +37,7 @@ func TestWriteHeaderReference(t *testing.T) {
 		Path:        "",
 		TagType:     "Class",
 		DefLocation: clangdoc.Location{99, headerPath}}
-	index.Records["USR_FOR_RECORD"] = rec
+	index.RecordUsrs["USR_FOR_RECORD"] = rec
 
 	header := &Header{Name: headerPath,
 		Functions: []*clangdoc.FunctionInfo{fn},

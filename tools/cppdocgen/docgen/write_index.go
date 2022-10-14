@@ -53,7 +53,7 @@ func writeFunctionIndex(index *Index, f io.Writer) {
 	fmt.Fprintf(f, "## Functions\n\n")
 
 	// Collect function info by group.
-	allFuncs := make([]indexLink, 0, len(index.Functions))
+	allFuncs := make([]indexLink, 0, len(index.FunctionUsrs))
 	for _, header := range index.Headers {
 		for _, g := range header.FunctionGroups {
 			link := functionGroupLink(g)
@@ -116,7 +116,7 @@ func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
 	}
 	fmt.Fprintf(f, "\n")
 
-	if len(index.Records) > 0 {
+	if len(index.RecordUsrs) > 0 {
 		fmt.Fprintf(f, "## Classes\n\n")
 		for _, r := range index.AllRecords() {
 			// TODO(brettw) include class/struct/enum type when clang-doc is fixed.
@@ -125,7 +125,7 @@ func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
 		fmt.Fprintf(f, "\n")
 	}
 
-	if len(index.Functions) > 0 {
+	if len(index.FunctionUsrs) > 0 {
 		writeFunctionIndex(index, f)
 	}
 

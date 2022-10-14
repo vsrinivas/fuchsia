@@ -77,7 +77,7 @@ func writeEnumSection(settings WriteSettings, index *Index, e *clangdoc.EnumInfo
 	fmt.Fprintf(f, "[Declaration source code](%s)\n\n", settings.locationSourceLink(e.DefLocation))
 
 	writeEnumDeclaration(e, f)
-	writeComment(e.Description, markdownHeading2, f)
+	writeComment(index, e.Description, markdownHeading2, f)
 
 	fmt.Fprintf(f, "\n")
 }
