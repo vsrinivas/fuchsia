@@ -201,6 +201,9 @@ class Devfs {
  private:
   friend class Devnode;
 
+  static std::optional<std::reference_wrapper<fs::Vnode>> Lookup(PseudoDir& parent,
+                                                                 std::string_view name);
+
   Devnode& root_;
 
   fbl::RefPtr<PseudoDir> class_ = fbl::MakeRefCounted<PseudoDir>();
