@@ -172,7 +172,7 @@ constexpr ErrorDef<71> ErrUnknownAttributeOnStrictEnumMember(
     "the @unknown attribute can be only be used on flexible enum members.");
 constexpr ErrorDef<72> ErrUnknownAttributeOnMultipleEnumMembers(
     "the @unknown attribute can be only applied to one enum member.");
-constexpr UndocumentedErrorDef<73> ErrComposingNonProtocol("This declaration is not a protocol");
+constexpr ErrorDef<73> ErrComposingNonProtocol("This declaration is not a protocol");
 constexpr ErrorDef<74, flat::Decl::Kind> ErrInvalidMethodPayloadLayoutClass(
     "cannot use {} as a request/response; must use a struct, table, or union");
 constexpr ErrorDef<75, const flat::Type *> ErrInvalidMethodPayloadType(

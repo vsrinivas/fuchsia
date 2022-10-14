@@ -565,14 +565,8 @@ protocol Child {
 }
 
 TEST(ProtocolTests, BadCannotComposeNonProtocol) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type S = struct {};
-protocol P {
-    compose S;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0073.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposingNonProtocol);
 }
 
