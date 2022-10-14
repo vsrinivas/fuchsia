@@ -11,15 +11,33 @@ protocol ProfileProvider {
     /// should have an elevated scheduling profile applied to it in order to meet audio or video
     /// deadlines.
     ///
-    /// `name` is the name of the component requesting the profile. `period` is the suggested
-    /// interval to be scheduled at. If `period` is 0, then the server will select an appropriate
-    /// interval in an implemenation dependent way. `capacity` is the suggested CPU capacity to
-    /// reserve for `thread_handle`. For example, with a 0.1 capacity, 10% of a core will be
-    /// reserved for the thread. For heterogeneous systems, this capacity should be planned against
-    /// the highest performance processor(s) in the system.
+    /// `name` is the name of a system scheduling role to apply to the thread given by
+    /// `thread_handle` -- different products may customize the underlying scheduling strategy based
+    /// on the requested role. `period` is the suggested interval to be scheduled at. `period` may
+    /// be zero if the thread has no preferred scheduling interval. `capacity` is the proportion of
+    /// the scheduling interval the thread needs to be running to achieve good performance or to
+    /// meet the scheduling deadline defined by `period`. `capacity` may be zero if the workload has
+    /// no firm runtime requirements. Note that `capacity` should be a good faith estimate based on
+    /// the worst case runtime the thread requires each period.  Excessive capacity requests may
+    /// be rejected or result in scaling back the performance of other threads to fit resource
+    /// limits.
     ///
-    /// Returns the period and capacity that was applied, if a deadline profile was selected.
-    /// Returns 0 if no deadline profile was selected.
+    /// Capacity, max runtime, and period have the following relationship:
+    ///
+    ///   capacity = max runtime / period
+    ///
+    /// Where:
+    ///
+    ///   0 <= max runtime <= period    and    0 <= capacity <= 1
+    ///
+    /// For heterogeneous systems, the capacity should be planned / measured against the highest
+    /// performance processor(s) in the system. The system will automatically adjust the effective
+    /// capacity to account for slower processors and operating points and will avoid processors and
+    /// operating points that are too slow to meet the requested scheduling parameters (provided
+    /// they are reasonable).
+    ///
+    /// Returns the period and capacity (actually maximum runtime) that was applied, either of which
+    /// may be zero to indicate not applicable.
     RegisterHandlerWithCapacity(resource struct {
         thread_handle zx.handle:THREAD;
         name string:64;
