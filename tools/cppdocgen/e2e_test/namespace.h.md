@@ -12,7 +12,7 @@ properly qualified.
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">namespace</span> myns {
 
-<span class="kwd">enum </span> <span class="typ">EnumInsideNamespace</span> {
+<span class="kwd">enum</span> <span class="typ">EnumInsideNamespace</span> {
   kValue1, <span class="com">// = 0</span>
   kValue2, <span class="com">// = 1</span>
 };

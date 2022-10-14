@@ -88,8 +88,8 @@ End-of-line comment. Scary!
 <pre class="devsite-disable-click-to-copy">
 SimpleTestClass::<b>SimpleTestClass</b>();
 SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a);
-SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a,
-                                 <span class="typ">int</span> b);
+SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a = 1,
+                                 <span class="typ">int</span> b = 2);
 </pre>
 
 

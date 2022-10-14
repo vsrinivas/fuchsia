@@ -11,6 +11,7 @@ cpp_docgen("docgen_e2e_docs") {
   headers = [
     "basics.h",
     "classes.h",
+    "functions.h",
     "grouping.h",
     "namespace.h",
   ]
@@ -44,6 +45,10 @@ golden_files("e2e_test") {
     {
       golden = "classes.h.md"
       candidate = "$generated_doc_dir/classes.h.md"
+    },
+    {
+      golden = "functions.h.md"
+      candidate = "$generated_doc_dir/functions.h.md"
     },
     {
       golden = "grouping.h.md"

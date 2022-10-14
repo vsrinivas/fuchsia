@@ -11,6 +11,7 @@ The contents of this README file will comprise the top of the generated index.md
 
   - [e2e_test/basics.h](basics.h.md)
   - [e2e_test/classes.h](classes.h.md)
+  - [e2e_test/functions.h](functions.h.md)
   - [e2e_test/grouping.h](grouping.h.md)
   - [e2e_test/namespace.h](namespace.h.md)
 
@@ -29,10 +30,13 @@ The contents of this README file will comprise the top of the generated index.md
 
 ## Functions
 
+  - [CustomTitleFunction](functions.h.md#CustomTitleFunction)
+  - [GetStringFromVectors](functions.h.md#GetStringFromVectors)
   - [GroupedExplicitlyOne](grouping.h.md#GroupedExplicitlyOne)
   - [GroupedExplicitlyTwo](grouping.h.md#GroupedExplicitlyOne)
   - [GroupedImplicitly](grouping.h.md#GroupedImplicitly)
   - [myns::FunctionInsideNamespace](namespace.h.md#myns::FunctionInsideNamespace)
+  - [UndocumentedFunction](functions.h.md#UndocumentedFunction)
   - [UngroupedOne](grouping.h.md#UngroupedOne)
   - [UngroupedTwo](grouping.h.md#UngroupedTwo)
 

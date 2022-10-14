@@ -63,6 +63,11 @@ func writeFunctionDeclaration(fn *clangdoc.FunctionInfo, namePrefix string, incl
 		} else {
 			fmt.Fprintf(f, "<span class=\"typ\">%s</span> %s", tn, param.Name)
 		}
+
+		// Optional default parameter value.
+		if param.DefaultValue != "" {
+			fmt.Fprintf(f, " = %s", param.DefaultValue)
+		}
 	}
 
 	fmt.Fprintf(f, ");\n")
@@ -81,8 +86,10 @@ func writeFunctionGroupBody(g *FunctionGroup, namePrefix string, includeReturnTy
 	}
 	writePreFooter(f)
 
-	// Any comment is on the first function in the group.
-	writeComment(g.Funcs[0].Description, markdownHeading2, f)
+	// Any comment is on the first function in the group. If it has a heading, it will have
+	// been extracted and used as the title so we need to strip that to avoid duplicating.
+	_, commentWithNoH1 := extractCommentHeading1(g.Funcs[0].Description)
+	writeComment(commentWithNoH1, markdownHeading2, f)
 
 	fmt.Fprintf(f, "\n")
 }

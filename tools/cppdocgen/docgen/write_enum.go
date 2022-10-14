@@ -32,7 +32,7 @@ func writeEnumDeclaration(e *clangdoc.EnumInfo, f io.Writer) {
 	if e.Scoped {
 		fmt.Fprintf(f, "<span class=\"kwd\">enum class</span> ")
 	} else {
-		fmt.Fprintf(f, "<span class=\"kwd\">enum </span> ")
+		fmt.Fprintf(f, "<span class=\"kwd\">enum</span> ")
 	}
 
 	// Only include nested class scopes in the name, since the namespaces were already

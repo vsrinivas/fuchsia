@@ -197,6 +197,7 @@ func escapeHtml(s string) string {
 var typeRenames = map[string]string{
 	// Clang emits C-style "_Bool" for some reason.
 	"_Bool":                  "bool",
+	"std::basic_string":      "std::string",
 	"std::basic_string_view": "std::string_view",
 }
 

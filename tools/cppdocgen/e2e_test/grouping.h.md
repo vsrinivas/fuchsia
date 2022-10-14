@@ -11,7 +11,6 @@
 <span class="kwd">#define</span> <span class="lit">GROUPED_TWO</span> 2
 </pre>
 
-### GROUPED defines
 
 These are the explicitly grouped defines.
 
@@ -67,7 +66,6 @@ This constructor will go in a separate section due to this separate documentatio
 <span class="typ">int</span> MyClass::<b>end</b>();
 </pre>
 
-### Iterator functions
 
 These functions are explicitly grouped.
 
@@ -88,7 +86,6 @@ These functions are explicitly grouped.
 <span class="typ">void</span> <b>GroupedExplicitlyTwo</b>(<span class="typ">double</span> a);
 </pre>
 
-### Explicitly grouped functions.
 
 These functions have no naming similarities but since there is no blank line nor comment between
 them, and there is a single comment beginning with a heading, they go into their own section.

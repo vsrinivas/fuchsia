@@ -70,8 +70,9 @@ type CommentInfo struct {
 // FieldTypeInfo is a field with a name and a type. It is used for function parameters. See also
 // MemberTypeInfo which adds an access tag (basically inheritance).
 type FieldTypeInfo struct {
-	Name string `yaml:"Name"`
-	Type Type   `yaml:"Type"`
+	Name         string `yaml:"Name"`
+	Type         Type   `yaml:"Type"`
+	DefaultValue string `yaml:"DefaultValue"`
 }
 
 type MemberTypeInfo struct {

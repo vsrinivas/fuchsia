@@ -11,3 +11,5 @@ toc:
   path: /docs/e2e_test/basics.h.md
 - title: "e2e_test/classes.h"
   path: /docs/e2e_test/classes.h.md
+- title: "e2e_test/functions.h"
+  path: /docs/e2e_test/functions.h.md

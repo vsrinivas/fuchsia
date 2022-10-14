@@ -32,7 +32,7 @@ Documentation for the API flag.
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#38)
 
 <pre class="devsite-disable-click-to-copy">
-<span class="kwd">enum </span> <span class="typ">MySimpleEnum</span> {
+<span class="kwd">enum</span> <span class="typ">MySimpleEnum</span> {
   kValue1, <span class="com">// = 0</span>
   kValue2, <span class="com">// = 1</span>
 };
