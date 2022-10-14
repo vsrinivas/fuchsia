@@ -16,7 +16,7 @@ use {
     },
 };
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub enum DeviceKind {
     #[default]
     Touch,
@@ -26,7 +26,7 @@ pub enum DeviceKind {
     Trackpad,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub enum Phase {
     #[default]
     Cancel,
@@ -38,12 +38,11 @@ pub enum Phase {
     Up,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub enum SignalKind {
     #[default]
     None,
     Scroll,
-    ScrollInertiaCancel,
 }
 
 pub const POINTER_BUTTON_1: i64 = 1 << 0;
@@ -67,6 +66,8 @@ pub struct PointerEvent {
     pub phase: Phase,
     /// The unique device identifier.
     pub device_id: u32,
+    /// The identifier for the pointer that issued this event when [DeviceKind] is [Touch].
+    pub pointer_id: Option<u32>,
     /// The x position of the device, in the viewport's coordinate system, as reported by the raw
     /// device event.
     pub physical_x: f32,
