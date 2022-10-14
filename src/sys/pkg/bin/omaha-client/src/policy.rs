@@ -204,7 +204,7 @@ impl Policy for FuchsiaPolicy {
     /// Is reboot allowed right now.
     fn reboot_allowed(policy_data: &Self::RebootPolicyData, check_options: &CheckOptions) -> bool {
         if policy_data.urgent_update {
-            fuchsia_syslog::fx_log_info!("Reboot reason: urgent update triggered!");
+            info!("Reboot reason: urgent update triggered!");
         }
 
         check_options.source == InstallSource::OnDemand

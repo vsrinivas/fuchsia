@@ -14,7 +14,7 @@ use omaha_client::{
 };
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::info;
+use tracing::{error, info};
 
 mod api_metrics;
 mod app_set;
@@ -35,8 +35,8 @@ mod timer;
 
 use configuration::{ChannelSource, ClientConfiguration};
 
+#[fuchsia::main]
 pub fn main() -> Result<(), Error> {
-    fuchsia_syslog::init().expect("Can't init logger");
     info!("Starting omaha client...");
 
     let mut executor = fuchsia_async::LocalExecutor::new().context("Error creating executor")?;
@@ -44,7 +44,7 @@ pub fn main() -> Result<(), Error> {
     executor.run_singlethreaded(main_inner()).map_err(|err| {
         // Use anyhow to print the error chain.
         let err = anyhow!(err);
-        fuchsia_syslog::fx_log_err!("error running omaha-client: {:#}", err);
+        error!("error running omaha-client: {:#}", err);
         err
     })
 }

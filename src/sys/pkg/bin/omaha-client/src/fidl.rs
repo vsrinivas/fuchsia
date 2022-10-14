@@ -27,7 +27,6 @@ use fuchsia_component::{
     client::connect_to_protocol,
     server::{ServiceFs, ServiceObjLocal},
 };
-use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, lock::Mutex, prelude::*};
 use omaha_client::{
@@ -375,7 +374,7 @@ where
 
             ManagerRequest::MonitorAllUpdateChecks { attempts_monitor, control_handle: _ } => {
                 if let Err(e) = Self::handle_monitor_all_updates(server, attempts_monitor).await {
-                    fx_log_err!("error monitoring all update checks: {:#}", anyhow!(e))
+                    error!("error monitoring all update checks: {:#}", anyhow!(e))
                 }
             }
         }
@@ -644,7 +643,7 @@ where
                 let mut attempt_monitor_queue = s.attempt_monitor_queue.clone();
                 drop(s);
                 if let Err(e) = attempt_monitor_queue.queue_event(attempt_options).await {
-                    fx_log_warn!("error sending update to attempt queue: {:#}", anyhow!(e))
+                    warn!("error sending update to attempt queue: {:#}", anyhow!(e))
                 }
             }
             _ => {}
