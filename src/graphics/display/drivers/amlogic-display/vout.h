@@ -76,6 +76,16 @@ class Vout {
     }
   }
 
+  uint32_t panel_type() {
+    switch (type_) {
+      case kDsi:
+        return dsi_.dsi_host->panel_type();
+      case kHdmi:
+      default:
+        return 0;
+    }
+  }
+
   void DisplayConnected();
   void DisplayDisconnected();
   bool CheckMode(const display_mode_t* mode);

@@ -114,7 +114,6 @@ zx_status_t AmlogicDisplay::DisplayInit() {
     RestartDisplay();
   }
 
-  root_node_ = inspector_.GetRoot().CreateChild("amlogic-display");
   auto osd_or_status = amlogic_display::Osd::Create(
       &pdev_, vout_->supports_afbc(), vout_->fb_width(), vout_->fb_height(), vout_->display_width(),
       vout_->display_height(), &root_node_);
@@ -827,6 +826,7 @@ int AmlogicDisplay::HpdThread() {
 
 // TODO(payamm): make sure unbind/release are called if we return error
 zx_status_t AmlogicDisplay::Bind() {
+  root_node_ = inspector_.GetRoot().CreateChild("amlogic-display");
   fbl::AllocChecker ac;
   vout_ = fbl::make_unique_checked<amlogic_display::Vout>(&ac);
   if (!ac.check()) {
@@ -859,7 +859,11 @@ zx_status_t AmlogicDisplay::Bind() {
       DISP_ERROR("Could not initialize DSI Vout device! %d\n", status);
       return status;
     }
+
+    root_node_.CreateUint("input_panel_type", display_info.panel_type, &inspector_);
+    root_node_.CreateUint("panel_type", vout_->panel_type(), &inspector_);
   }
+  root_node_.CreateUint("vout_type", vout_->type(), &inspector_);
 
   status = ddk::PDev::FromFragment(parent_, &pdev_);
   if (status != ZX_OK) {
