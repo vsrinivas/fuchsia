@@ -16,12 +16,12 @@ pub struct ClientNetworkState {
     pub status: Option<client_types::DisconnectStatus>,
 }
 
-impl Into<fidl_policy::NetworkState> for ClientNetworkState {
-    fn into(self) -> fidl_policy::NetworkState {
+impl From<ClientNetworkState> for fidl_policy::NetworkState {
+    fn from(client_network_state: ClientNetworkState) -> Self {
         fidl_policy::NetworkState {
-            id: Some(self.id.into()),
-            state: Some(self.state),
-            status: self.status,
+            id: Some(client_network_state.id.into()),
+            state: Some(client_network_state.state),
+            status: client_network_state.status,
             ..fidl_policy::NetworkState::EMPTY
         }
     }
@@ -33,11 +33,11 @@ pub struct ClientStateUpdate {
     pub networks: Vec<ClientNetworkState>,
 }
 
-impl Into<fidl_policy::ClientStateSummary> for ClientStateUpdate {
-    fn into(self) -> fidl_policy::ClientStateSummary {
+impl From<ClientStateUpdate> for fidl_policy::ClientStateSummary {
+    fn from(update: ClientStateUpdate) -> Self {
         fidl_policy::ClientStateSummary {
-            state: Some(self.state),
-            networks: Some(self.networks.iter().map(|n| n.clone().into()).collect()),
+            state: Some(update.state),
+            networks: Some(update.networks.iter().map(|n| n.clone().into()).collect()),
             ..fidl_policy::ClientStateSummary::EMPTY
         }
     }
@@ -59,7 +59,7 @@ impl CurrentStateCache for ClientStateUpdate {
         self.networks = self
             .networks
             .iter()
-            .filter(|n| update.networks.iter().find(|u| u.id == n.id).is_none())
+            .filter(|n| !update.networks.iter().any(|u| u.id == n.id))
             .map(|n| n.clone())
             .collect();
         // Push in all the networks from the update

@@ -71,23 +71,21 @@ impl TelemetrySender {
         match self.sender.lock().try_send(event) {
             Ok(_) => {
                 // If sender has been blocked before, set bool to false and log message
-                if let Ok(_) = self.sender_is_blocked.compare_exchange(
-                    true,
-                    false,
-                    Ordering::SeqCst,
-                    Ordering::SeqCst,
-                ) {
+                if self
+                    .sender_is_blocked
+                    .compare_exchange(true, false, Ordering::SeqCst, Ordering::SeqCst)
+                    .is_ok()
+                {
                     info!("TelemetrySender recovered and resumed sending");
                 }
             }
             Err(_) => {
                 // If sender has not been blocked before, set bool to true and log error message
-                if let Ok(_) = self.sender_is_blocked.compare_exchange(
-                    false,
-                    true,
-                    Ordering::SeqCst,
-                    Ordering::SeqCst,
-                ) {
+                if self
+                    .sender_is_blocked
+                    .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                    .is_ok()
+                {
                     warn!("TelemetrySender dropped a msg: either buffer is full or no receiver is waiting");
                 }
             }
@@ -282,7 +280,7 @@ pub enum ScanIssue {
 }
 
 impl ScanIssue {
-    fn into_metric_id(&self) -> u32 {
+    fn as_metric_id(&self) -> u32 {
         match self {
             ScanIssue::ScanFailure => metrics::CLIENT_SCAN_FAILURE_METRIC_ID,
             ScanIssue::AbortedScan => metrics::ABORTED_SCAN_METRIC_ID,
@@ -483,15 +481,12 @@ fn inspect_record_connection_status(
                     },
                     ht_cap?: latest_ap_state.raw_ht_cap().map(|cap| InspectBytes(cap.bytes)),
                     vht_cap?: latest_ap_state.raw_vht_cap().map(|cap| InspectBytes(cap.bytes)),
-                    wsc?: match &latest_ap_state.probe_resp_wsc() {
-                        None => None,
-                        Some(wsc) => Some(make_inspect_loggable!(
+                    wsc?: latest_ap_state.probe_resp_wsc().as_ref().map(|wsc| make_inspect_loggable!(
                             device_name: String::from_utf8_lossy(&wsc.device_name[..]).to_string(),
                             manufacturer: String::from_utf8_lossy(&wsc.manufacturer[..]).to_string(),
                             model_name: String::from_utf8_lossy(&wsc.model_name[..]).to_string(),
                             model_number: String::from_utf8_lossy(&wsc.model_number[..]).to_string(),
                         )),
-                    },
                     is_wmm_assoc: latest_ap_state.find_wmm_param().is_some(),
                     wmm_param?: latest_ap_state.find_wmm_param().map(|bytes| InspectBytes(bytes)),
                 });
@@ -524,15 +519,12 @@ fn inspect_record_external_data(
                 inspect_insert!(inspector.root(), connected_network: {
                     rssi_dbm: latest_ap_state.rssi_dbm,
                     snr_db: latest_ap_state.snr_db,
-                    wsc?: match &latest_ap_state.probe_resp_wsc() {
-                        None => None,
-                        Some(wsc) => Some(make_inspect_loggable!(
+                    wsc?: latest_ap_state.probe_resp_wsc().as_ref().map(|wsc| make_inspect_loggable!(
                             device_name: String::from_utf8_lossy(&wsc.device_name[..]).to_string(),
                             manufacturer: String::from_utf8_lossy(&wsc.manufacturer[..]).to_string(),
                             model_name: String::from_utf8_lossy(&wsc.model_name[..]).to_string(),
                             model_number: String::from_utf8_lossy(&wsc.model_number[..]).to_string(),
                         )),
-                    },
                 });
 
                 // TODO(fxbug.dev/90121): This timeout is no longer needed once diagnostics
@@ -1222,15 +1214,12 @@ impl Telemetry {
                 },
                 ht_cap?: info.latest_ap_state.raw_ht_cap().map(|cap| InspectBytes(cap.bytes)),
                 vht_cap?: info.latest_ap_state.raw_vht_cap().map(|cap| InspectBytes(cap.bytes)),
-                wsc?: match &info.latest_ap_state.probe_resp_wsc() {
-                    None => None,
-                    Some(wsc) => Some(make_inspect_loggable!(
+                wsc?: info.latest_ap_state.probe_resp_wsc().as_ref().map(|wsc| make_inspect_loggable!(
                         device_name: String::from_utf8_lossy(&wsc.device_name[..]).to_string(),
                         manufacturer: String::from_utf8_lossy(&wsc.manufacturer[..]).to_string(),
                         model_name: String::from_utf8_lossy(&wsc.model_name[..]).to_string(),
                         model_number: String::from_utf8_lossy(&wsc.model_number[..]).to_string(),
                     )),
-                },
                 is_wmm_assoc: info.latest_ap_state.find_wmm_param().is_some(),
                 wmm_param?: info.latest_ap_state.find_wmm_param().map(|bytes| InspectBytes(bytes)),
             }
@@ -2577,7 +2566,7 @@ impl StatsLogger {
     }
 
     async fn log_scan_issue(&mut self, issue: ScanIssue) {
-        log_cobalt_1dot1!(self.cobalt_1dot1_proxy, log_occurrence, issue.into_metric_id(), 1, &[])
+        log_cobalt_1dot1!(self.cobalt_1dot1_proxy, log_occurrence, issue.as_metric_id(), 1, &[])
     }
 
     async fn log_connection_failure(&mut self) {
@@ -6303,12 +6292,12 @@ mod tests {
         }
 
         match (&left.payload, &right.payload) {
-            (MetricEventPayload::Count(v1), MetricEventPayload::Count(v2)) => v1.cmp(&v2),
+            (MetricEventPayload::Count(v1), MetricEventPayload::Count(v2)) => v1.cmp(v2),
             (MetricEventPayload::IntegerValue(v1), MetricEventPayload::IntegerValue(v2)) => {
-                v1.cmp(&v2)
+                v1.cmp(v2)
             }
             (MetricEventPayload::StringValue(v1), MetricEventPayload::StringValue(v2)) => {
-                v1.cmp(&v2)
+                v1.cmp(v2)
             }
             (MetricEventPayload::Histogram(_), MetricEventPayload::Histogram(_)) => {
                 unimplemented!()

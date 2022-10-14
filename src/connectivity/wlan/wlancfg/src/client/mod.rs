@@ -75,10 +75,8 @@ pub async fn serve_provider_requests(
                         telemetry_sender.clone(),
                     );
                     controller_reqs.push(fut);
-                } else {
-                    if let Err(e) = reject_provider_request(req) {
-                        error!("error sending rejection epitaph: {:?}", e);
-                    }
+                } else if let Err(e) = reject_provider_request(req) {
+                    error!("error sending rejection epitaph: {:?}", e);
                 }
             },
             complete => break,
@@ -1543,7 +1541,7 @@ mod tests {
 
         // check whether each network we saved is in the results and that nothing else is there.
         for network_config in &expected_configs {
-            assert!(saved_networks_results.contains(&network_config));
+            assert!(saved_networks_results.contains(network_config));
         }
         assert_eq!(expected_configs.len(), saved_networks_results.len());
     }

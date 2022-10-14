@@ -285,7 +285,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                     .await
                     .write(
                         &network_id.clone().into(),
-                        &network_config_vec_to_persistent_data(&network_configs),
+                        &network_config_vec_to_persistent_data(network_configs),
                     )
                     .await
                     .map_err(|_| NetworkConfigError::StashWriteError)?;
@@ -387,7 +387,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
             .await
             .write(
                 &network_id.clone().into(),
-                &network_config_vec_to_persistent_data(&network_configs),
+                &network_config_vec_to_persistent_data(network_configs),
             )
             .await
             .map_err(|_| NetworkConfigError::StashWriteError)?;
@@ -430,7 +430,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                         }
                         if has_change {
                             // Update persistent storage since a config has changed.
-                            let data = network_config_vec_to_persistent_data(&networks);
+                            let data = network_config_vec_to_persistent_data(networks);
                             if let Err(e) = self.stash.lock().await.write(&id.into(), &data).await {
                                 info!("Failed to record successful connect in stash: {}", e);
                             }
@@ -473,7 +473,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
     ) {
         let bssid = data.bssid;
         let mut saved_networks = self.saved_networks.lock().await;
-        let networks = match saved_networks.get_mut(&id) {
+        let networks = match saved_networks.get_mut(id) {
             Some(networks) => networks,
             None => {
                 info!("Failed to find network to record disconnect stats");
@@ -535,7 +535,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                         .filter(|scan_id| scan_id.ssid == target_id.ssid)
                         .collect::<Vec<_>>();
                     for config in configs {
-                        if let None = potential_scans.iter().find(|scan_id| {
+                        if !potential_scans.iter().any(|scan_id| {
                             compatible_policy_securities(&scan_id.security_type)
                                 .contains(&config.security_type)
                                 && security_is_compatible(

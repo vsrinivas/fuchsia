@@ -1836,25 +1836,25 @@ mod tests {
 
     /// Move stash requests forward so that a save request can progress.
     fn process_stash_write(
-        mut exec: &mut fuchsia_async::TestExecutor,
-        mut stash_server: &mut fidl_stash::StoreAccessorRequestStream,
+        exec: &mut fuchsia_async::TestExecutor,
+        stash_server: &mut fidl_stash::StoreAccessorRequestStream,
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut stash_server.try_next()),
             Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::SetValue { .. })))
         );
-        process_stash_flush(&mut exec, &mut stash_server);
+        process_stash_flush(exec, stash_server);
     }
 
     fn process_stash_delete(
-        mut exec: &mut fuchsia_async::TestExecutor,
-        mut stash_server: &mut fidl_stash::StoreAccessorRequestStream,
+        exec: &mut fuchsia_async::TestExecutor,
+        stash_server: &mut fidl_stash::StoreAccessorRequestStream,
     ) {
         assert_variant!(
             exec.run_until_stalled(&mut stash_server.try_next()),
             Poll::Ready(Ok(Some(fidl_stash::StoreAccessorRequest::DeletePrefix { .. })))
         );
-        process_stash_flush(&mut exec, &mut stash_server);
+        process_stash_flush(exec, stash_server);
     }
 
     fn process_stash_flush(

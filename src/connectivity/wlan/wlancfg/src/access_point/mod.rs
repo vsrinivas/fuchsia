@@ -89,10 +89,8 @@ impl AccessPoint {
                                 ).await
                             };
                             provider_reqs.push(fut);
-                        } else {
-                            if let Err(e) = reject_provider_request(req) {
-                                error!("error sending rejection epitaph: {:?}", e);
-                            }
+                        } else if let Err(e) = reject_provider_request(req) {
+                            error!("error sending rejection epitaph: {:?}", e);
                         }
                     }
                     Err(e) => error!("encountered and error while serving provider requests: {}", e)

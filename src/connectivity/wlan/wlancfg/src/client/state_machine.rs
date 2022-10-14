@@ -116,13 +116,8 @@ pub async fn serve(
     telemetry_sender: TelemetrySender,
     stats_sender: ConnectionStatsSender,
 ) {
-    let next_network = match connect_selection {
-        Some(selection) => {
-            Some(ConnectingOptions { connect_selection: selection, attempt_counter: 0 })
-        }
-        // StateMachine will start, then quickly exit, signaling the client as idle.
-        None => None,
-    };
+    let next_network = connect_selection
+        .map(|selection| ConnectingOptions { connect_selection: selection, attempt_counter: 0 });
     let disconnect_options = DisconnectingOptions {
         disconnect_responder: None,
         previous_network: None,
@@ -248,14 +243,12 @@ async fn disconnecting_state(
 
     // Notify listeners if a disconnect request was sent, or ensure that listeners know client
     // connections are enabled.
-    let networks = match options.previous_network {
-        Some((network_identifier, status)) => Some(ClientNetworkState {
+    let networks =
+        options.previous_network.map(|(network_identifier, status)| ClientNetworkState {
             id: network_identifier,
             state: types::ConnectionState::Disconnected,
             status: Some(status),
-        }),
-        None => None,
-    };
+        });
     send_listener_state_update(&common_options.update_sender, networks);
 
     // Notify the caller that disconnect was sent to the SME once the final disconnected update has

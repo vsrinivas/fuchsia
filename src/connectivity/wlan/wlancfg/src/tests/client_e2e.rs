@@ -140,6 +140,7 @@ struct TestValues {
 }
 
 // Internal policy objects, used for manipulating state within tests
+#[allow(clippy::type_complexity)]
 struct InternalObjects {
     internal_futures: JoinAll<Pin<Box<dyn Future<Output = Result<Void, Error>>>>>,
     _saved_networks: Arc<dyn SavedNetworksManagerApi>,

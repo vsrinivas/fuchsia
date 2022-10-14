@@ -14,10 +14,10 @@ pub struct ConnectedClientInformation {
     pub count: u8,
 }
 
-impl Into<fidl_policy::ConnectedClientInformation> for ConnectedClientInformation {
-    fn into(self) -> fidl_policy::ConnectedClientInformation {
+impl From<ConnectedClientInformation> for fidl_policy::ConnectedClientInformation {
+    fn from(connected_client_info: ConnectedClientInformation) -> Self {
         fidl_policy::ConnectedClientInformation {
-            count: Some(self.count),
+            count: Some(connected_client_info.count),
             ..fidl_policy::ConnectedClientInformation::EMPTY
         }
     }
@@ -56,9 +56,10 @@ impl ApStateUpdate {
     }
 }
 
-impl Into<Vec<fidl_policy::AccessPointState>> for ApStatesUpdate {
-    fn into(self) -> Vec<fidl_policy::AccessPointState> {
-        self.access_points
+impl From<ApStatesUpdate> for Vec<fidl_policy::AccessPointState> {
+    fn from(ap_updates: ApStatesUpdate) -> Self {
+        ap_updates
+            .access_points
             .iter()
             .map(|ap| fidl_policy::AccessPointState {
                 id: Some(fidl_policy::NetworkIdentifier::from(ap.id.clone())),

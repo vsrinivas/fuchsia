@@ -41,7 +41,7 @@ impl Experiments {
     }
 
     pub fn update_experiment(&mut self, update: ExperimentUpdate) {
-        let (experiment, id) = update.into_key_value();
+        let (experiment, id) = update.as_key_value();
 
         // The experiment enum is already expected to exist in the hashmap, so this return value is
         // of no interest.
@@ -64,7 +64,7 @@ pub enum ExperimentUpdate {
 }
 
 impl ExperimentUpdate {
-    fn into_key_value(&self) -> (ExperimentType, ExperimentId) {
+    fn as_key_value(&self) -> (ExperimentType, ExperimentId) {
         match *self {
             ExperimentUpdate::Power(power_save_type) => {
                 (ExperimentType::Power, ExperimentId::from(power_save_type))
@@ -100,7 +100,7 @@ mod tests {
         update: ExperimentUpdate,
         expected: (ExperimentType, ExperimentId),
     ) {
-        assert_eq!(update.into_key_value(), expected)
+        assert_eq!(update.as_key_value(), expected)
     }
 
     #[test_case(fidl_common::PowerSaveType::PsModeUltraLowPower, ULTRA_LOW_POWER_EXPERIMENT_ID)]

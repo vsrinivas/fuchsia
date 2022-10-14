@@ -289,7 +289,7 @@ impl PhyManagerApi for PhyManager {
             )
             .await?;
             let security_support = query_security_support(&self.device_monitor, iface_id).await?;
-            if let Some(_) = phy_container.client_ifaces.insert(iface_id, security_support) {
+            if phy_container.client_ifaces.insert(iface_id, security_support).is_some() {
                 warn!("Unexpectedly replaced existing iface security support for id {}", iface_id);
             };
         }
@@ -301,7 +301,7 @@ impl PhyManagerApi for PhyManager {
             fuchsia_zircon::ok(ps_result).map_err(|_| PhyManagerError::PhySetLowPowerFailure)?
         }
 
-        if let Some(_) = self.phys.insert(phy_id, phy_container) {
+        if self.phys.insert(phy_id, phy_container).is_some() {
             warn!("Unexpectedly replaced existing phy information for id {}", phy_id);
         };
 
@@ -372,7 +372,7 @@ impl PhyManagerApi for PhyManager {
             let client_capable_phy_ids = self.phys_for_role(fidl_common::WlanMacRole::Client);
 
             for client_phy in client_capable_phy_ids.iter() {
-                let phy_container = match self.phys.get_mut(&client_phy) {
+                let phy_container = match self.phys.get_mut(client_phy) {
                     Some(phy_container) => phy_container,
                     None => {
                         error_encountered = Err(PhyManagerError::PhyQueryFailure);
@@ -445,7 +445,7 @@ impl PhyManagerApi for PhyManager {
 
         for client_phy in client_capable_phys.iter() {
             let mut phy_container =
-                self.phys.get_mut(&client_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
+                self.phys.get_mut(client_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
 
             // Continue tracking interface IDs for which deletion fails.
             let mut lingering_ifaces = HashMap::new();
@@ -456,7 +456,7 @@ impl PhyManagerApi for PhyManager {
                     Err(e) => {
                         result = Err(e);
                         failing_phys.push(*client_phy);
-                        if let Some(_) = lingering_ifaces.insert(iface_id, security_support) {
+                        if lingering_ifaces.insert(iface_id, security_support).is_some() {
                             warn!("Unexpected duplicate lingering iface for id {}", iface_id);
                         };
                     }
@@ -487,10 +487,7 @@ impl PhyManagerApi for PhyManager {
 
         // Find the first PHY with any client interfaces and return its first client interface.
         let phy = self.phys.get_mut(&client_capable_phys[0])?;
-        match phy.client_ifaces.keys().next() {
-            Some(iface_id) => Some(*iface_id),
-            None => None,
-        }
+        phy.client_ifaces.keys().next().map(|iface_id| *iface_id)
     }
 
     fn get_wpa3_capable_client(&mut self) -> Option<u16> {
@@ -514,7 +511,7 @@ impl PhyManagerApi for PhyManager {
         // First check for any PHYs that can have AP interfaces but do not yet
         for ap_phy_id in ap_capable_phy_ids.iter() {
             let phy_container =
-                self.phys.get_mut(&ap_phy_id).ok_or(PhyManagerError::PhyQueryFailure)?;
+                self.phys.get_mut(ap_phy_id).ok_or(PhyManagerError::PhyQueryFailure)?;
             if phy_container.ap_ifaces.is_empty() {
                 let mac = match self.suggested_ap_mac {
                     Some(mac) => mac.to_array(),
@@ -595,7 +592,7 @@ impl PhyManagerApi for PhyManager {
 
         for ap_phy in ap_capable_phys.iter() {
             let mut phy_container =
-                self.phys.get_mut(&ap_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
+                self.phys.get_mut(ap_phy).ok_or(PhyManagerError::PhyQueryFailure)?;
 
             // Continue tracking interface IDs for which deletion fails.
             let mut lingering_ifaces = HashSet::new();

@@ -323,7 +323,7 @@ async fn perform_scan(
         }
     }
 
-    if requested_active_scan_ids.len() > 0 {
+    if !requested_active_scan_ids.is_empty() {
         let requested_active_scan_ssids =
             requested_active_scan_ids.iter().map(|id| id.ssid.to_vec()).collect();
         let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -462,7 +462,7 @@ impl ScanResultUpdate for LocationSensorUpdater {
                 .map_err(|err| format_err!("failed to call location sensor service: {:?}", err))?;
 
             // Send results to the iterator
-            send_scan_results_over_fidl(server, &scan_results).await
+            send_scan_results_over_fidl(server, scan_results).await
         }
 
         let scan_results = scan_result_to_policy_scan_result(scan_results, self.wpa3_supported);
