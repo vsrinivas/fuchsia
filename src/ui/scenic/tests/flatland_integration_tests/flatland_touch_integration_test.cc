@@ -1025,6 +1025,15 @@ TEST_F(FlatlandTouchIntegrationTest, PartialScreenOverlappingViews) {
   points.push_back({0, A_B_height});
 
   InjectionHelper(points, child_A_events, 0, 0);
+  RunLoopUntil([&child_A_events] {
+    return !child_A_events.empty() && child_A_events.back().has_interaction_result();
+  });
+  RunLoopUntil([&parent_events] {
+    return !parent_events.empty() && parent_events.back().has_interaction_result();
+  });
+  EXPECT_EQ(child_A_events.size(), 5u);
+  EXPECT_EQ(parent_events.size(), 5u);
+  EXPECT_TRUE(child_B_events.empty());
 
   // Reset vectors for the next stream.
   parent_events.clear();
