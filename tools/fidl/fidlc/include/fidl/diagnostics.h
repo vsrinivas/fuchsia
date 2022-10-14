@@ -107,7 +107,7 @@ constexpr UndocumentedErrorDef<47, SourceSpan> ErrProtocolComposedMultipleTimes(
     "protocol composed multiple times; previous was at {}");
 constexpr UndocumentedErrorDef<48> ErrOptionalTableMember("Table members cannot be optional");
 constexpr UndocumentedErrorDef<49> ErrOptionalUnionMember("Union members cannot be optional");
-constexpr UndocumentedErrorDef<50> ErrDeprecatedStructDefaults(
+constexpr ErrorDef<50> ErrDeprecatedStructDefaults(
     "Struct defaults are deprecated and should not be used (see RFC-0160)");
 constexpr UndocumentedErrorDef<51, std::vector<std::string_view>, std::vector<std::string_view>>
     ErrUnknownDependentLibrary(

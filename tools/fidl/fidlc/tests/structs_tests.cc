@@ -32,12 +32,8 @@ type MyStruct = struct {
 }
 
 TEST(StructsTests, BadPrimitiveDefaultValueNoAnnotation) {
-  TestLibrary library(R"FIDL(library example;
-
-type MyStruct = struct {
-    field int64 = 20;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0050.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeprecatedStructDefaults);
 }
 
