@@ -307,7 +307,7 @@ lazy_static! {
         Some(('k', Some('K'), true).into()),
         Some(('l', Some('L'), true).into()),
         // 0x10
-        Some((',', Some('?'), true).into()),
+        Some((',', Some('?')).into()),
         Some(('n', Some('N'), true).into()),
         Some(('o', Some('O'), true).into()),
         Some(('p', Some('P'), true).into()),
@@ -350,7 +350,7 @@ lazy_static! {
         Some(('$', Some('£')).into()),
         Some(('\\', Some('|')).into()),  // Not present on French Azerty?
         None,
-        Some(('m', Some('M')).into()),
+        Some(('m', Some('M'), true).into()),
         // 0x34
         Some(('\'', Some('"')).into()),
         Some(('²', None).into()),
@@ -570,7 +570,7 @@ impl From<(char, Option<char>, bool)> for KeyLevels {
 
 impl KeyLevels {
     pub fn get_key(&self, m: &impl ModifierChecker, l: &impl LockStateChecker) -> Option<char> {
-        if l.test(LockState::CAPS_LOCK) && self.is_letter || m.test(Modifiers::SHIFT) {
+        if (l.test(LockState::CAPS_LOCK) && self.is_letter) || m.test(Modifiers::SHIFT) {
             return self.shift_ch;
         }
         Some(self.ch)

@@ -659,6 +659,7 @@ mod tests {
     const HID_USAGE_KEY_L: u32 = 0x0f;
     const HID_USAGE_KEY_M: u32 = 0x10;
     const HID_USAGE_KEY_N: u32 = 0x11;
+    const HID_USAGE_KEY_Q: u32 = 0x14;
     const HID_USAGE_KEY_U: u32 = 0x18;
     const HID_USAGE_KEY_1: u32 = 0x1e;
     const HID_USAGE_KEY_SEMICOLON: u32 = 0x33;
@@ -686,7 +687,7 @@ mod tests {
     }
 
     #[test]
-    fn spotcheck_keymap() -> Result<()> {
+    fn spotcheck_us_qwerty_keymap() -> Result<()> {
         assert_eq!(
             'a' as u32,
             US_QWERTY.hid_usage_to_code_point(
@@ -731,7 +732,36 @@ mod tests {
     }
 
     #[test]
-    fn spotcheck_dvorak_keymap() -> Result<()> {
+    fn spotcheck_fr_azerty_keymap() -> Result<()> {
+        assert_eq!(
+            'a' as u32,
+            FR_AZERTY.hid_usage_to_code_point(
+                HID_USAGE_KEY_Q,
+                &ModifierState::new(),
+                &LockStateKeys::new(),
+            )?
+        );
+        assert_eq!(
+            'M' as u32,
+            FR_AZERTY.hid_usage_to_code_point(
+                HID_USAGE_KEY_SEMICOLON,
+                &ModifierState::new(),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
+            )?
+        );
+        assert_eq!(
+            ',' as u32,
+            FR_AZERTY.hid_usage_to_code_point(
+                HID_USAGE_KEY_M,
+                &ModifierState::new(),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
+            )?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn spotcheck_us_dvorak_keymap() -> Result<()> {
         assert_eq!(
             'a' as u32,
             US_DVORAK.hid_usage_to_code_point(
@@ -800,6 +830,14 @@ mod tests {
             'N' as u32,
             US_DVORAK.hid_usage_to_code_point(
                 HID_USAGE_KEY_L,
+                &ModifierState::new(),
+                &LockStateKeys::new().with(LockState::CAPS_LOCK),
+            )?
+        );
+        assert_eq!(
+            '\'' as u32,
+            US_DVORAK.hid_usage_to_code_point(
+                HID_USAGE_KEY_Q,
                 &ModifierState::new(),
                 &LockStateKeys::new().with(LockState::CAPS_LOCK),
             )?
