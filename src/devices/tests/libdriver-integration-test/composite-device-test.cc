@@ -66,7 +66,7 @@ TEST_F(CompositeDeviceTest, CreateTest) {
   std::unique_ptr<MockDevice> child_device1, child_device2;
   fidl::InterfacePtr<fuchsia::io::Node> client;
 
-  constexpr char kName[] = "composite";
+  constexpr char kName[] = "sys/test/test/mock/fragment1/composite";
 
   auto promise = CreateFragmentDevices(&root_device, &child_device1, &child_device2)
                      .and_then(DoWaitForPath(kName))
@@ -94,7 +94,7 @@ TEST_F(CompositeDeviceTest, DISABLED_UnbindFragment) {
   fidl::InterfacePtr<fuchsia::device::Controller> composite, child1_controller;
   fidl::SynchronousInterfacePtr<fuchsia::device::test::RootDevice> composite_test;
 
-  constexpr char kName[] = "composite/test";
+  constexpr char kName[] = "sys/test/test/mock/fragment1/composite/test";
 
   auto promise =
       CreateFragmentDevices(&root_device, &child_device1, &child_device2)

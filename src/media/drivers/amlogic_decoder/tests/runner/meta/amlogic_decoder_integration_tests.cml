@@ -15,9 +15,9 @@
             protocol: [ "fuchsia.tracing.provider.Registry" ],
         },
         {
-            // For /dev/aml-video/amlogic_video, provided by "devices" facet.
-            // Entire /dev/ must be routed for GetTopologicalPath on
-            // /dev/aml-video/amlogic_video to not hang.
+            // We need /dev/class/media-codec to discover the device under test;
+            // we can't use dev-class here because test also uses the
+            // topological path to open the device's parent.
             directory: "dev",
             rights: [ "rw*" ],
             path: "/dev",

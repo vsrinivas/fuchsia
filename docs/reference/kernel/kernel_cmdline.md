@@ -433,10 +433,11 @@ Defaults to true.
 
 ## netsvc.interface=\<path>
 
-This option instructs netsvc to use only the ethernet device at the given
-topological path. All other ethernet devices are ignored by netsvc. The
+This option instructs netsvc to use only the device whose topological path ends
+with the option's value. All other devices are ignored by netsvc. The
 topological path for a device can be determined from the shell by running the
-`lsdev` command on the ethernet class device (e.g., `/dev/class/ethernet/000`).
+`lsdev` command on the device (e.g. `/dev/class/network/000` or
+`/dev/class/ethernet/000`).
 
 This is useful for configuring network booting for a device with multiple
 ethernet ports, which may be enumerated in a non-deterministic order.
