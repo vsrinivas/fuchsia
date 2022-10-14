@@ -543,6 +543,34 @@ func TestRunWithInvalidArtifactPrefix(t *testing.T) {
 	}
 }
 
+func TestRunWithFuzzerErrorUsingFuzzCtl(t *testing.T) {
+	build, _ := newMockBuild()
+
+	_, _, err := runWithBuild(t, build, "cff/broken", nil)
+	if err == nil || !strings.Contains(err.Error(), "internal error") {
+		t.Fatalf("expected failure to run but got: %s", err)
+	}
+}
+
+func TestRunWithFuzzerErrorUsingFfxFuzz(t *testing.T) {
+	build, _ := newMockBuild()
+	build.(*mockBuild).useFfxFuzz = true
+
+	f, err := build.Fuzzer("cff/broken")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	conn := NewMockConnector(t)
+	conn.Dirs = []string{f.AbsPath("data/corpus")}
+
+	_, _, err = runWithConnector(t, build, conn, "cff/broken", nil)
+
+	// TODO(fxbug.dev/112048): Validate the specific expected error.
+	if err == nil {
+		t.Fatalf("expected failure to run but got: %s", err)
+	}
+}
+
 func TestMissingPID(t *testing.T) {
 	output, _, err := runWithDefaults(t, "fail/nopid", nil)
 	if err != nil {

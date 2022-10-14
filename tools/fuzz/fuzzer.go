@@ -707,9 +707,9 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 	if err != nil {
 		return nil, fmt.Errorf("error getting fuzzer stdout: %s", err)
 	}
-	if !f.useFfxFuzz() {
-		// ffx fuzz combines stdout and stderr into stdout for us already, but
-		// for v1 fuzzers we need to do this ourself
+	if !f.isV2() {
+		// `ffx fuzz` and `fuzz_ctl` combine stdout and stderr into stdout for
+		// us already, but for v1 fuzzers we need to do this ourself
 		fuzzerStderr, err := cmd.StderrPipe()
 		if err != nil {
 			return nil, fmt.Errorf("error getting fuzzer stderr: %s", err)
@@ -753,9 +753,14 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 	err = cmd.Wait()
 	glog.Infof("Fuzzer run has completed")
 
-	// Check the returncode (though this might be modified
-	// by libfuzzer args and thus be unreliable)
 	if cmderr, ok := err.(*InstanceCmdError); ok {
+		// `fuzz_ctl` only returns 0 or 1, so anything non-zero is an error.
+		if f.useFuzzCtl() {
+			return nil, fmt.Errorf("unexpected return code: %s", err)
+		}
+
+		// For v1 libFuzzer: check the returncode (though this might be
+		// modified by libfuzzer args and thus be unreliable)
 		found := false
 		for _, code := range expectedFuzzerReturnCodes {
 			if cmderr.ReturnCode == code {

@@ -81,6 +81,9 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 		break
 	case "foo/bar":
 		break
+	case "cff/broken":
+		return nil, &InstanceCmdError{ReturnCode: 1, Command: c.name,
+			Stderr: "internal error"}
 	case "fail/nopid":
 		// No PID
 		output = []string{

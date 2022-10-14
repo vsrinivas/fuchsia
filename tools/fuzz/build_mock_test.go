@@ -73,6 +73,8 @@ func (b *mockBuild) Fuzzer(name string) (*Fuzzer, error) {
 		return NewV1Fuzzer(b, "fail", "notfound"), nil
 	case "cff/fuzzer":
 		return NewV2Fuzzer(b, "cff", "fuzzer", b.useFfxFuzz), nil
+	case "cff/broken":
+		return NewV2Fuzzer(b, "cff", "broken", b.useFfxFuzz), nil
 	default:
 		return nil, fmt.Errorf("invalid fuzzer name %q", name)
 	}
@@ -101,5 +103,5 @@ func (b *mockBuild) Symbolize(in io.ReadCloser, out io.Writer) error {
 }
 
 func (b *mockBuild) ListFuzzers() []string {
-	return []string{"foo/bar", "fail/nopid", "fail/notfound", "cff/fuzzer"}
+	return []string{"foo/bar", "fail/nopid", "fail/notfound", "cff/fuzzer", "cff/broken"}
 }

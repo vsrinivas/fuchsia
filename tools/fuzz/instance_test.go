@@ -248,7 +248,7 @@ func TestInstance(t *testing.T) {
 	fuzzers := i.ListFuzzers()
 
 	if !reflect.DeepEqual(fuzzers, []string{"foo/bar", "fail/nopid", "fail/notfound",
-		"cff/fuzzer"}) {
+		"cff/fuzzer", "cff/broken"}) {
 		t.Fatalf("incorrect fuzzer list: %v", fuzzers)
 	}
 
