@@ -245,6 +245,38 @@ impl Directory {
         }
     }
 
+    // Returns the size of a file in bytes.
+    pub async fn get_file_size<P: AsRef<Path>>(&self, relative_path: P) -> Result<u64> {
+        let path = self.path.join(relative_path.as_ref());
+        let relative_path = match relative_path.as_ref().to_str() {
+            Some(relative_path) => relative_path,
+            None => return Err(format_err!("relative path is not valid unicode")),
+        };
+
+        let file =
+            match open_file_no_describe(&self.proxy, relative_path, fio::OpenFlags::RIGHT_READABLE)
+            {
+                Ok(proxy) => proxy,
+                Err(e) => {
+                    return Err(format_err!(
+                        "could not open file `{}`: {}",
+                        path.as_path().display(),
+                        e
+                    ))
+                }
+            };
+
+        match file.get_attr().await {
+            Ok((raw_status_code, attr)) => {
+                Status::ok(raw_status_code)?;
+                Ok(attr.storage_size)
+            }
+            Err(e) => {
+                Err(format_err!("Unexpected FIDL error during file attribute retrieval: {}", e))
+            }
+        }
+    }
+
     // Return a list of directory entry names in the directory
     pub async fn entry_names(&self) -> Result<Vec<String>> {
         match self.entries().await {

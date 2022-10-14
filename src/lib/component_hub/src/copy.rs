@@ -14,6 +14,8 @@ use {
     std::path::PathBuf,
 };
 
+const CHANNEL_SIZE_LIMIT: u64 = 64 * 1024;
+
 /// Transfer a file between a component's namespace to/from the host machine.
 ///
 /// # Arguments
@@ -78,7 +80,17 @@ pub async fn copy_file_from_namespace(
     )
     .await?;
 
+    let file_size = component_namespace.get_file_size(&file_path).await?;
+    // TODO(http://fxbug.dev/111473): Add large file support
+    if file_size > CHANNEL_SIZE_LIMIT {
+        return Err(anyhow!(
+            "File: \"{}\" is greater than 64KB which is currently not supported.",
+            { file_path.display() }
+        ));
+    }
+
     let data = component_namespace.read_file_bytes(file_path).await?;
+
     write(destination_path, data).map_err(|e| anyhow!("Could not write file to host: {:?}", e))?;
     Ok(())
 }
@@ -93,11 +105,13 @@ mod tests {
         std::collections::HashMap,
         std::fs::read,
         std::path::Path,
+        tempfile::tempdir,
         test_case::test_case,
     };
 
-    const LARGE_FILE_ARRAY: [u8; 64000] = [b'a'; 64000];
-    const OVER_LIMIT_FILE_ARRAY: [u8; 64001] = [b'a'; 64001];
+    const LARGE_FILE_ARRAY: [u8; CHANNEL_SIZE_LIMIT as usize] = [b'a'; CHANNEL_SIZE_LIMIT as usize];
+    const OVER_LIMIT_FILE_ARRAY: [u8; (CHANNEL_SIZE_LIMIT + 1) as usize] =
+        [b'a'; (CHANNEL_SIZE_LIMIT + 1) as usize];
     const SAMPLE_NAME: &str = "./core/appmgr";
     const SAMPLE_MONIKER: &str = "./core/appmgr";
     const SAMPLE_FILE_NAME: &str = "foo.txt";
@@ -143,51 +157,60 @@ mod tests {
         )])
     }
 
-    #[test_case("/core/appmgr::foo.txt", "/hello/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/hello/foo.txt"; "device_to_host")]
-    #[test_case("/core/appmgr::foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/foo.txt"; "device_to_host_root")]
-    #[test_case("/core/appmgr::foo.txt", "/hello", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/hello/foo.txt"; "device_to_host_infer_path")]
-    #[test_case("/core/appmgr::foo.txt", "/hello/", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/hello/foo.txt"; "device_to_host_infer_slash_path")]
-    #[test_case("/core/appmgr::foo.txt", "/hello/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS),
-                                                                    (SAMPLE_FILE_NAME_2, SAMPLE_FILE_CONTENTS)], "/hello/foo.txt"; "device_to_host_populated_directory")]
-    #[test_case("/core/appmgr::foo.txt", "/hello/foo.txt", vec![(SAMPLE_FILE_NAME, std::str::from_utf8(&LARGE_FILE_ARRAY).unwrap())], "/hello/foo.txt"; "device_to_host_large_file")]
-    #[test_case("/core/appmgr::foo.txt", "/hello/foo.txt", vec![(SAMPLE_FILE_NAME, std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap())], "/hello/foo.txt"; "inconclusive device_to_host_over_file_limit")]
+    #[test_case("/core/appmgr::foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/foo.txt", SAMPLE_FILE_CONTENTS; "device_to_host")]
+    #[test_case("/core/appmgr::foo.txt", "", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/foo.txt", SAMPLE_FILE_CONTENTS; "device_to_host_infer_path")]
+    #[test_case("/core/appmgr::foo.txt", "/", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)], "/foo.txt", SAMPLE_FILE_CONTENTS; "device_to_host_infer_slash_path")]
+    #[test_case("/core/appmgr::foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS),(SAMPLE_FILE_NAME_2, SAMPLE_FILE_CONTENTS)],
+    "/foo.txt", SAMPLE_FILE_CONTENTS; "device_to_host_populated_directory")]
+    #[test_case("/core/appmgr::foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, std::str::from_utf8(&LARGE_FILE_ARRAY).unwrap())], "/foo.txt", std::str::from_utf8(&LARGE_FILE_ARRAY).unwrap(); "device_to_host_large_file")]
+    #[test_case("/core/appmgr::foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap())], "/tmp/foo.txt", std::str::from_utf8(&LARGE_FILE_ARRAY).unwrap(); "inconclusive device_to_host_over_file_limit")]
     #[fuchsia::test]
     async fn copy_from_device_to_host(
         source_path: &'static str,
         destination_path: &'static str,
         seed_files: Vec<(&'static str, &'static str)>,
         actual_data_path: &'static str,
-    ) -> Result<()> {
+        expected_data: &'static str,
+    ) {
+        let dir = tempdir().unwrap();
+        let temp_directory = dir.path().to_str().unwrap();
+        let destination_path = format!("{}{}", temp_directory, destination_path);
         let (ns_dir, ns_server) = create_endpoints::<fio::DirectoryMarker>().unwrap();
         let seed_files =
             HashMap::from(seed_files.into_iter().collect::<HashMap<&'static str, &'static str>>());
-        let () = serve_realm_query_with_namespace(ns_server, seed_files)?;
+        let () = serve_realm_query_with_namespace(ns_server, seed_files).unwrap();
         let query_instance = create_hashmap_of_instance_info(SAMPLE_NAME, SAMPLE_MONIKER, ns_dir);
         let realm_query_proxy = serve_realm_query(query_instance);
 
-        copy(&realm_query_proxy, source_path.to_owned(), destination_path.to_owned()).await?;
+        copy(&realm_query_proxy, source_path.to_owned(), destination_path.to_owned())
+            .await
+            .unwrap();
 
-        let expected_data = SAMPLE_FILE_CONTENTS.to_owned().into_bytes();
-        let actual_data_path = Path::new(actual_data_path);
-        let actual_data = read(&actual_data_path).unwrap();
+        let expected_data = expected_data.to_owned().into_bytes();
+        let actual_data_path_string = format!("{}{}", temp_directory, &actual_data_path);
+        let actual_data_path = Path::new(&actual_data_path_string);
+        let actual_data = read(actual_data_path).unwrap();
         assert_eq!(actual_data, expected_data);
-        Ok(())
     }
 
-    #[test_case("wrong_moniker/core/appmgr::foo.txt", "/hello/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "bad_moniker")]
-    #[test_case("/core/appmgr/foo.txt", "/hello/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "host_to_host_not_supported")]
-    #[test_case("/core/appmgr::bar.txt", "/hello/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "bad_file")]
-    #[test_case("/core/appmgr::foo.txt", "/hello/bar/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "bad_directory")]
+    #[test_case("wrong_moniker/core/appmgr::foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "bad_moniker")]
+    #[test_case("/core/appmgr/foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "host_to_host_not_supported")]
+    #[test_case("/core/appmgr::bar.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "bad_file")]
+    #[test_case("/core/appmgr::foo.txt", "/bar/foo.txt", vec![(SAMPLE_FILE_NAME, SAMPLE_FILE_CONTENTS)]; "bad_directory")]
+    #[test_case("/core/appmgr::foo.txt", "/foo.txt", vec![(SAMPLE_FILE_NAME, std::str::from_utf8(&OVER_LIMIT_FILE_ARRAY).unwrap())]; "device_to_host_over_file_limit")]
     #[fuchsia::test]
     async fn copy_from_device_to_host_fails(
         source_path: &'static str,
         destination_path: &'static str,
         seed_files: Vec<(&'static str, &'static str)>,
-    ) -> Result<()> {
+    ) {
+        let dir = tempdir().unwrap();
+        let temp_directory = dir.path().to_str().unwrap();
+        let destination_path = format!("{}{}", temp_directory, destination_path);
         let (ns_dir, ns_server) = create_endpoints::<fio::DirectoryMarker>().unwrap();
         let seed_files =
             HashMap::from(seed_files.into_iter().collect::<HashMap<&'static str, &'static str>>());
-        let () = serve_realm_query_with_namespace(ns_server, seed_files)?;
+        let () = serve_realm_query_with_namespace(ns_server, seed_files).unwrap();
         let query_instance = create_hashmap_of_instance_info(SAMPLE_NAME, SAMPLE_MONIKER, ns_dir);
         let realm_query_proxy = serve_realm_query(query_instance);
         let source_path = source_path.to_owned();
@@ -195,6 +218,5 @@ mod tests {
         let result = copy(&realm_query_proxy, source_path, destination_path.to_string()).await;
 
         assert!(result.is_err());
-        Ok(())
     }
 }
