@@ -261,7 +261,7 @@ config("fidl-deprecated-c-bindings") {
     "//src/ui/input/drivers/pc-ps2:pc-ps2-driver",
     "//src/ui/lib/display:hdcp_service",
     "//src/virtualization/bin/vmm/device:block",
-    "//src/virtualization/bin/vmm/device:magma_image",
+    "//src/virtualization/bin/vmm/device/virtio_magma:magma_image",
     "//src/zircon/bin/hwstress:hwstress_v2_test",
     "//src/zircon/bin/hwstress:lib",
     "//src/zircon/bin/kstress",

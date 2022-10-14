@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/components/fuchsia_unittest_package.gni")
-import("//src/graphics/lib/magma/include/virtio/virtmagma_debug.gni")
 
 group("tests") {
   testonly = true
@@ -16,6 +15,7 @@ group("tests") {
     "virtio_console:tests",
     "virtio_gpu:tests",
     "virtio_input:tests",
+    "virtio_magma:tests",
     "virtio_sound:tests",
     "virtio_vsock:tests",
   ]
@@ -27,13 +27,13 @@ group("tests") {
 
 group("packages") {
   deps = [
-    ":virtio_magma",
     ":virtio_wl",
     "virtio_balloon",
     "virtio_block",
     "virtio_console",
     "virtio_gpu",
     "virtio_input",
+    "virtio_magma",
     "virtio_net",
     "virtio_rng",
     "virtio_sound",
@@ -82,99 +82,6 @@ source_set("virtio") {
   ]
 }
 
-source_set("magma_image") {
-  visibility = [ ":*" ]
-
-  sources = [
-    "magma_image.cc",
-    "magma_image.h",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
-    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp_wire",
-    "//sdk/lib/sys/component/cpp",
-    "//src/graphics/lib/magma/include:magma",
-    "//src/lib/fsl",
-    "//src/lib/vulkan",
-    "//third_party/mesa/include:drm-uapi",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/image-format:image-format-llcpp",
-    "//zircon/system/ulib/syslog",
-    "//zircon/system/ulib/zx",
-  ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-}
-
-source_set("virtio_magma_lib") {
-  visibility = [ ":*" ]
-
-  sources = [
-    "../bits.h",
-    "virtio_magma.cc",
-    "virtio_magma.h",
-  ]
-  deps = [
-    ":magma_image",
-    ":virtio",
-    "//src/graphics/lib/magma/include:magma",
-    "//src/graphics/lib/magma/include/virtio",
-    "//zircon/system/ulib/syslog",
-  ]
-  public_deps = [ ":virtio_magma_generic" ]
-
-  if (virtmagma_debug) {
-    defines = [ "VIRTMAGMA_DEBUG=1" ]
-  }
-}
-
-executable("virtio_magma_bin") {
-  visibility = [ ":*" ]
-  output_name = "virtio_magma"
-  deps = [
-    ":virtio_magma_lib",
-    "//src/graphics/lib/magma/src/libmagma",
-  ]
-}
-
-executable("virtio_magma_bin_mock_system") {
-  visibility = [ ":*" ]
-  testonly = true
-  output_dir = "$target_out_dir/virtio_magma_mock_system"
-  output_name = "virtio_magma"
-  deps = [
-    ":virtio_magma_lib",
-    "//src/graphics/lib/magma/tests/mock:magma_system",
-  ]
-}
-
-resource("virtio_magma_resources") {
-  sources = [ "${root_build_dir}/linux_x64-shared/libvulkan_intel.so" ]
-  outputs = [ "drivers/libvulkan_intel.so" ]
-}
-
-fuchsia_package_with_single_component("virtio_magma") {
-  manifest = "../meta/virtio_magma.cml"
-  deps = [
-    # TODO(fxbug.dev/13128): don't hard-code the driver
-    ":virtio_magma_bin",
-    ":virtio_magma_resources",
-    "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
-  ]
-}
-
-fuchsia_package_with_single_component("virtio_magma_mock_system") {
-  testonly = true
-  manifest = "../meta/virtio_magma.cml"
-  deps = [ ":virtio_magma_bin_mock_system" ]
-}
-
 executable("virtio_wl_bin") {
   visibility = [ ":*" ]
 
@@ -204,16 +111,16 @@ executable("device_tests") {
   testonly = true
 
   sources = [
-    "magma_image_test.cc",
+    "virtio_magma/magma_image_test.cc",
     "virtio_queue_test.cc",
   ]
 
   deps = [
     ":lib",
-    ":magma_image",
     "tests:device_tests",
     "tests:test_with_device",
     "tests:virtio_queue_fake",
+    "virtio_magma:magma_image",
     "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_hlcpp",
     "//sdk/fidl/fuchsia.input:fuchsia.input_hlcpp",
@@ -301,17 +208,4 @@ fuchsia_unittest_package("device_unittests_package") {
       max_severity = "FATAL"
     }
   }
-}
-
-action("virtio_magma_generic") {
-  out_file = "$target_gen_dir/virtio_magma_generic.h"
-  script = "virtio_magma_generic_h_gen.py"
-  args = [
-    rebase_path("//src/graphics/lib/magma/include/magma/magma.json",
-                root_build_dir),
-    rebase_path(out_file, root_build_dir),
-  ]
-  sources = [ "$script" ]
-  inputs = [ "//src/graphics/lib/magma/include/magma/magma.json" ]
-  outputs = [ "$out_file" ]
 }

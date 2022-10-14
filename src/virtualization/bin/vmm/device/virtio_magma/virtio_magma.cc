@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/vmm/device/virtio_magma.h"
+#include "src/virtualization/bin/vmm/device/virtio_magma/virtio_magma.h"
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -18,7 +18,7 @@
 #include <lib/zx/vmar.h>
 #include <zircon/status.h>
 
-#include "src/virtualization/bin/vmm/device/magma_image.h"
+#include "src/virtualization/bin/vmm/device/virtio_magma/magma_image.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
 static constexpr const char* kDeviceDir = "/dev/class/gpu";

@@ -1,0 +1,115 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/graphics/lib/magma/include/virtio/virtmagma_debug.gni")
+
+group("tests") {
+  testonly = true
+  deps = []
+}
+
+action("virtio_magma_generic") {
+  out_file = "$target_gen_dir/virtio_magma_generic.h"
+  script = "virtio_magma_generic_h_gen.py"
+  args = [
+    rebase_path("//src/graphics/lib/magma/include/magma/magma.json",
+                root_build_dir),
+    rebase_path(out_file, root_build_dir),
+  ]
+  sources = [ "$script" ]
+  inputs = [ "//src/graphics/lib/magma/include/magma/magma.json" ]
+  outputs = [ "$out_file" ]
+}
+
+source_set("magma_image") {
+  sources = [
+    "magma_image.cc",
+    "magma_image.h",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
+    "//src/graphics/lib/magma/include:magma",
+    "//src/lib/fsl",
+    "//src/lib/vulkan",
+    "//third_party/mesa/include:drm-uapi",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/image-format:image-format-llcpp",
+    "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zx",
+  ]
+
+  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
+  # rather than builders.
+  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+}
+
+source_set("lib") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "//src/virtualization/bin/vmm/bits.h",
+    "virtio_magma.cc",
+    "virtio_magma.h",
+  ]
+  deps = [
+    ":magma_image",
+    "//src/graphics/lib/magma/include:magma",
+    "//src/graphics/lib/magma/include/virtio",
+    "//src/virtualization/bin/vmm/device:virtio",
+    "//zircon/system/ulib/syslog",
+  ]
+  public_deps = [ ":virtio_magma_generic" ]
+
+  if (virtmagma_debug) {
+    defines = [ "VIRTMAGMA_DEBUG=1" ]
+  }
+}
+
+executable("bin") {
+  visibility = [ ":*" ]
+  output_name = "virtio_magma"
+  deps = [
+    ":lib",
+    "//src/graphics/lib/magma/src/libmagma",
+  ]
+}
+
+resource("virtio_magma_resources") {
+  sources = [ "${root_build_dir}/linux_x64-shared/libvulkan_intel.so" ]
+  outputs = [ "drivers/libvulkan_intel.so" ]
+}
+
+fuchsia_package_with_single_component("virtio_magma") {
+  manifest = "meta/virtio_magma.cml"
+  deps = [
+    # TODO(fxbug.dev/13128): don't hard-code the driver
+    ":bin",
+    ":virtio_magma_resources",
+    "//third_party/mesa/src/intel/vulkan:vulkan_intel(//build/toolchain:linux_x64-shared)",
+  ]
+}
+
+executable("virtio_magma_bin_mock_system") {
+  visibility = [ ":*" ]
+  testonly = true
+  output_dir = "$target_out_dir/virtio_magma_mock_system"
+  output_name = "virtio_magma"
+  deps = [
+    ":lib",
+    "//src/graphics/lib/magma/tests/mock:magma_system",
+  ]
+}
+
+fuchsia_package_with_single_component("virtio_magma_mock_system") {
+  testonly = true
+  manifest = "../meta/virtio_magma.cml"
+  deps = [ ":virtio_magma_bin_mock_system" ]
+}

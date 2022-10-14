@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_MAGMA_H_
-#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_MAGMA_H_
+#ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_MAGMA_VIRTIO_MAGMA_H_
+#define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_MAGMA_VIRTIO_MAGMA_H_
 
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
@@ -20,7 +20,7 @@
 #include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 #include "src/lib/fxl/macros.h"
 #include "src/virtualization/bin/vmm/device/device_base.h"
-#include "src/virtualization/bin/vmm/device/virtio_magma_generic.h"
+#include "src/virtualization/bin/vmm/device/virtio_magma/virtio_magma_generic.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
 struct ImageInfoWithToken {
@@ -102,4 +102,4 @@ class VirtioMagma : public VirtioMagmaGeneric,
   FXL_DISALLOW_COPY_AND_ASSIGN(VirtioMagma);
 };
 
-#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_MAGMA_H_
+#endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_MAGMA_VIRTIO_MAGMA_H_

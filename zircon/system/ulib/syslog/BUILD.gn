@@ -52,6 +52,7 @@ syslog_visibility_allowlist = [
   "//src/lib/syslog/rust:*",
   "//src/storage/lib/watchdog:*",
   "//src/virtualization/bin/vmm/device:*",
+  "//src/virtualization/bin/vmm/device/virtio_magma:*",
   "//zircon/system/ulib/profile:*",
 ]
 
