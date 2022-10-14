@@ -323,6 +323,7 @@ void x86_intel_init_percpu();
 bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 uint32_t x86_amd_get_patch_level();
 uint32_t x86_intel_get_patch_level();
+bool x86_amd_has_retbleed();
 
 const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid);
 bool x86_intel_idle_state_may_empty_rsb(X86IdleState*);

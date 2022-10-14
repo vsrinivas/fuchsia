@@ -35,6 +35,18 @@ void x86_amd_set_lfence_serializing(const cpu_id::CpuId* cpuid, MsrAccess* msr) 
   }
 }
 
+// All Bulldozer and Zen 1 / Zen 2 CPUs are affected by Retbleed.
+bool x86_amd_has_retbleed() {
+  cpu_id::CpuId cpuid;
+
+  // TODO: Check BTC_NO bit.
+  auto cpu = cpuid.ReadProcessorId();
+  if (cpu.family() == 0x15 || cpu.family() == 0x17) {
+    return true;
+  }
+  return false;
+}
+
 void x86_amd_init_percpu(void) {
   cpu_id::CpuId cpuid;
   MsrAccess msr;

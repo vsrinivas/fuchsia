@@ -66,6 +66,7 @@ bool g_should_ibpb_on_ctxt_switch;
 bool g_ras_fill_on_ctxt_switch;
 bool g_cpu_vulnerable_to_rsb_underflow;
 bool g_has_enhanced_ibrs;
+bool g_has_retbleed;
 
 enum x86_hypervisor_list x86_hypervisor;
 bool g_hypervisor_has_pv_clock;
@@ -233,6 +234,17 @@ void x86_cpu_feature_init() {
   // not to attack the next process).
   // TODO(fxbug.dev/33667, fxbug.dev/12150): Should we have an individual knob for IBPB?
   g_should_ibpb_on_ctxt_switch = !gBootOptions->x86_disable_spec_mitigations && g_has_ibpb;
+
+  switch (x86_vendor) {
+    case X86_VENDOR_INTEL:
+      g_has_retbleed = false;  // TODO: Enumerate Intel CPUs affected by RETBLEED.
+      break;
+    case X86_VENDOR_AMD:
+      g_has_retbleed = x86_amd_has_retbleed();
+      break;
+    case X86_VENDOR_UNKNOWN:
+      break;
+  }
 }
 
 // Invoked on each CPU during boot, after platform init has taken place.
@@ -435,6 +447,7 @@ void x86_feature_debug(void) {
 #ifdef HARDEN_SLS
   print_property("harden_sls");
 #endif
+  print_property("retbleed", g_has_retbleed);
   if (arch::BootCpuidSupports<arch::CpuidPerformanceMonitoringA>()) {
     const arch::CpuidPerformanceMonitoringA eax = io.Read<arch::CpuidPerformanceMonitoringA>();
     const arch::CpuidPerformanceMonitoringD edx = io.Read<arch::CpuidPerformanceMonitoringD>();
