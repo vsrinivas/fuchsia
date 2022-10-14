@@ -50,7 +50,14 @@ impl Manager {
         let (rx, tx) = fidl::Socket::create(fidl::SocketOpts::STREAM)
             .map_err(Error::msg)
             .context("failed to create socket pair")?;
-        self.proxy.get_output(url.as_str(), output, tx).await.context("failed to get output")?;
+        let raw = self
+            .proxy
+            .get_output(url.as_str(), output, tx)
+            .await
+            .context("failed to get output")?;
+        if raw != zx::Status::OK.into_raw() {
+            bail!("fuchsia.fuzzer.Manager/GetOutput returned ZX_ERR_{}", zx::Status::from_raw(raw));
+        }
         Ok(rx)
     }
 
@@ -64,7 +71,7 @@ impl Manager {
         match zx::Status::from_raw(raw) {
             zx::Status::OK => Ok(true),
             zx::Status::NOT_FOUND => Ok(false),
-            status => bail!("failed to stop fuzzer: {}", status),
+            status => bail!("fuchsia.fuzzer.Manager/Stop returned ZX_ERR_{}", status),
         }
     }
 }

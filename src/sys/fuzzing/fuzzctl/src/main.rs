@@ -19,7 +19,8 @@ async fn main() -> Result<()> {
     let proxy = connect_to_protocol::<fuzz::ManagerMarker>()
         .context("failed to connect to fuchsia.fuzzer.Manager")?;
     let output_dir = PathBuf::from("/tmp/fuzz_ctl");
-    let writer = Writer::new(StdioSink { is_tty: false });
+    let mut writer = Writer::new(StdioSink { is_tty: false });
+    writer.use_colors(false);
     let fuzz_ctl = FuzzCtl::new(proxy, output_dir, &writer);
     let args: Vec<String> = std::env::args().skip(1).collect();
     fuzz_ctl.run(&args).await

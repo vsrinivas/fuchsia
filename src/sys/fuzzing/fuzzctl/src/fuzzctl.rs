@@ -70,14 +70,19 @@ impl<O: OutputSink> FuzzCtl<O> {
                 };
             }
         };
-        match args.command {
-            FuzzCtlSubcommand::Reset(cmd) => self.reset(cmd).await,
-            FuzzCtlSubcommand::RunLibFuzzer(cmd) => self.run_libfuzzer(cmd).await,
+        let (result, url) = match args.command {
+            FuzzCtlSubcommand::Reset(cmd) => (self.reset(&cmd).await, cmd.url),
+            FuzzCtlSubcommand::RunLibFuzzer(cmd) => (self.run_libfuzzer(&cmd).await, cmd.url),
+        };
+        if result.is_err() {
+            // Make a best effort to teardown a fuzzer that returns an error.
+            let _ = self.manager.stop(&url).await;
         }
+        result
     }
 
     // Stops and restarts a fuzzer component.
-    async fn reset(&self, cmd: ResetSubcommand) -> Result<()> {
+    async fn reset(&self, cmd: &ResetSubcommand) -> Result<()> {
         // Ensure the fuzzer is stopped or was never started.
         self.manager.stop(&cmd.url).await?;
 
@@ -94,7 +99,7 @@ impl<O: OutputSink> FuzzCtl<O> {
     }
 
     // Invokes `fuchsia.fuzzer.Controller` based on libFuzzer-style command-line arguments.
-    async fn run_libfuzzer(&self, cmd: RunLibFuzzerSubcommand) -> Result<()> {
+    async fn run_libfuzzer(&self, cmd: &RunLibFuzzerSubcommand) -> Result<()> {
         let fuzzer_dir = self.get_fuzzer_dir(&cmd.url).context("failed to get fuzzer directory")?;
 
         let proxy = self.manager.connect(&cmd.url).await?;
@@ -597,6 +602,15 @@ mod tests {
         let cmdline = vec!["run_libfuzzer", TEST_URL];
         run_cmd(&fuzz_ctl, &cmdline, &test).await;
         test.output_includes("failed to fuzz");
+
+        let requests = vec![
+            format!("fuchsia.fuzzer.Manager/Connect({})", TEST_URL),
+            format!("fuchsia.fuzzer.Manager/GetOutput({}, Stderr)", TEST_URL),
+            "fuchsia.fuzzer.Controller/Configure".to_string(),
+            "fuchsia.fuzzer.Controller/Fuzz".to_string(),
+            format!("fuchsia.fuzzer.Manager/Stop({})", TEST_URL),
+        ];
+        assert_eq!(test.requests(), requests);
 
         test.verify_output()
     }

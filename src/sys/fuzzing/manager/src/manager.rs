@@ -56,19 +56,33 @@ impl<T: FidlEndpoint<RunBuilderMarker>> Manager<T> {
         mut receiver: mpsc::UnboundedReceiver<fuzz::ManagerRequest>,
     ) -> Result<()> {
         while let Some(request) = receiver.next().await {
-            match request {
+            let result = match request {
                 fuzz::ManagerRequest::Connect { fuzzer_url, controller, responder } => {
-                    respond(self.connect(&fuzzer_url, controller).await, |r| responder.send(r))
+                    let response = self
+                        .connect(&fuzzer_url, controller)
+                        .await
+                        .map_or_else(|e| e, |_| zx::Status::OK);
+                    responder.send(response.into_raw())
                 }
                 fuzz::ManagerRequest::GetOutput { fuzzer_url, output, socket, responder } => {
-                    respond(self.get_output(&fuzzer_url, output, socket).await, |r| {
-                        responder.send(r)
-                    })
+                    let response = match self.get_output(&fuzzer_url, output, socket).await {
+                        Ok(_) => zx::Status::OK,
+                        Err(e) => {
+                            let _ = self.stop(&fuzzer_url).await;
+                            e
+                        }
+                    };
+                    responder.send(response.into_raw())
                 }
                 fuzz::ManagerRequest::Stop { fuzzer_url, responder } => {
-                    respond(self.stop(&fuzzer_url).await, |r| responder.send(r))
+                    let response =
+                        self.stop(&fuzzer_url).await.map_or_else(|e| e, |_| zx::Status::OK);
+                    responder.send(response.into_raw())
                 }
             };
+            if let Err(e) = result {
+                warn!("failed to send FIDL response: {:?}", e);
+            }
         }
         Ok(())
     }
@@ -212,19 +226,6 @@ fn parse_url(fuzzer_url: &str) -> Result<Url, zx::Status> {
 fn warn_internal<T>(e: Error) -> zx::Status {
     warn!("{:?}", e);
     zx::Status::INTERNAL
-}
-
-fn respond<R>(result: Result<(), zx::Status>, responder: R)
-where
-    R: FnOnce(i32) -> Result<(), fidl::Error>,
-{
-    let response = match result {
-        Ok(_) => zx::Status::OK.into_raw(),
-        Err(status) => status.into_raw(),
-    };
-    if let Err(e) = responder(response) {
-        warn!("failed to send FIDL response: {:?}", e);
-    }
 }
 
 #[cfg(test)]

@@ -136,22 +136,17 @@ impl FuzzRegistry {
         // Connect. Make sure no mutable RefCells are held across the await.
         let result = provider.connect(controller).await;
         let mut providers = self.providers.borrow_mut();
-        match result {
-            Ok(_) => {
-                let entry = providers.entry(url.clone()).or_insert(ProviderStatus::Stopped);
-                match *entry {
-                    ProviderStatus::Connecting => {
-                        // Put the provider back in the map.
-                        *entry = ProviderStatus::Running(provider);
-                        Ok(())
-                    }
-                    _ => {
-                        // Only reachable via a concurrent call to `disconnect`.
-                        Err(zx::Status::CANCELED)
-                    }
-                }
+        match (result, providers.remove(&url)) {
+            (Ok(_), Some(ProviderStatus::Connecting)) => {
+                // Put the provider back in the map.
+                providers.insert(url.clone(), ProviderStatus::Running(provider));
+                Ok(())
             }
-            Err(e) => {
+            (Ok(_), _) => {
+                // Only reachable via a concurrent call to `disconnect`.
+                Err(zx::Status::CANCELED)
+            }
+            (Err(e), _) => {
                 error!("fuchsia.fuzzer.ControllerProvider:Connect failed: {:?}", e);
                 let _ = stop_provider(&url, provider);
                 Err(zx::Status::INTERNAL)
