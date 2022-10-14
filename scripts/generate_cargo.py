@@ -493,9 +493,12 @@ def main():
             for patch in project.patches:
                 path = project.patches[patch]["path"]
                 fout.write(
-                    "%s = { path = %s }\n" % (
+                    "%s = { path = %s" % (
                         patch,
                         json.dumps(os.path.join("third_party/rust_crates", path))))
+                if package := project.patches[patch].get("package"):
+                    fout.write(", package = \"%s\"" % (package,))
+                fout.write(" }\n")
             fout.write("\n")
     return 0
 
