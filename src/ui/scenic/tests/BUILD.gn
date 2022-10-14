@@ -198,10 +198,7 @@ executable("gfx_viewstate_apptest_bin") {
 fuchsia_test_component("gfx_viewstate_apptest") {
   component_name = "gfx_viewstate_apptest"
   manifest = "meta/gfx_viewstate_app_test.cml"
-  deps = [
-    ":gfx_viewstate_apptest_bin",
-    "//src/ui/bin/root_presenter:component_v2",
-  ]
+  deps = [ ":gfx_viewstate_apptest_bin" ]
 }
 
 executable("scenic_pixeltest_bin") {
@@ -221,10 +218,7 @@ executable("scenic_pixeltest_bin") {
 fuchsia_test_component("scenic_pixeltest") {
   component_name = "scenic_pixeltest"
   manifest = "meta/scenic_pixeltest.cml"
-  deps = [
-    ":scenic_pixeltest_bin",
-    "//src/ui/bin/root_presenter:component_v2",
-  ]
+  deps = [ ":scenic_pixeltest_bin" ]
 }
 
 executable("flatland_touch_integration_test_bin") {
