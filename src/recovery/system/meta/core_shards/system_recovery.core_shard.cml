@@ -15,6 +15,11 @@
     ],
     offer: [
         {
+            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
+            from: "#cobalt",
+            to: "#system_recovery",
+        },
+        {
             protocol: "fuchsia.buildinfo.Provider",
             from: "#build-info",
             to: "#system_recovery",

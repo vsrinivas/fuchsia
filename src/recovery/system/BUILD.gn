@@ -10,6 +10,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
 import("//src/recovery/system/system_recovery_args.gni")
 import("//src/sys/core/build/core_shard.gni")
+import("//third_party/cobalt/metrics_registry.gni")
 
 # Generate rust library for the config
 fuchsia_component_manifest("ui_config_manifest") {
@@ -23,6 +24,17 @@ fuchsia_component_manifest("ui_config_manifest") {
 
 fuchsia_structured_config_rust_lib("recovery_ui_config") {
   cm_label = ":ui_config_manifest"
+}
+
+metrics_registry("recovery_metrics_registry") {
+  # ID of the 'recovery' project from the //third_party/cobalt_config/projects.yaml file
+  project_id = 17
+
+  # The namespace to use in the generated code
+  namespace = "cobalt_registry"
+
+  # Generates a rust target called 'recovery_metrics_rustlib'
+  generate_rust = true
 }
 
 group("system") {
@@ -154,10 +166,12 @@ rustc_binary("bin") {
   edition = "2021"
   with_unit_tests = true
   deps = [
+    ":recovery_metrics_registry_rustlib",
     ":recovery_ui_config",
     "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_rust",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_rust",
     "//sdk/fidl/fuchsia.recovery:fuchsia.recovery_rust",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
@@ -185,6 +199,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:tracing",
   ]
   test_deps = [
     "//src/lib/fuchsia-fs",
@@ -194,6 +209,7 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//src/sys/pkg/testing/mock-metrics",
     "//src/sys/pkg/testing/mock-paver",
   ]
   features = [
@@ -202,6 +218,7 @@ rustc_binary("bin") {
   ]
   sources = [
     "src/button.rs",
+    "src/cobalt.rs",
     "src/console.rs",
     "src/fdr.rs",
     "src/font.rs",

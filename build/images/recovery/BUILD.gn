@@ -159,6 +159,11 @@ if (is_fuchsia) {
         # So recovery can read board name and version info:
         "//src/developer/build_info:build-info-service",
 
+        "//src/cobalt/bin/app:build_type_eng",
+        "//src/cobalt/bin/app:cobalt",
+        "//src/cobalt/bin/app:cobalt_registry",
+        "//src/cobalt/bin/app:config",
+
         # Use eng allowlists:
         "//src/security/policy:appmgr_policy_eng",
 

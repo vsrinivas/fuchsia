@@ -4,6 +4,8 @@
 
 #[cfg(feature = "http_setup_server")]
 mod button;
+#[cfg(feature = "http_setup_server")]
+mod cobalt;
 #[cfg(feature = "debug_console")]
 mod console;
 mod fdr;
@@ -51,6 +53,8 @@ use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{Duration, Event};
 use futures::StreamExt;
+#[cfg(feature = "http_setup_server")]
+use recovery_metrics_registry::cobalt_registry as metrics;
 use recovery_ui_config::Config as UiConfig;
 use rive_rs::{self as rive};
 use std::borrow::{Borrow, Cow};
@@ -856,10 +860,51 @@ impl RecoveryViewAssistant {
                             make_message(RecoveryMessages::StartingOta),
                         );
                         let f = async move {
+                            let start_time = fasync::Time::now();
                             let res = ota::run_wellknown_ota(ota::StorageType::Real).await;
+                            let end_time = fasync::Time::now();
+                            let elapsed_time = (end_time - start_time).into_seconds();
                             match res {
-                                Ok(_) => println!("OTA Success!"),
-                                Err(ref e) => println!("OTA Error..... {:?}", e),
+                                Ok(_) => {
+                                    println!("OTA Success!");
+                                    fasync::Task::local(async move {
+                                        if let Ok(cobalt_logger) = cobalt::get_logger() {
+                                            if let Err(err) = cobalt::log_ota_duration(
+                                                &cobalt_logger,
+                                                elapsed_time,
+                                            )
+                                            .await
+                                            {
+                                                eprintln!("error {:?}", err)
+                                            }
+                                            if let Err(err) = cobalt::log_ota_status(
+                                                &cobalt_logger,
+                                                metrics::OtaDownloadStatusMetricDimensionResult::Success,
+                                            )
+                                            .await
+                                            {
+                                                eprintln!("error {:?}", err)
+                                            }
+                                        }
+                                    })
+                                    .detach();
+                                }
+                                Err(ref e) => {
+                                    println!("OTA Error..... {:?}", e);
+                                    fasync::Task::local(async move {
+                                        if let Ok(cobalt_logger) = cobalt::get_logger() {
+                                            if let Err(err) = cobalt::log_ota_status(
+                                                &cobalt_logger,
+                                                metrics::OtaDownloadStatusMetricDimensionResult::Failure,
+                                            )
+                                            .await
+                                            {
+                                                eprintln!("error {:?}", err)
+                                            }
+                                        }
+                                    })
+                                    .detach();
+                                }
                             }
 
                             local_app_sender.queue_message(
