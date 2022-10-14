@@ -265,15 +265,8 @@ type Foo = table {
 }
 
 TEST(TableTests, BadMustBeDense) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Example = table {
-    1: first int64;
-    3: third int64;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0100.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNonDenseOrdinal);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");
 }

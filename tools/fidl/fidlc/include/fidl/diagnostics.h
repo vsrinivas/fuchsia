@@ -235,7 +235,7 @@ constexpr UndocumentedErrorDef<99, std::string_view, std::string_view, SourceSpa
     ErrDuplicateUnionMemberNameCanonical(
         "union member '{}' conflicts with member '{}' from {}; both are represented "
         "by the canonical form '{}'");
-constexpr UndocumentedErrorDef<100, uint64_t> ErrNonDenseOrdinal(
+constexpr ErrorDef<100, uint64_t> ErrNonDenseOrdinal(
     "missing ordinal {} (ordinals must be dense); consider marking it reserved");
 constexpr UndocumentedErrorDef<101> ErrCouldNotParseSizeBound("unable to parse size bound");
 constexpr UndocumentedErrorDef<102, std::string_view> ErrCouldNotResolveMember(
