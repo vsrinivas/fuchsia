@@ -58,10 +58,18 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     }
 
     for package_list_manifest_path in cmd.package_list_manifests {
-        let file = File::open(&package_list_manifest_path)?;
+        let file = File::open(&package_list_manifest_path).with_context(|| {
+            format!("opening package manifest list {}", package_list_manifest_path)
+        })?;
 
-        for package_manifest_path in PackageManifestList::from_reader(file)? {
-            packages.push(PackageManifest::try_load_from(package_manifest_path)?);
+        for package_manifest_path in PackageManifestList::from_reader(file).with_context(|| {
+            format!("reading package manifest list {}", package_list_manifest_path)
+        })? {
+            packages.push(
+                PackageManifest::try_load_from(&package_manifest_path).with_context(|| {
+                    format!("reading package manifest {}", package_manifest_path)
+                })?,
+            );
         }
 
         deps.push(package_list_manifest_path);
