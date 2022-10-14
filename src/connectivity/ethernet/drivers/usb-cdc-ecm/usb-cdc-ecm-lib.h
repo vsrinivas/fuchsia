@@ -41,13 +41,6 @@ class EcmInterface {
   uint8_t alternate_setting;
 };
 
-typedef struct txn_info {
-  ethernet_netbuf_t netbuf;
-  ethernet_impl_queue_tx_callback completion_cb;
-  void* cookie;
-  list_node_t node;
-} txn_info_t;
-
 using MacAddress = std::array<uint8_t, ETH_MAC_SIZE>;
 
 class UsbCdcDescriptorParser {

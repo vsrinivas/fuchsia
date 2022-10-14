@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <fuchsia/hardware/usb/request/c/banjo.h>
+#include <lib/operation/ethernet.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/compiler.h>
 
@@ -17,6 +18,7 @@
 #include <usb/usb.h>
 
 #include "src/connectivity/ethernet/drivers/usb-cdc-ecm/usb-cdc-ecm-lib.h"
+#include "usb/request-cpp.h"
 
 namespace usb_cdc_ecm {
 
@@ -57,33 +59,18 @@ class UsbCdcEcm : public UsbCdcEcmType,
   // Interrupt handler function invoked by the interrupt handler thread. It receives the usb_request
   // it has to work on. If the response is less than the size of (usb_cdc_notification_t) the
   // interrupt is ignored.
-  void HandleInterrupt(usb_request_t* request);
+  void HandleInterrupt(usb::Request<void>& request);
 
   void InterruptComplete(usb_request_t* request) { sync_completion_signal(&completion_); }
-
-  void Free();
 
   zx_status_t SetPacketFilterMode(uint16_t mode, bool on);
 
   // Returns with ZX_OK if its able to set the completion callback and queues the request
   // successfully. It returns with the appropriate error status otherwise.
-  zx_status_t QueueRequest(const uint8_t* data, size_t length, usb_request_t* req);
-  zx_status_t SendLocked(ethernet_netbuf_t* netbuf) __TA_REQUIRES(&tx_mutex_);
-
-  // Write completion callback. Normally -- this will simply acquire the TX lock, release it,
-  // and re-queue the USB request.
-  // The error case is a bit more complicated. We set the reset bit on the request, and queue
-  // a packet that triggers a reset (asynchronously). We then immediately return to the interrupt
-  // thread with the lock held to allow for interrupt processing to take place. Once the reset
-  // completes, this function is called again with the lock still held, and request processing
-  // continues normally. It is necessary to keep the lock held after returning in the error case
-  // because we do not want other packets to get queued out-of-order while the asynchronous
-  // operation is in progress. Note: the assumption made here is that no rx transmissions will be
-  // processed in parallel, so we do not maintain an rx mutex.
-  void UsbReceive(usb_request_t* request);
+  zx_status_t SendLocked(const eth::BorrowedOperation<void>& op) __TA_REQUIRES(&mutex_);
 
   void UsbReadComplete(usb_request_t* request);
-  void UsbWriteComplete(usb_request_t* request) __TA_NO_THREAD_SAFETY_ANALYSIS;
+  void UsbWriteComplete(usb_request_t* request);
 
   void UpdateOnlineStatus(bool is_online);
 
@@ -98,29 +85,30 @@ class UsbCdcEcm : public UsbCdcEcmType,
   uint16_t mtu_;
 
   // Connection attributes
-  bool online_ = false;
+  bool online_ __TA_GUARDED(ethernet_mutex_) = false;
   uint32_t ds_bps_ = 0;
   uint32_t us_bps_ = 0;
 
   // Interrupt handling
   std::optional<EcmEndpoint> int_endpoint_;
-  usb_request_t* int_txn_buf_;
+  std::optional<usb::Request<void>> interrupt_request_;
   sync_completion_t completion_;
   thrd_t int_thread_;
 
   // Send context
   // TX lock -- Must be acquired before ethernet_mutex when both locks are held.
-  fbl::Mutex tx_mutex_;
+  fbl::Mutex mutex_;
   std::optional<EcmEndpoint> tx_endpoint_;
-  list_node_t tx_txn_bufs_ TA_GUARDED(tx_mutex_);       // list of usb_request_t
-  list_node_t tx_pending_infos_ TA_GUARDED(tx_mutex_);  // list of txn_info_t
-  bool unbound_ = false;        // set to true when device is going away. Guarded by tx_mutex_
-  uint64_t tx_endpoint_delay_;  // wait time between 2 transmit requests
+  usb::RequestPool<void> tx_request_pool_ TA_GUARDED(mutex_);
+  eth::BorrowedOperationQueue<> pending_tx_queue_ TA_GUARDED(mutex_);
+  bool unbound_ __TA_GUARDED(&mutex_) = false;
+  uint64_t tx_endpoint_delay_;
 
   size_t parent_req_size_;
 
   // Receive context
   std::optional<EcmEndpoint> rx_endpoint_;
+  usb::RequestPool<void> rx_request_pool_ TA_GUARDED(mutex_);
   uint64_t rx_endpoint_delay_;  // wait time between 2 recv requests
   uint16_t rx_packet_filter_;
 };
