@@ -13,6 +13,7 @@ group("device_tests") {
     ":virtio_magma_test",
     ":virtio_net_test",
     ":virtio_rng_test",
+    ":virtio_sound_test",
   ]
 }
 
@@ -193,5 +194,25 @@ source_set("virtio_rng_test") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
+  ]
+}
+
+source_set("virtio_sound_test") {
+  testonly = true
+
+  sources = [ "virtio_sound_test.cc" ]
+
+  deps = [
+    ":test_with_device",
+    ":virtio_queue_fake",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/virtio",
   ]
 }

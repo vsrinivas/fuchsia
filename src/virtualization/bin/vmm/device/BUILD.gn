@@ -206,7 +206,6 @@ executable("device_tests") {
   sources = [
     "magma_image_test.cc",
     "virtio_queue_test.cc",
-    "virtio_sound_test.cc",
     "virtio_vsock_test.cc",
     "virtio_wl_unittest.cc",
   ]
