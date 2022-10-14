@@ -71,6 +71,7 @@ void main() {
     final snapshot = await ermine.waitForView(chromiumUrl, testForFocus: true);
     expect(snapshot.url, chromiumUrl);
     print('A Chromium view is presented');
+    await Future.delayed(Duration(seconds: 3));
 
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
     await input.text(blueUrl, keyEventDuration: Duration(milliseconds: 50));
