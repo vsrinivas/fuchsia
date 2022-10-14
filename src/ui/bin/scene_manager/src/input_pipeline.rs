@@ -392,7 +392,7 @@ fn add_dead_keys_handler(
     assembly: InputPipelineAssembly,
     loader: icu_data::Loader,
 ) -> InputPipelineAssembly {
-    assembly.add_handler(dead_keys_handler::Handler::new(loader))
+    assembly.add_handler(dead_keys_handler::DeadKeysHandler::new(loader))
 }
 
 async fn add_shortcut_handler(mut assembly: InputPipelineAssembly) -> InputPipelineAssembly {

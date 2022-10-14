@@ -284,7 +284,7 @@ enum State {
 }
 
 #[derive(Debug)]
-pub struct Handler {
+pub struct DeadKeysHandler {
     /// Tracks the current state of the dead key composition.
     state: RefCell<State>,
 
@@ -299,7 +299,7 @@ pub struct Handler {
 /// This trait implementation allows the [Handler] to be hooked up into the input
 /// pipeline.
 #[async_trait(?Send)]
-impl UnhandledInputHandler for Handler {
+impl UnhandledInputHandler for DeadKeysHandler {
     async fn handle_unhandled_input_event(
         self: Rc<Self>,
         unhandled_input_event: UnhandledInputEvent,
@@ -308,10 +308,10 @@ impl UnhandledInputHandler for Handler {
     }
 }
 
-impl Handler {
+impl DeadKeysHandler {
     /// Creates a new instance of the dead keys handler.
     pub fn new(icu_data: icu_data::Loader) -> Rc<Self> {
-        let handler = Handler {
+        let handler = DeadKeysHandler {
             state: RefCell::new(State::S0000),
             // The NFC normalizer performs the needed composition and is not
             // lossy.
@@ -1220,7 +1220,7 @@ mod tests {
         ];
 
         let loader = icu_data::Loader::new().unwrap();
-        let handler = super::Handler::new(loader);
+        let handler = super::DeadKeysHandler::new(loader);
         for test in tests {
             let actuals: Vec<InputEvent> = test
                 .inputs
