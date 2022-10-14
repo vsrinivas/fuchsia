@@ -9,17 +9,24 @@ mod diagnostics;
 mod httpsdate;
 mod sampler;
 
-use crate::diagnostics::{CobaltDiagnostics, CompositeDiagnostics, InspectDiagnostics};
-use crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy};
-use crate::sampler::HttpsSamplerImpl;
-use anyhow::{Context, Error};
-use fidl_fuchsia_net_interfaces::StateMarker;
-use fidl_fuchsia_time_external::{PushSourceRequestStream, Status};
-use fuchsia_component::server::ServiceFs;
-use fuchsia_zircon as zx;
-use futures::{future::join3, FutureExt, StreamExt, TryFutureExt};
-use push_source::PushSource;
-use tracing::warn;
+use {
+    crate::diagnostics::{
+        CobaltDiagnostics, CompositeDiagnostics, Diagnostics, InspectDiagnostics,
+    },
+    crate::httpsdate::{HttpsDateUpdateAlgorithm, RetryStrategy},
+    crate::sampler::{HttpsSampler, HttpsSamplerImpl},
+    anyhow::{Context, Error},
+    fidl_fuchsia_net_interfaces::StateMarker,
+    fidl_fuchsia_time_external::{PushSourceRequestStream, Status},
+    fuchsia_component::server::{ServiceFs, ServiceObj},
+    fuchsia_zircon as zx,
+    futures::{
+        future::{join, Future},
+        FutureExt, StreamExt,
+    },
+    push_source::PushSource,
+    tracing::warn,
+};
 
 /// Retry strategy used while polling for time.
 const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
@@ -55,18 +62,67 @@ impl From<httpsdate_config::Config> for Config {
     }
 }
 
+/// Serves `PushSource` FIDL API.
+pub struct PushServer<
+    S: HttpsSampler + Send + Sync,
+    D: Diagnostics,
+    N: Future<Output = Result<(), Error>> + Send,
+> {
+    push_source: PushSource<HttpsDateUpdateAlgorithm<S, D, N>>,
+}
+
+impl<S, D, N> PushServer<S, D, N>
+where
+    S: HttpsSampler + Send + Sync,
+    D: Diagnostics,
+    N: Future<Output = Result<(), Error>> + Send,
+{
+    fn new(diagnostics: D, sampler: S, internet_reachable: N) -> Result<Self, Error> {
+        let update_algorithm =
+            HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, diagnostics, sampler, internet_reachable);
+        let push_source = PushSource::new(update_algorithm, Status::Initializing)?;
+
+        Ok(PushServer { push_source })
+    }
+
+    /// Start serving `PushSource` FIDL API.
+    fn serve<'a>(
+        &'a self,
+        fs: &'a mut ServiceFs<ServiceObj<'static, PushSourceRequestStream>>,
+    ) -> Result<impl 'a + Future<Output = Result<(), anyhow::Error>>, Error> {
+        let update_fut = self.push_source.poll_updates();
+
+        fs.dir("svc").add_fidl_service(|stream: PushSourceRequestStream| stream);
+        let service_fut = fs.for_each_concurrent(None, |stream| {
+            handle_push_source_request(stream, &self.push_source)
+        });
+        Ok(join(update_fut, service_fut).map(|(update_result, _serve_result)| update_result))
+    }
+}
+
+/// Handle next `PushSource` FIDL API request.
+async fn handle_push_source_request<T: push_source::UpdateAlgorithm>(
+    stream: PushSourceRequestStream,
+    push_source: &PushSource<T>,
+) {
+    push_source
+        .handle_requests_for_stream(stream)
+        .await
+        .unwrap_or_else(|e| warn!("Error handling PushSource stream: {:?}", e));
+}
+
 #[fuchsia::main(logging_tags=["time"])]
 async fn main() -> Result<(), Error> {
-    let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(|stream: PushSourceRequestStream| stream);
-
     let config: Config = httpsdate_config::Config::take_from_startup_handle().into();
 
     let inspect = InspectDiagnostics::new(fuchsia_inspect::component::inspector().root());
     let (cobalt, cobalt_sender_fut) = CobaltDiagnostics::new();
     let diagnostics = CompositeDiagnostics::new(inspect, cobalt);
 
+    let mut fs = ServiceFs::new();
     inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
+
+    fs.take_and_serve_directory_handle()?;
 
     let sampler = HttpsSamplerImpl::new(REQUEST_URI.parse()?, config);
 
@@ -78,18 +134,9 @@ async fn main() -> Result<(), Error> {
     )
     .map(|r| r.context("reachability status stream error"));
 
-    let update_algorithm =
-        HttpsDateUpdateAlgorithm::new(RETRY_STRATEGY, diagnostics, sampler, internet_reachable);
-    let push_source = PushSource::new(update_algorithm, Status::Initializing)?;
-    let update_fut = push_source.poll_updates();
+    let server = PushServer::new(diagnostics, sampler, internet_reachable)?;
+    let update_fut = server.serve(&mut fs)?;
 
-    fs.take_and_serve_directory_handle()?;
-    let service_fut = fs.for_each_concurrent(None, |stream| {
-        push_source
-            .handle_requests_for_stream(stream)
-            .unwrap_or_else(|e| warn!("Error handling PushSource stream: {:?}", e))
-    });
-
-    let (update_res, _, _) = join3(update_fut, service_fut, cobalt_sender_fut).await;
+    let (update_res, _) = join(update_fut, cobalt_sender_fut).await;
     update_res
 }
