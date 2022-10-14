@@ -12,6 +12,7 @@
 mod error;
 pub mod filesystem;
 pub mod format;
+pub mod partition;
 
 use {
     anyhow::Error,
