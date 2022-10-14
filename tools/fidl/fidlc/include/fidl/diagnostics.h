@@ -50,7 +50,7 @@ constexpr UndocumentedErrorDef<23> ErrRedundantAttributePlacement(
     "cannot specify attributes on the type declaration and the corresponding layout at the same "
     "time; please merge them into one location instead");
 constexpr ErrorDef<24> ErrDocCommentOnParameters("cannot have doc comment on parameters");
-constexpr UndocumentedErrorDef<25> ErrLibraryImportsMustBeGroupedAtTopOfFile(
+constexpr ErrorDef<25> ErrLibraryImportsMustBeGroupedAtTopOfFile(
     "library imports must be grouped at top-of-file");
 constexpr WarningDef<26> WarnCommentWithinDocCommentBlock(
     "cannot have comment within doc comment block");

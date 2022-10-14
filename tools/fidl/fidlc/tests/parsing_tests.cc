@@ -478,16 +478,8 @@ type Something = struct {};
 )FIDL");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library(&shared, "example.fidl", R"FIDL(
-library example;
-
-alias foo = int16;
-using dependent;
-
-type UseDependent = struct {
-    field dependent.Something;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0025.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
 }
 
