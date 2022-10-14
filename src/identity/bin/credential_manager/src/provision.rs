@@ -143,6 +143,10 @@ async fn synchronize_state<HS: HashTreeStorage, LT: LookupTable, PW: PinWeaverPr
             // In this case we have a populated hash tree that has fallen more than two steps
             // out of sync with the CR50 chip.
             } else {
+                error!(
+                    "State synchronization failed. Hash tree on disk contained {} items",
+                    hash_tree_populated_size
+                );
                 Err(CredentialError::CorruptedMetadata)
             }
         }
