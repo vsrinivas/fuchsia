@@ -26,11 +26,12 @@ const HUB_ROOT: &str = "/discovery_root";
 pub struct RemoteControlService {
     ids: RefCell<Vec<u64>>,
     id_allocator: fn() -> Result<HostIdentifier>,
+    connector: Box<dyn Fn(fidl::Socket)>,
     maps: SelectorMappingList,
 }
 
 impl RemoteControlService {
-    pub async fn new() -> Self {
+    pub async fn new(connector: impl Fn(fidl::Socket) + 'static) -> Self {
         let f = match fuchsia_fs::file::open_in_namespace(
             "/config/data/selector-maps.json",
             io::OpenFlags::RIGHT_READABLE,
@@ -39,6 +40,7 @@ impl RemoteControlService {
             Err(e) => {
                 error!(%e, "failed to open selector maps json file");
                 return Self::new_with_allocator_and_maps(
+                    connector,
                     || HostIdentifier::new(),
                     SelectorMappingList::default(),
                 );
@@ -49,6 +51,7 @@ impl RemoteControlService {
             Err(e) => {
                 error!(?e, "failed to read bytes from selector maps json");
                 return Self::new_with_allocator_and_maps(
+                    connector,
                     || HostIdentifier::new(),
                     SelectorMappingList::default(),
                 );
@@ -59,19 +62,26 @@ impl RemoteControlService {
             Err(e) => {
                 error!(?e, "failed to parse selector map json");
                 return Self::new_with_allocator_and_maps(
+                    connector,
                     || HostIdentifier::new(),
                     SelectorMappingList::default(),
                 );
             }
         };
-        return Self::new_with_allocator_and_maps(|| HostIdentifier::new(), list);
+        return Self::new_with_allocator_and_maps(connector, || HostIdentifier::new(), list);
     }
 
     pub(crate) fn new_with_allocator_and_maps(
+        connector: impl Fn(fidl::Socket) + 'static,
         id_allocator: fn() -> Result<HostIdentifier>,
         maps: SelectorMappingList,
     ) -> Self {
-        return Self { id_allocator, ids: Default::default(), maps };
+        return Self {
+            id_allocator,
+            ids: Default::default(),
+            connector: Box::new(connector),
+            maps,
+        };
     }
 
     async fn handle(self: &Rc<Self>, request: rcs::RemoteControlRequest) -> Result<()> {
@@ -82,6 +92,12 @@ impl RemoteControlService {
                 Ok(())
             }
             rcs::RemoteControlRequest::AddId { id, responder } => {
+                self.ids.borrow_mut().push(id);
+                responder.send()?;
+                Ok(())
+            }
+            rcs::RemoteControlRequest::AddOvernetLink { id, socket, responder } => {
+                (self.connector)(socket);
                 self.ids.borrow_mut().push(id);
                 responder.send()?;
                 Ok(())
@@ -698,6 +714,7 @@ mod tests {
 
     fn make_rcs_with_maps(maps: Vec<(&str, &str)>) -> Rc<RemoteControlService> {
         Rc::new(RemoteControlService::new_with_allocator_and_maps(
+            |_| (),
             || {
                 Ok(HostIdentifier {
                     interface_state_proxy: setup_fake_interface_state_service(),

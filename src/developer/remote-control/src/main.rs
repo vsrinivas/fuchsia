@@ -17,12 +17,86 @@ use {
     tracing::{error, info},
 };
 
+#[cfg(feature = "circuit")]
+use std::sync::Arc;
+
 mod args;
 
 async fn exec_server() -> Result<(), Error> {
     diagnostics_log::init!(&["remote-control"]);
 
-    let service = Rc::new(RemoteControlService::new().await);
+    #[cfg(feature = "circuit")]
+    let router = overnet_core::Router::new(
+        overnet_core::RouterOptions::new(),
+        Box::new(overnet_core::SimpleSecurityContext {
+            node_cert: "/pkg/data/cert.crt",
+            node_private_key: "/pkg/data/cert.key",
+            root_cert: "/pkg/data/rootca.crt",
+        }),
+    )?;
+
+    #[cfg(feature = "circuit")]
+    let connector = {
+        let router = Arc::clone(&router);
+        move |socket| {
+            let router = Arc::clone(&router);
+            fasync::Task::spawn(async move {
+                match fidl::AsyncSocket::from_socket(socket) {
+                    Ok(socket) => {
+                        let (mut rx, mut tx) = socket.split();
+                        if let Err(e) =
+                            circuit::multi_stream::multi_stream_node_connection_to_async(
+                                router.circuit_node(),
+                                &mut rx,
+                                &mut tx,
+                                true,
+                                circuit::Quality::NETWORK,
+                            )
+                            .await
+                        {
+                            error!("Error handling Overnet link: {:?}", e);
+                        }
+                    }
+                    Err(e) => error!("Could not handle incoming link socket: {:?}", e),
+                }
+            })
+            .detach();
+        }
+    };
+
+    #[cfg(not(feature = "circuit"))]
+    let connector = |_| error!("Circuit connections not supported");
+
+    let service = Rc::new(RemoteControlService::new(connector).await);
+
+    #[cfg(feature = "circuit")]
+    let onet_circuit_fut = {
+        let (s, p) = fidl::Channel::create().context("creating ServiceProvider zx channel")?;
+        let chan = fidl::AsyncChannel::from_channel(s)
+            .context("creating ServiceProvider async channel")?;
+        let stream = ServiceProviderRequestStream::from_channel(chan);
+        router
+            .register_service(rcs::RemoteControlMarker::PROTOCOL_NAME.to_owned(), ClientEnd::new(p))
+            .await?;
+        let sc = service.clone();
+        async move {
+            let fut = stream.for_each_concurrent(None, move |svc| {
+                let ServiceProviderRequest::ConnectToService {
+                    chan,
+                    info: _,
+                    control_handle: _control_handle,
+                } = svc.unwrap();
+                let chan = fidl::AsyncChannel::from_channel(chan)
+                    .context("failed to make async channel")
+                    .unwrap();
+
+                sc.clone().serve_stream(rcs::RemoteControlRequestStream::from_channel(chan))
+            });
+            info!("published remote control service to overnet");
+            let res = fut.await;
+            info!("connection to overnet lost: {:?}", res);
+        }
+    };
 
     let sc = service.clone();
     let onet_fut = async move {
@@ -74,6 +148,9 @@ async fn exec_server() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     let fidl_fut = fs.collect::<()>();
 
+    #[cfg(feature = "circuit")]
+    join!(fidl_fut, onet_fut, onet_circuit_fut);
+    #[cfg(not(feature = "circuit"))]
     join!(fidl_fut, onet_fut);
     Ok(())
 }

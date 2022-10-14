@@ -100,6 +100,15 @@ protocol RemoteControl {
         id uint64;
     }) -> ();
 
+    // Add a new Overnet link to this RCS instance. The node visible at the end
+    // of this link will host only the RemoteControl service. This method also
+    // performs the function of `AddId`, which is the purpose of the `id`
+    // argument.
+    AddOvernetLink(resource struct {
+        id uint64;
+        socket zx.handle:SOCKET;
+    }) -> ();
+
     // Establishes a TCP connection to the given address and forwards traffic through the given
     // socket.
     ForwardTcp(resource struct {

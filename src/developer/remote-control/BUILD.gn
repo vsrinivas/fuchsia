@@ -8,6 +8,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/test_spec.gni")
+import("//src/connectivity/overnet/enable_circuit.gni")
 import("//src/sys/core/build/core_shard.gni")
 
 group("remote-control") {
@@ -106,6 +107,14 @@ rustc_binary("bin") {
     "src/args.rs",
     "src/main.rs",
   ]
+
+  if (enable_circuit) {
+    features = [ "circuit" ]
+    deps += [
+      "//src/connectivity/overnet/lib/circuit",
+      "//src/connectivity/overnet/lib/core",
+    ]
+  }
 }
 
 fuchsia_test_component("lib_test-test-driver") {
@@ -142,6 +151,7 @@ fuchsia_component("remote-control-component") {
   manifest = "meta/remote-control.cml"
   deps = [
     ":bin",
+    "//src/connectivity/overnet/overnetstack:certificates",
     "//src/developer/remote-control/diagnostics-bridge",
   ]
 }
