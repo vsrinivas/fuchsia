@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/packages/prebuilt_test_manifest.gni")
-import("//sdk/ctf/build/internal/prebuilt_host_test_manifest.gni")
+import("//sdk/ctf/build/internal/ctf.gni")
 
 # Generates test targets from a CTF archive.
 #
@@ -28,9 +27,9 @@ template("compatibility_test_suite") {
 
   # ABI Tests
   abi_test_target_name = "${target_name}_abi"
-  prebuilt_test_manifest(abi_test_target_name) {
+  ctf_prebuilt_tests_from_manifest(abi_test_target_name) {
     forward_variables_from(invoker, [ "disabled_tests" ])
-    archive_dir = rebase_path(invoker.path)
+    ctf_path = rebase_path(invoker.path)
   }
 
   test_targets = [ ":$abi_test_target_name" ]

@@ -1,0 +1,85 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/packages/prebuilt_test_manifest.gni")
+import("//sdk/ctf/build/internal/prebuilt_host_test_manifest.gni")
+
+# Creates a Fuchsia test package from a prebuilt CTF test.
+#
+# This template takes the test's manifest entry as input.
+# The manifest entry should point to the test's archive in the CTF release
+# which is "unpacked" into a collection of package  target.
+#
+# Parameters:
+#
+#   ctf_path (required)
+#     The absolute path to the extracted CTF release archive.
+#     Type: path
+#
+#   test (required)
+#     The CTF test manifest entry.
+#     For more info on the manifest entry, see ctf_test_release_archive.gni.
+#     Type: scope; derived from a JSON object.
+#
+#   deps
+#   environments
+template("ctf_prebuilt_test") {
+  assert(defined(invoker.ctf_path), "The path to the CTF archive is required")
+  assert(defined(invoker.test), "CTF test manifest entry is required")
+
+  test = invoker.test
+
+  if (!defined(test.log_settings)) {
+    test.log_settings = {
+    }
+  }
+
+  prebuilt_test_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "environments",
+                           ])
+    archive = "${invoker.ctf_path}/${test.archive_name}.far"
+    component_name = test.component_name
+    package = test.package_name
+    log_settings = test.log_settings
+  }
+}
+
+# Creates a collection of Fuchsia packages from a prebuilt CTF test manifest.
+#
+# For documentation on the manifest contents, see ctf_test_release_archive.gni.
+#
+# Parameters:
+#   ctf_path (required)
+#     The absolute path to the extracted CTF test archive.
+#     Type: path
+#
+#   visibility
+template("ctf_prebuilt_tests_from_manifest") {
+  assert(defined(invoker.ctf_path), "ctf_path must be defined.")
+
+  tests = []
+
+  foreach(test, read_file("${invoker.ctf_path}/test_manifest.json", "json")) {
+    # Support the legacy 'package=' instead of 'package_name='.
+    # Delete after the F9 CTF release falls off CQ.
+    if (!defined(test.package_name)) {
+      test.package_name = test.package
+    }
+
+    tests += [ ":${test.package_name}" ]
+    ctf_prebuilt_test(test.package_name) {
+      forward_variables_from(invoker, "*")
+    }
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    testonly = true
+    public_deps = tests
+  }
+}

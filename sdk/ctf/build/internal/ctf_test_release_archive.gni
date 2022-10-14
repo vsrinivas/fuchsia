@@ -98,9 +98,6 @@ template("ctf_test_release_archive") {
       cts_artifacts = rebase_path(_copy_dsts, root_out_dir)
       test_manifest = [
         {
-          # TODO(kjharland): Delete `package` after updating compatibility_test_suite.gni.
-          # Prefer fields with consistent "_name" suffixes.
-          package = invoker.package_name
           archive_name = invoker.archive_name
           component_name = invoker.component_name
           package_name = invoker.package_name

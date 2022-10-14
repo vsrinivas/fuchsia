@@ -7,6 +7,7 @@
 # Please keep the list sorted alphabetically.
 import("//sdk/ctf/build/internal/allowed_ctf_deps.gni")
 import("//sdk/ctf/build/internal/ctf_element.gni")
+import("//sdk/ctf/build/internal/ctf_prebuilt_test.gni")
 import("//sdk/ctf/build/internal/ctf_test_release_archive.gni")
 import("//sdk/ctf/build/internal/ctf_version.gni")
 import("//sdk/ctf/build/internal/prebuilt_host_test_manifest.gni")
