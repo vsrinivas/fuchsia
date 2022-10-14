@@ -213,6 +213,7 @@ pub enum ClientTimerType {
     Retransmission,
     Refresh,
     Renew,
+    Rebind,
 }
 
 /// Possible actions that need to be taken for a state transition to happen successfully.
@@ -678,7 +679,7 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError>
 #[derive(Debug)]
 enum NextContactTime {
     InformationRefreshTime(Option<u32>),
-    RenewRebind { t1: v6::NonZeroTimeValue, _t2: v6::NonZeroTimeValue },
+    RenewRebind { t1: v6::NonZeroTimeValue, t2: v6::NonZeroTimeValue },
 }
 
 #[derive(Debug)]
@@ -1116,8 +1117,7 @@ fn process_options<B: ByteSlice>(
                 v6::TimeValue::NonZero(t) => t,
             };
             // T2 must be >= T1, compute its value based on T1.
-            // TODO(https://fxbug.dev/76766): set rebind timer.
-            let _t2 = match min_t2 {
+            let t2 = match min_t2 {
                 v6::TimeValue::Zero => compute_t(t1, T2_T1_RATIO),
                 v6::TimeValue::NonZero(t2_val) => {
                     if t2_val < t1 {
@@ -1127,7 +1127,8 @@ fn process_options<B: ByteSlice>(
                     }
                 }
             };
-            NextContactTime::RenewRebind { t1, _t2 }
+
+            NextContactTime::RenewRebind { t1, t2 }
         }
     };
     Ok(ProcessedOptions {
@@ -2003,9 +2004,9 @@ fn process_reply_with_leases<B: ByteSlice>(
         dns_servers,
     } = result?;
 
-    let t1 = assert_matches!(
+    let (t1, t2) = assert_matches!(
         next_contact_time,
-        NextContactTime::RenewRebind { t1, _t2 } => t1
+        NextContactTime::RenewRebind { t1, t2 } => (t1, t2)
     );
 
     if let Some(success_status_message) = success_status_message {
@@ -2267,6 +2268,26 @@ fn process_reply_with_leases<B: ByteSlice>(
                     v6::NonZeroTimeValue::Finite(t1_val) => Some(Action::ScheduleTimer(
                         ClientTimerType::Renew,
                         Duration::from_secs(t1_val.get().into()),
+                    )),
+                    v6::NonZeroTimeValue::Infinity => None,
+                })
+                // Per RFC 8415 section 18.2.5, set timer to enter rebind state:
+                //
+                //   At time T2 (which will only be reached if the server to
+                //   which the Renew message was sent starting at time T1 has
+                //   not responded), the client initiates a Rebind/Reply message
+                //   exchange with any available server.
+                //
+                // Per RFC 8415 section 7.7, do not enter the Rebind state if
+                // T2 is infinity:
+                //
+                //   A client will never attempt to use a Rebind message to
+                //   locate a different server to extend the lifetimes of any
+                //   addresses in an IA with T2 set to 0xffffffff.
+                .chain(match t2 {
+                    v6::NonZeroTimeValue::Finite(t2_val) => Some(Action::ScheduleTimer(
+                        ClientTimerType::Rebind,
+                        Duration::from_secs(t2_val.get().into()),
                     )),
                     v6::NonZeroTimeValue::Infinity => None,
                 })
@@ -3529,6 +3550,9 @@ impl<R: Rng> ClientStateMachine<R> {
                 ClientTimerType::Renew => {
                     old_state.renew_timer_expired(&options_to_request, rng, now)
                 }
+                ClientTimerType::Rebind => {
+                    todo!("https://fxbug.dev/76766: Implement Rebind state")
+                }
             };
         *state = Some(new_state);
         *transaction_id = new_transaction_id.unwrap_or(*transaction_id);
@@ -4212,6 +4236,7 @@ pub(crate) mod testutil {
         server_id: [u8; TEST_SERVER_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
+        expected_t2_secs: v6::NonZeroOrMaxU32,
         rng: R,
         now: Instant,
     ) -> ClientStateMachine<R> {
@@ -4243,8 +4268,12 @@ pub(crate) mod testutil {
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Renew, t1)
-            ] if *t1 == Duration::from_secs(expected_t1_secs.get().into())
+                Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+            ] => {
+                assert_eq!(*t1, Duration::from_secs(expected_t1_secs.get().into()));
+                assert_eq!(*t2, Duration::from_secs(expected_t2_secs.get().into()));
+            }
         );
 
         // Renew timeout should trigger a transition to Renewing, send a renew
@@ -5417,9 +5446,12 @@ mod tests {
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Renew, t1)
-            ]
-            if *t1 == Duration::from_secs(T1.get().into())
+                Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+            ] => {
+                assert_eq!(*t1, Duration::from_secs(T1.get().into()));
+                assert_eq!(*t2, Duration::from_secs(T2.get().into()));
+            }
         );
         assert!(transaction_id.is_none());
     }
@@ -5526,9 +5558,7 @@ mod tests {
             (ia1_preferred_lifetime, ia1_valid_lifetime, ia1_t1, ia1_t2),
             (ia2_preferred_lifetime, ia2_valid_lifetime, ia2_t1, ia2_t2),
             expected_t1,
-            // TODO(https://fxbug.dev/76766) check T2 when Rebind is
-            // implemented.
-            _expected_t2,
+            expected_t2,
         ) in vec![
             // If T1/T2 are 0, they should be computed as as 0.5 * minimum
             // preferred lifetime, and 0.8 * minimum preferred lifetime
@@ -5551,6 +5581,13 @@ mod tests {
                 (INFINITY, INFINITY, 0, 0),
                 (INFINITY, INFINITY, 0, 0),
                 v6::NonZeroTimeValue::Infinity,
+                v6::NonZeroTimeValue::Infinity,
+            ),
+            // T2 may be infinite if T1 is finite.
+            (
+                (INFINITY, INFINITY, 50, INFINITY),
+                (INFINITY, INFINITY, 50, INFINITY),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(50).expect("should succeed")),
                 v6::NonZeroTimeValue::Infinity,
             ),
             // If T1/T2 are set, and have different values across IAs, T1/T2
@@ -5627,21 +5664,39 @@ mod tests {
                 ClientState::AddressAssigned(address_assigned) => address_assigned
             );
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
-            match expected_t1 {
-                v6::NonZeroTimeValue::Finite(t1_val) => {
+            match (expected_t1, expected_t2) {
+                (v6::NonZeroTimeValue::Finite(t1_val), v6::NonZeroTimeValue::Finite(t2_val)) => {
                     assert_matches!(
                         &actions[..],
                         [
                             Action::CancelTimer(ClientTimerType::Retransmission),
-                            Action::ScheduleTimer(ClientTimerType::Renew, t1)
-                        ] if *t1 == Duration::from_secs(t1_val.get().into())
+                            Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                            Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+                        ] => {
+                            assert_eq!(*t1, Duration::from_secs(t1_val.get().into()));
+                            assert_eq!(*t2, Duration::from_secs(t2_val.get().into()));
+                        }
                     );
                 }
-                v6::NonZeroTimeValue::Infinity => {
+                (v6::NonZeroTimeValue::Finite(t1_val), v6::NonZeroTimeValue::Infinity) => {
+                    assert_matches!(
+                        &actions[..],
+                        [
+                            Action::CancelTimer(ClientTimerType::Retransmission),
+                            Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                        ] => {
+                            assert_eq!(*t1, Duration::from_secs(t1_val.get().into()));
+                        }
+                    );
+                }
+                (v6::NonZeroTimeValue::Infinity, v6::NonZeroTimeValue::Infinity) => {
                     assert_matches!(
                         &actions[..],
                         [Action::CancelTimer(ClientTimerType::Retransmission)]
                     );
+                }
+                (v6::NonZeroTimeValue::Infinity, v6::NonZeroTimeValue::Finite(t2_val)) => {
+                    panic!("cannot have a finite T2={:?} with an infinite T1", t2_val)
                 }
             };
         }
@@ -5908,8 +5963,12 @@ mod tests {
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Renew, t1)
-            ] if *t1 == Duration::from_secs(T1.get().into())
+                Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+            ] => {
+                assert_eq!(*t1, Duration::from_secs(T1.get().into()));
+                assert_eq!(*t2, Duration::from_secs(T2.get().into()));
+            }
         );
     }
 
@@ -5928,9 +5987,13 @@ mod tests {
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::UpdateDnsServers(dns_servers),
-                Action::ScheduleTimer(ClientTimerType::Renew, t1)
-            ] if dns_servers[..] == DNS_SERVERS &&
-                 *t1 == Duration::from_secs(T1.get().into())
+                Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+            ] => {
+                assert_eq!(dns_servers[..], DNS_SERVERS);
+                assert_eq!(*t1, Duration::from_secs(T1.get().into()));
+                assert_eq!(*t2, Duration::from_secs(T2.get().into()));
+            }
         );
         assert_eq!(client.get_dns_servers()[..], DNS_SERVERS);
     }
@@ -6097,6 +6160,7 @@ mod tests {
                 .map(|&addr| TestIdentityAssociation::new_default(addr))
                 .collect(),
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
         );
@@ -6146,6 +6210,7 @@ mod tests {
             SERVER_ID[0],
             addresses_to_assign.clone(),
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -6228,6 +6293,7 @@ mod tests {
             SERVER_ID[0],
             CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -6293,10 +6359,12 @@ mod tests {
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Renew, t1)
-                // TODO(https://fxbug.dev/76766) check T2 timer when Rebind is
-                // implemented.
-            ] if *t1 == Duration::from_secs(RENEWED_T1.get().into())
+                Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+            ] => {
+                assert_eq!(*t1, Duration::from_secs(RENEWED_T1.get().into()));
+                assert_eq!(*t2, Duration::from_secs(RENEWED_T2.get().into()));
+            }
         );
     }
 
@@ -6316,6 +6384,7 @@ mod tests {
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(addr)],
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -6384,6 +6453,7 @@ mod tests {
             SERVER_ID[0],
             addresses.iter().copied().map(TestIdentityAssociation::new_default).collect(),
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -6476,6 +6546,7 @@ mod tests {
                 .map(TestIdentityAssociation::new_default)
                 .collect(),
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -6550,10 +6621,12 @@ mod tests {
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Renew, t1)
-                // TODO(https://fxbug.dev/76766) check T2 timer when Rebind is
-                // implemented.
-            ] if *t1 == Duration::from_secs(RENEWED_T1.get().into())
+                Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+            ] => {
+                assert_eq!(*t1, Duration::from_secs(RENEWED_T1.get().into()));
+                assert_eq!(*t2, Duration::from_secs(RENEWED_T2.get().into()));
+            }
         );
     }
 
@@ -6565,6 +6638,7 @@ mod tests {
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -6627,13 +6701,15 @@ mod tests {
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Renew, t1)
-                // TODO(https://fxbug.dev/76766) check T2 timer when Rebind is
-                // implemented.
+                Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
                 // TODO(https://fxbug.dev/96674): expect initial address is
                 // removed.
                 // TODO(https://fxbug.dev/95265): expect new address is added.
-            ] if *t1 == Duration::from_secs(RENEWED_T1.get().into())
+            ] => {
+                assert_eq!(*t1, Duration::from_secs(RENEWED_T1.get().into()));
+                assert_eq!(*t2, Duration::from_secs(RENEWED_T2.get().into()));
+            }
         );
     }
 
@@ -6649,6 +6725,7 @@ mod tests {
                 .map(TestIdentityAssociation::new_default)
                 .collect(),
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -6765,6 +6842,7 @@ mod tests {
             SERVER_ID[0],
             CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -6817,10 +6895,12 @@ mod tests {
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Renew, t1)
-                // TODO(https://fxbug.dev/76766) check T2 timer when Rebind is
-                // implemented.
-            ] if *t1 == Duration::from_secs(RENEWED_T1.get().into())
+                Action::ScheduleTimer(ClientTimerType::Renew, t1),
+                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
+            ] => {
+                assert_eq!(*t1, Duration::from_secs(RENEWED_T1.get().into()));
+                assert_eq!(*t2, Duration::from_secs(RENEWED_T2.get().into()));
+            }
         );
     }
 
@@ -6993,6 +7073,7 @@ mod tests {
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
             T1,
+            T2,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
