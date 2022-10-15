@@ -11,7 +11,7 @@ use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use bitflags::bitflags;
 use fuchsia_zircon_sys::{
     self as sys, zx_info_maps_type_t, zx_koid_t, zx_time_t, zx_vaddr_t, zx_vm_option_t,
-    InfoMapsTypeUnion, PadByte, ZX_MAX_NAME_LEN,
+    InfoMapsTypeUnion, PadByte, ZX_MAX_NAME_LEN, ZX_OBJ_TYPE_UPPER_BOUND,
 };
 
 bitflags! {
@@ -137,6 +137,19 @@ impl Default for ProcessMapsInfo {
 unsafe impl ObjectQuery for ProcessMapsInfo {
     const TOPIC: Topic = Topic::PROCESS_MAPS;
     type InfoTy = ProcessMapsInfo;
+}
+
+sys::zx_info_process_handle_stats_t!(ProcessHandleStats);
+
+impl Default for ProcessHandleStats {
+    fn default() -> Self {
+        Self { handle_count: [0; ZX_OBJ_TYPE_UPPER_BOUND] }
+    }
+}
+
+unsafe impl ObjectQuery for ProcessHandleStats {
+    const TOPIC: Topic = Topic::PROCESS_HANDLE_STATS;
+    type InfoTy = ProcessHandleStats;
 }
 
 impl Process {
@@ -293,6 +306,15 @@ impl Process {
             // past this point however.
             std::hint::unreachable_unchecked()
         }
+    }
+
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_PROCESS_HANDLE_STATS topic.
+    pub fn handle_stats(&self) -> Result<ProcessHandleStats, Status> {
+        let mut info = ProcessHandleStats::default();
+        object_get_info::<ProcessHandleStats>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
     }
 }
 
@@ -471,5 +493,19 @@ mod tests {
             root_vmar.unmap(map1, system_get_page_size() as usize).unwrap();
             root_vmar.unmap(map2, system_get_page_size() as usize).unwrap();
         }
+    }
+
+    #[test]
+    fn handle_stats() {
+        let process = fuchsia_runtime::process_self();
+        let handle_stats = process.handle_stats().unwrap();
+
+        // We don't have an opinion about how many handles a typical process has, or what types
+        // they will be (the function returns counts for up to 64 different types),
+        // but a reasonable total should be between 1 and a million.
+        let sum: u32 = handle_stats.handle_count.iter().sum();
+
+        assert!(sum > 0);
+        assert!(sum < 1_000_000);
     }
 }

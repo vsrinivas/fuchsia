@@ -350,6 +350,12 @@ multiconst!(zx_obj_type_t, [
     ZX_OBJ_TYPE_STREAM              = 31;
 ]);
 
+// System ABI commits to having no more than 64 object types.
+//
+// See zx_info_process_handle_stats_t for an example of a binary interface that
+// depends on having an upper bound for the number of object types.
+pub const ZX_OBJ_TYPE_UPPER_BOUND: usize = 64;
+
 // TODO: add an alias for this type in the C headers.
 multiconst!(u32, [
     // Argument is a char[ZX_MAX_NAME_LEN].
@@ -1552,6 +1558,22 @@ struct_decl_macro! {
 }
 
 zx_info_maps_t!(zx_info_maps_t);
+
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_info_process_handle_stats_t> {
+        pub handle_count: [u32; ZX_OBJ_TYPE_UPPER_BOUND],
+    }
+}
+
+impl Default for zx_info_process_handle_stats_t {
+    fn default() -> Self {
+        Self { handle_count: [0; ZX_OBJ_TYPE_UPPER_BOUND] }
+    }
+}
+
+zx_info_process_handle_stats_t!(zx_info_process_handle_stats_t);
 
 // from //zircon/system/public/zircon/syscalls/hypervisor.h
 multiconst!(zx_guest_option_t, [
