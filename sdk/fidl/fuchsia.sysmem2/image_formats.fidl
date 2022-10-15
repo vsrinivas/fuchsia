@@ -37,7 +37,7 @@ type PixelFormat = table {
 //
 // TODO(dustingreen): Add more comment text re. pixel data layout for each of
 // these.
-type PixelFormatType = strict enum {
+type PixelFormatType = flexible enum : uint32 {
     INVALID = 0;
 
     /// RGB only, 8 bits per each of R/G/B/A sample
@@ -153,7 +153,7 @@ type ColorSpace = table {
 /// that's non-standard will cause sysmem to reject the combo and fail to
 /// allocate (intentionally, to strongly discourage specifying
 /// insufficiently-defined combos).
-type ColorSpaceType = strict enum {
+type ColorSpaceType = flexible enum : uint32 {
     /// Not a valid color space type.
     INVALID = 0;
     /// sRGB

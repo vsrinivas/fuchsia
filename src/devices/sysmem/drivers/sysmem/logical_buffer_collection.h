@@ -10,6 +10,7 @@
 #include <inttypes.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/wire/arena.h>
+#include <lib/sysmem-version/sysmem-version.h>
 #include <lib/zx/channel.h>
 
 #include <cstdint>
@@ -442,10 +443,10 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     }
   };
   template <typename EnumType>
-  struct DiffPrinter<EnumType, std::enable_if_t<std::is_enum_v<EnumType>>> {
+  struct DiffPrinter<EnumType, std::enable_if_t<sysmem::IsFidlEnum_v<EnumType>>> {
     static void PrintDiff(const LogicalBufferCollection& buffer_collection,
                           const std::string& field_name, const EnumType& o, const EnumType& n) {
-      using UnderlyingType = std::underlying_type_t<EnumType>;
+      using UnderlyingType = sysmem::FidlUnderlyingTypeOrType_t<EnumType>;
       const UnderlyingType o_underlying = static_cast<UnderlyingType>(o);
       const UnderlyingType n_underlying = static_cast<UnderlyingType>(n);
       DiffPrinter<UnderlyingType>::PrintDiff(buffer_collection, field_name, o_underlying,

@@ -60,17 +60,22 @@ const uint32_t kMaxGroupChildCombinations = 64;
 // Map of all supported color spaces to an unique semi arbitrary number. A higher number means
 // that the color space is less desirable and a lower number means that a color space is more
 // desirable.
-const std::unordered_map<fuchsia_sysmem2::wire::ColorSpaceType, uint32_t> kColorSpaceRanking = {
-    {fuchsia_sysmem2::wire::ColorSpaceType::kInvalid, std::numeric_limits<uint32_t>::max()},
-    {fuchsia_sysmem2::wire::ColorSpaceType::kSrgb, 1},
-    {fuchsia_sysmem2::wire::ColorSpaceType::kRec601Ntsc, 8},
-    {fuchsia_sysmem2::wire::ColorSpaceType::kRec601NtscFullRange, 7},
-    {fuchsia_sysmem2::wire::ColorSpaceType::kRec601Pal, 6},
-    {fuchsia_sysmem2::wire::ColorSpaceType::kRec601PalFullRange, 5},
-    {fuchsia_sysmem2::wire::ColorSpaceType::kRec709, 4},
-    {fuchsia_sysmem2::wire::ColorSpaceType::kRec2020, 3},
-    {fuchsia_sysmem2::wire::ColorSpaceType::kRec2100, 2},
-    {fuchsia_sysmem2::wire::ColorSpaceType::kPassThrough, 9}};
+const std::unordered_map<sysmem::FidlUnderlyingTypeOrType_t<fuchsia_sysmem2::wire::ColorSpaceType>,
+                         uint32_t>
+    kColorSpaceRanking = {
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kInvalid),
+         std::numeric_limits<uint32_t>::max()},
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kSrgb), 1},
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kRec601Ntsc), 8},
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kRec601NtscFullRange),
+         7},
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kRec601Pal), 6},
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kRec601PalFullRange),
+         5},
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kRec709), 4},
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kRec2020), 3},
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kRec2100), 2},
+        {sysmem::fidl_underlying_cast(fuchsia_sysmem2::wire::ColorSpaceType::kPassThrough), 9}};
 
 // Zero-initialized, so it shouldn't take up space on-disk.
 constexpr uint64_t kZeroBytes = 8192;
@@ -119,16 +124,17 @@ bool IsNonZeroPowerOf2(T value) {
 
 // TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
 // types.
-#define FIELD_DEFAULT_ZERO(table_ref_name, field_name)                                 \
-  do {                                                                                 \
-    auto& table_ref = (table_ref_name);                                                \
-    static_assert(fidl::IsTable<std::remove_reference_t<decltype(table_ref)>>::value); \
-    using FieldType = std::remove_reference<decltype((table_ref.field_name()))>::type; \
-    if (!table_ref.has_##field_name()) {                                               \
-      table_ref.set_##field_name(static_cast<FieldType>(0));                           \
-      ZX_DEBUG_ASSERT(!static_cast<bool>(table_ref.field_name()));                     \
-    }                                                                                  \
-    ZX_DEBUG_ASSERT(table_ref.has_##field_name());                                     \
+#define FIELD_DEFAULT_ZERO(table_ref_name, field_name)                                          \
+  do {                                                                                          \
+    auto& table_ref = (table_ref_name);                                                         \
+    static_assert(fidl::IsTable<std::remove_reference_t<decltype(table_ref)>>::value);          \
+    using FieldType = std::remove_reference<decltype((table_ref.field_name()))>::type;          \
+    using UnderlyingType = sysmem::FidlUnderlyingTypeOrType_t<FieldType>;                       \
+    if (!table_ref.has_##field_name()) {                                                        \
+      table_ref.set_##field_name(static_cast<FieldType>(0));                                    \
+      ZX_DEBUG_ASSERT(!static_cast<bool>(static_cast<UnderlyingType>(table_ref.field_name()))); \
+    }                                                                                           \
+    ZX_DEBUG_ASSERT(table_ref.has_##field_name());                                              \
   } while (false)
 
 // TODO(fxbug.dev/50590): It'd be nice if this could be a function template over FIDL scalar field
@@ -2091,8 +2097,10 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
 
         for (auto& color_space : image_constraint.color_spaces()) {
           if (color_space.has_type()) {
-            auto best_ranking = kColorSpaceRanking.at(best_color_space);
-            auto current_ranking = kColorSpaceRanking.at(color_space.type());
+            auto best_ranking =
+                kColorSpaceRanking.at(sysmem::fidl_underlying_cast(best_color_space));
+            auto current_ranking =
+                kColorSpaceRanking.at(sysmem::fidl_underlying_cast(color_space.type()));
 
             if (best_ranking > current_ranking) {
               best_color_space = color_space.type();
@@ -2279,7 +2287,8 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
                "!ImageFormatIsSupportedColorSpaceForPixelFormat() "
                "color_space.type: %u "
                "pixel_format.type: %u",
-               colorspace_type, constraints.pixel_format().type());
+               sysmem::fidl_underlying_cast(colorspace_type),
+               sysmem::fidl_underlying_cast(constraints.pixel_format().type()));
       return false;
     }
   }
@@ -3037,7 +3046,7 @@ LogicalBufferCollection::Allocate(
     const fuchsia_sysmem2::wire::ImageFormatConstraints& image_format_constraints =
         settings.image_format_constraints();
     inspect_node_.CreateUint("pixel_format",
-                             static_cast<uint64_t>(image_format_constraints.pixel_format().type()),
+                             static_cast<uint32_t>(image_format_constraints.pixel_format().type()),
                              &vmo_properties_);
     if (image_format_constraints.pixel_format().has_format_modifier_value()) {
       inspect_node_.CreateUint("pixel_format_modifier",
@@ -3379,8 +3388,9 @@ int32_t LogicalBufferCollection::CompareImageFormatConstraintsTieBreaker(
   // If there's not any cost difference, fall back to choosing the
   // pixel_format that has the larger type enum value as a tie-breaker.
 
-  int32_t result = clamp_difference(static_cast<int32_t>(a.pixel_format().type()),
-                                    static_cast<int32_t>(b.pixel_format().type()));
+  int64_t result =
+      clamp_difference(static_cast<int64_t>(static_cast<uint32_t>(a.pixel_format().type())),
+                       static_cast<int64_t>(static_cast<uint32_t>(b.pixel_format().type())));
 
   if (result != 0)
     return result;
@@ -3603,7 +3613,7 @@ std::optional<NodeProperties*> LogicalBufferCollection::FindNodePropertiesByNode
       LogClientInfo(location, node_properties, "!%s.has_%s()", #prefix, #field_name); \
     } else {                                                                          \
       LogClientInfo(location, node_properties, "%s.%s(): %u", #prefix, #field_name,   \
-                    prefix.field_name());                                             \
+                    sysmem::fidl_underlying_cast((prefix).field_name()));             \
     }                                                                                 \
   } while (0)
 
@@ -3613,7 +3623,7 @@ std::optional<NodeProperties*> LogicalBufferCollection::FindNodePropertiesByNode
       LogClientInfo(location, node_properties, "!%s.has_%s()", #prefix, #field_name);     \
     } else {                                                                              \
       LogClientInfo(location, node_properties, "%s.%s(): %" PRIx64, #prefix, #field_name, \
-                    (prefix).field_name());                                               \
+                    sysmem::fidl_underlying_cast((prefix).field_name()));                 \
     }                                                                                     \
   } while (0)
 

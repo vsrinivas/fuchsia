@@ -155,7 +155,7 @@ type BufferCollectionConstraints = table {
 /// Known heap types.
 /// Device specific types should have bit 60 set. Top order bit is reserved
 /// and should not be set.
-type HeapType = strict enum : uint64 {
+type HeapType = flexible enum : uint64 {
     SYSTEM_RAM = 0x0000000000000000;
 
     /// Heap used for amlogic protected memory.
@@ -212,7 +212,7 @@ type BufferMemoryConstraints = table {
 /// memory that isn't reachable from the CPU is CoherencyDomain Inaccessible,
 /// even if it's possible to cause a device (physical or virtual) to copy the
 /// data from the Inaccessible buffers to buffers that are visible to the CPU.
-type CoherencyDomain = strict enum {
+type CoherencyDomain = flexible enum {
     CPU = 0;
     RAM = 1;
     INACCESSIBLE = 2;
@@ -227,6 +227,13 @@ type ImageFormatConstraints = table {
     /// with an entry per PixelFormat.  It's not uncommon for the other fields
     /// of ImageFormatConstraints to vary by PixelFormat - for example for a
     /// linear format to support smaller max size than a tiled format.
+    ///
+    /// If not set, these ImageFormatConstraints apply to all PixelFormat(s),
+    /// and this ImageFormatConstraints does not constrain which PixelFormat is
+    /// chosen.  For example this can be used to set required_max_coded_width
+    /// and required_max_coded_height fields to force allocating large-enough
+    /// buffers to hold particular video dimensions, without needing to list
+    /// every PixelFormat.
     1: pixel_format PixelFormat;
 
     /// Empty is an error.  Redundant entries are an error.  Arbitrary ordering

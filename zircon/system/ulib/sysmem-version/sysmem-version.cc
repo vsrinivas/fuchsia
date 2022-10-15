@@ -4,11 +4,13 @@
 
 #include "lib/sysmem-version/sysmem-version.h"
 
+#include <fidl/fuchsia.sysmem/cpp/common_types.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fidl-async-2/fidl_struct.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <zircon/assert.h>
 
 #include <map>
@@ -21,17 +23,24 @@ namespace {
 
 // Can be replaced with std::remove_cvref<> when C++20.
 template <typename T>
-struct RemoveCVRef
-    : ::sysmem::internal::TypeIdentity<std::remove_cv_t<std::remove_reference_t<T>>> {};
+struct RemoveCVRef : internal::TypeIdentity<std::remove_cv_t<std::remove_reference_t<T>>> {};
 template <typename T>
 using RemoveCVRef_t = typename RemoveCVRef<T>::type;
 
+// The meaning of "fidl scalar" here includes flexible enums, which are actually just final classes
+// with a single private scalar field after codegen, but the have an operator uint32_t() or
+// operator uint64_t() (the ones we care about here) so we detect that way (at least for now).
 template <typename T, typename Enable = void>
 struct IsFidlScalar : std::false_type {};
 template <typename T>
 struct IsFidlScalar<
     T, typename std::enable_if<fidl::IsFidlType<T>::value &&
                                (std::is_arithmetic<T>::value || std::is_enum<T>::value)>::type>
+    : std::true_type {};
+template <typename T>
+struct IsFidlScalar<T, typename std::enable_if<fidl::IsFidlType<T>::value &&
+                                               (internal::HasOperatorUInt32<T>::value ||
+                                                internal::HasOperatorUInt64<T>::value)>::type>
     : std::true_type {};
 
 template <typename V2Type, typename V1Type, typename Enable = void>
@@ -44,10 +53,8 @@ struct IsCompatibleFidlScalarTypes<
         !std::is_const<typename std::remove_reference<V2Type>::type>::value &&
         IsFidlScalar<typename RemoveCVRef<V2Type>::type>::value &&
         IsFidlScalar<typename RemoveCVRef<V1Type>::type>::value &&
-        std::is_same<typename ::sysmem::internal::UnderlyingTypeOrType<
-                         typename RemoveCVRef<V2Type>::type>::type,
-                     typename ::sysmem::internal::UnderlyingTypeOrType<
-                         typename RemoveCVRef<V1Type>::type>::type>::value>::type>
+        std::is_same<FidlUnderlyingTypeOrType_t<typename RemoveCVRef<V2Type>::type>,
+                     FidlUnderlyingTypeOrType_t<typename RemoveCVRef<V1Type>::type>>::value>::type>
     : std::true_type {};
 template <typename V2, typename V1>
 inline constexpr bool IsCompatibleFidlScalarTypes_v = IsCompatibleFidlScalarTypes<V2, V1>::value;
@@ -78,48 +85,63 @@ inline constexpr bool IsCompatibleFidlScalarTypes_v = IsCompatibleFidlScalarType
 //
 // All bool fields are set regardless of false or true.  Other scalar fields are only set if not
 // equal to zero.
-#define PROCESS_SCALAR_FIELD_V1(field_name)                                      \
-  do {                                                                           \
-    using V2FieldType = std::remove_reference<decltype(v2b.field_name())>::type; \
-    /* double parens are significant here */                                     \
-    using V1FieldType = std::remove_reference<decltype((v1.field_name))>::type;  \
-    static_assert(IsCompatibleFidlScalarTypes_v<V2FieldType, V1FieldType>);      \
-    if (std::is_same<bool, RemoveCVRef<V1FieldType>::type>::value ||             \
-        static_cast<bool>(v1.field_name)) {                                      \
-      v2b.set_##field_name(static_cast<V2FieldType>(v1.field_name));             \
-    }                                                                            \
+#define PROCESS_SCALAR_FIELD_V1(field_name)                                              \
+  do {                                                                                   \
+    using V2FieldType = std::remove_reference<decltype(v2b.field_name())>::type;         \
+    /* double parens are significant here */                                             \
+    using V1FieldType = std::remove_reference<decltype((v1.field_name))>::type;          \
+    static_assert(IsCompatibleFidlScalarTypes_v<V2FieldType, V1FieldType>);              \
+    using V2UnderlyingType = FidlUnderlyingTypeOrType_t<V2FieldType>;                    \
+    using V1UnderlyingType = FidlUnderlyingTypeOrType_t<V1FieldType>;                    \
+    if (std::is_same<bool, RemoveCVRef<V1FieldType>::type>::value ||                     \
+        static_cast<bool>(v1.field_name)) {                                              \
+      /* This intentionally allows for implicit conversions for flexible enums */        \
+      v2b.set_##field_name(static_cast<V2FieldType>(                                     \
+          static_cast<V2UnderlyingType>(static_cast<V1UnderlyingType>(v1.field_name)))); \
+    }                                                                                    \
   } while (false)
-#define PROCESS_SCALAR_FIELD_V1_WITH_ALLOCATOR(field_name)                       \
-  do {                                                                           \
-    using V2FieldType = std::remove_reference<decltype(v2b.field_name())>::type; \
-    /* double parens are significant here */                                     \
-    using V1FieldType = std::remove_reference<decltype((v1.field_name))>::type;  \
-    static_assert(IsCompatibleFidlScalarTypes_v<V2FieldType, V1FieldType>);      \
-    if (std::is_same<bool, RemoveCVRef<V1FieldType>::type>::value ||             \
-        static_cast<bool>(v1.field_name)) {                                      \
-      v2b.set_##field_name(allocator, static_cast<V2FieldType>(v1.field_name));  \
-    }                                                                            \
-  } while (false)
-
-#define PROCESS_SCALAR_FIELD_V2(field_name)                                      \
-  do {                                                                           \
-    using V1FieldType = decltype(v1.field_name);                                 \
-    using V2FieldType = std::remove_reference<decltype(v2.field_name())>::type;  \
-    static_assert(IsCompatibleFidlScalarTypes<V1FieldType, V2FieldType>::value); \
-    if (v2.has_##field_name()) {                                                 \
-      v1.field_name = static_cast<V1FieldType>(v2.field_name());                 \
-    } else {                                                                     \
-      v1.field_name = static_cast<V1FieldType>(0);                               \
-    }                                                                            \
+#define PROCESS_SCALAR_FIELD_V1_WITH_ALLOCATOR(field_name)                                    \
+  do {                                                                                        \
+    using V2FieldType = std::remove_reference<decltype(v2b.field_name())>::type;              \
+    /* double parens are significant here */                                                  \
+    using V1FieldType = std::remove_reference<decltype((v1.field_name))>::type;               \
+    static_assert(IsCompatibleFidlScalarTypes_v<V2FieldType, V1FieldType>);                   \
+    using V2UnderlyingType = FidlUnderlyingTypeOrType_t<V2FieldType>;                         \
+    using V1UnderlyingType = FidlUnderlyingTypeOrType_t<V1FieldType>;                         \
+    if (std::is_same<bool, RemoveCVRef<V1FieldType>::type>::value ||                          \
+        static_cast<bool>(v1.field_name)) {                                                   \
+      /* This intentionally allows for implicit conversions for flexible enums */             \
+      v2b.set_##field_name(allocator, static_cast<V2FieldType>(static_cast<V2UnderlyingType>( \
+                                          static_cast<V1UnderlyingType>(v1.field_name))));    \
+    }                                                                                         \
   } while (false)
 
-#define ASSIGN_SCALAR(dst, src)                                     \
-  do {                                                              \
-    using DstType = decltype((dst));                                \
-    using SrcType = decltype((src));                                \
-    static_assert(IsCompatibleFidlScalarTypes_v<DstType, SrcType>); \
-    using DstNoRef = typename std::remove_reference<DstType>::type; \
-    (dst) = static_cast<DstNoRef>(src);                             \
+#define PROCESS_SCALAR_FIELD_V2(field_name)                                               \
+  do {                                                                                    \
+    using V1FieldType = decltype(v1.field_name);                                          \
+    using V2FieldType = std::remove_reference<decltype(v2.field_name())>::type;           \
+    static_assert(IsCompatibleFidlScalarTypes<V1FieldType, V2FieldType>::value);          \
+    using V1UnderlyingType = FidlUnderlyingTypeOrType_t<V1FieldType>;                     \
+    using V2UnderlyingType = FidlUnderlyingTypeOrType_t<V2FieldType>;                     \
+    if (v2.has_##field_name()) {                                                          \
+      /* This intentionally allows for implicit conversions for flexible enums */         \
+      v1.field_name = static_cast<V1FieldType>(                                           \
+          static_cast<V1UnderlyingType>(static_cast<V2UnderlyingType>(v2.field_name()))); \
+    } else {                                                                              \
+      v1.field_name = static_cast<V1FieldType>(0);                                        \
+    }                                                                                     \
+  } while (false)
+
+#define ASSIGN_SCALAR(dst, src)                                                                    \
+  do {                                                                                             \
+    using DstType = typename std::remove_reference<decltype((dst))>::type;                         \
+    using SrcType = typename std::remove_reference<decltype((src))>::type;                         \
+    static_assert(IsCompatibleFidlScalarTypes_v<DstType, SrcType>);                                \
+    using DstUnderlyingType = FidlUnderlyingTypeOrType_t<DstType>;                                 \
+    using SrcUnderlyingType = FidlUnderlyingTypeOrType_t<SrcType>;                                 \
+    /* This intentionally allows for implicit conversions for flexible enums */                    \
+    (dst) =                                                                                        \
+        static_cast<DstType>(static_cast<DstUnderlyingType>(static_cast<SrcUnderlyingType>(src))); \
   } while (false)
 
 template <size_t N>
@@ -466,6 +488,14 @@ fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo> V2MoveFromV1Buffer
     }
   }
   return fpromise::ok(std::move(v2b));
+}
+
+fuchsia_sysmem::wire::HeapType V1CopyFromV2HeapType(fuchsia_sysmem2::wire::HeapType heap_type) {
+  return static_cast<fuchsia_sysmem::wire::HeapType>(fidl_underlying_cast(heap_type));
+}
+
+fuchsia_sysmem2::wire::HeapType V2CopyFromV1HeapType(fuchsia_sysmem::wire::HeapType heap_type) {
+  return static_cast<fuchsia_sysmem2::wire::HeapType>(fidl_underlying_cast(heap_type));
 }
 
 fpromise::result<

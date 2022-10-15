@@ -546,6 +546,8 @@ class LinearFormats : public ImageFormatSet {
       case PixelFormatType::kA2B10G10R10:
       case PixelFormatType::kA2R10G10B10:
         return true;
+      default:
+        return false;
     }
     return false;
   }
@@ -705,6 +707,8 @@ class ArmTELinearFormats : public ImageFormatSet {
       case PixelFormatType::kA2B10G10R10:
       case PixelFormatType::kA2R10G10B10:
         return true;
+      default:
+        return false;
     }
     return false;
   }
@@ -910,9 +914,9 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem2::wire::PixelFormat& pixel
     case PixelFormatType::kA2B10G10R10:
     case PixelFormatType::kA2R10G10B10:
       return 2u + 3 * 10u;
+    default:
+      ZX_PANIC("Unknown Pixel Format: %u", sysmem::fidl_underlying_cast(pixel_format.type()));
   }
-  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
-  return 0u;
 }
 
 uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem::wire::PixelFormat& pixel_format_v1) {
@@ -971,9 +975,9 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(
       return 4u;
     case PixelFormatType::kA2R10G10B10:
       return 4u;
+    default:
+      ZX_PANIC("Unknown Pixel Format: %u", sysmem::fidl_underlying_cast(pixel_format.type()));
   }
-  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
-  return 0u;
 }
 
 uint32_t ImageFormatStrideBytesPerWidthPixel(
@@ -997,7 +1001,8 @@ uint64_t ImageFormatImageSize(const fuchsia_sysmem2::wire::ImageFormat& image_fo
       return format_set->ImageFormatImageSize(image_format);
     }
   }
-  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(image_format.pixel_format().type()));
+  ZX_PANIC("Unknown Pixel Format: %u",
+           sysmem::fidl_underlying_cast(image_format.pixel_format().type()));
   return 0;
 }
 
@@ -1056,9 +1061,9 @@ uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem2::wire::PixelForma
       return 1u;
     case PixelFormatType::kA2R10G10B10:
       return 1u;
+    default:
+      ZX_PANIC("Unknown Pixel Format: %u", sysmem::fidl_underlying_cast(pixel_format.type()));
   }
-  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
-  return 0u;
 }
 
 uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem::wire::PixelFormat& pixel_format_v1) {
@@ -1114,8 +1119,9 @@ uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem2::wire::PixelForm
       return 1u;
     case PixelFormatType::kA2R10G10B10:
       return 1u;
+    default:
+      ZX_PANIC("Unknown Pixel Format: %u", sysmem::fidl_underlying_cast(pixel_format.type()));
   }
-  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
   return 0u;
 }
 
@@ -1173,8 +1179,9 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem2::wire::PixelFormat& pi
       return 4u;
     case PixelFormatType::kA2R10G10B10:
       return 4u;
+    default:
+      ZX_PANIC("Unknown Pixel Format: %u", sysmem::fidl_underlying_cast(pixel_format.type()));
   }
-  ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format.type()));
   return 0u;
 }
 

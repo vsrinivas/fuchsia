@@ -8,7 +8,10 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fpromise/result.h>
+
+#include <type_traits>
 
 namespace sysmem {
 
@@ -22,16 +25,101 @@ struct TypeIdentity {
 template <typename T>
 using TypeIdentity_t = typename TypeIdentity<T>::type;
 
-// UnderlyingTypeOrType<T>::type gets std::underlying_type<T>::type if T is an enum, or T otherwise.
 template <typename T, typename Enable = void>
-struct UnderlyingTypeOrType : TypeIdentity<T> {};
+struct HasOperatorUInt32 : std::false_type {};
 template <typename T>
-struct UnderlyingTypeOrType<T, typename std::enable_if<std::is_enum<T>::value>::type>
+struct HasOperatorUInt32<
+    T,
+    std::enable_if_t<std::is_same_v<uint32_t, decltype((std::declval<T>().operator uint32_t()))>>>
+    : std::true_type {};
+
+static_assert(!HasOperatorUInt32<fuchsia_sysmem::PixelFormatType>::value);
+static_assert(HasOperatorUInt32<fuchsia_sysmem2::PixelFormatType>::value);
+static_assert(!HasOperatorUInt32<fuchsia_sysmem::HeapType>::value);
+static_assert(!HasOperatorUInt32<fuchsia_sysmem2::HeapType>::value);
+
+template <typename T, typename Enable = void>
+struct HasOperatorUInt64 : std::false_type {};
+template <typename T>
+struct HasOperatorUInt64<
+    T,
+    std::enable_if_t<std::is_same_v<uint64_t, decltype((std::declval<T>().operator uint64_t()))>>>
+    : std::true_type {};
+
+static_assert(!HasOperatorUInt64<fuchsia_sysmem::PixelFormatType>::value);
+static_assert(!HasOperatorUInt64<fuchsia_sysmem2::PixelFormatType>::value);
+static_assert(!HasOperatorUInt64<fuchsia_sysmem::HeapType>::value);
+static_assert(HasOperatorUInt64<fuchsia_sysmem2::HeapType>::value);
+
+// The meaning of "fidl enum" here includes flexible enums, which are actually just final classes
+// with a single private scalar field after codegen, but the have an operator uint32_t() or
+// operator uint64_t() (the ones we care about here) so we detect that way (at least for now).
+template <typename T, typename Enable = void>
+struct IsFidlEnum : std::false_type {};
+template <typename T>
+struct IsFidlEnum<
+    T, typename std::enable_if<fidl::IsFidlType<T>::value && std::is_enum<T>::value>::type>
+    : std::true_type {};
+template <typename T>
+struct IsFidlEnum<T, typename std::enable_if<fidl::IsFidlType<T>::value &&
+                                             (internal::HasOperatorUInt32<T>::value ||
+                                              internal::HasOperatorUInt64<T>::value)>::type>
+    : std::true_type {};
+
+enum TestEnum {
+  kTestEnumZero,
+  kTestEnumOne,
+};
+static_assert(!IsFidlEnum<TestEnum>::value);
+static_assert(IsFidlEnum<fuchsia_sysmem::ColorSpaceType>::value);
+static_assert(IsFidlEnum<fuchsia_sysmem2::ColorSpaceType>::value);
+static_assert(!IsFidlEnum<uint32_t>::value);
+static_assert(!IsFidlEnum<uint64_t>::value);
+
+// FidlUnderlyingTypeOrType<T>::type gets std::underlying_type<T>::type if T is a FIDL enum, or T
+// otherwise.  The notion "is an enum" in this context includes FIDL flexible enums despite not
+// being C++ enums after LLCPP FIDL codegen.  For such LLCPP FIDL flexible enums this returns the
+// type which they implicitly convert to/from.
+template <typename T, typename Enable = void>
+struct FidlUnderlyingTypeOrType : TypeIdentity<T> {};
+template <typename T>
+struct FidlUnderlyingTypeOrType<
+    T, typename std::enable_if<IsFidlEnum<T>::value && std::is_enum<T>::value>::type>
     : std::underlying_type<T> {};
 template <typename T>
-using UnderlyingTypeOrType_t = typename UnderlyingTypeOrType<T>::type;
+struct FidlUnderlyingTypeOrType<
+    T, typename std::enable_if<IsFidlEnum<T>::value && HasOperatorUInt32<T>::value>::type> {
+  using type = uint32_t;
+};
+template <typename T>
+struct FidlUnderlyingTypeOrType<
+    T, typename std::enable_if<IsFidlEnum<T>::value && HasOperatorUInt64<T>::value>::type> {
+  using type = uint64_t;
+};
+
+static_assert(
+    std::is_same<uint32_t, FidlUnderlyingTypeOrType<fuchsia_sysmem::PixelFormatType>::type>::value);
+static_assert(
+    std::is_same<uint64_t, FidlUnderlyingTypeOrType<fuchsia_sysmem::HeapType>::type>::value);
+static_assert(std::is_same<
+              uint32_t, FidlUnderlyingTypeOrType<fuchsia_sysmem2::PixelFormatType>::type>::value);
+static_assert(
+    std::is_same<uint64_t, FidlUnderlyingTypeOrType<fuchsia_sysmem2::HeapType>::type>::value);
 
 }  // namespace internal
+
+template <typename T>
+constexpr bool IsFidlEnum_v = internal::IsFidlEnum<T>::value;
+
+template <typename T>
+using FidlUnderlyingTypeOrType_t = typename internal::FidlUnderlyingTypeOrType<T>::type;
+
+template <typename T>
+constexpr FidlUnderlyingTypeOrType_t<T> fidl_underlying_cast(const T& value) {
+  return static_cast<FidlUnderlyingTypeOrType_t<T>>(value);
+}
+
+static_assert(2 == fidl_underlying_cast(static_cast<fuchsia_sysmem2::HeapType>(2)));
 
 ///////////////////////
 // V2 Copy/Move from V1
@@ -44,6 +132,8 @@ using UnderlyingTypeOrType_t = typename UnderlyingTypeOrType<T>::type;
 //
 // See fidl_struct.h's TakeAsLlcpp() for a way to convert from FIDL C to llcpp first.
 
+[[nodiscard]] fuchsia_sysmem2::wire::HeapType V2CopyFromV1HeapType(
+    fuchsia_sysmem::wire::HeapType heap_type);
 [[nodiscard]] fuchsia_sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(
     fidl::AnyArena& allocator, const fuchsia_sysmem::wire::PixelFormat& v1);
 [[nodiscard]] fuchsia_sysmem2::wire::PixelFormat V2CopyFromV1PixelFormat(
@@ -104,6 +194,8 @@ V2MoveFromV1BufferCollectionInfo(fidl::AnyArena& allocator,
 // V1 Copy/Move from V2
 ///////////////////////
 
+[[nodiscard]] fuchsia_sysmem::wire::HeapType V1CopyFromV2HeapType(
+    fuchsia_sysmem2::wire::HeapType heap_type);
 [[nodiscard]] fpromise::result<
     std::pair<std::optional<fuchsia_sysmem::wire::BufferCollectionConstraints>,
               std::optional<fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers>>>

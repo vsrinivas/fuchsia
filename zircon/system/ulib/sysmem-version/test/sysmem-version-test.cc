@@ -715,3 +715,18 @@ TEST(SysmemVersion, HeapProperties) {
     EXPECT_EQ(v2_2.need_clear(), v2_1.need_clear());
   }
 }
+
+TEST(SysmemVersion, HeapType) {
+  for (uint32_t run = 0; run < kRunCount; ++run) {
+    uint64_t heap_type_v2;
+    random(&heap_type_v2);
+    v2::HeapType v2_1 = static_cast<v2::HeapType>(heap_type_v2);
+    v1::HeapType v1_1 = sysmem::V1CopyFromV2HeapType(v2_1);
+    uint64_t heap_type_v1 = static_cast<uint64_t>(v1_1);
+    EXPECT_EQ(heap_type_v1, heap_type_v2);
+    v2::HeapType v2_2 = sysmem::V2CopyFromV1HeapType(v1_1);
+    EXPECT_EQ(v2_1, v2_2);
+    uint64_t heap_type_v2_2 = static_cast<uint64_t>(v2_2);
+    EXPECT_EQ(heap_type_v2_2, heap_type_v2);
+  }
+}

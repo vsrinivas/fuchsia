@@ -121,7 +121,7 @@ GetCreateColorBuffer2Params(fidl::AnyArena& allocator,
       break;
     default:
       zxlogf(ERROR, "[%s][%s] pixel_format_type unsupported: type %u", __func__, kTag,
-             pixel_format_type);
+             static_cast<uint32_t>(pixel_format_type));
       return fpromise::error(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -285,7 +285,7 @@ void HostVisibleHeap::CreateResource(CreateResourceRequestView request,
       "image:height",
       is_image ? request->buffer_settings.image_format_constraints().min_coded_height() : 0,
       "image:format",
-      is_image ? static_cast<int>(
+      is_image ? static_cast<uint32_t>(
                      request->buffer_settings.image_format_constraints().pixel_format().type())
                : 0,
       "buffer:size", is_image ? 0 : request->buffer_settings.buffer_settings().size_bytes());
