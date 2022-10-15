@@ -36,6 +36,12 @@ type Three = strict strict strict union { 1: b bool; }; // line 6
   ASSERT_SUBSTR(errors[2]->msg.c_str(), "strict");
 }
 
+TEST(StrictnessTests, BadDuplicateModifierNonConsecutive) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0032.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateModifier);
+}
+
 TEST(StrictnessTests, BadConflictingModifiers) {
   TestLibrary library;
   library.AddFile("bad/fi-0033.test.fidl");

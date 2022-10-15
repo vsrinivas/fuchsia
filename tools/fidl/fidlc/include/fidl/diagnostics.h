@@ -58,11 +58,11 @@ constexpr WarningDef<27> WarnBlankLinesWithinDocCommentBlock(
 constexpr WarningDef<28> WarnDocCommentMustBeFollowedByDeclaration(
     "doc comment must be followed by a declaration");
 constexpr ErrorDef<29> ErrMustHaveOneProperty("must have at least one property");
-constexpr ErrorDef<30, Token::KindAndSubkind, Token::KindAndSubkind>
-    ErrCannotSpecifyModifier("cannot specify modifier {} for {}");
+constexpr ErrorDef<30, Token::KindAndSubkind, Token::KindAndSubkind> ErrCannotSpecifyModifier(
+    "cannot specify modifier {} for {}");
 constexpr ErrorDef<31, Token::KindAndSubkind> ErrCannotSpecifySubtype(
     "cannot specify subtype for {}");
-constexpr UndocumentedErrorDef<32, Token::KindAndSubkind> ErrDuplicateModifier(
+constexpr ErrorDef<32, Token::KindAndSubkind> ErrDuplicateModifier(
     "duplicate occurrence of modifier {}");
 constexpr ErrorDef<33, Token::KindAndSubkind, Token::KindAndSubkind> ErrConflictingModifier(
     "modifier {} conflicts with modifier {}");
