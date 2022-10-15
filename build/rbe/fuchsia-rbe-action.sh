@@ -315,7 +315,7 @@ test "$canonicalize_working_dir" = "false" || \
 stderr_file="$primary_output_rel".stderr
 
 # Copy stderr to a temporary file for diagnostic analysis.
-"${full_command[@]}" 2> >(tee "$stderr_file" >&2)
+"${full_command[@]}" 2>&1 | tee "$stderr_file"
 # Preserve exit status from the rewrapper command.
 status="$?"
 
