@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 """Upload reproxy logs and metrics to BQ tables.
 
-This is used to publish fine-grain anonymized remote build performance data.
+This is used to publish fine-grained remote build performance data.
 """
 
 import argparse
@@ -262,11 +262,6 @@ def main_upload_logs(
         if verbose:
             msg("No remote action records found.  Skipping upload.")
         return 0
-
-    if verbose:
-        msg(f"Anonymizing remote action records.")
-    for record in log_dump.records:
-        record.command.exec_root = "/home/anonymous/user"
 
     if verbose:
         msg(f"Converting log format to JSON for BQ.")
