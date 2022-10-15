@@ -240,14 +240,8 @@ type OptionalTableContainer = flexible union {
 }
 
 TEST(TableTests, BadOptionalTableMember) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-type Foo = table {
-    // Strings can be optional in general, but not in table member position.
-    1: t string:optional;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0048.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOptionalTableMember);
 }
 
