@@ -10,8 +10,8 @@ use {
     },
     crate::config::{Config as ComponentConfig, Mode},
     fidl_fuchsia_paver as paver,
-    fuchsia_syslog::fx_log_info,
     fuchsia_zircon::Status,
+    tracing::info,
 };
 
 /// After gathering state from the BootManager, the PolicyEngine can answer whether we
@@ -34,18 +34,14 @@ impl PolicyEngine {
                 error: fidl::Error::ClientChannelClosed { status: Status::NOT_SUPPORTED, .. },
                 ..
             }) => {
-                fx_log_info!(
-                    "ABR not supported: skipping health verification and boot metadata updates"
-                );
+                info!("ABR not supported: skipping health verification and boot metadata updates");
                 return Ok(Self { current_config: None });
             }
             Err(e) => return Err(PolicyError::Build(e)),
 
             // As a special case, if we're in Recovery, ensure we neither verify nor commit.
             Ok(paver::Configuration::Recovery) => {
-                fx_log_info!(
-                    "System in recovery: skipping health verification and boot metadata updates"
-                );
+                info!("System in recovery: skipping health verification and boot metadata updates");
                 return Ok(Self { current_config: None });
             }
 

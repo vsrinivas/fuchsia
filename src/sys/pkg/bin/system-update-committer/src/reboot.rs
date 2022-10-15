@@ -8,8 +8,8 @@ use {
         AdminProxy as PowerStateControlProxy, RebootReason,
     },
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
+    tracing::error,
 };
 
 /// Waits for a timer to fire and then reboots the system, logging errors instead of failing.
@@ -25,7 +25,7 @@ pub(super) async fn wait_and_reboot(timer: fasync::Timer, proxy: &PowerStateCont
     }
     .await
     {
-        fx_log_err!("error initiating reboot: {:#}", anyhow!(e));
+        error!("error initiating reboot: {:#}", anyhow!(e));
     }
 }
 

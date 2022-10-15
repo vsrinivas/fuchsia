@@ -12,13 +12,13 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_inspect::{self as finspect, health::Reporter},
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{channel::oneshot, prelude::*, stream::FuturesUnordered},
     std::{
         sync::Arc,
         time::{Duration, Instant},
     },
+    tracing::{error, info, warn},
 };
 
 mod config;
@@ -35,20 +35,19 @@ mod reboot;
 // seems to be a ~2 second gap between the system-update-committer and last_reboot starting.
 const MINIMUM_REBOOT_WAIT: Duration = Duration::from_secs(5);
 
+#[fuchsia::main(logging_tags = ["system-update-committer"])]
 pub fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["system-update-committer"])
-        .context("while initializing logger")?;
-    fx_log_info!("starting system-update-committer");
+    info!("starting system-update-committer");
 
     let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
     let () = executor.run_singlethreaded(main_inner_async()).map_err(|err| {
         // Use anyhow to print the error chain.
         let err = anyhow!(err);
-        fuchsia_syslog::fx_log_err!("error running system-update-committer: {:#}", err);
+        error!("error running system-update-committer: {:#}", err);
         err
     })?;
 
-    fx_log_info!("shutting down system-update-committer");
+    info!("shutting down system-update-committer");
     Ok(())
 }
 
@@ -106,10 +105,10 @@ async fn main_inner_async() -> Result<(), Error> {
                     config
                 );
                 health_node_ref.set_unhealthy(&msg);
-                fx_log_warn!("{}", msg);
+                warn!("{}", msg);
                 wait_and_reboot(fasync::Timer::new(reboot_deadline), &reboot_proxy).await;
             } else {
-                fx_log_info!("metadata is in happy state!");
+                info!("metadata is in happy state!");
                 health_node_ref.set_ok();
             }
         }

@@ -6,10 +6,10 @@ use {
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_update::{CommitStatusProviderRequest, CommitStatusProviderRequestStream},
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
-    fuchsia_syslog::fx_log_warn,
     fuchsia_zircon::{self as zx, EventPair, HandleBased},
     futures::{channel::oneshot, future, prelude::*},
     std::sync::Arc,
+    tracing::warn,
 };
 
 pub struct FidlServer {
@@ -29,7 +29,7 @@ impl FidlServer {
             IncomingService::CommitStatusProvider(stream) => {
                 Self::handle_commit_status_provider_request_stream(Arc::clone(&server), stream)
                     .unwrap_or_else(|e| {
-                        fx_log_warn!(
+                        warn!(
                         "error handling fuchsia.update/CommitStatusProvider request stream:  {:#}",
                         anyhow!(e)
                     )

@@ -4,10 +4,10 @@
 
 use {
     anyhow::anyhow,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     serde::Deserialize,
     std::{fs::File, io::Read},
     thiserror::Error,
+    tracing::{error, info},
     typed_builder::TypedBuilder,
 };
 
@@ -58,13 +58,13 @@ impl Config {
         let f = match File::open("/config/data/config.json") {
             Ok(f) => f,
             Err(e) => {
-                fx_log_info!("no config found, using defaults: {:#}", anyhow!(e));
+                info!("no config found, using defaults: {:#}", anyhow!(e));
                 return Config::builder().build();
             }
         };
 
         Self::load(f).unwrap_or_else(|e| {
-            fx_log_err!("unable to load config, using defaults: {:#}", anyhow!(e));
+            error!("unable to load config, using defaults: {:#}", anyhow!(e));
             Config::builder().build()
         })
     }
