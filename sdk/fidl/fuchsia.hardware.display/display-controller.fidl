@@ -11,8 +11,8 @@ const INVALID_DISP_ID uint64 = 0;
 
 type VirtconMode = strict enum : uint8 {
     INACTIVE = 0; // the virtcon is never visible.
-    FALLBACK = 1; // the virtcon is visible if there is no primary client.
-    FORCED = 2; // the virtcon is visible even if there is a primary client.
+    FALLBACK = 1; // the virtcon is visible if there is no main client.
+    FORCED = 2; // the virtcon is visible even if there is a main client.
 };
 
 // A display mode configuration.
@@ -219,7 +219,7 @@ const INVALID_CONFIG_STAMP_VALUE uint64 = 0;
 
 /// Provider for display controllers.
 ///
-/// The driver supports two simultaneous clients - a primary client and a virtcon
+/// The driver supports two simultaneous clients - a main client and a virtcon
 /// client.  In some cases, the provider service may provide access to only one or
 /// the other; if the client tries to open the other then `ZX_ERR_NOT_SUPPORTED` will
 /// be returned.
@@ -242,12 +242,12 @@ protocol Provider {
         s zx.status;
     });
 
-    /// Open a primary client. `device` should be a handle to one endpoint of a
+    /// Open a main client. `device` should be a handle to one endpoint of a
     /// channel that (on success) will become an open connection to a new
     /// instance of a display client device. A protocol request `controller`
     /// provides an interface to the Controller for the new device. Closing the
     /// connection to `device` will also close the `controller` interface. If
-    /// the display device already has a primary controller then this method
+    /// the display device already has a main controller then this method
     /// will return `ZX_ERR_ALREADY_BOUND`.
     // TODO(fxbug.dev/33675): Once llcpp is supported in Zircon, unify `device` and
     // `controller`.
@@ -714,7 +714,7 @@ protocol Controller {
     });
 
     // Sets the visibility behavior of the virtcon. It is illegal to call this
-    // from the primary client.
+    // from the main client.
     SetVirtconMode(struct {
         mode uint8;
     });
