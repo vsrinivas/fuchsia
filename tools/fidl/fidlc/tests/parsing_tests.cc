@@ -712,12 +712,9 @@ type Foo = struct {
   ASSERT_COMPILED(library);
 }
 
-TEST(ParsingTests, BadSubtypeCtor) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = struct : uint32 {};
-)FIDL");
+TEST(ParsingTests, BadSubtypeConstructor) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0031.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifySubtype);
 }
 

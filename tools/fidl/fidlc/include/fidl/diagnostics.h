@@ -60,7 +60,7 @@ constexpr WarningDef<28> WarnDocCommentMustBeFollowedByDeclaration(
 constexpr ErrorDef<29> ErrMustHaveOneProperty("must have at least one property");
 constexpr ErrorDef<30, Token::KindAndSubkind, Token::KindAndSubkind>
     ErrCannotSpecifyModifier("cannot specify modifier {} for {}");
-constexpr UndocumentedErrorDef<31, Token::KindAndSubkind> ErrCannotSpecifySubtype(
+constexpr ErrorDef<31, Token::KindAndSubkind> ErrCannotSpecifySubtype(
     "cannot specify subtype for {}");
 constexpr UndocumentedErrorDef<32, Token::KindAndSubkind> ErrDuplicateModifier(
     "duplicate occurrence of modifier {}");
