@@ -110,8 +110,6 @@ executable("device_tests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [ "virtio_queue_test.cc" ]
-
   deps = [
     ":lib",
     "tests:device_tests",
@@ -180,19 +178,16 @@ executable("device_unittests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [ "phys_mem_unittest.cc" ]
+  sources = [
+    "phys_mem_unittest.cc",
+    "virtio_queue_unittest.cc",
+  ]
 
   deps = [
     ":lib",
-    ":qcow_test_data",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/syslog/cpp",
+    "tests:virtio_queue_fake",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
   ]
 }
 
