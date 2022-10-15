@@ -156,7 +156,7 @@ using error_status = error<zx_status_t>;
 //   // Newer method that interops with the legacy method.
 //   zx::status<> ConsumeValues(std::array<Value, kSize>* values) {
 //     if (values == nullptr) {
-//       return zx::error_status(ZX_ERR_INVALID_ARGS);
+//       return zx::error_result(ZX_ERR_INVALID_ARGS);
 //     }
 //     return zx::make_status(ConsumeValues(values->data(), values->length()));
 //   }
@@ -219,6 +219,32 @@ const char* status<T>::status_string() const {
   return make_status(status_value()).status_string();
 }
 #endif  // defined(__Fuchsia__)
+
+// zx::result usage is deprecated in favor of zx::result (rename).
+// Usually we would just alias status, but unfortunately template argument deduction does not work
+// through aliases, so a lot of `zx::result a = .....` would fail to compile. This is being done
+// until migration is complete.
+//
+// TODO(fxbug.dev/1120969) in progress.
+template <typename... Ts>
+class result : public status<Ts...> {
+  using base = ::zx::status<Ts...>;
+
+ public:
+  using base::base;
+  // Implicit construction from status -> result to aid with migration.
+  constexpr result(status<Ts...>&& s) : status<Ts...>(std::forward<zx::status<Ts...>>(s)) {}
+
+  // Implicit conversion from result -> status to aid with migration. Will the alias is moved.
+  constexpr operator status<Ts...>&() { return *this; }
+};
+
+using error_result = zx::error<zx_status_t>;
+
+template <typename... Args>
+constexpr auto make_result(Args&&... args) {
+  return make_status(std::forward<Args>(args)...);
+}
 
 }  // namespace zx
 
