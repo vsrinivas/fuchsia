@@ -36,7 +36,7 @@ constexpr ErrorDef<14> ErrAttributeWithEmptyParens(
 constexpr ErrorDef<15> ErrAttributeArgsMustAllBeNamed(
     "attributes that take multiple arguments must name all of them explicitly");
 constexpr ErrorDef<16> ErrMissingOrdinalBeforeMember("missing ordinal before member");
-constexpr UndocumentedErrorDef<17> ErrOrdinalOutOfBound("ordinal out-of-bound");
+constexpr ErrorDef<17> ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef<18> ErrOrdinalsMustStartAtOne("ordinals must start at 1");
 constexpr ErrorDef<19> ErrMustHaveOneMember("must have at least one member");
 constexpr ErrorDef<20> ErrInvalidProtocolMember("invalid protocol member");

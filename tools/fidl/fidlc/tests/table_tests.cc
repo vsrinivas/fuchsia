@@ -82,6 +82,23 @@ TEST(TableTests, BadMissingOrdinals) {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeMember)
 }
 
+TEST(TableTests, BadOrdinalOutOfBoundsNegative) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0017-a.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalOutOfBound);
+}
+
+TEST(TableTests, BadOrdinalOutOfBoundsLarge) {
+  TestLibrary library(R"FIDL(
+library test;
+
+type Foo = union {
+  4294967296: foo string;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalOutOfBound);
+}
+
 TEST(TableTests, BadDuplicateFieldNames) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;

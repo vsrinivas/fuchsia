@@ -173,12 +173,18 @@ type Foo = strict union {
   EXPECT_EQ(member4.ordinal->value, 4);
 }
 
-TEST(UnionTests, BadOrdinalOutOfBounds) {
+TEST(UnionTests, BadOrdinalOutOfBoundsNegative) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0017-b.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalOutOfBound);
+}
+
+TEST(UnionTests, BadOrdinalOutOfBoundsLarge) {
   TestLibrary library(R"FIDL(
 library test;
 
-type Foo = strict union {
-  -1: uint32 foo;
+type Foo = union {
+  4294967296: foo string;
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalOutOfBound);
