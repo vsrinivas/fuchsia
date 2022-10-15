@@ -115,13 +115,8 @@ type Foo = flexible bits {
 }
 
 TEST(StrictnessTests, BadStrictnessStruct) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = strict struct {
-    i int32;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0030.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }
 
