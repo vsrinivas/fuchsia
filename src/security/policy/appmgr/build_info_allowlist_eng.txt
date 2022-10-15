@@ -2,6 +2,7 @@ fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx
 fuchsia-pkg://fuchsia.com/build-info-service#meta/build-info.cmx
 fuchsia-pkg://fuchsia.com/has-build-info#meta/has-build-info.cmx
 fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx
+fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx
 fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx
 fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx
 fuchsia-pkg://fuchsia.com/timekeeper_bin_test#meta/timekeeper_bin_test.cmx
