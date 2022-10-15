@@ -80,7 +80,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/sys/pkg/bin/system-update-checker:*",
   "//src/sys/pkg/bin/system-updater:*",
   "//src/sys/pkg/lib/forced-fdr:*",
-  "//src/sys/pkg/tests/pkgdir/pkg-harness:*",
   "//src/ui/bin/brightness_manager:*",
   "//src/ui/bin/input-pipeline:*",
   "//src/ui/bin/text:*",

@@ -11,25 +11,23 @@ use {
     fuchsia_async::Task,
     fuchsia_component::server::ServiceFs,
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
     std::convert::TryInto,
+    tracing::{error, info},
 };
 
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["pkg-harness"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["pkg-harness"]).expect("can't init logger");
-
     main_inner().await.map_err(|err| {
         // Use anyhow to print the error chain.
         let err = anyhow!(err);
-        fx_log_err!("error running pkg-harness: {:#}", err);
+        error!("error running pkg-harness: {:#}", err);
         err
     })
 }
 
 async fn main_inner() -> Result<(), Error> {
-    fx_log_info!("starting pkg-harness");
+    info!("starting pkg-harness");
 
     // Spin up a blobfs and install the test package.
     let test_package = make_test_package().await;
@@ -69,7 +67,7 @@ async fn main_inner() -> Result<(), Error> {
                 ),
             }
             .unwrap_or_else(|e| {
-                fx_log_err!("error handling fidl connection: {:#}", anyhow!(e));
+                error!("error handling fidl connection: {:#}", anyhow!(e));
             })
         })
         .await;
