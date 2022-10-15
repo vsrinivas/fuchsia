@@ -67,18 +67,13 @@ TEST(FlatAstTests, GoodCompareHandles) {
 }
 
 TEST(FlatAstTests, BadCannotReferenceAnonymousName) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library;
+  library.AddFile("bad/fi-0058.test.fidl");
+  ASSERT_FALSE(library.Compile());
 
-protocol Foo {
-  SomeMethod(struct { some_param uint8; });
-};
-
-type Bar = struct {
-  bad_member_type FooSomeMethodRequest;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAnonymousNameReference);
+  for (const auto& err : library.errors()) {
+    EXPECT_ERR(err, fidl::ErrAnonymousNameReference);
+  }
 }
 
 TEST(FlatAstTests, BadAnonymousNameConflict) {

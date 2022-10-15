@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.good.fi0058;
+
+type ClientRequest = struct {
+    in uint8;
+};
+type ServerResponse = struct {
+    out int8;
+};
+
+protocol MyProtocol {
+    MyInfallible(ClientRequest) -> (ServerResponse);
+    MyFallible(ClientRequest) -> (ServerResponse) error uint32;
+    -> MyEvent(ServerResponse);
+};
+
+type MyAnonymousReferences = struct {
+    a ClientRequest;
+    b ServerResponse;
+    c ClientRequest;
+    d ServerResponse;
+    e ServerResponse;
+};
