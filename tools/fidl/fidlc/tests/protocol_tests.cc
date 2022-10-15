@@ -988,18 +988,8 @@ protocol MyProtocol {
 }
 
 TEST(ProtocolTests, BadMethodNamedDefaultValueStruct) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type MyStruct = struct{
-  @allow_deprecated_struct_defaults
-  a bool = false;
-};
-
-protocol MyProtocol {
-    MyMethod(MyStruct) -> (MyStruct);
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0084.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrPayloadStructHasDefaultMembers,
                                       fidl::ErrPayloadStructHasDefaultMembers);
 }

@@ -193,7 +193,7 @@ constexpr UndocumentedErrorDef<82> ErrInvalidSelectorValue(
     "invalid selector value, must be a method name or a fully qualified method name");
 constexpr UndocumentedErrorDef<83> ErrFuchsiaIoExplicitOrdinals(
     "fuchsia.io must have explicit ordinals (https://fxbug.dev/77623)");
-constexpr UndocumentedErrorDef<84> ErrPayloadStructHasDefaultMembers(
+constexpr ErrorDef<84> ErrPayloadStructHasDefaultMembers(
     "default values are not allowed on members of request/response structs");
 constexpr UndocumentedErrorDef<85, std::string_view, SourceSpan> ErrDuplicateServiceMemberName(
     "multiple service members named '{}'; previous was at {}");
