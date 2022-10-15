@@ -33,7 +33,7 @@ constexpr ErrorDef<12> ErrInvalidLayoutClass(
 constexpr ErrorDef<13> ErrInvalidWrappedType("wrapped type for bits/enum must be an identifier");
 constexpr ErrorDef<14> ErrAttributeWithEmptyParens(
     "attributes without arguments must omit the trailing empty parentheses");
-constexpr UndocumentedErrorDef<15> ErrAttributeArgsMustAllBeNamed(
+constexpr ErrorDef<15> ErrAttributeArgsMustAllBeNamed(
     "attributes that take multiple arguments must name all of them explicitly");
 constexpr UndocumentedErrorDef<16> ErrMissingOrdinalBeforeMember("missing ordinal before member");
 constexpr UndocumentedErrorDef<17> ErrOrdinalOutOfBound("ordinal out-of-bound");

@@ -883,14 +883,63 @@ type MyStruct = struct {};
 }
 
 TEST(AttributesTests, BadMultipleArgumentsWithNoNames) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0015.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgsMustAllBeNamed);
+}
+
+TEST(AttributesTests, BadMultipleArgumentsSomeNamesUnnamedStringArgFirst) {
   TestLibrary library(R"FIDL(
 library example;
 
-@foo("abc", "def")
+@foo("abc", bar="def")
+type MyStruct = struct {};
+
+)FIDL");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgsMustAllBeNamed);
+}
+
+TEST(AttributesTests, BadMultipleArgumentsSomeNamesUnnamedStringArgSecond) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(bar="abc", "def")
+type MyStruct = struct {};
+
+)FIDL");
+  // TODO(fxbug.dev/112219): If an unnamed string argument follows a named
+  // argument, it incorrectly produces ErrUnexpectedTokenOfKind instead of
+  // ErrAttributeArgsMustAllBeNamed.
+  // ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgsMustAllBeNamed);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
+}
+
+TEST(AttributesTests, BadMultipleArgumentsSomeNamesUnnamedIdentifierArgFirst) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo("abc", bar=def)
 type MyStruct = struct {};
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgsMustAllBeNamed);
+}
+
+TEST(AttributesTests, BadMultipleArgumentsSomeNamesUnnamedIdentifierArgSecond) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(bar="abc", def)
+type MyStruct = struct {};
+
+)FIDL");
+  // TODO(fxbug.dev/112219): If an unnamed identifier argument follows a named
+  // argument, it incorrectly produces ErrUnexpectedTokenOfKind and
+  // ErrUnexpectedToken instead of ErrAttributeArgsMustAllBeNamed.
+  // ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeArgsMustAllBeNamed);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedToken);
 }
 
 TEST(AttributesTests, BadMultipleArgumentsDuplicateNames) {
