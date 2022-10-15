@@ -34,6 +34,9 @@ third_party_rust_crate_log_visibility = [
   # Can't be listed in more detail here (but should still be removed)
   "//vendor/google/*",
 
+  # Can't be migrated. This is a test using //third_party sources.
+  "//src/sys/pkg/lib/tuf:*",
+
   "//src/connectivity/bluetooth/core/bt-gap:*",
   "//src/connectivity/bluetooth/profiles/tests/bt-a2dp-loopback:*",
   "//src/connectivity/bluetooth/profiles/tests/bt-hfp-audio-gateway-integration-tests:*",
@@ -67,8 +70,6 @@ third_party_rust_crate_log_visibility = [
   "//src/devices/bin/driver_tools:*",
   "//src/devices/bin/driver-index:*",
   "//src/diagnostics/archivist:*",
-  "//src/lib/cobalt/rust:*",
-  "//src/lib/fuchsia-component-test/tests:*",
   "//src/lib/syslog/rust:*",
   "//src/media/stream_processors/test:*",
   "//src/power/power-manager:*",
@@ -77,5 +78,4 @@ third_party_rust_crate_log_visibility = [
   "//src/storage/bin/odu:*",
   "//src/sys/lib/fidl-fuchsia-pkg-ext:*",
   "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext:*",
-  "//src/sys/pkg/lib/tuf:*",
 ]
