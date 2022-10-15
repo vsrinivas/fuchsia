@@ -2,21 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("device_tests") {
+import("//build/components/fuchsia_unittest_package.gni")
+
+group("tests") {
   testonly = true
-  deps = [
-    ":virtio_balloon_test",
-    ":virtio_block_test",
-    ":virtio_console_test",
-    ":virtio_gpu_test",
-    ":virtio_input_test",
-    ":virtio_magma_test",
-    ":virtio_net_test",
-    ":virtio_rng_test",
-    ":virtio_sound_test",
-    ":virtio_vsock_test",
-    ":virtio_wl_test",
-  ]
+  deps = [ ":device_tests_package" ]
 }
 
 source_set("virtio_queue_fake") {
@@ -253,4 +243,39 @@ source_set("virtio_wl_test") {
     "//zircon/system/ulib/virtio",
     "//zircon/system/ulib/zx",
   ]
+}
+
+executable("device_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  deps = [
+    ":virtio_balloon_test",
+    ":virtio_block_test",
+    ":virtio_console_test",
+    ":virtio_gpu_test",
+    ":virtio_input_test",
+    ":virtio_magma_test",
+    ":virtio_net_test",
+    ":virtio_rng_test",
+    ":virtio_sound_test",
+    ":virtio_vsock_test",
+    ":virtio_wl_test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("device_tests_package") {
+  package_name = "device_tests"
+  manifest = "meta/device_tests.cml"
+  deps = [
+    ":device_tests",
+    "//src/ui/testing/test_graphical_presenter",
+  ]
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

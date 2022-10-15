@@ -8,8 +8,8 @@ import("//build/components/fuchsia_unittest_package.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":device_tests_package",
     ":device_unittests_package",
+    "tests",
     "virtio_balloon:tests",
     "virtio_block:tests",
     "virtio_console:tests",
@@ -18,10 +18,6 @@ group("tests") {
     "virtio_magma:tests",
     "virtio_sound:tests",
     "virtio_vsock:tests",
-  ]
-  public_deps = [
-    "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/ui/scenic:scenic_pkg",
   ]
 }
 
@@ -104,69 +100,6 @@ executable("virtio_wl_bin") {
 fuchsia_package_with_single_component("virtio_wl") {
   manifest = "../meta/virtio_wl.cml"
   deps = [ ":virtio_wl_bin" ]
-}
-
-executable("device_tests") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  deps = [
-    ":lib",
-    "tests:device_tests",
-    "tests:test_with_device",
-    "tests:virtio_queue_fake",
-    "virtio_magma:magma_image",
-    "//sdk/fidl/fuchsia.element:fuchsia.element_hlcpp",
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_hlcpp",
-    "//sdk/fidl/fuchsia.input:fuchsia.input_hlcpp",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
-    "//sdk/fidl/fuchsia.media:fuchsia.media_hlcpp",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_hlcpp",
-    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization_hlcpp",
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_hlcpp",
-    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_hlcpp",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
-    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
-    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
-    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
-    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
-    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_hlcpp",
-    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_hlcpp",
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/connectivity/lib/network-device/cpp",
-    "//src/graphics/drivers/msd-intel-gen/include:include",
-    "//src/graphics/lib/magma/include:magma",
-    "//src/graphics/lib/magma/include/virtio:headers",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/ui/testing/ui_test_manager",
-    "//third_party/googletest:gmock",
-    "//third_party/mesa/include:drm-uapi",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/trace-provider",
-    "//zircon/system/ulib/virtio",
-  ]
-
-  configs += [ "//build/config:all_source" ]
-}
-
-fuchsia_unittest_package("device_tests_package") {
-  package_name = "device_tests"
-  manifest = "meta/device_tests.cml"
-  deps = [
-    ":device_tests",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/scenic:component_v2_with_supplied_display_provider",
-    "//src/ui/testing/test_graphical_presenter",
-  ]
-  test_specs = {
-    environments = guest_envs
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
 }
 
 source_set("qcow_test_data") {
