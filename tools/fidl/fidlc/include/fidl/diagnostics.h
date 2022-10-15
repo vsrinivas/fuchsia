@@ -154,7 +154,7 @@ constexpr ErrorDef<65, const flat::Constant *, const flat::Type *, const flat::T
 constexpr ErrorDef<66, const flat::Constant *, const flat::Type *> ErrConstantOverflowsType(
     "{} overflows type {}");
 constexpr ErrorDef<67> ErrBitsMemberMustBePowerOfTwo("bits members must be powers of two");
-constexpr UndocumentedErrorDef<68, std::string_view> ErrFlexibleEnumMemberWithMaxValue(
+constexpr ErrorDef<68, std::string_view> ErrFlexibleEnumMemberWithMaxValue(
     "flexible enums must not have a member with a value of {}, which is "
     "reserved for the unknown value. either: remove the member, change its "
     "value to something else, or explicitly specify the unknown value with "

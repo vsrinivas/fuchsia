@@ -18,16 +18,21 @@ TEST(FlexibleTests, BadEnumMultipleUnknown) {
 }
 
 TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownUnsigned) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = flexible enum : uint8 {
-  ZERO = 0;
-  ONE = 1;
-  MAX = 255;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
+  {
+    TestLibrary library;
+    library.AddFile("bad/fi-0068.test.fidl");
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
+  }
+  {
+    TestLibrary library;
+    library.AddFile("good/fi-0068-a.test.fidl");
+    ASSERT_COMPILED(library);
+  }
+  {
+    TestLibrary library;
+    library.AddFile("good/fi-0068-b.test.fidl");
+    ASSERT_COMPILED(library);
+  }
 }
 
 TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownSigned) {

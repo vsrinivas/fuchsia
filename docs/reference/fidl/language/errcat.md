@@ -90,6 +90,8 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<error-catalog/_fi-0067.md>>
 
+<<error-catalog/_fi-0068.md>>
+
 <<error-catalog/_fi-0069.md>>
 
 <<error-catalog/_fi-0070.md>>

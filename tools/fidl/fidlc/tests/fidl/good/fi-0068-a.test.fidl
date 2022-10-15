@@ -1,0 +1,6 @@
+library test.good.fi0068a;
+
+type Foo = flexible enum : uint8 {
+    ZERO = 0;
+    ONE = 1;
+};
