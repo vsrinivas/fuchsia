@@ -38,6 +38,7 @@ template("license_data") {
     out_dir = invoker.out_dir
   }
   temp_out_dir = "$out_dir/temp"
+  temp_out_licenses_dir = "$out_dir/temp_licenses"
 
   check_licenses_target = "${target_name}_check-licenses"
   copy_txt_notices_target = "${target_name}_txt_copy"
@@ -48,8 +49,8 @@ template("license_data") {
   html_notices_output =
       "license_texts_grouped_by_license_pattern_deduped.html.gz"
 
-  path_prefix =
-      "${build_info_version}/${build_info_product}.${build_info_board}"
+  product_board = "${build_info_product}.${build_info_board}"
+  path_prefix = "${build_info_version}/${product_board}"
 
   compiled_action(check_licenses_target) {
     forward_variables_from(invoker,
@@ -69,8 +70,6 @@ template("license_data") {
 
     sources = [ "//tools/check-licenses/cmd/_config.json" ]
 
-    out_dir = temp_out_dir
-
     outputs = [
       "$temp_out_dir/$path_prefix/out/$txt_notices_output",
       "$temp_out_dir/$path_prefix/out/$html_notices_output",
@@ -83,7 +82,9 @@ template("license_data") {
       "--fuchsia_dir",
       rebase_path("//", root_build_dir),
       "--out_dir",
-      rebase_path(out_dir, root_build_dir),
+      rebase_path(temp_out_dir, root_build_dir),
+      "--licenses_out_dir",
+      rebase_path(temp_out_licenses_dir, root_build_dir),
       "--gn_path",
       rebase_path("//prebuilt/third_party/gn/${host_os}-${host_cpu}/gn",
                   root_build_dir),
@@ -110,10 +111,9 @@ template("license_data") {
     metadata = {
       licenses = [
         {
-          version = build_info_version
-          product = build_info_product
-          board = build_info_board
-          out = rebase_path(out_dir, root_build_dir)
+          target = product_board
+          licenseFiles = rebase_path(temp_out_licenses_dir, root_build_dir)
+          runFiles = rebase_path("$temp_out_dir/$path_prefix", root_build_dir)
         },
       ]
     }

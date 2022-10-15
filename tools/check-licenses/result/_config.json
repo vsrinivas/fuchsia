@@ -2,6 +2,7 @@
     "result": {
         "fuchsiaDir": "{FUCHSIA_DIR}",
         "outDir": "{OUT_DIR}",
+        "licenseOutDir": "{LICENSES_OUT_DIR}",
         "buildInfoVersion": "{BUILD_INFO_VERSION}",
         "buildInfoProduct": "{BUILD_INFO_PRODUCT}",
         "buildInfoBoard": "{BUILD_INFO_BOARD}",

@@ -30,9 +30,10 @@ var (
 
 	diffTarget = flag.String("diff_target", "", "Notice file to diff the current licenses against.")
 
-	fuchsiaDir = flag.String("fuchsia_dir", os.Getenv("FUCHSIA_DIR"), "Location of the fuchsia root directory (//).")
-	buildDir   = flag.String("build_dir", os.Getenv("FUCHSIA_BUILD_DIR"), "Location of GN build directory.")
-	outDir     = flag.String("out_dir", "/tmp/check-licenses", "Directory to write outputs to.")
+	fuchsiaDir     = flag.String("fuchsia_dir", os.Getenv("FUCHSIA_DIR"), "Location of the fuchsia root directory (//).")
+	buildDir       = flag.String("build_dir", os.Getenv("FUCHSIA_BUILD_DIR"), "Location of GN build directory.")
+	outDir         = flag.String("out_dir", "/tmp/check-licenses", "Directory to write outputs to.")
+	licensesOutDir = flag.String("licenses_out_dir", "", "Directory to write license text segments.")
 
 	buildInfoVersion = flag.String("build_info_version", "version", "Version of fuchsia being built. Used for uploading results.")
 	buildInfoProduct = flag.String("build_info_product", "product", "Version of fuchsia being built. Used for uploading results.")
@@ -107,6 +108,21 @@ func mainImpl() error {
 		}
 	}
 	ConfigVars["{OUT_DIR}"] = *outDir
+
+	// licensesOutDir
+	if *licensesOutDir != "" {
+		*licensesOutDir, err = filepath.Abs(*licensesOutDir)
+		if err != nil {
+			return fmt.Errorf("Failed to get absolute directory for *licensesOutDir %v: %v", *licensesOutDir, err)
+		}
+		if _, err := os.Stat(*licensesOutDir); os.IsNotExist(err) {
+			err := os.MkdirAll(*licensesOutDir, 0755)
+			if err != nil {
+				return fmt.Errorf("Failed to create licenses out directory [%v]: %v\n", licensesOutDir, err)
+			}
+		}
+	}
+	ConfigVars["{LICENSES_OUT_DIR}"] = *licensesOutDir
 
 	// gnPath
 	if *gnPath == "" && *outputLicenseFile {

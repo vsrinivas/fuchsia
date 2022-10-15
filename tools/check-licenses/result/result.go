@@ -148,8 +148,18 @@ func saveMetrics(pkg string, m MetricsInterface) error {
 		k = strings.Replace(k, ",", "_", -1)
 
 		path := filepath.Join(pkg, k)
-		if err := writeFile(path, bytes); err != nil {
-			return fmt.Errorf("Failed to write Files file %v: %v", path, err)
+
+		// For uploading to GCS, the license files need to be saved in
+		// a separate directory.
+		if Config.LicenseOutDir != "" && strings.HasPrefix(path, "license/matches/") {
+			path = strings.TrimPrefix(path, "license/matches/")
+			if err := writeFileRoot(path, bytes, Config.LicenseOutDir); err != nil {
+				return fmt.Errorf("Failed to write Files file %v: %v", path, err)
+			}
+		} else {
+			if err := writeFile(path, bytes); err != nil {
+				return fmt.Errorf("Failed to write Files file %v: %v", path, err)
+			}
 		}
 	}
 
@@ -168,8 +178,14 @@ func saveMetrics(pkg string, m MetricsInterface) error {
 	return nil
 }
 
+// Write file to <Config.OutDir>/<path parameter>
 func writeFile(path string, data []byte) error {
-	path = filepath.Join(Config.OutDir, path)
+	return writeFileRoot(path, data, Config.OutDir)
+}
+
+// Write file to <root parameter>/<path parameter>
+func writeFileRoot(path string, data []byte, root string) error {
+	path = filepath.Join(root, path)
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("Failed to make directory %v: %v", dir, err)
