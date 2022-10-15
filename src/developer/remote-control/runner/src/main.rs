@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context as _, Result},
+    argh::FromArgs,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -45,29 +46,37 @@ async fn send_request(proxy: &RemoteControlProxy, id: Option<u64>) -> Result<()>
     }
 }
 
-fn get_id_argument<I>(mut args: I) -> Result<Option<u64>>
-where
-    I: Iterator<Item = String>,
-{
-    // Assume the first argument is the name of the binary.
-    let _ = args.next();
-    if let Some(arg) = args.next() {
-        arg.parse::<u64>()
-            .with_context(|| format!("Failed to parse {} as u64", arg))
-            .map(|n| Some(n))
-    } else {
-        Ok(None)
-    }
+/// Utility to bridge an overnet/RCS connection via SSH. If you're running this manually, you are
+/// probably doing something wrong.
+#[derive(FromArgs)]
+struct Args {
+    /// use circuit-switched connection
+    #[argh(switch)]
+    circuit: bool,
+
+    /// ID number. RCS will reproduce this number once you connect to it. This allows us to
+    /// associate an Overnet connection with an RCS connection, in spite of the fuzziness of
+    /// Overnet's mesh.
+    #[argh(positional)]
+    id: Option<u64>,
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<()> {
+    let args: Args = argh::from_env();
     let rcs_proxy = connect_to_protocol::<RemoteControlMarker>()?;
-    send_request(&rcs_proxy, get_id_argument(std::env::args())?).await?;
     let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
+
+    if args.circuit {
+        rcs_proxy.add_overnet_link(args.id.unwrap_or(0), remote_socket).await?;
+    } else {
+        send_request(&rcs_proxy, args.id).await?;
+        let controller = hoist().connect_as_mesh_controller()?;
+        controller.attach_socket_link(remote_socket)?;
+    }
+
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
     let (mut rx_socket, mut tx_socket) = futures::AsyncReadExt::split(local_socket);
-    hoist().connect_as_mesh_controller()?.attach_socket_link(remote_socket)?;
 
     let mut stdin = zx_socket_from_fd(std::io::stdin().lock().as_raw_fd())?;
     let mut stdout = zx_socket_from_fd(std::io::stdout().lock().as_raw_fd())?;
@@ -95,19 +104,6 @@ mod test {
         std::cell::RefCell,
         std::rc::Rc,
     };
-
-    #[test]
-    fn test_get_id_argument() {
-        assert_eq!(
-            get_id_argument(vec!["foo".to_string(), "1234".to_string()].into_iter()).unwrap(),
-            Some(1234u64)
-        );
-        assert_eq!(
-            get_id_argument(vec!["foo".to_string(), "4567".to_string()].into_iter()).unwrap(),
-            Some(4567u64)
-        );
-        assert!(get_id_argument(vec!["foo".to_string(), "foo".to_string()].into_iter()).is_err());
-    }
 
     fn setup_fake_rcs(handle_stream: bool) -> RemoteControlProxy {
         let (proxy, mut stream) = create_proxy_and_stream::<RemoteControlMarker>().unwrap();
