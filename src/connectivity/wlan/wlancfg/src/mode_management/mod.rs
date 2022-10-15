@@ -58,9 +58,33 @@ pub enum PhyFailure {
     IfaceDestructionFailure { phy_id: u16 },
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum IfaceFailure {
+    CanceledScan { iface_id: u16 },
+    FailedScan { iface_id: u16 },
+    EmptyScanResults { iface_id: u16 },
+}
+
+// Interfaces will come and go and each one will receive a different ID.  The failures are
+// ultimately all associated with a given PHY and we will be interested in tallying up how many
+// of a given failure type a PHY has seen when making recovery decisions.  As such, only the
+// IfaceFailure variant should be considered when determining equality.  The contained interface ID
+// is useful only for associating a failure with a PHY.
+impl PartialEq for IfaceFailure {
+    fn eq(&self, other: &Self) -> bool {
+        match (*self, *other) {
+            (IfaceFailure::CanceledScan { .. }, IfaceFailure::CanceledScan { .. }) => true,
+            (IfaceFailure::FailedScan { .. }, IfaceFailure::FailedScan { .. }) => true,
+            (IfaceFailure::EmptyScanResults { .. }, IfaceFailure::EmptyScanResults { .. }) => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Defect {
     Phy(PhyFailure),
+    Iface(IfaceFailure),
 }
 
 #[derive(Debug, PartialEq)]
@@ -125,6 +149,7 @@ mod tests {
     use {
         super::*,
         fuchsia_async::TestExecutor,
+        rand::Rng,
         test_util::{assert_gt, assert_lt},
     };
 
@@ -310,5 +335,22 @@ mod tests {
 
         assert_eq!(event_history.event_count(TestEnum::Foo), 1);
         assert_eq!(event_history.event_count(TestEnum::Bar), 2);
+    }
+
+    #[fuchsia::test]
+    fn test_failure_equality() {
+        let mut rng = rand::thread_rng();
+        assert_eq!(
+            IfaceFailure::CanceledScan { iface_id: rng.gen::<u16>() },
+            IfaceFailure::CanceledScan { iface_id: rng.gen::<u16>() }
+        );
+        assert_eq!(
+            IfaceFailure::FailedScan { iface_id: rng.gen::<u16>() },
+            IfaceFailure::FailedScan { iface_id: rng.gen::<u16>() }
+        );
+        assert_eq!(
+            IfaceFailure::EmptyScanResults { iface_id: rng.gen::<u16>() },
+            IfaceFailure::EmptyScanResults { iface_id: rng.gen::<u16>() }
+        );
     }
 }

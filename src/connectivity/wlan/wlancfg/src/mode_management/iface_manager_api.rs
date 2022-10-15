@@ -7,7 +7,7 @@ use {
         access_point::{state_machine as ap_fsm, types as ap_types},
         client::types as client_types,
         config_management::network_config::Credential,
-        mode_management::{iface_manager_types::*, Defect},
+        mode_management::{iface_manager_types::*, Defect, IfaceFailure},
         regulatory_manager::REGION_CODE_LEN,
     },
     anyhow::Error,
@@ -210,7 +210,6 @@ impl IfaceManagerApi for IfaceManager {
 #[derive(Debug)]
 pub struct SmeForScan {
     proxy: fidl_sme::ClientSmeProxy,
-    #[allow(unused)]
     iface_id: u16,
 }
 
@@ -225,6 +224,18 @@ impl SmeForScan {
         txn: fidl::endpoints::ServerEnd<fidl_sme::ScanTransactionMarker>,
     ) -> Result<(), fidl::Error> {
         self.proxy.scan(req, txn)
+    }
+
+    pub fn format_aborted_scan_defect(&self) -> Defect {
+        Defect::Iface(IfaceFailure::CanceledScan { iface_id: self.iface_id })
+    }
+
+    pub fn format_failed_scan_defect(&self) -> Defect {
+        Defect::Iface(IfaceFailure::FailedScan { iface_id: self.iface_id })
+    }
+
+    pub fn format_empty_scan_defect(&self) -> Defect {
+        Defect::Iface(IfaceFailure::EmptyScanResults { iface_id: self.iface_id })
     }
 }
 
@@ -267,6 +278,7 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         futures::{future::BoxFuture, task::Poll, StreamExt},
         pin_utils::pin_mut,
+        rand::Rng,
         std::convert::TryFrom,
         test_case::test_case,
         wlan_common::{assert_variant, channel::Cbw, RadioConfig},
@@ -1410,6 +1422,31 @@ mod tests {
             }))) => {
                 assert_eq!(scan_request, req)
             }
+        );
+    }
+
+    #[fuchsia::test]
+    fn sme_for_scan_defects() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        // Build an SME specifically for scanning.
+        let (proxy, _) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create client SME");
+        let mut rng = rand::thread_rng();
+        let iface_id = rng.gen::<u16>();
+        let sme = SmeForScan::new(proxy, iface_id);
+
+        assert_eq!(
+            sme.format_aborted_scan_defect(),
+            Defect::Iface(IfaceFailure::CanceledScan { iface_id })
+        );
+        assert_eq!(
+            sme.format_failed_scan_defect(),
+            Defect::Iface(IfaceFailure::FailedScan { iface_id })
+        );
+        assert_eq!(
+            sme.format_empty_scan_defect(),
+            Defect::Iface(IfaceFailure::EmptyScanResults { iface_id })
         );
     }
 }

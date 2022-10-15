@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        mode_management::{iface_manager::wpa3_supported, Defect, EventHistory, PhyFailure},
+        mode_management::{
+            iface_manager::wpa3_supported, Defect, EventHistory, IfaceFailure, PhyFailure,
+        },
         regulatory_manager::REGION_CODE_LEN,
         telemetry::{TelemetryEvent, TelemetrySender},
     },
@@ -691,6 +693,16 @@ impl PhyManagerApi for PhyManager {
             | Defect::Phy(PhyFailure::IfaceDestructionFailure { phy_id }) => {
                 if let Some(container) = self.phys.get_mut(&phy_id) {
                     container.defects.add_event(defect)
+                }
+            }
+            Defect::Iface(IfaceFailure::CanceledScan { iface_id })
+            | Defect::Iface(IfaceFailure::FailedScan { iface_id })
+            | Defect::Iface(IfaceFailure::EmptyScanResults { iface_id }) => {
+                for (_, phy_info) in self.phys.iter_mut() {
+                    if phy_info.client_ifaces.contains_key(&iface_id) {
+                        phy_info.defects.add_event(defect);
+                        break;
+                    }
                 }
             }
         }
@@ -3662,5 +3674,141 @@ mod tests {
             test_values.telemetry_receiver.try_next(),
             Ok(Some(TelemetryEvent::IfaceDestructionFailure))
         )
+    }
+
+    /// Verify that client iface failures are added properly.
+    #[fuchsia::test]
+    fn test_record_iface_event() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
+
+        let security_support = fidl_common::SecuritySupport {
+            sae: fidl_common::SaeFeature {
+                driver_handler_supported: false,
+                sme_handler_supported: false,
+            },
+            mfp: fidl_common::MfpFeature { supported: false },
+        };
+
+        // Add some PHYs with interfaces.
+        let _ = phy_manager.phys.insert(0, PhyContainer::new(vec![]));
+        let _ = phy_manager.phys.insert(1, PhyContainer::new(vec![]));
+        let _ = phy_manager.phys.insert(2, PhyContainer::new(vec![]));
+        let _ = phy_manager.phys.insert(3, PhyContainer::new(vec![]));
+
+        // Add some PHYs with interfaces.
+        let _ = phy_manager
+            .phys
+            .get_mut(&0)
+            .expect("missing PHY")
+            .client_ifaces
+            .insert(123, security_support.clone());
+        let _ = phy_manager
+            .phys
+            .get_mut(&1)
+            .expect("missing PHY")
+            .client_ifaces
+            .insert(456, security_support.clone());
+        let _ = phy_manager
+            .phys
+            .get_mut(&2)
+            .expect("missing PHY")
+            .client_ifaces
+            .insert(789, security_support);
+        let _ = phy_manager.phys.get_mut(&3).expect("missing PHY").ap_ifaces.insert(246);
+
+        // Allow defects to be retained indefinitely.
+        phy_manager.phys.get_mut(&0).expect("missing PHY").defects = EventHistory::new(u32::MAX);
+        phy_manager.phys.get_mut(&1).expect("missing PHY").defects = EventHistory::new(u32::MAX);
+        phy_manager.phys.get_mut(&2).expect("missing PHY").defects = EventHistory::new(u32::MAX);
+        phy_manager.phys.get_mut(&3).expect("missing PHY").defects = EventHistory::new(u32::MAX);
+
+        // Log some client interface failures.
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::CanceledScan { iface_id: 123 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::FailedScan { iface_id: 456 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::EmptyScanResults { iface_id: 789 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+
+        // Verify that the defects have been logged.
+        assert_eq!(phy_manager.phys[&0].defects.events.len(), 1);
+        assert_eq!(
+            phy_manager.phys[&0].defects.events[0].value,
+            Defect::Iface(IfaceFailure::CanceledScan { iface_id: 123 })
+        );
+        assert_eq!(phy_manager.phys[&1].defects.events.len(), 1);
+        assert_eq!(
+            phy_manager.phys[&1].defects.events[0].value,
+            Defect::Iface(IfaceFailure::FailedScan { iface_id: 456 })
+        );
+        assert_eq!(phy_manager.phys[&2].defects.events.len(), 1);
+        assert_eq!(
+            phy_manager.phys[&2].defects.events[0].value,
+            Defect::Iface(IfaceFailure::EmptyScanResults { iface_id: 789 })
+        );
+    }
+
+    /// Verify that AP ifaces do not receive client failures..
+    #[fuchsia::test]
+    fn test_aps_do_not_record_client_defects() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
+
+        // Add some PHYs with interfaces.
+        let _ = phy_manager.phys.insert(0, PhyContainer::new(vec![]));
+
+        // Add some PHYs with interfaces.
+        let _ = phy_manager.phys.get_mut(&0).expect("missing PHY").ap_ifaces.insert(123);
+
+        // Allow defects to be retained indefinitely.
+        phy_manager.phys.get_mut(&0).expect("missing PHY").defects = EventHistory::new(u32::MAX);
+
+        // Log some client interface failures.
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::CanceledScan { iface_id: 123 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::FailedScan { iface_id: 123 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::EmptyScanResults { iface_id: 123 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+
+        // Verify that the defects have been logged.
+        assert_eq!(phy_manager.phys[&0].defects.events.len(), 0);
     }
 }
