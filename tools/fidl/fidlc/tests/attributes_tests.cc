@@ -856,13 +856,8 @@ protocol MyProtocol {
 }
 
 TEST(AttributesTests, BadNoArgumentsEmptyParens) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-@for_deprecated_c_bindings()
-type MyStruct = struct {};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0014.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributeWithEmptyParens);
 }
 
