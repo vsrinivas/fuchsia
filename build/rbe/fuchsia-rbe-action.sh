@@ -325,6 +325,13 @@ function cleanup() {
   test "$save_temps" = 1 || rm -f "$stderr_file"
 }
 
+# http://fxbug.dev/112177
+# We have observed flakiness of the stderr file appearing on some systems.
+# When this happens, retry with back-off (silently).
+for t in 3 10 30
+do if test -r "$stderr_file" ; then break ; else sync ; sleep "$t" ; fi
+done
+
 if grep -q "fatal error:.*file not found" "$stderr_file"
 then :
   # Do not retry.  A local file is missing.
