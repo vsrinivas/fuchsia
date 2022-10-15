@@ -284,11 +284,8 @@ const c foo = "nope";
 }
 
 TEST(ConstsTests, BadConstTestNullableString) {
-  TestLibrary library(R"FIDL(
-library example;
-
-const c string:optional = "";
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0059.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidConstantType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "string?");
 }

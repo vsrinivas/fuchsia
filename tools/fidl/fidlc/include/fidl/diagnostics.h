@@ -136,8 +136,7 @@ constexpr UndocumentedErrorDef<56, const flat::Element *, VersionRange, Platform
 constexpr ErrorDef<57, std::vector<const flat::Decl *>> ErrIncludeCycle(
     "There is an includes-cycle in declarations: {}");
 constexpr ErrorDef<58, flat::Name> ErrAnonymousNameReference("cannot refer to anonymous name {}");
-constexpr UndocumentedErrorDef<59, const flat::Type *> ErrInvalidConstantType(
-    "invalid constant type {}");
+constexpr ErrorDef<59, const flat::Type *> ErrInvalidConstantType("invalid constant type {}");
 constexpr UndocumentedErrorDef<60> ErrCannotResolveConstantValue(
     "unable to resolve constant value");
 constexpr UndocumentedErrorDef<61> ErrOrOperatorOnNonPrimitiveValue(
