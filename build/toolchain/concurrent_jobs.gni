@@ -37,10 +37,12 @@ default_concurrent_jobs =
     exec_script(python_exe_src, _args, "json", [ _script ])
 
 concurrent_jobs = {
-  # Configuration for tools that run remotely, and consume negligible local CPU
-  # or memory, e.g. Goma or RBE.
-  remote = {
-    # Unconstrained by GN, and left up other constraints like ninja -j.
+  # Specific configuration for tools that run on Goma
+  goma = {
+    if (!use_goma) {
+      # Without Goma, these tools resort to running locally
+      pool = "//build/config:local($default_toolchain)"
+    }
   }
 
   # Configuration for tools that must run locally
