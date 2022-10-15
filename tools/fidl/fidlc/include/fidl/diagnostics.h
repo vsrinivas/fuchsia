@@ -30,8 +30,7 @@ constexpr ErrorDef<11, std::string_view> ErrInvalidLibraryNameComponent(
     "Invalid library name component {}");
 constexpr ErrorDef<12> ErrInvalidLayoutClass(
     "layouts must be of the class: bits, enum, struct, table, or union.");
-constexpr UndocumentedErrorDef<13> ErrInvalidWrappedType(
-    "wrapped type for bits/enum must be an identifier");
+constexpr ErrorDef<13> ErrInvalidWrappedType("wrapped type for bits/enum must be an identifier");
 constexpr UndocumentedErrorDef<14> ErrAttributeWithEmptyParens(
     "attributes without arguments must omit the trailing empty parentheses");
 constexpr UndocumentedErrorDef<15> ErrAttributeArgsMustAllBeNamed(

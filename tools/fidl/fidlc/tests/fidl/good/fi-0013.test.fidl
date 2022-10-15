@@ -1,0 +1,6 @@
+library test.good.fi0013;
+
+type TypeDecl = enum : int32 {
+    FOO = 1;
+    BAR = 2;
+};

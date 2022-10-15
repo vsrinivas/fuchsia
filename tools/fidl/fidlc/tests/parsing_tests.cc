@@ -787,13 +787,8 @@ type Foo = struct {
 }
 
 TEST(ParsingTests, BadTypeDeclOfEnumLayoutWithInvalidSubtype) {
-  TestLibrary library(R"FIDL(
-library example;
-type TypeDecl = enum : "123" {
-    FOO = 1;
-    BAR = 2;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0013.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidWrappedType);
 }
 
