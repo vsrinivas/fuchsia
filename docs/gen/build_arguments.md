@@ -3263,7 +3263,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6388,7 +6388,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"VETWOpLj3N4A7-5zle1yRY7K_b19bGGeZTSXp6SIbh0C"`
+**Current value (from the default):** `"uRR1B8fzptweXUjwWyzdG-c6LsnEzudr0KqBEZvtDrkC"`
 
 From //build/rust/config.gni:32
 
@@ -6914,7 +6914,7 @@ From //build/security.gni:228
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
