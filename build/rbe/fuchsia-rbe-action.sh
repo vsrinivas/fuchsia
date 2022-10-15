@@ -92,6 +92,8 @@ options:
       This is useful when the stdout/stderr size exceeds RPC limits.
   --log=LOGBASE: same as --log, but uses LOGBASE as the log basename.
 
+  --save-temps: keep around cleaned up intermediate files
+
   --fsatrace-path: location of fsatrace tool (which must reside under
       'exec_root').  If provided, a remote trace will be created and
       downloaded as \$output_files[0].remote-fsatrace.
@@ -125,6 +127,7 @@ exec_strategy=
 diagnose_nonzero_exit=0
 label=
 logbase=
+save_temps=0
 
 prev_opt=
 # Extract script options before --
@@ -157,6 +160,8 @@ do
 
     --label=*) label="$optarg" ;;
     --label) prev_opt=label ;;
+
+    --save-temps) save_temps=1 ;;
 
     --fsatrace-path=*) fsatrace_path="$optarg" ;;
     --fsatrace-path) prev_opt=fsatrace_path ;;
@@ -317,7 +322,7 @@ status="$?"
 trap cleanup EXIT
 
 function cleanup() {
-  rm -f "$stderr_file"
+  test "$save_temps" = 1 || rm -f "$stderr_file"
 }
 
 if grep -q "fatal error:.*file not found" "$stderr_file"
