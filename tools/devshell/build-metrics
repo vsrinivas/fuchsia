@@ -23,8 +23,9 @@
 ##       Upload any logs/metrics that may have accumulated.
 ##
 ## If you opt-in to metrics collection, data will be collected and used by
-## Google in accordance with the Google privacy policy
+## Google in accordance with the Google Privacy Policy
 ## (https://policies.google.com/privacy)
+## and Employee Privacy Policy (go/epp).
 
 set -e
 
@@ -40,15 +41,19 @@ function usage {
 
 function show-what-is-collected {
   cat <<EOF
-When enabled, fx builds will upload anonymized remote build logs
-to collect valuable build performance data.
+When enabled, 'fx build's with RBE enabled will upload remote execution logs
+and metrics, including:
 
-1. For every "fx build" invocation that uses remote building (RBE):
-   - Reproxy logs containing details about every remote build action,
-     e.g. timing breakdown, cache hit/miss, statuses, internal errors.
+1. Details about every remote build action: inputs, command, outputs,
+     event timestamps, cache hit/miss, statuses, internal errors.
+2. Environment variables and tool parameters, that can include usernames
+     in paths.
+3. Aggregate statistics about remote build actions.
+4. Host machine information, such as architecture and operating system.
 
-Each build can be identified by a UUID (not traceable to any user),
-but can be voluntarily referenced in bug reports and triage sessions.
+This data is used for performance analytics, bug reports, and triage sessions.
+
+This data is only accessible to the Fuchsia and RBE teams.
 
 EOF
 }
@@ -56,8 +61,9 @@ EOF
 function describe-privacy-policy {
   cat << EOF
 If you opt-in to logs collection, data will be collected and used by Google
-in accordance with the Google privacy policy
+in accordance with the Google Privacy Policy
 (https://policies.google.com/privacy)
+and Employee Privacy Policy (go/epp).
 EOF
 }
 
