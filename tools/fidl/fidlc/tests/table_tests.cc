@@ -77,13 +77,8 @@ type Foo = table {};
 }
 
 TEST(TableTests, BadMissingOrdinals) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-type Foo = table {
-    x int64;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0016-a.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeMember)
 }
 

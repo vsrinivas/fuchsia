@@ -77,15 +77,8 @@ TEST(UnionTests, GoodStrictUnion) {
 }
 
 TEST(UnionTests, BadMustHaveExplicitOrdinals) {
-  TestLibrary library(R"FIDL(
-library test;
-
-type Foo = strict union {
-    foo int64;
-    bar vector<uint32>:10;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0016-b.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeMember,
                                       fidl::ErrMissingOrdinalBeforeMember);
 }
