@@ -76,7 +76,6 @@ third_party_rust_crate_log_visibility = [
   "//src/settings/storage:*",
   "//src/storage/bin/odu:*",
   "//src/sys/lib/fidl-fuchsia-pkg-ext:*",
-  "//src/sys/pkg/lib/eager-package-config:*",
   "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext:*",
   "//src/sys/pkg/lib/tuf:*",
 ]

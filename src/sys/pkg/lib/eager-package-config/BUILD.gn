@@ -16,9 +16,9 @@ rustc_library("eager-package-config") {
     "//src/sys/pkg/lib/omaha-client",
     "//src/sys/pkg/lib/version",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tracing",
   ]
   if (is_fuchsia) {
     deps += [

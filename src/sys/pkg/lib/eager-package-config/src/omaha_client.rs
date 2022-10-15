@@ -49,7 +49,7 @@ impl EagerPackageConfigs {
         // Omaha client only supports one Omaha server at a time; just take the
         // first server config in this file.
         if eager_package_configs_json.eager_package_configs.len() > 1 {
-            log::error!(
+            tracing::error!(
                 "Warning: this eager package config JSON file contained more \
                 than one Omaha server config, but omaha-client only supports \
                 one Omaha server."
