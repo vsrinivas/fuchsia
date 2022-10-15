@@ -4,12 +4,12 @@
 
 use {
     anyhow::anyhow,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::AbsolutePackageUrl,
     fuchsia_zircon::Duration,
     serde::Deserialize,
     std::{cmp, fs::File, io::Read, num::NonZeroU64},
     thiserror::Error,
+    tracing::{error, info},
 };
 
 /// Static service configuration options.
@@ -32,13 +32,13 @@ impl Config {
         let f = match File::open("/config/data/ota_config.json") {
             Ok(f) => f,
             Err(e) => {
-                fx_log_info!("no config found, using defaults: {:#}", anyhow!(e));
+                info!("no config found, using defaults: {:#}", anyhow!(e));
                 return Config::default();
             }
         };
 
         Self::load(f).unwrap_or_else(|e| {
-            fx_log_err!("unable to load config, using defaults: {:#}", anyhow!(e));
+            error!("unable to load config, using defaults: {:#}", anyhow!(e));
             Config::default()
         })
     }

@@ -14,9 +14,9 @@ use fidl_fuchsia_update_installer_ext::{
     UpdateAttemptError,
 };
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_syslog::fx_log_info;
 use fuchsia_url::AbsolutePackageUrl;
 use futures::{future::BoxFuture, prelude::*, stream::BoxStream};
+use tracing::info;
 
 // On success, system will reboot before this function returns
 pub async fn apply_system_update<'a>(
@@ -104,7 +104,7 @@ async fn apply_system_update_impl(
     initiator: Initiator,
     target_channel_updater: &dyn TargetChannelUpdater,
 ) -> Result<BoxStream<'static, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error> {
-    fx_log_info!("starting system updater");
+    info!("starting system updater");
     let options = Options {
         initiator: match initiator {
             Initiator::Service => installer::Initiator::Service,
@@ -146,8 +146,7 @@ async fn monitor_update_progress(
         .context(Error::SystemUpdaterFailed)
         .map_err(|e| (apply_progress.clone(), e))?
     {
-        fx_log_info!("Installer entered state: {}", state.name());
-
+        info!("Installer entered state: {}", state.name());
         apply_progress.download_size = state.download_size();
         if let Some(progress) = state.progress() {
             apply_progress.fraction_completed = Some(progress.fraction_completed());
@@ -158,7 +157,7 @@ async fn monitor_update_progress(
         if state.id() == StateId::WaitToReboot {
             co.yield_(ApplyState::WaitingForReboot(apply_progress.clone())).await;
 
-            fx_log_info!("Successful update, rebooting...");
+            info!("Successful update, rebooting...");
 
             reboot_controller
                 .unblock()
@@ -167,7 +166,7 @@ async fn monitor_update_progress(
                 .map_err(|e| (apply_progress, e))?;
             // On success, wait for reboot to happen.
 
-            fx_log_info!("Reboot contoller unblocked, waiting for reboot");
+            info!("Reboot contoller unblocked, waiting for reboot");
             let () = future::pending().await;
             unreachable!();
         }

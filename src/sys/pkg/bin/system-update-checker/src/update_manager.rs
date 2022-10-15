@@ -22,7 +22,6 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_hash::Hash;
 use fuchsia_inspect as finspect;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::{
     channel::{mpsc, oneshot},
     future::BoxFuture,
@@ -32,6 +31,7 @@ use futures::{
     stream::BoxStream,
 };
 use std::sync::Arc;
+use tracing::{error, info};
 
 #[derive(Debug)]
 pub struct UpdateManagerControlHandle<N: StateNotifier, A>(
@@ -381,7 +381,7 @@ where
             match update_check_res {
                 Ok(()) => {}
                 Err(e) => {
-                    fx_log_err!("update attempt failed: {:#}", anyhow!(e));
+                    error!("update attempt failed: {:#}", anyhow!(e));
                 }
             }
             monitor.clear().await;
@@ -420,7 +420,7 @@ where
         initiator: Initiator,
     ) -> Result<(), Error> {
         co.yield_(StatusEvent::State(State::CheckingForUpdates)).await;
-        fx_log_info!(
+        info!(
             "starting update check (requested by {})",
             match initiator {
                 Initiator::Service => "service",
@@ -439,8 +439,8 @@ where
                 return Err(e);
             }
             Ok(SystemUpdateStatus::UpToDate { system_image, update_package }) => {
-                fx_log_info!("current system_image hash: {}", system_image);
-                fx_log_info!("system_image is already up-to-date");
+                info!("current system_image hash: {}", system_image);
+                info!("system_image is already up-to-date");
 
                 self.last_known_update_package = Some(update_package);
 
@@ -452,8 +452,8 @@ where
                 current_system_image,
                 latest_system_image,
             }) => {
-                fx_log_info!("current system_image hash: {}", current_system_image);
-                fx_log_info!("new system_image available: {}", latest_system_image);
+                info!("current system_image hash: {}", current_system_image);
+                info!("new system_image available: {}", latest_system_image);
                 let version_available = latest_system_image.to_string();
 
                 let status = match self.commit_status {

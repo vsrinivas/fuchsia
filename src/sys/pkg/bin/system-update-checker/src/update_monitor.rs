@@ -7,9 +7,9 @@ use {
     event_queue::{ControlHandle, EventQueue, Notify},
     fidl_fuchsia_update_ext::{AttemptOptions, State},
     fuchsia_inspect_contrib::inspectable::InspectableDebugString,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::prelude::*,
     std::time::Duration,
+    tracing::{error, warn},
 };
 
 pub trait StateNotifier: Notify<Event = State> + Send + Sync + 'static {}
@@ -71,33 +71,33 @@ where
     ) {
         let attempt_notifier = callback(self.temporary_queue.clone());
         if let Err(e) = self.attempt_queue.add_client(attempt_notifier).await {
-            fx_log_err!("error adding client to global queue: {:#}", anyhow!(e))
+            error!("error adding client to global queue: {:#}", anyhow!(e))
         }
     }
 
     pub async fn tell_global_monitors_about_the_update(&mut self, attempt_options: AttemptOptions) {
         if let Err(e) = self.attempt_queue.queue_event(attempt_options).await {
-            fx_log_warn!("error sending update to attempt queue: {:#}", anyhow!(e))
+            warn!("error sending update to attempt queue: {:#}", anyhow!(e))
         }
     }
 
     pub async fn add_temporary_callback(&mut self, callback: N) {
         if let Err(e) = self.temporary_queue.add_client(callback).await {
-            fx_log_err!("error adding client to temporary queue: {:#}", anyhow!(e))
+            error!("error adding client to temporary queue: {:#}", anyhow!(e))
         }
     }
 
     pub async fn advance_update_state(&mut self, next_update_state: State) {
         *self.update_state.get_mut() = Some(next_update_state.clone());
         if let Err(e) = self.temporary_queue.queue_event(next_update_state).await {
-            fx_log_warn!("error sending state to temporary queue: {:#}", anyhow!(e))
+            warn!("error sending state to temporary queue: {:#}", anyhow!(e))
         }
     }
 
     pub async fn clear(&mut self) {
         *self.version_available.get_mut() = None;
         if let Err(e) = self.temporary_queue.clear().await {
-            fx_log_warn!("error clearing clients of temporary queue: {:#}", anyhow!(e))
+            warn!("error clearing clients of temporary queue: {:#}", anyhow!(e))
         }
     }
 
@@ -105,11 +105,11 @@ where
         match self.temporary_queue.try_flush(Duration::from_secs(5)).await {
             Ok(flush_future) => {
                 if let Err(e) = flush_future.await {
-                    fx_log_warn!("Timed out flushing temporary queue: {:#}", anyhow!(e));
+                    warn!("Timed out flushing temporary queue: {:#}", anyhow!(e));
                 }
             }
             Err(e) => {
-                fx_log_warn!("error trying to flush temporary queue: {:#}", anyhow!(e));
+                warn!("error trying to flush temporary queue: {:#}", anyhow!(e));
             }
         }
     }

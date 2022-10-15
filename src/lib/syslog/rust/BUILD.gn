@@ -77,7 +77,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/settings/service:*",
   "//src/settings/storage:*",
   "//src/sys/pkg/bin/pkg-local-mirror:*",
-  "//src/sys/pkg/bin/system-update-checker:*",
   "//src/sys/pkg/bin/system-updater:*",
   "//src/sys/pkg/lib/forced-fdr:*",
   "//src/ui/bin/brightness_manager:*",

@@ -16,9 +16,9 @@ use {
     fidl_fuchsia_space as fidl_space,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_hash::Hash,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     std::{cmp::min, convert::TryInto as _, io},
+    tracing::{error, info, warn},
     update_package::{ImageType, UpdatePackage},
 };
 
@@ -95,7 +95,7 @@ async fn check_for_system_update_impl(
 
     if let Some(last_known_update_package) = last_known_update_package {
         if *last_known_update_package == latest_update_merkle {
-            fx_log_info!("Last known update package is latest, system is up to date");
+            info!("Last known update package is latest, system is up to date");
             return up_to_date;
         }
     }
@@ -104,7 +104,7 @@ async fn check_for_system_update_impl(
         Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image });
 
     if current_system_image != latest_system_image {
-        fx_log_info!("Current system image is not latest, system is not up to date");
+        info!("Current system image is not latest, system is not up to date");
         return update_available;
     }
 
@@ -118,24 +118,20 @@ async fn check_for_system_update_impl(
     {
         match is_image_up_to_date(&update_pkg, paver, *image, *asset).await {
             Ok(true) => {
-                fx_log_info!("Image {:?} is up to date, system is up to date", image);
+                info!("Image {:?} is up to date, system is up to date", image);
                 return up_to_date;
             }
             Ok(false) => {
-                fx_log_info!("Image {:?} is not latest, system is not up to date", image);
+                info!("Image {:?} is not latest, system is not up to date", image);
                 return update_available;
             }
             Err(err) => {
-                fx_log_warn!(
-                    "Failed to check if {} is up to date: {:#}",
-                    image.name(),
-                    anyhow!(err)
-                );
+                warn!("Failed to check if {} is up to date: {:#}", image.name(), anyhow!(err));
             }
         }
     }
 
-    fx_log_info!("Could not find any system differences, assuming system is up to date");
+    info!("Could not find any system differences, assuming system is up to date");
     up_to_date
 }
 
@@ -169,20 +165,18 @@ async fn latest_update_package(
         Err(raw) => return Err(raw),
     }
 
-    fx_log_info!("No space left for update package.  Attempting to clean up older packages.");
+    info!("No space left for update package.  Attempting to clean up older packages.");
 
     // If the first attempt fails with NoSpace, perform a GC and retry.
     if let Err(e) = gc(space_manager).await {
-        fx_log_err!("unable to gc packages: {:#}", anyhow!(e));
+        error!("unable to gc packages: {:#}", anyhow!(e));
     }
 
     match latest_update_package_attempt(default_update_url, package_resolver, channel_manager).await
     {
         Ok(update_package) => Ok(update_package),
         Err(raw) => {
-            fx_log_err!(
-                "`latest_update_package_attempt` failed twice to fetch the update package."
-            );
+            error!("`latest_update_package_attempt` failed twice to fetch the update package.");
             Err(raw)
         }
     }
@@ -236,7 +230,7 @@ async fn is_image_up_to_date(
             .map_err(|status| zx::Status::from_raw(status))
             .context("querying current configuration")?,
         Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_SUPPORTED, .. }) => {
-            fx_log_warn!("device does not support ABR. Checking image in slot A");
+            warn!("device does not support ABR. Checking image in slot A");
             Configuration::A
         }
         Err(err) => return Err(err).context("querying current configuration"),

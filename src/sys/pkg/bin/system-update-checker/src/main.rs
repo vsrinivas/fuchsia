@@ -29,22 +29,20 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as finspect,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::{prelude::*, stream::FuturesUnordered},
     std::{sync::Arc, time::Duration},
+    tracing::{error, warn},
 };
 
 const MAX_CONCURRENT_CONNECTIONS: usize = 100;
 const DEFAULT_UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 
-#[fasync::run(1)]
+#[fuchsia::main(threads = 1, logging_tags = ["system-update-checker"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["system-update-checker"]).context("syslog init failed")?;
-
     main_inner().await.map_err(|err| {
         // Use anyhow to print the error chain.
         let err = anyhow!(err);
-        fuchsia_syslog::fx_log_err!("error running system-update-checker: {:#}", err);
+        error!("error running system-update-checker: {:#}", err);
         err
     })
 }
@@ -52,7 +50,7 @@ async fn main() -> Result<(), Error> {
 async fn main_inner() -> Result<(), Error> {
     let config = Config::load_from_config_data_or_default();
     if let Some(url) = config.update_package_url() {
-        fx_log_warn!("Ignoring custom update package url: {}", url);
+        warn!("Ignoring custom update package url: {}", url);
     }
 
     let inspector = finspect::Inspector::new();
@@ -60,7 +58,7 @@ async fn main_inner() -> Result<(), Error> {
     let target_channel_manager =
         channel::TargetChannelManager::new(connect::ServiceConnector, "/config/data");
     if let Err(e) = target_channel_manager.update().await {
-        fx_log_err!("while updating the target channel: {:#}", anyhow!(e));
+        error!("while updating the target channel: {:#}", anyhow!(e));
     }
     let target_channel_manager = Arc::new(target_channel_manager);
 
@@ -102,9 +100,8 @@ async fn main_inner() -> Result<(), Error> {
     fs.take_and_serve_directory_handle().context("ServiceFs::take_and_serve_directory_handle")?;
     futures.push(
         fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, |incoming_service| {
-            handle_incoming_service(incoming_service).unwrap_or_else(|e| {
-                fx_log_err!("error handling client connection: {:#}", anyhow!(e))
-            })
+            handle_incoming_service(incoming_service)
+                .unwrap_or_else(|e| error!("error handling client connection: {:#}", anyhow!(e)))
         })
         .boxed(),
     );
@@ -119,7 +116,7 @@ async fn main_inner() -> Result<(), Error> {
                 fasync::Timer::new(Duration::from_secs(60)).await;
                 let options = CheckOptions::builder().initiator(Initiator::Service).build();
                 if let Err(e) = update_manager.try_start_update(options, None).await {
-                    fx_log_warn!("Update check failed with error: {:?}", e);
+                    warn!("Update check failed with error: {:?}", e);
                 }
             }
         }

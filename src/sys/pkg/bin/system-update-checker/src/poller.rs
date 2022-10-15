@@ -8,8 +8,8 @@ use crate::update_monitor::{AttemptNotifier, StateNotifier};
 use fidl_fuchsia_update::CheckNotStartedReason;
 use fidl_fuchsia_update_ext::{CheckOptions, Initiator};
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_info;
 use futures::prelude::*;
+use tracing::info;
 
 pub fn run_periodic_update_check<N, A>(
     mut manager: UpdateManagerControlHandle<N, A>,
@@ -32,16 +32,16 @@ where
             match manager.try_start_update(options, None).await {
                 Ok(()) => {}
                 Err(CheckNotStartedReason::Throttled) => {
-                    fx_log_info!("Service initiated update check throttled");
+                    info!("Service initiated update check throttled");
                 }
                 Err(CheckNotStartedReason::AlreadyInProgress) => {
-                    fx_log_info!("Update in progress, automatic update check skipped");
+                    info!("Update in progress, automatic update check skipped");
                 }
                 Err(CheckNotStartedReason::Internal) => {
-                    fx_log_info!("Internal error, will try again later");
+                    info!("Internal error, will try again later");
                 }
                 Err(CheckNotStartedReason::InvalidOptions) => {
-                    fx_log_info!("Invalid options, update check skipped");
+                    info!("Invalid options, update check skipped");
                 }
             }
         }

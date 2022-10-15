@@ -12,7 +12,6 @@ use fidl_fuchsia_cobalt::{
 use fidl_fuchsia_pkg::RepositoryManagerMarker;
 use fidl_fuchsia_pkg_ext::RepositoryConfig;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_url::AbsolutePackageUrl;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -23,6 +22,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use thiserror::Error;
+use tracing::{error, info, warn};
 
 static CHANNEL_PACKAGE_MAP: &'static str = "channel_package_map.json";
 
@@ -31,7 +31,7 @@ pub async fn build_current_channel_manager_and_notifier<S: ServiceConnect>(
 ) -> Result<(CurrentChannelManager, CurrentChannelNotifier<S>), anyhow::Error> {
     let (current_channel, current_realm) = if let (Some(channel), Some(realm)) =
         lookup_channel_and_realm_from_vbmeta(&service_connector).await.unwrap_or_else(|e| {
-            fx_log_warn!("Failed to read current_channel from vbmeta: {:#}", anyhow!(e));
+            warn!("Failed to read current_channel from vbmeta: {:#}", anyhow!(e));
             (None, None)
         }) {
         (channel, Some(realm))
@@ -69,20 +69,20 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
                 ..SoftwareDistributionInfo::EMPTY
             };
 
-            fx_log_info!("calling cobalt.SetSoftwareDistributionInfo(\"{:?}\")", distribution_info);
+            info!("calling cobalt.SetSoftwareDistributionInfo(\"{:?}\")", distribution_info);
 
             match cobalt.set_software_distribution_info(distribution_info).await {
                 Ok(CobaltStatus::Ok) => {
                     return;
                 }
                 Ok(CobaltStatus::EventTooBig) => {
-                    fx_log_warn!(
+                    warn!(
                         "cobalt.SetSoftwareDistributionInfo returned Status.EVENT_TOO_BIG, retrying"
                     );
                 }
                 Ok(status) => {
                     // Not much we can do about the other status codes but log.
-                    fx_log_err!(
+                    error!(
                         "cobalt.SetSoftwareDistributionInfo returned non-OK status: {:?}",
                         status
                     );
@@ -90,7 +90,7 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
                 }
                 Err(err) => {
                     // channel broken, so log the error and reconnect.
-                    fx_log_warn!(
+                    warn!(
                         "cobalt.SetSoftwareDistributionInfo returned error: {:#}, retrying",
                         anyhow!(err)
                     );
@@ -113,7 +113,7 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
                     return cobalt;
                 }
                 Err(err) => {
-                    fx_log_err!("error connecting to cobalt: {:#}", anyhow!(err));
+                    error!("error connecting to cobalt: {:#}", anyhow!(err));
                     Self::sleep().await
                 }
             }
@@ -158,7 +158,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         let mut config_path = config_dir.into();
         config_path.push(CHANNEL_PACKAGE_MAP);
         let channel_package_map = read_channel_mappings(&config_path).unwrap_or_else(|err| {
-            fx_log_warn!("Failed to load {}: {:?}", CHANNEL_PACKAGE_MAP, err);
+            warn!("Failed to load {}: {:?}", CHANNEL_PACKAGE_MAP, err);
             HashMap::new()
         });
 
@@ -278,11 +278,9 @@ fn read_channel_mappings(
         ChannelPackageMap::Version1(items) => {
             for item in items.into_iter() {
                 if let Some(old_pkg) = result.insert(item.channel.clone(), item.package.clone()) {
-                    fx_log_err!(
+                    error!(
                         "Duplicate update package definition for channel {}: {} and {}.",
-                        item.channel,
-                        item.package,
-                        old_pkg
+                        item.channel, item.package, old_pkg
                     );
                 }
             }
