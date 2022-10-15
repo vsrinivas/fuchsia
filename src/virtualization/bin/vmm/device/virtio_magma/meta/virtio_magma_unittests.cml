@@ -1,0 +1,39 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/virtio_magma_unittests",
+    },
+    children: [
+        {
+            name: "test_ui_stack",
+            url: "fuchsia-pkg://fuchsia.com/flatland-scene-manager-test-ui-stack#meta/test-ui-stack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.ui.composition.Allocator" ],
+            from: "#test_ui_stack",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#test_ui_stack",
+        },
+    ],
+}

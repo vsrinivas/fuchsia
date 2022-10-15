@@ -110,10 +110,7 @@ executable("device_tests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [
-    "virtio_magma/magma_image_test.cc",
-    "virtio_queue_test.cc",
-  ]
+  sources = [ "virtio_queue_test.cc" ]
 
   deps = [
     ":lib",
