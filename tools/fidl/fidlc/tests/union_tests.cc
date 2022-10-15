@@ -248,14 +248,8 @@ type Example = strict union {
 }
 
 TEST(UnionTests, BadNoNullableMembers) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = strict union {
-  1: bar string:optional;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0049.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOptionalUnionMember);
 }
 
