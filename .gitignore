@@ -127,6 +127,7 @@ tables_generator_tests_*.txt
 /tmp/
 /vendor/
 /src/experiences
+/build/secondary/third_party/ffmpeg
 /build/secondary/third_party/protobuf
 
 # rust-analyzer
