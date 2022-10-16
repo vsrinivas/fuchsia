@@ -137,7 +137,7 @@ Setup
 First, lets execute the test and export the LCOV file, which VS Code will use to show coverage.
 
 ```posix-terminal
-fx coverage --lcov-output-path $FUCHSIA_DIR/coverage.lcov testing-lib-test
+fx coverage --lcov-output-path $FUCHSIA_DIR/lcov.info testing-lib-test
 ```
 
 ### View coverage in VS Code
@@ -411,15 +411,12 @@ Ongoing work:
 - Performance and reliability improvements to the coverage runtime.
 - Kernel support for source code coverage from ZBI tests.
 - Custom coverage dashboards and alerts: build a dashboard for your team.
+- Local workflow: run tests locally, produce a coverage report locally.
+- IDE integration: see a coverage layer inside VS Code.
 
 Upcoming work:
 
 - Out-of-tree support: coverage outside of Fuchsia CI/CQ.
-
-Future work:
-
-- Local workflow: run tests locally, produce a coverage report locally.
-- IDE integration: see a coverage layer inside VS Code.
 
 ## Further reading
 
@@ -453,6 +450,6 @@ Future work:
 [llvm-coverage-mapping-format]: https://llvm.org/docs/CoverageMappingFormat.html
 [llvm-coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
 [llvm-profdata]: https://llvm.org/docs/CommandGuide/llvm-profdata.html
-[settings.json]: https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters
+[settings.json]: https://code.visualstudio.com/docs/getstarted/settings#_settings-editor
 [trf]: /docs/development/testing/components/test_runner_framework.md
 [vmo]: /docs/reference/kernel_objects/vm_object.md
