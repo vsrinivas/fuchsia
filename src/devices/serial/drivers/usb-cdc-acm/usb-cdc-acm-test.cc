@@ -24,54 +24,21 @@
 namespace usb_virtual_bus {
 namespace {
 
-class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
- public:
-  USBVirtualBus() = default;
-
-  // Initialize a USB CDC ACM device. Asserts on failure.
-  void InitUsbCdcAcm(fbl::String* devpath);
-};
-
-// Initialize a USB CDC ACM device. Asserts on failure.
-void USBVirtualBus::InitUsbCdcAcm(fbl::String* devpath) {
-  namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
-  using ConfigurationDescriptor =
-      ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
-  usb_peripheral::wire::DeviceDescriptor device_desc = {};
-  device_desc.bcd_usb = htole16(0x0200);
-  device_desc.b_max_packet_size0 = 64;
-  device_desc.bcd_device = htole16(0x0100);
-  device_desc.b_num_configurations = 1;
-
-  usb_peripheral::wire::FunctionDescriptor usb_cdc_acm_function_desc = {
-      .interface_class = USB_CLASS_COMM,
-      .interface_subclass = USB_CDC_SUBCLASS_ABSTRACT,
-      .interface_protocol = 0,
-  };
-
-  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
-  function_descs.push_back(usb_cdc_acm_function_desc);
-  std::vector<ConfigurationDescriptor> config_descs;
-  config_descs.emplace_back(
-      fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
-
-  ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
-
-  fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/serial", O_RDONLY));
-  while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {
-  }
-  *devpath = fbl::String::Concat({fbl::String("class/serial/"), *devpath});
-}
+using usb_virtual::BusLauncher;
 
 class UsbCdcAcmTest : public zxtest::Test {
  public:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURE(bus_.InitUsbCdcAcm(&devpath_)); }
+  void SetUp() override {
+    auto bus = BusLauncher::Create();
+    ASSERT_OK(bus.status_value());
+    bus_ = std::move(bus.value());
+    ASSERT_NO_FATAL_FAILURE(InitUsbCdcAcm(&devpath_));
+  }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
+    ASSERT_OK(bus_->ClearPeripheralDeviceFunctions());
 
-    auto result2 = bus_.virtual_bus()->Disable();
-    ASSERT_NO_FATAL_FAILURE(ValidateResult(result2));
+    ASSERT_OK(bus_->Disable());
   }
 
   zx_status_t ReadWithTimeout(int fd, void* data, size_t size, size_t* actual) {
@@ -87,12 +54,44 @@ class UsbCdcAcmTest : public zxtest::Test {
   }
 
  protected:
-  USBVirtualBus bus_;
+  // Initialize a USB CDC ACM device. Asserts on failure.
+  void InitUsbCdcAcm(fbl::String* devpath) {
+    namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
+    using ConfigurationDescriptor =
+        ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+    usb_peripheral::wire::DeviceDescriptor device_desc = {};
+    device_desc.bcd_usb = htole16(0x0200);
+    device_desc.b_max_packet_size0 = 64;
+    device_desc.bcd_device = htole16(0x0100);
+    device_desc.b_num_configurations = 1;
+
+    usb_peripheral::wire::FunctionDescriptor usb_cdc_acm_function_desc = {
+        .interface_class = USB_CLASS_COMM,
+        .interface_subclass = USB_CDC_SUBCLASS_ABSTRACT,
+        .interface_protocol = 0,
+    };
+
+    std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
+    function_descs.push_back(usb_cdc_acm_function_desc);
+    std::vector<ConfigurationDescriptor> config_descs;
+    config_descs.emplace_back(
+        fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
+
+    ASSERT_OK(bus_->SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+
+    fbl::unique_fd fd(openat(bus_->GetRootFd(), "class/serial", O_RDONLY));
+    while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) !=
+           ZX_ERR_STOP) {
+    }
+    *devpath = fbl::String::Concat({fbl::String("class/serial/"), *devpath});
+  }
+
+  std::optional<BusLauncher> bus_;
   fbl::String devpath_;
 };
 
 TEST_F(UsbCdcAcmTest, ReadAndWriteTest) {
-  fbl::unique_fd fd(openat(bus_.GetRootFd(), devpath_.c_str(), O_RDWR));
+  fbl::unique_fd fd(openat(bus_->GetRootFd(), devpath_.c_str(), O_RDWR));
   ASSERT_GT(fd.get(), 0);
 
   uint8_t write_data[] = {1, 2, 3};

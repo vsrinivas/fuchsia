@@ -34,6 +34,8 @@
 namespace usb_virtual_bus {
 namespace {
 
+using usb_virtual::BusLauncher;
+
 zx_status_t (&BRead)(int, void*, size_t, size_t) = block_client::SingleReadBytes;
 zx_status_t (&BWrite)(int, void*, size_t, size_t) = block_client::SingleWriteBytes;
 
@@ -43,6 +45,12 @@ namespace usb_peripheral_block = fuchsia_hardware_usb_peripheral_block;
 constexpr const char kManufacturer[] = "Google";
 constexpr const char kProduct[] = "USB test drive";
 constexpr const char kSerial[] = "ebfd5ad49d2a";
+
+template <typename T>
+void ValidateResult(const T& result) {
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
+}
 
 usb_peripheral::wire::DeviceDescriptor GetDeviceDescriptor() {
   usb_peripheral::wire::DeviceDescriptor device_desc = {};
@@ -65,49 +73,14 @@ usb_peripheral::wire::DeviceDescriptor GetDeviceDescriptor() {
   return device_desc;
 }
 
-class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
- public:
-  USBVirtualBus() {}
-
-  // Initialize UMS. Asserts on failure.
-  void InitUMS(fbl::String* devpath);
-};
-
-// Initialize UMS. Asserts on failure.
-void USBVirtualBus::InitUMS(fbl::String* devpath) {
-  using ConfigurationDescriptor =
-      ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
-  usb_peripheral::wire::FunctionDescriptor ums_function_desc = {
-      .interface_class = USB_CLASS_MSC,
-      .interface_subclass = USB_SUBCLASS_MSC_SCSI,
-      .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
-  };
-
-  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
-  function_descs.push_back(ums_function_desc);
-  std::vector<ConfigurationDescriptor> config_descs;
-  config_descs.emplace_back(
-      fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
-
-  ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(GetDeviceDescriptor(), std::move(config_descs)));
-
-  fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/block", O_RDONLY));
-  while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) != ZX_ERR_STOP) {
-    continue;
-  }
-  *devpath = fbl::String::Concat({fbl::String("class/block/"), *devpath});
-}
-
 class BlockDeviceController {
  public:
-  explicit BlockDeviceController(USBVirtualBus* bus) : bus_(bus) {}
+  explicit BlockDeviceController(BusLauncher* bus) : bus_(bus) {}
 
   void Disconnect() {
     cachecontrol_ = {};
-    ASSERT_NO_FATAL_FAILURE(bus_->ClearPeripheralDeviceFunctions());
-
-    auto result2 = virtual_bus()->Disconnect();
-    ASSERT_NO_FATAL_FAILURE(ValidateResult(result2));
+    ASSERT_OK(bus_->ClearPeripheralDeviceFunctions());
+    ASSERT_OK(bus_->Disconnect());
   }
 
   void Connect() {
@@ -124,8 +97,7 @@ class BlockDeviceController {
     std::vector<ConfigurationDescriptor> config_descs;
     config_descs.emplace_back(
         fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
-    ASSERT_NO_FATAL_FAILURE(
-        bus_->SetupPeripheralDevice(GetDeviceDescriptor(), std::move(config_descs)));
+    ASSERT_OK(bus_->SetupPeripheralDevice(GetDeviceDescriptor(), std::move(config_descs)));
 
     fbl::String devpath;
     while (fdio_watch_directory(openat(bus_->GetRootFd(), "class/usb-cache-test", O_RDONLY),
@@ -156,22 +128,53 @@ class BlockDeviceController {
   }
 
  private:
-  fidl::WireSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>& virtual_bus() {
-    return bus_->virtual_bus();
-  }
-  fidl::WireSyncClient<usb_peripheral::Device>& peripheral() { return bus_->peripheral(); }
-
-  USBVirtualBus* bus_;
+  BusLauncher* bus_;
   fidl::WireSyncClient<usb_peripheral_block::Device> cachecontrol_;
 };
 
 class UmsTest : public zxtest::Test {
  public:
-  void SetUp() override;
-  void TearDown() override;
+  void SetUp() override {
+    auto bus = BusLauncher::Create();
+    ASSERT_OK(bus.status_value());
+    bus_ = std::move(bus.value());
+    ASSERT_NO_FATAL_FAILURE(InitUMS(&devpath_));
+  }
+
+  void TearDown() override {
+    ASSERT_OK(bus_->ClearPeripheralDeviceFunctions());
+
+    ASSERT_OK(bus_->Disable());
+  }
 
  protected:
-  USBVirtualBus bus_;
+  // Initialize UMS. Asserts on failure.
+  void InitUMS(fbl::String* devpath) {
+    using ConfigurationDescriptor =
+        ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+    usb_peripheral::wire::FunctionDescriptor ums_function_desc = {
+        .interface_class = USB_CLASS_MSC,
+        .interface_subclass = USB_SUBCLASS_MSC_SCSI,
+        .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
+    };
+
+    std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
+    function_descs.push_back(ums_function_desc);
+    std::vector<ConfigurationDescriptor> config_descs;
+    config_descs.emplace_back(
+        fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
+
+    ASSERT_OK(bus_->SetupPeripheralDevice(GetDeviceDescriptor(), std::move(config_descs)));
+
+    fbl::unique_fd fd(openat(bus_->GetRootFd(), "class/block", O_RDONLY));
+    while (fdio_watch_directory(fd.get(), WaitForAnyFile, ZX_TIME_INFINITE, devpath) !=
+           ZX_ERR_STOP) {
+      continue;
+    }
+    *devpath = fbl::String::Concat({fbl::String("class/block/"), *devpath});
+  }
+
+  std::optional<BusLauncher> bus_;
   fbl::String devpath_;
   zx::unowned_channel peripheral_;
   zx::unowned_channel virtual_bus_handle_;
@@ -182,7 +185,7 @@ class UmsTest : public zxtest::Test {
     // the block-watcher deadlock. Changing the timing even slightly
     // makes this test invalid.
     while (true) {
-      fbl::unique_fd fd(openat(bus_.GetRootFd(), "class/block", O_RDONLY));
+      fbl::unique_fd fd(openat(bus_->GetRootFd(), "class/block", O_RDONLY));
       DIR* dir_handle = fdopendir(fd.get());
       auto release_dir = fit::defer([=]() { closedir(dir_handle); });
       for (dirent* ent = readdir(dir_handle); ent; ent = readdir(dir_handle)) {
@@ -211,21 +214,12 @@ class UmsTest : public zxtest::Test {
   fbl::String last_known_devpath_;
 };
 
-void UmsTest::SetUp() { ASSERT_NO_FATAL_FAILURE(bus_.InitUMS(&devpath_)); }
-
-void UmsTest::TearDown() {
-  ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
-
-  auto result2 = bus_.virtual_bus()->Disable();
-  ASSERT_NO_FATAL_FAILURE(ValidateResult(result2));
-}
-
 TEST_F(UmsTest, DISABLED_ReconnectTest) {
   // Disconnect and re-connect the block device 50 times as a sanity check
   // for race conditions and deadlocks.
   // If the test freezes; or something crashes at this point, it is likely
   // a regression in a driver (not a test flake).
-  BlockDeviceController controller(&bus_);
+  BlockDeviceController controller(&bus_.value());
   for (size_t i = 0; i < 50; i++) {
     ASSERT_NO_FATAL_FAILURE(controller.Disconnect());
     WaitForRemove();
@@ -237,12 +231,12 @@ TEST_F(UmsTest, DISABLED_ReconnectTest) {
 
 TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
   // Enable writeback caching on the block device
-  BlockDeviceController controller(&bus_);
+  BlockDeviceController controller(&bus_.value());
   ASSERT_NO_FATAL_FAILURE(controller.Disconnect());
   ASSERT_NO_FATAL_FAILURE(controller.Connect());
   ASSERT_NO_FATAL_FAILURE(controller.SetWritebackCacheReported(true));
   ASSERT_NO_FATAL_FAILURE(controller.EnableWritebackCache());
-  fbl::unique_fd fd(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
+  fbl::unique_fd fd(openat(bus_->GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
 
   uint32_t blk_size;
@@ -256,7 +250,7 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
   std::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
   std::unique_ptr<uint8_t[]> read_buffer(new uint8_t[blk_size]);
   ASSERT_EQ(ZX_OK, BRead(fd.get(), read_buffer.get(), blk_size, 0));
-  fd.reset(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
+  fd.reset(openat(bus_->GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
   // Create a pattern to write to the block device
   for (size_t i = 0; i < blk_size; i++) {
@@ -270,20 +264,20 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
   // This will cause the data that was written to be discarded.
   ASSERT_NO_FATAL_FAILURE(controller.Disconnect());
   ASSERT_NO_FATAL_FAILURE(controller.Connect());
-  fd.reset(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
+  fd.reset(openat(bus_->GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
   ASSERT_EQ(ZX_OK, BRead(fd.get(), write_buffer.get(), blk_size, 0));
   ASSERT_NE(0, memcmp(read_buffer.get(), write_buffer.get(), blk_size));
 }
 
 TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
-  BlockDeviceController controller(&bus_);
+  BlockDeviceController controller(&bus_.value());
   // Disable writeback caching on the device
   ASSERT_NO_FATAL_FAILURE(controller.Disconnect());
   ASSERT_NO_FATAL_FAILURE(controller.Connect());
   ASSERT_NO_FATAL_FAILURE(controller.SetWritebackCacheReported(false));
   ASSERT_NO_FATAL_FAILURE(controller.DisableWritebackCache());
-  fbl::unique_fd fd(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
+  fbl::unique_fd fd(openat(bus_->GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
 
   uint32_t blk_size;
@@ -306,7 +300,7 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
   // Disconnect and re-connect the block device
   ASSERT_NO_FATAL_FAILURE(controller.Disconnect());
   ASSERT_NO_FATAL_FAILURE(controller.Connect());
-  fd.reset(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
+  fd.reset(openat(bus_->GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
   // Read back the pattern, which should match what was written
   // since writeback caching was disabled.
@@ -322,7 +316,7 @@ TEST_F(UmsTest, BlkdevTest) {
   actions[0] = {};
   actions[0].action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY;
   zx_handle_t fd_channel;
-  ASSERT_OK(fdio_fd_clone(bus_.GetRootFd(), &fd_channel));
+  ASSERT_OK(fdio_fd_clone(bus_->GetRootFd(), &fd_channel));
   actions[0].ns.handle = fd_channel;
   actions[0].ns.prefix = "/dev2";
   fbl::String path = fbl::String::Concat({fbl::String("/dev2/"), GetTestdevPath()});

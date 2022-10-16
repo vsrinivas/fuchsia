@@ -29,17 +29,14 @@
 
 namespace usb_virtual_bus {
 namespace {
+
+using usb_virtual::BusLauncher;
+
 namespace virtualbustest = fuchsia_hardware_usb_virtualbustest;
+
 constexpr const char kManufacturer[] = "Google";
 constexpr const char kProduct[] = "USB Virtual Bus Virtual Device";
 constexpr const char kSerial[] = "ebfd5ad49d2a";
-
-class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
- public:
-  USBVirtualBus() = default;
-
-  void InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTest>* test);
-};
 
 zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) {
   if (std::string_view{name} == ".") {
@@ -58,7 +55,28 @@ zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) 
   return ZX_ERR_STOP;
 }
 
-void USBVirtualBus::InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTest>* test) {
+class VirtualBusTest : public zxtest::Test {
+ public:
+  void SetUp() override {
+    auto bus = BusLauncher::Create();
+    ASSERT_OK(bus.status_value());
+    bus_ = std::move(bus.value());
+    ASSERT_NO_FATAL_FAILURE(InitUsbVirtualBus(&test_));
+  }
+
+  void TearDown() override {
+    ASSERT_OK(bus_->ClearPeripheralDeviceFunctions());
+    ASSERT_OK(bus_->Disable());
+  }
+
+ protected:
+  void InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTest>* test);
+
+  std::optional<BusLauncher> bus_;
+  fidl::WireSyncClient<virtualbustest::BusTest> test_;
+};
+
+void VirtualBusTest::InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTest>* test) {
   namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
   using ConfigurationDescriptor =
       ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
@@ -91,9 +109,9 @@ void USBVirtualBus::InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTe
   config_descs.emplace_back(
       fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
 
-  ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+  ASSERT_OK(bus_->SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
 
-  fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/virtual-bus-test", O_RDONLY));
+  fbl::unique_fd fd(openat(bus_->GetRootFd(), "class/virtual-bus-test", O_RDONLY));
 
   while (true) {
     auto result = fdio_watch_directory(fd.get(), WaitForDevice, ZX_TIME_INFINITE, test);
@@ -104,20 +122,6 @@ void USBVirtualBus::InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTe
     ASSERT_NE(result, ZX_ERR_INTERNAL);
   }
 }
-
-class VirtualBusTest : public zxtest::Test {
- public:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURE(bus_.InitUsbVirtualBus(&test_)); }
-
-  void TearDown() override {
-    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
-    ASSERT_NO_FATAL_FAILURE(ValidateResult(bus_.virtual_bus()->Disable()));
-  }
-
- protected:
-  USBVirtualBus bus_;
-  fidl::WireSyncClient<virtualbustest::BusTest> test_;
-};
 
 TEST_F(VirtualBusTest, ShortTransfer) {
   ASSERT_TRUE(test_->RunShortPacketTest().value().success);

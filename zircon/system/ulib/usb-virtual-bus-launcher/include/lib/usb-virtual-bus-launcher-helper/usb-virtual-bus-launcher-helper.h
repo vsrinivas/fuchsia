@@ -7,15 +7,7 @@
 
 #include <zircon/types.h>
 
-#include <zxtest/zxtest.h>
-
 namespace usb_virtual_bus {
-
-template <typename T>
-void ValidateResult(const T& result) {
-  ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
-}
 
 zx_status_t WaitForAnyFile(int dirfd, int event, const char* name, void* cookie);
 

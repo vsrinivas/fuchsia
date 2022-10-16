@@ -8,9 +8,12 @@
 #include <fidl/fuchsia.hardware.ethernet/cpp/wire.h>
 #include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
+#include <fuchsia/diagnostics/cpp/fidl.h>
+#include <fuchsia/driver/test/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/testing/cpp/real_loop.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
@@ -37,6 +40,12 @@
 
 namespace usb_virtual_bus {
 namespace {
+
+using driver_integration_test::IsolatedDevmgr;
+using fuchsia::diagnostics::Severity;
+using fuchsia::driver::test::DriverLog;
+using usb_virtual::BusLauncher;
+
 namespace ethernet = fuchsia_hardware_ethernet;
 constexpr const char kManufacturer[] = "Google";
 constexpr const char kProduct[] = "CDC Ethernet";
@@ -94,65 +103,6 @@ zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) 
   }
   return ZX_OK;
 }
-
-class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
- public:
-  USBVirtualBus() = default;
-
-  void InitUsbCdcEcm(std::string* peripheral_path, std::string* host_path) {
-    namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
-    using ConfigurationDescriptor =
-        ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
-    usb_peripheral::wire::DeviceDescriptor device_desc = {};
-    device_desc.bcd_usb = htole16(0x0200);
-    device_desc.b_device_class = 0;
-    device_desc.b_device_sub_class = 0;
-    device_desc.b_device_protocol = 0;
-    device_desc.b_max_packet_size0 = 64;
-    device_desc.bcd_device = htole16(0x0100);
-    device_desc.b_num_configurations = 2;
-
-    device_desc.manufacturer = fidl::StringView(kManufacturer);
-    device_desc.product = fidl::StringView(kProduct);
-    device_desc.serial = fidl::StringView(kSerial);
-
-    device_desc.id_vendor = htole16(0x0BDA);
-    device_desc.id_product = htole16(0x8152);
-
-    usb_peripheral::wire::FunctionDescriptor usb_cdc_ecm_function_desc = {
-        .interface_class = USB_CLASS_COMM,
-        .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
-        .interface_protocol = 0,
-    };
-
-    std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
-    function_descs.push_back(usb_cdc_ecm_function_desc);
-    std::vector<ConfigurationDescriptor> config_descs;
-    config_descs.emplace_back(
-        fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
-    config_descs.emplace_back(
-        fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
-
-    ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
-
-    const auto wait_for_device = [this](DevicePaths& paths) {
-      fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), paths.subdir.c_str(), O_RDONLY));
-      ASSERT_TRUE(fd.is_valid());
-      ASSERT_STATUS(fdio_watch_directory(fd.get(), WaitForDevice, ZX_TIME_INFINITE, &paths),
-                    ZX_ERR_STOP);
-    };
-    DevicePaths host_device_paths{.subdir = "class/network/", .query = "/usb-bus/"};
-    // Attach to function-001, because it implements usb-cdc-ecm.
-    DevicePaths peripheral_device_paths{.subdir = "class/ethernet/",
-                                        .query = "/usb-peripheral/function-001"};
-
-    wait_for_device(host_device_paths);
-    wait_for_device(peripheral_device_paths);
-
-    *host_path = host_device_paths.path.value();
-    *peripheral_path = peripheral_device_paths.path.value();
-  }
-};
 
 class EthernetInterface {
  public:
@@ -404,24 +354,96 @@ class NetworkDeviceInterface : public ::loop_fixture::RealLoop {
 class UsbCdcEcmTest : public zxtest::Test {
  public:
   void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(bus_.InitUsbCdcEcm(&peripheral_path_, &host_path_));
+    IsolatedDevmgr::Args args = {
+        .log_level =
+            {
+                DriverLog{
+                    .name = "ethernet_usb_cdc_ecm",
+                    .log_level = Severity::DEBUG,
+                },
+                DriverLog{
+                    .name = "usb_cdc_acm_function",
+                    .log_level = Severity::DEBUG,
+                },
+            },
+    };
+    auto bus = BusLauncher::Create(std::move(args));
+    ASSERT_OK(bus.status_value());
+    bus_ = std::move(bus.value());
+
+    ASSERT_NO_FATAL_FAILURE(InitUsbCdcEcm(&peripheral_path_, &host_path_));
   }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
-    ASSERT_NO_FATAL_FAILURE(ValidateResult(bus_.virtual_bus()->Disable()));
+    ASSERT_OK(bus_->ClearPeripheralDeviceFunctions());
+    ASSERT_OK(bus_->Disable());
   }
 
  protected:
-  USBVirtualBus bus_;
+  std::optional<BusLauncher> bus_;
   std::string peripheral_path_;
   std::string host_path_;
+
+  void InitUsbCdcEcm(std::string* peripheral_path, std::string* host_path) {
+    namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
+    using ConfigurationDescriptor =
+        ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+    usb_peripheral::wire::DeviceDescriptor device_desc = {};
+    device_desc.bcd_usb = htole16(0x0200);
+    device_desc.b_device_class = 0;
+    device_desc.b_device_sub_class = 0;
+    device_desc.b_device_protocol = 0;
+    device_desc.b_max_packet_size0 = 64;
+    device_desc.bcd_device = htole16(0x0100);
+    device_desc.b_num_configurations = 2;
+
+    device_desc.manufacturer = fidl::StringView(kManufacturer);
+    device_desc.product = fidl::StringView(kProduct);
+    device_desc.serial = fidl::StringView(kSerial);
+
+    device_desc.id_vendor = htole16(0x0BDA);
+    device_desc.id_product = htole16(0x8152);
+
+    usb_peripheral::wire::FunctionDescriptor usb_cdc_ecm_function_desc = {
+        .interface_class = USB_CLASS_COMM,
+        .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
+        .interface_protocol = 0,
+    };
+
+    std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
+    function_descs.push_back(usb_cdc_ecm_function_desc);
+    std::vector<ConfigurationDescriptor> config_descs;
+    config_descs.emplace_back(
+        fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
+    config_descs.emplace_back(
+        fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs));
+
+    ASSERT_OK(bus_->SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+
+    const auto wait_for_device = [this](DevicePaths& paths) {
+      fbl::unique_fd fd(openat(bus_->GetRootFd(), paths.subdir.c_str(), O_RDONLY));
+      ASSERT_TRUE(fd.is_valid());
+      ASSERT_STATUS(fdio_watch_directory(fd.get(), WaitForDevice, ZX_TIME_INFINITE, &paths),
+                    ZX_ERR_STOP);
+    };
+    DevicePaths host_device_paths{.subdir = "class/network/", .query = "/usb-bus/"};
+    // Attach to function-001, because it implements usb-cdc-ecm.
+    DevicePaths peripheral_device_paths{.subdir = "class/ethernet/",
+                                        .query = "/usb-peripheral/function-001"};
+
+    wait_for_device(host_device_paths);
+    wait_for_device(peripheral_device_paths);
+
+    *host_path = host_device_paths.path.value();
+    *peripheral_path = peripheral_device_paths.path.value();
+  }
 };
 
 TEST_F(UsbCdcEcmTest, PeripheralTransmitsToHost) {
   EthernetInterface peripheral(
-      fbl::unique_fd(openat(bus_.GetRootFd(), peripheral_path_.c_str(), O_RDWR)));
-  NetworkDeviceInterface host(fbl::unique_fd(openat(bus_.GetRootFd(), host_path_.c_str(), O_RDWR)));
+      fbl::unique_fd(openat(bus_->GetRootFd(), peripheral_path_.c_str(), O_RDWR)));
+  NetworkDeviceInterface host(
+      fbl::unique_fd(openat(bus_->GetRootFd(), host_path_.c_str(), O_RDWR)));
 
   const uint32_t fifo_depth = std::min(peripheral.tx_depth(), host.rx_depth());
   ASSERT_EQ(peripheral.mtu(), kEthernetMtu);
@@ -453,8 +475,9 @@ TEST_F(UsbCdcEcmTest, PeripheralTransmitsToHost) {
 
 TEST_F(UsbCdcEcmTest, HostTransmitsToPeripheral) {
   EthernetInterface peripheral(
-      fbl::unique_fd(openat(bus_.GetRootFd(), peripheral_path_.c_str(), O_RDWR)));
-  NetworkDeviceInterface host(fbl::unique_fd(openat(bus_.GetRootFd(), host_path_.c_str(), O_RDWR)));
+      fbl::unique_fd(openat(bus_->GetRootFd(), peripheral_path_.c_str(), O_RDWR)));
+  NetworkDeviceInterface host(
+      fbl::unique_fd(openat(bus_->GetRootFd(), host_path_.c_str(), O_RDWR)));
 
   const uint32_t fifo_depth = std::min(peripheral.rx_depth(), host.tx_depth());
   ASSERT_EQ(peripheral.mtu(), kEthernetMtu);

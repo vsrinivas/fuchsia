@@ -23,73 +23,70 @@
 namespace usb_ax88179 {
 namespace {
 
+using usb_virtual::BusLauncher;
+
 namespace ethernet = fuchsia_hardware_ethernet;
 namespace ax88179 = fuchsia_hardware_ax88179;
-
-class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
- public:
-  USBVirtualBus() = default;
-
-  void InitUsbAx88179(fbl::String* dev_path, fbl::String* test_function_path);
-};
-
-void USBVirtualBus::InitUsbAx88179(fbl::String* dev_path, fbl::String* test_function_path) {
-  namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
-  using ConfigurationDescriptor =
-      ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
-
-  usb_peripheral::wire::DeviceDescriptor device_desc = {};
-  device_desc.bcd_usb = htole16(0x0200);
-  device_desc.b_max_packet_size0 = 64;
-  device_desc.bcd_device = htole16(0x0100);
-  device_desc.b_num_configurations = 1;
-
-  usb_peripheral::wire::FunctionDescriptor usb_ax88179_desc = {
-      .interface_class = USB_CLASS_COMM,
-      .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
-      .interface_protocol = 0,
-  };
-
-  device_desc.id_vendor = htole16(ASIX_VID);
-  device_desc.id_product = htole16(AX88179_PID);
-  std::vector<ConfigurationDescriptor> config_descs;
-  std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
-  function_descs.push_back(usb_ax88179_desc);
-  ConfigurationDescriptor config_desc;
-  config_desc =
-      fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs);
-  config_descs.push_back(std::move(config_desc));
-  ASSERT_NO_FATAL_FAILURE(SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
-
-  fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), "class/ethernet", O_RDONLY));
-  while (fdio_watch_directory(fd.get(), usb_virtual_bus::WaitForAnyFile, ZX_TIME_INFINITE,
-                              dev_path) != ZX_ERR_STOP) {
-  }
-  *dev_path = fbl::String::Concat({fbl::String("class/ethernet/"), *dev_path});
-
-  fd.reset(openat(devmgr_.devfs_root().get(), "class/test-asix-function", O_RDONLY));
-  while (fdio_watch_directory(fd.get(), usb_virtual_bus::WaitForAnyFile, ZX_TIME_INFINITE,
-                              test_function_path) != ZX_ERR_STOP) {
-  }
-  *test_function_path =
-      fbl::String::Concat({fbl::String("class/test-asix-function/"), *test_function_path});
-}
 
 class UsbAx88179Test : public zxtest::Test {
  public:
   void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(bus_.InitUsbAx88179(&dev_path_, &test_function_path_));
+    auto bus = BusLauncher::Create();
+    ASSERT_OK(bus.status_value());
+    bus_ = std::move(bus.value());
+    ASSERT_NO_FATAL_FAILURE(InitUsbAx88179(&dev_path_, &test_function_path_));
   }
 
   void TearDown() override {
-    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
+    ASSERT_OK(bus_->ClearPeripheralDeviceFunctions());
 
-    auto result2 = bus_.virtual_bus()->Disable();
-    ASSERT_NO_FATAL_FAILURE(usb_virtual_bus::ValidateResult(result2));
+    ASSERT_OK(bus_->Disable());
+  }
+
+  void InitUsbAx88179(fbl::String* dev_path, fbl::String* test_function_path) {
+    namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
+    using ConfigurationDescriptor =
+        ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+
+    usb_peripheral::wire::DeviceDescriptor device_desc = {};
+    device_desc.bcd_usb = htole16(0x0200);
+    device_desc.b_max_packet_size0 = 64;
+    device_desc.bcd_device = htole16(0x0100);
+    device_desc.b_num_configurations = 1;
+
+    usb_peripheral::wire::FunctionDescriptor usb_ax88179_desc = {
+        .interface_class = USB_CLASS_COMM,
+        .interface_subclass = USB_CDC_SUBCLASS_ETHERNET,
+        .interface_protocol = 0,
+    };
+
+    device_desc.id_vendor = htole16(ASIX_VID);
+    device_desc.id_product = htole16(AX88179_PID);
+    std::vector<ConfigurationDescriptor> config_descs;
+    std::vector<usb_peripheral::wire::FunctionDescriptor> function_descs;
+    function_descs.push_back(usb_ax88179_desc);
+    ConfigurationDescriptor config_desc;
+    config_desc =
+        fidl::VectorView<usb_peripheral::wire::FunctionDescriptor>::FromExternal(function_descs);
+    config_descs.push_back(std::move(config_desc));
+    ASSERT_OK(bus_->SetupPeripheralDevice(std::move(device_desc), std::move(config_descs)));
+
+    fbl::unique_fd fd(openat(bus_->GetRootFd(), "class/ethernet", O_RDONLY));
+    while (fdio_watch_directory(fd.get(), usb_virtual_bus::WaitForAnyFile, ZX_TIME_INFINITE,
+                                dev_path) != ZX_ERR_STOP) {
+    }
+    *dev_path = fbl::String::Concat({fbl::String("class/ethernet/"), *dev_path});
+
+    fd.reset(openat(bus_->GetRootFd(), "class/test-asix-function", O_RDONLY));
+    while (fdio_watch_directory(fd.get(), usb_virtual_bus::WaitForAnyFile, ZX_TIME_INFINITE,
+                                test_function_path) != ZX_ERR_STOP) {
+    }
+    *test_function_path =
+        fbl::String::Concat({fbl::String("class/test-asix-function/"), *test_function_path});
   }
 
   void ConnectEthernetClient() {
-    fbl::unique_fd fd(openat(bus_.GetRootFd(), dev_path_.c_str(), O_RDWR));
+    fbl::unique_fd fd(openat(bus_->GetRootFd(), dev_path_.c_str(), O_RDWR));
     zx::status ethernet_client_end =
         fdio_cpp::FdioCaller(std::move(fd)).take_as<ethernet::Device>();
     ASSERT_OK(ethernet_client_end.status_value());
@@ -121,7 +118,7 @@ class UsbAx88179Test : public zxtest::Test {
   }
 
   void SetDeviceOnline() {
-    fbl::unique_fd fd(openat(bus_.GetRootFd(), test_function_path_.c_str(), O_RDWR));
+    fbl::unique_fd fd(openat(bus_->GetRootFd(), test_function_path_.c_str(), O_RDWR));
     zx::status test_client_end = fdio_cpp::FdioCaller(std::move(fd)).take_as<ax88179::Hooks>();
     ASSERT_OK(test_client_end.status_value());
     fidl::WireSyncClient test_client{std::move(*test_client_end)};
@@ -157,7 +154,7 @@ class UsbAx88179Test : public zxtest::Test {
   }
 
  protected:
-  USBVirtualBus bus_;
+  std::optional<BusLauncher> bus_;
   fbl::String dev_path_;
   fbl::String test_function_path_;
   fidl::WireSyncClient<ethernet::Device> ethernet_client_;
