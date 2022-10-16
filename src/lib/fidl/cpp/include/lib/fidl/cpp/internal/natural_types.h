@@ -164,25 +164,39 @@ struct MemberVisitor {
   static constexpr auto kMembers = T::kMembers;
   static constexpr size_t kNumMembers = std::tuple_size_v<decltype(kMembers)>;
 
-  // Visit each of the members in order while the visitor function returns a truthy value.
-  template <typename U, typename Fn, size_t I = 0>
-  static void VisitWhile(U value, Fn func) {
-    static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
-    if constexpr (I < kNumMembers) {
-      auto& member_info = std::get<I>(kMembers);
-      auto* member_ptr = &(value->storage_.*(member_info.member_ptr));
+  // Invokes |func| with |std::integral_constant<size_t, I>| for each |I| in |indexes|.
+  template <typename F, size_t... I>
+  static void Fold(F func, std::index_sequence<I...> indexes) {
+    (func(std::integral_constant<size_t, I>{}), ...);
+  }
 
-      if (func(member_ptr, member_info)) {
-        VisitWhile<U, Fn, I + 1>(value, func);
-      }
-    }
+  // Invokes |func| with |std::integral_constant<size_t, I>| for each |I| in |indexes|.
+  // Exits early if a |func| ever returns false in the middle.
+  template <typename F, size_t... I>
+  static void FoldWhile(F func, std::index_sequence<I...> indexes) {
+    (void)(... && func(std::integral_constant<size_t, I>{}));
+  }
+
+  // Visit each of the members in order while the visitor function returns a truthy value.
+  template <typename U, typename Fn>
+  static void VisitWhile(U value, Fn&& func) {
+    static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
+    constexpr size_t N = std::tuple_size_v<decltype(T::kMembers)>;
+    FoldWhile(
+        [func = std::forward<Fn>(func), value](const auto& integral) -> bool {
+          constexpr size_t I = cpp20::remove_cvref_t<decltype(integral)>::value;
+          auto& member_info = std::get<I>(kMembers);
+          auto* member_ptr = &(value->storage_.*(member_info.member_ptr));
+          return func(member_ptr, member_info);
+        },
+        std::make_index_sequence<N>{});
   }
 
   // Visit all of the members in order.
   template <typename U, typename Fn>
-  static void Visit(U value, Fn func) {
+  static void Visit(U value, Fn&& func) {
     static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
-    VisitWhile(value, [func = std::move(func)](auto member_ptr, auto member_info) {
+    VisitWhile(value, [func = std::forward<Fn>(func)](auto member_ptr, auto member_info) {
       func(member_ptr, member_info);
       return true;
     });
@@ -190,26 +204,27 @@ struct MemberVisitor {
 
   // Visit each of the members of two structs or tables in order while the visitor function returns
   // a truthy value.
-  template <typename U, typename Fn, size_t I = 0>
-  static void Visit2While(U value1, U value2, Fn func) {
+  template <typename U, typename Fn>
+  static void Visit2While(U value1, U value2, Fn&& func) {
     static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
-    if constexpr (I < std::tuple_size_v<decltype(T::kMembers)>) {
-      auto& member_info = std::get<I>(T::kMembers);
-      auto* member_ptr1 = &(value1->storage_.*(member_info.member_ptr));
-      auto* member_ptr2 = &(value2->storage_.*(member_info.member_ptr));
-
-      if (func(member_ptr1, member_ptr2, member_info)) {
-        Visit2While<U, Fn, I + 1>(value1, value2, func);
-      }
-    }
+    constexpr size_t N = std::tuple_size_v<decltype(T::kMembers)>;
+    FoldWhile(
+        [func = std::forward<Fn>(func), value1, value2](const auto& integral) -> bool {
+          constexpr size_t I = cpp20::remove_cvref_t<decltype(integral)>::value;
+          auto& member_info = std::get<I>(kMembers);
+          auto* member_ptr1 = &(value1->storage_.*(member_info.member_ptr));
+          auto* member_ptr2 = &(value2->storage_.*(member_info.member_ptr));
+          return func(member_ptr1, member_ptr2, member_info);
+        },
+        std::make_index_sequence<N>{});
   }
 
   // Visit all of the members of two structs or tables in order.
   template <typename U, typename Fn>
-  static void Visit2(U value1, U value2, Fn func) {
+  static void Visit2(U value1, U value2, Fn&& func) {
     static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
     Visit2While(value1, value2,
-                [func = std::move(func)](auto member1, auto member2, auto member_info) {
+                [func = std::forward<Fn>(func)](auto member1, auto member2, auto member_info) {
                   func(member1, member2, member_info);
                   return true;
                 });
@@ -332,12 +347,6 @@ struct NaturalTableCodingTraits {
   struct TableMemberVisitor : public MemberVisitor<T> {
     using Base = MemberVisitor<T>;
 
-    // Invokes |func| with |std::integral_constant<size_t, I>| for each |I| in |indexes|.
-    template <typename F, size_t... I>
-    static void Fold(F func, std::index_sequence<I...> indexes) {
-      (func(std::integral_constant<size_t, I>{}), ...);
-    }
-
     // Visit all of the members in order, calling |func| with the previous member ordinal and the
     // current member ordinal. The main purpose of this function is to optimize closing unknown
     // envelopes in tables. The compiler can deterministically omit unknown envelope code paths if
@@ -355,7 +364,7 @@ struct NaturalTableCodingTraits {
     static void VisitPrevAndCurOrdinals(U value, Fn&& func) {
       static_assert(std::is_same_v<T*, U> || std::is_same_v<const T*, U>);
       constexpr size_t N = std::tuple_size_v<decltype(T::kMembers)>;
-      Fold(
+      Base::template Fold(
           [func = std::forward<Fn>(func), value](const auto& integral) {
             constexpr size_t I = cpp20::remove_cvref_t<decltype(integral)>::value;
             auto& member_info = std::get<I>(Base::kMembers);
