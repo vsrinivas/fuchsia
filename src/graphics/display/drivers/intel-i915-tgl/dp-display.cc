@@ -1561,7 +1561,7 @@ bool DpDisplay::Query() {
   // general DP displays, the default power state is D0, so we don't have to
   // worry about AUX failures because of power saving mode.
   {
-    auto capabilities = DpCapabilities::Read(dp_aux_);
+    fpromise::result<DpCapabilities> capabilities = DpCapabilities::Read(dp_aux_);
     if (capabilities.is_error()) {
       return false;
     }
