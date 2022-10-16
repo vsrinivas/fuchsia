@@ -40,15 +40,14 @@ struct Directive {
 static_assert(std::has_unique_object_representations_v<Directive>);
 
 // Patcher helps to facilitate code patching. It is constructed from a BOOTFS
-// that expects the following entries to be present for some directory
-// namespace:
+// directory with the following expected contents:
 //
-// * ${NAMESPACE}/code-patches.bin
+// * code-patches.bin
 //   This is raw binary comprised of an array of patch directives (in practice,
 //   removed as a section from the executable to patch).
 //
-// * ${NAMESPACE}/code-patches/
-//   A directory under which patch alternatives are found.
+// * code-patches/
+//   A subdirectory under which patch alternatives are found.
 //
 // Patcher provides methods for patching provided instruction ranges in the
 // supported ways (e.g., nop-fill or wholesale replacement by an alternative).
@@ -58,8 +57,8 @@ static_assert(std::has_unique_object_representations_v<Directive>);
 class Patcher {
  public:
   using Bytes = ktl::span<const ktl::byte>;
-  using Bootfs = zbitl::BootfsView<Bytes>;
-  using Error = Bootfs::Error;
+  using BootfsDir = zbitl::BootfsView<Bytes>;
+  using Error = BootfsDir::Error;
 
   using iterator = ktl::span<const Directive>::iterator;
 
@@ -69,9 +68,10 @@ class Patcher {
   // A directory under which patch alternatives are found.
   static constexpr ktl::string_view kPatchAlternativeDir = "code-patches";
 
-  // Initializes the Patcher. The provided directory namespace must be
-  // nonempty. Must be called before any other method.
-  fit::result<Error> Init(Bootfs bootfs, ktl::string_view directory);
+  // Initializes the Patcher. The associated BOOTFS directory namespace must be
+  // nonempty. Must be called before any other method. On initialization, the
+  // lifetime of the Patcher is bound to that of the original BootfsView input.
+  fit::result<Error> Init(BootfsDir bootfs);
 
   // The associated patch directives.
   ktl::span<const Directive> patches() const { return patches_; }
@@ -97,8 +97,7 @@ class Patcher {
     sync_ctx_.SyncRange(reinterpret_cast<uintptr_t>(instructions.data()), instructions.size());
   }
 
-  Bootfs bootfs_;
-  ktl::string_view dir_;
+  BootfsDir bootfs_;
   ktl::span<const Directive> patches_;
   arch::GlobalCacheConsistencyContext sync_ctx_;
 };

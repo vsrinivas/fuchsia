@@ -61,8 +61,14 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
   KernelStorage kernelfs;
   kernelfs.Init(zbi);
 
-  BootfsView bootfs = kernelfs.GetBootfs();
-  auto it = bootfs.find({kNamespace, kGetInt});
+  BootfsView bootfs;
+  if (auto result = kernelfs.GetBootfs(kNamespace); result.is_error()) {
+    zbitl::PrintBootfsError(result.error_value());
+    return 1;
+  } else {
+    bootfs = ktl::move(result).value();
+  }
+  auto it = bootfs.find(kGetInt);
   if (auto result = bootfs.take_error(); result.is_error()) {
     zbitl::PrintBootfsError(result.error_value());
     return 1;

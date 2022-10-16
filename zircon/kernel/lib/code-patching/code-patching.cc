@@ -16,12 +16,11 @@
 
 namespace code_patching {
 
-fit::result<Patcher::Error> Patcher::Init(Bootfs bootfs, ktl::string_view directory) {
-  ZX_ASSERT(!directory.empty());
-  bootfs_ = ktl::move(bootfs);
-  dir_ = directory;
+fit::result<Patcher::Error> Patcher::Init(BootfsDir bootfs) {
+  ZX_ASSERT(!bootfs.directory().empty());
+  bootfs_ = bootfs;
 
-  auto it = bootfs_.find({dir_, kPatchesBin});
+  auto it = bootfs_.find(kPatchesBin);
   if (auto result = bootfs_.take_error(); result.is_error()) {
     return result;
   }
@@ -68,7 +67,7 @@ void Patcher::NopFill(ktl::span<ktl::byte> instructions) {
 }
 
 fit::result<Patcher::Error, Patcher::Bytes> Patcher::GetPatchAlternative(ktl::string_view name) {
-  auto it = bootfs_.find({dir_, kPatchAlternativeDir, name});
+  auto it = bootfs_.find({kPatchAlternativeDir, name});
   if (auto result = bootfs_.take_error(); result.is_error()) {
     return result.take_error();
   }

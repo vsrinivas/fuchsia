@@ -51,7 +51,7 @@ constexpr uint64_t kKernelBssEstimate = 1024 * 1024 * 2;
 
 ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
   // Now we select our kernel ZBI.
-  auto it = kernelfs.find({kDefaultKernelPackage, kKernelZbiName});
+  auto it = kernelfs.find(kKernelZbiName);
   if (auto result = kernelfs.take_error(); result.is_error()) {
     printf("physboot: Error in looking for kernel ZBI within STORAGE_KERNEL item: ");
     zbitl::PrintBootfsError(result.error_value());
@@ -59,7 +59,7 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
   }
   if (it == kernelfs.end()) {
     printf("physboot: Could not find kernel ZBI (%.*s/%.*s) within STORAGE_KERNEL item\n",
-           static_cast<int>(kDefaultKernelPackage.size()), kDefaultKernelPackage.data(),
+           static_cast<int>(kernelfs.directory().size()), kernelfs.directory().data(),
            static_cast<int>(kKernelZbiName.size()), kKernelZbiName.data());
     abort();
   }
@@ -67,7 +67,7 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
 
   // Patch the kernel image in the BOOTFS in place before loading it.
   code_patching::Patcher patcher;
-  if (auto result = patcher.Init(ktl::move(kernelfs), kDefaultKernelPackage); result.is_error()) {
+  if (auto result = patcher.Init(kernelfs); result.is_error()) {
     printf("physboot: Failed to initialize code patching: ");
     code_patching::PrintPatcherError(result.error_value());
     abort();
@@ -92,7 +92,16 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
 }
 
 [[noreturn]] void BootZircon(KernelStorage kernel_storage) {
-  ChainBoot boot = LoadZirconZbi(kernel_storage.GetBootfs());
+  KernelStorage::Bootfs kernelfs;
+  if (auto result = kernel_storage.GetBootfs(kDefaultKernelPackage); result.is_error()) {
+    printf("physboot: Failed to read kernel package %.*s: ",
+           static_cast<int>(kDefaultKernelPackage.size()), kDefaultKernelPackage.data());
+    zbitl::PrintBootfsError(result.error_value());
+    abort();
+  } else {
+    kernelfs = ktl::move(result).value();
+  }
+  ChainBoot boot = LoadZirconZbi(kernelfs);
 
   // Repurpose the storage item as a place to put the handoff payload.
   KernelStorage::Zbi::iterator handoff_item = kernel_storage.item();

@@ -164,9 +164,16 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
     bootfs_reader = ktl::move(result.value());
   }
 
-  auto bootfs = bootfs_reader.root();
+  Bootfs::View bootfs;
+  if (auto result = bootfs_reader.root().subdir(kNamespace); result.is_error()) {
+    zbitl::PrintBootfsError(result.error_value());
+    return 1;
+  } else {
+    bootfs = ktl::move(result).value();
+  }
+
   code_patching::Patcher patcher;
-  if (auto result = patcher.Init(ktl::move(bootfs), kNamespace); result.is_error()) {
+  if (auto result = patcher.Init(bootfs); result.is_error()) {
     printf("FAILED: Could not initialize code_patching::Patcher: ");
     zbitl::PrintBootfsError(result.error_value());
     return 1;

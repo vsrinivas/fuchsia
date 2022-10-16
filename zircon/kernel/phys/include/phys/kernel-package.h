@@ -49,7 +49,9 @@ class KernelStorage {
   auto data() const { return storage_.data(); }
 
   // Helper to decode data() as a BOOTFS image.
-  Bootfs GetBootfs() const { return bootfs_reader_.root(); }
+  fit::result<Bootfs::Error, Bootfs> GetBootfs(ktl::string_view directory) const {
+    return bootfs_reader_.root().subdir(directory);
+  }
 
   void GetTimes(PhysBootTimes& times) {
     times.Set(PhysBootTimes::kDecompressStart, decompress_start_ts_);
