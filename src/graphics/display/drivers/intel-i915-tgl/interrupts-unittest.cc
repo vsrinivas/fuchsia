@@ -21,15 +21,16 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 
+namespace i915_tgl {
+
 namespace {
 
 void NopPipeVsyncCb(tgl_registers::Pipe, zx_time_t) {}
 void NopHotplugCb(tgl_registers::Ddi, bool) {}
 void NopIrqCb(void*, uint32_t, uint64_t) {}
 
-zx_status_t InitInterrupts(i915_tgl::Interrupts* i, zx_device_t* dev, ddk::Pci& pci,
-                           fdf::MmioBuffer* mmio) {
-  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, pci, mmio, i915_tgl::kTestDeviceDid);
+zx_status_t InitInterrupts(Interrupts* i, zx_device_t* dev, ddk::Pci& pci, fdf::MmioBuffer* mmio) {
+  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, pci, mmio, kTestDeviceDid);
 }
 
 class InterruptTest : public testing::Test {
@@ -58,7 +59,7 @@ TEST_F(InterruptTest, Init) {
   });
   std::shared_ptr<MockDevice> parent = MockDevice::FakeRootParent();
 
-  i915_tgl::Interrupts interrupts;
+  Interrupts interrupts;
   EXPECT_EQ(ZX_ERR_INTERNAL, InitInterrupts(&interrupts, parent.get(), pci_, &mmio_space));
 
   pci::RunAsync(loop_, [&] { fake_pci_.AddLegacyInterrupt(); });
@@ -79,7 +80,7 @@ TEST_F(InterruptTest, Init) {
 }
 
 TEST_F(InterruptTest, SetInterruptCallback) {
-  i915_tgl::Interrupts interrupts;
+  Interrupts interrupts;
 
   constexpr intel_gpu_core_interrupt_t callback = {.callback = NopIrqCb, .ctx = nullptr};
   const uint32_t gpu_interrupt_mask = 0;
@@ -97,3 +98,5 @@ TEST_F(InterruptTest, SetInterruptCallback) {
 }
 
 }  // namespace
+
+}  // namespace i915_tgl

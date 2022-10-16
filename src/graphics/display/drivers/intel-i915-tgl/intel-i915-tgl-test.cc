@@ -56,6 +56,8 @@ zx_status_t zx_framebuffer_get_info(zx_handle_t resource, uint32_t* format, uint
   return g_framebuffer.status;
 }
 
+namespace i915_tgl {
+
 namespace {
 
 class MockNoCpuBufferCollection
@@ -107,7 +109,7 @@ class TglIntegrationTest : public ::testing::Test {
     constexpr uint16_t kIntelVendorId = 0x8086;
     pci_.SetDeviceInfo({
         .vendor_id = kIntelVendorId,
-        .device_id = i915_tgl::kTestDeviceDid,
+        .device_id = kTestDeviceDid,
     });
 
     parent_ = MockDevice::FakeRootParent();
@@ -133,12 +135,12 @@ class TglIntegrationTest : public ::testing::Test {
   pci::FakePciProtocol pci_;
   FakeSysmem sysmem_;
 
-  // mock-ddk parent device of the i915_tgl::Controller under test.
+  // mock-ddk parent device of the Controller under test.
   std::shared_ptr<MockDevice> parent_;
 };
 
 TEST(IntelI915TglDisplay, SysmemRequirements) {
-  i915_tgl::Controller display(nullptr);
+  Controller display(nullptr);
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
@@ -158,7 +160,7 @@ TEST(IntelI915TglDisplay, SysmemRequirements) {
 }
 
 TEST(IntelI915TglDisplay, SysmemNoneFormat) {
-  i915_tgl::Controller display(nullptr);
+  Controller display(nullptr);
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
@@ -178,7 +180,7 @@ TEST(IntelI915TglDisplay, SysmemNoneFormat) {
 }
 
 TEST(IntelI915TglDisplay, SysmemInvalidFormat) {
-  i915_tgl::Controller display(nullptr);
+  Controller display(nullptr);
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
@@ -198,7 +200,7 @@ TEST(IntelI915TglDisplay, SysmemInvalidFormat) {
 }
 
 TEST(IntelI915TglDisplay, SysmemInvalidType) {
-  i915_tgl::Controller display(nullptr);
+  Controller display(nullptr);
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
@@ -220,7 +222,7 @@ TEST(IntelI915TglDisplay, SysmemInvalidType) {
 
 // Tests that DDK basic DDK lifecycle hooks function as expected.
 TEST_F(TglIntegrationTest, BindAndInit) {
-  ASSERT_OK(i915_tgl::Controller::Create(parent()));
+  ASSERT_OK(Controller::Create(parent()));
 
   // There should be two published devices: one "intel_i915" device rooted at |parent()|, and a
   // grandchild "intel-gpu-core" device.
@@ -245,9 +247,9 @@ TEST_F(TglIntegrationTest, BindAndInit) {
 TEST_F(TglIntegrationTest, InitFailsIfBootloaderGetInfoFails) {
   SetFramebuffer({.status = ZX_ERR_INVALID_ARGS});
 
-  ASSERT_EQ(ZX_OK, i915_tgl::Controller::Create(parent()));
+  ASSERT_EQ(ZX_OK, Controller::Create(parent()));
   auto dev = parent()->GetLatestChild();
-  i915_tgl::Controller* ctx = dev->GetDeviceContext<i915_tgl::Controller>();
+  Controller* ctx = dev->GetDeviceContext<Controller>();
 
   uint64_t addr;
   EXPECT_EQ(ZX_OK, ctx->IntelGpuCoreGttAlloc(1, &addr));
@@ -271,13 +273,13 @@ TEST_F(TglIntegrationTest, GttAllocationDoesNotOverlapBootloaderFramebuffer) {
       .height = kHeight,
       .stride = kStride,
   });
-  ASSERT_OK(i915_tgl::Controller::Create(parent()));
+  ASSERT_OK(Controller::Create(parent()));
 
   // There should be two published devices: one "intel_i915" device rooted at |parent()|, and a
   // grandchild "intel-gpu-core" device.
   ASSERT_EQ(1u, parent()->child_count());
   auto dev = parent()->GetLatestChild();
-  i915_tgl::Controller* ctx = dev->GetDeviceContext<i915_tgl::Controller>();
+  Controller* ctx = dev->GetDeviceContext<Controller>();
 
   uint64_t addr;
   EXPECT_EQ(ZX_OK, ctx->IntelGpuCoreGttAlloc(1, &addr));
@@ -285,3 +287,5 @@ TEST_F(TglIntegrationTest, GttAllocationDoesNotOverlapBootloaderFramebuffer) {
 }
 
 }  // namespace
+
+}  // namespace i915_tgl

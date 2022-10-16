@@ -16,6 +16,8 @@
 #include "src/devices/pci/testing/pci_protocol_fake.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
+namespace i915_tgl {
+
 namespace {
 
 constexpr size_t kPageSize = PAGE_SIZE;
@@ -55,7 +57,7 @@ TEST_F(GttTest, InitWithZeroSizeGtt) {
   uint8_t buffer = 0;
   fdf::MmioBuffer mmio = MakeMmioBuffer(&buffer, 0);
 
-  i915_tgl::Gtt gtt;
+  Gtt gtt;
   EXPECT_EQ(ZX_ERR_INTERNAL, gtt.Init(pci_, std::move(mmio), 0));
 
   // No MMIO writes should have occurred.
@@ -69,7 +71,7 @@ TEST_F(GttTest, InitGtt) {
   memset(buffer.get(), 0, kTableSize);
   fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
-  i915_tgl::Gtt gtt;
+  Gtt gtt;
   EXPECT_EQ(ZX_OK, gtt.Init(pci_, std::move(mmio), 0));
 
   // The table should contain 2MB / sizeof(uint64_t) 64-bit entries that map to the fake scratch
@@ -81,7 +83,7 @@ TEST_F(GttTest, InitGtt) {
   }
 
   // Allocated GTT regions should start from base 0.
-  std::unique_ptr<i915_tgl::GttRegion> region;
+  std::unique_ptr<GttRegion> region;
   EXPECT_EQ(ZX_OK, gtt.AllocRegion(kPageSize, kPageSize, &region));
   ASSERT_TRUE(region != nullptr);
   EXPECT_EQ(0u, region->base());
@@ -99,7 +101,7 @@ TEST_F(GttTest, InitGttWithFramebufferOffset) {
   memset(buffer.get(), kJunk, kTableSize);
   fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
-  i915_tgl::Gtt gtt;
+  Gtt gtt;
   EXPECT_EQ(ZX_OK, gtt.Init(pci_, std::move(mmio), kFbOffset));
 
   // The first page-aligned region of addresses should remain unmodified.
@@ -116,7 +118,7 @@ TEST_F(GttTest, InitGttWithFramebufferOffset) {
   }
 
   // The first allocated GTT regions should exclude the framebuffer pages.
-  std::unique_ptr<i915_tgl::GttRegion> region;
+  std::unique_ptr<GttRegion> region;
   EXPECT_EQ(ZX_OK, gtt.AllocRegion(kPageSize, kPageSize, &region));
   ASSERT_TRUE(region != nullptr);
   EXPECT_EQ(kFbPages * kPageSize, region->base());
@@ -128,7 +130,7 @@ TEST_F(GttTest, SetupForMexec) {
   auto buffer = std::make_unique<uint8_t[]>(kTableSize);
   fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
-  i915_tgl::Gtt gtt;
+  Gtt gtt;
   EXPECT_EQ(ZX_OK, gtt.Init(pci_, std::move(mmio), 0));
 
   // Assign an arbitrary page-aligned number as the stolen framebuffer address.
@@ -150,3 +152,5 @@ TEST_F(GttTest, SetupForMexec) {
 }
 
 }  // namespace
+
+}  // namespace i915_tgl

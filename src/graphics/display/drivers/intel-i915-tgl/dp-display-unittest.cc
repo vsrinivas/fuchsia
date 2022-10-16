@@ -19,18 +19,20 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
+namespace i915_tgl {
+
 namespace {
 
 // Value used to allocate space for the fake i915 register MMIO space.
-// TODO(fxbug.dev/83998): Remove this once DpDisplay no longer depends on i915_tgl::Controller.
+// TODO(fxbug.dev/83998): Remove this once DpDisplay no longer depends on Controller.
 constexpr uint32_t kMmioSize = 0xd0000;
 
-class TestDpll : public i915_tgl::DisplayPll {
+class TestDpll : public DisplayPll {
  public:
   explicit TestDpll(tgl_registers::Dpll dpll) : DisplayPll(dpll) {}
   ~TestDpll() override = default;
 
-  bool Enable(const i915_tgl::DpllState& state) final {
+  bool Enable(const DpllState& state) final {
     enabled_ = true;
     return enabled_;
   }
@@ -43,7 +45,7 @@ class TestDpll : public i915_tgl::DisplayPll {
   bool enabled_ = false;
 };
 
-class TestDpllManager : public i915_tgl::DisplayPllManager {
+class TestDpllManager : public DisplayPllManager {
  public:
   explicit TestDpllManager() {
     for (const auto dpll : kDplls) {
@@ -52,8 +54,8 @@ class TestDpllManager : public i915_tgl::DisplayPllManager {
     }
   }
 
-  std::optional<i915_tgl::DpllState> LoadState(tgl_registers::Ddi ddi) final {
-    i915_tgl::DpllState state = i915_tgl::DpDpllState{
+  std::optional<DpllState> LoadState(tgl_registers::Ddi ddi) final {
+    DpllState state = DpDpllState{
         .dp_bit_rate_mhz = 5400,
     };
     return std::make_optional(state);
@@ -66,8 +68,7 @@ class TestDpllManager : public i915_tgl::DisplayPllManager {
   bool MapImpl(tgl_registers::Ddi ddi, tgl_registers::Dpll dpll) final { return true; }
   bool UnmapImpl(tgl_registers::Ddi ddi) final { return true; }
 
-  i915_tgl::DisplayPll* FindBestDpll(tgl_registers::Ddi ddi, bool is_edp,
-                                     const i915_tgl::DpllState& state) final {
+  DisplayPll* FindBestDpll(tgl_registers::Ddi ddi, bool is_edp, const DpllState& state) final {
     for (const auto dpll : kDplls) {
       if (ref_count_[plls_[dpll].get()] == 0) {
         return plls_[dpll].get();
@@ -77,24 +78,22 @@ class TestDpllManager : public i915_tgl::DisplayPllManager {
   }
 };
 
-class TestPipeManager : public i915_tgl::PipeManager {
+class TestPipeManager : public PipeManager {
  public:
-  explicit TestPipeManager(i915_tgl::Controller* controller)
-      : i915_tgl::PipeManager(DefaultPipes(controller)) {}
+  explicit TestPipeManager(Controller* controller) : PipeManager(DefaultPipes(controller)) {}
 
-  static std::vector<std::unique_ptr<i915_tgl::Pipe>> DefaultPipes(
-      i915_tgl::Controller* controller) {
-    std::vector<std::unique_ptr<i915_tgl::Pipe>> pipes;
-    pipes.push_back(std::make_unique<i915_tgl::PipeSkylake>(
-        controller->mmio_space(), tgl_registers::PIPE_A, i915_tgl::PowerWellRef{}));
+  static std::vector<std::unique_ptr<Pipe>> DefaultPipes(Controller* controller) {
+    std::vector<std::unique_ptr<Pipe>> pipes;
+    pipes.push_back(std::make_unique<PipeSkylake>(controller->mmio_space(), tgl_registers::PIPE_A,
+                                                  PowerWellRef{}));
     return pipes;
   }
 
   void ResetInactiveTranscoders() override {}
 
  private:
-  i915_tgl::Pipe* GetAvailablePipe() override { return At(tgl_registers::PIPE_A); }
-  i915_tgl::Pipe* GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) override {
+  Pipe* GetAvailablePipe() override { return At(tgl_registers::PIPE_A); }
+  Pipe* GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) override {
     return At(tgl_registers::PIPE_A);
   }
 };
@@ -116,17 +115,16 @@ class DpDisplayTest : public ::testing::Test {
     controller_.SetMmioForTesting(mmio_buffer_.View(0));
     controller_.SetDpllManagerForTesting(std::make_unique<TestDpllManager>());
     controller_.SetPipeManagerForTesting(std::make_unique<TestPipeManager>(controller()));
-    controller_.SetPowerWellForTesting(
-        i915_tgl::Power::New(controller_.mmio_space(), i915_tgl::kTestDeviceDid));
+    controller_.SetPowerWellForTesting(Power::New(controller_.mmio_space(), kTestDeviceDid));
     fake_dpcd_.SetDefaults();
 
     static constexpr int kAtlasGpuDeviceId = 0x591c;
 
     pch_engine_.emplace(controller_.mmio_space(), kAtlasGpuDeviceId);
-    i915_tgl::PchClockParameters clock_parameters = pch_engine_->ClockParameters();
+    PchClockParameters clock_parameters = pch_engine_->ClockParameters();
     pch_engine_->FixClockParameters(clock_parameters);
     pch_engine_->SetClockParameters(clock_parameters);
-    i915_tgl::PchPanelParameters panel_parameters = pch_engine_->PanelParameters();
+    PchPanelParameters panel_parameters = pch_engine_->PanelParameters();
     panel_parameters.Fix();
     pch_engine_->SetPanelParameters(panel_parameters);
   }
@@ -136,36 +134,36 @@ class DpDisplayTest : public ::testing::Test {
     controller_.ResetMmioSpaceForTesting();
   }
 
-  std::unique_ptr<i915_tgl::DpDisplay> MakeDisplay(tgl_registers::Ddi ddi, uint64_t id = 1) {
+  std::unique_ptr<DpDisplay> MakeDisplay(tgl_registers::Ddi ddi, uint64_t id = 1) {
     // TODO(fxbug.dev/86038): In normal operation a DpDisplay is not fully constructed until it
     // receives a call to DisplayDevice::Query, then either DisplayDevice::Init() (for a hotplug or
     // initially powered-off display) OR DisplayDevice::AttachPipe() and
     // DisplayDevice::LoadACtiveMode() (for a pre-initialized display, e.g. bootloader-configured
     // eDP). For testing we only initialize until the Query() stage. The states of a DpDisplay
     // should become easier to reason about if remove the partially-initialized states.
-    auto display = std::make_unique<i915_tgl::DpDisplay>(&controller_, id, ddi, &fake_dpcd_,
-                                                         &pch_engine_.value(), &node_);
+    auto display = std::make_unique<DpDisplay>(&controller_, id, ddi, &fake_dpcd_,
+                                               &pch_engine_.value(), &node_);
     if (!display->Query()) {
       return nullptr;
     }
     return display;
   }
 
-  i915_tgl::Controller* controller() { return &controller_; }
-  i915_tgl::testing::FakeDpcdChannel* fake_dpcd() { return &fake_dpcd_; }
-  i915_tgl::PchEngine* pch_engine() { return &pch_engine_.value(); }
+  Controller* controller() { return &controller_; }
+  testing::FakeDpcdChannel* fake_dpcd() { return &fake_dpcd_; }
+  PchEngine* pch_engine() { return &pch_engine_.value(); }
   fdf::MmioBuffer* mmio_buffer() { return &mmio_buffer_; }
 
  private:
-  // TODO(fxbug.dev/83998): Remove DpDisplay's dependency on i915_tgl::Controller which will remove
+  // TODO(fxbug.dev/83998): Remove DpDisplay's dependency on Controller which will remove
   // the need for much of what's in SetUp() and TearDown().
-  i915_tgl::Controller controller_;
+  Controller controller_;
   uint8_t buffer_[kMmioSize];
   fdf::MmioBuffer mmio_buffer_;
 
   inspect::Node node_;
-  i915_tgl::testing::FakeDpcdChannel fake_dpcd_;
-  std::optional<i915_tgl::PchEngine> pch_engine_;
+  testing::FakeDpcdChannel fake_dpcd_;
+  std::optional<PchEngine> pch_engine_;
 };
 
 // Tests that display creation fails if the DP sink count is not 1, as MST is not supported.
@@ -241,7 +239,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDpllState) {
   auto display = MakeDisplay(tgl_registers::DDI_A);
   ASSERT_NE(nullptr, display);
 
-  i915_tgl::DpllState dpll_state = i915_tgl::DpDpllState{
+  DpllState dpll_state = DpDpllState{
       .dp_bit_rate_mhz = 4320u,
   };
   display->InitWithDpllState(&dpll_state);
@@ -290,3 +288,5 @@ TEST_F(DpDisplayTest, GetBacklightBrightnessUsesDpcd) {
 }
 
 }  // namespace
+
+}  // namespace i915_tgl
